@@ -3,6 +3,7 @@ import SwiftUI
 struct WorkoutDetailView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
+    @EnvironmentObject var authService: AuthService
     @State var sheet: WorkoutSheet
     @State private var showActiveWorkout = false
     @State private var showVision = false
@@ -52,6 +53,11 @@ struct WorkoutDetailView: View {
             Button {
                 workoutStore.startSession(for: sheet)
                 watchConnectivity.startWorkoutOnWatch(workoutName: sheet.title)
+                let athleteName = authService.currentUser?.name ?? "Atleta"
+                NotificationService.shared.deliverWorkoutStartNotification(
+                    workoutTitle: sheet.title,
+                    athleteName: athleteName
+                )
                 showActiveWorkout = true
             } label: {
                 Label("Iniciar Treino", systemImage: "play.fill")

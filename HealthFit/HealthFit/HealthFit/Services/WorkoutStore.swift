@@ -7,9 +7,13 @@ final class WorkoutStore: ObservableObject {
     @Published var activeSession: WorkoutSession?
     @Published var sessionHistory: [WorkoutSession] = []
     @Published var currentExerciseIndex = 0
+    @Published private(set) var exerciseRecords: [ExerciseSessionRecord] = []
+
+    @Published private(set) var isExerciseTimerPaused = false
 
     private let storageKey = "healthfit_workout_sheets"
     private let historyKey = "healthfit_session_history"
+    private var exerciseTimer: Timer?
 
     init() {
         loadData()
@@ -45,16 +49,75 @@ final class WorkoutStore: ObservableObject {
             totalExercises: sheet.exercises.count
         )
         currentExerciseIndex = 0
+        exerciseRecords = sheet.exercises.map {
+            ExerciseSessionRecord(exerciseId: $0.id, exerciseName: $0.name)
+        }
+        isExerciseTimerPaused = false
+        startExerciseTimer()
     }
 
     func completeExercise() {
-        guard var session = activeSession else { return }
-        session.completedExercises += 1
-        activeSession = session
+        markExerciseCompleted()
+    }
 
-        if currentExerciseIndex < (workoutSheets.first { $0.id == session.workoutSheetId }?.exercises.count ?? 0) - 1 {
-            currentExerciseIndex += 1
+    func markExerciseCompleted(at index: Int? = nil) {
+        let idx = index ?? currentExerciseIndex
+        guard idx < exerciseRecords.count, !exerciseRecords[idx].isCompleted else { return }
+
+        exerciseRecords[idx].isCompleted = true
+        syncCompletedExerciseCount()
+
+        if idx == currentExerciseIndex {
+            advanceToNextIncomplete()
         }
+    }
+
+    func setExerciseTimerPaused(_ paused: Bool) {
+        isExerciseTimerPaused = paused
+    }
+
+    func applyRestSeconds(from timerService: RestTimerService) {
+        for (exerciseId, seconds) in timerService.restByExerciseId {
+            guard let idx = exerciseRecords.firstIndex(where: { $0.exerciseId == exerciseId }) else { continue }
+            exerciseRecords[idx].restSeconds = seconds
+        }
+    }
+
+    var allExercisesCompleted: Bool {
+        !exerciseRecords.isEmpty && exerciseRecords.allSatisfy(\.isCompleted)
+    }
+
+    private func startExerciseTimer() {
+        exerciseTimer?.invalidate()
+        exerciseTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.tickCurrentExercise()
+            }
+        }
+    }
+
+    private func tickCurrentExercise() {
+        guard !isExerciseTimerPaused,
+              currentExerciseIndex < exerciseRecords.count,
+              !exerciseRecords[currentExerciseIndex].isCompleted else { return }
+        exerciseRecords[currentExerciseIndex].elapsedSeconds += 1
+    }
+
+    private func advanceToNextIncomplete() {
+        if let next = exerciseRecords.indices.first(where: { !exerciseRecords[$0].isCompleted }) {
+            currentExerciseIndex = next
+        }
+    }
+
+    private func syncCompletedExerciseCount() {
+        guard var session = activeSession else { return }
+        session.completedExercises = exerciseRecords.filter(\.isCompleted).count
+        activeSession = session
+    }
+
+    private func stopExerciseTimer() {
+        exerciseTimer?.invalidate()
+        exerciseTimer = nil
     }
 
     func addHeartRateSample(_ bpm: Double) {
@@ -71,10 +134,15 @@ final class WorkoutStore: ObservableObject {
 
     func endSession() {
         guard var session = activeSession else { return }
+        stopExerciseTimer()
         session.endedAt = .now
+        session.exerciseRecords = exerciseRecords
+        session.completedExercises = exerciseRecords.filter(\.isCompleted).count
         sessionHistory.insert(session, at: 0)
         activeSession = nil
         currentExerciseIndex = 0
+        exerciseRecords = []
+        isExerciseTimerPaused = false
         saveHistory()
     }
 

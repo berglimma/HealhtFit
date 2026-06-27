@@ -1,3 +1,4 @@
+import SwiftUI
 import Foundation
 
 enum Biotype: String, CaseIterable, Codable, Identifiable {
@@ -22,6 +23,16 @@ enum Biotype: String, CaseIterable, Codable, Identifiable {
         case .endomorph: return "figure.arms.open"
         }
     }
+    var color: Color {
+        switch self {
+        case .ectomorph:
+            return .blue
+        case .mesomorph:
+            return .green
+        case .endomorph:
+            return .orange
+        }
+    }
 }
 
 enum FitnessGoal: String, CaseIterable, Codable, Identifiable {
@@ -40,6 +51,22 @@ enum FitnessGoal: String, CaseIterable, Codable, Identifiable {
         case .endurance: return "heart.fill"
         }
     }
+    
+    var color: Color {
+        switch self {
+        case .muscleGain:
+            return .green
+
+        case .fatLoss:
+            return .red
+
+        case .maintenance:
+            return .blue
+
+        case .endurance:
+            return .orange
+        }
+    }
 }
 
 enum Gender: String, CaseIterable, Codable, Identifiable {
@@ -53,35 +80,44 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var id: UUID
     var name: String
     var email: String
+    var personalTrainerName: String
+    var personalTrainerEmail: String
     var biotype: Biotype
     var goal: FitnessGoal
     var gender: Gender
     var weight: Double
     var height: Double
     var age: Int
+    var caloricDeficit: Int
     var createdAt: Date
 
     init(
         id: UUID = UUID(),
         name: String,
         email: String,
+        personalTrainerName: String = "",
+        personalTrainerEmail: String = "",
         biotype: Biotype = .mesomorph,
         goal: FitnessGoal = .muscleGain,
         gender: Gender = .male,
         weight: Double = 75,
         height: Double = 175,
         age: Int = 28,
+        caloricDeficit: Int = 400,
         createdAt: Date = .now
     ) {
         self.id = id
         self.name = name
         self.email = email
+        self.personalTrainerName = personalTrainerName
+        self.personalTrainerEmail = personalTrainerEmail
         self.biotype = biotype
         self.goal = goal
         self.gender = gender
         self.weight = weight
         self.height = height
         self.age = age
+        self.caloricDeficit = caloricDeficit
         self.createdAt = createdAt
     }
 
@@ -90,17 +126,25 @@ struct UserProfile: Codable, Identifiable, Equatable {
         id = try container.decode(UUID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         email = try container.decode(String.self, forKey: .email)
+        personalTrainerName = try container.decodeIfPresent(String.self, forKey: .personalTrainerName) ?? ""
+        personalTrainerEmail = try container.decodeIfPresent(String.self, forKey: .personalTrainerEmail) ?? ""
         biotype = try container.decode(Biotype.self, forKey: .biotype)
         goal = try container.decode(FitnessGoal.self, forKey: .goal)
         gender = try container.decodeIfPresent(Gender.self, forKey: .gender) ?? .male
         weight = try container.decode(Double.self, forKey: .weight)
         height = try container.decode(Double.self, forKey: .height)
         age = try container.decode(Int.self, forKey: .age)
+        caloricDeficit = try container.decodeIfPresent(Int.self, forKey: .caloricDeficit) ?? 400
         createdAt = try container.decode(Date.self, forKey: .createdAt)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, email, biotype, goal, gender, weight, height, age, createdAt
+        case id, name, email, personalTrainerName, personalTrainerEmail
+        case biotype, goal, gender, weight, height, age, caloricDeficit, createdAt
+    }
+
+    var hasPersonalTrainer: Bool {
+        !personalTrainerEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// Taxa Metabólica Basal (Mifflin-St Jeor)
@@ -110,8 +154,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
         return max(Int(bmr.rounded()), 1000)
     }
 
-    /// Gasto calórico diário estimado com atividade moderada e ajuste por biotipo/objetivo
-    var dailyCalorieTarget: Int {
+    /// Gasto calórico diário estimado (TDEE) sem ajuste de objetivo
+    var estimatedTDEE: Int {
         var tdee = Double(basalMetabolicRate) * 1.55
 
         switch biotype {
@@ -120,14 +164,32 @@ struct UserProfile: Codable, Identifiable, Equatable {
         case .mesomorph: break
         }
 
-        switch goal {
-        case .muscleGain: tdee += 400
-        case .fatLoss: tdee -= 400
-        case .endurance: tdee += 200
-        case .maintenance: break
-        }
-
         return max(Int(tdee.rounded()), 1200)
+    }
+
+    /// Meta calórica diária considerando objetivo e déficit configurado
+    var dailyCalorieTarget: Int {
+        switch goal {
+        case .fatLoss:
+            return max(estimatedTDEE - caloricDeficit, 1200)
+        case .muscleGain:
+            return estimatedTDEE + 400
+        case .endurance:
+            return estimatedTDEE + 200
+        case .maintenance:
+            return max(estimatedTDEE - caloricDeficit, 1200)
+        }
+    }
+
+    /// Déficit efetivo aplicado sobre o TDEE
+    var effectiveCaloricDeficit: Int {
+        max(estimatedTDEE - dailyCalorieTarget, 0)
+    }
+
+    /// Estimativa de perda de peso semanal (1 kg ≈ 7.700 kcal)
+    var estimatedWeeklyWeightLoss: Double {
+        guard effectiveCaloricDeficit > 0 else { return 0 }
+        return (Double(effectiveCaloricDeficit) * 7.0) / 7_700.0
     }
 
     var bmi: Double {

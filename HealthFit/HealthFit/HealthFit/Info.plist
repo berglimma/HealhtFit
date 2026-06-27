@@ -2,14 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSCameraUsageDescription</key>
-	<string>HealthFit usa a câmera para reconhecer repetições e analisar sua postura durante os exercícios.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>HealthFit precisa acessar suas fotos para definir a imagem do perfil.</string>
-	<key>NSHealthShareUsageDescription</key>
-	<string>HealthFit precisa acessar seus dados de saúde para exibir métricas de desempenho e sincronizar treinos.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>HealthFit salva seus treinos e calorias queimadas no app Saúde.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
@@ -21,11 +13,5 @@
 		<key>UIImageName</key>
 		<string>AppIcon</string>
 	</dict>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-	</array>
-	<key>CFBundleDisplayName</key>
-	<string>HealthFit</string>
 </dict>
 </plist>

@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 enum AppTheme {
     static let accent = Color("AccentGreen")
@@ -9,7 +10,7 @@ enum AppTheme {
     static let textSecondary = Color.white.opacity(0.65)
 
     static let gradientPrimary = LinearGradient(
-        colors: [Color("AccentGreen"), Color("AccentGreen").opacity(0.7)],
+        colors: [Color("AccentGreen"), Color("AccentOrange")],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
@@ -60,7 +61,16 @@ struct PrimaryButtonStyle: ButtonStyle {
                     : AnyShapeStyle(Color.gray.opacity(0.4))
             )
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(.white.opacity(0.15), lineWidth: 1)
+            )
+            .shadow(
+                color: isEnabled ? AppTheme.accent.opacity(0.45) : .clear,
+                radius: 12, x: 0, y: 6
+            )
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(isEnabled ? 1 : 0.6)
             .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
     }
 }

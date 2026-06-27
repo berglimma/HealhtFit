@@ -12,6 +12,7 @@ struct MealPlanView: View {
     @State private var selectedGender: Gender = .male
     @State private var selectedGoal: FitnessGoal = .muscleGain
     @State private var selectedBiotype: Biotype = .mesomorph
+    @State private var caloricDeficit = 400
 
     private var previewProfile: UserProfile? {
         guard var user = authService.currentUser else { return nil }
@@ -27,6 +28,7 @@ struct MealPlanView: View {
         user.gender = selectedGender
         user.goal = selectedGoal
         user.biotype = selectedBiotype
+        user.caloricDeficit = caloricDeficit
         return user
     }
 
@@ -77,6 +79,11 @@ struct MealPlanView: View {
             }
             .onChange(of: authService.currentUser) { _, _ in
                 syncFromProfile()
+            }
+            .onChange(of: caloricDeficit) { _, newValue in
+                guard var user = authService.currentUser, user.caloricDeficit != newValue else { return }
+                user.caloricDeficit = newValue
+                authService.updateProfile(user)
             }
         }
     }
@@ -151,6 +158,8 @@ struct MealPlanView: View {
             }
 
             if let profile = previewProfile {
+                caloricDeficitSection(profile: profile)
+
                 HStack(spacing: 12) {
                     MetabolicCard(
                         title: "Metabolismo Basal",
@@ -162,7 +171,7 @@ struct MealPlanView: View {
                     )
                     MetabolicCard(
                         title: "Meta Diária",
-                        subtitle: "Com treino",
+                        subtitle: deficitSubtitle(for: profile),
                         value: "\(profile.dailyCalorieTarget)",
                         unit: "kcal/dia",
                         icon: "flame.fill",
@@ -175,6 +184,9 @@ struct MealPlanView: View {
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                     Spacer()
+                    Label("TDEE: \(profile.estimatedTDEE) kcal", systemImage: "bolt.fill")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
 
@@ -205,11 +217,78 @@ struct MealPlanView: View {
         heightText = String(format: "%.0f", user.height)
         ageText = "\(user.age)"
         selectedGender = user.gender
+        caloricDeficit = user.caloricDeficit
 
         if mealPlanService.basalMetabolicRate == 0 {
             mealPlanService.basalMetabolicRate = user.basalMetabolicRate
+            mealPlanService.estimatedTDEE = user.estimatedTDEE
+            mealPlanService.caloricDeficit = user.caloricDeficit
             mealPlanService.dailyCalorieTarget = user.dailyCalorieTarget
         }
+    }
+
+    private func caloricDeficitSection(profile: UserProfile) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Déficit Calórico")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            Text("Gasto diário estimado (TDEE): \(profile.estimatedTDEE) kcal")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            Stepper(value: $caloricDeficit, in: 0...1000, step: 50) {
+                HStack {
+                    Text("Déficit diário")
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Spacer()
+                    Text("-\(caloricDeficit) kcal")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
+            }
+            .disabled(selectedGoal == .muscleGain || selectedGoal == .endurance)
+
+            if selectedGoal == .muscleGain || selectedGoal == .endurance {
+                Text("Déficit desativado para objetivos de ganho de massa ou resistência.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Meta calórica final")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Spacer()
+                    Text("\(profile.dailyCalorieTarget) kcal/dia")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(AppTheme.accent)
+                }
+
+                if profile.effectiveCaloricDeficit > 0 {
+                    HStack {
+                        Text("Perda estimada")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                        Spacer()
+                        Text(String(format: "~%.2f kg/semana", profile.estimatedWeeklyWeightLoss))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
+                }
+            }
+            .padding()
+            .background(AppTheme.background)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    private func deficitSubtitle(for profile: UserProfile) -> String {
+        if profile.effectiveCaloricDeficit > 0 {
+            return "TDEE − \(profile.effectiveCaloricDeficit) kcal"
+        }
+        return "Com treino"
     }
 
     private func updateBiotype(_ biotype: Biotype) {
@@ -223,6 +302,10 @@ struct MealPlanView: View {
     private func updateGoal(_ goal: FitnessGoal) {
         guard var user = authService.currentUser, user.goal != goal else { return }
         user.goal = goal
+        if goal == .fatLoss && user.caloricDeficit == 0 {
+            user.caloricDeficit = 400
+            caloricDeficit = 400
+        }
         authService.updateProfile(user)
         selectedGoal = goal
         mealPlanService.regeneratePlanIfNeeded(for: user)
@@ -240,6 +323,7 @@ struct MealPlanView: View {
         user.gender = selectedGender
         user.goal = selectedGoal
         user.biotype = selectedBiotype
+        user.caloricDeficit = caloricDeficit
         authService.updateProfile(user)
         mealPlanService.generatePlan(for: user)
     }
@@ -274,7 +358,18 @@ struct MealPlanView: View {
                         .font(.caption.weight(.medium))
                         .foregroundStyle(AppTheme.textSecondary)
                     Spacer()
+                    if mealPlanService.caloricDeficit > 0 {
+                        Text("Déficit: −\(mealPlanService.caloricDeficit) kcal")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
+                }
+                HStack {
                     Text("TMB: \(mealPlanService.basalMetabolicRate) kcal")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Spacer()
+                    Text("TDEE: \(mealPlanService.estimatedTDEE) kcal")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(AppTheme.textSecondary)
                 }
@@ -282,6 +377,19 @@ struct MealPlanView: View {
             HStack(spacing: 16) {
                 MacroPill(label: "Calorias", value: "\(plan.totalCalories)", unit: "kcal", color: AppTheme.accentSecondary)
                 MacroPill(label: "Proteína", value: "\(plan.totalProtein)", unit: "g", color: AppTheme.accent)
+            }
+
+            if mealPlanService.dailyCalorieTarget > 0 {
+                let difference = plan.totalCalories - mealPlanService.dailyCalorieTarget
+                HStack {
+                    Text("vs meta diária")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Spacer()
+                    Text(difference == 0 ? "Na meta" : "\(difference > 0 ? "+" : "")\(difference) kcal")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(difference <= 0 ? AppTheme.accent : AppTheme.accentSecondary)
+                }
             }
         }
     }

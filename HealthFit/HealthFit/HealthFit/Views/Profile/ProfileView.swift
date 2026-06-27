@@ -8,6 +8,8 @@ struct ProfileView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @State private var showLogoutAlert = false
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var trainerName = ""
+    @State private var trainerEmail = ""
 
     var body: some View {
         NavigationStack {
@@ -76,6 +78,33 @@ struct ProfileView: View {
                         .padding(.vertical, 4)
                     }
                     .listRowBackground(AppTheme.cardBackground)
+
+                    Section("Personal Trainer") {
+                        TextField("Nome do Personal", text: $trainerName)
+                            .textContentType(.name)
+                            .onChange(of: trainerName) { _, _ in
+                                savePersonalTrainer()
+                            }
+
+                        TextField("E-mail do Personal", text: $trainerEmail)
+                            .textContentType(.emailAddress)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .onChange(of: trainerEmail) { _, _ in
+                                savePersonalTrainer()
+                            }
+
+                        if authService.currentUser?.hasPersonalTrainer == true {
+                            Label("Relatórios de treino poderão ser enviados por e-mail", systemImage: "envelope.fill")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.accent)
+                        } else {
+                            Text("Cadastre o e-mail para enviar relatórios após cada treino.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
 
                     Section("Perfil Físico") {
                         LabeledContent("Peso", value: String(format: "%.1f kg", user.weight))
@@ -156,6 +185,12 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle("Perfil")
+            .onAppear {
+                syncTrainerFields()
+            }
+            .onChange(of: authService.currentUser) { _, _ in
+                syncTrainerFields()
+            }
             .onChange(of: selectedPhotoItem) { _, item in
                 guard let item else { return }
                 Task {
@@ -171,6 +206,21 @@ struct ProfileView: View {
                 }
             }
         }
+    }
+
+    private func syncTrainerFields() {
+        trainerName = authService.currentUser?.personalTrainerName ?? ""
+        trainerEmail = authService.currentUser?.personalTrainerEmail ?? ""
+    }
+
+    private func savePersonalTrainer() {
+        guard var user = authService.currentUser else { return }
+        let name = trainerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let email = trainerEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard user.personalTrainerName != name || user.personalTrainerEmail != email else { return }
+        user.personalTrainerName = name
+        user.personalTrainerEmail = email
+        authService.updateProfile(user)
     }
 
     private func updateGoal(_ goal: FitnessGoal) {

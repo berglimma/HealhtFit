@@ -88,6 +88,30 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
     }
 }
 
+struct ExerciseSessionRecord: Identifiable, Codable, Hashable {
+    var exerciseId: UUID
+    var exerciseName: String
+    var elapsedSeconds: Int
+    var restSeconds: Int
+    var isCompleted: Bool
+
+    var id: UUID { exerciseId }
+
+    init(
+        exerciseId: UUID,
+        exerciseName: String,
+        elapsedSeconds: Int = 0,
+        restSeconds: Int = 0,
+        isCompleted: Bool = false
+    ) {
+        self.exerciseId = exerciseId
+        self.exerciseName = exerciseName
+        self.elapsedSeconds = elapsedSeconds
+        self.restSeconds = restSeconds
+        self.isCompleted = isCompleted
+    }
+}
+
 struct WorkoutSession: Identifiable, Codable {
     var id: UUID
     var workoutSheetId: UUID
@@ -98,6 +122,7 @@ struct WorkoutSession: Identifiable, Codable {
     var caloriesBurned: Double
     var completedExercises: Int
     var totalExercises: Int
+    var exerciseRecords: [ExerciseSessionRecord]
 
     init(
         id: UUID = UUID(),
@@ -108,7 +133,8 @@ struct WorkoutSession: Identifiable, Codable {
         heartRateSamples: [HeartRateSample] = [],
         caloriesBurned: Double = 0,
         completedExercises: Int = 0,
-        totalExercises: Int = 0
+        totalExercises: Int = 0,
+        exerciseRecords: [ExerciseSessionRecord] = []
     ) {
         self.id = id
         self.workoutSheetId = workoutSheetId
@@ -119,6 +145,7 @@ struct WorkoutSession: Identifiable, Codable {
         self.caloriesBurned = caloriesBurned
         self.completedExercises = completedExercises
         self.totalExercises = totalExercises
+        self.exerciseRecords = exerciseRecords
     }
 
     var duration: TimeInterval {
@@ -128,6 +155,22 @@ struct WorkoutSession: Identifiable, Codable {
     var averageHeartRate: Double {
         guard !heartRateSamples.isEmpty else { return 0 }
         return heartRateSamples.map(\.bpm).reduce(0, +) / Double(heartRateSamples.count)
+    }
+
+    var totalRestSeconds: Int {
+        exerciseRecords.reduce(0) { $0 + $1.restSeconds }
+    }
+
+    var totalExerciseSeconds: Int {
+        exerciseRecords.reduce(0) { $0 + $1.elapsedSeconds }
+    }
+}
+
+enum DurationFormatting {
+    static func format(seconds: Int) -> String {
+        let minutes = seconds / 60
+        let secs = seconds % 60
+        return String(format: "%02d:%02d", minutes, secs)
     }
 }
 

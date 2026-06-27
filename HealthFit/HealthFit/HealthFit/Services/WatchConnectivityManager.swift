@@ -47,9 +47,36 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         isWorkoutActiveOnWatch = false
     }
 
+    func sendRestTimerStart(seconds: Int, exerciseName: String) {
+        sendToWatch([
+            "action": "restTimerStart",
+            "seconds": seconds,
+            "exerciseName": exerciseName
+        ])
+    }
+
+    func sendRestTimerStop() {
+        sendToWatch(["action": "restTimerStop"])
+    }
+
+    func sendRestOvertimeAlert(exerciseName: String) {
+        sendToWatch([
+            "action": "restOvertime",
+            "exerciseName": exerciseName
+        ])
+    }
+
     func sendRestTimer(seconds: Int) {
-        guard let session, session.isReachable else { return }
-        session.sendMessage(["action": "restTimer", "seconds": seconds], replyHandler: nil)
+        sendRestTimerStart(seconds: seconds, exerciseName: "")
+    }
+
+    private func sendToWatch(_ message: [String: Any]) {
+        guard let session else { return }
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil)
+        } else {
+            session.transferUserInfo(message)
+        }
     }
 
     private func simulateWatchData() {
@@ -76,14 +103,24 @@ extension WatchConnectivityManager: WCSessionDelegate {
         session.activate()
     }
 
+    nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
+        Task { @MainActor in
+            handleWatchMessage(userInfo)
+        }
+    }
+
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
         Task { @MainActor in
-            if let heartRate = message["heartRate"] as? Double {
-                watchHeartRate = heartRate
-            }
-            if let calories = message["calories"] as? Double {
-                watchCalories = calories
-            }
+            handleWatchMessage(message)
+        }
+    }
+
+    private func handleWatchMessage(_ message: [String: Any]) {
+        if let heartRate = message["heartRate"] as? Double {
+            watchHeartRate = heartRate
+        }
+        if let calories = message["calories"] as? Double {
+            watchCalories = calories
         }
     }
 }

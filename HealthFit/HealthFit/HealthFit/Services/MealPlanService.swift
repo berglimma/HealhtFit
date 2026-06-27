@@ -7,12 +7,16 @@ final class MealPlanService: ObservableObject {
     @Published var shoppingList: [ShoppingItem] = []
     @Published var basalMetabolicRate: Int = 0
     @Published var dailyCalorieTarget: Int = 0
+    @Published var estimatedTDEE: Int = 0
+    @Published var caloricDeficit: Int = 0
 
     private let planKey = "healthfit_meal_plan"
     private let shoppingKey = "healthfit_shopping_list"
 
     func generatePlan(for profile: UserProfile) {
         basalMetabolicRate = profile.basalMetabolicRate
+        estimatedTDEE = profile.estimatedTDEE
+        caloricDeficit = profile.caloricDeficit
         dailyCalorieTarget = profile.dailyCalorieTarget
         weeklyPlan = Self.buildWeeklyPlan(
             calorieBase: profile.dailyCalorieTarget,

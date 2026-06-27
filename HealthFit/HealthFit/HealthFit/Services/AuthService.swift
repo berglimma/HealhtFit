@@ -35,6 +35,7 @@ final class AuthService: ObservableObject {
         isAuthenticated = true
         saveUser(user)
         loadProfileImage()
+        NotificationService.shared.scheduleDailyMotivationNotifications()
         isLoading = false
     }
 
@@ -55,6 +56,7 @@ final class AuthService: ObservableObject {
         isAuthenticated = true
         saveUser(user)
         loadProfileImage()
+        NotificationService.shared.scheduleDailyMotivationNotifications()
         isLoading = false
     }
 
@@ -62,12 +64,14 @@ final class AuthService: ObservableObject {
         currentUser = nil
         profileImage = nil
         isAuthenticated = false
+        NotificationService.shared.cancelDailyMotivationNotifications()
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
     }
 
     func updateProfile(_ profile: UserProfile) {
         currentUser = profile
         saveUser(profile)
+        NotificationService.shared.scheduleDailyMotivationNotifications()
     }
 
     func updateProfileImage(_ image: UIImage?) {
@@ -102,6 +106,7 @@ final class AuthService: ObservableObject {
         currentUser = user
         isAuthenticated = true
         loadProfileImage()
+        NotificationService.shared.scheduleDailyMotivationNotifications()
     }
 
     private static func profileImageURL(for email: String) -> URL {
