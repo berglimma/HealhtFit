@@ -3,6 +3,7 @@ import SwiftUI
 struct RegisterView: View {
     
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject var authService: AuthService
     
     @State private var name = ""
@@ -74,7 +75,7 @@ struct RegisterView: View {
                             .font(.headline)
                             .foregroundStyle(AppTheme.textPrimary)
                         
-                        HStack(spacing: 10) {
+                        AdaptiveBiotypeRow {
                             ForEach(Biotype.allCases) { biotype in
                                 BiotypeCard(
                                     biotype: biotype,
@@ -82,16 +83,17 @@ struct RegisterView: View {
                                 ) {
                                     selectedBiotype = biotype
                                 }
+                                .frame(minWidth: DeviceLayout.isPad ? 128 : 100)
                             }
                         }
                     }
-                    
+
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Objetivo")
                             .font(.headline)
                             .foregroundStyle(AppTheme.textPrimary)
-                        
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+
+                        AdaptiveGoalGrid {
                             ForEach(FitnessGoal.allCases) { goal in
                                 GoalCard(goal: goal, isSelected: selectedGoal == goal) {
                                     selectedGoal = goal
@@ -148,7 +150,9 @@ struct RegisterView: View {
                         ProgressView().tint(AppTheme.accent).scaleEffect(1.5)
                     }
                 }
-                .navigationBarTitleDisplayMode(.inline)
+                .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                .padding(.bottom, 32)
+                .adaptiveContentWidth(DeviceLayout.formMaxWidth(for: horizontalSizeClass))
             }
         }
     }

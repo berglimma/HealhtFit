@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject var authService: AuthService
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var email = ""
     @State private var password = ""
     @State private var showRegister = false
@@ -13,23 +14,23 @@ struct LoginView: View {
                 
                 VStack(spacing: 0) {
                     Spacer()
-                    
+
                     VStack(spacing: 12) {
                         Image(systemName: "heart.circle.fill")
-                            .font(.system(size: 72))
+                            .font(.system(size: DeviceLayout.isPad ? 88 : 72))
                             .foregroundStyle(AppTheme.gradientPrimary)
                             .symbolEffect(.pulse)
-                        
+
                         Text("HealthFit")
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .font(.system(size: DeviceLayout.isPad ? 42 : 36, weight: .bold, design: .rounded))
                             .foregroundStyle(AppTheme.textPrimary)
-                        
+
                         Text("Seu personal trainer inteligente")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.textSecondary)
                     }
                     .padding(.bottom, 48)
-                    
+
                     VStack(spacing: 16) {
                         TextField("E-mail", text: $email)
                             .textFieldStyle(HealthFitTextFieldStyle())
@@ -60,8 +61,10 @@ struct LoginView: View {
                         .disabled(email.isEmpty || password.count < 6 || authService.isLoading)
                         .padding(.top, 8)
                     }
-                    .padding(.horizontal, AppTheme.padding)
-                    
+                    .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                    .frame(maxWidth: DeviceLayout.formMaxWidth(for: horizontalSizeClass))
+                    .frame(maxWidth: .infinity)
+
                     Spacer()
                     
                     DeveloperCreditView()

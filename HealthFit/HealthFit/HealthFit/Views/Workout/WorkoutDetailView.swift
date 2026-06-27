@@ -4,6 +4,7 @@ struct WorkoutDetailView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var authService: AuthService
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State var sheet: WorkoutSheet
     @State private var showActiveWorkout = false
     @State private var showVision = false
@@ -15,7 +16,8 @@ struct WorkoutDetailView: View {
                 exercisesSection
                 actionButtons
             }
-            .padding(AppTheme.padding)
+            .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+            .adaptiveContentWidth()
         }
         .background(AppTheme.background)
         .navigationTitle(sheet.title)

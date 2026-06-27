@@ -30,5 +30,6 @@ struct MainTabView: View {
                 .tag(3)
         }
         .tint(AppTheme.accent)
+        .tabViewStyle(.automatic)
     }
 }

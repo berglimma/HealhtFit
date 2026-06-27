@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WorkoutSummaryView: View {
     @EnvironmentObject var authService: AuthService
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     let session: WorkoutSession
     let onFinish: () -> Void
@@ -19,7 +20,8 @@ struct WorkoutSummaryView: View {
                     totalsSection
                     emailSection
                 }
-                .padding(AppTheme.padding)
+                .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                .adaptiveContentWidth()
             }
             .background(AppTheme.background)
             .navigationTitle("Treino Concluído")

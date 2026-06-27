@@ -56,6 +56,23 @@ final class WorkoutStore: ObservableObject {
         startExerciseTimer()
     }
 
+    func startCardioSession(config: CardioWorkoutConfig) {
+        stopExerciseTimer()
+        activeSession = WorkoutSession(
+            workoutSheetId: config.exercise.id,
+            workoutTitle: config.title,
+            totalExercises: 1
+        )
+        currentExerciseIndex = 0
+        exerciseRecords = [
+            ExerciseSessionRecord(
+                exerciseId: config.exercise.id,
+                exerciseName: "\(config.exercise.name) (\(config.intensity.rawValue))"
+            )
+        ]
+        isExerciseTimerPaused = false
+    }
+
     func completeExercise() {
         markExerciseCompleted()
     }

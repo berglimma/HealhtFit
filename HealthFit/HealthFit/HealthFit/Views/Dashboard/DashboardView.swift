@@ -6,6 +6,7 @@ struct DashboardView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         NavigationStack {
@@ -17,7 +18,8 @@ struct DashboardView: View {
                     watchSection
                     recentWorkoutsSection
                 }
-                .padding(AppTheme.padding)
+                .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                .adaptiveContentWidth()
             }
             .background(AppTheme.background)
             .navigationTitle("Dashboard")

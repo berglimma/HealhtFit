@@ -6,6 +6,7 @@ struct ProfileView: View {
     @EnvironmentObject var mealPlanService: MealPlanService
     @EnvironmentObject var timerService: RestTimerService
     @EnvironmentObject var healthKitManager: HealthKitManager
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showLogoutAlert = false
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var trainerName = ""
@@ -53,7 +54,7 @@ struct ProfileView: View {
                     }
 
                     Section("Biotipo") {
-                        HStack(spacing: 10) {
+                        AdaptiveBiotypeRow {
                             ForEach(Biotype.allCases) { biotype in
                                 BiotypeCard(
                                     biotype: biotype,
@@ -61,6 +62,7 @@ struct ProfileView: View {
                                 ) {
                                     updateBiotype(biotype)
                                 }
+                                .frame(minWidth: DeviceLayout.isPad ? 128 : 100)
                             }
                         }
                         .padding(.vertical, 4)
@@ -68,7 +70,7 @@ struct ProfileView: View {
                     .listRowBackground(AppTheme.cardBackground)
 
                     Section("Objetivo") {
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        AdaptiveGoalGrid {
                             ForEach(FitnessGoal.allCases) { goal in
                                 GoalCard(goal: goal, isSelected: user.goal == goal) {
                                     updateGoal(goal)
@@ -184,6 +186,7 @@ struct ProfileView: View {
                     }
                 }
             }
+            .adaptiveContentWidth()
             .navigationTitle("Perfil")
             .onAppear {
                 syncTrainerFields()

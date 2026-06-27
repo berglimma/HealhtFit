@@ -1,45 +1,97 @@
 import SwiftUI
 
+private enum WorkoutSection: String, CaseIterable, Identifiable {
+    case strength = "Musculação"
+    case cardio = "Cardio"
+
+    var id: String { rawValue }
+}
+
 struct WorkoutListView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showCreateWorkout = false
+    @State private var selectedSection: WorkoutSection = .strength
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                if let session = workoutStore.activeSession {
-                    ActiveWorkoutBanner(session: session)
-                        .padding(.horizontal, AppTheme.padding)
-                        .padding(.top, 8)
-                }
+                VStack(spacing: 16) {
+                    sectionPicker
 
-                LazyVStack(spacing: 12) {
-                    ForEach(workoutStore.workoutSheets) { sheet in
-                        NavigationLink(value: sheet) {
-                            WorkoutSheetCard(sheet: sheet)
-                        }
-                        .buttonStyle(.plain)
+                    if let session = workoutStore.activeSession {
+                        ActiveWorkoutBanner(session: session)
+                    }
+
+                    switch selectedSection {
+                    case .strength:
+                        strengthSection
+                    case .cardio:
+                        cardioSection
                     }
                 }
-                .padding(AppTheme.padding)
+                .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                .adaptiveContentWidth()
             }
             .background(AppTheme.background)
-            .navigationTitle("Fichas de Treino")
+            .navigationTitle("Treinos")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showCreateWorkout = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(AppTheme.accent)
+                    if selectedSection == .strength {
+                        Button {
+                            showCreateWorkout = true
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundStyle(AppTheme.accent)
+                        }
                     }
                 }
             }
             .navigationDestination(for: WorkoutSheet.self) { sheet in
                 WorkoutDetailView(sheet: sheet)
             }
+            .navigationDestination(for: CardioExercise.self) { exercise in
+                CardioSetupView(exercise: exercise)
+            }
             .sheet(isPresented: $showCreateWorkout) {
                 CreateWorkoutView()
+            }
+        }
+    }
+
+    private var sectionPicker: some View {
+        Picker("Seção", selection: $selectedSection) {
+            ForEach(WorkoutSection.allCases) { section in
+                Text(section.rawValue).tag(section)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    private var strengthSection: some View {
+        LazyVStack(spacing: 12) {
+            ForEach(workoutStore.workoutSheets) { sheet in
+                NavigationLink(value: sheet) {
+                    WorkoutSheetCard(sheet: sheet)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var cardioSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Escolha um exercício e defina a intensidade")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            LazyVStack(spacing: 12) {
+                ForEach(CardioExercise.catalog) { exercise in
+                    NavigationLink(value: exercise) {
+                        CardioExerciseCard(exercise: exercise)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
     }

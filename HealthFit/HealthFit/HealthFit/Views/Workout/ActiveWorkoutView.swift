@@ -7,6 +7,7 @@ struct ActiveWorkoutView: View {
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var authService: AuthService
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     let sheet: WorkoutSheet
     @State private var completedSets: [UUID: Int] = [:]
@@ -21,11 +22,28 @@ struct ActiveWorkoutView: View {
             ZStack {
                 AppTheme.background.ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    progressHeader
-                    currentExerciseCard
-                    exerciseList
-                    bottomBar
+                Group {
+                    if DeviceLayout.isPad && horizontalSizeClass == .regular {
+                        HStack(alignment: .top, spacing: 0) {
+                            VStack(spacing: 0) {
+                                progressHeader
+                                currentExerciseCard
+                                bottomBar
+                            }
+                            .frame(maxWidth: 420)
+
+                            exerciseList
+                                .frame(maxWidth: .infinity)
+                        }
+                        .adaptiveContentWidth(960)
+                    } else {
+                        VStack(spacing: 0) {
+                            progressHeader
+                            currentExerciseCard
+                            exerciseList
+                            bottomBar
+                        }
+                    }
                 }
 
                 if timerService.isRunning {

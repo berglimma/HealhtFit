@@ -4,6 +4,7 @@ import UIKit
 struct MealPlanView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var mealPlanService: MealPlanService
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selectedDay = 0
     @State private var showShoppingList = false
     @State private var weightText = ""
@@ -49,8 +50,9 @@ struct MealPlanView: View {
                                     MealCard(meal: meal)
                                 }
                             }
-                            .padding(AppTheme.padding)
+                            .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                             .padding(.bottom, 24)
+                            .adaptiveContentWidth()
                         }
                     } else {
                         emptyState
@@ -106,7 +108,7 @@ struct MealPlanView: View {
                 Text("Biotipo")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
-                HStack(spacing: 8) {
+                AdaptiveBiotypeRow {
                     ForEach(Biotype.allCases) { biotype in
                         BiotypeCard(
                             biotype: biotype,
@@ -114,6 +116,7 @@ struct MealPlanView: View {
                         ) {
                             updateBiotype(biotype)
                         }
+                        .frame(minWidth: DeviceLayout.isPad ? 128 : 100)
                     }
                 }
             }
@@ -122,7 +125,7 @@ struct MealPlanView: View {
                 Text("Objetivo")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                AdaptiveGoalGrid {
                     ForEach(FitnessGoal.allCases) { goal in
                         GoalCard(goal: goal, isSelected: selectedGoal == goal) {
                             updateGoal(goal)
@@ -198,7 +201,8 @@ struct MealPlanView: View {
             .buttonStyle(PrimaryButtonStyle(isEnabled: isMetricsValid))
             .disabled(!isMetricsValid)
         }
-        .padding()
+        .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+        .adaptiveContentWidth()
         .background(AppTheme.cardBackground)
     }
 
