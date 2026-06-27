@@ -1,6 +1,6 @@
 import Foundation
 
-struct Meal: Identifiable, Codable {
+struct Meal: Identifiable, Codable, Hashable {
     var id: UUID
     var name: String
     var mealType: MealType
@@ -34,7 +34,7 @@ struct Meal: Identifiable, Codable {
     }
 }
 
-enum MealType: String, CaseIterable, Codable, Identifiable {
+enum MealType: String, CaseIterable, Codable, Identifiable, Hashable {
     case breakfast = "Café da Manhã"
     case lunch = "Almoço"
     case snack = "Lanche"
@@ -52,22 +52,61 @@ enum MealType: String, CaseIterable, Codable, Identifiable {
     }
 }
 
+struct MealPlanOption: Identifiable, Codable, Hashable {
+    var id: UUID
+    var name: String
+    var subtitle: String
+    var meals: [Meal]
+
+    init(id: UUID = UUID(), name: String, subtitle: String = "", meals: [Meal]) {
+        self.id = id
+        self.name = name
+        self.subtitle = subtitle
+        self.meals = meals
+    }
+
+    var totalCalories: Int { meals.reduce(0) { $0 + $1.calories } }
+    var totalProtein: Int { meals.reduce(0) { $0 + $1.protein } }
+}
+
 struct DailyMealPlan: Identifiable, Codable {
     var id: UUID
     var dayOfWeek: String
-    var meals: [Meal]
-    var totalCalories: Int {
-        meals.reduce(0) { $0 + $1.calories }
-    }
-    var totalProtein: Int {
-        meals.reduce(0) { $0 + $1.protein }
-    }
+    var options: [MealPlanOption]
 
-    init(id: UUID = UUID(), dayOfWeek: String, meals: [Meal]) {
+    init(id: UUID = UUID(), dayOfWeek: String, options: [MealPlanOption]) {
         self.id = id
         self.dayOfWeek = dayOfWeek
-        self.meals = meals
+        self.options = options
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        dayOfWeek = try container.decode(String.self, forKey: .dayOfWeek)
+        if let options = try container.decodeIfPresent([MealPlanOption].self, forKey: .options), !options.isEmpty {
+            self.options = options
+        } else if let meals = try container.decodeIfPresent([Meal].self, forKey: .meals) {
+            self.options = [MealPlanOption(name: "Opção 1", subtitle: "Cardápio padrão", meals: meals)]
+        } else {
+            self.options = []
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(dayOfWeek, forKey: .dayOfWeek)
+        try container.encode(options, forKey: .options)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, dayOfWeek, options, meals
+    }
+
+    var meals: [Meal] { options.first?.meals ?? [] }
+    var totalCalories: Int { options.first?.totalCalories ?? 0 }
+    var totalProtein: Int { options.first?.totalProtein ?? 0 }
 }
 
 struct ShoppingItem: Identifiable, Codable {

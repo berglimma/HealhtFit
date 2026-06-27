@@ -35,16 +35,18 @@ final class MealPlanService: ObservableObject {
         var ingredientCounts: [String: (quantity: String, category: ShoppingCategory)] = [:]
 
         for day in weeklyPlan {
-            for meal in day.meals {
-                for ingredient in meal.ingredients {
-                    let parts = ingredient.split(separator: " ", maxSplits: 1)
-                    let name = String(parts.last ?? Substring(ingredient))
-                    let qty = parts.count > 1 ? String(parts[0]) : "1 un"
+            for option in day.options {
+                for meal in option.meals {
+                    for ingredient in meal.ingredients {
+                        let parts = ingredient.split(separator: " ", maxSplits: 1)
+                        let name = String(parts.last ?? Substring(ingredient))
+                        let qty = parts.count > 1 ? String(parts[0]) : "1 un"
 
-                    if let existing = ingredientCounts[name] {
-                        ingredientCounts[name] = (existing.quantity, existing.category)
-                    } else {
-                        ingredientCounts[name] = (qty, categorizeIngredient(name))
+                        if let existing = ingredientCounts[name] {
+                            ingredientCounts[name] = (existing.quantity, existing.category)
+                        } else {
+                            ingredientCounts[name] = (qty, categorizeIngredient(name))
+                        }
                     }
                 }
             }
@@ -105,12 +107,25 @@ final class MealPlanService: ObservableObject {
         return .vegetables
     }
 
+    private static let optionTemplates: [(name: String, subtitle: String)] = [
+        ("Opção 1", "Foco proteico"),
+        ("Opção 2", "Equilibrado"),
+        ("Opção 3", "Prático e leve")
+    ]
+
     private static func buildWeeklyPlan(calorieBase: Int, goal: FitnessGoal) -> [DailyMealPlan] {
         let days = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 
         return days.enumerated().map { index, day in
-            let variation = index % 3
-            return DailyMealPlan(dayOfWeek: day, meals: mealsForDay(variation: variation, calorieBase: calorieBase, goal: goal))
+            let options = optionTemplates.enumerated().map { optionIndex, template in
+                let variation = (index + optionIndex) % 3
+                return MealPlanOption(
+                    name: template.name,
+                    subtitle: template.subtitle,
+                    meals: mealsForDay(variation: variation, calorieBase: calorieBase, goal: goal)
+                )
+            }
+            return DailyMealPlan(dayOfWeek: day, options: options)
         }
     }
 

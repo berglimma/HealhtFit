@@ -16,11 +16,12 @@ struct ProfileView: View {
         NavigationStack {
             List {
                 if let user = authService.currentUser {
+                    let profileImage = authService.profileImage
                     Section {
                         HStack(spacing: 16) {
                             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                                 ProfileAvatarView(
-                                    image: authService.profileImage,
+                                    image: profileImage,
                                     initial: String(user.name.prefix(1).uppercased())
                                 )
                             }
@@ -32,14 +33,14 @@ struct ProfileView: View {
                                 Text(user.email)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                Text(authService.profileImage == nil ? "Toque para adicionar foto" : "Toque para alterar foto")
+                                Text(profileImage == nil ? "Toque para adicionar foto" : "Toque para alterar foto")
                                     .font(.caption2)
                                     .foregroundStyle(AppTheme.accent)
                             }
 
                             Spacer()
 
-                            if authService.profileImage != nil {
+                            if profileImage != nil {
                                 Button {
                                     selectedPhotoItem = nil
                                     authService.updateProfileImage(nil)

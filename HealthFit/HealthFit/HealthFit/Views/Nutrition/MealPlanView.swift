@@ -6,6 +6,7 @@ struct MealPlanView: View {
     @EnvironmentObject var mealPlanService: MealPlanService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selectedDay = 0
+    @State private var selectedOption = 0
     @State private var showShoppingList = false
     @State private var weightText = ""
     @State private var heightText = ""
@@ -44,9 +45,13 @@ struct MealPlanView: View {
 
                         if selectedDay < mealPlanService.weeklyPlan.count {
                             let dayPlan = mealPlanService.weeklyPlan[selectedDay]
+                            let safeOption = min(selectedOption, max(dayPlan.options.count - 1, 0))
+                            let activeOption = dayPlan.options[safeOption]
+
                             VStack(spacing: 16) {
-                                macrosSummary(dayPlan)
-                                ForEach(dayPlan.meals) { meal in
+                                optionPicker(for: dayPlan, selected: safeOption)
+                                macrosSummary(activeOption)
+                                ForEach(activeOption.meals) { meal in
                                     MealCard(meal: meal)
                                 }
                             }
@@ -82,10 +87,8 @@ struct MealPlanView: View {
             .onChange(of: authService.currentUser) { _, _ in
                 syncFromProfile()
             }
-            .onChange(of: caloricDeficit) { _, newValue in
-                guard var user = authService.currentUser, user.caloricDeficit != newValue else { return }
-                user.caloricDeficit = newValue
-                authService.updateProfile(user)
+            .onChange(of: selectedDay) { _, _ in
+                selectedOption = 0
             }
         }
     }
@@ -230,6 +233,10 @@ struct MealPlanView: View {
         }
     }
 
+    private var isDeficitEnabled: Bool {
+        selectedGoal == .fatLoss || selectedGoal == .maintenance
+    }
+
     private func caloricDeficitSection(profile: UserProfile) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Déficit Calórico")
@@ -240,19 +247,39 @@ struct MealPlanView: View {
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
 
-            Stepper(value: $caloricDeficit, in: 0...1000, step: 50) {
-                HStack {
-                    Text("Déficit diário")
-                        .foregroundStyle(AppTheme.textPrimary)
-                    Spacer()
+            HStack {
+                Text("Déficit diário")
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                HStack(spacing: 12) {
+                    Button {
+                        adjustCaloricDeficit(by: -50)
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(isDeficitEnabled && caloricDeficit > 0 ? AppTheme.accent : AppTheme.textSecondary.opacity(0.4))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!isDeficitEnabled || caloricDeficit <= 0)
+
                     Text("-\(caloricDeficit) kcal")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.accentSecondary)
+                        .frame(minWidth: 72)
+
+                    Button {
+                        adjustCaloricDeficit(by: 50)
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(isDeficitEnabled && caloricDeficit < 1000 ? AppTheme.accent : AppTheme.textSecondary.opacity(0.4))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!isDeficitEnabled || caloricDeficit >= 1000)
                 }
             }
-            .disabled(selectedGoal == .muscleGain || selectedGoal == .endurance)
 
-            if selectedGoal == .muscleGain || selectedGoal == .endurance {
+            if !isDeficitEnabled {
                 Text("Déficit desativado para objetivos de ganho de massa ou resistência.")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
@@ -285,6 +312,17 @@ struct MealPlanView: View {
             .background(AppTheme.background)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
+    }
+
+    private func adjustCaloricDeficit(by delta: Int) {
+        let newValue = min(max(caloricDeficit + delta, 0), 1000)
+        guard newValue != caloricDeficit, var user = authService.currentUser else { return }
+        caloricDeficit = newValue
+        user.caloricDeficit = newValue
+        authService.updateProfile(user)
+        mealPlanService.caloricDeficit = newValue
+        mealPlanService.dailyCalorieTarget = user.dailyCalorieTarget
+        mealPlanService.regeneratePlanIfNeeded(for: user)
     }
 
     private func deficitSubtitle(for profile: UserProfile) -> String {
@@ -353,7 +391,40 @@ struct MealPlanView: View {
         }
     }
 
-    private func macrosSummary(_ plan: DailyMealPlan) -> some View {
+    private func optionPicker(for dayPlan: DailyMealPlan, selected: Int) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("\(dayPlan.dayOfWeek) — escolha um cardápio")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+
+            HStack(spacing: 8) {
+                ForEach(Array(dayPlan.options.enumerated()), id: \.element.id) { index, option in
+                    Button {
+                        selectedOption = index
+                    } label: {
+                        VStack(spacing: 4) {
+                            Text(option.name)
+                                .font(.caption.weight(.bold))
+                            Text(option.subtitle)
+                                .font(.caption2)
+                                .lineLimit(1)
+                            Text("\(option.totalCalories) kcal")
+                                .font(.caption2.weight(.medium))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 6)
+                        .foregroundStyle(selected == index ? .white : AppTheme.textPrimary)
+                        .background(selected == index ? AppTheme.accent : AppTheme.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func macrosSummary(_ option: MealPlanOption) -> some View {
         VStack(spacing: 12) {
             if mealPlanService.dailyCalorieTarget > 0 {
                 HStack {
@@ -378,12 +449,12 @@ struct MealPlanView: View {
                 }
             }
             HStack(spacing: 16) {
-                MacroPill(label: "Calorias", value: "\(plan.totalCalories)", unit: "kcal", color: AppTheme.accentSecondary)
-                MacroPill(label: "Proteína", value: "\(plan.totalProtein)", unit: "g", color: AppTheme.accent)
+                MacroPill(label: "Calorias", value: "\(option.totalCalories)", unit: "kcal", color: AppTheme.accentSecondary)
+                MacroPill(label: "Proteína", value: "\(option.totalProtein)", unit: "g", color: AppTheme.accent)
             }
 
             if mealPlanService.dailyCalorieTarget > 0 {
-                let difference = plan.totalCalories - mealPlanService.dailyCalorieTarget
+                let difference = option.totalCalories - mealPlanService.dailyCalorieTarget
                 HStack {
                     Text("vs meta diária")
                         .font(.caption2)
