@@ -62,7 +62,6 @@ struct ProfileView: View {
                                 ) {
                                     updateBiotype(biotype)
                                 }
-                                .frame(minWidth: DeviceLayout.isPad ? 128 : 100)
                             }
                         }
                         .padding(.vertical, 4)

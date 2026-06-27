@@ -75,11 +75,10 @@ struct AdaptiveBiotypeRow<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                content
-            }
+        HStack(alignment: .top, spacing: 8) {
+            content
         }
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 }
 

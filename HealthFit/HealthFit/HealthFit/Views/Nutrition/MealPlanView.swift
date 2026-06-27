@@ -116,7 +116,6 @@ struct MealPlanView: View {
                         ) {
                             updateBiotype(biotype)
                         }
-                        .frame(minWidth: DeviceLayout.isPad ? 128 : 100)
                     }
                 }
             }

@@ -83,7 +83,6 @@ struct RegisterView: View {
                                 ) {
                                     selectedBiotype = biotype
                                 }
-                                .frame(minWidth: DeviceLayout.isPad ? 128 : 100)
                             }
                         }
                     }
@@ -162,26 +161,29 @@ struct BiotypeCard: View {
     let biotype: Biotype
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 8) {
-                
                 Image(systemName: biotype.icon)
                     .font(.title2.weight(.bold))
                     .foregroundStyle(isSelected ? .white : biotype.color)
-                
+                    .frame(height: 28)
+
                 Text(biotype.rawValue)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(isSelected ? .white : AppTheme.textPrimary)
                     .multilineTextAlignment(.center)
-                
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+                    .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 92)
+            .padding(.horizontal, 6)
             .padding(.vertical, 10)
             .background(isSelected ? biotype.color : AppTheme.cardBackground)
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 12)
                     .stroke(
                         isSelected ? biotype.color : biotype.color.opacity(0.20),
                         lineWidth: 1.5
@@ -189,6 +191,8 @@ struct BiotypeCard: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
     }
 }
 
