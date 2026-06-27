@@ -4,6 +4,8 @@ import Combine
 
 @MainActor
 final class WatchConnectivityManager: NSObject, ObservableObject {
+    static let shared = WatchConnectivityManager()
+
     @Published var isWatchConnected = false
     @Published var watchHeartRate: Double = 0
     @Published var watchCalories: Double = 0
@@ -11,7 +13,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
 
     private var session: WCSession?
 
-    override init() {
+    private override init() {
         super.init()
         if WCSession.isSupported() {
             session = WCSession.default
@@ -68,6 +70,38 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
 
     func sendRestTimer(seconds: Int) {
         sendRestTimerStart(seconds: seconds, exerciseName: "")
+    }
+
+    func deliverNotificationToWatch(
+        title: String,
+        body: String,
+        category: String,
+        identifier: String,
+        exerciseName: String? = nil
+    ) {
+        var message: [String: Any] = [
+            "action": "deliverNotification",
+            "title": title,
+            "body": body,
+            "category": category,
+            "identifier": identifier
+        ]
+        if let exerciseName {
+            message["exerciseName"] = exerciseName
+        }
+        sendToWatch(message)
+    }
+
+    func syncDailyMotivationToWatch(entries: [[String: Any]]) {
+        guard let payload = try? JSONSerialization.data(withJSONObject: entries) else { return }
+        sendToWatch([
+            "action": "syncDailyMotivation",
+            "payload": payload
+        ])
+    }
+
+    func cancelDailyMotivationOnWatch() {
+        sendToWatch(["action": "cancelDailyMotivation"])
     }
 
     private func sendToWatch(_ message: [String: Any]) {

@@ -84,8 +84,73 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         hasSentRestOvertimeNotification = true
         isRestOvertime = true
         restExerciseName = exerciseName.isEmpty ? restExerciseName : exerciseName
-        deliverWatchRestOvertimeNotification(exerciseName: restExerciseName)
         WKInterfaceDevice.current().play(.notification)
+    }
+
+    private func deliverSyncedNotification(title: String, body: String, category: String, identifier: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        if !category.isEmpty {
+            content.categoryIdentifier = category
+        }
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "watch_\(identifier)",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    private func syncDailyMotivationFromPhone(_ entries: [[String: Any]]) {
+        cancelDailyMotivationOnWatch()
+
+        let calendar = Calendar.current
+        for entry in entries {
+            guard let identifier = entry["identifier"] as? String,
+                  let title = entry["title"] as? String,
+                  let body = entry["body"] as? String,
+                  let year = entry["year"] as? Int,
+                  let month = entry["month"] as? Int,
+                  let day = entry["day"] as? Int,
+                  let hour = entry["hour"] as? Int,
+                  let minute = entry["minute"] as? Int else { continue }
+
+            var components = DateComponents()
+            components.year = year
+            components.month = month
+            components.day = day
+            components.hour = hour
+            components.minute = minute
+
+            guard let scheduledDate = calendar.date(from: components), scheduledDate > .now else { continue }
+
+            let content = UNMutableNotificationContent()
+            content.title = title
+            content.body = body
+            content.sound = .default
+            content.categoryIdentifier = "DAILY_MOTIVATION"
+
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            let request = UNNotificationRequest(
+                identifier: "watch_\(identifier)",
+                content: content,
+                trigger: trigger
+            )
+            UNUserNotificationCenter.current().add(request)
+        }
+    }
+
+    private func cancelDailyMotivationOnWatch() {
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let ids = requests
+                .filter { $0.identifier.hasPrefix("watch_daily_motivation") }
+                .map(\.identifier)
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        }
     }
 
     private func tickRest() {
@@ -104,21 +169,6 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             restOvertimeSeconds = restElapsedSeconds - configuredRestSeconds
             notifyRestOvertime(exerciseName: restExerciseName)
         }
-    }
-
-    private func deliverWatchRestOvertimeNotification(exerciseName: String) {
-        let content = UNMutableNotificationContent()
-        content.title = "Descanso encerrado!"
-        content.body = "Volte ao treino: \(exerciseName)"
-        content.sound = .default
-
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        let request = UNNotificationRequest(
-            identifier: "watch_rest_overtime_\(UUID().uuidString)",
-            content: content,
-            trigger: trigger
-        )
-        UNUserNotificationCenter.current().add(request)
     }
 
     private func startHeartRateMonitoring() {
@@ -176,6 +226,23 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         case "restOvertime":
             let exerciseName = message["exerciseName"] as? String ?? restExerciseName
             notifyRestOvertime(exerciseName: exerciseName)
+        case "deliverNotification":
+            let title = message["title"] as? String ?? ""
+            let body = message["body"] as? String ?? ""
+            let category = message["category"] as? String ?? ""
+            let identifier = message["identifier"] as? String ?? UUID().uuidString
+            deliverSyncedNotification(title: title, body: body, category: category, identifier: identifier)
+            if category == "REST_OVERTIME" {
+                let exerciseName = message["exerciseName"] as? String ?? restExerciseName
+                notifyRestOvertime(exerciseName: exerciseName)
+            }
+        case "syncDailyMotivation":
+            if let payload = message["payload"] as? Data,
+               let entries = try? JSONSerialization.jsonObject(with: payload) as? [[String: Any]] {
+                syncDailyMotivationFromPhone(entries)
+            }
+        case "cancelDailyMotivation":
+            cancelDailyMotivationOnWatch()
         case "restTimer":
             let seconds = message["seconds"] as? Int ?? 60
             startRestCountdown(seconds: seconds, exerciseName: "Exercício")

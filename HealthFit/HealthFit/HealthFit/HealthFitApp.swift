@@ -8,7 +8,7 @@ struct HealthFitApp: App {
     @StateObject private var workoutStore = WorkoutStore()
     @StateObject private var mealPlanService = MealPlanService()
     @StateObject private var timerService = RestTimerService()
-    @StateObject private var watchConnectivity = WatchConnectivityManager()
+    @StateObject private var watchConnectivity = WatchConnectivityManager.shared
 
     init() {
         NotificationService.shared.requestAuthorization()
