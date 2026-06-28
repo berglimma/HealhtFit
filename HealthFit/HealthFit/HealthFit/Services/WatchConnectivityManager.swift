@@ -23,29 +23,55 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     }
 
     func startWorkoutOnWatch(workoutName: String) {
-        guard let session, session.isReachable else {
-            isWorkoutActiveOnWatch = true
-            simulateWatchData()
-            return
-        }
-
-        let message: [String: Any] = [
+        sendToWatch([
             "action": "startWorkout",
             "workoutName": workoutName,
+            "workoutMode": "strength",
             "timestamp": Date().timeIntervalSince1970
-        ]
-        session.sendMessage(message, replyHandler: nil)
+        ])
         isWorkoutActiveOnWatch = true
+        if session?.isReachable != true {
+            simulateWatchData()
+        }
+    }
+
+    func startCardioOnWatch(workoutName: String, targetSeconds: Int, exerciseName: String) {
+        sendToWatch([
+            "action": "startCardio",
+            "workoutName": workoutName,
+            "targetSeconds": targetSeconds,
+            "exerciseName": exerciseName,
+            "timestamp": Date().timeIntervalSince1970
+        ])
+        isWorkoutActiveOnWatch = true
+        if session?.isReachable != true {
+            simulateWatchData()
+        }
+    }
+
+    func syncWorkoutProgress(
+        workoutElapsedSeconds: Int,
+        exerciseName: String,
+        exerciseElapsedSeconds: Int
+    ) {
+        sendToWatch([
+            "action": "syncWorkoutProgress",
+            "workoutElapsedSeconds": workoutElapsedSeconds,
+            "exerciseName": exerciseName,
+            "exerciseElapsedSeconds": exerciseElapsedSeconds
+        ], realtime: true)
+    }
+
+    func syncCardioProgress(elapsedSeconds: Int, targetSeconds: Int) {
+        sendToWatch([
+            "action": "syncCardioProgress",
+            "elapsedSeconds": elapsedSeconds,
+            "targetSeconds": targetSeconds
+        ], realtime: true)
     }
 
     func stopWorkoutOnWatch() {
-        guard let session, session.isReachable else {
-            isWorkoutActiveOnWatch = false
-            return
-        }
-
-        let message: [String: Any] = ["action": "stopWorkout"]
-        session.sendMessage(message, replyHandler: nil)
+        sendToWatch(["action": "stopWorkout"])
         isWorkoutActiveOnWatch = false
     }
 
@@ -104,11 +130,11 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         sendToWatch(["action": "cancelDailyMotivation"])
     }
 
-    private func sendToWatch(_ message: [String: Any]) {
+    private func sendToWatch(_ message: [String: Any], realtime: Bool = false) {
         guard let session else { return }
         if session.isReachable {
             session.sendMessage(message, replyHandler: nil)
-        } else {
+        } else if !realtime {
             session.transferUserInfo(message)
         }
     }

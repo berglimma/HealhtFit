@@ -54,7 +54,17 @@ struct ActiveCardioView: View {
         }
         .onReceive(clock) { _ in
             elapsedSeconds += 1
+            watchConnectivity.syncCardioProgress(
+                elapsedSeconds: elapsedSeconds,
+                targetSeconds: config.targetDurationSeconds
+            )
             syncWatchData()
+        }
+        .onAppear {
+            watchConnectivity.syncCardioProgress(
+                elapsedSeconds: elapsedSeconds,
+                targetSeconds: config.targetDurationSeconds
+            )
         }
         .fullScreenCover(item: $finishedSession) { session in
             WorkoutSummaryView(session: session) {

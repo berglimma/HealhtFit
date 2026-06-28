@@ -133,7 +133,11 @@ struct CardioSetupView: View {
     private var startButton: some View {
         Button {
             workoutStore.startCardioSession(config: config)
-            watchConnectivity.startWorkoutOnWatch(workoutName: config.title)
+            watchConnectivity.startCardioOnWatch(
+                workoutName: config.title,
+                targetSeconds: config.targetDurationSeconds,
+                exerciseName: config.exercise.name
+            )
             let athleteName = authService.currentUser?.name ?? "Atleta"
             NotificationService.shared.deliverWorkoutStartNotification(
                 workoutTitle: config.title,

@@ -293,6 +293,17 @@ struct ActiveWorkoutView: View {
     private func updateWorkoutElapsed() {
         guard let startedAt = workoutStore.activeSession?.startedAt else { return }
         workoutElapsedSeconds = max(0, Int(Date.now.timeIntervalSince(startedAt)))
+
+        let exerciseName = workoutStore.currentExercise?.name ?? ""
+        let exerciseElapsed = workoutStore.exerciseRecords
+            .first(where: { $0.exerciseId == workoutStore.currentExercise?.id })?
+            .elapsedSeconds ?? 0
+
+        watchConnectivity.syncWorkoutProgress(
+            workoutElapsedSeconds: workoutElapsedSeconds,
+            exerciseName: exerciseName,
+            exerciseElapsedSeconds: exerciseElapsed
+        )
     }
 
     private func syncWatchData() {

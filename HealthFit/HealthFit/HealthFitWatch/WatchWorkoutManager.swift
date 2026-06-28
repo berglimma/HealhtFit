@@ -9,6 +9,11 @@ import WatchKit
 final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var isActive = false
     @Published var workoutName = ""
+    @Published var isCardioWorkout = false
+    @Published var workoutElapsedSeconds = 0
+    @Published var exerciseElapsedSeconds = 0
+    @Published var currentExerciseName = ""
+    @Published var cardioTargetSeconds = 0
     @Published var heartRate: Double = 0
     @Published var calories: Double = 0
     @Published var restRemainingSeconds = 0
@@ -19,9 +24,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     private var session: WCSession?
     private var heartRateTimer: Timer?
+    private var workoutClockTimer: Timer?
     private var restTimer: Timer?
     private var configuredRestSeconds = 60
     private var restElapsedSeconds = 0
+    private var secondsSincePhoneSync = 0
     private var hasSentRestOvertimeNotification = false
     private let healthStore = HKHealthStore()
 
@@ -35,18 +42,86 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     func startWorkout(name: String) {
+        resetWorkoutState()
         workoutName = name
+        isCardioWorkout = false
         isActive = true
-        calories = 0
         startHeartRateMonitoring()
+        startWorkoutClock()
+    }
+
+    func startCardio(name: String, targetSeconds: Int, exerciseName: String) {
+        resetWorkoutState()
+        workoutName = name
+        isCardioWorkout = true
+        cardioTargetSeconds = max(targetSeconds, 1)
+        currentExerciseName = exerciseName
+        isActive = true
+        startHeartRateMonitoring()
+        startWorkoutClock()
     }
 
     func stopWorkout() {
         isActive = false
+        isCardioWorkout = false
         heartRateTimer?.invalidate()
         heartRateTimer = nil
+        workoutClockTimer?.invalidate()
+        workoutClockTimer = nil
         stopRestCountdown()
+        resetWorkoutState()
         sendMetricsToPhone()
+    }
+
+    private func resetWorkoutState() {
+        workoutElapsedSeconds = 0
+        exerciseElapsedSeconds = 0
+        currentExerciseName = ""
+        cardioTargetSeconds = 0
+        calories = 0
+        secondsSincePhoneSync = 0
+    }
+
+    private func startWorkoutClock() {
+        workoutClockTimer?.invalidate()
+        secondsSincePhoneSync = 0
+        workoutClockTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.tickWorkoutClock()
+            }
+        }
+    }
+
+    private func tickWorkoutClock() {
+        guard isActive else { return }
+        secondsSincePhoneSync += 1
+
+        guard secondsSincePhoneSync > 2, !isResting else { return }
+        workoutElapsedSeconds += 1
+        if !isCardioWorkout {
+            exerciseElapsedSeconds += 1
+        }
+    }
+
+    private func applyPhoneSync(
+        workoutElapsedSeconds: Int? = nil,
+        exerciseElapsedSeconds: Int? = nil,
+        exerciseName: String? = nil,
+        targetSeconds: Int? = nil
+    ) {
+        secondsSincePhoneSync = 0
+        if let workoutElapsedSeconds {
+            self.workoutElapsedSeconds = workoutElapsedSeconds
+        }
+        if let exerciseElapsedSeconds {
+            self.exerciseElapsedSeconds = exerciseElapsedSeconds
+        }
+        if let exerciseName, !exerciseName.isEmpty {
+            currentExerciseName = exerciseName
+        }
+        if let targetSeconds, targetSeconds > 0 {
+            cardioTargetSeconds = targetSeconds
+        }
     }
 
     func startRestCountdown(seconds: Int, exerciseName: String) {
@@ -215,6 +290,22 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         case "startWorkout":
             let name = message["workoutName"] as? String ?? "Treino"
             startWorkout(name: name)
+        case "startCardio":
+            let name = message["workoutName"] as? String ?? "Cardio"
+            let targetSeconds = message["targetSeconds"] as? Int ?? 0
+            let exerciseName = message["exerciseName"] as? String ?? "Cardio"
+            startCardio(name: name, targetSeconds: targetSeconds, exerciseName: exerciseName)
+        case "syncWorkoutProgress":
+            applyPhoneSync(
+                workoutElapsedSeconds: message["workoutElapsedSeconds"] as? Int,
+                exerciseElapsedSeconds: message["exerciseElapsedSeconds"] as? Int,
+                exerciseName: message["exerciseName"] as? String
+            )
+        case "syncCardioProgress":
+            applyPhoneSync(
+                workoutElapsedSeconds: message["elapsedSeconds"] as? Int,
+                targetSeconds: message["targetSeconds"] as? Int
+            )
         case "stopWorkout":
             stopWorkout()
         case "restTimerStart":
