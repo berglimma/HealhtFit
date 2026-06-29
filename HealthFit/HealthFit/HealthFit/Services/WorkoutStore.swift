@@ -73,6 +73,23 @@ final class WorkoutStore: ObservableObject {
         isExerciseTimerPaused = false
     }
 
+    func startMeditationSession(config: MeditationWorkoutConfig) {
+        stopExerciseTimer()
+        activeSession = WorkoutSession(
+            workoutSheetId: config.topic.id,
+            workoutTitle: config.title,
+            totalExercises: 1
+        )
+        currentExerciseIndex = 0
+        exerciseRecords = [
+            ExerciseSessionRecord(
+                exerciseId: config.topic.id,
+                exerciseName: config.topic.name
+            )
+        ]
+        isExerciseTimerPaused = false
+    }
+
     func completeExercise() {
         markExerciseCompleted()
     }

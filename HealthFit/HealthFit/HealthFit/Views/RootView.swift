@@ -5,6 +5,7 @@ struct RootView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var mealPlanService: MealPlanService
     @EnvironmentObject var workoutStore: WorkoutStore
+    @EnvironmentObject var wellnessService: DailyWellnessService
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -12,6 +13,7 @@ struct RootView: View {
             if authService.isAuthenticated {
                 MainTabView()
                     .task {
+                        wellnessService.configure(for: authService.currentUser)
                         await healthKitManager.requestAuthorization()
                         mealPlanService.loadSavedData()
                         if mealPlanService.weeklyPlan.isEmpty, let user = authService.currentUser {
@@ -20,6 +22,9 @@ struct RootView: View {
                         NotificationService.shared.scheduleDailyMotivationNotifications()
                         refreshInactivityReminder()
                     }
+                    .sheet(isPresented: $wellnessService.showSleepCheckIn) {
+                        DailyWellnessCheckInView()
+                    }
             } else {
                 LoginView()
             }
@@ -27,8 +32,15 @@ struct RootView: View {
         .animation(.easeInOut, value: authService.isAuthenticated)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active, authService.isAuthenticated {
+                wellnessService.configure(for: authService.currentUser)
+                wellnessService.checkInOnAppOpen()
                 NotificationService.shared.scheduleDailyMotivationNotifications()
                 refreshInactivityReminder()
+            }
+        }
+        .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
+            if isAuthenticated {
+                wellnessService.configure(for: authService.currentUser)
             }
         }
     }

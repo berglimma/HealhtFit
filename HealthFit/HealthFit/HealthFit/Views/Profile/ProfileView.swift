@@ -6,11 +6,13 @@ struct ProfileView: View {
     @EnvironmentObject var mealPlanService: MealPlanService
     @EnvironmentObject var timerService: RestTimerService
     @EnvironmentObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var wellnessService: DailyWellnessService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showLogoutAlert = false
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var trainerName = ""
     @State private var trainerEmail = ""
+    @State private var sleepHoursInput: Double = 7
 
     var body: some View {
         NavigationStack {
@@ -108,6 +110,12 @@ struct ProfileView: View {
                         }
                     }
 
+                    Section("Sono e Hidratação") {
+                        if let user = authService.currentUser {
+                            wellnessSection(for: user)
+                        }
+                    }
+
                     Section("Perfil Físico") {
                         LabeledContent("Peso", value: String(format: "%.1f kg", user.weight))
                         LabeledContent("Altura", value: String(format: "%.0f cm", user.height))
@@ -190,9 +198,13 @@ struct ProfileView: View {
             .navigationTitle("Perfil")
             .onAppear {
                 syncTrainerFields()
+                syncWellnessFields()
             }
             .onChange(of: authService.currentUser) { _, _ in
                 syncTrainerFields()
+            }
+            .onChange(of: wellnessService.todayEntry) { _, _ in
+                syncWellnessFields()
             }
             .onChange(of: selectedPhotoItem) { _, item in
                 guard let item else { return }
@@ -214,6 +226,103 @@ struct ProfileView: View {
     private func syncTrainerFields() {
         trainerName = authService.currentUser?.personalTrainerName ?? ""
         trainerEmail = authService.currentUser?.personalTrainerEmail ?? ""
+    }
+
+    @ViewBuilder
+    private func wellnessSection(for user: UserProfile) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Horas de sono (hoje)")
+                .font(.subheadline.weight(.medium))
+
+            HStack {
+                Text(String(format: "%.1f h", sleepHoursInput))
+                    .font(.title3.bold())
+                    .foregroundStyle(AppTheme.accent)
+                Spacer()
+                if let assessment = wellnessService.todaySleepAssessment {
+                    Label(assessment.title, systemImage: assessment.icon)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(assessment.color)
+                } else {
+                    let preview = SleepAssessment.evaluate(hours: sleepHoursInput)
+                    Label(preview.title, systemImage: preview.icon)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(preview.color)
+                }
+            }
+
+            Slider(value: $sleepHoursInput, in: 0...12, step: 0.5)
+                .tint(AppTheme.accent)
+                .onChange(of: sleepHoursInput) { _, newValue in
+                    wellnessService.logSleep(hours: newValue)
+                }
+
+            if let assessment = wellnessService.todaySleepAssessment {
+                Text(assessment.message)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            } else {
+                Text("Registre seu sono ao abrir o app ou ajuste o controle acima.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+        }
+        .padding(.vertical, 4)
+
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Água recomendada")
+                .font(.subheadline.weight(.medium))
+
+            HStack {
+                Label(
+                    String(format: "%.1f L / dia", user.recommendedDailyWaterLiters),
+                    systemImage: "drop.fill"
+                )
+                .foregroundStyle(.blue)
+                Spacer()
+                Text("\(user.recommendedDailyWaterML) ml")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            Text("Cálculo: 35 ml por kg de peso corporal (\(String(format: "%.1f", user.weight)) kg).")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            ProgressView(value: wellnessService.waterProgress(for: user))
+                .tint(.blue)
+
+            HStack {
+                Text("\(wellnessService.todayEntry.waterIntakeMl) ml ingeridos")
+                    .font(.caption)
+                Spacer()
+                Text(wellnessService.waterStatusMessage(for: user))
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.trailing)
+            }
+
+            Stepper(
+                "Copos (250 ml): \(wellnessService.todayEntry.waterIntakeMl / 250)",
+                value: Binding(
+                    get: { wellnessService.todayEntry.waterIntakeMl },
+                    set: { wellnessService.updateWaterIntake($0) }
+                ),
+                in: 0...user.recommendedDailyWaterML + 1000,
+                step: 250
+            )
+
+            HStack(spacing: 10) {
+                Button("+250 ml") { wellnessService.addWater(250) }
+                Button("+500 ml") { wellnessService.addWater(500) }
+            }
+            .font(.caption.weight(.semibold))
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func syncWellnessFields() {
+        sleepHoursInput = wellnessService.todaySleepHours ?? 7
     }
 
     private func savePersonalTrainer() {

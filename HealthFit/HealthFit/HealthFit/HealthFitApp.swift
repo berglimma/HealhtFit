@@ -10,6 +10,7 @@ struct HealthFitApp: App {
     @StateObject private var timerService = RestTimerService()
     @StateObject private var watchConnectivity = WatchConnectivityManager.shared
     @StateObject private var weeklyReportService = WeeklyReportService.shared
+    @StateObject private var wellnessService = DailyWellnessService.shared
 
     init() {
         NotificationService.shared.requestAuthorization()
@@ -25,6 +26,7 @@ struct HealthFitApp: App {
                 .environmentObject(timerService)
                 .environmentObject(watchConnectivity)
                 .environmentObject(weeklyReportService)
+                .environmentObject(wellnessService)
                 .preferredColorScheme(.dark)
         }
     }

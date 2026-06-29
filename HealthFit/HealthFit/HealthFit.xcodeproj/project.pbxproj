@@ -52,6 +52,12 @@
 		B1000045 /* WeeklyProgressAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000047 /* WeeklyProgressAnalyzer.swift */; };
 		B1000046 /* WeeklyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000048 /* WeeklyReportService.swift */; };
 		B1000047 /* WeeklyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000049 /* WeeklyReportView.swift */; };
+		B1000048 /* MeditationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000050 /* MeditationModels.swift */; };
+		B1000049 /* MeditationSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000051 /* MeditationSetupView.swift */; };
+		B1000050 /* ActiveMeditationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000052 /* ActiveMeditationView.swift */; };
+		B1000051 /* DailyWellnessModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000053 /* DailyWellnessModels.swift */; };
+		B1000052 /* DailyWellnessService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000054 /* DailyWellnessService.swift */; };
+		B1000053 /* DailyWellnessCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000055 /* DailyWellnessCheckInView.swift */; };
 		B1000034 /* HealthFitWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = F1000034 /* HealthFitWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -129,6 +135,12 @@
 		F1000047 /* WeeklyProgressAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressAnalyzer.swift; sourceTree = "<group>"; };
 		F1000048 /* WeeklyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportService.swift; sourceTree = "<group>"; };
 		F1000049 /* WeeklyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportView.swift; sourceTree = "<group>"; };
+		F1000050 /* MeditationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationModels.swift; sourceTree = "<group>"; };
+		F1000051 /* MeditationSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationSetupView.swift; sourceTree = "<group>"; };
+		F1000052 /* ActiveMeditationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveMeditationView.swift; sourceTree = "<group>"; };
+		F1000053 /* DailyWellnessModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyWellnessModels.swift; sourceTree = "<group>"; };
+		F1000054 /* DailyWellnessService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyWellnessService.swift; sourceTree = "<group>"; };
+		F1000055 /* DailyWellnessCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyWellnessCheckInView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -201,6 +213,8 @@
 				F1000043 /* CardioModels.swift */,
 				F1000004 /* MealModels.swift */,
 				F1000046 /* WeeklyProgressModels.swift */,
+				F1000050 /* MeditationModels.swift */,
+				F1000053 /* DailyWellnessModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -220,6 +234,7 @@
 				F1000040 /* WorkoutReportBuilder.swift */,
 				F1000047 /* WeeklyProgressAnalyzer.swift */,
 				F1000048 /* WeeklyReportService.swift */,
+				F1000054 /* DailyWellnessService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -286,6 +301,8 @@
 				F1000038 /* WorkoutSummaryView.swift */,
 				F1000044 /* CardioSetupView.swift */,
 				F1000045 /* ActiveCardioView.swift */,
+				F1000051 /* MeditationSetupView.swift */,
+				F1000052 /* ActiveMeditationView.swift */,
 			);
 			path = Workout;
 			sourceTree = "<group>";
@@ -320,6 +337,7 @@
 			isa = PBXGroup;
 			children = (
 				F1000041 /* MailComposeView.swift */,
+				F1000055 /* DailyWellnessCheckInView.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -459,6 +477,12 @@
 				B1000045 /* WeeklyProgressAnalyzer.swift in Sources */,
 				B1000046 /* WeeklyReportService.swift in Sources */,
 				B1000047 /* WeeklyReportView.swift in Sources */,
+				B1000048 /* MeditationModels.swift in Sources */,
+				B1000049 /* MeditationSetupView.swift in Sources */,
+				B1000050 /* ActiveMeditationView.swift in Sources */,
+				B1000051 /* DailyWellnessModels.swift in Sources */,
+				B1000052 /* DailyWellnessService.swift in Sources */,
+				B1000053 /* DailyWellnessCheckInView.swift in Sources */,
 				B1000039 /* MailComposeView.swift in Sources */,
 				B1000024 /* CameraPreviewView.swift in Sources */,
 				B1000025 /* VisionWorkoutView.swift in Sources */,

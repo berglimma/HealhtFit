@@ -3,6 +3,7 @@ import SwiftUI
 private enum WorkoutSection: String, CaseIterable, Identifiable {
     case strength = "Musculação"
     case cardio = "Cardio"
+    case meditation = "Meditação"
 
     var id: String { rawValue }
 }
@@ -28,6 +29,8 @@ struct WorkoutListView: View {
                         strengthSection
                     case .cardio:
                         cardioSection
+                    case .meditation:
+                        meditationSection
                     }
                 }
                 .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
@@ -52,6 +55,9 @@ struct WorkoutListView: View {
             }
             .navigationDestination(for: CardioExercise.self) { exercise in
                 CardioSetupView(exercise: exercise)
+            }
+            .navigationDestination(for: MeditationTopic.self) { topic in
+                MeditationSetupView(topic: topic)
             }
             .sheet(isPresented: $showCreateWorkout) {
                 CreateWorkoutView()
@@ -89,6 +95,23 @@ struct WorkoutListView: View {
                 ForEach(CardioExercise.catalog) { exercise in
                     NavigationLink(value: exercise) {
                         CardioExerciseCard(exercise: exercise)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var meditationSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Escolha um tópico e a duração da sessão")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            LazyVStack(spacing: 12) {
+                ForEach(MeditationTopic.catalog) { topic in
+                    NavigationLink(value: topic) {
+                        MeditationTopicCard(topic: topic)
                     }
                     .buttonStyle(.plain)
                 }
