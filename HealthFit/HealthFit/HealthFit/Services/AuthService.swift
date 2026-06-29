@@ -36,6 +36,10 @@ final class AuthService: ObservableObject {
         saveUser(user)
         loadProfileImage()
         NotificationService.shared.scheduleDailyMotivationNotifications()
+        NotificationService.shared.refreshWorkoutInactivityReminder(
+            lastWorkoutAt: nil,
+            accountCreatedAt: user.createdAt
+        )
         isLoading = false
     }
 
@@ -57,10 +61,15 @@ final class AuthService: ObservableObject {
         saveUser(user)
         loadProfileImage()
         NotificationService.shared.scheduleDailyMotivationNotifications()
+        NotificationService.shared.refreshWorkoutInactivityReminder(
+            lastWorkoutAt: nil,
+            accountCreatedAt: user.createdAt
+        )
         isLoading = false
     }
 
     func logout() {
+        NotificationService.shared.cancelWorkoutInactivityReminder()
         currentUser = nil
         profileImage = nil
         isAuthenticated = false

@@ -5,6 +5,12 @@ import UserNotifications
 final class NotificationService {
     static let shared = NotificationService()
 
+    private let lastWorkoutKey = "healthfit_last_workout_completed_at"
+    private let inactivityNotifiedKey = "healthfit_inactivity_notified_for_workout_at"
+    private let inactivityReminderIdentifier = "workout_inactivity_48h"
+
+    static let inactivityThreshold: TimeInterval = 48 * 60 * 60
+
     private init() {}
 
     func requestAuthorization() {
@@ -131,6 +137,109 @@ final class NotificationService {
             body: "Parabéns! Você finalizou \(title). Ótimo trabalho!",
             category: "WORKOUT_COMPLETE",
             identifier: "workout_complete_\(UUID().uuidString)"
+        )
+    }
+
+    func recordWorkoutCompleted(at date: Date = .now) {
+        UserDefaults.standard.set(date, forKey: lastWorkoutKey)
+        UserDefaults.standard.removeObject(forKey: inactivityNotifiedKey)
+        refreshWorkoutInactivityReminder(lastWorkoutAt: date)
+    }
+
+    func refreshWorkoutInactivityReminder(lastWorkoutAt: Date?, accountCreatedAt: Date? = nil) {
+        cancelWorkoutInactivityReminder()
+
+        let referenceDate = lastWorkoutAt ?? accountCreatedAt
+        guard let referenceDate else { return }
+
+        let fireDate = referenceDate.addingTimeInterval(Self.inactivityThreshold)
+        let title = "Hora de voltar a treinar!"
+        let body = MotivationMessages.inactivityMessage()
+
+        if fireDate <= .now {
+            Task {
+                await deliverInactivityReminderIfNeeded(
+                    referenceWorkoutAt: referenceDate,
+                    title: title,
+                    body: body
+                )
+            }
+        } else {
+            let interval = fireDate.timeIntervalSinceNow
+            scheduleOnPhone(
+                title: title,
+                body: body,
+                category: "WORKOUT_INACTIVITY",
+                identifier: inactivityReminderIdentifier,
+                trigger: UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+            )
+            syncInactivityReminderToWatch(fireDate: fireDate, title: title, body: body)
+        }
+    }
+
+    func cancelWorkoutInactivityReminder() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [inactivityReminderIdentifier]
+        )
+        WatchConnectivityManager.shared.cancelInactivityReminderOnWatch()
+    }
+
+    var lastRecordedWorkoutAt: Date? {
+        UserDefaults.standard.object(forKey: lastWorkoutKey) as? Date
+    }
+
+    func migrateLastWorkoutDateIfNeeded(_ date: Date) {
+        guard lastRecordedWorkoutAt == nil else { return }
+        UserDefaults.standard.set(date, forKey: lastWorkoutKey)
+    }
+
+    private func deliverInactivityReminderIfNeeded(
+        referenceWorkoutAt: Date,
+        title: String,
+        body: String
+    ) async {
+        let notifiedFor = UserDefaults.standard.object(forKey: inactivityNotifiedKey) as? Date
+        guard notifiedFor != referenceWorkoutAt else { return }
+
+        let delivered = await pendingDeliveredNotifications()
+        let alreadyShown = delivered.contains {
+            $0.request.content.categoryIdentifier == "WORKOUT_INACTIVITY"
+        }
+
+        if alreadyShown {
+            UserDefaults.standard.set(referenceWorkoutAt, forKey: inactivityNotifiedKey)
+            return
+        }
+
+        deliverImmediately(
+            title: title,
+            body: body,
+            category: "WORKOUT_INACTIVITY",
+            identifier: "workout_inactivity_\(UUID().uuidString)"
+        )
+        UserDefaults.standard.set(referenceWorkoutAt, forKey: inactivityNotifiedKey)
+    }
+
+    private func pendingDeliveredNotifications() async -> [UNNotification] {
+        await withCheckedContinuation { continuation in
+            UNUserNotificationCenter.current().getDeliveredNotifications { notifications in
+                continuation.resume(returning: notifications)
+            }
+        }
+    }
+
+    private func syncInactivityReminderToWatch(fireDate: Date, title: String, body: String) {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+        WatchConnectivityManager.shared.scheduleInactivityReminderOnWatch(
+            title: title,
+            body: body,
+            year: components.year ?? 0,
+            month: components.month ?? 0,
+            day: components.day ?? 0,
+            hour: components.hour ?? 0,
+            minute: components.minute ?? 0,
+            identifier: inactivityReminderIdentifier
         )
     }
 

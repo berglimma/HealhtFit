@@ -6,13 +6,17 @@ struct DashboardView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
+    @EnvironmentObject var weeklyReportService: WeeklyReportService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    @State private var showWeeklyReport = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     headerSection
+                    weeklyReportBanner
                     metricsRow
                     HealthChartsView()
                     watchSection
@@ -26,7 +30,68 @@ struct DashboardView: View {
             .refreshable {
                 await healthKitManager.fetchWeeklyMetrics()
             }
+            .sheet(isPresented: $showWeeklyReport) {
+                WeeklyReportView()
+            }
         }
+    }
+
+    private var weeklyReportBanner: some View {
+        Button {
+            showWeeklyReport = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(AppTheme.accent.opacity(0.2))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "chart.bar.doc.horizontal.fill")
+                        .font(.title3)
+                        .foregroundStyle(AppTheme.accent)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text("Relatório Semanal")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        if weeklyReportService.isReportAvailable {
+                            Text("NOVO")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(AppTheme.accentSecondary)
+                                .clipShape(Capsule())
+                        }
+                    }
+
+                    if weeklyReportService.isReportAvailable {
+                        Text("Veja seu progresso e o que melhorar esta semana")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    } else if weeklyReportService.daysUntilNextReport > 0 {
+                        Text("Próximo relatório em \(weeklyReportService.daysUntilNextReport) dia(s)")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    } else {
+                        Text("Acompanhe treinos, calorias e sugestões de melhoria")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            .padding()
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        }
+        .buttonStyle(.plain)
     }
 
     private var headerSection: some View {

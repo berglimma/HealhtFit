@@ -130,6 +130,33 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         sendToWatch(["action": "cancelDailyMotivation"])
     }
 
+    func scheduleInactivityReminderOnWatch(
+        title: String,
+        body: String,
+        year: Int,
+        month: Int,
+        day: Int,
+        hour: Int,
+        minute: Int,
+        identifier: String
+    ) {
+        sendToWatch([
+            "action": "scheduleInactivityReminder",
+            "title": title,
+            "body": body,
+            "year": year,
+            "month": month,
+            "day": day,
+            "hour": hour,
+            "minute": minute,
+            "identifier": identifier
+        ])
+    }
+
+    func cancelInactivityReminderOnWatch() {
+        sendToWatch(["action": "cancelInactivityReminder"])
+    }
+
     private func sendToWatch(_ message: [String: Any], realtime: Bool = false) {
         guard let session else { return }
         if session.isReachable {

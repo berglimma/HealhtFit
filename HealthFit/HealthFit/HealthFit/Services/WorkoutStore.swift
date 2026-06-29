@@ -161,6 +161,19 @@ final class WorkoutStore: ObservableObject {
         exerciseRecords = []
         isExerciseTimerPaused = false
         saveHistory()
+
+        if let endedAt = session.endedAt {
+            NotificationService.shared.recordWorkoutCompleted(at: endedAt)
+        }
+    }
+
+    var lastCompletedWorkoutAt: Date? {
+        if let recorded = NotificationService.shared.lastRecordedWorkoutAt {
+            return recorded
+        }
+        return sessionHistory
+            .compactMap { $0.endedAt ?? $0.startedAt }
+            .max()
     }
 
     var currentExercise: Exercise? {
@@ -184,6 +197,9 @@ final class WorkoutStore: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: historyKey),
            let history = try? JSONDecoder().decode([WorkoutSession].self, from: data) {
             sessionHistory = history
+            if let latest = history.compactMap({ $0.endedAt ?? $0.startedAt }).max() {
+                NotificationService.shared.migrateLastWorkoutDateIfNeeded(latest)
+            }
         }
     }
 

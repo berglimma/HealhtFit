@@ -48,6 +48,10 @@
 		B1000031 /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000031 /* WatchContentView.swift */; };
 		B1000032 /* WatchWorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000032 /* WatchWorkoutManager.swift */; };
 		B1000033 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000033 /* Assets.xcassets */; };
+		B1000044 /* WeeklyProgressModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000046 /* WeeklyProgressModels.swift */; };
+		B1000045 /* WeeklyProgressAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000047 /* WeeklyProgressAnalyzer.swift */; };
+		B1000046 /* WeeklyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000048 /* WeeklyReportService.swift */; };
+		B1000047 /* WeeklyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000049 /* WeeklyReportView.swift */; };
 		B1000034 /* HealthFitWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = F1000034 /* HealthFitWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -121,6 +125,10 @@
 		F1000039 /* MotivationMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotivationMessages.swift; sourceTree = "<group>"; };
 		F1000040 /* WorkoutReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutReportBuilder.swift; sourceTree = "<group>"; };
 		F1000041 /* MailComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailComposeView.swift; sourceTree = "<group>"; };
+		F1000046 /* WeeklyProgressModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressModels.swift; sourceTree = "<group>"; };
+		F1000047 /* WeeklyProgressAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressAnalyzer.swift; sourceTree = "<group>"; };
+		F1000048 /* WeeklyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportService.swift; sourceTree = "<group>"; };
+		F1000049 /* WeeklyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -192,6 +200,7 @@
 				F1000003 /* WorkoutModels.swift */,
 				F1000043 /* CardioModels.swift */,
 				F1000004 /* MealModels.swift */,
+				F1000046 /* WeeklyProgressModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -209,6 +218,8 @@
 				F1000012 /* VisionWorkoutService.swift */,
 				F1000039 /* MotivationMessages.swift */,
 				F1000040 /* WorkoutReportBuilder.swift */,
+				F1000047 /* WeeklyProgressAnalyzer.swift */,
+				F1000048 /* WeeklyReportService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -260,6 +271,7 @@
 			children = (
 				F1000018 /* DashboardView.swift */,
 				F1000019 /* HealthChartsView.swift */,
+				F1000049 /* WeeklyReportView.swift */,
 			);
 			path = Dashboard;
 			sourceTree = "<group>";
@@ -443,6 +455,10 @@
 				B1000043 /* ActiveCardioView.swift in Sources */,
 				B1000036 /* MotivationMessages.swift in Sources */,
 				B1000037 /* WorkoutReportBuilder.swift in Sources */,
+				B1000044 /* WeeklyProgressModels.swift in Sources */,
+				B1000045 /* WeeklyProgressAnalyzer.swift in Sources */,
+				B1000046 /* WeeklyReportService.swift in Sources */,
+				B1000047 /* WeeklyReportView.swift in Sources */,
 				B1000039 /* MailComposeView.swift in Sources */,
 				B1000024 /* CameraPreviewView.swift in Sources */,
 				B1000025 /* VisionWorkoutView.swift in Sources */,

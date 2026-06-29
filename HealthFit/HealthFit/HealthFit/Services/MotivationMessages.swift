@@ -61,4 +61,16 @@ enum MotivationMessages {
         let exercises = "\(session.completedExercises)/\(session.totalExercises)"
         return "\(athleteName), treino finalizado! \(session.workoutTitle) — \(duration), \(exercises) exercícios concluídos. Parabéns pelo esforço! 🏆"
     }
+
+    static let inactivityReminder: [String] = [
+        "Faz mais de 48h que você não treina. Seu corpo sente falta — bora retomar hoje? 💪",
+        "Dois dias sem treino ou cardio. A consistência é o segredo — volte hoje!",
+        "48h sem atividade registrada. Um treino curto já faz diferença. Vamos?",
+        "Sentimos sua falta! Há 2 dias sem treino — retome sua rotina agora.",
+        "A pausa foi longa. Seu próximo treino começa com uma decisão — faça acontecer hoje!"
+    ]
+
+    static func inactivityMessage() -> String {
+        inactivityReminder.randomElement() ?? inactivityReminder[0]
+    }
 }

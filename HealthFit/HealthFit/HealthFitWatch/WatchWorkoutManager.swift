@@ -228,6 +228,52 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
+    private func scheduleInactivityReminderOnWatch(
+        title: String,
+        body: String,
+        year: Int,
+        month: Int,
+        day: Int,
+        hour: Int,
+        minute: Int,
+        identifier: String
+    ) {
+        cancelInactivityReminderOnWatch()
+
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = day
+        components.hour = hour
+        components.minute = minute
+
+        let calendar = Calendar.current
+        guard let scheduledDate = calendar.date(from: components), scheduledDate > .now else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        content.categoryIdentifier = "WORKOUT_INACTIVITY"
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "watch_\(identifier)",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    private func cancelInactivityReminderOnWatch() {
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let ids = requests
+                .filter { $0.identifier.hasPrefix("watch_workout_inactivity") }
+                .map(\.identifier)
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        }
+    }
+
     private func tickRest() {
         restElapsedSeconds += 1
 
@@ -334,6 +380,21 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
         case "cancelDailyMotivation":
             cancelDailyMotivationOnWatch()
+        case "scheduleInactivityReminder":
+            let title = message["title"] as? String ?? "Hora de voltar a treinar!"
+            let body = message["body"] as? String ?? ""
+            scheduleInactivityReminderOnWatch(
+                title: title,
+                body: body,
+                year: message["year"] as? Int ?? 0,
+                month: message["month"] as? Int ?? 0,
+                day: message["day"] as? Int ?? 0,
+                hour: message["hour"] as? Int ?? 0,
+                minute: message["minute"] as? Int ?? 0,
+                identifier: message["identifier"] as? String ?? "workout_inactivity_48h"
+            )
+        case "cancelInactivityReminder":
+            cancelInactivityReminderOnWatch()
         case "restTimer":
             let seconds = message["seconds"] as? Int ?? 60
             startRestCountdown(seconds: seconds, exerciseName: "Exercício")
