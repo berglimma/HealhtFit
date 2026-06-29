@@ -109,36 +109,42 @@ struct ExerciseRow: View {
     let exercise: Exercise
 
     var body: some View {
-        HStack(spacing: 14) {
-            Text("\(index)")
-                .font(.caption.bold())
-                .foregroundStyle(AppTheme.accent)
-                .frame(width: 28, height: 28)
-                .background(AppTheme.accent.opacity(0.2))
-                .clipShape(Circle())
+        DisclosureGroup {
+            ExerciseExecutionGuideView(steps: exercise.executionGuide)
+                .padding(.top, 4)
+        } label: {
+            HStack(spacing: 14) {
+                Text("\(index)")
+                    .font(.caption.bold())
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 28, height: 28)
+                    .background(AppTheme.accent.opacity(0.2))
+                    .clipShape(Circle())
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(exercise.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(AppTheme.textPrimary)
-                HStack(spacing: 8) {
-                    Text("\(exercise.sets)x\(exercise.reps)")
-                    if let weight = exercise.weight {
-                        Text("\(Int(weight))kg")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(exercise.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    HStack(spacing: 8) {
+                        Text("\(exercise.sets)x\(exercise.reps)")
+                        if let weight = exercise.weight {
+                            Text("\(Int(weight))kg")
+                        }
+                        Text("\(exercise.restSeconds)s descanso")
                     }
-                    Text("\(exercise.restSeconds)s descanso")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
                 }
-                .font(.caption)
-                .foregroundStyle(AppTheme.textSecondary)
+
+                Spacer()
+
+                Image(systemName: exercise.muscleGroup.icon)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
-
-            Spacer()
-
-            Image(systemName: exercise.muscleGroup.icon)
-                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .tint(AppTheme.accent)
     }
 }

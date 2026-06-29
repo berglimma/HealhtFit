@@ -58,6 +58,7 @@
 		B1000051 /* DailyWellnessModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000053 /* DailyWellnessModels.swift */; };
 		B1000052 /* DailyWellnessService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000054 /* DailyWellnessService.swift */; };
 		B1000053 /* DailyWellnessCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000055 /* DailyWellnessCheckInView.swift */; };
+		B1000054 /* ExerciseGuideCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000056 /* ExerciseGuideCatalog.swift */; };
 		B1000034 /* HealthFitWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = F1000034 /* HealthFitWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -141,6 +142,7 @@
 		F1000053 /* DailyWellnessModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyWellnessModels.swift; sourceTree = "<group>"; };
 		F1000054 /* DailyWellnessService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyWellnessService.swift; sourceTree = "<group>"; };
 		F1000055 /* DailyWellnessCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyWellnessCheckInView.swift; sourceTree = "<group>"; };
+		F1000056 /* ExerciseGuideCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseGuideCatalog.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -215,6 +217,7 @@
 				F1000046 /* WeeklyProgressModels.swift */,
 				F1000050 /* MeditationModels.swift */,
 				F1000053 /* DailyWellnessModels.swift */,
+				F1000056 /* ExerciseGuideCatalog.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -483,6 +486,7 @@
 				B1000051 /* DailyWellnessModels.swift in Sources */,
 				B1000052 /* DailyWellnessService.swift in Sources */,
 				B1000053 /* DailyWellnessCheckInView.swift in Sources */,
+				B1000054 /* ExerciseGuideCatalog.swift in Sources */,
 				B1000039 /* MailComposeView.swift in Sources */,
 				B1000024 /* CameraPreviewView.swift in Sources */,
 				B1000025 /* VisionWorkoutView.swift in Sources */,

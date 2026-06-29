@@ -133,6 +133,8 @@ struct ActiveWorkoutView: View {
                         .font(.title.bold())
                         .foregroundStyle(AppTheme.textPrimary)
 
+                    ExerciseExecutionGuideView(steps: exercise.executionGuide, compact: true)
+
                     HStack(spacing: 8) {
                         Image(systemName: timerService.isRunning ? "pause.circle.fill" : "stopwatch.fill")
                             .foregroundStyle(timerService.isRunning ? .orange : AppTheme.accent)
