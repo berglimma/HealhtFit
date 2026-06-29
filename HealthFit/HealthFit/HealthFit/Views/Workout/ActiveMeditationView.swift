@@ -3,6 +3,7 @@ import SwiftUI
 struct ActiveMeditationView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var authService: AuthService
+    @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -61,9 +62,23 @@ struct ActiveMeditationView: View {
         }
         .onReceive(clock) { _ in
             elapsedSeconds += 1
+            watchConnectivity.syncMeditationProgress(
+                elapsedSeconds: elapsedSeconds,
+                targetSeconds: config.targetDurationSeconds,
+                currentPrompt: currentPrompt,
+                promptIndex: currentPromptIndex
+            )
             if elapsedSeconds >= config.targetDurationSeconds && !isFinishing {
                 finishMeditation()
             }
+        }
+        .onAppear {
+            watchConnectivity.syncMeditationProgress(
+                elapsedSeconds: elapsedSeconds,
+                targetSeconds: config.targetDurationSeconds,
+                currentPrompt: currentPrompt,
+                promptIndex: currentPromptIndex
+            )
         }
         .fullScreenCover(item: $finishedSession) { session in
             WorkoutSummaryView(session: session) {
@@ -143,6 +158,8 @@ struct ActiveMeditationView: View {
     private func finishMeditation() {
         guard !isFinishing else { return }
         isFinishing = true
+
+        watchConnectivity.stopWorkoutOnWatch()
 
         guard var session = workoutStore.activeSession else {
             dismiss()

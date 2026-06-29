@@ -8,6 +8,8 @@ struct WeekStats: Equatable {
     let activeDays: Int
     let cardioSessions: Int
     let strengthSessions: Int
+    let meditationSessions: Int
+    let meditationMinutes: Int
     let averageHeartRate: Double
     let totalRestMinutes: Int
     let totalExerciseMinutes: Int
@@ -20,6 +22,8 @@ struct WeekStats: Equatable {
         activeDays: 0,
         cardioSessions: 0,
         strengthSessions: 0,
+        meditationSessions: 0,
+        meditationMinutes: 0,
         averageHeartRate: 0,
         totalRestMinutes: 0,
         totalExerciseMinutes: 0
@@ -64,6 +68,7 @@ struct WeeklyProgressReport: Equatable {
     let weekEnd: Date
     let currentWeek: WeekStats
     let previousWeek: WeekStats?
+    let meditationSummary: MeditationWeekSummary
     let trends: [ProgressTrend]
     let highlights: [String]
     let improvements: [ImprovementSuggestion]
@@ -76,6 +81,20 @@ struct WeeklyProgressReport: Equatable {
         formatter.dateFormat = "d MMM"
         return "\(formatter.string(from: weekStart)) – \(formatter.string(from: weekEnd))"
     }
+}
+
+struct MeditationWeekSummary: Equatable {
+    let sessionCount: Int
+    let totalMinutes: Int
+    let topics: [String]
+    let previousMinutes: Int
+
+    static let empty = MeditationWeekSummary(
+        sessionCount: 0,
+        totalMinutes: 0,
+        topics: [],
+        previousMinutes: 0
+    )
 }
 
 struct DailyWorkoutActivity: Identifiable, Equatable {

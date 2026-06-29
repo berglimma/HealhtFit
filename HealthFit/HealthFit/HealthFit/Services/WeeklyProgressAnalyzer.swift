@@ -23,6 +23,10 @@ enum WeeklyProgressAnalyzer {
 
         let currentWeek = stats(for: currentSessions, calendar: calendar)
         let previousWeek = stats(for: previousSessions, calendar: calendar)
+        let meditationSummary = buildMeditationSummary(
+            current: currentSessions,
+            previous: previousSessions
+        )
         let trends = buildTrends(current: currentWeek, previous: previousWeek)
         let highlights = buildHighlights(current: currentWeek, previous: previousWeek)
         let improvements = buildImprovements(
@@ -43,6 +47,7 @@ enum WeeklyProgressAnalyzer {
             weekEnd: referenceDate,
             currentWeek: currentWeek,
             previousWeek: previousWeek.workoutCount > 0 ? previousWeek : nil,
+            meditationSummary: meditationSummary,
             trends: trends,
             highlights: highlights,
             improvements: improvements,
@@ -57,6 +62,7 @@ enum WeeklyProgressAnalyzer {
             weekEnd: referenceDate,
             currentWeek: .empty,
             previousWeek: nil,
+            meditationSummary: .empty,
             trends: [],
             highlights: [],
             improvements: [
@@ -69,6 +75,37 @@ enum WeeklyProgressAnalyzer {
             ],
             dailyWorkoutMinutes: [],
             overallScore: 0
+        )
+    }
+
+    static func isMeditationSession(_ session: WorkoutSession) -> Bool {
+        session.workoutTitle.lowercased().hasPrefix("meditação")
+            || session.workoutTitle.lowercased().hasPrefix("meditacao")
+    }
+
+    static func isCardioSession(_ session: WorkoutSession) -> Bool {
+        session.workoutTitle.lowercased().hasPrefix("cardio")
+    }
+
+    private static func buildMeditationSummary(
+        current: [WorkoutSession],
+        previous: [WorkoutSession]
+    ) -> MeditationWeekSummary {
+        let currentMeditation = current.filter(isMeditationSession)
+        let previousMeditation = previous.filter(isMeditationSession)
+        let topics = currentMeditation.compactMap { session -> String? in
+            if let name = session.exerciseRecords.first?.exerciseName, !name.isEmpty {
+                return name
+            }
+            let parts = session.workoutTitle.components(separatedBy: " — ")
+            return parts.count > 1 ? parts[1] : session.workoutTitle
+        }
+
+        return MeditationWeekSummary(
+            sessionCount: currentMeditation.count,
+            totalMinutes: currentMeditation.reduce(0) { $0 + Int($1.duration / 60) },
+            topics: Array(Set(topics)).sorted(),
+            previousMinutes: previousMeditation.reduce(0) { $0 + Int($1.duration / 60) }
         )
     }
 
@@ -97,7 +134,11 @@ enum WeeklyProgressAnalyzer {
 
         let activeDays = Set(sessions.map { calendar.startOfDay(for: $0.startedAt) }).count
         let cardioSessions = sessions.filter(isCardioSession).count
-        let strengthSessions = sessions.count - cardioSessions
+        let meditationSessions = sessions.filter(isMeditationSession).count
+        let strengthSessions = sessions.count - cardioSessions - meditationSessions
+        let meditationMinutes = sessions
+            .filter(isMeditationSession)
+            .reduce(0) { $0 + Int($1.duration / 60) }
 
         let heartRates = sessions.map(\.averageHeartRate).filter { $0 > 0 }
         let averageHeartRate = heartRates.isEmpty ? 0 : heartRates.reduce(0, +) / Double(heartRates.count)
@@ -113,20 +154,18 @@ enum WeeklyProgressAnalyzer {
             activeDays: activeDays,
             cardioSessions: cardioSessions,
             strengthSessions: strengthSessions,
+            meditationSessions: meditationSessions,
+            meditationMinutes: meditationMinutes,
             averageHeartRate: averageHeartRate,
             totalRestMinutes: totalRest,
             totalExerciseMinutes: totalExercise
         )
     }
 
-    private static func isCardioSession(_ session: WorkoutSession) -> Bool {
-        session.workoutTitle.lowercased().hasPrefix("cardio")
-    }
-
     private static func buildTrends(current: WeekStats, previous: WeekStats) -> [ProgressTrend] {
         guard previous.workoutCount > 0 || current.workoutCount > 0 else { return [] }
 
-        return [
+        var trends = [
             makeTrend(
                 title: "Treinos",
                 current: current.workoutCount,
@@ -156,6 +195,20 @@ enum WeeklyProgressAnalyzer {
                 format: { "\($0)/7" }
             )
         ]
+
+        if current.meditationSessions > 0 || previous.meditationSessions > 0 {
+            trends.append(
+                makeTrend(
+                    title: "Meditação",
+                    current: current.meditationMinutes,
+                    previous: previous.meditationMinutes,
+                    icon: "brain.head.profile",
+                    format: { "\($0) min" }
+                )
+            )
+        }
+
+        return trends
     }
 
     private static func makeTrend<T: Comparable & Numeric>(
@@ -207,6 +260,12 @@ enum WeeklyProgressAnalyzer {
 
         if current.cardioSessions >= 2 {
             highlights.append("Bom volume de cardio: \(current.cardioSessions) sessões.")
+        }
+
+        if current.meditationMinutes >= 30 {
+            highlights.append("Excelente prática de meditação: \(current.meditationMinutes) minutos na semana.")
+        } else if current.meditationSessions >= 2 {
+            highlights.append("Boa consistência na meditação: \(current.meditationSessions) sessões.")
         }
 
         if highlights.isEmpty && current.workoutCount > 0 {
@@ -285,6 +344,17 @@ enum WeeklyProgressAnalyzer {
                     icon: "timer",
                     title: "Reduza descansos longos",
                     detail: "O tempo de descanso superou o tempo de exercício. Mantenha intervalos mais curtos para manter a intensidade.",
+                    priority: .medium
+                )
+            )
+        }
+
+        if current.meditationSessions == 0 {
+            suggestions.append(
+                ImprovementSuggestion(
+                    icon: "brain.head.profile",
+                    title: "Inclua meditação",
+                    detail: "Nenhuma sessão de meditação esta semana. Reserve 5–10 minutos para recuperação mental e foco.",
                     priority: .medium
                 )
             )

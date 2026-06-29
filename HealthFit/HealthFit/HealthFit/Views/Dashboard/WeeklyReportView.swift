@@ -24,6 +24,7 @@ struct WeeklyReportView: View {
                     if !report.trends.isEmpty {
                         trendsSection
                     }
+                    meditationSection
                     activityChart
                     if !report.highlights.isEmpty {
                         highlightsSection
@@ -170,6 +171,98 @@ struct WeeklyReportView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
+    }
+
+    private var meditationSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Meditação", systemImage: "brain.head.profile")
+                .font(.headline)
+                .foregroundStyle(.purple)
+
+            HStack(spacing: 12) {
+                meditationStatTile(
+                    icon: "leaf.fill",
+                    value: "\(report.meditationSummary.sessionCount)",
+                    label: "Sessões",
+                    color: .purple
+                )
+                meditationStatTile(
+                    icon: "clock.fill",
+                    value: "\(report.meditationSummary.totalMinutes) min",
+                    label: "Tempo total",
+                    color: .indigo
+                )
+            }
+
+            if report.meditationSummary.previousMinutes > 0 || report.meditationSummary.totalMinutes > 0 {
+                let delta = report.meditationSummary.totalMinutes - report.meditationSummary.previousMinutes
+                HStack(spacing: 8) {
+                    Image(systemName: delta >= 0 ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
+                        .foregroundStyle(delta >= 0 ? AppTheme.accent : .orange)
+                    Text(meditationComparisonText(delta: delta))
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+
+            if report.meditationSummary.topics.isEmpty {
+                Text("Nenhuma sessão de meditação nesta semana. Reserve alguns minutos para acalmar a mente.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.purple.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Tópicos praticados")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    ForEach(report.meditationSummary.topics, id: \.self) { topic in
+                        HStack(spacing: 8) {
+                            Image(systemName: "circle.fill")
+                                .font(.system(size: 6))
+                                .foregroundStyle(.purple)
+                            Text(topic)
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+    }
+
+    private func meditationStatTile(icon: String, value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .foregroundStyle(color)
+            Text(value)
+                .font(.title3.bold())
+                .foregroundStyle(AppTheme.textPrimary)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(Color.purple.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func meditationComparisonText(delta: Int) -> String {
+        if delta > 0 {
+            return "+\(delta) min em relação à semana anterior (\(report.meditationSummary.previousMinutes) min)"
+        }
+        if delta < 0 {
+            return "\(delta) min em relação à semana anterior (\(report.meditationSummary.previousMinutes) min)"
+        }
+        return "Mesmo tempo da semana anterior (\(report.meditationSummary.previousMinutes) min)"
     }
 
     private var activityChart: some View {

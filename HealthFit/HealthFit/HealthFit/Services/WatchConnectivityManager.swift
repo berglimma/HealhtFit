@@ -70,6 +70,46 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         ], realtime: true)
     }
 
+    func startMeditationOnWatch(
+        workoutName: String,
+        targetSeconds: Int,
+        topicName: String,
+        topicIcon: String,
+        colorName: String,
+        currentPrompt: String,
+        promptIndex: Int,
+        totalPrompts: Int
+    ) {
+        sendToWatch([
+            "action": "startMeditation",
+            "workoutName": workoutName,
+            "targetSeconds": targetSeconds,
+            "topicName": topicName,
+            "topicIcon": topicIcon,
+            "colorName": colorName,
+            "currentPrompt": currentPrompt,
+            "promptIndex": promptIndex,
+            "totalPrompts": totalPrompts,
+            "timestamp": Date().timeIntervalSince1970
+        ])
+        isWorkoutActiveOnWatch = true
+    }
+
+    func syncMeditationProgress(
+        elapsedSeconds: Int,
+        targetSeconds: Int,
+        currentPrompt: String,
+        promptIndex: Int
+    ) {
+        sendToWatch([
+            "action": "syncMeditationProgress",
+            "elapsedSeconds": elapsedSeconds,
+            "targetSeconds": targetSeconds,
+            "currentPrompt": currentPrompt,
+            "promptIndex": promptIndex
+        ], realtime: true)
+    }
+
     func stopWorkoutOnWatch() {
         sendToWatch(["action": "stopWorkout"])
         isWorkoutActiveOnWatch = false

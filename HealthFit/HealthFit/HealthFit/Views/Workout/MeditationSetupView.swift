@@ -3,6 +3,7 @@ import SwiftUI
 struct MeditationSetupView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var authService: AuthService
+    @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     let topic: MeditationTopic
@@ -116,6 +117,17 @@ struct MeditationSetupView: View {
     private var startButton: some View {
         Button {
             workoutStore.startMeditationSession(config: config)
+            let firstPrompt = topic.prompts.first ?? ""
+            watchConnectivity.startMeditationOnWatch(
+                workoutName: config.title,
+                targetSeconds: config.targetDurationSeconds,
+                topicName: topic.name,
+                topicIcon: topic.icon,
+                colorName: topic.colorName,
+                currentPrompt: firstPrompt,
+                promptIndex: 0,
+                totalPrompts: topic.prompts.count
+            )
             let athleteName = authService.currentUser?.name ?? "Atleta"
             NotificationService.shared.deliverWorkoutStartNotification(
                 workoutTitle: config.title,

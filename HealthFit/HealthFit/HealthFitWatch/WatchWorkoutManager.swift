@@ -10,10 +10,18 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var isActive = false
     @Published var workoutName = ""
     @Published var isCardioWorkout = false
+    @Published var isMeditationWorkout = false
     @Published var workoutElapsedSeconds = 0
     @Published var exerciseElapsedSeconds = 0
     @Published var currentExerciseName = ""
     @Published var cardioTargetSeconds = 0
+    @Published var meditationTargetSeconds = 0
+    @Published var meditationTopicName = ""
+    @Published var meditationTopicIcon = "brain.head.profile"
+    @Published var meditationColorName = "purple"
+    @Published var meditationPrompt = ""
+    @Published var meditationPromptIndex = 0
+    @Published var meditationTotalPrompts = 1
     @Published var heartRate: Double = 0
     @Published var calories: Double = 0
     @Published var restRemainingSeconds = 0
@@ -45,6 +53,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         resetWorkoutState()
         workoutName = name
         isCardioWorkout = false
+        isMeditationWorkout = false
         isActive = true
         startHeartRateMonitoring()
         startWorkoutClock()
@@ -54,6 +63,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         resetWorkoutState()
         workoutName = name
         isCardioWorkout = true
+        isMeditationWorkout = false
         cardioTargetSeconds = max(targetSeconds, 1)
         currentExerciseName = exerciseName
         isActive = true
@@ -61,9 +71,35 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         startWorkoutClock()
     }
 
+    func startMeditation(
+        name: String,
+        targetSeconds: Int,
+        topicName: String,
+        topicIcon: String,
+        colorName: String,
+        currentPrompt: String,
+        promptIndex: Int,
+        totalPrompts: Int
+    ) {
+        resetWorkoutState()
+        workoutName = name
+        isCardioWorkout = false
+        isMeditationWorkout = true
+        meditationTargetSeconds = max(targetSeconds, 1)
+        meditationTopicName = topicName
+        meditationTopicIcon = topicIcon
+        meditationColorName = colorName
+        meditationPrompt = currentPrompt
+        meditationPromptIndex = max(promptIndex, 0)
+        meditationTotalPrompts = max(totalPrompts, 1)
+        isActive = true
+        startWorkoutClock()
+    }
+
     func stopWorkout() {
         isActive = false
         isCardioWorkout = false
+        isMeditationWorkout = false
         heartRateTimer?.invalidate()
         heartRateTimer = nil
         workoutClockTimer?.invalidate()
@@ -78,6 +114,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         exerciseElapsedSeconds = 0
         currentExerciseName = ""
         cardioTargetSeconds = 0
+        meditationTargetSeconds = 0
+        meditationTopicName = ""
+        meditationTopicIcon = "brain.head.profile"
+        meditationColorName = "purple"
+        meditationPrompt = ""
+        meditationPromptIndex = 0
+        meditationTotalPrompts = 1
         calories = 0
         secondsSincePhoneSync = 0
     }
@@ -98,7 +141,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
         guard secondsSincePhoneSync > 2, !isResting else { return }
         workoutElapsedSeconds += 1
-        if !isCardioWorkout {
+        if !isCardioWorkout && !isMeditationWorkout {
             exerciseElapsedSeconds += 1
         }
     }
@@ -107,7 +150,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         workoutElapsedSeconds: Int? = nil,
         exerciseElapsedSeconds: Int? = nil,
         exerciseName: String? = nil,
-        targetSeconds: Int? = nil
+        targetSeconds: Int? = nil,
+        meditationPrompt: String? = nil,
+        promptIndex: Int? = nil
     ) {
         secondsSincePhoneSync = 0
         if let workoutElapsedSeconds {
@@ -120,7 +165,17 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             currentExerciseName = exerciseName
         }
         if let targetSeconds, targetSeconds > 0 {
-            cardioTargetSeconds = targetSeconds
+            if isMeditationWorkout {
+                meditationTargetSeconds = targetSeconds
+            } else {
+                cardioTargetSeconds = targetSeconds
+            }
+        }
+        if let meditationPrompt, !meditationPrompt.isEmpty {
+            self.meditationPrompt = meditationPrompt
+        }
+        if let promptIndex {
+            meditationPromptIndex = promptIndex
         }
     }
 
@@ -351,6 +406,24 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             applyPhoneSync(
                 workoutElapsedSeconds: message["elapsedSeconds"] as? Int,
                 targetSeconds: message["targetSeconds"] as? Int
+            )
+        case "startMeditation":
+            startMeditation(
+                name: message["workoutName"] as? String ?? "Meditação",
+                targetSeconds: message["targetSeconds"] as? Int ?? 0,
+                topicName: message["topicName"] as? String ?? "Meditação",
+                topicIcon: message["topicIcon"] as? String ?? "brain.head.profile",
+                colorName: message["colorName"] as? String ?? "purple",
+                currentPrompt: message["currentPrompt"] as? String ?? "",
+                promptIndex: message["promptIndex"] as? Int ?? 0,
+                totalPrompts: message["totalPrompts"] as? Int ?? 1
+            )
+        case "syncMeditationProgress":
+            applyPhoneSync(
+                workoutElapsedSeconds: message["elapsedSeconds"] as? Int,
+                targetSeconds: message["targetSeconds"] as? Int,
+                meditationPrompt: message["currentPrompt"] as? String,
+                promptIndex: message["promptIndex"] as? Int
             )
         case "stopWorkout":
             stopWorkout()

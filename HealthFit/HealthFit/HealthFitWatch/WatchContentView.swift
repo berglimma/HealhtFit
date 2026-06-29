@@ -21,13 +21,17 @@ struct WatchContentView: View {
 
                 if workoutManager.isResting {
                     restSection
+                } else if workoutManager.isMeditationWorkout {
+                    meditationSection
                 } else if workoutManager.isCardioWorkout {
                     cardioSection
                 } else {
                     strengthSection
                 }
 
-                compactMetricsRow
+                if !workoutManager.isMeditationWorkout {
+                    compactMetricsRow
+                }
 
                 Button("Encerrar") {
                     workoutManager.stopWorkout()
@@ -71,6 +75,75 @@ struct WatchContentView: View {
                     .font(.system(size: 20, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    private var meditationSection: some View {
+        let accent = meditationColor(from: workoutManager.meditationColorName)
+        let remaining = max(workoutManager.meditationTargetSeconds - workoutManager.workoutElapsedSeconds, 0)
+        let progress = workoutManager.meditationTargetSeconds > 0
+            ? Double(workoutManager.workoutElapsedSeconds) / Double(workoutManager.meditationTargetSeconds)
+            : 0
+
+        return VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: workoutManager.meditationTopicIcon)
+                    .font(.caption)
+                Text(workoutManager.meditationTopicName)
+                    .font(.caption2.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(accent)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(accent.opacity(0.2))
+            .clipShape(Capsule())
+
+            ZStack {
+                Circle()
+                    .stroke(Color.white.opacity(0.12), lineWidth: 6)
+                    .frame(width: 100, height: 100)
+                Circle()
+                    .trim(from: 0, to: min(progress, 1.0))
+                    .stroke(accent, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .frame(width: 100, height: 100)
+                    .rotationEffect(.degrees(-90))
+
+                VStack(spacing: 2) {
+                    Text(formatDuration(remaining))
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                        .foregroundStyle(accent)
+                    Text("restante")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Text("Etapa \(workoutManager.meditationPromptIndex + 1)/\(workoutManager.meditationTotalPrompts)")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(accent.opacity(0.85))
+
+            if !workoutManager.meditationPrompt.isEmpty {
+                Text(workoutManager.meditationPrompt)
+                    .font(.caption2)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(4)
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 4)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func meditationColor(from name: String) -> Color {
+        switch name {
+        case "blue": return .blue
+        case "green": return .green
+        case "orange": return .orange
+        case "pink": return .pink
+        case "indigo": return .indigo
+        case "teal": return .teal
+        default: return .purple
         }
     }
 
@@ -183,7 +256,7 @@ struct WatchContentView: View {
         VStack(spacing: 8) {
             Label("Sincronizado", systemImage: "iphone.and.arrow.forward")
                 .font(.caption)
-            Text("Treino, cardio e cronômetro sincronizados com o iPhone.")
+            Text("Treino, cardio, meditação e cronômetro sincronizados com o iPhone.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
