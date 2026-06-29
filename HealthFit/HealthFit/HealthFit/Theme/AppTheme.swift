@@ -26,8 +26,8 @@ enum AppTheme {
 }
 
 enum AppInfo {
-    static let developerName = "BERG LIMMA"
-    static let developerCredit = "Código desenvolvido por BERG LIMMA"
+    static let developerName = "BERG / LUAN - BLSwift Solutions LTDA"
+    static let developerCredit = "Código desenvolvido por BERG / LUAN - BLSwift Solutions LTDA"
 }
 
 struct CardModifier: ViewModifier {

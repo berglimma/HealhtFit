@@ -39,7 +39,7 @@ def add_title_page(doc):
     meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
     meta.add_run(f"\nVersão do documento: 1.0\nData: {date.today().strftime('%d/%m/%Y')}\n")
     meta.add_run("Plataforma: iOS + watchOS (Swift / SwiftUI)\n")
-    meta.add_run("Desenvolvedor: BERG LIMMA\n")
+    meta.add_run("Desenvolvedor: BERG / LUAN - BLSwift Solutions LTDA\n")
 
     doc.add_page_break()
 
