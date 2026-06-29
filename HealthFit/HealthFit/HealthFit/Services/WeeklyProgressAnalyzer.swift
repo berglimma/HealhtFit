@@ -18,8 +18,8 @@ enum WeeklyProgressAnalyzer {
         }
 
         let completedSessions = sessions.filter { $0.endedAt != nil }
-        let currentSessions = sessions(in: currentStart...endOfDay(referenceDate, calendar: calendar), from: completedSessions)
-        let previousSessions = sessions(in: previousStart...endOfDay(previousEnd, calendar: calendar), from: completedSessions)
+        let currentSessions = filterSessions(in: currentStart...endOfDay(referenceDate, calendar: calendar), from: completedSessions)
+        let previousSessions = filterSessions(in: previousStart...endOfDay(previousEnd, calendar: calendar), from: completedSessions)
 
         let currentWeek = stats(for: currentSessions, calendar: calendar)
         let previousWeek = stats(for: previousSessions, calendar: calendar)
@@ -72,7 +72,7 @@ enum WeeklyProgressAnalyzer {
         )
     }
 
-    private static func sessions(
+    private static func filterSessions(
         in range: ClosedRange<Date>,
         from sessions: [WorkoutSession]
     ) -> [WorkoutSession] {
