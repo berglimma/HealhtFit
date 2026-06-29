@@ -77,6 +77,7 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         CardioExercise(name: "Elíptico", description: "Movimento fluido de corpo inteiro", icon: "figure.step.training", caloriesPerMinute: 8),
         CardioExercise(name: "Pular Corda", description: "Saltos contínuos com corda", icon: "figure.jumprope", caloriesPerMinute: 12),
         CardioExercise(name: "Escada", description: "Simulador de escadas ou degraus", icon: "figure.stair.stepper", caloriesPerMinute: 11),
+        CardioExercise(name: "Escalada", description: "Escalada em parede indoor ou rocha", icon: "figure.climbing", caloriesPerMinute: 11),
         CardioExercise(name: "Remo", description: "Remo ergométrico de alta eficiência", icon: "figure.rower", caloriesPerMinute: 10),
         CardioExercise(name: "Natação", description: "Nados contínuos em piscina", icon: "figure.pool.swim", caloriesPerMinute: 11),
         CardioExercise(name: "Polichinelo", description: "Jumping jacks em ritmo constante", icon: "figure.mixed.cardio", caloriesPerMinute: 9),
