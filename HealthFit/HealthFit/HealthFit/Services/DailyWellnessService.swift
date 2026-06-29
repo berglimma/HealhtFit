@@ -84,7 +84,7 @@ final class DailyWellnessService: ObservableObject {
     }
 
     private func currentTodayEntry() -> DailyWellnessEntry {
-        let today = DailyWellnessEntry.dayKey()
+        let today = DailyWellnessEntry.dayKey(for: .now)
         if todayEntry.dayKey == today {
             return todayEntry
         }
@@ -100,7 +100,7 @@ final class DailyWellnessService: ObservableObject {
         let key = storageKey(email: userEmail)
         guard let data = UserDefaults.standard.data(forKey: key),
               let stored = try? JSONDecoder().decode(DailyWellnessEntry.self, from: data),
-              stored.dayKey == DailyWellnessEntry.dayKey() else {
+              stored.dayKey == DailyWellnessEntry.dayKey(for: .now) else {
             todayEntry = .empty()
             return
         }
