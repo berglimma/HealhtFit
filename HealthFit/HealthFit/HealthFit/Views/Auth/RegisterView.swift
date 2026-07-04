@@ -33,6 +33,11 @@ struct RegisterView: View {
                             .foregroundStyle(AppTheme.textSecondary)
                     }
                     .padding(.top, 20)
+
+                    SocialLoginButtonsView()
+                        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                        .frame(maxWidth: DeviceLayout.formMaxWidth(for: horizontalSizeClass))
+                        .frame(maxWidth: .infinity)
                     
                     VStack(spacing: 10) {
                         TextField(

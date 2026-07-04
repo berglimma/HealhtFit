@@ -6,6 +6,7 @@ enum TestFixtures {
     static let exerciseId = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
 
     static func userProfile(
+        id: String = "test-user-id",
         name: String = "João Silva",
         email: String = "joao@test.com",
         biotype: Biotype = .mesomorph,
@@ -17,6 +18,7 @@ enum TestFixtures {
         caloricDeficit: Int = 400
     ) -> UserProfile {
         UserProfile(
+            id: id,
             name: name,
             email: email,
             biotype: biotype,

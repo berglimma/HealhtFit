@@ -6,6 +6,7 @@ struct LoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var showRegister = false
+    @State private var showForgotPassword = false
     
     var body: some View {
         NavigationStack {
@@ -29,15 +30,66 @@ struct LoginView: View {
                     .padding(.bottom, 48)
 
                     VStack(spacing: 16) {
-                        TextField("E-mail", text: $email)
-                            .textFieldStyle(HealthFitTextFieldStyle())
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                        
-                        SecureField("Senha", text: $password)
-                            .textFieldStyle(HealthFitTextFieldStyle())
-                            .textContentType(.password)
+                        SocialLoginButtonsView()
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("E-mail")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(AppTheme.textSecondary)
+
+                            ZStack(alignment: .leading) {
+                                if email.isEmpty {
+                                    Text("seu@email.com")
+                                        .font(.body.weight(.semibold))
+                                        .foregroundStyle(AppTheme.accent)
+                                        .padding(.horizontal, 16)
+                                        .allowsHitTesting(false)
+                                }
+
+                                TextField("", text: $email)
+                                    .textFieldStyle(HealthFitTextFieldStyle())
+                                    .textContentType(.emailAddress)
+                                    .keyboardType(.emailAddress)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .tint(AppTheme.accent)
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Senha")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(AppTheme.textSecondary)
+
+                            ZStack(alignment: .leading) {
+                                if password.isEmpty {
+                                    Text("Sua senha")
+                                        .font(.body.weight(.semibold))
+                                        .foregroundStyle(AppTheme.accent.opacity(0.55))
+                                        .padding(.horizontal, 16)
+                                        .allowsHitTesting(false)
+                                }
+
+                                SecureField("", text: $password)
+                                    .textFieldStyle(HealthFitTextFieldStyle())
+                                    .textContentType(.password)
+                                    .tint(AppTheme.accent)
+                            }
+                        }
+
+                        Button("Esqueci minha senha") {
+                            showForgotPassword = true
+                        }
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.accent)
+                        .frame(maxWidth: .infinity, alignment: .center)
+
+                        if !authService.isFirebaseReady {
+                            Text("Firebase não configurado. Substitua o GoogleService-Info.plist pelo arquivo do Firebase Console.")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                         
                         if let error = authService.errorMessage {
                             Text(error)
@@ -85,6 +137,9 @@ struct LoginView: View {
             }
             .navigationDestination(isPresented: $showRegister) {
                 RegisterView()
+            }
+            .sheet(isPresented: $showForgotPassword) {
+                ForgotPasswordView(initialEmail: email)
             }
         }
     }

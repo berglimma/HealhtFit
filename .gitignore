@@ -1,0 +1,42 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Xcode — dados locais do usuário
+**/xcuserdata/
+**/*.xcuserstate
+**/*.xccheckout
+**/*.xcscmblueprint
+**/*.moved-aside
+**/*.hmap
+
+# Build
+**/DerivedData/
+**/build/
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Swift Package Manager (cache local)
+.swiftpm/xcode/package.xcworkspace/xcuserdata/
+
+# Firebase — NÃO commitar (contém API_KEY e CLIENT_ID)
+**/GoogleService-Info.plist
+!**/GoogleService-Info.plist.example
+
+# Segredos / ambiente
+.env
+.env.*
+*.secret
+secrets.plist
+
+# IDE local
+.cursor/
+
+# Fastlane (futuro)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output

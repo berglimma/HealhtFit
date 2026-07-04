@@ -89,7 +89,7 @@ enum Gender: String, CaseIterable, Codable, Identifiable {
 }
 
 struct UserProfile: Codable, Identifiable, Equatable {
-    var id: UUID
+    var id: String
     var name: String
     var displayName: String
     var email: String
@@ -105,7 +105,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var createdAt: Date
 
     init(
-        id: UUID = UUID(),
+        id: String = UUID().uuidString,
         name: String,
         email: String,
         displayName: String = "",
@@ -138,7 +138,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
+        id = try container.decode(String.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         displayName = try container.decodeIfPresent(String.self, forKey: .displayName) ?? ""
         email = try container.decode(String.self, forKey: .email)

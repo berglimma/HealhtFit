@@ -1,0 +1,17 @@
+Configuração Firebase (não commitar segredos)
+===========================================
+
+1. Firebase Console → Configurações do projeto → app iOS
+2. Baixe GoogleService-Info.plist
+3. Copie para: HealthFit/GoogleService-Info.plist
+   (use GoogleService-Info.plist.example como referência de estrutura)
+
+4. Login Google: em Info.plist, em CFBundleURLSchemes, use o valor
+   REVERSED_CLIENT_ID do plist baixado.
+
+5. Firebase Console → Authentication → habilite:
+   - E-mail/Senha
+   - Google
+   - Apple
+
+O arquivo GoogleService-Info.plist está no .gitignore e NÃO deve ir para o Git.

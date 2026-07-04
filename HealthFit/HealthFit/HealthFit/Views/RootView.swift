@@ -13,7 +13,13 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if !authService.isAuthenticated {
+            if authService.isRestoringSession {
+                ZStack {
+                    AppTheme.background.ignoresSafeArea()
+                    ProgressView("Carregando...")
+                        .tint(AppTheme.accent)
+                }
+            } else if !authService.isAuthenticated {
                 LoginView()
             } else if showWelcomeMotivation, let welcomeContext {
                 WelcomeMotivationView(context: welcomeContext) {
@@ -36,6 +42,7 @@ struct RootView: View {
                     }
             }
         }
+        .animation(.easeInOut(duration: 0.25), value: authService.isRestoringSession)
         .animation(.easeInOut(duration: 0.25), value: showWelcomeMotivation)
         .onAppear {
             prepareWelcomeIfAuthenticated(trigger: .coldStart)
