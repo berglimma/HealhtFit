@@ -174,7 +174,7 @@ private struct TypingIndicatorBubble: View {
                 Image(systemName: "ellipsis.message.fill")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.accent)
-                    .symbolEffect(.pulse, options: .repeating)
+                    .modifier(RepeatingPulseSymbolEffect())
 
                 HStack(spacing: 4) {
                     ForEach(0..<3, id: \.self) { index in

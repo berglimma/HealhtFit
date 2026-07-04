@@ -72,7 +72,7 @@ struct WelcomeMotivationView: View {
                 Image(systemName: currentSlide.icon)
                     .font(.system(size: 48, weight: .semibold))
                     .foregroundStyle(glowColor)
-                    .symbolEffect(.bounce, options: .repeating.speed(0.55))
+                    .modifier(RepeatingBounceSymbolEffect(speed: 0.55))
             }
             .frame(width: 128, height: 128)
             .scaleEffect(iconScale)

@@ -138,6 +138,44 @@ final class MealPlanService: ObservableObject {
         }
     }
 
+    func addCatalogItem(_ catalogItem: ShoppingCatalogItem) {
+        guard !containsShoppingItem(named: catalogItem.name) else { return }
+
+        let weekStart = Calendar.current.startOfDay(for: .now)
+        shoppingList.append(
+            ShoppingItem(
+                name: catalogItem.name,
+                quantity: catalogItem.defaultQuantity,
+                category: catalogItem.category,
+                weekStartDate: weekStart
+            )
+        )
+        shoppingList.sort { $0.category.rawValue < $1.category.rawValue }
+        saveData()
+    }
+
+    func containsShoppingItem(named name: String) -> Bool {
+        let normalized = normalizedIngredient(name)
+        return shoppingList.contains { normalizedIngredient($0.name) == normalized }
+    }
+
+    func filteredShoppingList(query: String, category: ShoppingCategory?) -> [ShoppingItem] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        var items = shoppingList
+
+        if let category {
+            items = items.filter { $0.category == category }
+        }
+
+        guard !trimmed.isEmpty else { return items }
+
+        let normalizedQuery = normalizedIngredient(trimmed)
+        return items.filter { item in
+            let name = normalizedIngredient(item.name)
+            return name.contains(normalizedQuery)
+        }
+    }
+
     func loadSavedData() {
         if let data = UserDefaults.standard.data(forKey: planKey),
            let plan = try? JSONDecoder().decode([DailyMealPlan].self, from: data) {

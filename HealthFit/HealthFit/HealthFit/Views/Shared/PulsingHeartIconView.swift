@@ -59,3 +59,59 @@ struct PulsingHeartIconView: View {
         PulsingHeartIconView(size: 88)
     }
 }
+
+struct RepeatingBounceSymbolEffect: ViewModifier {
+    let speed: Double
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.symbolEffect(.bounce, options: .repeating.speed(speed))
+        } else {
+            LegacyRepeatingBounceEffect(speed: speed, content: content)
+        }
+    }
+}
+
+struct RepeatingPulseSymbolEffect: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.symbolEffect(.pulse, options: .repeating)
+        } else {
+            LegacyRepeatingPulseEffect(content: content)
+        }
+    }
+}
+
+private struct LegacyRepeatingBounceEffect<Content: View>: View {
+    let speed: Double
+    let content: Content
+    @State private var isAnimating = false
+
+    var body: some View {
+        content
+            .scaleEffect(isAnimating ? 1.08 : 0.95)
+            .animation(
+                .easeInOut(duration: max(0.45, 1.1 / speed))
+                    .repeatForever(autoreverses: true),
+                value: isAnimating
+            )
+            .onAppear { isAnimating = true }
+    }
+}
+
+private struct LegacyRepeatingPulseEffect<Content: View>: View {
+    let content: Content
+    @State private var isAnimating = false
+
+    var body: some View {
+        content
+            .opacity(isAnimating ? 1 : 0.45)
+            .animation(
+                .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                value: isAnimating
+            )
+            .onAppear { isAnimating = true }
+    }
+}
