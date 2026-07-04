@@ -1,6 +1,40 @@
 import Foundation
 import SwiftUI
 
+enum RunningDistance: Int, CaseIterable, Identifiable, Codable, Hashable {
+    case five = 5
+    case ten = 10
+    case fifteen = 15
+    case twenty = 20
+    case twentyFive = 25
+
+    var id: Int { rawValue }
+
+    var label: String { "\(rawValue) km" }
+
+    var kilometers: Double { Double(rawValue) }
+
+    var icon: String {
+        switch self {
+        case .five: return "5.circle.fill"
+        case .ten: return "10.circle.fill"
+        case .fifteen: return "15.circle.fill"
+        case .twenty: return "20.circle.fill"
+        case .twentyFive: return "25.circle.fill"
+        }
+    }
+
+    var marathonRole: String {
+        switch self {
+        case .five: return "Velocidade e base aeróbica"
+        case .ten: return "Ritmo de prova e resistência"
+        case .fifteen: return "Volume intermediário para maratona"
+        case .twenty: return "Longão de preparação"
+        case .twentyFive: return "Simulação de fase avançada"
+        }
+    }
+}
+
 enum CardioIntensity: String, CaseIterable, Codable, Identifiable, Hashable {
     case low = "Baixa"
     case medium = "Média"
@@ -21,6 +55,15 @@ enum CardioIntensity: String, CaseIterable, Codable, Identifiable, Hashable {
         case .low: return 0.75
         case .medium: return 1.0
         case .high: return 1.35
+        }
+    }
+
+    /// Ritmo estimado em segundos por km (corrida por distância).
+    var paceSecondsPerKm: Int {
+        switch self {
+        case .low: return 420
+        case .medium: return 360
+        case .high: return 330
         }
     }
 
@@ -47,6 +90,10 @@ enum CardioIntensity: String, CaseIterable, Codable, Identifiable, Hashable {
         case .high: return .red
         }
     }
+
+    func formattedPace() -> String {
+        PaceFormatting.format(secondsPerKm: paceSecondsPerKm)
+    }
 }
 
 struct CardioExercise: Identifiable, Hashable, Codable {
@@ -70,6 +117,10 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         self.caloriesPerMinute = caloriesPerMinute
     }
 
+    var supportsDistanceGoals: Bool {
+        name == "Corrida"
+    }
+
     static let catalog: [CardioExercise] = [
         CardioExercise(name: "Corrida", description: "Corrida contínua em esteira ou ao ar livre", icon: "figure.run", caloriesPerMinute: 10),
         CardioExercise(name: "Caminhada Rápida", description: "Caminhada acelerada com inclinação moderada", icon: "figure.walk", caloriesPerMinute: 6),
@@ -88,12 +139,71 @@ struct CardioExercise: Identifiable, Hashable, Codable {
 struct CardioWorkoutConfig: Hashable {
     let exercise: CardioExercise
     let intensity: CardioIntensity
+    let runningDistance: RunningDistance?
+    let targetCalories: Int?
 
-    var title: String { "Cardio — \(exercise.name)" }
-    var targetDurationSeconds: Int { intensity.durationMinutes * 60 }
+    var isDistanceRun: Bool { runningDistance != nil }
+
+    var hasCalorieGoal: Bool {
+        guard let targetCalories else { return false }
+        return targetCalories > 0
+    }
+
+    var title: String {
+        if let distance = runningDistance {
+            return "Cardio — Corrida \(distance.label)"
+        }
+        return "Cardio — \(exercise.name)"
+    }
+
+    var targetDistanceKm: Double {
+        runningDistance?.kilometers ?? 0
+    }
+
+    var targetDurationSeconds: Int {
+        if let distance = runningDistance {
+            return Int(distance.kilometers * Double(intensity.paceSecondsPerKm))
+        }
+        return intensity.durationMinutes * 60
+    }
 
     func estimatedCalories(for elapsedSeconds: Int) -> Double {
         let minutes = Double(elapsedSeconds) / 60.0
         return exercise.caloriesPerMinute * intensity.multiplier * minutes
+    }
+
+    func estimatedDistanceKm(elapsedSeconds: Int) -> Double {
+        guard intensity.paceSecondsPerKm > 0 else { return 0 }
+        return Double(elapsedSeconds) / Double(intensity.paceSecondsPerKm)
+    }
+
+    func paceSecondsPerKm(elapsedSeconds: Int, distanceKm: Double) -> Int {
+        guard distanceKm > 0 else { return intensity.paceSecondsPerKm }
+        return Int((Double(elapsedSeconds) / distanceKm).rounded())
+    }
+}
+
+enum PaceFormatting {
+    static let marathonDistanceKm = 42.195
+    static let halfMarathonDistanceKm = 21.0975
+
+    static func format(secondsPerKm: Int) -> String {
+        let minutes = secondsPerKm / 60
+        let seconds = secondsPerKm % 60
+        return String(format: "%d:%02d /km", minutes, seconds)
+    }
+
+    static func formatDuration(seconds: Int) -> String {
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
+        let secs = seconds % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, secs)
+        }
+        return String(format: "%d:%02d", minutes, secs)
+    }
+
+    static func projectedFinish(secondsPerKm: Int, distanceKm: Double) -> Int {
+        Int((Double(secondsPerKm) * distanceKm).rounded())
     }
 }

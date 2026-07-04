@@ -62,6 +62,11 @@
 		B1000055 /* AppIconInactivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000057 /* AppIconInactivityService.swift */; };
 		B1000056 /* PulsingHeartIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000058 /* PulsingHeartIconView.swift */; };
 		B1000057 /* MealCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000059 /* MealCatalog.swift */; };
+		B1000058 /* HealthAssistantService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000060 /* HealthAssistantService.swift */; };
+		B1000059 /* HealthChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000061 /* HealthChatView.swift */; };
+		B1000060 /* WelcomeMotivationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000062 /* WelcomeMotivationService.swift */; };
+		B1000061 /* WelcomeMotivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000063 /* WelcomeMotivationView.swift */; };
+		B1000062 /* MarathonReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000064 /* MarathonReportBuilder.swift */; };
 		B1000034 /* HealthFitWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = F1000034 /* HealthFitWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -149,6 +154,11 @@
 		F1000057 /* AppIconInactivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconInactivityService.swift; sourceTree = "<group>"; };
 		F1000058 /* PulsingHeartIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulsingHeartIconView.swift; sourceTree = "<group>"; };
 		F1000059 /* MealCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealCatalog.swift; sourceTree = "<group>"; };
+		F1000060 /* HealthAssistantService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthAssistantService.swift; sourceTree = "<group>"; };
+		F1000061 /* HealthChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthChatView.swift; sourceTree = "<group>"; };
+		F1000062 /* WelcomeMotivationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeMotivationService.swift; sourceTree = "<group>"; };
+		F1000063 /* WelcomeMotivationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeMotivationView.swift; sourceTree = "<group>"; };
+		F1000064 /* MarathonReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarathonReportBuilder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -246,6 +256,9 @@
 				F1000048 /* WeeklyReportService.swift */,
 				F1000054 /* DailyWellnessService.swift */,
 				F1000057 /* AppIconInactivityService.swift */,
+				F1000060 /* HealthAssistantService.swift */,
+				F1000062 /* WelcomeMotivationService.swift */,
+				F1000064 /* MarathonReportBuilder.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -269,6 +282,7 @@
 				G1000012 /* Workout */,
 				G1000013 /* Camera */,
 				G1000014 /* Nutrition */,
+				G1000017 /* Assistant */,
 				G1000015 /* Profile */,
 				G1000016 /* Shared */,
 			);
@@ -344,12 +358,21 @@
 			path = Profile;
 			sourceTree = "<group>";
 		};
+		G1000017 /* Assistant */ = {
+			isa = PBXGroup;
+			children = (
+				F1000061 /* HealthChatView.swift */,
+			);
+			path = Assistant;
+			sourceTree = "<group>";
+		};
 		G1000016 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
 				F1000041 /* MailComposeView.swift */,
 				F1000055 /* DailyWellnessCheckInView.swift */,
 				F1000058 /* PulsingHeartIconView.swift */,
+				F1000063 /* WelcomeMotivationView.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -499,6 +522,11 @@
 				B1000055 /* AppIconInactivityService.swift in Sources */,
 				B1000056 /* PulsingHeartIconView.swift in Sources */,
 				B1000057 /* MealCatalog.swift in Sources */,
+				B1000058 /* HealthAssistantService.swift in Sources */,
+				B1000059 /* HealthChatView.swift in Sources */,
+				B1000060 /* WelcomeMotivationService.swift in Sources */,
+				B1000061 /* WelcomeMotivationView.swift in Sources */,
+				B1000062 /* MarathonReportBuilder.swift in Sources */,
 				B1000039 /* MailComposeView.swift in Sources */,
 				B1000024 /* CameraPreviewView.swift in Sources */,
 				B1000025 /* VisionWorkoutView.swift in Sources */,

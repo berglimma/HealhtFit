@@ -35,12 +35,14 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         }
     }
 
-    func startCardioOnWatch(workoutName: String, targetSeconds: Int, exerciseName: String) {
+    func startCardioOnWatch(workoutName: String, targetSeconds: Int, exerciseName: String, targetCalories: Int? = nil) {
+        watchCalories = 0
         sendToWatch([
             "action": "startCardio",
             "workoutName": workoutName,
             "targetSeconds": targetSeconds,
             "exerciseName": exerciseName,
+            "targetCalories": targetCalories ?? 0,
             "timestamp": Date().timeIntervalSince1970
         ])
         isWorkoutActiveOnWatch = true
@@ -62,11 +64,18 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         ], realtime: true)
     }
 
-    func syncCardioProgress(elapsedSeconds: Int, targetSeconds: Int) {
+    func syncCardioProgress(
+        elapsedSeconds: Int,
+        targetSeconds: Int,
+        currentCalories: Double,
+        targetCalories: Int? = nil
+    ) {
         sendToWatch([
             "action": "syncCardioProgress",
             "elapsedSeconds": elapsedSeconds,
-            "targetSeconds": targetSeconds
+            "targetSeconds": targetSeconds,
+            "currentCalories": currentCalories,
+            "targetCalories": targetCalories ?? 0
         ], realtime: true)
     }
 

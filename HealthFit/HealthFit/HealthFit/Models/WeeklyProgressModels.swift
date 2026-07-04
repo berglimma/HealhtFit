@@ -77,6 +77,7 @@ struct WeeklyProgressReport: Equatable {
     let highlights: [String]
     let improvements: [ImprovementSuggestion]
     let dailyWorkoutMinutes: [DailyWorkoutActivity]
+    let dailyMeditationMinutes: [DailyMeditationActivity]
     let overallScore: Int
     let preWorkoutSummary: PreWorkoutUsageSummary
     let lifetimePreWorkoutSummary: PreWorkoutUsageSummary
@@ -109,4 +110,11 @@ struct DailyWorkoutActivity: Identifiable, Equatable {
     let date: Date
     let minutes: Int
     let workoutCount: Int
+}
+
+struct DailyMeditationActivity: Identifiable, Equatable {
+    let id = UUID()
+    let date: Date
+    let minutes: Int
+    let sessionCount: Int
 }

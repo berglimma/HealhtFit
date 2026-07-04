@@ -62,7 +62,10 @@ final class WorkoutStore: ObservableObject {
         activeSession = WorkoutSession(
             workoutSheetId: config.exercise.id,
             workoutTitle: config.title,
-            totalExercises: 1
+            totalExercises: 1,
+            targetDistanceKm: config.isDistanceRun ? config.targetDistanceKm : nil,
+            cardioIntensityLabel: config.intensity.rawValue,
+            targetCalories: config.targetCalories
         )
         currentExerciseIndex = 0
         exerciseRecords = [
@@ -167,12 +170,19 @@ final class WorkoutStore: ObservableObject {
         activeSession = session
     }
 
-    func endSession() {
-        guard var session = activeSession else { return }
+    func endSession(persisting persistedSession: WorkoutSession? = nil) {
         stopExerciseTimer()
-        session.endedAt = .now
-        session.exerciseRecords = exerciseRecords
-        session.completedExercises = exerciseRecords.filter(\.isCompleted).count
+
+        guard var session = persistedSession ?? activeSession else { return }
+
+        if persistedSession == nil {
+            session.endedAt = .now
+            session.exerciseRecords = exerciseRecords
+            session.completedExercises = exerciseRecords.filter(\.isCompleted).count
+        } else if session.endedAt == nil {
+            session.endedAt = .now
+        }
+
         sessionHistory.insert(session, at: 0)
         activeSession = nil
         currentExerciseIndex = 0

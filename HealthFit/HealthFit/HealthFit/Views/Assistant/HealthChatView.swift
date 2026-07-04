@@ -1,0 +1,248 @@
+import SwiftUI
+
+struct HealthChatView: View {
+    @EnvironmentObject var authService: AuthService
+    @EnvironmentObject var mealPlanService: MealPlanService
+    @EnvironmentObject var wellnessService: DailyWellnessService
+    @EnvironmentObject var workoutStore: WorkoutStore
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    @StateObject private var assistant = HealthAssistantService()
+    @State private var draft = ""
+    @FocusState private var isInputFocused: Bool
+
+    private var context: HealthAssistantContext {
+        let user = authService.currentUser
+        let weeklyReport = WeeklyProgressAnalyzer.buildReport(
+            sessions: workoutStore.sessionHistory,
+            goal: user?.goal ?? .maintenance
+        )
+        let hoursSinceLastWorkout: Double? = workoutStore.lastCompletedWorkoutAt.map {
+            Date().timeIntervalSince($0) / 3600
+        }
+
+        return HealthAssistantContext(
+            user: user,
+            waterIntakeMl: wellnessService.todayEntry.waterIntakeMl,
+            sleepHours: wellnessService.todayEntry.sleepHours,
+            weeklyWorkoutCount: weeklyReport.currentWeek.workoutCount,
+            hoursSinceLastWorkout: hoursSinceLastWorkout,
+            dailyCalorieTarget: mealPlanService.dailyCalorieTarget > 0
+                ? mealPlanService.dailyCalorieTarget
+                : (user?.dailyCalorieTarget ?? 0),
+            basalMetabolicRate: mealPlanService.basalMetabolicRate > 0
+                ? mealPlanService.basalMetabolicRate
+                : (user?.basalMetabolicRate ?? 0),
+            estimatedTDEE: mealPlanService.estimatedTDEE > 0
+                ? mealPlanService.estimatedTDEE
+                : (user?.estimatedTDEE ?? 0),
+            caloricDeficit: mealPlanService.caloricDeficit > 0
+                ? mealPlanService.caloricDeficit
+                : (user?.caloricDeficit ?? 0),
+            sweetConsumption: mealPlanService.customMenuSelection.sweetConsumption,
+            lactoseTolerance: mealPlanService.customMenuSelection.lactoseTolerance
+        )
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(assistant.messages) { message in
+                                ChatBubble(message: message)
+                                    .id(message.id)
+                            }
+
+                            if assistant.isTyping {
+                                TypingIndicatorBubble()
+                                    .id("typing-indicator")
+                            }
+                        }
+                        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                        .padding(.vertical, 12)
+                    }
+                    .onChange(of: assistant.messages.count) { _, _ in
+                        scrollToBottom(proxy)
+                    }
+                    .onChange(of: assistant.isTyping) { _, isTyping in
+                        if isTyping {
+                            scrollToBottom(proxy)
+                        }
+                    }
+                }
+
+                suggestionStrip
+
+                inputBar
+            }
+            .background(AppTheme.background)
+            .navigationTitle("Assistente")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        assistant.clear(context: context)
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                    .accessibilityLabel("Limpar conversa")
+                }
+            }
+            .onAppear {
+                assistant.bootstrap(context: context)
+            }
+        }
+    }
+
+    private func scrollToBottom(_ proxy: ScrollViewProxy) {
+        withAnimation(.easeOut(duration: 0.25)) {
+            if assistant.isTyping {
+                proxy.scrollTo("typing-indicator", anchor: .bottom)
+            } else if let last = assistant.messages.last {
+                proxy.scrollTo(last.id, anchor: .bottom)
+            }
+        }
+    }
+
+    private var suggestionStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(HealthAssistantEngine.suggestedQuestions, id: \.self) { question in
+                    Button {
+                        draft = ""
+                        isInputFocused = false
+                        assistant.send(question, context: context)
+                    } label: {
+                        Text(question)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(AppTheme.cardBackground)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(assistant.isTyping)
+                    .opacity(assistant.isTyping ? 0.5 : 1)
+                }
+            }
+            .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+            .padding(.vertical, 8)
+        }
+        .background(AppTheme.background.opacity(0.95))
+    }
+
+    private var inputBar: some View {
+        HStack(spacing: 10) {
+            TextField("Digite sua dúvida...", text: $draft, axis: .vertical)
+                .lineLimit(1...4)
+                .focused($isInputFocused)
+                .disabled(assistant.isTyping)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .foregroundStyle(AppTheme.textPrimary)
+
+            Button {
+                let text = draft
+                draft = ""
+                isInputFocused = false
+                assistant.send(text, context: context)
+            } label: {
+                Image(systemName: "paperplane.fill")
+                    .font(.title3)
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.textSecondary : AppTheme.accent)
+                    .clipShape(Circle())
+            }
+            .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || assistant.isTyping)
+        }
+        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+        .padding(.vertical, 10)
+        .background(AppTheme.cardBackground.opacity(0.6))
+        .opacity(assistant.isTyping ? 0.85 : 1)
+    }
+}
+
+private struct TypingIndicatorBubble: View {
+    var body: some View {
+        HStack {
+            HStack(spacing: 8) {
+                Image(systemName: "ellipsis.message.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.accent)
+                    .symbolEffect(.pulse, options: .repeating)
+
+                HStack(spacing: 4) {
+                    ForEach(0..<3, id: \.self) { index in
+                        TypingDot(delay: Double(index) * 0.2)
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityLabel("Assistente digitando")
+
+            Spacer(minLength: 48)
+        }
+    }
+}
+
+private struct TypingDot: View {
+    let delay: Double
+    @State private var isAnimating = false
+
+    var body: some View {
+        Circle()
+            .fill(AppTheme.textSecondary)
+            .frame(width: 7, height: 7)
+            .offset(y: isAnimating ? -4 : 2)
+            .animation(
+                .easeInOut(duration: 0.45)
+                    .repeatForever(autoreverses: true)
+                    .delay(delay),
+                value: isAnimating
+            )
+            .onAppear { isAnimating = true }
+    }
+}
+
+private struct ChatBubble: View {
+    let message: HealthChatMessage
+
+    var body: some View {
+        HStack {
+            if message.isUser { Spacer(minLength: 48) }
+
+            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
+                Text(message.text)
+                    .font(.subheadline)
+                    .foregroundStyle(message.isUser ? .white : AppTheme.textPrimary)
+                    .multilineTextAlignment(message.isUser ? .trailing : .leading)
+
+                Text(message.timestamp, format: .dateTime.hour().minute())
+                    .font(.caption2)
+                    .foregroundStyle(message.isUser ? .white.opacity(0.75) : AppTheme.textSecondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(message.isUser ? AppTheme.accent : AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+            if !message.isUser { Spacer(minLength: 48) }
+        }
+    }
+}
+
+#Preview {
+    HealthChatView()
+        .environmentObject(AuthService())
+        .environmentObject(MealPlanService())
+        .environmentObject(DailyWellnessService.shared)
+        .environmentObject(WorkoutStore())
+}

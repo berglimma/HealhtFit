@@ -21,12 +21,27 @@ struct WorkoutSummaryView: View {
     @State private var showEmailSentAlert = false
     @State private var showEmailFailedAlert = false
     @State private var emailWasSent = false
+    @State private var didAttemptAutoSend = false
+
+    private var isCardioSession: Bool {
+        WorkoutReportBuilder.isCardioSession(session)
+    }
+
+    private var marathonReport: MarathonPerformanceReport? {
+        MarathonReportBuilder.build(session: session, allSessions: workoutStore.sessionHistory)
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     summaryHeader
+                    if session.targetCalories != nil {
+                        calorieGoalResultSection
+                    }
+                    if marathonReport != nil {
+                        marathonPerformanceSection
+                    }
                     preWorkoutSection
                     exerciseBreakdown
                     totalsSection
@@ -74,12 +89,21 @@ struct WorkoutSummaryView: View {
         } message: {
             Text("Configure uma conta de e-mail no iPhone ou cadastre o e-mail do personal no perfil.")
         }
+        .onAppear {
+            autoSendReportToTrainerIfNeeded()
+        }
     }
 
     @ViewBuilder
     private var emailSection: some View {
         if let user = authService.currentUser, user.hasPersonalTrainer {
             VStack(spacing: 12) {
+                if !emailWasSent && mailDraft == nil && didAttemptAutoSend {
+                    Label("Abrindo e-mail para o personal...", systemImage: "envelope")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+
                 Button {
                     sendReportToTrainer(user: user)
                 } label: {
@@ -100,6 +124,11 @@ struct WorkoutSummaryView: View {
                     Label("E-mail enviado", systemImage: "checkmark.circle.fill")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.green)
+                } else if didAttemptAutoSend {
+                    Text("O relatório abre automaticamente ao finalizar o treino.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
                 }
 
                 if !user.personalTrainerName.isEmpty {
@@ -110,6 +139,14 @@ struct WorkoutSummaryView: View {
                 }
             }
         }
+    }
+
+    private func autoSendReportToTrainerIfNeeded() {
+        guard !didAttemptAutoSend,
+              let user = authService.currentUser,
+              user.hasPersonalTrainer else { return }
+        didAttemptAutoSend = true
+        sendReportToTrainer(user: user)
     }
 
     private var buttonLabel: String {
@@ -186,17 +223,34 @@ struct WorkoutSummaryView: View {
                     label: "Duração total",
                     icon: "clock.fill"
                 )
-                SummaryStat(
-                    value: "\(session.completedExercises)/\(session.totalExercises)",
-                    label: "Exercícios",
-                    icon: "list.bullet"
-                )
-                if session.caloriesBurned > 0 {
+                if isCardioSession {
+                    if session.caloriesBurned > 0 {
+                        SummaryStat(
+                            value: "\(Int(session.caloriesBurned))",
+                            label: "kcal",
+                            icon: "flame.fill"
+                        )
+                    }
+                    if session.averageHeartRate > 0 {
+                        SummaryStat(
+                            value: String(format: "%.0f", session.averageHeartRate),
+                            label: "BPM",
+                            icon: "heart.fill"
+                        )
+                    }
+                } else {
                     SummaryStat(
-                        value: "\(Int(session.caloriesBurned))",
-                        label: "kcal",
-                        icon: "flame.fill"
+                        value: "\(session.completedExercises)/\(session.totalExercises)",
+                        label: "Exercícios",
+                        icon: "list.bullet"
                     )
+                    if session.caloriesBurned > 0 {
+                        SummaryStat(
+                            value: "\(Int(session.caloriesBurned))",
+                            label: "kcal",
+                            icon: "flame.fill"
+                        )
+                    }
                 }
             }
         }
@@ -204,6 +258,164 @@ struct WorkoutSummaryView: View {
         .padding()
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    @ViewBuilder
+    private var calorieGoalResultSection: some View {
+        if let target = session.targetCalories, target > 0 {
+            let burned = Int(session.caloriesBurned)
+            let exceeded = burned >= target
+            let superation = burned - target
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Image(systemName: exceeded ? "flame.circle.fill" : "target")
+                        .foregroundStyle(exceeded ? .orange : AppTheme.accentSecondary)
+                    Text("Meta de calorias")
+                        .font(.headline)
+                }
+
+                HStack {
+                    Text("\(burned) / \(target) kcal")
+                        .font(.title3.bold())
+                        .foregroundStyle(exceeded ? .orange : AppTheme.textPrimary)
+                    Spacer()
+                    Text(exceeded ? "Atingida" : "Parcial")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(exceeded ? .green : AppTheme.textSecondary)
+                }
+
+                ProgressView(value: min(Double(burned) / Double(target), 1.0))
+                    .tint(exceeded ? .orange : AppTheme.accentSecondary)
+
+                if superation > 0 {
+                    Text(MotivationMessages.cardioCalorieExceededMessage(
+                        currentCalories: burned,
+                        targetCalories: target
+                    ))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+            .foregroundStyle(AppTheme.textPrimary)
+            .padding()
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        }
+    }
+
+    @ViewBuilder
+    private var marathonPerformanceSection: some View {
+        if let report = marathonReport {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Image(systemName: "figure.run.circle.fill")
+                        .foregroundStyle(AppTheme.accent)
+                    Text("Performance Maratona")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+
+                HStack(spacing: 16) {
+                    SummaryStat(
+                        value: String(format: "%.2f km", report.distanceKm),
+                        label: "Percorridos",
+                        icon: "map.fill"
+                    )
+                    SummaryStat(
+                        value: report.formattedTime,
+                        label: "Tempo",
+                        icon: "clock.fill"
+                    )
+                    SummaryStat(
+                        value: report.formattedPace.replacingOccurrences(of: " /km", with: ""),
+                        label: "Ritmo",
+                        icon: "speedometer"
+                    )
+                }
+
+                Divider().background(Color.white.opacity(0.1))
+
+                HStack {
+                    Label("Meta \(String(format: "%.0f", report.targetDistanceKm)) km", systemImage: "target")
+                    Spacer()
+                    Text(report.goalReached ? "Atingida" : "Parcial")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(report.goalReached ? .green : AppTheme.accentSecondary)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Projeções com este ritmo")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                    HStack {
+                        Label("Meia (21,1 km)", systemImage: "flag.checkered")
+                        Spacer()
+                        Text(report.formattedHalfMarathonProjection)
+                            .font(.system(.body, design: .monospaced).weight(.semibold))
+                    }
+                    HStack {
+                        Label("Maratona (42,2 km)", systemImage: "trophy.fill")
+                        Spacer()
+                        Text(report.formattedMarathonProjection)
+                            .font(.system(.body, design: .monospaced).weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                }
+
+                HStack {
+                    Label("Volume semanal", systemImage: "calendar")
+                    Spacer()
+                    Text(String(format: "%.1f km", report.weeklyRunningKm))
+                        .font(.subheadline.weight(.semibold))
+                }
+
+                if let previous = report.previousBestSeconds, let delta = report.improvementSeconds {
+                    HStack {
+                        Label("Melhor marca anterior", systemImage: "medal.fill")
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(PaceFormatting.formatDuration(seconds: previous))
+                                .font(.subheadline.weight(.semibold))
+                            if delta < 0 {
+                                Text("Novo recorde! −\(abs(delta / 60)) min")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(.green)
+                            } else if delta > 0 {
+                                Text("+\(delta / 60) min vs recorde")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            } else {
+                                Text("Empate com recorde")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.accentSecondary)
+                            }
+                        }
+                    }
+                }
+
+                Text(report.readinessMessage)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .padding(.top, 4)
+
+                if !report.coachingTips.isEmpty {
+                    Divider().background(Color.white.opacity(0.1))
+                    Text("Orientações")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                    ForEach(report.coachingTips, id: \.self) { tip in
+                        Label(tip, systemImage: "lightbulb.fill")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textPrimary)
+                    }
+                }
+            }
+            .foregroundStyle(AppTheme.textPrimary)
+            .padding()
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        }
     }
 
     @ViewBuilder
@@ -278,7 +490,7 @@ struct WorkoutSummaryView: View {
 
     private var exerciseBreakdown: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Tempo por Exercício")
+            Text(isCardioSession ? "Detalhes do Cardio" : "Tempo por Exercício")
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
 
@@ -311,27 +523,30 @@ struct WorkoutSummaryView: View {
         }
     }
 
+    @ViewBuilder
     private var totalsSection: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Label("Tempo nos exercícios", systemImage: "figure.strengthtraining.traditional")
-                Spacer()
-                Text(DurationFormatting.format(seconds: session.totalExerciseSeconds))
-                    .font(.system(.body, design: .monospaced).weight(.semibold))
-            }
+        if !isCardioSession {
+            VStack(spacing: 12) {
+                HStack {
+                    Label("Tempo nos exercícios", systemImage: "figure.strengthtraining.traditional")
+                    Spacer()
+                    Text(DurationFormatting.format(seconds: session.totalExerciseSeconds))
+                        .font(.system(.body, design: .monospaced).weight(.semibold))
+                }
 
-            HStack {
-                Label("Descanso total", systemImage: "timer")
-                Spacer()
-                Text(DurationFormatting.format(seconds: session.totalRestSeconds))
-                    .font(.system(.body, design: .monospaced).weight(.semibold))
-                    .foregroundStyle(AppTheme.accentSecondary)
+                HStack {
+                    Label("Descanso total", systemImage: "timer")
+                    Spacer()
+                    Text(DurationFormatting.format(seconds: session.totalRestSeconds))
+                        .font(.system(.body, design: .monospaced).weight(.semibold))
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
             }
+            .foregroundStyle(AppTheme.textPrimary)
+            .padding()
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
         }
-        .foregroundStyle(AppTheme.textPrimary)
-        .padding()
-        .background(AppTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 }
 

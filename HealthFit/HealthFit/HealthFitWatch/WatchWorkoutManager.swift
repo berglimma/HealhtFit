@@ -15,6 +15,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var exerciseElapsedSeconds = 0
     @Published var currentExerciseName = ""
     @Published var cardioTargetSeconds = 0
+    @Published var cardioTargetCalories = 0
+    @Published var cardioSuperationMessage = ""
     @Published var meditationTargetSeconds = 0
     @Published var meditationTopicName = ""
     @Published var meditationTopicIcon = "brain.head.profile"
@@ -59,12 +61,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         startWorkoutClock()
     }
 
-    func startCardio(name: String, targetSeconds: Int, exerciseName: String) {
+    func startCardio(name: String, targetSeconds: Int, exerciseName: String, targetCalories: Int = 0) {
         resetWorkoutState()
         workoutName = name
         isCardioWorkout = true
         isMeditationWorkout = false
         cardioTargetSeconds = max(targetSeconds, 1)
+        cardioTargetCalories = max(targetCalories, 0)
         currentExerciseName = exerciseName
         isActive = true
         startHeartRateMonitoring()
@@ -114,6 +117,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         exerciseElapsedSeconds = 0
         currentExerciseName = ""
         cardioTargetSeconds = 0
+        cardioTargetCalories = 0
+        cardioSuperationMessage = ""
         meditationTargetSeconds = 0
         meditationTopicName = ""
         meditationTopicIcon = "brain.head.profile"
@@ -151,6 +156,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         exerciseElapsedSeconds: Int? = nil,
         exerciseName: String? = nil,
         targetSeconds: Int? = nil,
+        targetCalories: Int? = nil,
+        currentCalories: Double? = nil,
         meditationPrompt: String? = nil,
         promptIndex: Int? = nil
     ) {
@@ -171,11 +178,33 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 cardioTargetSeconds = targetSeconds
             }
         }
+        if let targetCalories, targetCalories > 0 {
+            cardioTargetCalories = targetCalories
+        }
+        if let currentCalories {
+            calories = max(calories, currentCalories)
+            updateCalorieSuperation()
+        }
         if let meditationPrompt, !meditationPrompt.isEmpty {
             self.meditationPrompt = meditationPrompt
         }
         if let promptIndex {
             meditationPromptIndex = promptIndex
+        }
+    }
+
+    private func updateCalorieSuperation() {
+        guard isCardioWorkout, cardioTargetCalories > 0 else {
+            cardioSuperationMessage = ""
+            return
+        }
+        if calories >= Double(cardioTargetCalories) {
+            if cardioSuperationMessage.isEmpty {
+                cardioSuperationMessage = "Meta superada! 🔥"
+                WKInterfaceDevice.current().play(.success)
+            }
+        } else {
+            cardioSuperationMessage = ""
         }
     }
 
@@ -352,6 +381,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             Task { @MainActor in
                 self?.fetchHeartRate()
                 self?.calories += Double.random(in: 1...5)
+                self?.updateCalorieSuperation()
                 self?.sendMetricsToPhone()
             }
         }
@@ -395,7 +425,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             let name = message["workoutName"] as? String ?? "Cardio"
             let targetSeconds = message["targetSeconds"] as? Int ?? 0
             let exerciseName = message["exerciseName"] as? String ?? "Cardio"
-            startCardio(name: name, targetSeconds: targetSeconds, exerciseName: exerciseName)
+            let targetCalories = message["targetCalories"] as? Int ?? 0
+            startCardio(name: name, targetSeconds: targetSeconds, exerciseName: exerciseName, targetCalories: targetCalories)
         case "syncWorkoutProgress":
             applyPhoneSync(
                 workoutElapsedSeconds: message["workoutElapsedSeconds"] as? Int,
@@ -405,7 +436,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         case "syncCardioProgress":
             applyPhoneSync(
                 workoutElapsedSeconds: message["elapsedSeconds"] as? Int,
-                targetSeconds: message["targetSeconds"] as? Int
+                targetSeconds: message["targetSeconds"] as? Int,
+                targetCalories: message["targetCalories"] as? Int,
+                currentCalories: message["currentCalories"] as? Double
             )
         case "startMeditation":
             startMeditation(

@@ -148,28 +148,61 @@ struct WatchContentView: View {
     }
 
     private var cardioSection: some View {
-        VStack(spacing: 6) {
-            Label("Cronômetro", systemImage: "stopwatch.fill")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+        let hasCalorieGoal = workoutManager.cardioTargetCalories > 0
+        let calorieProgress = hasCalorieGoal
+            ? min(workoutManager.calories / Double(workoutManager.cardioTargetCalories), 1.0)
+            : 0
 
-            Text(formatDuration(workoutManager.workoutElapsedSeconds))
-                .font(.system(size: 44, weight: .bold, design: .monospaced))
-                .foregroundStyle(.orange)
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
+        return VStack(spacing: 6) {
+            if hasCalorieGoal {
+                Label("Meta calórica", systemImage: "flame.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
 
-            if workoutManager.cardioTargetSeconds > 0 {
-                Text("Meta: \(formatDuration(workoutManager.cardioTargetSeconds))")
+                Text("\(Int(workoutManager.calories))")
+                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .foregroundStyle(workoutManager.calories >= Double(workoutManager.cardioTargetCalories) ? .orange : .primary)
+
+                Text("de \(workoutManager.cardioTargetCalories) kcal")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
-                ProgressView(
-                    value: Double(workoutManager.workoutElapsedSeconds),
-                    total: Double(workoutManager.cardioTargetSeconds)
-                )
-                .tint(.orange)
+                ProgressView(value: calorieProgress)
+                    .tint(workoutManager.calories >= Double(workoutManager.cardioTargetCalories) ? .orange : .orange.opacity(0.8))
+
+                if !workoutManager.cardioSuperationMessage.isEmpty {
+                    Text(workoutManager.cardioSuperationMessage)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.orange)
+                        .multilineTextAlignment(.center)
+                }
+            } else {
+                Label("Cronômetro", systemImage: "stopwatch.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                Text(formatDuration(workoutManager.workoutElapsedSeconds))
+                    .font(.system(size: 44, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.orange)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+
+                if workoutManager.cardioTargetSeconds > 0 {
+                    Text("Meta: \(formatDuration(workoutManager.cardioTargetSeconds))")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    ProgressView(
+                        value: Double(workoutManager.workoutElapsedSeconds),
+                        total: Double(workoutManager.cardioTargetSeconds)
+                    )
+                    .tint(.orange)
+                }
             }
+
+            Text(formatDuration(workoutManager.workoutElapsedSeconds))
+                .font(.caption2.monospaced())
+                .foregroundStyle(.secondary)
 
             if !workoutManager.currentExerciseName.isEmpty {
                 Text(workoutManager.currentExerciseName)

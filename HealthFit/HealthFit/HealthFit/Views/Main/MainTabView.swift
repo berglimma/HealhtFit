@@ -23,11 +23,17 @@ struct MainTabView: View {
                 }
                 .tag(2)
 
+            HealthChatView()
+                .tabItem {
+                    Label("Dúvidas", systemImage: "bubble.left.and.bubble.right.fill")
+                }
+                .tag(3)
+
             ProfileView()
                 .tabItem {
                     Label("Perfil", systemImage: "person.fill")
                 }
-                .tag(3)
+                .tag(4)
         }
         .tint(AppTheme.accent)
         .tabViewStyle(.automatic)

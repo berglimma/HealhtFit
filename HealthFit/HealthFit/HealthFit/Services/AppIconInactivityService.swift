@@ -11,7 +11,7 @@ final class AppIconInactivityService {
     static let yellowThreshold: TimeInterval = 24 * 60 * 60
     /// 36h sem abrir o app.
     static let redThreshold: TimeInterval = 36 * 60 * 60
-    /// Após o vermelho: coração quebrado + alerta.
+    /// Após o vermelho: ícone quebrado + alerta.
     static let brokenThreshold: TimeInterval = 48 * 60 * 60
     static let pulseInterval: TimeInterval = 0.65
 
@@ -33,10 +33,10 @@ final class AppIconInactivityService {
 
         var title: String {
             switch self {
-            case .normal: "Coração saudável"
-            case .yellow: "Atenção — 24h sem uso"
-            case .red: "Alerta — 36h sem abrir"
-            case .broken: "Coração quebrado — retome os treinos"
+            case .normal: "Ícone saudável"
+            case .yellow: "Ícone amarelo — 24h sem uso"
+            case .red: "Ícone vermelho — 36h sem abrir"
+            case .broken: "Ícone quebrado — retome os treinos"
             }
         }
 
@@ -157,6 +157,12 @@ final class AppIconInactivityService {
 
     var lastSessionEndAt: Date? {
         UserDefaults.standard.object(forKey: lastSessionEndKey) as? Date
+    }
+
+    /// Horas desde a última sessão fechada (antes do reset ao abrir o app).
+    func hoursSinceLastSessionEnd(referenceDate: Date = .now) -> Double? {
+        guard let sessionEnd = lastSessionEndAt else { return nil }
+        return referenceDate.timeIntervalSince(sessionEnd) / 3600
     }
 
     /// Estado que o ícone teria agora se o app estivesse fechado.

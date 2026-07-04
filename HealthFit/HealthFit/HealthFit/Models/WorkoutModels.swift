@@ -124,6 +124,11 @@ struct WorkoutSession: Identifiable, Codable {
     var totalExercises: Int
     var exerciseRecords: [ExerciseSessionRecord]
     var tookPreWorkout: Bool?
+    var targetDistanceKm: Double?
+    var completedDistanceKm: Double?
+    var averagePaceSecondsPerKm: Int?
+    var cardioIntensityLabel: String?
+    var targetCalories: Int?
 
     init(
         id: UUID = UUID(),
@@ -136,7 +141,12 @@ struct WorkoutSession: Identifiable, Codable {
         completedExercises: Int = 0,
         totalExercises: Int = 0,
         exerciseRecords: [ExerciseSessionRecord] = [],
-        tookPreWorkout: Bool? = nil
+        tookPreWorkout: Bool? = nil,
+        targetDistanceKm: Double? = nil,
+        completedDistanceKm: Double? = nil,
+        averagePaceSecondsPerKm: Int? = nil,
+        cardioIntensityLabel: String? = nil,
+        targetCalories: Int? = nil
     ) {
         self.id = id
         self.workoutSheetId = workoutSheetId
@@ -149,6 +159,11 @@ struct WorkoutSession: Identifiable, Codable {
         self.totalExercises = totalExercises
         self.exerciseRecords = exerciseRecords
         self.tookPreWorkout = tookPreWorkout
+        self.targetDistanceKm = targetDistanceKm
+        self.completedDistanceKm = completedDistanceKm
+        self.averagePaceSecondsPerKm = averagePaceSecondsPerKm
+        self.cardioIntensityLabel = cardioIntensityLabel
+        self.targetCalories = targetCalories
     }
 
     init(from decoder: Decoder) throws {
@@ -164,12 +179,19 @@ struct WorkoutSession: Identifiable, Codable {
         totalExercises = try container.decodeIfPresent(Int.self, forKey: .totalExercises) ?? 0
         exerciseRecords = try container.decodeIfPresent([ExerciseSessionRecord].self, forKey: .exerciseRecords) ?? []
         tookPreWorkout = try container.decodeIfPresent(Bool.self, forKey: .tookPreWorkout)
+        targetDistanceKm = try container.decodeIfPresent(Double.self, forKey: .targetDistanceKm)
+        completedDistanceKm = try container.decodeIfPresent(Double.self, forKey: .completedDistanceKm)
+        averagePaceSecondsPerKm = try container.decodeIfPresent(Int.self, forKey: .averagePaceSecondsPerKm)
+        cardioIntensityLabel = try container.decodeIfPresent(String.self, forKey: .cardioIntensityLabel)
+        targetCalories = try container.decodeIfPresent(Int.self, forKey: .targetCalories)
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, workoutSheetId, workoutTitle, startedAt, endedAt
         case heartRateSamples, caloriesBurned, completedExercises, totalExercises
         case exerciseRecords, tookPreWorkout
+        case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel
+        case targetCalories
     }
 
     var duration: TimeInterval {

@@ -3,6 +3,9 @@ import Charts
 
 struct HealthChartsView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var workoutStore: WorkoutStore
+    @EnvironmentObject var authService: AuthService
+
     @State private var selectedMetric: ChartMetric = .steps
 
     enum ChartMetric: String, CaseIterable {
@@ -10,6 +13,14 @@ struct HealthChartsView: View {
         case calories = "Calorias"
         case heartRate = "FC Repouso"
         case workout = "Treino (min)"
+        case meditation = "Meditação (min)"
+    }
+
+    private var weeklyReport: WeeklyProgressReport {
+        WeeklyProgressAnalyzer.buildReport(
+            sessions: workoutStore.sessionHistory,
+            goal: authService.currentUser?.goal ?? .maintenance
+        )
     }
 
     var body: some View {
@@ -28,10 +39,14 @@ struct HealthChartsView: View {
                 .tint(AppTheme.accent)
             }
 
-            Chart(healthKitManager.dailyMetrics) { metric in
+            if selectedMetric == .meditation {
+                meditationEvolutionBanner
+            }
+
+            Chart(chartDataPoints) { point in
                 BarMark(
-                    x: .value("Dia", metric.date, unit: .day),
-                    y: .value("Valor", valueForMetric(metric))
+                    x: .value("Dia", point.date, unit: .day),
+                    y: .value("Valor", point.value)
                 )
                 .foregroundStyle(
                     LinearGradient(
@@ -68,23 +83,87 @@ struct HealthChartsView: View {
         .cardStyle()
     }
 
+    private var meditationEvolutionBanner: some View {
+        let summary = weeklyReport.meditationSummary
+        let delta = summary.totalMinutes - summary.previousMinutes
+        let direction: ProgressTrendDirection
+        if delta > 0 { direction = .up }
+        else if delta < 0 { direction = .down }
+        else { direction = .stable }
+
+        return HStack(spacing: 10) {
+            Image(systemName: "brain.head.profile")
+                .foregroundStyle(.purple)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Evolução da meditação")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text(meditationEvolutionText(delta: delta, previous: summary.previousMinutes))
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            Spacer()
+            Label(evolutionLabel(delta: delta, direction: direction), systemImage: evolutionIcon(direction))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(evolutionColor(direction))
+        }
+        .padding(12)
+        .background(Color.purple.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var chartDataPoints: [WeeklyChartPoint] {
+        switch selectedMetric {
+        case .meditation:
+            return weeklyReport.dailyMeditationMinutes.map {
+                WeeklyChartPoint(date: $0.date, value: Double($0.minutes))
+            }
+        default:
+            return healthKitManager.dailyMetrics.map {
+                WeeklyChartPoint(date: $0.date, value: valueForMetric($0))
+            }
+        }
+    }
+
+    @ViewBuilder
     private var summaryRow: some View {
-        HStack(spacing: 16) {
-            SummaryItem(
-                title: "Média Passos",
-                value: "\(averageSteps)",
-                icon: "figure.walk"
-            )
-            SummaryItem(
-                title: "Total Calorias",
-                value: "\(Int(totalCalories))",
-                icon: "flame.fill"
-            )
-            SummaryItem(
-                title: "FC Média",
-                value: "\(Int(averageHR))",
-                icon: "heart.fill"
-            )
+        switch selectedMetric {
+        case .meditation:
+            HStack(spacing: 16) {
+                SummaryItem(
+                    title: "Total semana",
+                    value: "\(weeklyReport.meditationSummary.totalMinutes) min",
+                    icon: "clock.fill"
+                )
+                SummaryItem(
+                    title: "Sessões",
+                    value: "\(weeklyReport.meditationSummary.sessionCount)",
+                    icon: "leaf.fill"
+                )
+                SummaryItem(
+                    title: "Semana anterior",
+                    value: "\(weeklyReport.meditationSummary.previousMinutes) min",
+                    icon: "calendar"
+                )
+            }
+        default:
+            HStack(spacing: 16) {
+                SummaryItem(
+                    title: "Média Passos",
+                    value: "\(averageSteps)",
+                    icon: "figure.walk"
+                )
+                SummaryItem(
+                    title: "Total Calorias",
+                    value: "\(Int(totalCalories))",
+                    icon: "flame.fill"
+                )
+                SummaryItem(
+                    title: "FC Média",
+                    value: "\(Int(averageHR))",
+                    icon: "heart.fill"
+                )
+            }
         }
     }
 
@@ -94,6 +173,7 @@ struct HealthChartsView: View {
         case .calories: return metric.activeCalories
         case .heartRate: return metric.restingHeartRate
         case .workout: return Double(metric.workoutMinutes)
+        case .meditation: return 0
         }
     }
 
@@ -103,6 +183,7 @@ struct HealthChartsView: View {
         case .calories: return AppTheme.accentSecondary
         case .heartRate: return .red
         case .workout: return .purple
+        case .meditation: return .purple
         }
     }
 
@@ -119,6 +200,52 @@ struct HealthChartsView: View {
         let values = healthKitManager.dailyMetrics.map(\.restingHeartRate).filter { $0 > 0 }
         return values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count)
     }
+
+    private func meditationEvolutionText(delta: Int, previous: Int) -> String {
+        if previous == 0 && weeklyReport.meditationSummary.totalMinutes == 0 {
+            return "Nenhuma sessão registrada. Comece em Treinos → Meditação."
+        }
+        if previous == 0 {
+            return "Primeira semana com meditação registrada no app."
+        }
+        if delta > 0 {
+            return "+\(delta) min vs semana anterior (\(previous) min)"
+        }
+        if delta < 0 {
+            return "\(delta) min vs semana anterior (\(previous) min)"
+        }
+        return "Mesmo tempo da semana anterior (\(previous) min)"
+    }
+
+    private func evolutionLabel(delta: Int, direction: ProgressTrendDirection) -> String {
+        switch direction {
+        case .up: return "+\(delta) min"
+        case .down: return "\(delta) min"
+        case .stable: return "Estável"
+        }
+    }
+
+    private func evolutionIcon(_ direction: ProgressTrendDirection) -> String {
+        switch direction {
+        case .up: return "arrow.up"
+        case .down: return "arrow.down"
+        case .stable: return "minus"
+        }
+    }
+
+    private func evolutionColor(_ direction: ProgressTrendDirection) -> Color {
+        switch direction {
+        case .up: return AppTheme.accent
+        case .down: return .orange
+        case .stable: return AppTheme.textSecondary
+        }
+    }
+}
+
+private struct WeeklyChartPoint: Identifiable {
+    let id = UUID()
+    let date: Date
+    let value: Double
 }
 
 struct SummaryItem: View {

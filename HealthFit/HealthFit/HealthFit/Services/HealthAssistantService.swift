@@ -1,0 +1,1350 @@
+import Foundation
+
+struct HealthChatMessage: Identifiable, Equatable {
+    let id: UUID
+    let text: String
+    let isUser: Bool
+    let timestamp: Date
+
+    init(id: UUID = UUID(), text: String, isUser: Bool, timestamp: Date = .now) {
+        self.id = id
+        self.text = text
+        self.isUser = isUser
+        self.timestamp = timestamp
+    }
+}
+
+struct HealthAssistantContext {
+    let user: UserProfile?
+    let waterIntakeMl: Int
+    let sleepHours: Double?
+    let weeklyWorkoutCount: Int
+    let hoursSinceLastWorkout: Double?
+    let dailyCalorieTarget: Int
+    let basalMetabolicRate: Int
+    let estimatedTDEE: Int
+    let caloricDeficit: Int
+    let sweetConsumption: SweetConsumptionLevel
+    let lactoseTolerance: LactoseTolerance?
+}
+
+enum HealthAssistantEngine {
+    static let suggestedQuestions: [String] = [
+        "Qual é meu IMC?",
+        "O que é ectomorfo?",
+        "O que é mesomorfo?",
+        "O que é endomorfo?",
+        "Como dormir corretamente?",
+        "Como treinar conforme o personal?",
+        "Quanto de proteína comer?",
+        "Quantas séries e repetições?",
+        "O que fazer no déficit calórico?",
+        "Treino, cardio ou meditação?",
+    ]
+
+    static func welcomeMessage(context: HealthAssistantContext) -> String {
+        let name = context.user?.name
+        let greeting = name.map { "Olá, \($0.components(separatedBy: " ").first ?? $0)!" } ?? "Olá!"
+        var sections = ["\(greeting) Sou o assistente HealthFit.", ""]
+
+        let summary = buildWelcomeAlerts(context)
+        if !summary.messages.isEmpty {
+            sections.append("Atenção ao seu dia:")
+            summary.messages.forEach { sections.append("• \($0)") }
+            sections.append("")
+            sections.append(
+                MotivationMessages.chatWelcomeMotivation(
+                    hasSleepAlert: summary.hasSleepIssue,
+                    hasWaterAlert: summary.hasWaterIssue,
+                    hasWorkoutAlert: summary.hasWorkoutIssue
+                )
+            )
+            sections.append("")
+        } else {
+            sections.append(MotivationMessages.dailyMessage())
+            sections.append("")
+        }
+
+        sections.append("Posso tirar dúvidas sobre dieta, IMC, biotipos (ecto/meso/endo), sono, treinos conforme orientação profissional, cardio, meditação e macros.")
+        sections.append("")
+        sections.append("Toque em uma sugestão abaixo ou escreva sua pergunta.")
+
+        return sections.joined(separator: "\n")
+    }
+
+    private struct WelcomeAlertSummary {
+        let messages: [String]
+        let hasSleepIssue: Bool
+        let hasWaterIssue: Bool
+        let hasWorkoutIssue: Bool
+    }
+
+    private static func buildWelcomeAlerts(_ context: HealthAssistantContext) -> WelcomeAlertSummary {
+        var alerts: [String] = []
+        var hasSleepIssue = false
+        var hasWaterIssue = false
+        var hasWorkoutIssue = false
+
+        if let hours = context.sleepHours {
+            let formatted = String(format: "%.1f", hours)
+            switch SleepAssessment.evaluate(hours: hours) {
+            case .unregulated:
+                hasSleepIssue = true
+                alerts.append("Sono desregulado: você registrou \(formatted) h. O ideal é 7–9 h — priorize descanso para recuperar dos treinos.")
+            case .needsMore:
+                hasSleepIssue = true
+                alerts.append("Sono abaixo do ideal: \(formatted) h registradas. Tente dormir entre 7 e 9 horas por noite.")
+            case .aboveRecommended:
+                hasSleepIssue = true
+                alerts.append("Sono acima do recomendado: \(formatted) h. O ideal é 7–9 h — avalie se há fadiga ou rotina irregular.")
+            case .ideal:
+                break
+            }
+        }
+
+        if let user = context.user {
+            let goal = user.recommendedDailyWaterML
+            let current = context.waterIntakeMl
+            if goal > 0, current < goal {
+                hasWaterIssue = true
+                let remaining = goal - current
+                let pct = Int((Double(current) / Double(goal) * 100).rounded())
+                if pct < 50 {
+                    alerts.append("Hidratação baixa: apenas \(current) ml de \(goal) ml (\(pct)% da meta). Beba água ao longo do dia.")
+                } else {
+                    alerts.append("Meta de água não atingida: \(current) ml de \(goal) ml. Faltam \(remaining) ml.")
+                }
+            }
+        }
+
+        if context.weeklyWorkoutCount == 0 {
+            hasWorkoutIssue = true
+            if let hours = context.hoursSinceLastWorkout, hours >= 48 {
+                let days = max(Int(hours / 24), 2)
+                alerts.append("Treinos: nenhum registrado nos últimos 7 dias. Faz \(days) dias desde o último treino.")
+            } else if context.hoursSinceLastWorkout == nil {
+                alerts.append("Treinos: nenhum treino registrado ainda. Comece na aba Treinos!")
+            } else {
+                alerts.append("Treinos: nenhum treino registrado nos últimos 7 dias.")
+            }
+        } else if let hours = context.hoursSinceLastWorkout, hours >= 48 {
+            hasWorkoutIssue = true
+            let days = max(Int(hours / 24), 2)
+            alerts.append("Treinos: faz \(days) dia(s) desde seu último treino. O ideal é manter a consistência semanal.")
+        } else if context.weeklyWorkoutCount < 3 {
+            hasWorkoutIssue = true
+            let label = context.weeklyWorkoutCount == 1 ? "treino" : "treinos"
+            alerts.append("Treinos: apenas \(context.weeklyWorkoutCount) \(label) esta semana. O ideal é pelo menos 3.")
+        }
+
+        return WelcomeAlertSummary(
+            messages: alerts,
+            hasSleepIssue: hasSleepIssue,
+            hasWaterIssue: hasWaterIssue,
+            hasWorkoutIssue: hasWorkoutIssue
+        )
+    }
+
+    static func welcomeMessage(for name: String?) -> String {
+        welcomeMessage(context: HealthAssistantContext(
+            user: name.map { UserProfile(name: $0, email: "") },
+            waterIntakeMl: 0,
+            sleepHours: nil,
+            weeklyWorkoutCount: 0,
+            hoursSinceLastWorkout: nil,
+            dailyCalorieTarget: 0,
+            basalMetabolicRate: 0,
+            estimatedTDEE: 0,
+            caloricDeficit: 0,
+            sweetConsumption: .moderate,
+            lactoseTolerance: nil
+        ))
+    }
+
+    static func answer(for question: String, context: HealthAssistantContext) -> String {
+        let normalized = normalize(question)
+        let scores = topics.map { topic -> (HealthAssistantTopic, Int) in
+            let score = topic.keywords.reduce(0) { partial, keyword in
+                normalized.contains(keyword) ? partial + keyword.count : partial
+            }
+            return (topic, score)
+        }
+        .sorted { $0.1 > $1.1 }
+
+        if let best = scores.first, best.1 > 0 {
+            return best.0.respond(context)
+        }
+
+        return fallbackAnswer(context)
+    }
+
+    private static func normalize(_ text: String) -> String {
+        text.lowercased()
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+    }
+
+    private static func fallbackAnswer(_ context: HealthAssistantContext) -> String {
+        var lines = [
+            "Não encontrei uma resposta exata, mas posso ajudar com estes temas:",
+            "• Dieta: cardápio, macros, proteína, carboidrato, açúcar e lactose",
+            "• IMC, peso, altura e composição corporal",
+            "• Biotipos: ectomorfo, mesomorfo e endomorfo",
+            "• Sono e recuperação",
+            "• Treinos conforme orientação do personal",
+            "",
+            "Reformule a pergunta ou toque em uma sugestão abaixo."
+        ]
+        if let user = context.user {
+            lines.insert("Seu objetivo: \(user.goal.rawValue). IMC: \(String(format: "%.1f", user.bmi)). Meta: \(context.dailyCalorieTarget) kcal/dia.", at: 1)
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    // MARK: - Helpers
+
+    private static func bmiInfo(for user: UserProfile) -> (label: String, advice: String) {
+        let bmi = user.bmi
+        switch bmi {
+        case ..<18.5:
+            return (
+                "Abaixo do peso",
+                "Priorize superávit calórico moderado, proteína adequada e treino de força para ganhar massa com saúde."
+            )
+        case 18.5..<25:
+            return (
+                "Peso normal",
+                "Mantenha hábitos equilibrados. Ajuste calorias conforme objetivo (ganho, perda ou manutenção)."
+            )
+        case 25..<30:
+            return (
+                "Sobrepeso",
+                "Déficit calórico moderado + treino de força ajudam a reduzir gordura preservando músculo."
+            )
+        case 30..<35:
+            return (
+                "Obesidade grau I",
+                "Combine alimentação controlada, movimento regular e acompanhamento profissional se possível."
+            )
+        case 35..<40:
+            return (
+                "Obesidade grau II",
+                "Priorize hábitos sustentáveis. Evite dietas extremas; busque orientação médica/nutricional."
+            )
+        default:
+            return (
+                "Obesidade grau III",
+                "Recomendamos acompanhamento de profissionais de saúde para um plano seguro e personalizado."
+            )
+        }
+    }
+
+    private static func proteinRecommendation(for user: UserProfile, calories: Int) -> String {
+        let gramsPerKg: Double
+        switch user.goal {
+        case .muscleGain: gramsPerKg = 2.0
+        case .fatLoss: gramsPerKg = 2.2
+        case .endurance: gramsPerKg = 1.6
+        case .maintenance: gramsPerKg = 1.8
+        }
+        let grams = Int((user.weight * gramsPerKg).rounded())
+        let kcal = grams * 4
+        let pct = calories > 0 ? Int((Double(kcal) / Double(calories) * 100).rounded()) : 0
+        return "Sugestão: ~\(grams) g/dia (~\(gramsPerKg) g/kg). Isso representa cerca de \(kcal) kcal (\(pct)% da meta)."
+    }
+
+    private static func goalTrainingSummary(_ goal: FitnessGoal) -> String {
+        switch goal {
+        case .muscleGain:
+            return "3–5 treinos de força/semana, progressão de carga, superávit calórico e proteína alta."
+        case .fatLoss:
+            return "3–4 treinos de força/semana + déficit calórico. Cardio 2–3x opcional."
+        case .endurance:
+            return "3–4 sessões de cardio/semana + 2 treinos de força para prevenir lesões."
+        case .maintenance:
+            return "2–4 treinos/semana equilibrados entre força e cardio leve."
+        }
+    }
+
+    private static func ectomorphDefinition(isUserType: Bool) -> String {
+        let prefix = isUserType ? "Seu biotipo é ectomorfo.\n\n" : ""
+        return """
+        \(prefix)Ectomorfo — definição:
+        Somatotipo caracterizado por estrutura corporal magra, ossatura fina e metabolismo acelerado. Tende a ter dificuldade em ganhar peso e massa muscular.
+
+        Características:
+        • Corpo esguio, ombros e quadris estreitos
+        • Pulsos e tornozelos finos
+        • Ganha pouco peso mesmo comendo bastante
+        • Metabolismo acelerado (+10% no TDEE no app)
+
+        Alimentação: superávit calórico moderado, proteína alta, refeições frequentes.
+        Treino: musculação 3–5x/semana com progressão de carga; cardio leve e curto.
+        """
+    }
+
+    private static func mesomorphDefinition(isUserType: Bool) -> String {
+        let prefix = isUserType ? "Seu biotipo é mesomorfo.\n\n" : ""
+        return """
+        \(prefix)Mesomorfo — definição:
+        Somatotipo atlético, com facilidade natural para ganhar músculo e perder gordura. Estrutura corporal equilibrada e boa resposta ao treino.
+
+        Características:
+        • Ombros largos e cintura marcada
+        • Estrutura muscular visível
+        • Ganha músculo e perde gordura com relativa facilidade
+        • TDEE padrão no app (sem ajuste extra)
+
+        Alimentação: balanceada conforme objetivo (superávit para massa, déficit para cutting).
+        Treino: responde bem a volume moderado-alto; combine força e cardio.
+        """
+    }
+
+    private static func endomorphDefinition(isUserType: Bool) -> String {
+        let prefix = isUserType ? "Seu biotipo é endomorfo.\n\n" : ""
+        return """
+        \(prefix)Endomorfo — definição:
+        Somatotipo com tendência a acumular gordura, estrutura mais arredondada e metabolismo mais lento. Ganha peso com mais facilidade.
+
+        Características:
+        • Estrutura arredondada, cintura e quadril mais largos
+        • Acumula gordura com facilidade
+        • Ganha peso mais rápido que os outros biotipos
+        • Metabolismo mais lento (−10% no TDEE no app)
+
+        Alimentação: controle calórico, proteína alta, menos ultraprocessados e frituras.
+        Treino: musculação + cardio regular; consistência é chave.
+        """
+    }
+
+    private static func sleepStatusLine(hours: Double?) -> String {
+        guard let hours else {
+            return "Registre suas horas de sono no check-in diário para acompanhar."
+        }
+        let assessment = SleepAssessment.evaluate(hours: hours)
+        return "Hoje você registrou \(String(format: "%.1f", hours)) h — \(assessment.title.lowercased()). \(assessment.message)"
+    }
+
+    private static let topics: [HealthAssistantTopic] = dietTopics + imcTopics + workoutTopics + biotypeTopics + generalTopics
+
+    // MARK: - Dieta
+
+    private static let dietTopics: [HealthAssistantTopic] = [
+        HealthAssistantTopic(
+            keywords: ["cardapio", "refeicao", "refeição", "dieta", "nutricao", "nutrição", "compras", "lista", "montar", "alimentacao", "alimentação"],
+            respond: { ctx in
+                let lactose = ctx.lactoseTolerance?.rawValue ?? "não informada"
+                let sweet = ctx.sweetConsumption.rawValue
+                let goal = ctx.user?.goal.rawValue ?? "seu objetivo"
+                return """
+                Seu cardápio no HealthFit é montado com base no objetivo (\(goal)), biotipo, TMB e preferências.
+
+                • 6 refeições: café, lanches, almoço, janta e ceia
+                • Consumo de doces: \(sweet)
+                • Tolerância à lactose: \(lactose)
+                • Meta calórica: \(ctx.dailyCalorieTarget) kcal/dia
+
+                Na aba Nutrição você monta o cardápio e gera a lista de compras (proteínas, frutas, grãos e suplementos).
+
+                Para perda de gordura, há opções mais restritivas com menos carboidrato e sem frituras.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["proteina", "proteína", "proteinas", "proteínas", "whey", "carne", "frango", "ovo", "ovos"],
+            respond: { ctx in
+                guard let user = ctx.user else {
+                    return """
+                    Proteína é essencial para músculos, saciedade e recuperação.
+                    • Ganho de massa: ~1,6–2,2 g/kg/dia
+                    • Perda de gordura: ~2,0–2,4 g/kg/dia
+                    • Manutenção: ~1,6–2,0 g/kg/dia
+
+                    Complete seu perfil para ver a meta personalizada.
+                    """
+                }
+                return """
+                Proteína constrói e preserva músculo, aumenta saciedade e acelera recuperação pós-treino.
+
+                \(proteinRecommendation(for: user, calories: ctx.dailyCalorieTarget))
+
+                Fontes no cardápio: frango, carne magra, peixe, ovos, iogurte (se tolera lactose), whey e leguminosas.
+
+                Distribua ao longo do dia — café, almoço, janta e lanches.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["carboidrato", "carbo", "carbos", "arroz", "pao", "pão", "macarrao", "macarrão", "batata", "aveia"],
+            respond: { ctx in
+                let goal = ctx.user?.goal ?? .maintenance
+                let advice: String
+                switch goal {
+                case .muscleGain:
+                    advice = "Carboidratos são importantes para energia nos treinos e recuperação. Inclua arroz, batata, aveia e frutas."
+                case .fatLoss:
+                    advice = "Carboidratos não são vilões — controle porções e priorize integrais. Reduza em jantar/ceia se necessário."
+                case .endurance:
+                    advice = "Carboidratos são sua principal fonte de energia para cardio e resistência."
+                case .maintenance:
+                    advice = "Mantenha carboidratos equilibrados: integrais, frutas e legumes."
+                }
+                return """
+                Carboidratos fornecem energia para treinos e funções cerebrais.
+
+                Objetivo (\(goal.rawValue)): \(advice)
+
+                Meta calórica: \(ctx.dailyCalorieTarget) kcal/dia.
+                Tipicamente 40–55% das calorias vêm de carboidratos, ajustados ao objetivo.
+
+                Prefira: arroz integral, batata doce, aveia, frutas e pães integrais. Evite excesso de ultraprocessados e frituras.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["gordura", "gorduras", "lipidio", "lipídio", "oleo", "óleo", "azeite", "abacate"],
+            respond: { ctx in
+                return """
+                Gorduras são essenciais para hormônios, absorção de vitaminas e saúde cerebral.
+
+                Tipos:
+                • Insaturadas (azeite, abacate, castanhas, peixes) — priorize
+                • Saturadas (carnes, manteiga) — moderação
+                • Trans (industrializados, frituras) — evite
+
+                Meta: cerca de 20–35% das calorias diárias (\(ctx.dailyCalorieTarget) kcal → ~\(Int(Double(ctx.dailyCalorieTarget) * 0.25 / 9)) g/dia de gordura).
+
+                No cardápio de perda de gordura, reduzimos frituras e opções muito gordurosas.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["macro", "macronutriente", "macronutrientes", "distribuicao", "distribuição"],
+            respond: { ctx in
+                guard let user = ctx.user else {
+                    return "Macronutrientes são proteína, carboidrato e gordura. Configure seu perfil para ver a distribuição sugerida."
+                }
+                let cal = ctx.dailyCalorieTarget
+                let proteinG = Int((user.weight * 2.0).rounded())
+                let proteinKcal = proteinG * 4
+                let fatKcal = Int(Double(cal) * 0.25)
+                let fatG = fatKcal / 9
+                let carbKcal = max(cal - proteinKcal - fatKcal, 0)
+                let carbG = carbKcal / 4
+                return """
+                Macronutrientes na sua meta (\(cal) kcal/dia):
+
+                • Proteína: ~\(proteinG) g (\(proteinKcal) kcal)
+                • Gordura: ~\(fatG) g (\(fatKcal) kcal)
+                • Carboidrato: ~\(carbG) g (\(carbKcal) kcal)
+
+                Objetivo: \(user.goal.rawValue).
+
+                O cardápio do app distribui isso em 6 refeições. Ajuste doces e lactose em Nutrição.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["cafe da manha", "café da manhã", "cafe", "café da manha", "breakfast"],
+            respond: { ctx in
+                return """
+                Café da manhã (~20% das calorias ≈ \(Int(Double(ctx.dailyCalorieTarget) * 0.20)) kcal).
+
+                Função: quebrar o jejum noturno, energia para o dia e proteína matinal.
+
+                Opções no app: ovos, aveia, frutas, pão integral, iogurte (conforme lactose).
+
+                Dica: inclua proteína no café — ajuda na saciedade e no ganho muscular.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["almoco", "almoço", "lunch"],
+            respond: { ctx in
+                return """
+                Almoço (~30% das calorias ≈ \(Int(Double(ctx.dailyCalorieTarget) * 0.30)) kcal) — refeição principal.
+
+                Estrutura ideal:
+                • Proteína (carne, frango, peixe, leguminosas)
+                • Carboidrato (arroz, batata, macarrão integral)
+                • Vegetais e salada
+                • Gordura boa (azeite)
+
+                No app, escolha opções alinhadas ao objetivo \(ctx.user?.goal.rawValue.lowercased() ?? "atual").
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["jantar", "janta", "jantar", "ceia", "supper", "dinner"],
+            respond: { ctx in
+                let isFatLoss = ctx.user?.goal == .fatLoss
+                return """
+                Jantar (~22%) e ceia (~8%) completam o dia.
+
+                Jantar: ~\(Int(Double(ctx.dailyCalorieTarget) * 0.22)) kcal
+                Ceia: ~\(Int(Double(ctx.dailyCalorieTarget) * 0.08)) kcal
+
+                \(isFatLoss ? "Em perda de gordura: jantar mais leve, menos carboidrato e sem fritura." : "Mantenha proteína no jantar para recuperação noturna.")
+
+                Ceia: opções leves — iogurte, fruta ou whey — ajudam a evitar fome noturna.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["lanche", "snack", "lanche da tarde", "lanche manha"],
+            respond: { ctx in
+                return """
+                Lanches (~10% cada ≈ \(Int(Double(ctx.dailyCalorieTarget) * 0.10)) kcal) mantêm energia estável entre refeições.
+
+                Ideias no cardápio: frutas, castanhas, iogurte, whey, sanduíche integral.
+
+                Evite pular lanches se treina à tarde — você precisa de combustível antes do treino.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["acucar", "doce", "doces", "açucar", "sobremesa", "docinho"],
+            respond: { ctx in
+                let level = ctx.sweetConsumption
+                return """
+                Consumo de açúcar no seu plano: \(level.rawValue).
+                \(level.detail)
+
+                A OMS recomenda limitar açúcares livres a menos de 10% das calorias (idealmente 5%). Em 2000 kcal: até 50 g (10%) ou 25 g (5%).
+
+                Prefira frutas, aveia e doces ocasionais. Ajuste em Nutrição → "Você consome muito doce?".
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["lactose", "intolerancia", "intolerância", "leite", "iogurte", "queijo", "laticinio", "laticínio"],
+            respond: { ctx in
+                let tolerance = ctx.lactoseTolerance
+                return """
+                \(tolerance.map { "Sua tolerância à lactose: \($0.rawValue). \($0.detail)" } ?? "Informe sua tolerância à lactose em Nutrição para filtrar opções com leite e queijo.")
+
+                Se intolerante, o cardápio prioriza opções sem lactose (leite vegetal, ovos, carnes, frutas).
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["fruta", "frutas", "banana", "maca", "maçã", "morango", "vitamina"],
+            respond: { _ in
+                """
+                Frutas são fonte de fibras, vitaminas e carboidratos naturais.
+
+                • 2–4 porções/dia é uma boa referência
+                • Melhor com refeições ou lanches (não substituem proteína)
+                • Priorize frutas inteiras em vez de sucos industrializados
+
+                Na lista de compras do app: banana, maçã, morango, mamão e outras sazonais.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["fritura", "frituras", "frito", "fast food", "ultraprocessado", "industrializado"],
+            respond: { ctx in
+                let isFatLoss = ctx.user?.goal == .fatLoss
+                return """
+                Frituras e ultraprocessados têm muita gordura, sódio e calorias vazias.
+
+                \(isFatLoss ? "Seu plano de perda de gordura exclui frituras do cardápio." : "Consuma com moderação — ocasionalmente não arruína o progresso.")
+
+                Prefira: grelhados, assados, cozidos e airfryer.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["jejum", "jejuar", "intermitente", "fasting"],
+            respond: { ctx in
+                return """
+                Jejum intermitente (ex.: 16/8) pode funcionar para algumas pessoas, mas não é obrigatório.
+
+                O que importa para \(ctx.user?.goal.rawValue.lowercased() ?? "seus objetivos"): total calórico diário (\(ctx.dailyCalorieTarget) kcal) e proteína adequada.
+
+                Se treina de manhã, não pule proteína pré/pós-treino.
+                Consulte um profissional se tiver condições médicas.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["fibras", "fibra", "constipacao", "constipação", "intestino"],
+            respond: { _ in
+                """
+                Fibras melhoram digestão, saciedade e controle glicêmico.
+
+                Meta: 25–30 g/dia (adultos).
+                Fontes: frutas, vegetais, aveia, arroz integral, leguminosas.
+
+                Aumente aos poucos e beba água — fibras sem hidratação podem causar desconforto.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["deficit", "deficit calorico", "déficit calórico", "emagrecer", "perda de gordura", "perder peso", "emagrecimento"],
+            respond: { ctx in
+                guard let user = ctx.user else {
+                    return "Déficit calórico é consumir menos calorias do que você gasta para perder gordura. Configure peso, altura e objetivo em Nutrição."
+                }
+                let deficit = ctx.caloricDeficit
+                let weekly = user.estimatedWeeklyWeightLoss
+                return """
+                Déficit calórico = gastar mais energia do que consome.
+
+                Seu TDEE: \(ctx.estimatedTDEE) kcal/dia.
+                Déficit configurado: \(deficit > 0 ? "−\(deficit) kcal/dia" : "sem déficit ativo").
+                Meta calórica: \(ctx.dailyCalorieTarget) kcal/dia.
+                \(weekly > 0 ? String(format: "Estimativa: ~%.2f kg/semana de perda.", weekly) : "")
+
+                O que fazer no déficit:
+                • Priorize proteína (preserva músculo)
+                • Mantenha treino de força
+                • Inclua cardio moderado se quiser
+                • Beba água e durma 7–9 h
+                • Evite déficits extremos (não fique abaixo de ~1200 kcal sem acompanhamento)
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["ganho de massa", "bulking", "hipertrofia", "massa muscular alimentacao", "massa muscular alimentação", "engordar musculo", "engordar músculo"],
+            respond: { ctx in
+                guard let user = ctx.user else {
+                    return "Ganho de massa exige superávit calórico (~300–500 kcal acima do TDEE) e proteína alta com treino de força."
+                }
+                return """
+                Ganho de massa muscular (bulking):
+
+                • Meta calórica: \(ctx.dailyCalorieTarget) kcal/dia (superávit sobre TDEE de \(ctx.estimatedTDEE))
+                • Proteína: \(proteinRecommendation(for: user, calories: ctx.dailyCalorieTarget))
+                • Treino: 3–5x/semana com progressão de carga
+                • Biotipo \(user.biotype.rawValue): \(user.biotype.description)
+
+                Ganho de 0,25–0,5 kg/semana indica progresso sem excesso de gordura.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["lista de compras", "compras semana", "supermercado", "feira"],
+            respond: { _ in
+                """
+                A lista de compras do HealthFit inclui:
+
+                • Proteínas: frango, carne, peixe, ovos
+                • Frutas e vegetais da semana
+                • Grãos: arroz, aveia, feijão
+                • Suplementos: creatina, ômega 3, beta-alanina, pré-treino
+                • Energéticos (configurável — alerta OMS acima de 2/semana)
+
+                Gere em Nutrição → Lista de Compras após montar o cardápio.
+                """
+            }
+        ),
+    ]
+
+    // MARK: - IMC
+
+    private static let imcTopics: [HealthAssistantTopic] = [
+        HealthAssistantTopic(
+            keywords: ["imc", "bmi", "indice de massa", "índice de massa", "massa corporal", "qual meu imc", "qual é meu imc"],
+            respond: { ctx in
+                guard let user = ctx.user else {
+                    return """
+                    IMC (Índice de Massa Corporal) = peso (kg) ÷ altura (m)²
+
+                    Classificação (OMS):
+                    • Abaixo de 18,5 — abaixo do peso
+                    • 18,5–24,9 — peso normal
+                    • 25–29,9 — sobrepeso
+                    • 30+ — obesidade
+
+                    Complete peso e altura em Nutrição ou Perfil.
+                    """
+                }
+                let bmi = user.bmi
+                let info = bmiInfo(for: user)
+                return """
+                IMC (Índice de Massa Corporal) mede a relação peso/altura — não mede gordura diretamente, mas é um indicador útil.
+
+                Seus dados:
+                • Peso: \(String(format: "%.1f", user.weight)) kg
+                • Altura: \(String(format: "%.0f", user.height)) cm
+                • IMC: \(String(format: "%.1f", bmi))
+                • Classificação: \(info.label)
+
+                \(info.advice)
+
+                Atletas com muito músculo podem ter IMC alto sem excesso de gordura. Combine com medidas corporais e % gordura se possível.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["peso ideal", "peso saudavel", "peso saudável", "quanto devo pesar", "meta de peso"],
+            respond: { ctx in
+                guard let user = ctx.user else {
+                    return "Peso ideal varia com altura, composição corporal e objetivo. IMC entre 18,5–24,9 é referência geral para adultos."
+                }
+                let heightM = user.height / 100
+                let minWeight = 18.5 * heightM * heightM
+                let maxWeight = 24.9 * heightM * heightM
+                return """
+                Faixa de peso saudável (IMC 18,5–24,9) para sua altura (\(String(format: "%.0f", user.height)) cm):
+
+                • Mínimo: ~\(String(format: "%.1f", minWeight)) kg
+                • Máximo: ~\(String(format: "%.1f", maxWeight)) kg
+                • Seu peso atual: \(String(format: "%.1f", user.weight)) kg (IMC \(String(format: "%.1f", user.bmi)))
+
+                Objetivo no app: \(user.goal.rawValue).
+                \(user.estimatedWeeklyWeightLoss > 0 ? String(format: "Ritmo estimado: ~%.2f kg/semana.", user.estimatedWeeklyWeightLoss) : "Ajuste calorias conforme progresso semanal.")
+
+                Composição corporal importa mais que o número na balança — treino de força preserva músculo.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["sobrepeso", "obesidade", "obeso", "gordo", "acima do peso", "magreza", "abaixo do peso", "muito magro"],
+            respond: { ctx in
+                guard let user = ctx.user else {
+                    return """
+                    Classificação IMC (OMS):
+                    • < 18,5 — abaixo do peso
+                    • 18,5–24,9 — normal
+                    • 25–29,9 — sobrepeso
+                    • 30–34,9 — obesidade I
+                    • 35–39,9 — obesidade II
+                    • ≥ 40 — obesidade III
+                    """
+                }
+                let info = bmiInfo(for: user)
+                return """
+                Seu IMC: \(String(format: "%.1f", user.bmi)) — \(info.label)
+
+                \(info.advice)
+
+                Objetivo configurado: \(user.goal.rawValue).
+                Meta calórica: \(ctx.dailyCalorieTarget) kcal/dia.
+
+                Mudanças graduais e consistentes vencem dietas radicais. O app acompanha treino, nutrição e hidratação.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["peso", "balanca", "balança", "engordar", "emagreci", "subi de peso", "desci de peso"],
+            respond: { ctx in
+                guard let user = ctx.user else {
+                    return "Registre peso e altura em Nutrição para calcular IMC, TMB e metas calóricas."
+                }
+                let info = bmiInfo(for: user)
+                return """
+                Seu peso: \(String(format: "%.1f", user.weight)) kg
+                Altura: \(String(format: "%.0f", user.height)) cm
+                IMC: \(String(format: "%.1f", user.bmi)) (\(info.label))
+
+                Para \(user.goal.rawValue.lowercased()):
+                • Meta calórica: \(ctx.dailyCalorieTarget) kcal/dia
+                • TDEE: \(ctx.estimatedTDEE) kcal/dia
+                \(user.estimatedWeeklyWeightLoss > 0 ? String(format: "• Estimativa: ~%.2f kg/semana", user.estimatedWeeklyWeightLoss) : "")
+
+                Pese-se no mesmo horário (ex.: ao acordar) 1–2x/semana. Flutuações diárias de 1–2 kg são normais (água, alimento).
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["composicao corporal", "composição corporal", "gordura corporal", "percentual de gordura", "bf", "body fat"],
+            respond: { ctx in
+                let bmiNote = ctx.user.map { "Seu IMC (\(String(format: "%.1f", $0.bmi))) é um proxy, não mede % gordura diretamente." } ?? ""
+                return """
+                Composição corporal = proporção de gordura vs músculo (mais relevante que peso sozinho).
+
+                \(bmiNote)
+
+                Para melhorar composição:
+                • Treino de força (preserva/ganha músculo)
+                • Proteína adequada
+                • Déficit moderado se perder gordura
+
+                Bioimpedância, adipômetro ou DEXA dão medidas mais precisas que a balança comum.
+                """
+            }
+        ),
+    ]
+
+    // MARK: - Treinos
+
+    private static let workoutTopics: [HealthAssistantTopic] = [
+        HealthAssistantTopic(
+            keywords: ["treino", "musculacao", "musculação", "forca", "força", "exercicio", "exercício", "academia", "ficha"],
+            respond: { ctx in
+                let goal = ctx.user?.goal ?? .maintenance
+                return """
+                Treino de musculação (força) ganha/preserva massa muscular, acelera metabolismo e melhora composição corporal.
+
+                Para \(goal.rawValue):
+                \(goalTrainingSummary(goal))
+
+                No app: Treinos → Musculação. Escolha uma ficha, registre séries e envie relatório ao personal.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["serie", "série", "series", "séries", "repeticao", "repetição", "repeticoes", "repetições", "reps", "quantas series"],
+            respond: { ctx in
+                let goal = ctx.user?.goal ?? .maintenance
+                let scheme: String
+                switch goal {
+                case .muscleGain:
+                    scheme = "3–5 séries × 6–12 reps (hipertrofia). Descanso 60–90 s."
+                case .fatLoss:
+                    scheme = "3–4 séries × 8–15 reps. Mantenha carga desafiadora."
+                case .endurance:
+                    scheme = "2–3 séries × 15–20 reps ou circuitos."
+                case .maintenance:
+                    scheme = "3 séries × 8–12 reps — equilíbrio força e volume."
+                }
+                return """
+                Séries e repetições dependem do objetivo (\(goal.rawValue)):
+
+                \(scheme)
+
+                Regras gerais:
+                • Últimas 2–3 reps devem ser difíceis (RPE 7–9)
+                • Progressão: aumente carga ou reps quando completar o topo da faixa
+                • Registre no app para acompanhar evolução
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["descanso", "intervalo", "pausa entre", "descanso entre series", "descanso entre séries"],
+            respond: { _ in
+                """
+                Descanso entre séries:
+
+                • Força (1–5 reps): 2–5 min
+                • Hipertrofia (6–12 reps): 60–90 s
+                • Resistência (15+ reps): 30–60 s
+                • Exercícios compostos (agachamento, terra): mais descanso
+                • Isolados (rosca, extensora): menos descanso
+
+                Descanso insuficiente reduz performance; excessivo esfria o músculo. Use o timer do app durante o treino.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["aquecimento", "alongamento", "warm up", "warmup", "mobilidade", "flexibilidade"],
+            respond: { _ in
+                """
+                Aquecimento (5–10 min antes do treino):
+                • Cardio leve (esteira, bike)
+                • Mobilidade articular
+                • 1–2 séries leves do primeiro exercício
+
+                Alongamento:
+                • Dinâmico antes do treino
+                • Estático após o treino (15–30 s por músculo)
+
+                Reduz risco de lesão e melhora amplitude de movimento.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["progressao", "progressão", "carga", "sobrecarga", "evoluir", "aumentar peso", "plateau", "estagnado"],
+            respond: { _ in
+                """
+                Progressão de carga (sobrecarga progressiva):
+
+                • Quando completar todas as reps com boa forma → aumente 2,5–5 kg (membros superiores) ou 5–10 kg (inferiores)
+                • Ou adicione 1–2 reps por série
+                • Anote pesos no app — compare semana a semana
+
+                Estagnou? Varie exercícios, aumente volume ou revise sono/alimentação.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["cardio", "corrida", "caminhada", "esteira", "bike", "bicicleta", "aerobico", "aeróbico", "eliptico", "elíptico"],
+            respond: { ctx in
+                let goal = ctx.user?.goal.rawValue ?? "seu objetivo"
+                return """
+                Cardio melhora condicionamento, queima calorias e saúde cardiovascular.
+
+                Indicado para \(goal) e recuperação ativa.
+                • Leve: caminhada, bike leve — recuperação
+                • Moderado: corrida leve, elíptico — queima calorias
+                • Intenso: HIIT, sprints — condicionamento avançado
+
+                No HealthFit: Treinos → Cardio. Combine 1–3 sessões/semana com musculação.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["hiit", "intervalado", "sprint", "alta intensidade"],
+            respond: { ctx in
+                return """
+                HIIT (treino intervalado de alta intensidade) alterna esforço máximo e recuperação.
+
+                Benefícios: condicionamento rápido, queima calórica elevada.
+                Riscos: exige base cardiovascular; não ideal para iniciantes ou todos os dias.
+
+                Para \(ctx.user?.goal.rawValue.lowercased() ?? "seu objetivo"): 1–2x/semana, além de musculação.
+                No app: Treinos → Cardio → opções intensas.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["meditacao", "meditação", "mindfulness", "relaxar", "ansiedade", "estresse"],
+            respond: { _ in
+                """
+                Meditação reduz estresse, melhora foco e apoia recuperação.
+
+                Benefícios:
+                • Melhor qualidade do sono
+                • Menos cortisol
+                • Mais consistência nos hábitos
+
+                No app: Treinos → Meditação. 5–10 minutos já fazem diferença. Complementa treino e dieta.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["melhor", "qual escolher", "treino ou", "cardio ou", "comparar", "versus", " vs "],
+            respond: { ctx in
+                let goal = ctx.user?.goal ?? .maintenance
+                let recommendation: String
+                switch goal {
+                case .muscleGain:
+                    recommendation = "Priorize musculação (4–5x/semana). Cardio leve 1–2x. Meditação para recuperação."
+                case .fatLoss:
+                    recommendation = "Musculação 3–4x + déficit calórico. Cardio 2–3x. Meditação para sono e adesão."
+                case .endurance:
+                    recommendation = "Cardio 3–4x + musculação 2x para prevenir lesões. Meditação para foco."
+                case .maintenance:
+                    recommendation = "Combine musculação 2–3x, cardio 2x e meditação 2–3x por semana."
+                }
+                return """
+                Não existe um só "melhor" — depende do objetivo (\(goal.rawValue)):
+
+                • Musculação — massa muscular, força, metabolismo
+                • Cardio — condicionamento, calorias, coração
+                • Meditação — mente, sono, estresse
+
+                Recomendação para você: \(recommendation)
+
+                O ideal é combinar os três ao longo da semana.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["peito", "supino", "costas", "dorsal", "perna", "pernas", "agachamento", "gluteo", "glúteo", "ombro", "ombros", "braco", "braço", "biceps", "bíceps", "triceps", "tríceps", "abdomen", "abdômen", "abdominal", "core"],
+            respond: { _ in
+                """
+                Grupos musculares no app:
+
+                • Peito — supino reto/inclinado, crucifixo, crossover
+                • Costas — remada, puxada, levantamento terra
+                • Pernas — agachamento, leg press, extensora, flexora, panturrilha
+                • Ombros — desenvolvimento, elevação lateral/frontal
+                • Braços — rosca (bíceps), tríceps pulley/testa
+                • Core — estabilização em compostos + abdominais
+
+                Fichas divididas (A/B/C) cobrem todos os grupos na semana. Veja guia de execução em cada exercício.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["frequencia", "frequência", "quantos treinos", "vezes por semana", "dias de treino", "split"],
+            respond: { ctx in
+                let goal = ctx.user?.goal ?? .maintenance
+                return """
+                Frequência de treinos para \(goal.rawValue):
+
+                \(goalTrainingSummary(goal))
+
+                Splits comuns:
+                • Full body — 3x/semana (iniciantes)
+                • ABC — 3–6x/semana (intermediários)
+                • Push/Pull/Legs — 4–6x/semana (avançados)
+
+                Descanse 48 h entre treinos do mesmo grupo muscular.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["lesao", "lesão", "dor", "machucado", "contusao", "contusão", "tendinite"],
+            respond: { _ in
+                """
+                Dor vs desconforto muscular:
+                • Desconforto muscular (DOMS) 24–48 h após treino — normal
+                • Dor aguda, articular ou pontual — pare e avalie
+
+                Se lesionado:
+                • Não treine a região afetada
+                • Gelo nas primeiras 48 h se inflamação
+                • Busque fisioterapeuta/médico se persistir
+
+                O app não substitui orientação médica.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["personal", "relatorio", "relatório", "email", "e-mail", "enviar treino"],
+            respond: { ctx in
+                let hasTrainer = ctx.user?.hasPersonalTrainer ?? false
+                return """
+                Relatórios de treino no HealthFit:
+
+                • Ao finalizar musculação ou cardio, o app gera resumo
+                \(hasTrainer ? "• Seu personal (\(ctx.user?.personalTrainerName ?? "")) recebe por e-mail automaticamente" : "• Configure e-mail do personal em Perfil para envio automático")
+                • Inclui exercícios, séries, cargas, cardio e uso de pré-treino
+
+                Relatório semanal em Início → Progresso Semanal.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: [
+                "conforme o personal", "conforme personal", "orientacao profissional", "orientação profissional",
+                "seguir ficha", "ficha do personal", "treinar certo", "execucao correta", "execução correta",
+                "como treinar", "guia de exercicio", "guia de exercício", "profissional prescreveu",
+                "prescricao", "prescrição", "seguir treino", "treino profissional"
+            ],
+            respond: { ctx in
+                let hasTrainer = ctx.user?.hasPersonalTrainer ?? false
+                let trainerName = ctx.user?.personalTrainerName ?? "seu personal"
+                return """
+                Como treinar conforme orientação profissional no HealthFit:
+
+                1. Siga a ficha prescrita
+                • Treinos → Musculação → escolha a ficha do seu plano
+                • Respeite séries, repetições e descanso indicados
+                • Não aumente carga por conta própria sem aval do \(trainerName)
+
+                2. Execução correta
+                • Toque em cada exercício para ver o guia passo a passo
+                • Priorize amplitude e forma antes de peso
+                • Use o timer de descanso entre séries
+
+                3. Registre tudo
+                • Anote cargas e reps reais durante o treino
+                • Informe se tomou pré-treino ao iniciar
+                • Ao finalizar, o relatório é gerado automaticamente
+
+                4. Comunicação com o personal
+                \(hasTrainer
+                    ? "• Relatório enviado para \(trainerName) (\(ctx.user?.personalTrainerEmail ?? ""))\n                • Relatório semanal em Início consolida volume e evolução"
+                    : "• Cadastre nome e e-mail do personal em Perfil para envio automático\n                • Leve o histórico de treinos nas consultas")
+
+                O app complementa o acompanhamento — dúvidas técnicas ou dores persistentes, consulte sempre o profissional.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["pre treino", "pré-treino", "pre-treino", "creatina", "suplemento", "suplementos", "energetico", "energético", "beta alanina", "beta-alanina", "omega", "ômega"],
+            respond: { _ in
+                """
+                Suplementos no HealthFit:
+
+                • Pré-treino — foco e energia (registre ao iniciar treino)
+                • Creatina — força e volume muscular (3–5 g/dia)
+                • Ômega 3 — saúde cardiovascular e anti-inflamatório
+                • Beta-alanina — resistência muscular
+                • Whey — conveniência proteica (se tolera lactose)
+
+                Energéticos: moderação — alerta OMS acima de 2/semana.
+                Suplementos não substituem alimentação. Consulte profissional se tiver dúvidas médicas.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["overtraining", "excesso de treino", "treinar todo dia", "fadiga", "cansaco", "cansaço"],
+            respond: { _ in
+                """
+                Sinais de overtraining (excesso):
+                • Queda de performance
+                • Fadiga persistente
+                • Sono ruim, irritabilidade
+                • Dores que não passam
+
+                Prevenção:
+                • 1–2 dias de descanso/semana
+                • Durma 7–9 h
+                • Alimentação e hidratação adequadas
+                • Periodize intensidade (nem todo treino é máximo)
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["objetivo", "ganho de massa treino", "resistencia", "resistência", "manutencao", "manutenção"],
+            respond: { ctx in
+                guard let user = ctx.user else {
+                    return "Objetivos no app: Ganho de Massa, Perda de Gordura, Manutenção e Resistência. Configure em Nutrição ou Perfil."
+                }
+                return """
+                Seu objetivo: \(user.goal.rawValue)
+
+                Dieta: \(ctx.dailyCalorieTarget) kcal/dia (TDEE \(ctx.estimatedTDEE)).
+                Treino: \(goalTrainingSummary(user.goal))
+
+                Cardápio e fichas se adaptam ao objetivo. Altere em Perfil quando mudar de fase.
+                """
+            }
+        ),
+    ]
+
+    // MARK: - Biotipos
+
+    private static let biotypeTopics: [HealthAssistantTopic] = [
+        HealthAssistantTopic(
+            keywords: [
+                "ectomorfo", "o que e ectomorfo", "o que é ectomorfo", "definicao ectomorfo",
+                "definição ectomorfo", "significado ectomorfo", "ecto morfo", "sou ectomorfo"
+            ],
+            respond: { ctx in
+                let isUser = ctx.user?.biotype == .ectomorph
+                var text = ectomorphDefinition(isUserType: isUser)
+                if let user = ctx.user {
+                    if isUser {
+                        text += "\n\nSeu TDEE ajustado: \(ctx.estimatedTDEE) kcal/dia (metabolismo +10%)."
+                    } else {
+                        text += "\n\nNo app, ectomorfos recebem +10% no TDEE. Seu biotipo: \(user.biotype.rawValue). TDEE: \(ctx.estimatedTDEE) kcal/dia."
+                    }
+                }
+                return text
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: [
+                "mesomorfo", "o que e mesomorfo", "o que é mesomorfo", "definicao mesomorfo",
+                "definição mesomorfo", "significado mesomorfo", "meso morfo", "sou mesomorfo"
+            ],
+            respond: { ctx in
+                let isUser = ctx.user?.biotype == .mesomorph
+                var text = mesomorphDefinition(isUserType: isUser)
+                if let user = ctx.user {
+                    if isUser {
+                        text += "\n\nSeu TDEE: \(ctx.estimatedTDEE) kcal/dia."
+                    } else {
+                        text += "\n\nSeu biotipo: \(user.biotype.rawValue). TDEE: \(ctx.estimatedTDEE) kcal/dia."
+                    }
+                }
+                return text
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: [
+                "endomorfo", "o que e endomorfo", "o que é endomorfo", "definicao endomorfo",
+                "definição endomorfo", "significado endomorfo", "endo morfo", "sou endomorfo"
+            ],
+            respond: { ctx in
+                let isUser = ctx.user?.biotype == .endomorph
+                var text = endomorphDefinition(isUserType: isUser)
+                if let user = ctx.user {
+                    if isUser {
+                        text += "\n\nSeu TDEE ajustado: \(ctx.estimatedTDEE) kcal/dia (metabolismo −10%)."
+                    } else {
+                        text += "\n\nNo app, endomorfos recebem −10% no TDEE. Seu biotipo: \(user.biotype.rawValue). TDEE: \(ctx.estimatedTDEE) kcal/dia."
+                    }
+                }
+                return text
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["biotipo", "biotipos", "somatotipo", "somatotipos", "tipos corporais", "tipo corporal"],
+            respond: { ctx in
+                guard let user = ctx.user else {
+                    return """
+                    Biotipo (somatotipo) descreve tendências naturais do corpo:
+
+                    • Ectomorfo — magro, metabolismo acelerado, dificuldade em ganhar massa
+                    • Mesomorfo — atlético, ganha músculo e perde gordura com facilidade
+                    • Endomorfo — tende a acumular gordura, metabolismo mais lento
+
+                    Pergunte "O que é ectomorfo?", "O que é mesomorfo?" ou "O que é endomorfo?" para ver cada definição.
+                    Defina o seu em Nutrição ou Perfil.
+                    """
+                }
+                return """
+                Seu biotipo: \(user.biotype.rawValue)
+                \(user.biotype.description)
+
+                Como identificar: \(user.biotype.identificationGuide)
+
+                Resumo dos três biotipos:
+                • Ectomorfo — magro, metabolismo rápido (+10% TDEE)
+                • Mesomorfo — atlético, responde bem ao treino
+                • Endomorfo — acumula gordura com facilidade (−10% TDEE)
+
+                O biotipo ajusta levemente calorias e estratégias, mas não limita seus resultados.
+                """
+            }
+        ),
+    ]
+
+    // MARK: - Geral
+
+    private static let generalTopics: [HealthAssistantTopic] = [
+        HealthAssistantTopic(
+            keywords: ["metabolismo basal", "tmb", "basal"],
+            respond: { ctx in
+                guard let user = ctx.user else {
+                    return "Metabolismo basal (TMB) é a energia que seu corpo gasta em repouso. Complete seu perfil para ver sua estimativa."
+                }
+                return """
+                Metabolismo basal (TMB) = calorias em repouso absoluto (respiração, circulação, órgãos).
+
+                Sua TMB: \(ctx.basalMetabolicRate) kcal/dia.
+                TDEE (atividade moderada): \(ctx.estimatedTDEE) kcal/dia.
+                Meta: \(ctx.dailyCalorieTarget) kcal/dia para \(user.goal.rawValue.lowercased()).
+
+                Varia com peso, altura, idade, sexo e biotipo (\(user.biotype.rawValue)).
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["tdee", "gasto calorico", "gasto calórico", "meta calorica", "meta calórica", "calorias"],
+            respond: { ctx in
+                """
+                TDEE = gasto calórico total (TMB + atividade diária).
+
+                Sua TMB: \(ctx.basalMetabolicRate) kcal/dia.
+                TDEE estimado: \(ctx.estimatedTDEE) kcal/dia.
+                Meta do plano: \(ctx.dailyCalorieTarget) kcal/dia.
+
+                Emagrecer → abaixo do TDEE. Ganhar massa → acima. Manter → perto do TDEE.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: ["agua", "hidrata", "beber", "desidrata", "liquido", "líquido"],
+            respond: { ctx in
+                guard let user = ctx.user else {
+                    return "Beber água suficiente mantém energia, digestão e performance. Meta: ~35 ml/kg/dia."
+                }
+                let goal = user.recommendedDailyWaterML
+                let current = ctx.waterIntakeMl
+                let remaining = max(goal - current, 0)
+                return """
+                Sem água suficiente: cansaço, dor de cabeça, queda no treino, recuperação lenta, confusão fome/sede.
+
+                Meta: \(goal) ml/dia (~\(String(format: "%.1f", user.recommendedDailyWaterLiters)) L).
+                Hoje: \(current) ml.
+                \(remaining > 0 ? "Faltam ~\(remaining) ml." : "Meta atingida hoje!")
+
+                Beba ao longo do dia; aumente em dias de treino ou calor.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: [
+                "sono", "dormir", "descanso", "recuperacao", "recuperação",
+                "dormir corretamente", "dormir bem", "higiene do sono", "rotina de sono",
+                "insomnia", "insônia", "noite", "cama", "horas de sono", "qualidade do sono"
+            ],
+            respond: { ctx in
+                let todayNote = sleepStatusLine(hours: ctx.sleepHours)
+                return """
+                Como dormir corretamente:
+
+                Meta: 7–9 horas por noite (adultos).
+                • < 5 h — sono não regulado; hormônios e recuperação prejudicados
+                • 5–7 h — aumente gradualmente
+                • 7–9 h — ideal para treino, músculo e perda de gordura
+                • > 9 h — ok ocasionalmente; avalie se há fadiga excessiva
+
+                \(todayNote)
+
+                Higiene do sono:
+                • Horário fixo para deitar e acordar (inclusive fim de semana)
+                • Quarto escuro, silencioso e fresco
+                • Evite telas 30–60 min antes de dormir
+                • Sem cafeína/energético à tarde/noite
+                • Jantar leve 2–3 h antes de deitar
+                • Meditação no app (Treinos → Meditação) ajuda a relaxar
+
+                Sono ruim sabota treino e dieta — trate o descanso como parte do plano.
+                """
+            }
+        ),
+    ]
+}
+
+private struct HealthAssistantTopic {
+    let keywords: [String]
+    let respond: (HealthAssistantContext) -> String
+}
+
+@MainActor
+final class HealthAssistantService: ObservableObject {
+    @Published private(set) var messages: [HealthChatMessage] = []
+    @Published private(set) var isTyping = false
+
+    private var replyTask: Task<Void, Never>?
+    private static let replyDelay: Duration = .seconds(3)
+
+    func bootstrap(context: HealthAssistantContext) {
+        guard messages.isEmpty else { return }
+        messages.append(
+            HealthChatMessage(
+                text: HealthAssistantEngine.welcomeMessage(context: context),
+                isUser: false
+            )
+        )
+    }
+
+    func bootstrap(userName: String?) {
+        bootstrap(context: HealthAssistantContext(
+            user: userName.map { UserProfile(name: $0, email: "") },
+            waterIntakeMl: 0,
+            sleepHours: nil,
+            weeklyWorkoutCount: 0,
+            hoursSinceLastWorkout: nil,
+            dailyCalorieTarget: 0,
+            basalMetabolicRate: 0,
+            estimatedTDEE: 0,
+            caloricDeficit: 0,
+            sweetConsumption: .moderate,
+            lactoseTolerance: nil
+        ))
+    }
+
+    func send(_ question: String, context: HealthAssistantContext) {
+        let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !isTyping else { return }
+
+        replyTask?.cancel()
+        messages.append(HealthChatMessage(text: trimmed, isUser: true))
+        isTyping = true
+
+        replyTask = Task {
+            do {
+                try await Task.sleep(for: Self.replyDelay)
+                guard !Task.isCancelled else { return }
+                let answer = HealthAssistantEngine.answer(for: trimmed, context: context)
+                messages.append(HealthChatMessage(text: answer, isUser: false))
+                isTyping = false
+            } catch {
+                isTyping = false
+            }
+        }
+    }
+
+    func clear(context: HealthAssistantContext) {
+        replyTask?.cancel()
+        isTyping = false
+        messages.removeAll()
+        bootstrap(context: context)
+    }
+
+    func clear(userName: String?) {
+        clear(context: HealthAssistantContext(
+            user: userName.map { UserProfile(name: $0, email: "") },
+            waterIntakeMl: 0,
+            sleepHours: nil,
+            weeklyWorkoutCount: 0,
+            hoursSinceLastWorkout: nil,
+            dailyCalorieTarget: 0,
+            basalMetabolicRate: 0,
+            estimatedTDEE: 0,
+            caloricDeficit: 0,
+            sweetConsumption: .moderate,
+            lactoseTolerance: nil
+        ))
+    }
+}

@@ -8,9 +8,18 @@ struct RootView: View {
     @EnvironmentObject var wellnessService: DailyWellnessService
     @Environment(\.scenePhase) private var scenePhase
 
+    @State private var showWelcomeMotivation = false
+    @State private var welcomeContext: WelcomeMotivationContext?
+
     var body: some View {
         Group {
-            if authService.isAuthenticated {
+            if !authService.isAuthenticated {
+                LoginView()
+            } else if showWelcomeMotivation, let welcomeContext {
+                WelcomeMotivationView(context: welcomeContext) {
+                    showWelcomeMotivation = false
+                }
+            } else {
                 MainTabView()
                     .task {
                         wellnessService.configure(for: authService.currentUser)
@@ -25,24 +34,24 @@ struct RootView: View {
                     .sheet(isPresented: $wellnessService.showSleepCheckIn) {
                         DailyWellnessCheckInView()
                     }
-            } else {
-                LoginView()
             }
         }
-        .animation(.easeInOut, value: authService.isAuthenticated)
+        .animation(.easeInOut(duration: 0.25), value: showWelcomeMotivation)
         .onAppear {
+            prepareWelcomeIfAuthenticated(trigger: .coldStart)
             AppIconInactivityService.shared.handleAppBecameActive()
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
-                AppIconInactivityService.shared.handleAppBecameActive()
                 if authService.isAuthenticated {
+                    prepareWelcomeIfAuthenticated(trigger: .returnFromBackground)
                     wellnessService.configure(for: authService.currentUser)
                     wellnessService.checkInOnAppOpen()
                     NotificationService.shared.scheduleDailyMotivationNotifications()
                     refreshInactivityReminder()
                 }
+                AppIconInactivityService.shared.handleAppBecameActive()
             case .background:
                 AppIconInactivityService.shared.handleAppEnteredBackground()
             default:
@@ -51,9 +60,50 @@ struct RootView: View {
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             if isAuthenticated {
+                prepareWelcomeIfAuthenticated(trigger: .login)
                 wellnessService.configure(for: authService.currentUser)
             }
         }
+    }
+
+    private enum WelcomeTrigger {
+        case coldStart
+        case login
+        case returnFromBackground
+    }
+
+    private func prepareWelcomeIfAuthenticated(trigger: WelcomeTrigger) {
+        guard authService.isAuthenticated else { return }
+
+        switch trigger {
+        case .login, .coldStart:
+            presentWelcome()
+        case .returnFromBackground:
+            if let hours = AppIconInactivityService.shared.hoursSinceLastSessionEnd(), hours >= 24 {
+                presentWelcome()
+            }
+        }
+    }
+
+    private func presentWelcome() {
+        guard !showWelcomeMotivation else { return }
+
+        let user = authService.currentUser
+        let weeklyReport = WeeklyProgressAnalyzer.buildReport(
+            sessions: workoutStore.sessionHistory,
+            goal: user?.goal ?? .maintenance
+        )
+        let hoursSinceLastWorkout = workoutStore.lastCompletedWorkoutAt.map {
+            Date().timeIntervalSince($0) / 3600
+        }
+
+        welcomeContext = WelcomeMotivationEngine.makeContext(
+            athleteName: user?.name ?? "Atleta",
+            hoursSinceLastOpen: AppIconInactivityService.shared.hoursSinceLastSessionEnd(),
+            hoursSinceLastWorkout: hoursSinceLastWorkout,
+            weeklyWorkoutCount: weeklyReport.currentWeek.workoutCount
+        )
+        showWelcomeMotivation = true
     }
 
     private func refreshInactivityReminder() {

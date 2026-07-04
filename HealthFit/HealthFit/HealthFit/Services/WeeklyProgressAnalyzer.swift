@@ -40,6 +40,12 @@ enum WeeklyProgressAnalyzer {
             end: todayStart,
             calendar: calendar
         )
+        let dailyMeditation = buildDailyMeditationActivity(
+            sessions: currentSessions,
+            start: currentStart,
+            end: todayStart,
+            calendar: calendar
+        )
         let score = calculateScore(current: currentWeek, previous: previousWeek, goal: goal)
         let weekPreWorkout = PreWorkoutUsageSummary.from(sessions: currentSessions)
         let lifetimePreWorkout = PreWorkoutUsageSummary.from(sessions: completedSessions)
@@ -55,6 +61,7 @@ enum WeeklyProgressAnalyzer {
             highlights: highlights,
             improvements: improvements,
             dailyWorkoutMinutes: dailyActivity,
+            dailyMeditationMinutes: dailyMeditation,
             overallScore: score,
             preWorkoutSummary: weekPreWorkout,
             lifetimePreWorkoutSummary: lifetimePreWorkout,
@@ -80,6 +87,7 @@ enum WeeklyProgressAnalyzer {
                 )
             ],
             dailyWorkoutMinutes: [],
+            dailyMeditationMinutes: [],
             overallScore: 0,
             preWorkoutSummary: .empty,
             lifetimePreWorkoutSummary: .empty,
@@ -211,11 +219,20 @@ enum WeeklyProgressAnalyzer {
         if current.meditationSessions > 0 || previous.meditationSessions > 0 {
             trends.append(
                 makeTrend(
-                    title: "Meditação",
+                    title: "Meditação (min)",
                     current: current.meditationMinutes,
                     previous: previous.meditationMinutes,
                     icon: "brain.head.profile",
                     format: { "\($0) min" }
+                )
+            )
+            trends.append(
+                makeTrend(
+                    title: "Sessões de meditação",
+                    current: current.meditationSessions,
+                    previous: previous.meditationSessions,
+                    icon: "leaf.fill",
+                    format: { "\($0)" }
                 )
             )
         }
@@ -467,6 +484,33 @@ enum WeeklyProgressAnalyzer {
                     date: day,
                     minutes: minutes,
                     workoutCount: daySessions.count
+                )
+            )
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+            day = next
+        }
+
+        return result
+    }
+
+    private static func buildDailyMeditationActivity(
+        sessions: [WorkoutSession],
+        start: Date,
+        end: Date,
+        calendar: Calendar
+    ) -> [DailyMeditationActivity] {
+        let meditationSessions = sessions.filter(isMeditationSession)
+        var result: [DailyMeditationActivity] = []
+        var day = start
+
+        while day <= end {
+            let daySessions = meditationSessions.filter { calendar.isDate($0.startedAt, inSameDayAs: day) }
+            let minutes = daySessions.reduce(0) { $0 + Int($1.duration / 60) }
+            result.append(
+                DailyMeditationActivity(
+                    date: day,
+                    minutes: minutes,
+                    sessionCount: daySessions.count
                 )
             )
             guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }

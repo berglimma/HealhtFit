@@ -8,16 +8,31 @@ struct CardioSetupView: View {
 
     let exercise: CardioExercise
     @State private var selectedIntensity: CardioIntensity = .medium
+    @State private var selectedDistance: RunningDistance = .five
+    @State private var useDistanceGoal = true
+    @State private var useCalorieGoal = false
+    @State private var selectedCalorieGoal = 300
     @State private var showActiveCardio = false
 
+    private static let caloriePresets = [100, 150, 200, 250, 300, 350, 400, 500, 600, 800]
+
     private var config: CardioWorkoutConfig {
-        CardioWorkoutConfig(exercise: exercise, intensity: selectedIntensity)
+        CardioWorkoutConfig(
+            exercise: exercise,
+            intensity: selectedIntensity,
+            runningDistance: exercise.supportsDistanceGoals && useDistanceGoal ? selectedDistance : nil,
+            targetCalories: useCalorieGoal ? selectedCalorieGoal : nil
+        )
     }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 headerSection
+                if exercise.supportsDistanceGoals {
+                    distanceSection
+                }
+                calorieGoalSection
                 intensitySection
                 summarySection
                 startButton
@@ -62,6 +77,107 @@ struct CardioSetupView: View {
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
+    private var distanceSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Distância da corrida")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                Toggle("Por km", isOn: $useDistanceGoal)
+                    .labelsHidden()
+                    .tint(AppTheme.accent)
+            }
+
+            Text(useDistanceGoal ? "Escolha a meta em quilômetros para preparação de maratona." : "Modo por tempo — use a intensidade abaixo.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            if useDistanceGoal {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    ForEach(RunningDistance.allCases) { distance in
+                        Button {
+                            selectedDistance = distance
+                        } label: {
+                            VStack(spacing: 8) {
+                                Image(systemName: distance.icon)
+                                    .font(.title2)
+                                Text(distance.label)
+                                    .font(.headline)
+                                Text(distance.marathonRole)
+                                    .font(.caption2)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                            }
+                            .foregroundStyle(selectedDistance == distance ? .white : AppTheme.textPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(selectedDistance == distance ? AppTheme.accent : AppTheme.cardBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private var calorieGoalSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Meta de calorias")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                Toggle("Meta kcal", isOn: $useCalorieGoal)
+                    .labelsHidden()
+                    .tint(AppTheme.accentSecondary)
+            }
+
+            if useCalorieGoal {
+                Text("Defina quantas calorias pretende gastar neste cardio.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(Self.caloriePresets, id: \.self) { kcal in
+                        Button {
+                            selectedCalorieGoal = kcal
+                        } label: {
+                            Text("\(kcal)")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(selectedCalorieGoal == kcal ? .white : AppTheme.textPrimary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(selectedCalorieGoal == kcal ? AppTheme.accentSecondary : AppTheme.cardBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                Stepper(value: $selectedCalorieGoal, in: 50...1200, step: 25) {
+                    HStack {
+                        Label("Personalizado", systemImage: "flame.fill")
+                        Spacer()
+                        Text("\(selectedCalorieGoal) kcal")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
+                }
+                .foregroundStyle(AppTheme.textPrimary)
+            } else {
+                HStack(spacing: 10) {
+                    Image(systemName: "applewatch")
+                        .foregroundStyle(AppTheme.accent)
+                    Text("Sem meta definida — as calorias serão acompanhadas em tempo real pelo Apple Watch durante o treino.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+        }
+    }
+
     private var intensitySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Intensidade")
@@ -86,9 +202,15 @@ struct CardioSetupView: View {
                                 .font(.caption)
                                 .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.85) : AppTheme.textSecondary)
                                 .multilineTextAlignment(.leading)
-                            Text("\(intensity.durationMinutes) min sugeridos")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.9) : intensity.color)
+                            if exercise.supportsDistanceGoals && useDistanceGoal {
+                                Text("Ritmo alvo: \(intensity.formattedPace())")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.9) : intensity.color)
+                            } else {
+                                Text("\(intensity.durationMinutes) min sugeridos")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.9) : intensity.color)
+                            }
                         }
 
                         Spacer()
@@ -109,12 +231,36 @@ struct CardioSetupView: View {
 
     private var summarySection: some View {
         VStack(spacing: 10) {
-            HStack {
-                Label("Duração sugerida", systemImage: "clock.fill")
-                Spacer()
-                Text("\(selectedIntensity.durationMinutes) min")
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.accent)
+            if config.isDistanceRun {
+                HStack {
+                    Label("Distância meta", systemImage: "figure.run")
+                    Spacer()
+                    Text(selectedDistance.label)
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accent)
+                }
+                HStack {
+                    Label("Tempo estimado", systemImage: "clock.fill")
+                    Spacer()
+                    Text(PaceFormatting.formatDuration(seconds: config.targetDurationSeconds))
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accent)
+                }
+                HStack {
+                    Label("Ritmo alvo", systemImage: "speedometer")
+                    Spacer()
+                    Text(selectedIntensity.formattedPace())
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
+            } else {
+                HStack {
+                    Label("Duração sugerida", systemImage: "clock.fill")
+                    Spacer()
+                    Text("\(selectedIntensity.durationMinutes) min")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accent)
+                }
             }
             HStack {
                 Label("Calorias estimadas", systemImage: "flame.fill")
@@ -122,6 +268,15 @@ struct CardioSetupView: View {
                 Text("~\(Int(config.estimatedCalories(for: config.targetDurationSeconds))) kcal")
                     .font(.headline)
                     .foregroundStyle(AppTheme.accentSecondary)
+            }
+            if config.hasCalorieGoal {
+                HStack {
+                    Label("Meta de calorias", systemImage: "target")
+                    Spacer()
+                    Text("\(config.targetCalories ?? 0) kcal")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accent)
+                }
             }
         }
         .foregroundStyle(AppTheme.textPrimary)
@@ -136,7 +291,8 @@ struct CardioSetupView: View {
             watchConnectivity.startCardioOnWatch(
                 workoutName: config.title,
                 targetSeconds: config.targetDurationSeconds,
-                exerciseName: config.exercise.name
+                exerciseName: config.exercise.name,
+                targetCalories: config.targetCalories
             )
             let athleteName = authService.currentUser?.name ?? "Atleta"
             NotificationService.shared.deliverWorkoutStartNotification(
@@ -145,7 +301,7 @@ struct CardioSetupView: View {
             )
             showActiveCardio = true
         } label: {
-            Label("Iniciar Cardio", systemImage: "play.fill")
+            Label(config.isDistanceRun ? "Iniciar Corrida" : "Iniciar Cardio", systemImage: "play.fill")
         }
         .buttonStyle(PrimaryButtonStyle())
     }
@@ -169,7 +325,9 @@ struct CardioExerciseCard: View {
                 Text(exercise.name)
                     .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
-                Text(exercise.description)
+                Text(exercise.supportsDistanceGoals
+                     ? "\(exercise.description) · 5–25 km"
+                     : exercise.description)
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
                     .lineLimit(2)

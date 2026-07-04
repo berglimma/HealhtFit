@@ -23,8 +23,13 @@ struct PreWorkoutSessionEntry: Identifiable, Equatable {
 }
 
 enum WorkoutReportBuilder {
+    static func isCardioSession(_ session: WorkoutSession) -> Bool {
+        session.workoutTitle.lowercased().hasPrefix("cardio")
+    }
+
     static func emailSubject(session: WorkoutSession, athleteName: String) -> String {
-        "Relatório de Treino — \(athleteName) — \(session.workoutTitle)"
+        let kind = isCardioSession(session) ? "Cardio" : "Treino"
+        return "Relatório de \(kind) — \(athleteName) — \(session.workoutTitle)"
     }
 
     static func emailBody(
@@ -44,31 +49,61 @@ enum WorkoutReportBuilder {
             "",
             "Treino: \(session.workoutTitle)",
             "Data: \(dateFormatter.string(from: session.startedAt))",
-            "Duração total: \(DurationFormatting.format(seconds: Int(session.duration)))",
-            "Exercícios concluídos: \(session.completedExercises)/\(session.totalExercises)",
-            "Tempo nos exercícios: \(DurationFormatting.format(seconds: session.totalExerciseSeconds))",
-            "Descanso total: \(DurationFormatting.format(seconds: session.totalRestSeconds))"
+            "Duração total: \(DurationFormatting.format(seconds: Int(session.duration)))"
         ]
+
+        if isCardioSession(session) {
+            lines.append("Tipo: Cardio")
+            if let record = session.exerciseRecords.first {
+                lines.append("Atividade: \(record.exerciseName)")
+                lines.append("Tempo ativo: \(DurationFormatting.format(seconds: record.elapsedSeconds))")
+                lines.append("Meta atingida: \(record.isCompleted ? "Sim" : "Parcial")")
+            }
+            if let targetKm = session.targetDistanceKm, targetKm > 0,
+               let report = MarathonReportBuilder.build(session: session, allSessions: allSessions) {
+                lines.append(contentsOf: MarathonReportBuilder.emailLines(report: report, session: session))
+            }
+        } else {
+            lines.append("Exercícios concluídos: \(session.completedExercises)/\(session.totalExercises)")
+            lines.append("Tempo nos exercícios: \(DurationFormatting.format(seconds: session.totalExerciseSeconds))")
+            lines.append("Descanso total: \(DurationFormatting.format(seconds: session.totalRestSeconds))")
+        }
 
         if session.caloriesBurned > 0 {
             lines.append("Calorias: \(Int(session.caloriesBurned)) kcal")
+        }
+
+        if let targetCalories = session.targetCalories, targetCalories > 0 {
+            let burned = Int(session.caloriesBurned)
+            let reached = burned >= Int(Double(targetCalories) * 0.98)
+            lines.append("Meta calórica: \(targetCalories) kcal")
+            lines.append("Meta calórica atingida: \(reached ? "Sim" : "Parcial")")
+            if burned > targetCalories {
+                lines.append("Superação: +\(burned - targetCalories) kcal além da meta")
+            }
         }
 
         if session.averageHeartRate > 0 {
             lines.append(String(format: "FC média: %.0f BPM", session.averageHeartRate))
         }
 
-        lines.append(contentsOf: preWorkoutReportLines(
-            currentSession: session,
-            allSessions: allSessions
-        ))
+        if !isCardioSession(session) {
+            lines.append(contentsOf: preWorkoutReportLines(
+                currentSession: session,
+                allSessions: allSessions
+            ))
+        }
 
         if !session.exerciseRecords.isEmpty {
             lines.append("")
-            lines.append("Detalhamento por exercício:")
+            lines.append(isCardioSession(session) ? "Detalhes da sessão:" : "Detalhamento por exercício:")
             for record in session.exerciseRecords {
                 let status = record.isCompleted ? "✓" : "○"
-                lines.append("\(status) \(record.exerciseName) — \(DurationFormatting.format(seconds: record.elapsedSeconds)) (descanso: \(DurationFormatting.format(seconds: record.restSeconds)))")
+                if isCardioSession(session) {
+                    lines.append("\(status) \(record.exerciseName) — \(DurationFormatting.format(seconds: record.elapsedSeconds))")
+                } else {
+                    lines.append("\(status) \(record.exerciseName) — \(DurationFormatting.format(seconds: record.elapsedSeconds)) (descanso: \(DurationFormatting.format(seconds: record.restSeconds)))")
+                }
             }
         }
 

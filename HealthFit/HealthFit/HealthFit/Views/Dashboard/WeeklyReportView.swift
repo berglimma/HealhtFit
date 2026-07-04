@@ -132,6 +132,18 @@ struct WeeklyReportView: View {
                 label: "Dias ativos",
                 color: .blue
             )
+            WeeklyStatCard(
+                icon: "brain.head.profile",
+                value: "\(report.meditationSummary.sessionCount)",
+                label: "Meditação",
+                color: .purple
+            )
+            WeeklyStatCard(
+                icon: "leaf.fill",
+                value: "\(report.meditationSummary.totalMinutes) min",
+                label: "Min. meditação",
+                color: .indigo
+            )
         }
     }
 
@@ -205,6 +217,8 @@ struct WeeklyReportView: View {
                         .foregroundStyle(AppTheme.textSecondary)
                 }
             }
+
+            meditationEvolutionChart
 
             if report.meditationSummary.topics.isEmpty {
                 Text("Nenhuma sessão de meditação nesta semana. Reserve alguns minutos para acalmar a mente.")
@@ -311,6 +325,66 @@ struct WeeklyReportView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
         .background(AppTheme.accentSecondary.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var meditationEvolutionChart: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Evolução diária")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(AppTheme.textPrimary)
+
+            if report.dailyMeditationMinutes.allSatisfy({ $0.minutes == 0 }) {
+                Text("Sem minutos de meditação registrados nesta semana.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+            } else {
+                Chart(report.dailyMeditationMinutes) { day in
+                    BarMark(
+                        x: .value("Dia", day.date, unit: .day),
+                        y: .value("Minutos", day.minutes)
+                    )
+                    .foregroundStyle(Color.purple.gradient)
+                    .cornerRadius(4)
+                }
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .day)) { value in
+                        if let date = value.as(Date.self) {
+                            AxisValueLabel {
+                                Text(date.formatted(.dateTime.weekday(.abbreviated)))
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+                        }
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks { _ in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4]))
+                            .foregroundStyle(Color.white.opacity(0.1))
+                        AxisValueLabel()
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+                .frame(height: 140)
+            }
+
+            if let previous = report.previousWeek, previous.meditationMinutes > 0 || report.currentWeek.meditationMinutes > 0 {
+                HStack {
+                    Text("Semana anterior")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Spacer()
+                    Text("\(previous.meditationSessions) sessões · \(previous.meditationMinutes) min")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+            }
+        }
+        .padding()
+        .background(Color.purple.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
