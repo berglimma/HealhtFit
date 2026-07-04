@@ -1,6 +1,6 @@
 # HealthFit
 
-Aplicativo iOS + watchOS de saúde e fitness desenvolvido em **Swift** e **SwiftUI**. O HealthFit integra treinos de musculação, cardio e meditação, nutrição personalizada, métricas do Apple Health, sincronização com Apple Watch, relatório semanal de progresso e check-in de sono/hidratação.
+Aplicativo iOS + watchOS de saúde e fitness desenvolvido em **Swift** e **SwiftUI**. O HealthFit integra treinos de musculação, cardio (incluindo corrida por distância e meta calórica), meditação, nutrição personalizada, assistente de dúvidas, métricas do Apple Health, sincronização com Apple Watch, relatório semanal de progresso, preparação para maratona e ícone dinâmico por inatividade.
 
 | Plataforma | Versão mínima | Bundle ID |
 |------------|---------------|-----------|
@@ -21,12 +21,14 @@ Aplicativo iOS + watchOS de saúde e fitness desenvolvido em **Swift** e **Swift
 - [Arquitetura](#arquitetura)
 - [Estrutura do projeto](#estrutura-do-projeto)
 - [Módulos e funcionalidades](#módulos-e-funcionalidades)
+- [Ícone dinâmico do app](#ícone-dinâmico-do-app)
 - [Sincronização com Apple Watch](#sincronização-com-apple-watch)
 - [Persistência de dados](#persistência-de-dados)
 - [Permissões e integrações](#permissões-e-integrações)
 - [Requisitos](#requisitos)
 - [Configuração e execução](#configuração-e-execução)
 - [Build via linha de comando](#build-via-linha-de-comando)
+- [Scripts auxiliares](#scripts-auxiliares)
 - [Convenções de código](#convenções-de-código)
 - [Limitações conhecidas](#limitações-conhecidas)
 
@@ -36,8 +38,18 @@ Aplicativo iOS + watchOS de saúde e fitness desenvolvido em **Swift** e **Swift
 
 O HealthFit é um app nativo Apple com dois targets principais:
 
-1. **HealthFit (iPhone/iPad)** — experiência completa: autenticação, dashboard, treinos, nutrição, perfil e relatórios.
-2. **HealthFitWatch (Apple Watch)** — companion app focado em cronômetro, métricas em tempo real e sessões guiadas sincronizadas com o iPhone.
+1. **HealthFit (iPhone/iPad)** — experiência completa: autenticação, boas-vindas motivacionais, dashboard, treinos, nutrição, chat de dúvidas, perfil e relatórios.
+2. **HealthFitWatch (Apple Watch)** — companion app focado em cronômetro, métricas em tempo real (BPM, calorias) e sessões guiadas sincronizadas com o iPhone.
+
+### Fluxo de navegação
+
+```
+Login / Registro
+      ↓
+WelcomeMotivationView (5 s, mensagens por inatividade)
+      ↓
+MainTabView — 5 abas: Início · Treinos · Nutrição · Dúvidas · Perfil
+```
 
 O ponto de entrada do app iOS injeta os serviços globais via `@EnvironmentObject`:
 
@@ -56,7 +68,7 @@ struct HealthFitApp: App {
 }
 ```
 
-O fluxo de navegação raiz (`RootView`) alterna entre autenticação e `MainTabView` (4 abas: Início, Treinos, Nutrição, Perfil).
+Ao abrir o app, `AppIconInactivityService` restaura o ícone verde padrão. Ao ir para background, inicia a contagem de inatividade e a pulsação alternada do ícone.
 
 ---
 
@@ -68,7 +80,8 @@ O fluxo de navegação raiz (`RootView`) alterna entre autenticação e `MainTab
 | Saúde | HealthKit (leitura/escrita de treinos, passos, calorias, FC) |
 | Watch | WatchConnectivity (`WCSession`) |
 | Visão | AVFoundation + Vision (detecção de postura e repetições) |
-| Notificações | UserNotifications (motivação diária, lembretes de inatividade) |
+| Notificações | UserNotifications (motivação diária, inatividade, início/fim de treino) |
+| Background | BGTaskScheduler (atualização do ícone alternativo) |
 | E-mail | MessageUI (`MFMailComposeViewController`) |
 | Armazenamento | UserDefaults + FileManager (foto de perfil) |
 | Layout adaptativo | `DeviceLayout`, `horizontalSizeClass` |
@@ -84,14 +97,15 @@ O projeto segue uma organização **MVVM simplificada** com serviços singleton 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                      Views (SwiftUI)                     │
-│  Dashboard · Treinos · Nutrição · Perfil · Watch UI   │
+│  Dashboard · Treinos · Nutrição · Dúvidas · Perfil     │
 └─────────────────────────┬───────────────────────────────┘
                           │ @EnvironmentObject
 ┌─────────────────────────▼───────────────────────────────┐
 │                        Services                          │
 │  WorkoutStore · AuthService · HealthKitManager            │
 │  WatchConnectivityManager · WeeklyReportService           │
-│  DailyWellnessService · MealPlanService · VisionWorkout   │
+│  HealthAssistantService · AppIconInactivityService        │
+│  MarathonReportBuilder · DailyWellnessService             │
 └─────────────────────────┬───────────────────────────────┘
                           │
 ┌─────────────────────────▼───────────────────────────────┐
@@ -105,6 +119,7 @@ O projeto segue uma organização **MVVM simplificada** com serviços singleton 
 - Estado compartilhado via `ObservableObject` + `@Published`
 - Análise de relatório semanal desacoplada em `WeeklyProgressAnalyzer` (funções estáticas puras)
 - Protocolo de mensagens Watch baseado em dicionários com chave `"action"`
+- Assistente de saúde baseado em base de conhecimento local (`HealthAssistantService`)
 
 ---
 
@@ -113,7 +128,10 @@ O projeto segue uma organização **MVVM simplificada** com serviços singleton 
 ```
 HealhtFit/
 ├── README.md
-├── generate_report.py          # Script auxiliar para gerar relatório .docx
+├── generate_report.py              # Script auxiliar para gerar relatório .docx
+├── scripts/
+│   ├── generate_alternate_app_icons.py   # Ícones alternativos e frames de pulso
+│   └── app_icon_master.png               # Master gerado a partir do AppIcon
 └── HealthFit/
     └── HealthFit/
         ├── HealthFit.xcodeproj
@@ -123,7 +141,7 @@ HealhtFit/
         │   ├── Services/
         │   ├── Views/
         │   ├── Theme/
-        │   ├── Assets.xcassets
+        │   ├── Assets.xcassets           # AppIcon + ícones alternativos + BrandHeart
         │   ├── Info.plist
         │   └── HealthFit.entitlements
         └── HealthFitWatch/               # Target watchOS
@@ -136,12 +154,12 @@ HealhtFit/
 
 | Arquivo | Responsabilidade |
 |---------|------------------|
-| `WorkoutModels.swift` | Fichas de treino, sessões, exercícios, registros |
-| `CardioModels.swift` | Catálogo de cardio, intensidades, configuração |
+| `WorkoutModels.swift` | Fichas, sessões, metadados de corrida (distância, ritmo, meta calórica) |
+| `CardioModels.swift` | Catálogo de cardio, intensidades, distâncias (5–25 km), meta de calorias |
 | `MeditationModels.swift` | Tópicos (7), durações (5–20 min), prompts guiados |
-| `WeeklyProgressModels.swift` | Estatísticas semanais, tendências, resumo de meditação |
+| `WeeklyProgressModels.swift` | Estatísticas semanais, tendências, meditação diária |
 | `DailyWellnessModels.swift` | Sono, hidratação, metas por peso |
-| `UserProfile.swift` | Perfil, biotipo, objetivo fitness |
+| `UserProfile.swift` | Perfil, biotipo, objetivo fitness, personal trainer |
 | `MealModels.swift` | Plano alimentar semanal e lista de compras |
 
 ### Services (`HealthFit/Services/`)
@@ -151,15 +169,20 @@ HealhtFit/
 | `WorkoutStore` | CRUD de fichas, sessões ativas, histórico |
 | `AuthService` | Login/registro local, perfil do usuário |
 | `HealthKitManager` | Autorização, métricas diárias, salvamento de treinos |
-| `WatchConnectivityManager` | Bridge iPhone ↔ Watch |
+| `WatchConnectivityManager` | Bridge iPhone ↔ Watch (BPM, calorias, progresso) |
 | `WeeklyReportService` | Disponibilidade do relatório (ciclo de 7 dias) |
-| `WeeklyProgressAnalyzer` | Cálculo de score, tendências e sugestões |
+| `WeeklyProgressAnalyzer` | Score, tendências, meditação e sugestões |
+| `HealthAssistantService` | Chat de dúvidas (dieta, treinos, IMC, biotipos, sono) |
+| `WelcomeMotivationService` | Mensagens da tela pós-login por inatividade |
+| `AppIconInactivityService` | Ícone alternativo verde/amarelo/vermelho/quebrado + pulso |
+| `MarathonReportBuilder` | Relatório de performance para maratona |
+| `WorkoutReportBuilder` | Relatório de treino/cardio para e-mail |
 | `DailyWellnessService` | Check-in de sono e consumo de água |
 | `MealPlanService` | Geração e persistência do plano alimentar |
 | `VisionWorkoutService` | Câmera + Vision para contagem de reps |
 | `RestTimerService` | Timer de descanso entre séries |
-| `NotificationService` | Notificações locais |
-| `WorkoutReportBuilder` | Montagem de relatório para envio por e-mail |
+| `NotificationService` | Notificações locais e lembretes de inatividade |
+| `MotivationMessages` | Textos motivacionais (treino, ícone, superação calórica) |
 
 ### Views (`HealthFit/Views/`)
 
@@ -167,11 +190,12 @@ HealhtFit/
 |-------|------------------|
 | `Auth/` | Login, registro |
 | `Dashboard/` | Dashboard, gráficos HealthKit, relatório semanal |
-| `Workout/` | Lista (musculação/cardio/meditação), treino ativo, resumo |
+| `Workout/` | Musculação, cardio, meditação, resumo, corrida por distância |
 | `Nutrition/` | Plano alimentar, lista de compras |
-| `Profile/` | Perfil, sono e hidratação |
+| `Assistant/` | Chat de dúvidas com indicador de digitação |
+| `Profile/` | Perfil, sono, hidratação, estado do ícone do app |
 | `Camera/` | Treino com visão computacional |
-| `Shared/` | Check-in wellness, composição de e-mail |
+| `Shared/` | Boas-vindas, check-in wellness, composição de e-mail, ícone pulsante |
 
 ---
 
@@ -184,25 +208,46 @@ HealhtFit/
 - Sincronização com Watch (nome do exercício, tempo total e por exercício)
 - Resumo pós-treino com opção de enviar relatório ao personal via e-mail
 - Treino assistido por câmera (`VisionWorkoutService`) para contagem de repetições
+- Registro opcional de uso de pré-treino
 
 ### Treinos — Cardio
 
 - Catálogo com 11 modalidades (corrida, bicicleta, escalada, burpees, etc.)
 - Três níveis de intensidade (baixa, média, alta) com duração e multiplicador calórico
-- Sincronização Watch com meta de tempo e barra de progresso (tema laranja)
+- **Corrida por distância:** metas de 5, 10, 15, 20 e 25 km com ritmo alvo por intensidade
+- **Meta de calorias (opcional):** presets ou valor personalizado (50–1200 kcal)
+- Evolução calórica em tempo real, priorizando dados do Apple Watch
+- Mensagens de progresso (25/50/75%) e **superação** ao ultrapassar a meta
+- **Relatório de performance para maratona** após corridas por distância:
+  - Projeções para meia (21,1 km) e maratona (42,2 km)
+  - Comparação com melhor marca, volume semanal e orientações
+- Sincronização Watch com meta de tempo, calorias e barra de progresso
 
 ### Treinos — Meditação
 
 - 7 tópicos com 10 prompts cada (respiração, relaxamento, sono, pós-treino, etc.)
 - Durações: 5, 10, 15 ou 20 minutos
 - Prompts rotacionam ao longo da sessão
-- Sincronização Watch com cor do tópico, anel de progresso e texto guiado (tema roxo/índigo)
+- Sincronização Watch com cor do tópico, anel de progresso e texto guiado
+
+### Assistente de dúvidas (aba Dúvidas)
+
+- Chat local com respostas sobre dieta, IMC, biotipos, sono, treinos e personal
+- Indicador de digitação (3 s) antes de cada resposta
+- Boas-vindas contextualizadas com alertas de sono, água e treinos
+- Contexto personalizado com dados do perfil e do wellness do dia
+
+### Boas-vindas pós-login
+
+- Tela `WelcomeMotivationView` exibida por **5 segundos** após login
+- Mensagens adaptadas ao tempo sem usar o app (24 h / 36 h / 48 h+)
+- Transição automática para o dashboard, sem necessidade de toque
 
 ### Relatório semanal
 
 - Gerado a partir do histórico de `WorkoutSession` dos últimos 7 dias
 - Score geral (0–100), comparativo com semana anterior, gráfico de atividade diária
-- Seção dedicada de **meditação** (sessões, minutos, tópicos, tendência)
+- Seção de **meditação** (sessões, minutos, evolução diária, tendência)
 - Sugestões de melhoria priorizadas por objetivo fitness do usuário
 - Badge **NOVO** no dashboard a cada 7 dias após visualização
 
@@ -223,6 +268,27 @@ HealhtFit/
 - UI com abas verticais: treino ativo e status de sincronização
 - Modos visuais distintos: verde (musculação), laranja (cardio), roxo (meditação)
 - BPM e calorias do relógio retornam ao iPhone durante cardio/musculação
+- Cardio com meta calórica: progresso e alerta de superação no relógio
+
+---
+
+## Ícone dinâmico do app
+
+O ícone na tela inicial do iPhone muda conforme o tempo **sem abrir o app** (contagem inicia ao ir para background):
+
+| Tempo sem abrir | Estado | Comportamento |
+|-----------------|--------|---------------|
+| Uso normal | Verde (padrão) | Pulsa entre 3 frames ao estar em background |
+| 24 h | Amarelo | Ícone alternativo + pulso |
+| 36 h | Vermelho | Ícone alternativo + pulso |
+| 48 h+ | Quebrado | Ícone rachado + notificação para retomar atividades |
+
+- Ao **abrir o app**, o ícone volta ao verde imediatamente
+- `BGTaskScheduler` agenda transições mesmo com o app fechado
+- Seção **Ícone do App** no Perfil mostra o estado projetado e próxima mudança
+- Ícones gerados por `scripts/generate_alternate_app_icons.py` (12 variantes + pulso)
+
+> **Nota:** Ícones alternativos exigem dispositivo físico; o simulador não aplica `setAlternateIconName`.
 
 ---
 
@@ -236,19 +302,20 @@ Comunicação via **WatchConnectivity** com mensagens JSON-like (`[String: Any]`
 |----------|-----------|
 | `startWorkout` | Inicia treino de musculação |
 | `syncWorkoutProgress` | Sincroniza tempos e exercício atual (tempo real) |
-| `startCardio` | Inicia sessão de cardio com meta |
-| `syncCardioProgress` | Atualiza progresso do cardio (tempo real) |
+| `startCardio` | Inicia cardio com meta de tempo e calorias |
+| `syncCardioProgress` | Atualiza tempo, calorias atuais e meta calórica |
 | `startMeditation` | Inicia meditação com tópico, cor e prompt |
 | `syncMeditationProgress` | Atualiza tempo e prompt (tempo real) |
-| `startRest` / `stopRest` | Timer de descanso no Watch |
+| `restTimerStart` / `restTimerStop` | Timer de descanso no Watch |
 | `stopWorkout` | Encerra sessão ativa |
+| `deliverNotification` | Replica notificação no relógio |
 
-### Ações Watch → iPhone
+### Dados Watch → iPhone
 
-| `action` | Descrição |
-|----------|-----------|
-| `heartRateUpdate` | BPM em tempo real |
-| `caloriesUpdate` | Calorias estimadas |
+| Campo | Descrição |
+|-------|-----------|
+| `heartRate` | BPM em tempo real |
+| `calories` | Calorias acumuladas na sessão |
 
 Mensagens de alta frequência usam `sendMessage` (`realtime: true`). Início/fim de sessão usa `transferUserInfo` como fallback quando o Watch não está alcançável.
 
@@ -256,6 +323,7 @@ Mensagens de alta frequência usam `sendMessage` (`realtime: true`). Início/fim
 
 - Cardio: título com prefixo `"Cardio"`
 - Meditação: título com prefixo `"Meditação"` ou `"Meditacao"`
+- Corrida por distância: `targetDistanceKm` preenchido na sessão
 
 ---
 
@@ -269,8 +337,11 @@ Mensagens de alta frequência usam `sendMessage` (`realtime: true`). Início/fim
 | Plano alimentar | UserDefaults | via `MealPlanService` |
 | Wellness diário | UserDefaults | `healthfit_wellness_{email}_{dayKey}` |
 | Último relatório visto | UserDefaults | `healthfit_last_weekly_report_viewed` |
+| Fim da última sessão (ícone) | UserDefaults | `healthfit_last_session_end_at` |
 | Foto de perfil | FileManager | diretório de documentos do app |
 | Treinos concluídos | HealthKit | `HKWorkout` + calorias ativas |
+
+Campos opcionais em `WorkoutSession` para cardio avançado: `targetDistanceKm`, `completedDistanceKm`, `averagePaceSecondsPerKm`, `targetCalories`, `cardioIntensityLabel`.
 
 ---
 
@@ -283,7 +354,7 @@ Configuradas no target iOS (`INFOPLIST_KEY_*` no Xcode):
 | **HealthKit** (read/write) | Passos, calorias, FC, treinos |
 | **Câmera** | Visão computacional para reps e postura |
 | **Fotos** | Imagem de perfil |
-| **Notificações** | Motivação, inatividade, início/fim de treino |
+| **Notificações** | Motivação, inatividade, início/fim de treino, ícone quebrado |
 
 Entitlements (`HealthFit.entitlements`):
 
@@ -292,6 +363,8 @@ Entitlements (`HealthFit.entitlements`):
 <true/>
 ```
 
+`Info.plist` declara **CFBundleAlternateIcons** (amarelo, vermelho, quebrado + frames de pulso) e identificadores **BGTaskScheduler** para atualização do ícone.
+
 O companion Watch declara `WKCompanionAppBundleIdentifier = luan.com.healthfit.app`.
 
 ---
@@ -299,10 +372,10 @@ O companion Watch declara `WKCompanionAppBundleIdentifier = luan.com.healthfit.a
 ## Requisitos
 
 - **macOS** com Xcode 15+ (recomendado Xcode 16)
-- **Conta Apple Developer** para executar em dispositivo físico (HealthKit e Watch exigem device real)
+- **Conta Apple Developer** para executar em dispositivo físico (HealthKit, ícones alternativos e Watch exigem device real)
 - **iPhone** com iOS 17+
-- **Apple Watch** pareado (opcional, para testar sincronização)
-- Simulador iOS funciona para grande parte das telas; HealthKit e Watch têm limitações no simulador
+- **Apple Watch** pareado (opcional, para testar sincronização e calorias)
+- Simulador iOS funciona para grande parte das telas; HealthKit, ícones alternativos e Watch têm limitações no simulador
 
 ---
 
@@ -310,7 +383,7 @@ O companion Watch declara `WKCompanionAppBundleIdentifier = luan.com.healthfit.a
 
 1. Clone o repositório:
    ```bash
-   git clone <url-do-repositorio>
+   git clone https://github.com/berglimma/HealhtFit.git
    cd HealhtFit/HealthFit/HealthFit
    ```
 
@@ -321,7 +394,7 @@ O companion Watch declara `WKCompanionAppBundleIdentifier = luan.com.healthfit.a
 
 3. Selecione o scheme **HealthFit** e um simulador ou dispositivo iOS.
 
-4. Configure **Signing & Capabilities** com seu Team e bundle identifiers compatíveis (ou mantenha os IDs do projeto se tiver acesso).
+4. Configure **Signing & Capabilities** com seu Team e bundle identifiers compatíveis.
 
 5. Para o Watch:
    - Selecione o scheme **HealthFitWatch**
@@ -330,9 +403,14 @@ O companion Watch declara `WKCompanionAppBundleIdentifier = luan.com.healthfit.a
 
 6. Execute (`⌘R`).
 
-### Testando e-mail do relatório ao personal
+### Testando recursos que exigem dispositivo físico
 
-O envio usa `MFMailComposeViewController`. Funciona apenas em **dispositivo físico** com conta de e-mail configurada no app Mail. No simulador, o composer pode não estar disponível.
+| Recurso | Simulador | Dispositivo |
+|---------|-----------|-------------|
+| HealthKit completo | Parcial | Sim |
+| Ícones alternativos | Não | Sim |
+| E-mail ao personal | Não | Sim (conta Mail configurada) |
+| Apple Watch sync | Limitado | Sim |
 
 ---
 
@@ -361,11 +439,32 @@ xcodebuild \
 
 ---
 
+## Scripts auxiliares
+
+### Regenerar ícones alternativos
+
+Requer Python 3 e Pillow:
+
+```bash
+pip install Pillow
+python3 scripts/generate_alternate_app_icons.py
+```
+
+Gera em `Assets.xcassets`: `AppIconYellow`, `AppIconRed`, `AppIconBroken`, frames de pulso (`*Pulse1`, `*Pulse2`) e `BrandHeart` (uso na UI).
+
+### Relatório .docx
+
+```bash
+python3 generate_report.py
+```
+
+---
+
 ## Convenções de código
 
 - **Idioma da UI:** português (Brasil)
 - **Serviços:** `@MainActor final class … : ObservableObject`
-- **Singletons compartilhados:** `static let shared` (`WatchConnectivityManager`, `WeeklyReportService`, `DailyWellnessService`)
+- **Singletons compartilhados:** `static let shared` (`WatchConnectivityManager`, `WeeklyReportService`, `AppIconInactivityService`, etc.)
 - **Tema:** `AppTheme` + `BiotypeThemes` (cores por biotipo)
 - **Layout:** `DeviceLayout.adaptivePadding` + `.adaptiveContentWidth()` para iPad
 - **Sessões:** toda atividade gera um `WorkoutSession` com `startedAt` / `endedAt` para alimentar dashboard e relatório
@@ -377,8 +476,10 @@ xcodebuild \
 | Área | Situação atual |
 |------|----------------|
 | Autenticação | Local/simulada — sem API, JWT ou Keychain |
+| Assistente de dúvidas | Base de conhecimento local — não é LLM externo |
 | Sincronização de dados | Apenas entre iPhone e Watch durante sessão ativa |
 | Backup | Dados em UserDefaults — não há sync iCloud |
+| Ícone animado | Pulsação via alternância de frames estáticos (limitação do iOS) |
 | Testes automatizados | Sem target de unit/UI tests no projeto |
 | Internacionalização | Apenas pt-BR |
 

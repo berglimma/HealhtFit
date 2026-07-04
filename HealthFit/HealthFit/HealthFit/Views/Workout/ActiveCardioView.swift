@@ -54,11 +54,18 @@ struct ActiveCardioView: View {
         if config.hasCalorieGoal {
             return calorieProgressClamped
         }
+        if config.isFreeRun {
+            return 0
+        }
         if config.isDistanceRun, config.targetDistanceKm > 0 {
             return min(completedDistanceKm / config.targetDistanceKm, 1.0)
         }
         guard config.targetDurationSeconds > 0 else { return 0 }
         return min(Double(elapsedSeconds) / Double(config.targetDurationSeconds), 1.0)
+    }
+
+    private var showsRunningUI: Bool {
+        config.isDistanceRun || config.isFreeRun
     }
 
     private var progressRingColor: Color {
@@ -99,7 +106,7 @@ struct ActiveCardioView: View {
                 .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                 .adaptiveContentWidth()
             }
-            .navigationTitle(config.isDistanceRun ? "Corrida" : "Cardio")
+            .navigationTitle(showsRunningUI ? "Corrida" : "Cardio")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -132,7 +139,11 @@ struct ActiveCardioView: View {
             Image(systemName: config.intensity.icon)
             Text("Intensidade \(config.intensity.rawValue)")
                 .font(.subheadline.weight(.semibold))
-            if config.isDistanceRun, let distance = config.runningDistance {
+            if config.isFreeRun {
+                Text("·")
+                Text("Livre")
+                    .font(.subheadline.weight(.semibold))
+            } else if config.isDistanceRun, let distance = config.runningDistance {
                 Text("·")
                 Text(distance.label)
                     .font(.subheadline.weight(.semibold))
@@ -158,7 +169,12 @@ struct ActiveCardioView: View {
             Text(config.exercise.name)
                 .font(.title.bold())
                 .foregroundStyle(AppTheme.textPrimary)
-            if config.isDistanceRun {
+            if config.isFreeRun {
+                Text("Corrida livre — encerre quando quiser · Ritmo ref. \(config.intensity.formattedPace())")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+            } else if config.isDistanceRun {
                 Text("Meta: \(String(format: "%.0f", config.targetDistanceKm)) km · Ritmo \(config.intensity.formattedPace())")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
@@ -214,13 +230,19 @@ struct ActiveCardioView: View {
                     Text("\(Int(calorieProgressClamped * 100))%")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(AppTheme.accentSecondary)
-                } else if config.isDistanceRun {
+                } else if config.isFreeRun || config.isDistanceRun {
                     Text(String(format: "%.2f km", completedDistanceKm))
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundStyle(AppTheme.textPrimary)
-                    Text("Meta: \(String(format: "%.0f", config.targetDistanceKm)) km")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.textSecondary)
+                    if config.isDistanceRun {
+                        Text("Meta: \(String(format: "%.0f", config.targetDistanceKm)) km")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    } else {
+                        Text("Sem meta")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
                     Text(DurationFormatting.format(seconds: elapsedSeconds))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(AppTheme.accent)
@@ -357,6 +379,13 @@ struct ActiveCardioView: View {
                     label: "Ritmo",
                     color: config.intensity.color
                 )
+            } else if config.isFreeRun {
+                CardioMetricTile(
+                    icon: "map.fill",
+                    value: String(format: "%.2f", completedDistanceKm),
+                    label: "km",
+                    color: config.intensity.color
+                )
             } else if config.hasCalorieGoal {
                 CardioMetricTile(
                     icon: "percent",
@@ -380,7 +409,7 @@ struct ActiveCardioView: View {
             finishCardio()
         } label: {
             Label(
-                config.isDistanceRun ? "Finalizar Corrida" : "Finalizar Cardio",
+                showsRunningUI ? "Finalizar Corrida" : "Finalizar Cardio",
                 systemImage: "flag.checkered"
             )
         }
@@ -445,6 +474,9 @@ struct ActiveCardioView: View {
             if config.hasCalorieGoal, let target = config.targetCalories {
                 return liveCalories >= Double(target) * 0.98
             }
+            if config.isFreeRun {
+                return elapsedSeconds >= 60
+            }
             if config.isDistanceRun {
                 return distanceKm >= config.targetDistanceKm * 0.98
             }
@@ -453,16 +485,22 @@ struct ActiveCardioView: View {
 
         session.endedAt = .now
         session.caloriesBurned = liveCalories
-        session.completedDistanceKm = config.isDistanceRun ? distanceKm : nil
-        session.averagePaceSecondsPerKm = config.isDistanceRun ? pace : nil
+        session.completedDistanceKm = (config.isDistanceRun || config.isFreeRun) ? distanceKm : nil
+        session.averagePaceSecondsPerKm = (config.isDistanceRun || config.isFreeRun) ? pace : nil
         session.cardioIntensityLabel = config.intensity.rawValue
         session.targetCalories = config.targetCalories
         session.exerciseRecords = [
             ExerciseSessionRecord(
                 exerciseId: config.exercise.id,
-                exerciseName: config.isDistanceRun
-                    ? "\(config.exercise.name) \(String(format: "%.0f", config.targetDistanceKm)) km (\(config.intensity.rawValue))"
-                    : "\(config.exercise.name) (\(config.intensity.rawValue))",
+                exerciseName: {
+                    if config.isFreeRun {
+                        return "Corrida livre (\(config.intensity.rawValue))"
+                    }
+                    if config.isDistanceRun {
+                        return "\(config.exercise.name) \(String(format: "%.0f", config.targetDistanceKm)) km (\(config.intensity.rawValue))"
+                    }
+                    return "\(config.exercise.name) (\(config.intensity.rawValue))"
+                }(),
                 elapsedSeconds: elapsedSeconds,
                 restSeconds: 0,
                 isCompleted: goalReached

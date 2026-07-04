@@ -66,7 +66,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         workoutName = name
         isCardioWorkout = true
         isMeditationWorkout = false
-        cardioTargetSeconds = max(targetSeconds, 1)
+        cardioTargetSeconds = max(targetSeconds, 0)
         cardioTargetCalories = max(targetCalories, 0)
         currentExerciseName = exerciseName
         isActive = true

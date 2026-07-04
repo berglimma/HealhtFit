@@ -9,19 +9,35 @@ struct CardioSetupView: View {
     let exercise: CardioExercise
     @State private var selectedIntensity: CardioIntensity = .medium
     @State private var selectedDistance: RunningDistance = .five
-    @State private var useDistanceGoal = true
+    @State private var runningMode: RunningSetupMode = .distance(.five)
     @State private var useCalorieGoal = false
     @State private var selectedCalorieGoal = 300
     @State private var showActiveCardio = false
 
     private static let caloriePresets = [100, 150, 200, 250, 300, 350, 400, 500, 600, 800]
 
+    private enum RunningSetupMode: Hashable {
+        case freeRun
+        case distance(RunningDistance)
+
+        var isFreeRun: Bool {
+            if case .freeRun = self { return true }
+            return false
+        }
+    }
+
     private var config: CardioWorkoutConfig {
-        CardioWorkoutConfig(
+        let distance: RunningDistance? = {
+            guard exercise.supportsDistanceGoals, case .distance(let value) = runningMode else { return nil }
+            return value
+        }()
+
+        return CardioWorkoutConfig(
             exercise: exercise,
             intensity: selectedIntensity,
-            runningDistance: exercise.supportsDistanceGoals && useDistanceGoal ? selectedDistance : nil,
-            targetCalories: useCalorieGoal ? selectedCalorieGoal : nil
+            runningDistance: distance,
+            targetCalories: useCalorieGoal ? selectedCalorieGoal : nil,
+            isFreeRun: exercise.supportsDistanceGoals && runningMode.isFreeRun
         )
     }
 
@@ -79,44 +95,79 @@ struct CardioSetupView: View {
 
     private var distanceSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Distância da corrida")
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.textPrimary)
-                Spacer()
-                Toggle("Por km", isOn: $useDistanceGoal)
-                    .labelsHidden()
-                    .tint(AppTheme.accent)
-            }
+            Text("Modo da corrida")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
 
-            Text(useDistanceGoal ? "Escolha a meta em quilômetros para preparação de maratona." : "Modo por tempo — use a intensidade abaixo.")
-                .font(.caption)
-                .foregroundStyle(AppTheme.textSecondary)
-
-            if useDistanceGoal {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    ForEach(RunningDistance.allCases) { distance in
-                        Button {
-                            selectedDistance = distance
-                        } label: {
-                            VStack(spacing: 8) {
-                                Image(systemName: distance.icon)
-                                    .font(.title2)
-                                Text(distance.label)
-                                    .font(.headline)
-                                Text(distance.marathonRole)
-                                    .font(.caption2)
-                                    .multilineTextAlignment(.center)
-                                    .lineLimit(2)
-                            }
-                            .foregroundStyle(selectedDistance == distance ? .white : AppTheme.textPrimary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(selectedDistance == distance ? AppTheme.accent : AppTheme.cardBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .buttonStyle(.plain)
+            Button {
+                runningMode = .freeRun
+            } label: {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(runningMode.isFreeRun ? AppTheme.accent.opacity(0.25) : AppTheme.cardBackground)
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "figure.run")
+                            .font(.title2)
+                            .foregroundStyle(runningMode.isFreeRun ? AppTheme.accent : AppTheme.textSecondary)
                     }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Sem meta")
+                            .font(.headline)
+                            .foregroundStyle(runningMode.isFreeRun ? AppTheme.accent : AppTheme.textPrimary)
+                        Text("Apenas corrida — sem distância ou tempo fixo. Encerre quando quiser.")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .multilineTextAlignment(.leading)
+                    }
+
+                    Spacer()
+
+                    if runningMode.isFreeRun {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                }
+                .padding()
+                .background(runningMode.isFreeRun ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                        .stroke(runningMode.isFreeRun ? AppTheme.accent : Color.clear, lineWidth: 2)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            }
+            .buttonStyle(.plain)
+
+            Text("Ou escolha uma meta em quilômetros:")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+                .padding(.top, 4)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                ForEach(RunningDistance.allCases) { distance in
+                    Button {
+                        selectedDistance = distance
+                        runningMode = .distance(distance)
+                    } label: {
+                        let isSelected = runningMode == .distance(distance)
+                        VStack(spacing: 8) {
+                            Image(systemName: distance.icon)
+                                .font(.title2)
+                            Text(distance.label)
+                                .font(.headline)
+                            Text(distance.marathonRole)
+                                .font(.caption2)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                        }
+                        .foregroundStyle(isSelected ? .white : AppTheme.textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(isSelected ? AppTheme.accent : AppTheme.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -202,8 +253,12 @@ struct CardioSetupView: View {
                                 .font(.caption)
                                 .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.85) : AppTheme.textSecondary)
                                 .multilineTextAlignment(.leading)
-                            if exercise.supportsDistanceGoals && useDistanceGoal {
+                            if exercise.supportsDistanceGoals && !runningMode.isFreeRun {
                                 Text("Ritmo alvo: \(intensity.formattedPace())")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.9) : intensity.color)
+                            } else if exercise.supportsDistanceGoals && runningMode.isFreeRun {
+                                Text("Ritmo de referência: \(intensity.formattedPace())")
                                     .font(.caption2.weight(.semibold))
                                     .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.9) : intensity.color)
                             } else {
@@ -231,7 +286,22 @@ struct CardioSetupView: View {
 
     private var summarySection: some View {
         VStack(spacing: 10) {
-            if config.isDistanceRun {
+            if config.isFreeRun {
+                HStack {
+                    Label("Modo", systemImage: "figure.run")
+                    Spacer()
+                    Text("Apenas corrida")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accent)
+                }
+                HStack {
+                    Label("Ritmo de referência", systemImage: "speedometer")
+                    Spacer()
+                    Text(selectedIntensity.formattedPace())
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
+            } else if config.isDistanceRun {
                 HStack {
                     Label("Distância meta", systemImage: "figure.run")
                     Spacer()
@@ -262,12 +332,22 @@ struct CardioSetupView: View {
                         .foregroundStyle(AppTheme.accent)
                 }
             }
-            HStack {
-                Label("Calorias estimadas", systemImage: "flame.fill")
-                Spacer()
-                Text("~\(Int(config.estimatedCalories(for: config.targetDurationSeconds))) kcal")
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.accentSecondary)
+            if config.isFreeRun || config.isDistanceRun {
+                HStack {
+                    Label("Calorias (referência)", systemImage: "flame.fill")
+                    Spacer()
+                    Text("Acompanhe durante o treino")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
+            } else {
+                HStack {
+                    Label("Calorias estimadas", systemImage: "flame.fill")
+                    Spacer()
+                    Text("~\(Int(config.estimatedCalories(for: config.targetDurationSeconds))) kcal")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
             }
             if config.hasCalorieGoal {
                 HStack {
@@ -301,7 +381,10 @@ struct CardioSetupView: View {
             )
             showActiveCardio = true
         } label: {
-            Label(config.isDistanceRun ? "Iniciar Corrida" : "Iniciar Cardio", systemImage: "play.fill")
+            Label(
+                config.isDistanceRun || config.isFreeRun ? "Iniciar Corrida" : "Iniciar Cardio",
+                systemImage: "play.fill"
+            )
         }
         .buttonStyle(PrimaryButtonStyle())
     }
@@ -326,7 +409,7 @@ struct CardioExerciseCard: View {
                     .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
                 Text(exercise.supportsDistanceGoals
-                     ? "\(exercise.description) · 5–25 km"
+                     ? "\(exercise.description) · livre ou 5–25 km"
                      : exercise.description)
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)

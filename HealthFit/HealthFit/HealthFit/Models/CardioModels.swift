@@ -141,8 +141,23 @@ struct CardioWorkoutConfig: Hashable {
     let intensity: CardioIntensity
     let runningDistance: RunningDistance?
     let targetCalories: Int?
+    let isFreeRun: Bool
 
-    var isDistanceRun: Bool { runningDistance != nil }
+    init(
+        exercise: CardioExercise,
+        intensity: CardioIntensity,
+        runningDistance: RunningDistance? = nil,
+        targetCalories: Int? = nil,
+        isFreeRun: Bool = false
+    ) {
+        self.exercise = exercise
+        self.intensity = intensity
+        self.runningDistance = runningDistance
+        self.targetCalories = targetCalories
+        self.isFreeRun = isFreeRun
+    }
+
+    var isDistanceRun: Bool { runningDistance != nil && !isFreeRun }
 
     var hasCalorieGoal: Bool {
         guard let targetCalories else { return false }
@@ -150,6 +165,9 @@ struct CardioWorkoutConfig: Hashable {
     }
 
     var title: String {
+        if isFreeRun {
+            return "Cardio — Corrida livre"
+        }
         if let distance = runningDistance {
             return "Cardio — Corrida \(distance.label)"
         }
@@ -161,6 +179,9 @@ struct CardioWorkoutConfig: Hashable {
     }
 
     var targetDurationSeconds: Int {
+        if isFreeRun {
+            return 0
+        }
         if let distance = runningDistance {
             return Int(distance.kilometers * Double(intensity.paceSecondsPerKm))
         }
