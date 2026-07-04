@@ -34,6 +34,7 @@ struct RootView: View {
                         if mealPlanService.weeklyPlan.isEmpty, let user = authService.currentUser {
                             mealPlanService.generatePlan(for: user)
                         }
+                        syncWorkoutCloudHistory()
                         NotificationService.shared.scheduleDailyMotivationNotifications()
                         refreshInactivityReminder()
                     }
@@ -69,7 +70,22 @@ struct RootView: View {
             if isAuthenticated {
                 prepareWelcomeIfAuthenticated(trigger: .login)
                 wellnessService.configure(for: authService.currentUser)
+                syncWorkoutCloudHistory()
+            } else {
+                workoutStore.configureCloudSync(userId: nil)
             }
+        }
+    }
+
+    private func syncWorkoutCloudHistory() {
+        guard let userId = authService.currentUser?.id else {
+            workoutStore.configureCloudSync(userId: nil)
+            return
+        }
+
+        workoutStore.configureCloudSync(userId: userId)
+        Task {
+            await workoutStore.loadCloudHistory(userId: userId)
         }
     }
 

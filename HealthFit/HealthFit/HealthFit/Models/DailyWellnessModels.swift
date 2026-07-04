@@ -60,6 +60,7 @@ enum SleepAssessment: Equatable {
 enum WaterServing {
     static let glassML = 250
     static let bottleML = 500
+    static let maxDailyIntakeML = 10_000
 }
 
 struct DailyWellnessEntry: Codable, Equatable {

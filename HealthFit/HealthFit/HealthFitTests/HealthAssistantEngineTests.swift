@@ -56,6 +56,28 @@ final class HealthAssistantEngineTests: XCTestCase {
         XCTAssertTrue(answer.localizedCaseInsensitiveContains("light"))
     }
 
+    func testAnswersAnabolicSteroidsWarning() {
+        let questions = [
+            "Posso usar esteróides anabolizantes?",
+            "Quero fazer um ciclo de testosterona",
+            "Deca e winstrol fazem bem?",
+            "Anavar é seguro para ganhar massa?",
+            "Quero ciclar",
+            "Quero efetuar um ciclo",
+            "Quero tomar suco"
+        ]
+
+        for question in questions {
+            let answer = HealthAssistantEngine.answer(for: question, context: TestFixtures.assistantContext())
+            XCTAssertTrue(answer.contains("ALERTA"), "Falhou para: \(question)")
+            XCTAssertTrue(answer.localizedCaseInsensitiveContains("jamais"), "Falhou para: \(question)")
+            XCTAssertTrue(answer.localizedCaseInsensitiveContains("médico"), "Falhou para: \(question)")
+            XCTAssertTrue(answer.localizedCaseInsensitiveContains("testosterona"), "Falhou para: \(question)")
+            XCTAssertTrue(answer.localizedCaseInsensitiveContains("nandrolona"), "Falhou para: \(question)")
+            XCTAssertTrue(answer.localizedCaseInsensitiveContains("prejudica"), "Falhou para: \(question)")
+        }
+    }
+
     @MainActor
     func testIdleReturnMessageAfterThreeMinutesWithoutTyping() {
         let service = HealthAssistantService()

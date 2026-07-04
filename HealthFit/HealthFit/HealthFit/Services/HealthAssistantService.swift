@@ -328,7 +328,98 @@ enum HealthAssistantEngine {
         return "Hoje você registrou \(String(format: "%.1f", hours)) h — \(assessment.title.lowercased()). \(assessment.message)"
     }
 
-    private static let topics: [HealthAssistantTopic] = dietTopics + imcTopics + workoutTopics + biotypeTopics + generalTopics
+    private static let topics: [HealthAssistantTopic] = steroidTopics + dietTopics + imcTopics + workoutTopics + biotypeTopics + generalTopics
+
+    // MARK: - Esteróides anabolizantes (alerta de saúde)
+
+    private static let steroidTopics: [HealthAssistantTopic] = [
+        HealthAssistantTopic(
+            keywords: [
+                "esteroides anabolizantes", "esteróides anabolizantes", "esteroides anabolicos", "esteróides anabólicos",
+                "anabolizante", "anabolizantes", "anabolico", "anabólico", "anabolico androgenico", "anabólico androgênico",
+                "hormonio anabolico", "hormônio anabólico", "uso de esteroides", "ciclo de esteroides", "ciclo de hormonio",
+                "ciclo de hormônio", "ciclo de bomba", "fazer ciclo", "iniciar ciclo", "efetuar um ciclo", "efetuar ciclo",
+                "quero efetuar um ciclo", "quero fazer um ciclo", "quero iniciar um ciclo", "quero comecar um ciclo",
+                "quero começar um ciclo", "montar um ciclo", "primeiro ciclo", "meu primeiro ciclo",
+                "ciclar", "quero ciclar", "vou ciclar", "posso ciclar", "como ciclar", "ta ciclando", "tá ciclando",
+                "ciclado", "ciclada", "to ciclando", "tô ciclando", "ciclo de bulking", "ciclo de cutting",
+                "tomar suco", "quero tomar suco", "vou tomar suco", "tomei suco", "pegar suco", "usar suco",
+                "suco anabolico", "suco anabólico", "suco hormonal", "suco de bomba", "suco no ciclo",
+                "pct esteroide", "trt ilegal",
+                "testosterona exógena", "testosterona exogena", "testosterona sintetica", "testosterona sintética",
+                "testosterona", "testo enantato", "testo cipionato", "testo propionato", "enantato de testosterona",
+                "cipionato de testosterona", "propionato de testosterona", "undecanoato de testosterona", "sustanon",
+                "durateston", "nandrolona", "deca durabolin", "deca-durabolin", "deca durabolin", "deca",
+                "decanoato de nandrolona", "trenbolona", "trenbolone", "acetato de trenbolona", "enantato de trenbolona",
+                "tren ace", "tren e", "boldenona", "equipoise", "stanozolol", "winstrol", "oxandrolona", "anavar",
+                "metandienona", "metandrostenolona", "dianabol", "d-bol", "dbol", "oximetolona", "hemogenin", "anadrol",
+                "fluoxymesterone", "fluoximesterona", "halotestin", "mesterolona", "proviron", "turinabol",
+                "clorodehidrometiltestosterona", "metenolona", "methenolone", "primobolan", "primo",
+                "drostanolona", "masteron", "metiltestosterona", "superdrol", "metasterona", "turinabol",
+                "oximetolona", "stanozolol injetavel", "stanozolol injetável", "bomba de ferro", "bomba hormonal",
+                "peptideo de crescimento ilegal", "hgh ilegal", "hormonio do crescimento ilegal", "sarm ilegal",
+                "ostarine", "ligandrol", "rad 140", "rad-140", "cardarine", "yk-11", "andarine",
+                "prohormona", "pro-hormona", "designer steroid", "esteroides orais", "esteroides injetaveis",
+                "esteroides injetáveis", "stack de esteroides", "stack anabolico", "stack anabólico"
+            ],
+            respond: { _ in anabolicSteroidsWarning() }
+        ),
+    ]
+
+    private static func anabolicSteroidsWarning() -> String {
+        """
+        ⚠️ ALERTA DE SAÚDE — ESTERÓIDES ANABOLIZANTES
+
+        O HealthFit NÃO recomenda, NÃO orienta e NÃO incentiva o uso de esteróides anabolizantes.
+        Jamais faça uso por conta própria. Isso prejudica o corpo de forma grave e, muitas vezes, irreversível.
+        Procure um médico (endocrinologista ou médico do esporte) para qualquer dúvida sobre hormônios.
+
+        O uso sem prescrição e acompanhamento médico é ilegal no Brasil e pode causar danos permanentes.
+
+        Principais esteróides anabolizantes (todos com riscos sérios):
+        • Testosterona e ésteres — enantato, cipionato, propionato, undecanoato, Sustanon/Durateston
+        • Nandrolona — Deca-Durabolin (decanoato de nandrolona)
+        • Trenbolona — acetato, enantato (Tren)
+        • Boldenona — Equipoise
+        • Stanozolol — Winstrol (oral e injetável)
+        • Oxandrolona — Anavar
+        • Metandienona — Dianabol (D-Bol)
+        • Oximetolona — Hemogenin/Anadrol
+        • Fluoximesterona — Halotestin
+        • Mesterolona — Proviron
+        • Turinabol (clorodehidrometiltestosterona)
+        • Metenolona — Primobolan
+        • Drostanolona — Masteron
+        • Metiltestosterona
+        • Metasterona — Superdrol
+        • Outros andrógenos sintéticos e “designer steroids”
+
+        Substâncias frequentemente associadas (também perigosas sem supervisão):
+        • SARMs (ostarine, ligandrol, RAD-140, andarine, etc.)
+        • Pro-hormônias
+        • Hormônio do crescimento (HGH) usado de forma ilegal
+
+        Riscos ao corpo:
+        • Coração — hipertensão, arritmias, infarto, AVC, colesterol alterado
+        • Fígado — hepatotoxicidade, icterícia, tumores
+        • Hormônios — queda da produção natural de testosterona, infertilidade, ginecomastia
+        • Pele e cabelo — acne severa, queda de cabelo, estrias
+        • Psique — agressividade, ansiedade, depressão, dependência
+        • Sistema reprodutor — atrofia testicular, queda de libido, alterações menstruais
+        • Crescimento — fechamento precoce de placa óssea em jovens
+        • Infecções — abscessos e contaminação por agulhas compartilhadas
+        • Legal e esportivo — sanções, doping, prisão
+
+        O que fazer em vez disso:
+        • Treino progressivo com orientação profissional
+        • Dieta adequada com proteína, carboidrato e gordura de qualidade
+        • Sono de 7–9 horas por noite
+        • Suplementos seguros (creatina, whey, ômega 3) com orientação profissional
+
+        Repetindo: jamais use esteróides anabolizantes por conta própria. Procure um médico.
+        Ganhos rápidos com hormônios não valem a saúde destruída.
+        """
+    }
 
     // MARK: - Dieta
 

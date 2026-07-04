@@ -90,6 +90,8 @@
 		B1000080 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD003 /* GoogleSignIn */; };
 		B1000081 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD001 /* FirebaseAuth */; };
 		B1000082 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD002 /* FirebaseCore */; };
+		B1000083 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD004 /* FirebaseFirestore */; };
+		B1000079 /* WorkoutFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000079 /* WorkoutFirestoreService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -204,6 +206,7 @@
 		F1000076 /* AppleSignInNonce.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInNonce.swift; sourceTree = "<group>"; };
 		F1000077 /* SocialSignInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialSignInService.swift; sourceTree = "<group>"; };
 		F1000078 /* SocialLoginButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialLoginButtonsView.swift; sourceTree = "<group>"; };
+		F1000079 /* WorkoutFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutFirestoreService.swift; sourceTree = "<group>"; };
 		F2000001 /* HealthFitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2000002 /* HealthFitUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2000010 /* TestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFixtures.swift; sourceTree = "<group>"; };
@@ -225,6 +228,7 @@
 			files = (
 				B1000081 /* FirebaseAuth in Frameworks */,
 				B1000082 /* FirebaseCore in Frameworks */,
+				B1000083 /* FirebaseFirestore in Frameworks */,
 				B1000080 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -352,6 +356,7 @@
 				F1000075 /* GoogleServiceInfo.swift */,
 				F1000076 /* AppleSignInNonce.swift */,
 				F1000077 /* SocialSignInService.swift */,
+				F1000079 /* WorkoutFirestoreService.swift */,
 			);
 			path = Firebase;
 			sourceTree = "<group>";
@@ -525,6 +530,7 @@
 			packageProductDependencies = (
 				PKGPROD001 /* FirebaseAuth */,
 				PKGPROD002 /* FirebaseCore */,
+				PKGPROD004 /* FirebaseFirestore */,
 				PKGPROD003 /* GoogleSignIn */,
 			);
 			productName = HealthFit;
@@ -727,6 +733,7 @@
 				B1000070 /* FirebaseBootstrap.swift in Sources */,
 				B1000071 /* AuthErrorMapper.swift in Sources */,
 				B1000072 /* FirebaseAuthProvider.swift in Sources */,
+				B1000079 /* WorkoutFirestoreService.swift in Sources */,
 				B1000073 /* ForgotPasswordView.swift in Sources */,
 				B1000075 /* GoogleServiceInfo.swift in Sources */,
 				B1000076 /* AppleSignInNonce.swift in Sources */,
@@ -1226,6 +1233,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = PKGREF002 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignIn;
+		};
+		PKGPROD004 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PKGREF001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

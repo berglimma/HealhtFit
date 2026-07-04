@@ -55,13 +55,13 @@ final class DailyWellnessService: ObservableObject {
 
     func updateWaterIntake(_ milliliters: Int) {
         var entry = currentTodayEntry()
-        entry.waterIntakeMl = max(0, milliliters)
+        entry.waterIntakeMl = min(max(0, milliliters), WaterServing.maxDailyIntakeML)
         todayEntry = entry
         save(entry)
     }
 
     func addWater(_ milliliters: Int) {
-        updateWaterIntake(todayEntry.waterIntakeMl + milliliters)
+        updateWaterIntake(min(todayEntry.waterIntakeMl + milliliters, WaterServing.maxDailyIntakeML))
     }
 
     func updateEnergyDrinksCount(_ count: Int) {

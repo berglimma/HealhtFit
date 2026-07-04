@@ -14,6 +14,25 @@ final class WorkoutStore: ObservableObject {
     private let storageKey = "healthfit_workout_sheets"
     private let historyKey = "healthfit_session_history"
     private var exerciseTimer: Timer?
+    private var cloudUserId: String?
+
+    func configureCloudSync(userId: String?) {
+        cloudUserId = userId
+    }
+
+    func loadCloudHistory(userId: String) async {
+        guard WorkoutFirestoreService.isAvailable else { return }
+
+        do {
+            let remoteSessions = try await WorkoutFirestoreService.fetchRecentSessions(userId: userId)
+            guard !remoteSessions.isEmpty else { return }
+
+            sessionHistory = mergeSessions(local: sessionHistory, remote: remoteSessions)
+            saveHistory()
+        } catch {
+            print("[HealthFit] Falha ao carregar treinos do Firebase: \(error.localizedDescription)")
+        }
+    }
 
     init() {
         loadData()
@@ -184,11 +203,24 @@ final class WorkoutStore: ObservableObject {
         }
 
         sessionHistory.insert(session, at: 0)
+        if sessionHistory.count > WorkoutFirestoreService.maxStoredSessions {
+            sessionHistory = Array(sessionHistory.prefix(WorkoutFirestoreService.maxStoredSessions))
+        }
         activeSession = nil
         currentExerciseIndex = 0
         exerciseRecords = []
         isExerciseTimerPaused = false
         saveHistory()
+
+        if let userId = cloudUserId {
+            Task {
+                do {
+                    try await WorkoutFirestoreService.saveSession(session, userId: userId)
+                } catch {
+                    print("[HealthFit] Falha ao salvar treino no Firebase: \(error.localizedDescription)")
+                }
+            }
+        }
 
         if let endedAt = session.endedAt {
             NotificationService.shared.recordWorkoutCompleted(at: endedAt)
@@ -224,7 +256,7 @@ final class WorkoutStore: ObservableObject {
         }
         if let data = UserDefaults.standard.data(forKey: historyKey),
            let history = try? JSONDecoder().decode([WorkoutSession].self, from: data) {
-            sessionHistory = history
+            sessionHistory = Array(history.prefix(WorkoutFirestoreService.maxStoredSessions))
             if let latest = history.compactMap({ $0.endedAt ?? $0.startedAt }).max() {
                 NotificationService.shared.migrateLastWorkoutDateIfNeeded(latest)
             }
@@ -266,6 +298,26 @@ final class WorkoutStore: ObservableObject {
         if didUpdate {
             saveData()
         }
+    }
+
+    private func mergeSessions(local: [WorkoutSession], remote: [WorkoutSession]) -> [WorkoutSession] {
+        var merged: [UUID: WorkoutSession] = [:]
+
+        for session in local {
+            merged[session.id] = session
+        }
+        for session in remote {
+            merged[session.id] = session
+        }
+
+        return merged.values
+            .sorted {
+                let lhs = $0.endedAt ?? $0.startedAt
+                let rhs = $1.endedAt ?? $1.startedAt
+                return lhs > rhs
+            }
+            .prefix(WorkoutFirestoreService.maxStoredSessions)
+            .map { $0 }
     }
 
     static func presetExercises(for muscleGroup: MuscleGroup) -> [Exercise] {

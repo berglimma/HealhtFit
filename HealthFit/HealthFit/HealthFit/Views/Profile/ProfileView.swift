@@ -398,7 +398,7 @@ struct ProfileView: View {
                     get: { wellnessService.todayEntry.waterIntakeMl / WaterServing.glassML },
                     set: { wellnessService.updateWaterIntake($0 * WaterServing.glassML) }
                 ),
-                in: 0...(user.recommendedDailyWaterML + 1000) / WaterServing.glassML,
+                in: 0...WaterServing.maxDailyIntakeML / WaterServing.glassML,
                 step: 1
             )
 
@@ -408,7 +408,7 @@ struct ProfileView: View {
                     get: { wellnessService.todayEntry.waterIntakeMl / WaterServing.bottleML },
                     set: { wellnessService.updateWaterIntake($0 * WaterServing.bottleML) }
                 ),
-                in: 0...(user.recommendedDailyWaterML + 1000) / WaterServing.bottleML,
+                in: 0...WaterServing.maxDailyIntakeML / WaterServing.bottleML,
                 step: 1
             )
 
