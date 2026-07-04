@@ -268,6 +268,27 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
+    static func presetExercises(for muscleGroup: MuscleGroup) -> [Exercise] {
+        var seen = Set<String>()
+        return (sampleWorkouts + catalogOnlyWorkouts)
+            .flatMap(\.exercises)
+            .filter { $0.muscleGroup == muscleGroup }
+            .filter { seen.insert($0.name).inserted }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    static func copyExerciseForWorkout(_ template: Exercise) -> Exercise {
+        Exercise(
+            name: template.name,
+            sets: template.sets,
+            reps: template.reps,
+            weight: template.weight,
+            restSeconds: template.restSeconds,
+            notes: template.notes,
+            muscleGroup: template.muscleGroup
+        )
+    }
+
     static let sampleWorkouts: [WorkoutSheet] = [
         WorkoutSheet(
             title: "Treino A - Peito e Tríceps",
@@ -332,6 +353,49 @@ final class WorkoutStore: ObservableObject {
                 Exercise(name: "Elevação Frontal", sets: 3, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .shoulders),
                 Exercise(name: "Crucifixo Inverso", sets: 3, reps: 15, weight: 10, restSeconds: 60, muscleGroup: .back),
                 Exercise(name: "Face Pull", sets: 3, reps: 15, weight: 20, restSeconds: 60, muscleGroup: .back)
+            ]
+        )
+    ]
+
+    /// Fichas usadas apenas no catálogo de exercícios ao criar treino personalizado.
+    private static let catalogOnlyWorkouts: [WorkoutSheet] = [
+        WorkoutSheet(
+            title: "Catálogo - Ombros",
+            description: "Exercícios de deltoides",
+            exercises: [
+                Exercise(name: "Desenvolvimento com Halteres", sets: 4, reps: 10, weight: 18, restSeconds: 90, muscleGroup: .shoulders),
+                Exercise(name: "Arnold Press", sets: 3, reps: 12, weight: 14, restSeconds: 75, muscleGroup: .shoulders),
+                Exercise(name: "Elevação Posterior", sets: 4, reps: 15, weight: 8, restSeconds: 60, muscleGroup: .shoulders),
+                Exercise(name: "Elevação Lateral na Polia", sets: 3, reps: 15, weight: 8, restSeconds: 60, muscleGroup: .shoulders),
+                Exercise(name: "Desenvolvimento na Máquina", sets: 4, reps: 12, weight: 35, restSeconds: 75, muscleGroup: .shoulders),
+                Exercise(name: "Crucifixo Inverso no Cabo", sets: 3, reps: 15, weight: 10, restSeconds: 60, muscleGroup: .shoulders)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Catálogo - Abdômen",
+            description: "Exercícios de core",
+            exercises: [
+                Exercise(name: "Prancha", sets: 3, reps: 45, restSeconds: 45, muscleGroup: .core),
+                Exercise(name: "Abdominal Crunch", sets: 4, reps: 20, restSeconds: 45, muscleGroup: .core),
+                Exercise(name: "Abdominal Infra", sets: 4, reps: 15, restSeconds: 45, muscleGroup: .core),
+                Exercise(name: "Abdominal Oblíquo", sets: 3, reps: 20, restSeconds: 45, muscleGroup: .core),
+                Exercise(name: "Elevação de Pernas", sets: 3, reps: 15, restSeconds: 60, muscleGroup: .core),
+                Exercise(name: "Russian Twist", sets: 3, reps: 20, weight: 8, restSeconds: 45, muscleGroup: .core),
+                Exercise(name: "Mountain Climber", sets: 3, reps: 30, restSeconds: 45, muscleGroup: .core),
+                Exercise(name: "Abdominal na Polia", sets: 4, reps: 15, weight: 25, restSeconds: 60, muscleGroup: .core),
+                Exercise(name: "Prancha Lateral", sets: 3, reps: 30, restSeconds: 45, muscleGroup: .core),
+                Exercise(name: "Bicicleta no Ar", sets: 3, reps: 20, restSeconds: 45, muscleGroup: .core)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Catálogo - Corpo Inteiro",
+            description: "Exercícios compostos",
+            exercises: [
+                Exercise(name: "Burpee", sets: 3, reps: 12, restSeconds: 75, muscleGroup: .fullBody),
+                Exercise(name: "Levantamento Terra", sets: 4, reps: 8, weight: 70, restSeconds: 120, muscleGroup: .fullBody),
+                Exercise(name: "Thruster", sets: 3, reps: 10, weight: 20, restSeconds: 90, muscleGroup: .fullBody),
+                Exercise(name: "Kettlebell Swing", sets: 4, reps: 15, weight: 16, restSeconds: 75, muscleGroup: .fullBody),
+                Exercise(name: "Farmer's Walk", sets: 3, reps: 40, weight: 24, restSeconds: 90, muscleGroup: .fullBody)
             ]
         )
     ]

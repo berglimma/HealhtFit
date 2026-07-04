@@ -49,6 +49,10 @@ struct ShoppingListView: View {
 
                 summarySection
 
+                if !mealPlanService.topPurchasedItems.isEmpty && !isSearchActive {
+                    mostPurchasedSection
+                }
+
                 if !isSearchActive {
                     energyDrinksSection
                 }
@@ -154,6 +158,43 @@ struct ShoppingListView: View {
                 .frame(width: 60)
                 .tint(AppTheme.accent)
             }
+        }
+    }
+
+    private var mostPurchasedSection: some View {
+        Section {
+            ForEach(Array(mealPlanService.topPurchasedItems.prefix(8))) { stat in
+                HStack(spacing: 12) {
+                    Image(systemName: "cart.fill")
+                        .foregroundStyle(AppTheme.accentSecondary)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(stat.displayName)
+                            .font(.subheadline.weight(.medium))
+                        Text(stat.purchaseCount == 1
+                             ? "Comprado 1 vez"
+                             : "Comprado \(stat.purchaseCount) vezes")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Text("\(stat.purchaseCount)x")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(AppTheme.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.accent.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+                .padding(.vertical, 2)
+            }
+        } header: {
+            Label("Mais comprados", systemImage: "chart.bar.fill")
+        } footer: {
+            Text("Itens marcados como comprados na lista são contabilizados aqui.")
         }
     }
 

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 struct Meal: Identifiable, Codable, Hashable {
     var id: UUID
@@ -118,6 +119,29 @@ enum SweetConsumptionLevel: String, CaseIterable, Codable, Identifiable {
             return "Cardápio equilibrado com doces ocasionais."
         case .high:
             return "Incluímos sobremesas e lanches doces — acompanhe as porções."
+        }
+    }
+
+    var warningMessage: String? {
+        switch self {
+        case .low:
+            return nil
+        case .moderate:
+            return """
+            Atenção: consumo moderado de doces pode elevar o açúcar diário acima do recomendado. Prefira frutas, limite sobremesas a poucos dias na semana e evite açúcar em excesso em bebidas e lanches.
+            """
+        case .high:
+            return """
+            Atenção: consumo elevado de doces aumenta o risco de ganho de gordura, picos de glicemia, inflamação e compulsão alimentar. A OMS recomenda que açúcares livres fiquem abaixo de 10% das calorias diárias — o ideal é manter em torno de 5%.
+            """
+        }
+    }
+
+    var warningColor: Color {
+        switch self {
+        case .low: return .clear
+        case .moderate: return .orange
+        case .high: return .red
         }
     }
 }
@@ -335,6 +359,15 @@ struct DailyMealPlan: Identifiable, Codable {
     var totalProtein: Int { options.first?.totalProtein ?? 0 }
 }
 
+struct ShoppingPurchaseStat: Identifiable, Codable, Equatable {
+    var normalizedName: String
+    var displayName: String
+    var purchaseCount: Int
+    var lastPurchasedAt: Date
+
+    var id: String { normalizedName }
+}
+
 struct ShoppingItem: Identifiable, Codable {
     var id: UUID
     var name: String
@@ -436,7 +469,9 @@ enum ShoppingCatalog {
         ShoppingCatalogItem(name: "Peito de frango", defaultQuantity: "1 kg", category: .proteins, keywords: ["frango", "ave"]),
         ShoppingCatalogItem(name: "Coxa de frango", defaultQuantity: "800 g", category: .proteins),
         ShoppingCatalogItem(name: "Carne patinho", defaultQuantity: "500 g", category: .proteins, keywords: ["boi", "bovina"]),
-        ShoppingCatalogItem(name: "Carne moída magra", defaultQuantity: "500 g", category: .proteins),
+        ShoppingCatalogItem(name: "Carne moída", defaultQuantity: "600 g", category: .proteins, keywords: ["moida", "moída", "boi", "bovina"]),
+        ShoppingCatalogItem(name: "Carne moída magra", defaultQuantity: "500 g", category: .proteins, keywords: ["moida", "moída"]),
+        ShoppingCatalogItem(name: "Bifes", defaultQuantity: "600 g", category: .proteins, keywords: ["bife", "bovina", "boi", "contra-file", "contra filé"]),
         ShoppingCatalogItem(name: "Alcatra", defaultQuantity: "500 g", category: .proteins),
         ShoppingCatalogItem(name: "Filé mignon", defaultQuantity: "400 g", category: .proteins),
         ShoppingCatalogItem(name: "Ovos", defaultQuantity: "1 dúzia", category: .proteins, keywords: ["ovo"]),
@@ -571,6 +606,10 @@ enum ShoppingCatalog {
 
 enum SupplementGuidance {
     static let preWorkoutCaffeineLimit = "até 400 mg de cafeína por dose"
+
+    static let preWorkoutDailyLimitWarning = """
+    Mais de 1 pré-treino por dia pode elevar a ingestão de cafeína e estimulantes acima do recomendado, com riscos para o sono, pressão arterial e coração. Limite-se a uma dose por dia.
+    """
 
     static let preWorkoutAndEnergyDrinkWarning = """
     Você informou pré-treino e energético no mesmo dia. Combinar os dois pode elevar muito a ingestão de cafeína e estimulantes, aumentando o risco de taquicardia, ansiedade, insônia e desidratação. Evite usar os dois no mesmo dia sempre que possível.

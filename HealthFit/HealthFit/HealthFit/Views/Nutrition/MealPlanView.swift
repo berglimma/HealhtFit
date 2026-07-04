@@ -318,6 +318,23 @@ struct MealPlanView: View {
                 Text(mealPlanService.customMenuSelection.sweetConsumption.detail)
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
+
+                if let warning = mealPlanService.customMenuSelection.sweetConsumption.warningMessage {
+                    let level = mealPlanService.customMenuSelection.sweetConsumption
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Atenção ao consumo de doces", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(level.warningColor)
+                        Text(warning)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(level.warningColor.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
             }
 
             if selectedGoal == .fatLoss {

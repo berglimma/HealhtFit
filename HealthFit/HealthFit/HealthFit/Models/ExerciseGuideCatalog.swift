@@ -248,6 +248,96 @@ enum ExerciseGuideCatalog {
             "Puxe a corda em direção ao rosto, cotovelos altos e abertos.",
             "Separe as pontas da corda ao lado das orelhas.",
             "Retorne controlando, mantendo tensão nos ombros posteriores."
+        ],
+        "Prancha": [
+            "Apoie os antebraços e as pontas dos pés, corpo alinhado da cabeça aos calcanhares.",
+            "Contraia abdômen, glúteos e quadril para evitar que a lombar ceda.",
+            "Mantenha o pescoço neutro, olhando levemente para o chão.",
+            "Respire de forma contínua e segure a posição pelo tempo indicado."
+        ],
+        "Abdominal Crunch": [
+            "Deite com joelhos flexionados e pés apoiados no chão.",
+            "Mãos atrás da cabeça ou cruzadas no peito, sem puxar o pescoço.",
+            "Eleve apenas os ombros do chão contraindo o abdômen.",
+            "Desça controlando sem relaxar totalmente o core."
+        ],
+        "Abdominal Infra": [
+            "Deite com as pernas estendidas ou joelhos levemente flexionados.",
+            "Eleve o quadril do chão levando as pernas em direção ao teto.",
+            "Contraia o abdômen inferior no topo do movimento.",
+            "Desça as pernas controlando, sem arquear a lombar."
+        ],
+        "Abdominal Oblíquo": [
+            "Deite de lado com cotovelo apoiado e pernas estendidas ou joelhos flexionados.",
+            "Eleve o quadril contraindo o oblíquo do lado de baixo.",
+            "Mantenha o corpo alinhado da cabeça aos pés.",
+            "Desça controlando sem apoiar o quadril no chão."
+        ],
+        "Elevação de Pernas": [
+            "Deite no chão ou no banco com as mãos ao lado do corpo ou segurando o banco.",
+            "Eleve as pernas estendidas até formar ângulo de 90° com o tronco.",
+            "Desça as pernas devagar sem tocar o chão, mantendo tensão no abdômen.",
+            "Evite balançar o corpo; o movimento deve vir do core."
+        ],
+        "Russian Twist": [
+            "Sente com joelhos flexionados e pés levemente elevados do chão.",
+            "Incline o tronco para trás mantendo a coluna neutra.",
+            "Gire o tronco de um lado para o outro, contraindo os oblíquos.",
+            "Mantenha o movimento controlado; use peso opcional com técnica estável."
+        ],
+        "Mountain Climber": [
+            "Inicie em posição de prancha alta, mãos alinhadas aos ombros.",
+            "Leve um joelho em direção ao peito alternando as pernas rapidamente.",
+            "Mantenha o quadril baixo e o abdômen contraído durante todo o exercício.",
+            "Respire de forma contínua sem deixar os ombros colapsarem."
+        ],
+        "Abdominal na Polia": [
+            "Ajoelhe-se de frente para a polia alta com corda ou barra atrás da cabeça.",
+            "Flexione o tronco contraindo o abdômen, puxando a carga para baixo.",
+            "Evite puxar com os braços; o movimento vem da flexão do core.",
+            "Retorne controlando sem perder tensão abdominal."
+        ],
+        "Prancha Lateral": [
+            "Deite de lado apoiando o antebraço e o pé (ou joelho para facilitar).",
+            "Eleve o quadril alinhando ombros, quadril e tornozelos.",
+            "Contraia oblíquos e glúteos para manter a posição estável.",
+            "Segure pelo tempo indicado e troque de lado."
+        ],
+        "Bicicleta no Ar": [
+            "Deite com as mãos atrás da cabeça e pernas elevadas.",
+            "Traga um cotovelo em direção ao joelho oposto alternando os lados.",
+            "Estenda a perna que não flexiona mantendo-a longe do chão.",
+            "Mantenha o abdômen contraído e o movimento controlado."
+        ],
+        "Burpee": [
+            "Inicie em pé, agache e apoie as mãos no chão.",
+            "Salte ou caminhe os pés para trás até a posição de prancha.",
+            "Execute uma flexão opcional, depois traga os pés de volta.",
+            "Salte para cima com braços estendidos e aterrisse com controle."
+        ],
+        "Levantamento Terra": [
+            "Pés na largura do quadril, barra próxima às canelas.",
+            "Flexione quadril e joelhos mantendo coluna neutra e peito aberto.",
+            "Empurre o chão com os pés e estenda quadris e joelhos juntos.",
+            "Desça a barra controlando, mantendo-a próxima ao corpo."
+        ],
+        "Thruster": [
+            "Segure halteres ou barra na altura dos ombros com pegada firme.",
+            "Agache até coxas paralelas ao chão mantendo o tronco ereto.",
+            "Suba explosivamente e empurre a carga acima da cabeça.",
+            "Desça a carga aos ombros e repita em fluxo contínuo e controlado."
+        ],
+        "Kettlebell Swing": [
+            "Pés um pouco mais largos que os ombros, kettlebell entre os pés.",
+            "Incline o quadril para trás e balance o peso entre as pernas.",
+            "Estenda quadris e joelhos empurrando o kettlebell até a altura do peito.",
+            "Deixe o peso descer pelo movimento do quadril, não dos braços."
+        ],
+        "Farmer's Walk": [
+            "Segure um halter pesado em cada mão ao lado do corpo.",
+            "Mantenha ombros para baixo, peito aberto e abdômen contraído.",
+            "Caminhe em passos curtos e firmes pelo tempo ou distância indicada.",
+            "Evite inclinar o tronco ou deixar os ombros subirem."
         ]
     ]
 

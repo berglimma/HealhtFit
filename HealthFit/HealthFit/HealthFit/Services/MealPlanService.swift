@@ -14,6 +14,9 @@ final class MealPlanService: ObservableObject {
     private let planKey = "healthfit_meal_plan"
     private let shoppingKey = "healthfit_shopping_list"
     private let customMenuKey = "healthfit_custom_menu"
+    private let purchaseStatsKey = "healthfit_shopping_purchase_stats"
+
+    @Published private(set) var purchaseStats: [ShoppingPurchaseStat] = []
 
     func generatePlan(for profile: UserProfile) {
         guard customMenuSelection.isReadyToBuild else { return }
@@ -138,9 +141,49 @@ final class MealPlanService: ObservableObject {
 
     func togglePurchased(_ item: ShoppingItem) {
         if let index = shoppingList.firstIndex(where: { $0.id == item.id }) {
+            let wasPurchased = shoppingList[index].isPurchased
             shoppingList[index].isPurchased.toggle()
+
+            if !wasPurchased && shoppingList[index].isPurchased {
+                recordPurchase(name: shoppingList[index].name)
+            }
+
             saveData()
         }
+    }
+
+    var topPurchasedItems: [ShoppingPurchaseStat] {
+        purchaseStats
+            .sorted {
+                if $0.purchaseCount == $1.purchaseCount {
+                    return $0.lastPurchasedAt > $1.lastPurchasedAt
+                }
+                return $0.purchaseCount > $1.purchaseCount
+            }
+    }
+
+    func recordPurchase(name: String) {
+        let normalized = normalizedIngredient(name)
+        guard !normalized.isEmpty else { return }
+
+        if let index = purchaseStats.firstIndex(where: { $0.normalizedName == normalized }) {
+            purchaseStats[index].purchaseCount += 1
+            purchaseStats[index].lastPurchasedAt = .now
+            if purchaseStats[index].displayName.count < name.count {
+                purchaseStats[index].displayName = name
+            }
+        } else {
+            purchaseStats.append(
+                ShoppingPurchaseStat(
+                    normalizedName: normalized,
+                    displayName: name,
+                    purchaseCount: 1,
+                    lastPurchasedAt: .now
+                )
+            )
+        }
+
+        savePurchaseStats()
     }
 
     func addCatalogItem(_ catalogItem: ShoppingCatalogItem) {
@@ -193,6 +236,22 @@ final class MealPlanService: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: customMenuKey),
            let selection = try? JSONDecoder().decode(CustomMenuSelection.self, from: data) {
             customMenuSelection = selection
+        }
+        loadPurchaseStats()
+    }
+
+    private func loadPurchaseStats() {
+        guard let data = UserDefaults.standard.data(forKey: purchaseStatsKey),
+              let stats = try? JSONDecoder().decode([ShoppingPurchaseStat].self, from: data) else {
+            purchaseStats = []
+            return
+        }
+        purchaseStats = stats
+    }
+
+    private func savePurchaseStats() {
+        if let data = try? JSONEncoder().encode(purchaseStats) {
+            UserDefaults.standard.set(data, forKey: purchaseStatsKey)
         }
     }
 
@@ -276,6 +335,8 @@ final class MealPlanService: ObservableObject {
         ("Peito de frango", "1 kg", .proteins),
         ("Ovos", "1 dúzia", .proteins),
         ("Carne patinho", "500 g", .proteins),
+        ("Carne moída", "600 g", .proteins),
+        ("Bifes", "600 g", .proteins),
         ("Tilápia", "600 g", .proteins),
         ("Salmão", "400 g", .proteins),
         ("Atum em lata", "2 un", .proteins),
@@ -312,7 +373,8 @@ final class MealPlanService: ObservableObject {
 
         if containsAny(lower, keywords: [
             "frango", "carne", "peixe", "ovo", "ovos", "claras", "atum", "salmao",
-            "tilapia", "camarao", "peru", "patinho", "tofu", "tempeh", "camarão"
+            "tilapia", "camarao", "peru", "patinho", "tofu", "tempeh", "camarão",
+            "bife", "bifes", "moida", "moída"
         ]) {
             return .proteins
         }

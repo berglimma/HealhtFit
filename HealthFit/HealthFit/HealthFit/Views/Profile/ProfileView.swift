@@ -563,6 +563,25 @@ struct ProfileView: View {
                         .foregroundStyle(AppTheme.textSecondary)
                 }
 
+                if preWorkoutCount > 1 {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Alerta de pré-treino", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.orange)
+                        Text(SupplementGuidance.preWorkoutDailyLimitWarning)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.orange.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else if preWorkoutCount == 1 {
+                    Text("Consumo dentro do limite diário recomendado.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+
                 Text(SupplementGuidance.preWorkoutCaffeineLimit.capitalized + ".")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
