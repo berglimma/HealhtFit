@@ -21,7 +21,6 @@ struct WorkoutSummaryView: View {
     @State private var showEmailSentAlert = false
     @State private var showEmailFailedAlert = false
     @State private var emailWasSent = false
-    @State private var didAttemptAutoSend = false
 
     private var isCardioSession: Bool {
         WorkoutReportBuilder.isCardioSession(session)
@@ -46,6 +45,7 @@ struct WorkoutSummaryView: View {
                     exerciseBreakdown
                     totalsSection
                     emailSection
+                    finishButton
                 }
                 .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                 .adaptiveContentWidth()
@@ -53,14 +53,6 @@ struct WorkoutSummaryView: View {
             .background(AppTheme.background)
             .navigationTitle("Treino Concluído")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Fechar") {
-                        onFinish()
-                    }
-                    .foregroundStyle(AppTheme.accent)
-                }
-            }
         }
         .sheet(item: $mailDraft) { draft in
             MailComposeView(
@@ -87,23 +79,14 @@ struct WorkoutSummaryView: View {
         .alert("E-mail indisponível", isPresented: $showMailUnavailableAlert) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Configure uma conta de e-mail no iPhone ou cadastre o e-mail do personal no perfil.")
-        }
-        .onAppear {
-            autoSendReportToTrainerIfNeeded()
+            Text("Configure uma conta de e-mail no iPhone ou cadastre o e-mail do personal no Perfil.")
         }
     }
 
     @ViewBuilder
     private var emailSection: some View {
-        if let user = authService.currentUser, user.hasPersonalTrainer {
-            VStack(spacing: 12) {
-                if !emailWasSent && mailDraft == nil && didAttemptAutoSend {
-                    Label("Abrindo e-mail para o personal...", systemImage: "envelope")
-                        .font(.subheadline)
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
-
+        VStack(spacing: 12) {
+            if let user = authService.currentUser, user.hasPersonalTrainer {
                 Button {
                     sendReportToTrainer(user: user)
                 } label: {
@@ -124,11 +107,6 @@ struct WorkoutSummaryView: View {
                     Label("E-mail enviado", systemImage: "checkmark.circle.fill")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.green)
-                } else if didAttemptAutoSend {
-                    Text("O relatório abre automaticamente ao finalizar o treino.")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .multilineTextAlignment(.center)
                 }
 
                 if !user.personalTrainerName.isEmpty {
@@ -136,23 +114,48 @@ struct WorkoutSummaryView: View {
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                         .multilineTextAlignment(.center)
+                } else {
+                    Text("Para: \(user.personalTrainerEmail)")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
                 }
+            } else {
+                VStack(spacing: 8) {
+                    Label("E-mail do personal não cadastrado", systemImage: "person.crop.circle.badge.exclamationmark")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.orange)
+                    Text("Cadastre o e-mail do personal no Perfil para enviar o relatório deste treino.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
     }
 
-    private func autoSendReportToTrainerIfNeeded() {
-        guard !didAttemptAutoSend,
-              let user = authService.currentUser,
-              user.hasPersonalTrainer else { return }
-        didAttemptAutoSend = true
-        sendReportToTrainer(user: user)
+    private var finishButton: some View {
+        Button {
+            onFinish()
+        } label: {
+            Text("Fechar")
+                .font(.headline)
+                .foregroundStyle(AppTheme.accent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
     }
 
     private var buttonLabel: String {
         if emailWasSent { return "E-mail enviado" }
         if mailDraft != nil { return "Abrindo e-mail..." }
-        return "Enviar relatório ao Personal"
+        return "Enviar e-mail para o Personal"
     }
 
     private func sendReportToTrainer(user: UserProfile) {

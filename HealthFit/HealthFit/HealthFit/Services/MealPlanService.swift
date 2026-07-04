@@ -62,6 +62,11 @@ final class MealPlanService: ObservableObject {
         generateShoppingList()
     }
 
+    func updateEnergyDrinksPerDay(_ count: Int) {
+        customMenuSelection.energyDrinksPerDay = max(0, count)
+        saveData()
+    }
+
     func builtMenuMeals(for profile: UserProfile) -> [Meal] {
         guard customMenuSelection.isReadyToBuild else { return [] }
         ensureDefaultSelections(goal: profile.goal)

@@ -64,23 +64,49 @@ final class DailyWellnessService: ObservableObject {
         updateWaterIntake(todayEntry.waterIntakeMl + milliliters)
     }
 
+    func updateEnergyDrinksCount(_ count: Int) {
+        var entry = currentTodayEntry()
+        entry.energyDrinksCount = max(0, count)
+        todayEntry = entry
+        save(entry)
+    }
+
+    func updatePreWorkoutCount(_ count: Int) {
+        var entry = currentTodayEntry()
+        entry.preWorkoutCount = max(0, count)
+        todayEntry = entry
+        save(entry)
+    }
+
+    func applyPreWorkoutFromWorkouts(_ sessions: [WorkoutSession]) {
+        let usedToday = WorkoutReportBuilder.todayPreWorkoutEntries(from: sessions)
+            .filter(\.tookPreWorkout)
+            .count
+        var entry = currentTodayEntry()
+        guard usedToday > entry.preWorkoutCount else { return }
+        entry.preWorkoutCount = usedToday
+        todayEntry = entry
+        save(entry)
+    }
+
+    var tookPreWorkoutAndEnergyDrinkToday: Bool {
+        todayEntry.preWorkoutCount > 0 && todayEntry.energyDrinksCount > 0
+    }
+
     func waterProgress(for user: UserProfile) -> Double {
         guard user.recommendedDailyWaterML > 0 else { return 0 }
         return min(Double(todayEntry.waterIntakeMl) / Double(user.recommendedDailyWaterML), 1.0)
     }
 
-    func waterStatusMessage(for user: UserProfile) -> String {
-        let goal = user.recommendedDailyWaterML
-        let current = todayEntry.waterIntakeMl
-        let remaining = max(goal - current, 0)
+    func hasMetWaterGoal(for user: UserProfile) -> Bool {
+        todayEntry.waterIntakeMl >= user.recommendedDailyWaterML
+    }
 
-        if current >= goal {
-            return "Meta de hidratação atingida! Continue se estiver treinando ou com calor."
+    func waterStatusMessage(for user: UserProfile) -> String {
+        if hasMetWaterGoal(for: user) {
+            return "Excelente hidratação!"
         }
-        if remaining >= 1000 {
-            return String(format: "Faltam %.1f L para atingir sua meta de água hoje.", Double(remaining) / 1000)
-        }
-        return "Faltam \(remaining) ml para atingir sua meta de água hoje."
+        return "Você precisa hidratar-se melhor."
     }
 
     private func currentTodayEntry() -> DailyWellnessEntry {

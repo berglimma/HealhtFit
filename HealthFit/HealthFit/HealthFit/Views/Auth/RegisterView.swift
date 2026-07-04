@@ -34,7 +34,7 @@ struct RegisterView: View {
                     }
                     .padding(.top, 20)
 
-                    SocialLoginButtonsView()
+                    SocialLoginButtonsView(style: .iconCards)
                         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                         .frame(maxWidth: DeviceLayout.formMaxWidth(for: horizontalSizeClass))
                         .frame(maxWidth: .infinity)

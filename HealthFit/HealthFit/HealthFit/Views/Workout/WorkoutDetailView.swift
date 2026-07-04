@@ -4,6 +4,7 @@ struct WorkoutDetailView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var authService: AuthService
+    @EnvironmentObject var wellnessService: DailyWellnessService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State var sheet: WorkoutSheet
     @State private var showActiveWorkout = false
@@ -91,6 +92,7 @@ struct WorkoutDetailView: View {
 
     private func beginWorkout(tookPreWorkout: Bool) {
         workoutStore.startSession(for: sheet, tookPreWorkout: tookPreWorkout)
+        wellnessService.applyPreWorkoutFromWorkouts(allTrackedSessions)
         watchConnectivity.startWorkoutOnWatch(workoutName: sheet.title)
         let athleteName = authService.currentUser?.greetingName ?? "Atleta"
         NotificationService.shared.deliverWorkoutStartNotification(
@@ -98,6 +100,14 @@ struct WorkoutDetailView: View {
             athleteName: athleteName
         )
         showActiveWorkout = true
+    }
+
+    private var allTrackedSessions: [WorkoutSession] {
+        var sessions = workoutStore.sessionHistory
+        if let activeSession = workoutStore.activeSession {
+            sessions.append(activeSession)
+        }
+        return sessions
     }
 }
 

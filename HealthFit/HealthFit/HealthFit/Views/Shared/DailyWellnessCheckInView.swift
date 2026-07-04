@@ -111,7 +111,7 @@ struct DailyWellnessCheckInView: View {
                     .font(.title2.bold())
                     .foregroundStyle(.blue)
 
-                Text("Equivale a cerca de \(user.recommendedWaterGlasses) copos de 250 ml.")
+                Text("Equivale a cerca de \(user.recommendedWaterGlasses) copos de \(WaterServing.glassML) ml ou \(user.recommendedWaterBottles) garrafas de \(WaterServing.bottleML) ml.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
             }

@@ -7,6 +7,7 @@ struct ProfileView: View {
     @EnvironmentObject var timerService: RestTimerService
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var wellnessService: DailyWellnessService
+    @EnvironmentObject var workoutStore: WorkoutStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showLogoutAlert = false
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -170,6 +171,10 @@ struct ProfileView: View {
                         }
                     }
 
+                    Section("Energéticos e Pré-treino") {
+                        energyDrinksSection
+                    }
+
                     Section("Perfil Físico") {
                         LabeledContent("Peso", value: String(format: "%.1f kg", user.weight))
                         LabeledContent("Altura", value: String(format: "%.0f cm", user.height))
@@ -254,6 +259,7 @@ struct ProfileView: View {
                 syncTrainerFields()
                 syncDisplayNameField()
                 syncWellnessFields()
+                syncPreWorkoutFromWorkouts()
             }
             .onChange(of: authService.currentUser) { _, _ in
                 syncTrainerFields()
@@ -261,6 +267,9 @@ struct ProfileView: View {
             }
             .onChange(of: wellnessService.todayEntry) { _, _ in
                 syncWellnessFields()
+            }
+            .onChange(of: workoutStore.sessionHistory.count) { _, _ in
+                syncPreWorkoutFromWorkouts()
             }
             .onChange(of: selectedPhotoItem) { _, item in
                 guard let item else { return }
@@ -353,36 +362,59 @@ struct ProfileView: View {
                     .foregroundStyle(AppTheme.textSecondary)
             }
 
-            Text("Cálculo: 35 ml por kg de peso corporal (\(String(format: "%.1f", user.weight)) kg).")
+            Text("Cálculo: 35 ml por kg de peso corporal (\(String(format: "%.1f", user.weight)) kg). Equivale a cerca de \(user.recommendedWaterGlasses) copos (\(WaterServing.glassML) ml) ou \(user.recommendedWaterBottles) garrafas (\(WaterServing.bottleML) ml).")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
 
             ProgressView(value: wellnessService.waterProgress(for: user))
-                .tint(.blue)
+                .tint(
+                    wellnessService.hasMetWaterGoal(for: user)
+                        ? AppTheme.accent
+                        : .red
+                )
 
             HStack {
                 Text("\(wellnessService.todayEntry.waterIntakeMl) ml ingeridos")
-                    .font(.caption)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(
+                        wellnessService.hasMetWaterGoal(for: user)
+                            ? AppTheme.accent
+                            : .red
+                    )
                 Spacer()
                 Text(wellnessService.waterStatusMessage(for: user))
-                    .font(.caption2)
-                    .foregroundStyle(AppTheme.textSecondary)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(
+                        wellnessService.hasMetWaterGoal(for: user)
+                            ? AppTheme.accent
+                            : .red
+                    )
                     .multilineTextAlignment(.trailing)
             }
 
             Stepper(
-                "Copos (250 ml): \(wellnessService.todayEntry.waterIntakeMl / 250)",
+                "Copos (\(WaterServing.glassML) ml): \(wellnessService.todayEntry.waterIntakeMl / WaterServing.glassML)",
                 value: Binding(
-                    get: { wellnessService.todayEntry.waterIntakeMl },
-                    set: { wellnessService.updateWaterIntake($0) }
+                    get: { wellnessService.todayEntry.waterIntakeMl / WaterServing.glassML },
+                    set: { wellnessService.updateWaterIntake($0 * WaterServing.glassML) }
                 ),
-                in: 0...user.recommendedDailyWaterML + 1000,
-                step: 250
+                in: 0...(user.recommendedDailyWaterML + 1000) / WaterServing.glassML,
+                step: 1
+            )
+
+            Stepper(
+                "Garrafas (\(WaterServing.bottleML) ml): \(wellnessService.todayEntry.waterIntakeMl / WaterServing.bottleML)",
+                value: Binding(
+                    get: { wellnessService.todayEntry.waterIntakeMl / WaterServing.bottleML },
+                    set: { wellnessService.updateWaterIntake($0 * WaterServing.bottleML) }
+                ),
+                in: 0...(user.recommendedDailyWaterML + 1000) / WaterServing.bottleML,
+                step: 1
             )
 
             HStack(spacing: 10) {
-                Button("+250 ml") { wellnessService.addWater(250) }
-                Button("+500 ml") { wellnessService.addWater(500) }
+                Button("+1 copo") { wellnessService.addWater(WaterServing.glassML) }
+                Button("+1 garrafa") { wellnessService.addWater(WaterServing.bottleML) }
             }
             .font(.caption.weight(.semibold))
         }
@@ -391,6 +423,167 @@ struct ProfileView: View {
 
     private func syncWellnessFields() {
         sleepHoursInput = wellnessService.todaySleepHours ?? 7
+    }
+
+    private func syncPreWorkoutFromWorkouts() {
+        wellnessService.applyPreWorkoutFromWorkouts(trackedWorkoutSessions)
+    }
+
+    private var trackedWorkoutSessions: [WorkoutSession] {
+        var sessions = workoutStore.sessionHistory
+        if let activeSession = workoutStore.activeSession {
+            sessions.append(activeSession)
+        }
+        return sessions
+    }
+
+    private var todayPreWorkoutEntries: [PreWorkoutSessionEntry] {
+        WorkoutReportBuilder.todayPreWorkoutEntries(from: trackedWorkoutSessions)
+    }
+
+    @ViewBuilder
+    private var energyDrinksSection: some View {
+        let energyCount = wellnessService.todayEntry.energyDrinksCount
+        let preWorkoutCount = wellnessService.todayEntry.preWorkoutCount
+
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Quantos energéticos você bebe durante o dia?")
+                    .font(.subheadline.weight(.medium))
+
+                HStack {
+                    Label(
+                        energyCount == 0 ? "Nenhum" : "\(energyCount) hoje",
+                        systemImage: "bolt.fill"
+                    )
+                    .font(.title3.bold())
+                    .foregroundStyle(energyCount > 1 ? .orange : AppTheme.accent)
+
+                    Spacer()
+
+                    Text(energyCount == 1 ? "1 unidade" : "\(energyCount) unidades")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+
+                Stepper(
+                    value: Binding(
+                        get: { wellnessService.todayEntry.energyDrinksCount },
+                        set: { wellnessService.updateEnergyDrinksCount($0) }
+                    ),
+                    in: 0...10,
+                    step: 1
+                ) {
+                    Text("Energéticos hoje")
+                }
+
+                if energyCount > 1 {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Alerta OMS", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.orange)
+                        Text(SupplementGuidance.whoEnergyDrinkWarning)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                } else if energyCount == 0 {
+                    Text("Ótimo! Menos cafeína ajuda no sono e na recuperação muscular.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                } else {
+                    Text("Consumo moderado. Evite energéticos à noite para não prejudicar o sono.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Quantos pré-treinos você tomou hoje?")
+                    .font(.subheadline.weight(.medium))
+
+                HStack {
+                    Label(
+                        preWorkoutCount == 0 ? "Nenhum" : "\(preWorkoutCount) hoje",
+                        systemImage: "flame.fill"
+                    )
+                    .font(.title3.bold())
+                    .foregroundStyle(preWorkoutCount > 1 ? .orange : AppTheme.accentSecondary)
+
+                    Spacer()
+
+                    Text(preWorkoutCount == 1 ? "1 dose" : "\(preWorkoutCount) doses")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+
+                Stepper(
+                    value: Binding(
+                        get: { wellnessService.todayEntry.preWorkoutCount },
+                        set: { wellnessService.updatePreWorkoutCount($0) }
+                    ),
+                    in: 0...5,
+                    step: 1
+                ) {
+                    Text("Pré-treino hoje")
+                }
+
+                if !todayPreWorkoutEntries.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Registrado ao iniciar treino")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.textSecondary)
+
+                        ForEach(todayPreWorkoutEntries) { entry in
+                            HStack(spacing: 8) {
+                                Image(systemName: entry.tookPreWorkout ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                    .foregroundStyle(entry.tookPreWorkout ? AppTheme.accent : AppTheme.textSecondary)
+
+                                Text(entry.workoutTitle)
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                Text(entry.tookPreWorkout ? "Sim, tomei" : "Não tomei")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(entry.tookPreWorkout ? AppTheme.accent : AppTheme.textSecondary)
+                            }
+                        }
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppTheme.cardBackground.opacity(0.65))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    Text("Ao iniciar um treino, sua resposta sobre pré-treino aparecerá aqui.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+
+                Text(SupplementGuidance.preWorkoutCaffeineLimit.capitalized + ".")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            if wellnessService.tookPreWorkoutAndEnergyDrinkToday {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Alerta de cafeína", systemImage: "exclamationmark.octagon.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.red)
+                    Text(SupplementGuidance.preWorkoutAndEnergyDrinkWarning)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.red.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(.vertical, 4)
     }
 
     private func savePersonalTrainer() {

@@ -57,16 +57,25 @@ enum SleepAssessment: Equatable {
     }
 }
 
+enum WaterServing {
+    static let glassML = 250
+    static let bottleML = 500
+}
+
 struct DailyWellnessEntry: Codable, Equatable {
     var dayKey: String
     var sleepHours: Double?
     var waterIntakeMl: Int
+    var energyDrinksCount: Int
+    var preWorkoutCount: Int
 
     static func empty(for date: Date = .now) -> DailyWellnessEntry {
         DailyWellnessEntry(
             dayKey: Self.dayKey(for: date),
             sleepHours: nil,
-            waterIntakeMl: 0
+            waterIntakeMl: 0,
+            energyDrinksCount: 0,
+            preWorkoutCount: 0
         )
     }
 
@@ -76,6 +85,33 @@ struct DailyWellnessEntry: Codable, Equatable {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+
+    init(
+        dayKey: String,
+        sleepHours: Double? = nil,
+        waterIntakeMl: Int = 0,
+        energyDrinksCount: Int = 0,
+        preWorkoutCount: Int = 0
+    ) {
+        self.dayKey = dayKey
+        self.sleepHours = sleepHours
+        self.waterIntakeMl = waterIntakeMl
+        self.energyDrinksCount = max(0, energyDrinksCount)
+        self.preWorkoutCount = max(0, preWorkoutCount)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        dayKey = try container.decode(String.self, forKey: .dayKey)
+        sleepHours = try container.decodeIfPresent(Double.self, forKey: .sleepHours)
+        waterIntakeMl = try container.decodeIfPresent(Int.self, forKey: .waterIntakeMl) ?? 0
+        energyDrinksCount = max(0, try container.decodeIfPresent(Int.self, forKey: .energyDrinksCount) ?? 0)
+        preWorkoutCount = max(0, try container.decodeIfPresent(Int.self, forKey: .preWorkoutCount) ?? 0)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case dayKey, sleepHours, waterIntakeMl, energyDrinksCount, preWorkoutCount
     }
 }
 
@@ -90,6 +126,10 @@ extension UserProfile {
     }
 
     var recommendedWaterGlasses: Int {
-        max(recommendedDailyWaterML / 250, 6)
+        max(recommendedDailyWaterML / WaterServing.glassML, 6)
+    }
+
+    var recommendedWaterBottles: Int {
+        max(Int(ceil(Double(recommendedDailyWaterML) / Double(WaterServing.bottleML))), 3)
     }
 }

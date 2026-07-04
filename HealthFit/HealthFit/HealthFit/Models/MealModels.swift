@@ -228,12 +228,14 @@ struct CustomMenuSelection: Codable, Equatable {
     var lactoseTolerance: LactoseTolerance?
     var selections: [String: UUID]
     var energyDrinksPerWeek: Int
+    var energyDrinksPerDay: Int
 
     static let `default` = CustomMenuSelection(
         sweetConsumption: .moderate,
         lactoseTolerance: nil,
         selections: [:],
-        energyDrinksPerWeek: 0
+        energyDrinksPerWeek: 0,
+        energyDrinksPerDay: 0
     )
 
     var isReadyToBuild: Bool {
@@ -244,12 +246,14 @@ struct CustomMenuSelection: Codable, Equatable {
         sweetConsumption: SweetConsumptionLevel,
         lactoseTolerance: LactoseTolerance? = nil,
         selections: [String: UUID] = [:],
-        energyDrinksPerWeek: Int = 0
+        energyDrinksPerWeek: Int = 0,
+        energyDrinksPerDay: Int = 0
     ) {
         self.sweetConsumption = sweetConsumption
         self.lactoseTolerance = lactoseTolerance
         self.selections = selections
         self.energyDrinksPerWeek = max(0, energyDrinksPerWeek)
+        self.energyDrinksPerDay = max(0, energyDrinksPerDay)
     }
 
     init(from decoder: Decoder) throws {
@@ -258,10 +262,11 @@ struct CustomMenuSelection: Codable, Equatable {
         lactoseTolerance = try container.decodeIfPresent(LactoseTolerance.self, forKey: .lactoseTolerance)
         selections = try container.decodeIfPresent([String: UUID].self, forKey: .selections) ?? [:]
         energyDrinksPerWeek = max(0, try container.decodeIfPresent(Int.self, forKey: .energyDrinksPerWeek) ?? 0)
+        energyDrinksPerDay = max(0, try container.decodeIfPresent(Int.self, forKey: .energyDrinksPerDay) ?? 0)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case sweetConsumption, lactoseTolerance, selections, energyDrinksPerWeek
+        case sweetConsumption, lactoseTolerance, selections, energyDrinksPerWeek, energyDrinksPerDay
     }
 
     func selectedTemplateID(for mealType: MealType) -> UUID? {
@@ -566,6 +571,10 @@ enum ShoppingCatalog {
 
 enum SupplementGuidance {
     static let preWorkoutCaffeineLimit = "até 400 mg de cafeína por dose"
+
+    static let preWorkoutAndEnergyDrinkWarning = """
+    Você informou pré-treino e energético no mesmo dia. Combinar os dois pode elevar muito a ingestão de cafeína e estimulantes, aumentando o risco de taquicardia, ansiedade, insônia e desidratação. Evite usar os dois no mesmo dia sempre que possível.
+    """
 
     static let whoEnergyDrinkWarning = """
     A OMS recomenda limitar bebidas energéticas e açucaradas. Em adultos saudáveis, a cafeína total não deve ultrapassar cerca de 400 mg por dia. A ingestão de açúcares livres deve ficar abaixo de 10% das calorias diárias (idealmente 5%). Mais de 2 energéticos por semana pode elevar cafeína e açúcar acima do recomendado, com riscos para sono, pressão arterial e coração.

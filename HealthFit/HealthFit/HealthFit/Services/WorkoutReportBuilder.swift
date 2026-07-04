@@ -126,6 +126,13 @@ enum WorkoutReportBuilder {
             .sorted { $0.date > $1.date }
     }
 
+    static func todayPreWorkoutEntries(from sessions: [WorkoutSession]) -> [PreWorkoutSessionEntry] {
+        let todayKey = DailyWellnessEntry.dayKey(for: .now)
+        return preWorkoutEntries(from: sessions).filter {
+            DailyWellnessEntry.dayKey(for: $0.date) == todayKey
+        }
+    }
+
     static func preWorkoutReportLines(
         currentSession: WorkoutSession? = nil,
         allSessions: [WorkoutSession],
