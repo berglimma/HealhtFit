@@ -161,47 +161,52 @@ struct CreateAccountCard: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 14) {
+            HStack(spacing: 12) {
                 ZStack {
                     Circle()
                         .fill(AppTheme.accent.opacity(0.14))
-                        .frame(width: 92, height: 92)
+                        .frame(width: 56, height: 56)
 
                     Circle()
-                        .stroke(AppTheme.accent.opacity(0.35), lineWidth: 2)
-                        .frame(width: 92, height: 92)
+                        .stroke(AppTheme.accent.opacity(0.35), lineWidth: 1.5)
+                        .frame(width: 56, height: 56)
 
                     Image(systemName: workoutIcons[iconIndex])
-                        .font(.system(size: 42, weight: .semibold))
+                        .font(.system(size: 26, weight: .semibold))
                         .foregroundStyle(AppTheme.gradientPrimary)
                         .modifier(RepeatingBounceSymbolEffect(speed: 0.6))
                         .id(workoutIcons[iconIndex])
                         .transition(.scale.combined(with: .opacity))
                 }
-                .frame(maxWidth: .infinity)
                 .animation(.easeInOut(duration: 0.35), value: iconIndex)
 
-                VStack(spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("Criar conta")
-                        .font(.headline.weight(.bold))
+                        .font(.subheadline.weight(.bold))
                         .foregroundStyle(AppTheme.textPrimary)
 
                     Text("Monte seu plano e comece a treinar")
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundStyle(AppTheme.textSecondary)
-                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
                 }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent.opacity(0.8))
             }
-            .padding(.vertical, 20)
-            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
             .frame(maxWidth: .infinity)
             .background(AppTheme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(AppTheme.accent.opacity(0.3), lineWidth: 1)
             )
-            .shadow(color: AppTheme.accent.opacity(0.2), radius: 8, y: 4)
+            .shadow(color: AppTheme.accent.opacity(0.15), radius: 6, y: 3)
         }
         .buttonStyle(.plain)
         .onReceive(iconTimer) { _ in
