@@ -194,4 +194,18 @@ enum MotivationMessages {
         "Seu corpo precisa de água para treinar e recuperar. Complete a meta hoje!",
         "Água é combustível. Aproxime-se da meta ml a ml — você consegue!",
     ]
+
+    static let waterReminderMessages = [
+        "Hora de beber água! 💧 Hidratação mantém energia, foco e recuperação muscular.",
+        "Pausa para hidratar! 💧 Seu corpo precisa de água agora — registre no Perfil.",
+        "Lembrete de água 💧 Beba um copo agora e continue sua meta diária.",
+        "Hidratação em dia = treino melhor 💧 Beba água neste momento.",
+        "Água agora! 💧 Cada gole aproxima você da meta de hidratação.",
+        "Não espere sede 💧 Beba água agora e mantenha o corpo funcionando bem.",
+    ]
+
+    static func waterReminderMessage(forHour hour: Int) -> String {
+        let index = max(hour, 0) % waterReminderMessages.count
+        return waterReminderMessages[index]
+    }
 }

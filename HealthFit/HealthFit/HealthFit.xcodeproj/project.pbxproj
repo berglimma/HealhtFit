@@ -78,6 +78,7 @@
 		B2000008 /* SleepAssessmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000017 /* SleepAssessmentTests.swift */; };
 		B2000009 /* ShoppingCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000018 /* ShoppingCatalogTests.swift */; };
 		B2000010 /* HealthFitUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000020 /* HealthFitUITests.swift */; };
+		B2000011 /* NotificationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000019 /* NotificationServiceTests.swift */; };
 		B1000070 /* FirebaseBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000070 /* FirebaseBootstrap.swift */; };
 		B1000071 /* AuthErrorMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000071 /* AuthErrorMapper.swift */; };
 		B1000072 /* FirebaseAuthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000072 /* FirebaseAuthProvider.swift */; };
@@ -218,6 +219,7 @@
 		F2000016 /* WeeklyProgressAnalyzerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressAnalyzerTests.swift; sourceTree = "<group>"; };
 		F2000017 /* SleepAssessmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepAssessmentTests.swift; sourceTree = "<group>"; };
 		F2000018 /* ShoppingCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingCatalogTests.swift; sourceTree = "<group>"; };
+		F2000019 /* NotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationServiceTests.swift; sourceTree = "<group>"; };
 		F2000020 /* HealthFitUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -489,6 +491,7 @@
 				F2000016 /* WeeklyProgressAnalyzerTests.swift */,
 				F2000017 /* SleepAssessmentTests.swift */,
 				F2000018 /* ShoppingCatalogTests.swift */,
+				F2000019 /* NotificationServiceTests.swift */,
 			);
 			path = HealthFitTests;
 			sourceTree = "<group>";
@@ -771,6 +774,7 @@
 				B2000007 /* WeeklyProgressAnalyzerTests.swift in Sources */,
 				B2000008 /* SleepAssessmentTests.swift in Sources */,
 				B2000009 /* ShoppingCatalogTests.swift in Sources */,
+				B2000011 /* NotificationServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

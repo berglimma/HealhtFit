@@ -10,17 +10,79 @@ final class NotificationService {
     private let inactivityReminderIdentifier = "workout_inactivity_48h"
     private let appUsageInactivityNotifiedKey = "healthfit_app_usage_inactivity_notified_for_session"
     private let appUsageInactivityReminderIdentifier = "app_usage_inactivity_48h"
+    private let waterReminderIdentifierPrefix = "water_reminder_"
 
     static let inactivityThreshold: TimeInterval = 48 * 60 * 60
+    static let waterReminderIntervalHours = 3
+    static let waterReminderStartHour = 8
+    static let waterReminderEndHour = 21
 
     private init() {}
+
+    nonisolated static func waterReminderHours(
+        startHour: Int = waterReminderStartHour,
+        endHour: Int = waterReminderEndHour,
+        intervalHours: Int = waterReminderIntervalHours
+    ) -> [Int] {
+        guard intervalHours > 0, startHour <= endHour else { return [] }
+
+        var hours: [Int] = []
+        var hour = startHour
+        while hour <= endHour {
+            hours.append(hour)
+            hour += intervalHours
+        }
+        return hours
+    }
 
     func requestAuthorization() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
             Task { @MainActor in
-                self.scheduleDailyMotivationNotifications()
+                self.refreshRecurringNotifications()
             }
         }
+    }
+
+    func refreshRecurringNotifications() {
+        scheduleDailyMotivationNotifications()
+        scheduleWaterReminders()
+    }
+
+    func scheduleWaterReminders(
+        startHour: Int = waterReminderStartHour,
+        endHour: Int = waterReminderEndHour,
+        intervalHours: Int = waterReminderIntervalHours,
+        minute: Int = 0
+    ) {
+        cancelWaterReminders()
+
+        for hour in Self.waterReminderHours(
+            startHour: startHour,
+            endHour: endHour,
+            intervalHours: intervalHours
+        ) {
+            var components = DateComponents()
+            components.hour = hour
+            components.minute = minute
+
+            let title = "Hora de beber água! 💧"
+            let body = MotivationMessages.waterReminderMessage(forHour: hour)
+            let identifier = "\(waterReminderIdentifierPrefix)\(hour)"
+
+            scheduleOnPhone(
+                title: title,
+                body: body,
+                category: "WATER_REMINDER",
+                identifier: identifier,
+                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+            )
+        }
+    }
+
+    func cancelWaterReminders() {
+        let hours = Self.waterReminderHours()
+        let identifiers = hours.map { "\(waterReminderIdentifierPrefix)\($0)" }
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: identifiers)
     }
 
     func scheduleDailyMotivationNotifications(hour: Int = 8, minute: Int = 0) {

@@ -160,6 +160,7 @@ final class AuthService: ObservableObject {
     func logout() {
         NotificationService.shared.cancelWorkoutInactivityReminder()
         NotificationService.shared.cancelDailyMotivationNotifications()
+        NotificationService.shared.cancelWaterReminders()
 
         if FirebaseBootstrap.isConfigured {
             try? FirebaseAuthProvider.signOut()
@@ -171,7 +172,7 @@ final class AuthService: ObservableObject {
     func updateProfile(_ profile: UserProfile) {
         currentUser = profile
         saveCachedProfile(profile)
-        NotificationService.shared.scheduleDailyMotivationNotifications()
+        NotificationService.shared.refreshRecurringNotifications()
     }
 
     func updateProfileImage(_ image: UIImage?) {
@@ -249,7 +250,7 @@ final class AuthService: ObservableObject {
         isAuthenticated = true
         saveCachedProfile(profile)
         loadProfileImage()
-        NotificationService.shared.scheduleDailyMotivationNotifications()
+        NotificationService.shared.refreshRecurringNotifications()
         NotificationService.shared.refreshWorkoutInactivityReminder(
             lastWorkoutAt: nil,
             accountCreatedAt: profile.createdAt
@@ -303,7 +304,7 @@ final class AuthService: ObservableObject {
         currentUser = user
         isAuthenticated = true
         loadProfileImage()
-        NotificationService.shared.scheduleDailyMotivationNotifications()
+        NotificationService.shared.refreshRecurringNotifications()
     }
 
     @discardableResult

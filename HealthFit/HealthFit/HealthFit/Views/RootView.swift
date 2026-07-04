@@ -35,7 +35,7 @@ struct RootView: View {
                             mealPlanService.generatePlan(for: user)
                         }
                         syncWorkoutCloudHistory()
-                        NotificationService.shared.scheduleDailyMotivationNotifications()
+                        NotificationService.shared.refreshRecurringNotifications()
                         refreshInactivityReminder()
                     }
                     .sheet(isPresented: $wellnessService.showSleepCheckIn) {
@@ -56,7 +56,7 @@ struct RootView: View {
                     prepareWelcomeIfAuthenticated(trigger: .returnFromBackground)
                     wellnessService.configure(for: authService.currentUser)
                     wellnessService.checkInOnAppOpen()
-                    NotificationService.shared.scheduleDailyMotivationNotifications()
+                    NotificationService.shared.refreshRecurringNotifications()
                     refreshInactivityReminder()
                 }
                 AppIconInactivityService.shared.handleAppBecameActive()
