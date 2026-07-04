@@ -146,6 +146,19 @@ struct LoginView: View {
 struct CreateAccountCard: View {
     let action: () -> Void
 
+    private let workoutIcons = [
+        "figure.strengthtraining.traditional",
+        "dumbbell.fill",
+        "figure.run",
+        "figure.yoga",
+        "figure.mind.and.body",
+        "flame.fill"
+    ]
+
+    @State private var iconIndex = 0
+
+    private let iconTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 14) {
@@ -158,12 +171,15 @@ struct CreateAccountCard: View {
                         .stroke(AppTheme.accent.opacity(0.35), lineWidth: 2)
                         .frame(width: 92, height: 92)
 
-                    Image(systemName: "figure.strengthtraining.traditional")
+                    Image(systemName: workoutIcons[iconIndex])
                         .font(.system(size: 42, weight: .semibold))
                         .foregroundStyle(AppTheme.gradientPrimary)
                         .modifier(RepeatingBounceSymbolEffect(speed: 0.6))
+                        .id(workoutIcons[iconIndex])
+                        .transition(.scale.combined(with: .opacity))
                 }
                 .frame(maxWidth: .infinity)
+                .animation(.easeInOut(duration: 0.35), value: iconIndex)
 
                 VStack(spacing: 4) {
                     Text("Criar conta")
@@ -188,6 +204,9 @@ struct CreateAccountCard: View {
             .shadow(color: AppTheme.accent.opacity(0.2), radius: 8, y: 4)
         }
         .buttonStyle(.plain)
+        .onReceive(iconTimer) { _ in
+            iconIndex = (iconIndex + 1) % workoutIcons.count
+        }
     }
 }
 
