@@ -342,7 +342,7 @@ struct ActiveWorkoutView: View {
         }
         NotificationService.shared.deliverWorkoutEndNotification(
             session: session,
-            athleteName: authService.currentUser?.name ?? "Atleta"
+            athleteName: authService.currentUser?.greetingName ?? "Atleta"
         )
 
         workoutStore.endSession()

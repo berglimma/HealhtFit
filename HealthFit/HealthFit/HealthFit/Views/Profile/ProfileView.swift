@@ -12,6 +12,7 @@ struct ProfileView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var trainerName = ""
     @State private var trainerEmail = ""
+    @State private var displayName = ""
     @State private var sleepHoursInput: Double = 7
 
     var body: some View {
@@ -24,13 +25,13 @@ struct ProfileView: View {
                             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                                 ProfileAvatarView(
                                     image: profileImage,
-                                    initial: String(user.name.prefix(1).uppercased())
+                                    initial: String(user.greetingName.prefix(1).uppercased())
                                 )
                             }
                             .buttonStyle(.plain)
 
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(user.name)
+                                Text(user.shownName)
                                     .font(.headline)
                                 Text(user.email)
                                     .font(.caption)
@@ -56,6 +57,25 @@ struct ProfileView: View {
                             }
                         }
                         .padding(.vertical, 8)
+                    }
+
+                    Section("Como você gostaria de ser chamado?") {
+                        TextField("Seu apelido ou primeiro nome", text: $displayName)
+                            .textContentType(.nickname)
+                            .onChange(of: displayName) { _, _ in
+                                saveDisplayName()
+                            }
+
+                        if !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                           displayName.trimmingCharacters(in: .whitespacesAndNewlines) != user.name {
+                            Text("Nome completo: \(user.name)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Text("Usado nas saudações, motivação e mensagens do app.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
 
                     Section("Biotipo") {
@@ -232,10 +252,12 @@ struct ProfileView: View {
             .navigationTitle("Perfil")
             .onAppear {
                 syncTrainerFields()
+                syncDisplayNameField()
                 syncWellnessFields()
             }
             .onChange(of: authService.currentUser) { _, _ in
                 syncTrainerFields()
+                syncDisplayNameField()
             }
             .onChange(of: wellnessService.todayEntry) { _, _ in
                 syncWellnessFields()
@@ -260,6 +282,18 @@ struct ProfileView: View {
     private func syncTrainerFields() {
         trainerName = authService.currentUser?.personalTrainerName ?? ""
         trainerEmail = authService.currentUser?.personalTrainerEmail ?? ""
+    }
+
+    private func syncDisplayNameField() {
+        displayName = authService.currentUser?.displayName ?? ""
+    }
+
+    private func saveDisplayName() {
+        guard var user = authService.currentUser else { return }
+        let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard user.displayName != trimmed else { return }
+        user.displayName = trimmed
+        authService.updateProfile(user)
     }
 
     @ViewBuilder

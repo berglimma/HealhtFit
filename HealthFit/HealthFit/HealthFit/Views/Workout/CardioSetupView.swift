@@ -374,7 +374,7 @@ struct CardioSetupView: View {
                 exerciseName: config.exercise.name,
                 targetCalories: config.targetCalories
             )
-            let athleteName = authService.currentUser?.name ?? "Atleta"
+            let athleteName = authService.currentUser?.greetingName ?? "Atleta"
             NotificationService.shared.deliverWorkoutStartNotification(
                 workoutTitle: config.title,
                 athleteName: athleteName

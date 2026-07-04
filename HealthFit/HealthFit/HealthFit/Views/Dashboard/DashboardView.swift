@@ -97,7 +97,7 @@ struct DashboardView: View {
     private var headerSection: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Olá, \(authService.currentUser?.name.components(separatedBy: " ").first ?? "Atleta")!")
+                Text("Olá, \(authService.currentUser?.greetingName ?? "Atleta")!")
                     .font(.title2.bold())
                     .foregroundStyle(AppTheme.textPrimary)
                 Text("Pronto para treinar hoje?")

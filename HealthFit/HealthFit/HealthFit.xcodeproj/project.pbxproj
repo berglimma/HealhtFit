@@ -68,6 +68,16 @@
 		B1000061 /* WelcomeMotivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000063 /* WelcomeMotivationView.swift */; };
 		B1000062 /* MarathonReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000064 /* MarathonReportBuilder.swift */; };
 		B1000034 /* HealthFitWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = F1000034 /* HealthFitWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B2000001 /* TestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000010 /* TestFixtures.swift */; };
+		B2000002 /* UserProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000011 /* UserProfileTests.swift */; };
+		B2000003 /* MarathonReportBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000012 /* MarathonReportBuilderTests.swift */; };
+		B2000004 /* CardioWorkoutConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000013 /* CardioWorkoutConfigTests.swift */; };
+		B2000005 /* PaceFormattingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000014 /* PaceFormattingTests.swift */; };
+		B2000006 /* HealthAssistantEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000015 /* HealthAssistantEngineTests.swift */; };
+		B2000007 /* WeeklyProgressAnalyzerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000016 /* WeeklyProgressAnalyzerTests.swift */; };
+		B2000008 /* SleepAssessmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000017 /* SleepAssessmentTests.swift */; };
+		B2000009 /* ShoppingCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000018 /* ShoppingCatalogTests.swift */; };
+		B2000010 /* HealthFitUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000020 /* HealthFitUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -77,6 +87,20 @@
 			proxyType = 1;
 			remoteGlobalIDString = T1000002;
 			remoteInfo = HealthFitWatch;
+		};
+		C2000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = P1000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = T1000001;
+			remoteInfo = HealthFit;
+		};
+		C2000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = P1000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = T1000001;
+			remoteInfo = HealthFit;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -159,6 +183,18 @@
 		F1000062 /* WelcomeMotivationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeMotivationService.swift; sourceTree = "<group>"; };
 		F1000063 /* WelcomeMotivationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeMotivationView.swift; sourceTree = "<group>"; };
 		F1000064 /* MarathonReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarathonReportBuilder.swift; sourceTree = "<group>"; };
+		F2000001 /* HealthFitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F2000002 /* HealthFitUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F2000010 /* TestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFixtures.swift; sourceTree = "<group>"; };
+		F2000011 /* UserProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileTests.swift; sourceTree = "<group>"; };
+		F2000012 /* MarathonReportBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarathonReportBuilderTests.swift; sourceTree = "<group>"; };
+		F2000013 /* CardioWorkoutConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardioWorkoutConfigTests.swift; sourceTree = "<group>"; };
+		F2000014 /* PaceFormattingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceFormattingTests.swift; sourceTree = "<group>"; };
+		F2000015 /* HealthAssistantEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthAssistantEngineTests.swift; sourceTree = "<group>"; };
+		F2000016 /* WeeklyProgressAnalyzerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressAnalyzerTests.swift; sourceTree = "<group>"; };
+		F2000017 /* SleepAssessmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepAssessmentTests.swift; sourceTree = "<group>"; };
+		F2000018 /* ShoppingCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingCatalogTests.swift; sourceTree = "<group>"; };
+		F2000020 /* HealthFitUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -176,6 +212,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FW200001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FW200002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -184,6 +234,8 @@
 			children = (
 				G1000002 /* HealthFit */,
 				G1000003 /* HealthFitWatch */,
+				G2000001 /* HealthFitTests */,
+				G2000003 /* HealthFitUITests */,
 				G1000004 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -219,6 +271,8 @@
 			children = (
 				F1000035 /* HealthFit.app */,
 				F1000034 /* HealthFitWatch.app */,
+				F2000001 /* HealthFitTests.xctest */,
+				F2000002 /* HealthFitUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -377,6 +431,38 @@
 			path = Shared;
 			sourceTree = "<group>";
 		};
+		G2000001 /* HealthFitTests */ = {
+			isa = PBXGroup;
+			children = (
+				G2000002 /* Fixtures */,
+				F2000011 /* UserProfileTests.swift */,
+				F2000012 /* MarathonReportBuilderTests.swift */,
+				F2000013 /* CardioWorkoutConfigTests.swift */,
+				F2000014 /* PaceFormattingTests.swift */,
+				F2000015 /* HealthAssistantEngineTests.swift */,
+				F2000016 /* WeeklyProgressAnalyzerTests.swift */,
+				F2000017 /* SleepAssessmentTests.swift */,
+				F2000018 /* ShoppingCatalogTests.swift */,
+			);
+			path = HealthFitTests;
+			sourceTree = "<group>";
+		};
+		G2000002 /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				F2000010 /* TestFixtures.swift */,
+			);
+			path = Fixtures;
+			sourceTree = "<group>";
+		};
+		G2000003 /* HealthFitUITests */ = {
+			isa = PBXGroup;
+			children = (
+				F2000020 /* HealthFitUITests.swift */,
+			);
+			path = HealthFitUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -416,6 +502,42 @@
 			productReference = F1000034 /* HealthFitWatch.app */;
 			productType = "com.apple.product-type.application";
 		};
+		T1000003 /* HealthFitTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BC200001 /* Build configuration list for PBXNativeTarget "HealthFitTests" */;
+			buildPhases = (
+				S2000001 /* Sources */,
+				FW200001 /* Frameworks */,
+				R2000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D2000001 /* PBXTargetDependency */,
+			);
+			name = HealthFitTests;
+			productName = HealthFitTests;
+			productReference = F2000001 /* HealthFitTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		T1000004 /* HealthFitUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BC200002 /* Build configuration list for PBXNativeTarget "HealthFitUITests" */;
+			buildPhases = (
+				S2000002 /* Sources */,
+				FW200002 /* Frameworks */,
+				R2000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D2000002 /* PBXTargetDependency */,
+			);
+			name = HealthFitUITests;
+			productName = HealthFitUITests;
+			productReference = F2000002 /* HealthFitUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -431,6 +553,14 @@
 					};
 					T1000002 = {
 						CreatedOnToolsVersion = 15.0;
+					};
+					T1000003 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = T1000001;
+					};
+					T1000004 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = T1000001;
 					};
 				};
 			};
@@ -450,6 +580,8 @@
 			targets = (
 				T1000001 /* HealthFit */,
 				T1000002 /* HealthFitWatch */,
+				T1000003 /* HealthFitTests */,
+				T1000004 /* HealthFitUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -468,6 +600,20 @@
 			buildActionMask = 2147483647;
 			files = (
 				B1000033 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		R2000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		R2000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -546,6 +692,30 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		S2000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2000001 /* TestFixtures.swift in Sources */,
+				B2000002 /* UserProfileTests.swift in Sources */,
+				B2000003 /* MarathonReportBuilderTests.swift in Sources */,
+				B2000004 /* CardioWorkoutConfigTests.swift in Sources */,
+				B2000005 /* PaceFormattingTests.swift in Sources */,
+				B2000006 /* HealthAssistantEngineTests.swift in Sources */,
+				B2000007 /* WeeklyProgressAnalyzerTests.swift in Sources */,
+				B2000008 /* SleepAssessmentTests.swift in Sources */,
+				B2000009 /* ShoppingCatalogTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		S2000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2000010 /* HealthFitUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -553,6 +723,16 @@
 			isa = PBXTargetDependency;
 			target = T1000002 /* HealthFitWatch */;
 			targetProxy = C1000001 /* PBXContainerItemProxy */;
+		};
+		D2000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = T1000001 /* HealthFit */;
+			targetProxy = C2000001 /* PBXContainerItemProxy */;
+		};
+		D2000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = T1000001 /* HealthFit */;
+			targetProxy = C2000002 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -809,6 +989,100 @@
 			};
 			name = Release;
 		};
+		XC200007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 99L25FT5GG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HealthFit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HealthFit";
+			};
+			name = Debug;
+		};
+		XC200008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 99L25FT5GG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HealthFit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HealthFit";
+			};
+			name = Release;
+		};
+		XC200009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 99L25FT5GG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HealthFit;
+			};
+			name = Debug;
+		};
+		XC200010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 99L25FT5GG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HealthFit;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -835,6 +1109,24 @@
 			buildConfigurations = (
 				XC100001 /* Debug */,
 				XC100002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BC200001 /* Build configuration list for PBXNativeTarget "HealthFitTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				XC200007 /* Debug */,
+				XC200008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BC200002 /* Build configuration list for PBXNativeTarget "HealthFitUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				XC200009 /* Debug */,
+				XC200010 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -29,6 +29,8 @@ struct HealthAssistantContext {
 }
 
 enum HealthAssistantEngine {
+    static let idleReturnMessage = "Vi que você está focado em outra demanda, qualquer dúvida estou à disposição, bom treino e foco sempre, você vai vencer!"
+
     static let suggestedQuestions: [String] = [
         "Qual é meu IMC?",
         "O que é ectomorfo?",
@@ -39,12 +41,14 @@ enum HealthAssistantEngine {
         "Quanto de proteína comer?",
         "Quantas séries e repetições?",
         "O que fazer no déficit calórico?",
+        "Posso beber álcool ou cerveja?",
+        "Cerveja zero álcool é liberada?",
+        "Cerveja light faz mal?",
         "Treino, cardio ou meditação?",
     ]
 
     static func welcomeMessage(context: HealthAssistantContext) -> String {
-        let name = context.user?.name
-        let greeting = name.map { "Olá, \($0.components(separatedBy: " ").first ?? $0)!" } ?? "Olá!"
+        let greeting = context.user.map { "Olá, \($0.greetingName)!" } ?? "Olá!"
         var sections = ["\(greeting) Sou o assistente HealthFit.", ""]
 
         let summary = buildWelcomeAlerts(context)
@@ -65,7 +69,7 @@ enum HealthAssistantEngine {
             sections.append("")
         }
 
-        sections.append("Posso tirar dúvidas sobre dieta, IMC, biotipos (ecto/meso/endo), sono, treinos conforme orientação profissional, cardio, meditação e macros.")
+        sections.append("Posso tirar dúvidas sobre dieta, IMC, biotipos (ecto/meso/endo), sono, treinos conforme orientação profissional, cardio, meditação, macros e consumo de álcool.")
         sections.append("")
         sections.append("Toque em uma sugestão abaixo ou escreva sua pergunta.")
 
@@ -186,7 +190,7 @@ enum HealthAssistantEngine {
     private static func fallbackAnswer(_ context: HealthAssistantContext) -> String {
         var lines = [
             "Não encontrei uma resposta exata, mas posso ajudar com estes temas:",
-            "• Dieta: cardápio, macros, proteína, carboidrato, açúcar e lactose",
+            "• Dieta: cardápio, macros, proteína, carboidrato, açúcar, lactose e álcool",
             "• IMC, peso, altura e composição corporal",
             "• Biotipos: ectomorfo, mesomorfo e endomorfo",
             "• Sono e recuperação",
@@ -512,6 +516,95 @@ enum HealthAssistantEngine {
                 A OMS recomenda limitar açúcares livres a menos de 10% das calorias (idealmente 5%). Em 2000 kcal: até 50 g (10%) ou 25 g (5%).
 
                 Prefira frutas, aveia e doces ocasionais. Ajuste em Nutrição → "Você consome muito doce?".
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: [
+                "alcool", "álcool", "alcoolica", "alcoólica", "beber alcool", "beber álcool",
+                "cerveja", "cervejas", "chopp", "chope", "vinho", "vodka", "whisky", "uisque",
+                "destilada", "destiladas", "bebida alcoolica", "bebida alcoólica", "drinque", "drink",
+                "caipirinha", "gin", "rum", "tequila", "pinga", "cachaca", "cachaça", "bebida destilada"
+            ],
+            respond: { ctx in
+                let goal = ctx.user?.goal.rawValue ?? "seu objetivo"
+                let calorieNote = "Sua meta: \(ctx.dailyCalorieTarget) kcal/dia."
+                return """
+                Álcool, cerveja e bebidas destiladas têm influência negativa relevante no plano (\(goal)).
+
+                Por que prejudica:
+                • Calorias vazias — o corpo queima álcool antes de gordura (atrapalha perda de peso)
+                • Cerveja: ~90–180 kcal/lata + carboidratos; destilados: ~70–100 kcal/dose (40 ml), mas o efeito do etanol é maior por concentração
+                • Reduz síntese proteica e recuperação muscular pós-treino
+                • Piora sono (menos REM), desidrata e aumenta fome no dia seguinte
+                • Em excesso: fígado, pressão arterial e adesão à dieta caem
+
+                \(calorieNote)
+
+                Se for consumir (não é recomendado em fase de cutting):
+                • Máximo ocasional — não é parte do cardápio HealthFit
+                • Evite no dia de treino intenso ou antes de dormir
+                • Não compense "comendo menos" no dia — priorize proteína e água
+                • Destilados com calorias de mixers (refrigerante, suco) somam ainda mais
+
+                Para ganho de massa ou perda de gordura, menos álcool = melhor resultado.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: [
+                "cerveja zero", "zero alcool", "zero álcool", "sem alcool", "sem álcool",
+                "nao alcoolica", "não alcoólica", "cerveja sem alcool", "cerveja sem álcool",
+                "heineken 0", "brahma 0", "antarctica 0", "bebida zero alcool"
+            ],
+            respond: { ctx in
+                return """
+                Cerveja zero álcool — o que pode e o que não pode:
+
+                ✅ Pode (com moderação):
+                • Opção social sem etanol — não intoxica nem prejudica o fígado como álcool
+                • Geralmente menos calorias que cerveja comum (~15–35 kcal/100 ml vs ~40–50)
+                • Cabe melhor na meta de \(ctx.dailyCalorieTarget) kcal/dia se contabilizar no dia
+                • Hidratação levemente melhor que cerveja alcoólica (sem efeito diurético do álcool)
+
+                ❌ Não pode / cuidados:
+                • Não é "liberado à vontade" — ainda tem carboidrato, sódio e calorias
+                • Pode conter açúcar ou maltose — leia o rótulo
+                • Não substitui água, leite ou refeições
+                • Algumas marcas têm traços de álcool (<0,5%) — atletas em competição devem verificar
+                • Pode manter hábito de "cerveja todo dia" — o ideal é ocasional
+
+                Resumo: melhor que cerveja comum para saúde e dieta, mas trate como bebida calórica ocasional, não como hidratação ou suplemento.
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: [
+                "cerveja light", "cerveja diet", "cerveja baixa caloria", "cerveja baixa calorias",
+                "cerveja low carb", "pode cerveja light", "cerveja menos calorias", "cerveja light faz mal"
+            ],
+            respond: { ctx in
+                let goal = ctx.user?.goal.rawValue ?? "seu objetivo"
+                return """
+                Cerveja light / de baixa caloria — pontos positivos e negativos:
+
+                👍 Influência positiva (relativa):
+                • Menos calorias que cerveja tradicional (~80–100 kcal/lata vs ~140–180)
+                • Facilita encaixar 1 unidade ocasional na meta de \(ctx.dailyCalorieTarget) kcal/dia
+                • Pode ser escolha "menos pior" em eventos sociais (objetivo: \(goal))
+
+                👎 Influência negativa (ainda presente):
+                • Continua com álcool — etanol segue atrapalhando queima de gordura e recuperação
+                • Álcool permanece (~3,5–4,5%) — efeito no sono, fígado e treino é similar
+                • Risco de beber mais unidades ("é light, então pode mais")
+                • Carboidratos e sódio ainda existem; pouca proteína ou nutriente útil
+
+                Comparativo rápido:
+                • Pior: destilado + mixer, cerveja comum em excesso
+                • Médio: cerveja light ocasional
+                • Melhor para dieta/treino: zero álcool ou não beber
+
+                Em perda de gordura ou ganho de massa, menos é mais. Se beber, 1 light ocasional e conte as calorias no dia.
                 """
             }
         ),
@@ -1276,7 +1369,10 @@ final class HealthAssistantService: ObservableObject {
     @Published private(set) var isTyping = false
 
     private var replyTask: Task<Void, Never>?
+    private var hasAppearedOnce = false
+    private(set) var lastUserInteractionAt = Date()
     private static let replyDelay: Duration = .seconds(3)
+    private static let idleReturnThreshold: TimeInterval = 180
 
     func bootstrap(context: HealthAssistantContext) {
         guard messages.isEmpty else { return }
@@ -1286,6 +1382,7 @@ final class HealthAssistantService: ObservableObject {
                 isUser: false
             )
         )
+        lastUserInteractionAt = Date()
     }
 
     func bootstrap(userName: String?) {
@@ -1308,6 +1405,7 @@ final class HealthAssistantService: ObservableObject {
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isTyping else { return }
 
+        recordUserInteraction()
         replyTask?.cancel()
         messages.append(HealthChatMessage(text: trimmed, isUser: true))
         isTyping = true
@@ -1331,6 +1429,39 @@ final class HealthAssistantService: ObservableObject {
         messages.removeAll()
         bootstrap(context: context)
     }
+
+    func recordUserInteraction() {
+        lastUserInteractionAt = Date()
+    }
+
+    func handleTabReturn() {
+        guard hasAppearedOnce else {
+            hasAppearedOnce = true
+            lastUserInteractionAt = Date()
+            return
+        }
+
+        let idleSeconds = Date().timeIntervalSince(lastUserInteractionAt)
+        guard idleSeconds >= Self.idleReturnThreshold else { return }
+
+        appendIdleReturnMessageIfNeeded()
+        lastUserInteractionAt = Date()
+    }
+
+    private func appendIdleReturnMessageIfNeeded() {
+        guard !isTyping else { return }
+
+        let text = HealthAssistantEngine.idleReturnMessage
+        if let last = messages.last, !last.isUser, last.text == text { return }
+
+        messages.append(HealthChatMessage(text: text, isUser: false))
+    }
+
+    #if DEBUG
+    func setLastUserInteractionForTests(_ date: Date) {
+        lastUserInteractionAt = date
+    }
+    #endif
 
     func clear(userName: String?) {
         clear(context: HealthAssistantContext(

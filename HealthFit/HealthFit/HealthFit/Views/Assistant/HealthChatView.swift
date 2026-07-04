@@ -91,6 +91,12 @@ struct HealthChatView: View {
             }
             .onAppear {
                 assistant.bootstrap(context: context)
+                assistant.handleTabReturn()
+            }
+            .onChange(of: draft) { _, newValue in
+                if !newValue.isEmpty {
+                    assistant.recordUserInteraction()
+                }
             }
         }
     }

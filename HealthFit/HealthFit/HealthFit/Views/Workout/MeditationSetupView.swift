@@ -128,7 +128,7 @@ struct MeditationSetupView: View {
                 promptIndex: 0,
                 totalPrompts: topic.prompts.count
             )
-            let athleteName = authService.currentUser?.name ?? "Atleta"
+            let athleteName = authService.currentUser?.greetingName ?? "Atleta"
             NotificationService.shared.deliverWorkoutStartNotification(
                 workoutTitle: config.title,
                 athleteName: athleteName

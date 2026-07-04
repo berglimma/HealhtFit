@@ -91,6 +91,7 @@ enum Gender: String, CaseIterable, Codable, Identifiable {
 struct UserProfile: Codable, Identifiable, Equatable {
     var id: UUID
     var name: String
+    var displayName: String
     var email: String
     var personalTrainerName: String
     var personalTrainerEmail: String
@@ -107,6 +108,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         id: UUID = UUID(),
         name: String,
         email: String,
+        displayName: String = "",
         personalTrainerName: String = "",
         personalTrainerEmail: String = "",
         biotype: Biotype = .mesomorph,
@@ -120,6 +122,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
     ) {
         self.id = id
         self.name = name
+        self.displayName = displayName
         self.email = email
         self.personalTrainerName = personalTrainerName
         self.personalTrainerEmail = personalTrainerEmail
@@ -137,6 +140,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
+        displayName = try container.decodeIfPresent(String.self, forKey: .displayName) ?? ""
         email = try container.decode(String.self, forKey: .email)
         personalTrainerName = try container.decodeIfPresent(String.self, forKey: .personalTrainerName) ?? ""
         personalTrainerEmail = try container.decodeIfPresent(String.self, forKey: .personalTrainerEmail) ?? ""
@@ -151,12 +155,25 @@ struct UserProfile: Codable, Identifiable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, email, personalTrainerName, personalTrainerEmail
+        case id, name, displayName, email, personalTrainerName, personalTrainerEmail
         case biotype, goal, gender, weight, height, age, caloricDeficit, createdAt
     }
 
     var hasPersonalTrainer: Bool {
         !personalTrainerEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Nome usado em saudações e mensagens do app.
+    var greetingName: String {
+        let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        return name.components(separatedBy: " ").first ?? name
+    }
+
+    /// Nome exibido no perfil e cabeçalhos.
+    var shownName: String {
+        let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? name : trimmed
     }
 
     /// Taxa Metabólica Basal (Mifflin-St Jeor)

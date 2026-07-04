@@ -98,7 +98,7 @@ struct RootView: View {
         }
 
         welcomeContext = WelcomeMotivationEngine.makeContext(
-            athleteName: user?.name ?? "Atleta",
+            athleteName: user?.greetingName ?? "Atleta",
             hoursSinceLastOpen: AppIconInactivityService.shared.hoursSinceLastSessionEnd(),
             hoursSinceLastWorkout: hoursSinceLastWorkout,
             weeklyWorkoutCount: weeklyReport.currentWeek.workoutCount
