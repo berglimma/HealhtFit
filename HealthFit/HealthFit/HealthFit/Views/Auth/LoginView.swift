@@ -30,7 +30,7 @@ struct LoginView: View {
                     .padding(.bottom, 48)
 
                     VStack(spacing: 16) {
-                        SocialLoginButtonsView()
+                        SocialLoginButtonsView(style: .iconCards)
 
                         VStack(alignment: .leading, spacing: 6) {
                             Text("E-mail")
@@ -109,6 +109,11 @@ struct LoginView: View {
                         .buttonStyle(PrimaryButtonStyle(isEnabled: !email.isEmpty && password.count >= 6))
                         .disabled(email.isEmpty || password.count < 6 || authService.isLoading)
                         .padding(.top, 8)
+
+                        CreateAccountCard {
+                            showRegister = true
+                        }
+                        .padding(.top, 4)
                     }
                     .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                     .frame(maxWidth: DeviceLayout.formMaxWidth(for: horizontalSizeClass))
@@ -118,14 +123,7 @@ struct LoginView: View {
                     
                     DeveloperCreditView()
                         .padding(.horizontal, AppTheme.padding)
-                        .padding(.bottom, 8)
-                    
-                    Button("Criar conta") {
-                        showRegister = true
-                    }
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(AppTheme.accent)
-                    .padding(.bottom, 32)
+                        .padding(.bottom, 32)
                 }
                 
                 if authService.isLoading {
@@ -142,6 +140,54 @@ struct LoginView: View {
                 ForgotPasswordView(initialEmail: email)
             }
         }
+    }
+}
+
+struct CreateAccountCard: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(AppTheme.accent.opacity(0.14))
+                        .frame(width: 92, height: 92)
+
+                    Circle()
+                        .stroke(AppTheme.accent.opacity(0.35), lineWidth: 2)
+                        .frame(width: 92, height: 92)
+
+                    Image(systemName: "figure.strengthtraining.traditional")
+                        .font(.system(size: 42, weight: .semibold))
+                        .foregroundStyle(AppTheme.gradientPrimary)
+                        .modifier(RepeatingBounceSymbolEffect(speed: 0.6))
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: 4) {
+                    Text("Criar conta")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    Text("Monte seu plano e comece a treinar")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .padding(.vertical, 20)
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity)
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                    .strokeBorder(AppTheme.accent.opacity(0.3), lineWidth: 1)
+            )
+            .shadow(color: AppTheme.accent.opacity(0.2), radius: 8, y: 4)
+        }
+        .buttonStyle(.plain)
     }
 }
 
