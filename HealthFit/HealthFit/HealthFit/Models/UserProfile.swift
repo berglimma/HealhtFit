@@ -16,6 +16,18 @@ enum Biotype: String, CaseIterable, Codable, Identifiable {
         }
     }
 
+    /// Como identificar o biotipo no espelho e no dia a dia.
+    var identificationGuide: String {
+        switch self {
+        case .ectomorph:
+            return "Corpo magro, ombros e quadris estreitos, pulsos e tornozelos finos. Ganha pouco peso mesmo comendo bastante."
+        case .mesomorph:
+            return "Ombros largos, cintura marcada e estrutura atlética. Ganha músculo e perde gordura com relativa facilidade."
+        case .endomorph:
+            return "Estrutura mais arredondada, acumula gordura com facilidade (cintura e quadril). Ganha peso mais rápido que os outros biotipos."
+        }
+    }
+
     var icon: String {
         switch self {
         case .ectomorph: return "figure.walk"

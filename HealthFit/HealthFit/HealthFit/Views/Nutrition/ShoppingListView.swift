@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ShoppingListView: View {
     @EnvironmentObject var mealPlanService: MealPlanService
+    @EnvironmentObject var authService: AuthService
     @Environment(\.dismiss) private var dismiss
 
     private var groupedItems: [(ShoppingCategory, [ShoppingItem])] {
@@ -14,6 +15,10 @@ struct ShoppingListView: View {
 
     private var purchasedCount: Int {
         mealPlanService.shoppingList.filter(\.isPurchased).count
+    }
+
+    private var energyDrinksPerWeek: Int {
+        mealPlanService.customMenuSelection.energyDrinksPerWeek
     }
 
     var body: some View {
@@ -38,6 +43,40 @@ struct ShoppingListView: View {
                     }
                 }
 
+                Section {
+                    Stepper(
+                        value: energyDrinksBinding,
+                        in: 0...14,
+                        step: 1
+                    ) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Energéticos por semana")
+                                .font(.subheadline.weight(.medium))
+                            Text(energyDrinksPerWeek == 0
+                                 ? "Não incluir na lista"
+                                 : "\(energyDrinksPerWeek) un na lista de compras")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if energyDrinksPerWeek > 2 {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Alerta OMS", systemImage: "exclamationmark.triangle.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.orange)
+                            Text(SupplementGuidance.whoEnergyDrinkWarning)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                } header: {
+                    Label("Bebidas", systemImage: "bolt.fill")
+                } footer: {
+                    Text("Informe quantos energéticos você pretende comprar nesta semana.")
+                }
+
                 ForEach(groupedItems, id: \.0) { category, items in
                     Section {
                         ForEach(items) { item in
@@ -47,6 +86,10 @@ struct ShoppingListView: View {
                         }
                     } header: {
                         Label(category.rawValue, systemImage: category.icon)
+                    } footer: {
+                        if category == .supplements {
+                            Text("Pré-treino: \(SupplementGuidance.preWorkoutCaffeineLimit).")
+                        }
                     }
                 }
             }
@@ -65,6 +108,15 @@ struct ShoppingListView: View {
                 }
             }
         }
+    }
+
+    private var energyDrinksBinding: Binding<Int> {
+        Binding(
+            get: { mealPlanService.customMenuSelection.energyDrinksPerWeek },
+            set: { newValue in
+                mealPlanService.updateEnergyDrinksPerWeek(newValue, profile: authService.currentUser)
+            }
+        )
     }
 }
 

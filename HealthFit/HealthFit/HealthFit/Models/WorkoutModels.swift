@@ -123,6 +123,7 @@ struct WorkoutSession: Identifiable, Codable {
     var completedExercises: Int
     var totalExercises: Int
     var exerciseRecords: [ExerciseSessionRecord]
+    var tookPreWorkout: Bool?
 
     init(
         id: UUID = UUID(),
@@ -134,7 +135,8 @@ struct WorkoutSession: Identifiable, Codable {
         caloriesBurned: Double = 0,
         completedExercises: Int = 0,
         totalExercises: Int = 0,
-        exerciseRecords: [ExerciseSessionRecord] = []
+        exerciseRecords: [ExerciseSessionRecord] = [],
+        tookPreWorkout: Bool? = nil
     ) {
         self.id = id
         self.workoutSheetId = workoutSheetId
@@ -146,6 +148,28 @@ struct WorkoutSession: Identifiable, Codable {
         self.completedExercises = completedExercises
         self.totalExercises = totalExercises
         self.exerciseRecords = exerciseRecords
+        self.tookPreWorkout = tookPreWorkout
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        workoutSheetId = try container.decode(UUID.self, forKey: .workoutSheetId)
+        workoutTitle = try container.decode(String.self, forKey: .workoutTitle)
+        startedAt = try container.decode(Date.self, forKey: .startedAt)
+        endedAt = try container.decodeIfPresent(Date.self, forKey: .endedAt)
+        heartRateSamples = try container.decodeIfPresent([HeartRateSample].self, forKey: .heartRateSamples) ?? []
+        caloriesBurned = try container.decodeIfPresent(Double.self, forKey: .caloriesBurned) ?? 0
+        completedExercises = try container.decodeIfPresent(Int.self, forKey: .completedExercises) ?? 0
+        totalExercises = try container.decodeIfPresent(Int.self, forKey: .totalExercises) ?? 0
+        exerciseRecords = try container.decodeIfPresent([ExerciseSessionRecord].self, forKey: .exerciseRecords) ?? []
+        tookPreWorkout = try container.decodeIfPresent(Bool.self, forKey: .tookPreWorkout)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, workoutSheetId, workoutTitle, startedAt, endedAt
+        case heartRateSamples, caloriesBurned, completedExercises, totalExercises
+        case exerciseRecords, tookPreWorkout
     }
 
     var duration: TimeInterval {

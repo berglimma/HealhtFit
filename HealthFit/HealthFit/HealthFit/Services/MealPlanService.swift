@@ -9,18 +9,25 @@ final class MealPlanService: ObservableObject {
     @Published var dailyCalorieTarget: Int = 0
     @Published var estimatedTDEE: Int = 0
     @Published var caloricDeficit: Int = 0
+    @Published var customMenuSelection: CustomMenuSelection = .default
 
     private let planKey = "healthfit_meal_plan"
     private let shoppingKey = "healthfit_shopping_list"
+    private let customMenuKey = "healthfit_custom_menu"
 
     func generatePlan(for profile: UserProfile) {
+        guard customMenuSelection.isReadyToBuild else { return }
+
         basalMetabolicRate = profile.basalMetabolicRate
         estimatedTDEE = profile.estimatedTDEE
         caloricDeficit = profile.caloricDeficit
         dailyCalorieTarget = profile.dailyCalorieTarget
+        ensureDefaultSelections(goal: profile.goal)
         weeklyPlan = Self.buildWeeklyPlan(
             calorieBase: profile.dailyCalorieTarget,
-            goal: profile.goal
+            goal: profile.goal,
+            sweetLevel: customMenuSelection.sweetConsumption,
+            customSelection: customMenuSelection
         )
         generateShoppingList()
         saveData()
@@ -29,6 +36,55 @@ final class MealPlanService: ObservableObject {
     func regeneratePlanIfNeeded(for profile: UserProfile) {
         guard !weeklyPlan.isEmpty else { return }
         generatePlan(for: profile)
+    }
+
+    func updateSweetConsumption(_ level: SweetConsumptionLevel, profile: UserProfile?) {
+        customMenuSelection.sweetConsumption = level
+        resetSelectionsForPreferences(profile: profile)
+    }
+
+    func updateLactoseTolerance(_ tolerance: LactoseTolerance, profile: UserProfile?) {
+        customMenuSelection.lactoseTolerance = tolerance
+        resetSelectionsForPreferences(profile: profile)
+    }
+
+    func updateMealSelection(_ templateID: UUID, for mealType: MealType, profile: UserProfile?) {
+        customMenuSelection.setSelection(templateID, for: mealType)
+        if let profile {
+            generatePlan(for: profile)
+        } else {
+            saveData()
+        }
+    }
+
+    func updateEnergyDrinksPerWeek(_ count: Int, profile: UserProfile?) {
+        customMenuSelection.energyDrinksPerWeek = max(0, count)
+        generateShoppingList()
+    }
+
+    func builtMenuMeals(for profile: UserProfile) -> [Meal] {
+        guard customMenuSelection.isReadyToBuild else { return [] }
+        ensureDefaultSelections(goal: profile.goal)
+        guard let lactose = customMenuSelection.lactoseTolerance else { return [] }
+
+        return Self.mealsFromSelection(
+            calorieBase: profile.dailyCalorieTarget,
+            goal: profile.goal,
+            sweetLevel: customMenuSelection.sweetConsumption,
+            lactoseTolerance: lactose,
+            selection: customMenuSelection,
+            variation: 0,
+            useCustomSelections: true
+        )
+    }
+
+    func builtMenuOption(for profile: UserProfile) -> MealPlanOption {
+        let meals = builtMenuMeals(for: profile)
+        return MealPlanOption(
+            name: "Meu Cardápio",
+            subtitle: "Montado por você",
+            meals: meals
+        )
     }
 
     func generateShoppingList() {
@@ -50,6 +106,21 @@ final class MealPlanService: ObservableObject {
                     }
                 }
             }
+        }
+
+        for staple in Self.weeklyStaples {
+            guard !ingredientAlreadyListed(staple.name, in: ingredientCounts) else { continue }
+            ingredientCounts[staple.name] = (staple.quantity, staple.category)
+        }
+
+        for staple in Self.supplementStaples {
+            guard !ingredientAlreadyListed(staple.name, in: ingredientCounts) else { continue }
+            ingredientCounts[staple.name] = (staple.quantity, staple.category)
+        }
+
+        let energyCount = customMenuSelection.energyDrinksPerWeek
+        if energyCount > 0 {
+            ingredientCounts["Energético"] = ("\(energyCount) un/semana", .other)
         }
 
         let weekStart = Calendar.current.startOfDay(for: .now)
@@ -76,6 +147,10 @@ final class MealPlanService: ObservableObject {
            let list = try? JSONDecoder().decode([ShoppingItem].self, from: data) {
             shoppingList = list
         }
+        if let data = UserDefaults.standard.data(forKey: customMenuKey),
+           let selection = try? JSONDecoder().decode(CustomMenuSelection.self, from: data) {
+            customMenuSelection = selection
+        }
     }
 
     private func saveData() {
@@ -85,104 +160,256 @@ final class MealPlanService: ObservableObject {
         if let data = try? JSONEncoder().encode(shoppingList) {
             UserDefaults.standard.set(data, forKey: shoppingKey)
         }
+        if let data = try? JSONEncoder().encode(customMenuSelection) {
+            UserDefaults.standard.set(data, forKey: customMenuKey)
+        }
+    }
+
+    private func ensureDefaultSelections(goal: FitnessGoal = .maintenance) {
+        guard let lactose = customMenuSelection.lactoseTolerance else { return }
+
+        for mealType in MealType.allCases {
+            if customMenuSelection.selectedTemplateID(for: mealType) == nil {
+                let template = MealCatalog.defaultTemplate(
+                    for: mealType,
+                    sweetLevel: customMenuSelection.sweetConsumption,
+                    goal: goal,
+                    lactoseTolerance: lactose,
+                    index: mealTypeCalorieOrder.firstIndex(of: mealType) ?? 0
+                )
+                customMenuSelection.setSelection(template.id, for: mealType)
+            } else if let selectedID = customMenuSelection.selectedTemplateID(for: mealType),
+                      let template = MealCatalog.template(id: selectedID),
+                      lactose == .intolerant && template.containsLactose {
+                let replacement = MealCatalog.defaultTemplate(
+                    for: mealType,
+                    sweetLevel: customMenuSelection.sweetConsumption,
+                    goal: goal,
+                    lactoseTolerance: lactose,
+                    index: 0
+                )
+                customMenuSelection.setSelection(replacement.id, for: mealType)
+            }
+        }
+    }
+
+    private func resetSelectionsForPreferences(profile: UserProfile?) {
+        customMenuSelection.selections = [:]
+        ensureDefaultSelections(goal: profile?.goal ?? .maintenance)
+        if let profile, customMenuSelection.isReadyToBuild {
+            generatePlan(for: profile)
+        } else {
+            saveData()
+        }
+    }
+
+    private var mealTypeCalorieOrder: [MealType] {
+        MealType.allCases
+    }
+
+    private static let weeklyStaples: [(name: String, quantity: String, category: ShoppingCategory)] = [
+        ("Banana", "1 cacho", .fruits),
+        ("Maçã", "6 un", .fruits),
+        ("Laranja", "4 un", .fruits),
+        ("Mamão", "1 un", .fruits),
+        ("Abacaxi", "1 un", .fruits),
+        ("Morango", "1 pote", .fruits),
+        ("Uva", "1 cacho", .fruits),
+        ("Manga", "2 un", .fruits),
+        ("Kiwi", "4 un", .fruits),
+        ("Abacate", "2 un", .fruits),
+        ("Pera", "3 un", .fruits),
+        ("Melancia", "1 fatia", .fruits),
+        ("Arroz integral", "1 kg", .grains),
+        ("Aveia", "500 g", .grains),
+        ("Feijão preto", "500 g", .grains),
+        ("Lentilha", "300 g", .grains),
+        ("Quinoa", "300 g", .grains),
+        ("Pão integral", "1 pacote", .grains),
+        ("Batata doce", "1 kg", .grains),
+        ("Grão-de-bico", "300 g", .grains),
+        ("Macarrão integral", "500 g", .grains),
+        ("Goma de tapioca", "500 g", .grains),
+        ("Peito de frango", "1 kg", .proteins),
+        ("Ovos", "1 dúzia", .proteins),
+        ("Carne patinho", "500 g", .proteins),
+        ("Tilápia", "600 g", .proteins),
+        ("Salmão", "400 g", .proteins),
+        ("Atum em lata", "2 un", .proteins),
+        ("Peito de peru", "200 g", .proteins),
+        ("Camarão", "300 g", .proteins),
+    ]
+
+    private static let supplementStaples: [(name: String, quantity: String, category: ShoppingCategory)] = [
+        ("Creatina", "300 g", .supplements),
+        ("Ômega 3", "1 frasco", .supplements),
+        ("Ômega 3-6-9", "1 frasco", .supplements),
+        ("Beta-alanina", "300 g", .supplements),
+        ("Pré-treino (até 400 mg cafeína)", "1 un", .supplements),
+    ]
+
+    private func ingredientAlreadyListed(
+        _ stapleName: String,
+        in counts: [String: (quantity: String, category: ShoppingCategory)]
+    ) -> Bool {
+        let staple = normalizedIngredient(stapleName)
+        return counts.keys.contains { key in
+            let listed = normalizedIngredient(key)
+            return listed.contains(staple) || staple.contains(listed)
+        }
+    }
+
+    private func normalizedIngredient(_ name: String) -> String {
+        name.lowercased()
+            .folding(options: .diacriticInsensitive, locale: .current)
     }
 
     private func categorizeIngredient(_ name: String) -> ShoppingCategory {
-        let lower = name.lowercased()
-        if lower.contains("frango") || lower.contains("carne") || lower.contains("peixe") || lower.contains("ovo") || lower.contains("atum") {
+        let lower = normalizedIngredient(name)
+
+        if containsAny(lower, keywords: [
+            "frango", "carne", "peixe", "ovo", "ovos", "claras", "atum", "salmao",
+            "tilapia", "camarao", "peru", "patinho", "tofu", "tempeh", "camarão"
+        ]) {
             return .proteins
         }
-        if lower.contains("leite") || lower.contains("iogurte") || lower.contains("queijo") || lower.contains("whey") {
+        if containsAny(lower, keywords: ["whey", "creatina", "omega", "ômega", "beta-alanina", "beta alanina", "pre-treino", "pre treino", "pré-treino"]) {
+            return .supplements
+        }
+        if containsAny(lower, keywords: [
+            "leite", "iogurte", "queijo", "cottage", "coalho"
+        ]) {
             return .dairy
         }
-        if lower.contains("arroz") || lower.contains("aveia") || lower.contains("pão") || lower.contains("batata") || lower.contains("macarrão") {
+        if containsAny(lower, keywords: [
+            "arroz", "aveia", "pao", "batata", "macarrao", "tapioca", "quinoa",
+            "feijao", "lentilha", "mandioca", "cuscuz", "granola", "chia",
+            "farinha", "tortilla", "inhame", "graodebico", "grão-de-bico",
+            "milho", "centeio"
+        ]) {
             return .grains
         }
-        if lower.contains("banana") || lower.contains("maçã") || lower.contains("morango") {
+        if containsAny(lower, keywords: [
+            "banana", "maca", "morango", "mirtilo", "fruta", "abacate", "mamao",
+            "manga", "kiwi", "uva", "pera", "laranja", "abacaxi", "melancia",
+            "melao", "framboesa", "goiaba", "maracuja", "pessego", "ameixa",
+            "acai", "açaí", "polpa de acai"
+        ]) {
             return .fruits
         }
-        if lower.contains("whey") || lower.contains("creatina") {
-            return .supplements
+        if containsAny(lower, keywords: ["bolo", "mel", "cacau", "barra", "energetico", "energético"]) {
+            return .other
         }
         return .vegetables
     }
 
-    private static let optionTemplates: [(name: String, subtitle: String)] = [
-        ("Opção 1", "Foco proteico"),
-        ("Opção 2", "Equilibrado"),
-        ("Opção 3", "Prático e leve")
-    ]
+    private func containsAny(_ text: String, keywords: [String]) -> Bool {
+        keywords.contains { text.contains($0) }
+    }
 
-    private static func buildWeeklyPlan(calorieBase: Int, goal: FitnessGoal) -> [DailyMealPlan] {
+    private static func buildWeeklyPlan(
+        calorieBase: Int,
+        goal: FitnessGoal,
+        sweetLevel: SweetConsumptionLevel,
+        customSelection: CustomMenuSelection
+    ) -> [DailyMealPlan] {
+        guard let lactose = customSelection.lactoseTolerance else { return [] }
+
         let days = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
+        let optionTemplates = goal == .fatLoss
+            ? [
+                ("Opção 1", "Déficit proteico"),
+                ("Opção 2", "Low carb restrito"),
+                ("Opção 3", "Leve e saciante"),
+            ]
+            : [
+                ("Opção 1", "Foco proteico"),
+                ("Opção 2", "Equilibrado"),
+                ("Opção 3", "Prático e leve"),
+            ]
 
         return days.enumerated().map { index, day in
             let options = optionTemplates.enumerated().map { optionIndex, template in
                 let variation = (index + optionIndex) % 3
+                let meals = mealsFromSelection(
+                    calorieBase: calorieBase,
+                    goal: goal,
+                    sweetLevel: sweetLevel,
+                    lactoseTolerance: lactose,
+                    selection: customSelection,
+                    variation: variation,
+                    useCustomSelections: false
+                )
                 return MealPlanOption(
-                    name: template.name,
-                    subtitle: template.subtitle,
-                    meals: mealsForDay(variation: variation, calorieBase: calorieBase, goal: goal)
+                    name: template.0,
+                    subtitle: template.1,
+                    meals: meals
                 )
             }
-            return DailyMealPlan(dayOfWeek: day, options: options)
+
+            let customMeals = mealsFromSelection(
+                calorieBase: calorieBase,
+                goal: goal,
+                sweetLevel: sweetLevel,
+                lactoseTolerance: lactose,
+                selection: customSelection,
+                variation: 0,
+                useCustomSelections: true
+            )
+            let customOption = MealPlanOption(
+                name: "Montado",
+                subtitle: "Suas escolhas",
+                meals: customMeals
+            )
+
+            return DailyMealPlan(dayOfWeek: day, options: options + [customOption])
         }
     }
 
-    private static func mealsForDay(variation: Int, calorieBase: Int, goal: FitnessGoal) -> [Meal] {
-        let breakfastCal = calorieBase / 4
-        let lunchCal = calorieBase / 3
-        let snackCal = calorieBase / 8
-        let dinnerCal = calorieBase - breakfastCal - lunchCal - snackCal
-
+    private static func mealsFromSelection(
+        calorieBase: Int,
+        goal: FitnessGoal,
+        sweetLevel: SweetConsumptionLevel,
+        lactoseTolerance: LactoseTolerance,
+        selection: CustomMenuSelection,
+        variation: Int,
+        useCustomSelections: Bool
+    ) -> [Meal] {
         let proteins = goal == .muscleGain ? 2 : 1
 
-        switch variation {
-        case 0:
-            return [
-                Meal(name: "Omelete Proteico", mealType: .breakfast, calories: breakfastCal, protein: 30 * proteins, carbs: 25, fat: 15,
-                     ingredients: ["3 un ovos", "50g queijo cottage", "1 fatia pão integral", "Tomate cereja"],
-                     instructions: "Bata os ovos, adicione o queijo e cozinhe em frigideira antiaderente."),
-                Meal(name: "Frango com Arroz", mealType: .lunch, calories: lunchCal, protein: 45 * proteins, carbs: 60, fat: 12,
-                     ingredients: ["200g peito de frango", "150g arroz integral", "Brócolis", "Azeite"],
-                     instructions: "Grelhe o frango temperado e sirva com arroz e brócolis no vapor."),
-                Meal(name: "Shake de Whey", mealType: .snack, calories: snackCal, protein: 25, carbs: 15, fat: 5,
-                     ingredients: ["30g whey protein", "1 banana", "200ml leite desnatado"],
-                     instructions: "Bata todos os ingredientes no liquidificador."),
-                Meal(name: "Salmão com Batata Doce", mealType: .dinner, calories: dinnerCal, protein: 40, carbs: 45, fat: 18,
-                     ingredients: ["180g salmão", "200g batata doce", "Aspargos", "Limão"],
-                     instructions: "Asse o salmão com limão e sirva com batata doce assada.")
-            ]
-        case 1:
-            return [
-                Meal(name: "Aveia com Frutas", mealType: .breakfast, calories: breakfastCal, protein: 20, carbs: 55, fat: 10,
-                     ingredients: ["80g aveia", "1 banana", "Morangos", "Mel"],
-                     instructions: "Cozinhe a aveia com leite e adicione as frutas por cima."),
-                Meal(name: "Carne com Legumes", mealType: .lunch, calories: lunchCal, protein: 50 * proteins, carbs: 40, fat: 15,
-                     ingredients: ["200g patinho moído", "Abobrinha", "Cenoura", "Arroz"],
-                     instructions: "Refogue a carne com os legumes e acompanhe com arroz."),
-                Meal(name: "Iogurte com Granola", mealType: .snack, calories: snackCal, protein: 15, carbs: 25, fat: 8,
-                     ingredients: ["200g iogurte grego", "30g granola", "Mel"],
-                     instructions: "Misture o iogurte com granola e mel."),
-                Meal(name: "Atum com Salada", mealType: .dinner, calories: dinnerCal, protein: 35, carbs: 30, fat: 12,
-                     ingredients: ["2 latas atum", "Mix de folhas", "Tomate", "Azeite"],
-                     instructions: "Monte a salada e adicione o atum por cima.")
-            ]
-        default:
-            return [
-                Meal(name: "Panqueca de Banana", mealType: .breakfast, calories: breakfastCal, protein: 25, carbs: 45, fat: 12,
-                     ingredients: ["2 ovos", "1 banana", "Aveia", "Canela"],
-                     instructions: "Misture e faça panquecas em frigideira."),
-                Meal(name: "Peixe Grelhado", mealType: .lunch, calories: lunchCal, protein: 42, carbs: 50, fat: 10,
-                     ingredients: ["200g tilápia", "Quinoa", "Espinafre", "Alho"],
-                     instructions: "Grelhe o peixe e sirva com quinoa e espinafre."),
-                Meal(name: "Barra Proteica", mealType: .snack, calories: snackCal, protein: 20, carbs: 20, fat: 6,
-                     ingredients: ["1 barra proteica", "Castanhas"],
-                     instructions: "Consuma como lanche prático."),
-                Meal(name: "Frango Desfiado", mealType: .dinner, calories: dinnerCal, protein: 38, carbs: 35, fat: 10,
-                     ingredients: ["180g frango desfiado", "Batata inglesa", "Salada verde"],
-                     instructions: "Cozinhe o frango e sirva com batata cozida e salada.")
-            ]
+        return MealType.allCases.map { mealType in
+            let targetCalories = max(Int(Double(calorieBase) * mealType.calorieShare), 120)
+            let template: MealTemplate
+
+            if useCustomSelections,
+               let selectedID = selection.selectedTemplateID(for: mealType),
+               let selected = MealCatalog.template(id: selectedID),
+               lactoseTolerance == .tolerant || !selected.containsLactose {
+                template = selected
+            } else {
+                let alternatives = MealCatalog.templates(
+                    for: mealType,
+                    sweetLevel: sweetLevel,
+                    goal: goal,
+                    lactoseTolerance: lactoseTolerance
+                )
+                let index = (variation + mealTypeCalorieIndex(mealType)) % max(alternatives.count, 1)
+                template = alternatives.isEmpty
+                    ? MealCatalog.defaultTemplate(
+                        for: mealType,
+                        sweetLevel: sweetLevel,
+                        goal: goal,
+                        lactoseTolerance: lactoseTolerance,
+                        index: index
+                    )
+                    : alternatives[index]
+            }
+
+            return template.scaled(to: targetCalories, proteinMultiplier: proteins)
         }
+    }
+
+    private static func mealTypeCalorieIndex(_ mealType: MealType) -> Int {
+        MealType.allCases.firstIndex(of: mealType) ?? 0
     }
 }

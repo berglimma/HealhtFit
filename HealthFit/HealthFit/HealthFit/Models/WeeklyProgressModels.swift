@@ -13,6 +13,8 @@ struct WeekStats: Equatable {
     let averageHeartRate: Double
     let totalRestMinutes: Int
     let totalExerciseMinutes: Int
+    let preWorkoutUsedCount: Int
+    let preWorkoutNotUsedCount: Int
 
     static let empty = WeekStats(
         workoutCount: 0,
@@ -26,7 +28,9 @@ struct WeekStats: Equatable {
         meditationMinutes: 0,
         averageHeartRate: 0,
         totalRestMinutes: 0,
-        totalExerciseMinutes: 0
+        totalExerciseMinutes: 0,
+        preWorkoutUsedCount: 0,
+        preWorkoutNotUsedCount: 0
     )
 }
 
@@ -74,6 +78,9 @@ struct WeeklyProgressReport: Equatable {
     let improvements: [ImprovementSuggestion]
     let dailyWorkoutMinutes: [DailyWorkoutActivity]
     let overallScore: Int
+    let preWorkoutSummary: PreWorkoutUsageSummary
+    let lifetimePreWorkoutSummary: PreWorkoutUsageSummary
+    let preWorkoutEntries: [PreWorkoutSessionEntry]
 
     var periodLabel: String {
         let formatter = DateFormatter()

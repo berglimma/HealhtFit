@@ -70,7 +70,19 @@ enum MotivationMessages {
         "A pausa foi longa. Seu próximo treino começa com uma decisão — faça acontecer hoje!"
     ]
 
+    static let appUsageInactivityReminder: [String] = [
+        "Seu coração no ícone está quebrado 💔 Abra o HealthFit e volte às atividades físicas hoje!",
+        "Faz mais de 48h sem abrir o app. Seu corpo precisa de movimento — retome seus treinos agora!",
+        "A inatividade afeta sua saúde. Volte ao HealthFit e cuide do seu condicionamento físico!",
+        "Que tal retomar a rotina? Abra o app e dê o primeiro passo de volta aos treinos.",
+        "Seu progresso espera por você. Reabra o HealthFit e volte a se movimentar!"
+    ]
+
     static func inactivityMessage() -> String {
         inactivityReminder.randomElement() ?? inactivityReminder[0]
+    }
+
+    static func appUsageInactivityMessage() -> String {
+        appUsageInactivityReminder.randomElement() ?? appUsageInactivityReminder[0]
     }
 }

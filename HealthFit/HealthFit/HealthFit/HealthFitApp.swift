@@ -13,6 +13,7 @@ struct HealthFitApp: App {
     @StateObject private var wellnessService = DailyWellnessService.shared
 
     init() {
+        AppIconInactivityService.shared.registerBackgroundTasks()
         NotificationService.shared.requestAuthorization()
     }
 

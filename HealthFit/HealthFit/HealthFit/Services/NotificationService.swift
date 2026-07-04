@@ -8,6 +8,8 @@ final class NotificationService {
     private let lastWorkoutKey = "healthfit_last_workout_completed_at"
     private let inactivityNotifiedKey = "healthfit_inactivity_notified_for_workout_at"
     private let inactivityReminderIdentifier = "workout_inactivity_48h"
+    private let appUsageInactivityNotifiedKey = "healthfit_app_usage_inactivity_notified_for_session"
+    private let appUsageInactivityReminderIdentifier = "app_usage_inactivity_48h"
 
     static let inactivityThreshold: TimeInterval = 48 * 60 * 60
 
@@ -182,6 +184,51 @@ final class NotificationService {
             withIdentifiers: [inactivityReminderIdentifier]
         )
         WatchConnectivityManager.shared.cancelInactivityReminderOnWatch()
+    }
+
+    func refreshAppUsageInactivityReminder(lastSessionEndAt: Date) {
+        cancelAppUsageInactivityReminder()
+
+        let fireDate = lastSessionEndAt.addingTimeInterval(AppIconInactivityService.brokenThreshold)
+        let title = "Volte às atividades físicas! 💔"
+        let body = MotivationMessages.appUsageInactivityMessage()
+
+        if fireDate <= .now {
+            Task {
+                await deliverAppUsageInactivityAlertIfNeeded(referenceSessionEnd: lastSessionEndAt)
+            }
+        } else {
+            let interval = fireDate.timeIntervalSinceNow
+            scheduleOnPhone(
+                title: title,
+                body: body,
+                category: "APP_USAGE_INACTIVITY",
+                identifier: appUsageInactivityReminderIdentifier,
+                trigger: UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+            )
+        }
+    }
+
+    func cancelAppUsageInactivityReminder() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [appUsageInactivityReminderIdentifier]
+        )
+    }
+
+    func deliverAppUsageInactivityAlertIfNeeded(referenceSessionEnd: Date) async {
+        let notifiedFor = UserDefaults.standard.object(forKey: appUsageInactivityNotifiedKey) as? Date
+        guard notifiedFor != referenceSessionEnd else { return }
+
+        let title = "Volte às atividades físicas! 💔"
+        let body = MotivationMessages.appUsageInactivityMessage()
+
+        deliverImmediately(
+            title: title,
+            body: body,
+            category: "APP_USAGE_INACTIVITY",
+            identifier: "app_usage_inactivity_\(UUID().uuidString)"
+        )
+        UserDefaults.standard.set(referenceSessionEnd, forKey: appUsageInactivityNotifiedKey)
     }
 
     var lastRecordedWorkoutAt: Date? {

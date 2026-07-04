@@ -8,6 +8,7 @@ struct MealPlanView: View {
     @State private var selectedDay = 0
     @State private var selectedOption = 0
     @State private var showShoppingList = false
+    @State private var nutritionTab = 0
     @State private var weightText = ""
     @State private var heightText = ""
     @State private var ageText = ""
@@ -39,29 +40,23 @@ struct MealPlanView: View {
             ScrollView {
                 VStack(spacing: 8) {
                     bodyMetricsSection
+                    menuPreferencesSection
 
-                    if !mealPlanService.weeklyPlan.isEmpty {
-                        dayPicker
+                    if mealPlanService.customMenuSelection.isReadyToBuild {
+                        Picker("Modo", selection: $nutritionTab) {
+                            Text("Plano Semanal").tag(0)
+                            Text("Montar Cardápio").tag(1)
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
 
-                        if selectedDay < mealPlanService.weeklyPlan.count {
-                            let dayPlan = mealPlanService.weeklyPlan[selectedDay]
-                            let safeOption = min(selectedOption, max(dayPlan.options.count - 1, 0))
-                            let activeOption = dayPlan.options[safeOption]
-
-                            VStack(spacing: 16) {
-                                optionPicker(for: dayPlan, selected: safeOption)
-                                macrosSummary(activeOption)
-                                ForEach(activeOption.meals) { meal in
-                                    MealCard(meal: meal)
-                                }
-                            }
-                            .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                            .padding(.bottom, 24)
-                            .adaptiveContentWidth()
+                        if nutritionTab == 0 {
+                            weeklyPlanSection
+                        } else {
+                            menuBuilderSection
                         }
                     } else {
-                        emptyState
-                            .padding(.vertical, 40)
+                        preferencesRequiredState
                     }
                 }
             }
@@ -121,6 +116,8 @@ struct MealPlanView: View {
                         }
                     }
                 }
+
+                BiotypeIdentificationHint(biotype: selectedBiotype)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -200,12 +197,278 @@ struct MealPlanView: View {
             } label: {
                 Label("Atualizar Cardápio", systemImage: "arrow.triangle.2.circlepath")
             }
-            .buttonStyle(PrimaryButtonStyle(isEnabled: isMetricsValid))
-            .disabled(!isMetricsValid)
+            .buttonStyle(PrimaryButtonStyle(isEnabled: isMetricsValid && mealPlanService.customMenuSelection.isReadyToBuild))
+            .disabled(!isMetricsValid || !mealPlanService.customMenuSelection.isReadyToBuild)
         }
         .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
         .adaptiveContentWidth()
         .background(AppTheme.cardBackground)
+    }
+
+    private var weeklyPlanSection: some View {
+        Group {
+            if !mealPlanService.weeklyPlan.isEmpty {
+                dayPicker
+
+                if selectedDay < mealPlanService.weeklyPlan.count {
+                    let dayPlan = mealPlanService.weeklyPlan[selectedDay]
+                    let safeOption = min(selectedOption, max(dayPlan.options.count - 1, 0))
+                    let activeOption = dayPlan.options[safeOption]
+
+                    VStack(spacing: 16) {
+                        optionPicker(for: dayPlan, selected: safeOption)
+                        macrosSummary(activeOption)
+                        ForEach(activeOption.meals) { meal in
+                            MealCard(meal: meal)
+                        }
+                    }
+                    .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                    .padding(.bottom, 24)
+                    .adaptiveContentWidth()
+                }
+            } else {
+                emptyState
+                    .padding(.vertical, 40)
+            }
+        }
+    }
+
+    private var menuPreferencesSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Você tolera lactose?")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                HStack(spacing: 8) {
+                    ForEach(LactoseTolerance.allCases) { tolerance in
+                        Button {
+                            updateLactoseTolerance(tolerance)
+                        } label: {
+                            VStack(spacing: 6) {
+                                Image(systemName: tolerance.icon)
+                                    .font(.title3)
+                                Text(tolerance.rawValue)
+                                    .font(.caption.weight(.bold))
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .foregroundStyle(
+                                mealPlanService.customMenuSelection.lactoseTolerance == tolerance
+                                    ? .white
+                                    : AppTheme.textPrimary
+                            )
+                            .background(
+                                mealPlanService.customMenuSelection.lactoseTolerance == tolerance
+                                    ? AppTheme.accent
+                                    : AppTheme.background
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                if let lactose = mealPlanService.customMenuSelection.lactoseTolerance {
+                    Text(lactose.detail)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                } else {
+                    Text("Responda antes de montar o cardápio.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Você consome muito doce?")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                HStack(spacing: 8) {
+                    ForEach(SweetConsumptionLevel.allCases) { level in
+                        Button {
+                            updateSweetConsumption(level)
+                        } label: {
+                            VStack(spacing: 6) {
+                                Image(systemName: level.icon)
+                                    .font(.title3)
+                                Text(level.rawValue)
+                                    .font(.caption.weight(.bold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .foregroundStyle(
+                                mealPlanService.customMenuSelection.sweetConsumption == level
+                                    ? .white
+                                    : AppTheme.textPrimary
+                            )
+                            .background(
+                                mealPlanService.customMenuSelection.sweetConsumption == level
+                                    ? AppTheme.accent
+                                    : AppTheme.background
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                Text(mealPlanService.customMenuSelection.sweetConsumption.detail)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            if selectedGoal == .fatLoss {
+                Label("Modo perda de gordura: opções restritivas com baixo carboidrato e sem frituras.", systemImage: "flame.fill")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.accentSecondary)
+            }
+        }
+        .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+        .adaptiveContentWidth()
+        .padding(.vertical, 8)
+    }
+
+    private var preferencesRequiredState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "list.clipboard")
+                .font(.system(size: 52))
+                .foregroundStyle(AppTheme.textSecondary)
+            Text("Responda sobre lactose e doces para montar seu cardápio.")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
+    }
+
+    private var menuBuilderSection: some View {
+        VStack(spacing: 16) {
+            if let profile = previewProfile {
+                macrosSummary(mealPlanService.builtMenuOption(for: profile))
+
+                Text("Escolha uma opção para cada refeição do dia")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                ForEach(MealType.allCases) { mealType in
+                    mealSlotBuilder(mealType: mealType, profile: profile)
+                }
+
+                Button {
+                    applyMetricsAndRegenerate()
+                    nutritionTab = 0
+                    if let dayCount = mealPlanService.weeklyPlan.first?.options.count {
+                        selectedOption = max(dayCount - 1, 0)
+                    }
+                } label: {
+                    Label("Salvar no Plano Semanal", systemImage: "checkmark.circle.fill")
+                }
+                .buttonStyle(PrimaryButtonStyle(isEnabled: isMetricsValid))
+                .disabled(!isMetricsValid)
+                .padding(.top, 8)
+            } else {
+                Text("Complete seus dados acima para montar o cardápio.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .padding(.vertical, 24)
+            }
+        }
+        .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+        .padding(.bottom, 24)
+        .adaptiveContentWidth()
+    }
+
+    @ViewBuilder
+    private func mealSlotBuilder(mealType: MealType, profile: UserProfile) -> some View {
+        if let lactose = mealPlanService.customMenuSelection.lactoseTolerance {
+            let sweetLevel = mealPlanService.customMenuSelection.sweetConsumption
+            let options = MealCatalog.templates(
+                for: mealType,
+                sweetLevel: sweetLevel,
+                goal: profile.goal,
+                lactoseTolerance: lactose
+            )
+            let selectedID = mealPlanService.customMenuSelection.selectedTemplateID(for: mealType)
+
+            VStack(alignment: .leading, spacing: 10) {
+            Label(mealType.rawValue, systemImage: mealType.icon)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(options) { template in
+                        let isSelected = selectedID == template.id
+                        let scaled = template.scaled(
+                            to: max(Int(Double(profile.dailyCalorieTarget) * mealType.calorieShare), 120),
+                            proteinMultiplier: profile.goal == .muscleGain ? 2 : 1
+                        )
+
+                        Button {
+                            mealPlanService.updateMealSelection(template.id, for: mealType, profile: profile)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text(template.name)
+                                        .font(.caption.weight(.bold))
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.leading)
+                                    if template.isFatLossFocused {
+                                        Image(systemName: "flame.fill")
+                                            .font(.caption2)
+                                            .foregroundStyle(.orange)
+                                    }
+                                    if template.isSweet {
+                                        Image(systemName: "birthday.cake.fill")
+                                            .font(.caption2)
+                                            .foregroundStyle(AppTheme.accentSecondary)
+                                    }
+                                    if template.containsLactose {
+                                        Image(systemName: "cup.and.saucer.fill")
+                                            .font(.caption2)
+                                            .foregroundStyle(.blue.opacity(0.8))
+                                    }
+                                }
+                                Text("\(scaled.calories) kcal")
+                                    .font(.caption2.weight(.medium))
+                                    .foregroundStyle(AppTheme.accentSecondary)
+                                Text("P:\(scaled.protein)g C:\(scaled.carbs)g")
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+                            .frame(width: 148, alignment: .leading)
+                            .padding(10)
+                            .foregroundStyle(isSelected ? .white : AppTheme.textPrimary)
+                            .background(isSelected ? AppTheme.accent : AppTheme.cardBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(isSelected ? AppTheme.accent : Color.clear, lineWidth: 2)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+            .padding()
+            .background(AppTheme.cardBackground.opacity(0.6))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        }
+    }
+
+    private func updateSweetConsumption(_ level: SweetConsumptionLevel) {
+        mealPlanService.updateSweetConsumption(level, profile: previewProfile ?? authService.currentUser)
+    }
+
+    private func updateLactoseTolerance(_ tolerance: LactoseTolerance) {
+        mealPlanService.updateLactoseTolerance(tolerance, profile: previewProfile ?? authService.currentUser)
     }
 
     private var isMetricsValid: Bool {
@@ -353,7 +616,8 @@ struct MealPlanView: View {
     }
 
     private func applyMetricsAndRegenerate() {
-        guard var user = authService.currentUser,
+        guard mealPlanService.customMenuSelection.isReadyToBuild,
+              var user = authService.currentUser,
               let weight = Double(weightText.replacingOccurrences(of: ",", with: ".")),
               let height = Double(heightText.replacingOccurrences(of: ",", with: ".")),
               let age = Int(ageText) else { return }

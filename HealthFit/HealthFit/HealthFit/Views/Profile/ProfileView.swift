@@ -42,6 +42,8 @@ struct ProfileView: View {
 
                             Spacer()
 
+                            PulsingHeartIconView(size: 44)
+
                             if profileImage != nil {
                                 Button {
                                     selectedPhotoItem = nil
@@ -68,6 +70,8 @@ struct ProfileView: View {
                             }
                         }
                         .padding(.vertical, 4)
+
+                        BiotypeIdentificationHint(biotype: user.biotype)
                     }
                     .listRowBackground(AppTheme.cardBackground)
 
@@ -108,6 +112,36 @@ struct ProfileView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
+                    }
+
+                    Section("Ícone do App") {
+                        let projectedState = AppIconInactivityService.shared.projectedIconState()
+
+                        HStack(spacing: 14) {
+                            PulsingHeartIconView(
+                                size: 40,
+                                glowColor: projectedState.glowColor
+                            )
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(projectedState.title)
+                                    .font(.subheadline.weight(.semibold))
+                                Text(projectedState.detail)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+
+                        if let nextChange = AppIconInactivityService.shared.formattedTimeUntilNextChange() {
+                            Label(nextChange, systemImage: "clock")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.accent)
+                        }
+
+                        Label("Ao abrir o app, o ícone volta ao verde.", systemImage: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.green)
                     }
 
                     Section("Sono e Hidratação") {

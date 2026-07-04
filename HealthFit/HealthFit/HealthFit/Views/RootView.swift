@@ -30,12 +30,23 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut, value: authService.isAuthenticated)
+        .onAppear {
+            AppIconInactivityService.shared.handleAppBecameActive()
+        }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active, authService.isAuthenticated {
-                wellnessService.configure(for: authService.currentUser)
-                wellnessService.checkInOnAppOpen()
-                NotificationService.shared.scheduleDailyMotivationNotifications()
-                refreshInactivityReminder()
+            switch phase {
+            case .active:
+                AppIconInactivityService.shared.handleAppBecameActive()
+                if authService.isAuthenticated {
+                    wellnessService.configure(for: authService.currentUser)
+                    wellnessService.checkInOnAppOpen()
+                    NotificationService.shared.scheduleDailyMotivationNotifications()
+                    refreshInactivityReminder()
+                }
+            case .background:
+                AppIconInactivityService.shared.handleAppEnteredBackground()
+            default:
+                break
             }
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in

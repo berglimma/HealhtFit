@@ -10,6 +10,7 @@ private struct TrainerMailDraft: Identifiable {
 
 struct WorkoutSummaryView: View {
     @EnvironmentObject var authService: AuthService
+    @EnvironmentObject var workoutStore: WorkoutStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     let session: WorkoutSession
@@ -26,6 +27,7 @@ struct WorkoutSummaryView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     summaryHeader
+                    preWorkoutSection
                     exerciseBreakdown
                     totalsSection
                     emailSection
@@ -124,7 +126,11 @@ struct WorkoutSummaryView: View {
         }
 
         let subject = WorkoutReportBuilder.emailSubject(session: session, athleteName: user.name)
-        let body = WorkoutReportBuilder.emailBody(session: session, athlete: user)
+        let body = WorkoutReportBuilder.emailBody(
+            session: session,
+            athlete: user,
+            allSessions: workoutStore.sessionHistory
+        )
 
         if MailComposeView.canSendMail {
             mailDraft = TrainerMailDraft(
@@ -198,6 +204,76 @@ struct WorkoutSummaryView: View {
         .padding()
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    @ViewBuilder
+    private var preWorkoutSection: some View {
+        if session.tookPreWorkout != nil || !preWorkoutHistory.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Pré-treino")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                if let tookPreWorkout = session.tookPreWorkout {
+                    HStack {
+                        Label("Neste treino", systemImage: "bolt.fill")
+                        Spacer()
+                        Text(tookPreWorkout ? "Sim, tomei" : "Não tomei")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(tookPreWorkout ? AppTheme.accent : AppTheme.textSecondary)
+                    }
+                }
+
+                HStack {
+                    Label("Usou pré-treino", systemImage: "checkmark.circle.fill")
+                    Spacer()
+                    Text("\(lifetimePreWorkoutSummary.usedCount)x")
+                        .font(.subheadline.weight(.semibold))
+                }
+
+                HStack {
+                    Label("Não usou", systemImage: "xmark.circle.fill")
+                    Spacer()
+                    Text("\(lifetimePreWorkoutSummary.notUsedCount)x")
+                        .font(.subheadline.weight(.semibold))
+                }
+
+                if !preWorkoutHistory.isEmpty {
+                    Divider().background(Color.white.opacity(0.1))
+                    Text("Todas as respostas")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    ForEach(preWorkoutHistory) { entry in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.workoutTitle)
+                                    .font(.caption.weight(.medium))
+                                Text(entry.date, format: .dateTime.day().month().hour().minute())
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+                            Spacer()
+                            Text(entry.tookPreWorkout ? "Sim" : "Não")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(entry.tookPreWorkout ? AppTheme.accent : AppTheme.textSecondary)
+                        }
+                    }
+                }
+            }
+            .foregroundStyle(AppTheme.textPrimary)
+            .padding()
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        }
+    }
+
+    private var preWorkoutHistory: [PreWorkoutSessionEntry] {
+        WorkoutReportBuilder.preWorkoutEntries(from: workoutStore.sessionHistory)
+    }
+
+    private var lifetimePreWorkoutSummary: PreWorkoutUsageSummary {
+        PreWorkoutUsageSummary.from(sessions: workoutStore.sessionHistory)
     }
 
     private var exerciseBreakdown: some View {

@@ -105,12 +105,7 @@ struct DashboardView: View {
                     .foregroundStyle(AppTheme.textSecondary)
             }
             Spacer()
-            Image(systemName: "flame.fill")
-                .font(.title)
-                .foregroundStyle(AppTheme.accentSecondary)
-                .padding(12)
-                .background(AppTheme.cardBackground)
-                .clipShape(Circle())
+            PulsingHeartIconView(size: DeviceLayout.isPad ? 52 : 44)
         }
     }
 

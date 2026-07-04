@@ -8,6 +8,7 @@ struct WorkoutDetailView: View {
     @State var sheet: WorkoutSheet
     @State private var showActiveWorkout = false
     @State private var showVision = false
+    @State private var showPreWorkoutPrompt = false
 
     var body: some View {
         ScrollView {
@@ -27,6 +28,21 @@ struct WorkoutDetailView: View {
         }
         .sheet(isPresented: $showVision) {
             VisionWorkoutView()
+        }
+        .confirmationDialog(
+            "Pré-treino",
+            isPresented: $showPreWorkoutPrompt,
+            titleVisibility: .visible
+        ) {
+            Button("Sim, tomei") {
+                beginWorkout(tookPreWorkout: true)
+            }
+            Button("Não tomei") {
+                beginWorkout(tookPreWorkout: false)
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Você tomou pré-treino antes deste treino? \(SupplementGuidance.preWorkoutCaffeineLimit.capitalized).")
         }
     }
 
@@ -53,14 +69,7 @@ struct WorkoutDetailView: View {
     private var actionButtons: some View {
         VStack(spacing: 12) {
             Button {
-                workoutStore.startSession(for: sheet)
-                watchConnectivity.startWorkoutOnWatch(workoutName: sheet.title)
-                let athleteName = authService.currentUser?.name ?? "Atleta"
-                NotificationService.shared.deliverWorkoutStartNotification(
-                    workoutTitle: sheet.title,
-                    athleteName: athleteName
-                )
-                showActiveWorkout = true
+                showPreWorkoutPrompt = true
             } label: {
                 Label("Iniciar Treino", systemImage: "play.fill")
             }
@@ -78,6 +87,17 @@ struct WorkoutDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
+    }
+
+    private func beginWorkout(tookPreWorkout: Bool) {
+        workoutStore.startSession(for: sheet, tookPreWorkout: tookPreWorkout)
+        watchConnectivity.startWorkoutOnWatch(workoutName: sheet.title)
+        let athleteName = authService.currentUser?.name ?? "Atleta"
+        NotificationService.shared.deliverWorkoutStartNotification(
+            workoutTitle: sheet.title,
+            athleteName: athleteName
+        )
+        showActiveWorkout = true
     }
 }
 

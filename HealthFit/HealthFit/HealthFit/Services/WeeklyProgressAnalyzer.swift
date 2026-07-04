@@ -41,6 +41,9 @@ enum WeeklyProgressAnalyzer {
             calendar: calendar
         )
         let score = calculateScore(current: currentWeek, previous: previousWeek, goal: goal)
+        let weekPreWorkout = PreWorkoutUsageSummary.from(sessions: currentSessions)
+        let lifetimePreWorkout = PreWorkoutUsageSummary.from(sessions: completedSessions)
+        let preWorkoutEntries = WorkoutReportBuilder.preWorkoutEntries(from: currentSessions)
 
         return WeeklyProgressReport(
             weekStart: currentStart,
@@ -52,7 +55,10 @@ enum WeeklyProgressAnalyzer {
             highlights: highlights,
             improvements: improvements,
             dailyWorkoutMinutes: dailyActivity,
-            overallScore: score
+            overallScore: score,
+            preWorkoutSummary: weekPreWorkout,
+            lifetimePreWorkoutSummary: lifetimePreWorkout,
+            preWorkoutEntries: preWorkoutEntries
         )
     }
 
@@ -74,7 +80,10 @@ enum WeeklyProgressAnalyzer {
                 )
             ],
             dailyWorkoutMinutes: [],
-            overallScore: 0
+            overallScore: 0,
+            preWorkoutSummary: .empty,
+            lifetimePreWorkoutSummary: .empty,
+            preWorkoutEntries: []
         )
     }
 
@@ -145,6 +154,7 @@ enum WeeklyProgressAnalyzer {
 
         let totalRest = sessions.reduce(0) { $0 + $1.totalRestSeconds } / 60
         let totalExercise = sessions.reduce(0) { $0 + $1.totalExerciseSeconds } / 60
+        let preWorkout = PreWorkoutUsageSummary.from(sessions: sessions)
 
         return WeekStats(
             workoutCount: sessions.count,
@@ -158,7 +168,9 @@ enum WeeklyProgressAnalyzer {
             meditationMinutes: meditationMinutes,
             averageHeartRate: averageHeartRate,
             totalRestMinutes: totalRest,
-            totalExerciseMinutes: totalExercise
+            totalExerciseMinutes: totalExercise,
+            preWorkoutUsedCount: preWorkout.usedCount,
+            preWorkoutNotUsedCount: preWorkout.notUsedCount
         )
     }
 
@@ -264,8 +276,12 @@ enum WeeklyProgressAnalyzer {
 
         if current.meditationMinutes >= 30 {
             highlights.append("Excelente prática de meditação: \(current.meditationMinutes) minutos na semana.")
-        } else if current.meditationSessions >= 2 {
+        } else         if current.meditationSessions >= 2 {
             highlights.append("Boa consistência na meditação: \(current.meditationSessions) sessões.")
+        }
+
+        if current.preWorkoutUsedCount > 0 {
+            highlights.append("Pré-treino usado em \(current.preWorkoutUsedCount) treino(s) esta semana.")
         }
 
         if highlights.isEmpty && current.workoutCount > 0 {

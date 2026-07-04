@@ -85,6 +85,8 @@ struct RegisterView: View {
                                 }
                             }
                         }
+
+                        BiotypeIdentificationHint(biotype: selectedBiotype)
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -164,21 +166,28 @@ struct BiotypeCard: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Image(systemName: biotype.icon)
                     .font(.title2.weight(.bold))
                     .foregroundStyle(isSelected ? .white : biotype.color)
-                    .frame(height: 28)
+                    .frame(height: 24)
 
                 Text(biotype.rawValue)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(isSelected ? .white : AppTheme.textPrimary)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2)
+                    .lineLimit(1)
                     .minimumScaleFactor(0.85)
+
+                Text(biotype.identificationGuide)
+                    .font(.caption2)
+                    .foregroundStyle(isSelected ? .white.opacity(0.9) : AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(4)
+                    .minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity, minHeight: 92)
+            .frame(maxWidth: .infinity, minHeight: 128)
             .padding(.horizontal, 6)
             .padding(.vertical, 10)
             .background(isSelected ? biotype.color : AppTheme.cardBackground)
@@ -193,6 +202,26 @@ struct BiotypeCard: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
+    }
+}
+
+struct BiotypeIdentificationHint: View {
+    let biotype: Biotype
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label("Como saber se você é \(biotype.rawValue.lowercased())", systemImage: "questionmark.circle")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(biotype.color)
+            Text(biotype.identificationGuide)
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(biotype.color.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

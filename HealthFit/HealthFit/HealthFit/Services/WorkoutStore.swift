@@ -42,11 +42,12 @@ final class WorkoutStore: ObservableObject {
         saveData()
     }
 
-    func startSession(for sheet: WorkoutSheet) {
+    func startSession(for sheet: WorkoutSheet, tookPreWorkout: Bool? = nil) {
         activeSession = WorkoutSession(
             workoutSheetId: sheet.id,
             workoutTitle: sheet.title,
-            totalExercises: sheet.exercises.count
+            totalExercises: sheet.exercises.count,
+            tookPreWorkout: tookPreWorkout
         )
         currentExerciseIndex = 0
         exerciseRecords = sheet.exercises.map {

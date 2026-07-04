@@ -16,10 +16,7 @@ struct LoginView: View {
                     Spacer()
 
                     VStack(spacing: 12) {
-                        Image(systemName: "heart.circle.fill")
-                            .font(.system(size: DeviceLayout.isPad ? 88 : 72))
-                            .foregroundStyle(AppTheme.gradientPrimary)
-                            .symbolEffect(.pulse)
+                        PulsingHeartIconView(size: DeviceLayout.isPad ? 88 : 72)
 
                         Text("HealthFit")
                             .font(.system(size: DeviceLayout.isPad ? 42 : 36, weight: .bold, design: .rounded))

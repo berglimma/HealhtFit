@@ -25,6 +25,7 @@ struct WeeklyReportView: View {
                         trendsSection
                     }
                     meditationSection
+                    preWorkoutSection
                     activityChart
                     if !report.highlights.isEmpty {
                         highlightsSection
@@ -236,6 +237,81 @@ struct WeeklyReportView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
+    }
+
+    @ViewBuilder
+    private var preWorkoutSection: some View {
+        if report.preWorkoutSummary.totalAnswered > 0 || report.lifetimePreWorkoutSummary.totalAnswered > 0 {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Pré-treino", systemImage: "bolt.fill")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.accentSecondary)
+
+                HStack(spacing: 12) {
+                    preWorkoutStatTile(
+                        value: "\(report.preWorkoutSummary.usedCount)x",
+                        label: "Com pré-treino (semana)"
+                    )
+                    preWorkoutStatTile(
+                        value: "\(report.preWorkoutSummary.notUsedCount)x",
+                        label: "Sem pré-treino (semana)"
+                    )
+                }
+
+                HStack {
+                    Label("Total histórico com pré-treino", systemImage: "chart.bar.fill")
+                        .font(.caption)
+                    Spacer()
+                    Text("\(report.lifetimePreWorkoutSummary.usedCount)x")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .foregroundStyle(AppTheme.textPrimary)
+
+                if !report.preWorkoutEntries.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Respostas desta semana")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(AppTheme.textPrimary)
+
+                        ForEach(report.preWorkoutEntries) { entry in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(entry.workoutTitle)
+                                        .font(.caption.weight(.medium))
+                                    Text(entry.date, format: .dateTime.day().month().hour().minute())
+                                        .font(.caption2)
+                                        .foregroundStyle(AppTheme.textSecondary)
+                                }
+                                Spacer()
+                                Text(entry.tookPreWorkout ? "Sim" : "Não")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(entry.tookPreWorkout ? AppTheme.accent : AppTheme.textSecondary)
+                            }
+                        }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
+    }
+
+    private func preWorkoutStatTile(value: String, label: String) -> some View {
+        VStack(spacing: 6) {
+            Text(value)
+                .font(.title3.bold())
+                .foregroundStyle(AppTheme.textPrimary)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(AppTheme.accentSecondary.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private func meditationStatTile(icon: String, value: String, label: String, color: Color) -> some View {
