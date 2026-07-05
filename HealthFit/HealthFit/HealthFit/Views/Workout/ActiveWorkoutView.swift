@@ -546,6 +546,7 @@ struct ExerciseTrackingRow: View {
 
 struct WorkoutStartMotivationOverlay: View {
     let onContinue: () -> Void
+    @State private var iconPulse = false
 
     var body: some View {
         ZStack {
@@ -556,7 +557,9 @@ struct WorkoutStartMotivationOverlay: View {
                 Image(systemName: "figure.strengthtraining.traditional")
                     .font(.system(size: 52))
                     .foregroundStyle(AppTheme.accent)
-                    .symbolEffect(.bounce, options: .repeating.speed(0.4))
+                    .scaleEffect(iconPulse ? 1.08 : 1.0)
+                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: iconPulse)
+                    .onAppear { iconPulse = true }
 
                 Text("Hora de treinar!")
                     .font(.title2.bold())
