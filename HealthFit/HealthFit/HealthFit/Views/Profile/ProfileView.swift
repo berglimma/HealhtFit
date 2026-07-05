@@ -277,7 +277,8 @@ struct ProfileView: View {
 
                     Section("Sobre") {
                         LabeledContent("App", value: "HealthFit")
-                        LabeledContent("Desenvolvedor", value: AppInfo.developerName)
+                        LabeledContent("Desenvolvedores", value: AppInfo.developerPeople)
+                        LabeledContent("Empresa", value: AppInfo.developerName)
                         Text(AppInfo.developerCredit)
                             .font(.caption)
                             .foregroundStyle(.secondary)

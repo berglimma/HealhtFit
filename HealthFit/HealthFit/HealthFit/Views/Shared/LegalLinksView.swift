@@ -5,6 +5,7 @@ struct LegalLinksView: View {
     var showsSupportLink = false
 
     @State private var presentedDocument: LegalDocument?
+    @State private var showSupport = false
 
     enum Style {
         case inline
@@ -23,6 +24,9 @@ struct LegalLinksView: View {
         .sheet(item: $presentedDocument) { document in
             LegalDocumentView(document: document)
         }
+        .sheet(isPresented: $showSupport) {
+            SupportContactView()
+        }
     }
 
     private var inlineLinks: some View {
@@ -37,9 +41,11 @@ struct LegalLinksView: View {
             .multilineTextAlignment(.center)
 
             if showsSupportLink {
-                Link("Suporte: \(AppLegalConfiguration.supportEmail)", destination: AppLegalConfiguration.supportURL)
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
+                Button("Suporte") {
+                    showSupport = true
+                }
+                .font(.caption)
+                .foregroundStyle(AppTheme.accent)
             }
         }
         .frame(maxWidth: .infinity)
@@ -50,7 +56,9 @@ struct LegalLinksView: View {
             legalRow(title: "Política de Privacidade", icon: "hand.raised", document: .privacyPolicy)
             legalRow(title: "Termos de Uso", icon: "doc.text", document: .termsOfUse)
             if showsSupportLink {
-                Link(destination: AppLegalConfiguration.supportURL) {
+                Button {
+                    showSupport = true
+                } label: {
                     Label("Suporte", systemImage: "envelope")
                 }
             }
@@ -69,6 +77,37 @@ struct LegalLinksView: View {
             presentedDocument = document
         } label: {
             Label(title, systemImage: icon)
+        }
+    }
+}
+
+struct SupportContactView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    LabeledContent("Desenvolvedores", value: AppLegalConfiguration.developerNames)
+                    LabeledContent("Empresa", value: AppLegalConfiguration.developerCompany)
+                    LabeledContent("E-mail", value: AppLegalConfiguration.supportEmail)
+                } footer: {
+                    Text("Entre em contato para dúvidas, sugestões ou problemas com o HealthFit.")
+                }
+
+                Section {
+                    Link(destination: AppLegalConfiguration.supportURL) {
+                        Label("Enviar e-mail", systemImage: "envelope.fill")
+                    }
+                }
+            }
+            .navigationTitle("Suporte")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Fechar") { dismiss() }
+                }
+            }
         }
     }
 }
