@@ -5,6 +5,7 @@ import UIKit
 struct AnimatedGIFView: UIViewRepresentable {
     let url: URL
     @Binding var loadState: ExerciseGifLoadState
+    var contentMode: UIView.ContentMode = .scaleAspectFit
 
     func makeUIView(context: Context) -> GIFContainerView {
         let view = GIFContainerView()
@@ -13,6 +14,8 @@ struct AnimatedGIFView: UIViewRepresentable {
     }
 
     func updateUIView(_ container: GIFContainerView, context: Context) {
+        container.imageView.contentMode = contentMode
+
         let taskId = url.absoluteString
 
         if context.coordinator.loadedTaskId == taskId, let image = context.coordinator.loadedImage {
@@ -76,6 +79,10 @@ struct AnimatedGIFView: UIViewRepresentable {
             return try Data(contentsOf: url)
         }
 
+        if let cached = ExerciseGifCache.shared.data(for: url) {
+            return cached
+        }
+
         var request = URLRequest(url: url)
         request.cachePolicy = .returnCacheDataElseLoad
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -84,6 +91,7 @@ struct AnimatedGIFView: UIViewRepresentable {
             throw URLError(.badServerResponse)
         }
 
+        ExerciseGifCache.shared.store(data, for: url)
         return data
     }
 }
@@ -95,7 +103,7 @@ enum ExerciseGifLoadState {
 }
 
 final class GIFContainerView: UIView {
-    private let imageView: UIImageView = {
+    let imageView: UIImageView = {
         let view = UIImageView()
         view.contentMode = .scaleAspectFit
         view.clipsToBounds = true
@@ -119,10 +127,6 @@ final class GIFContainerView: UIView {
         nil
     }
 
-    override var intrinsicContentSize: CGSize {
-        imageView.image?.size ?? super.intrinsicContentSize
-    }
-
     func setImage(_ image: UIImage?) {
         imageView.stopAnimating()
         imageView.image = image
@@ -130,7 +134,24 @@ final class GIFContainerView: UIView {
             imageView.animationRepeatCount = 0
             imageView.startAnimating()
         }
-        invalidateIntrinsicContentSize()
+    }
+}
+
+private final class ExerciseGifCache {
+    static let shared = ExerciseGifCache()
+
+    private let cache = NSCache<NSURL, NSData>()
+
+    private init() {
+        cache.countLimit = 80
+    }
+
+    func data(for url: URL) -> Data? {
+        cache.object(forKey: url as NSURL) as Data?
+    }
+
+    func store(_ data: Data, for url: URL) {
+        cache.setObject(data as NSData, forKey: url as NSURL)
     }
 }
 

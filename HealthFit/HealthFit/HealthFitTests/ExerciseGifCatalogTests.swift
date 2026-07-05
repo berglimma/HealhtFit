@@ -4,28 +4,36 @@ import XCTest
 final class ExerciseGifCatalogTests: XCTestCase {
     func testExactMatchForBenchPressGif() {
         let exercise = Exercise(name: "Supino Reto", muscleGroup: .chest)
-        let url = ExerciseGifCatalog.bundledGifURL(for: exercise)
+        let url = ExerciseGifCatalog.remoteGifURL(for: exercise)
         XCTAssertNotNil(url)
-        XCTAssertEqual(url?.lastPathComponent, "peito.gif")
+        XCTAssertTrue(url?.absoluteString.contains("barbell-bench-press.gif") == true)
+        XCTAssertTrue(url?.absoluteString.contains("jsdelivr.net") == true)
     }
 
     func testKeywordFallbackForCustomExerciseName() {
         let exercise = Exercise(name: "Supino com halteres inclinado", muscleGroup: .chest)
-        let mediaId = ExerciseGifCatalog.mediaId(forExerciseName: exercise.name, muscleGroup: exercise.muscleGroup)
-        XCTAssertEqual(mediaId, "EIeI8Vf")
+        let path = ExerciseGifCatalog.filePath(forExerciseName: exercise.name, muscleGroup: exercise.muscleGroup)
+        XCTAssertNotNil(path)
+        XCTAssertTrue(path?.contains("bench") == true || path?.contains("incline") == true)
     }
 
     func testMuscleGroupFallbackUsesGroupGif() {
         let exercise = Exercise(name: "Exercício personalizado XYZ", muscleGroup: .legs)
+        let url = ExerciseGifCatalog.remoteGifURL(for: exercise)
+        XCTAssertTrue(url?.absoluteString.contains("barbell-full-squat.gif") == true)
+    }
+
+    func testBundledFallbackStillAvailable() {
+        let exercise = Exercise(name: "Supino Reto", muscleGroup: .chest)
         let url = ExerciseGifCatalog.bundledGifURL(for: exercise)
-        XCTAssertEqual(url?.lastPathComponent, "pernas.gif")
+        XCTAssertEqual(url?.lastPathComponent, "peito.gif")
     }
 
     func testAllCatalogExercisesHaveGifMapping() {
         for (name, _) in ExerciseVideoCatalog.bundledVideos() {
             let group = inferredGroup(for: name)
-            let mediaId = ExerciseGifCatalog.mediaId(forExerciseName: name, muscleGroup: group)
-            XCTAssertNotNil(mediaId, "GIF ausente para \(name)")
+            let path = ExerciseGifCatalog.filePath(forExerciseName: name, muscleGroup: group)
+            XCTAssertNotNil(path, "GIF ausente para \(name)")
         }
     }
 
