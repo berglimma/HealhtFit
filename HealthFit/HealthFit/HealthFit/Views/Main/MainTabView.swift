@@ -29,7 +29,7 @@ struct MainTabView: View {
 
             HealthChatView()
                 .tabItem {
-                    Label("Dúvidas", systemImage: "bubble.left.and.bubble.right.fill")
+                    Label("IAssistente", systemImage: "bubble.left.and.bubble.right.fill")
                 }
                 .tag(assistantTabTag)
                 .badge(checkInService.assistantTabBadgeCount)

@@ -187,7 +187,7 @@ enum DailyMorningCheckInEngine {
     private static func farewell(for feeling: DailyMorningFeeling, name: String) -> String {
         switch feeling {
         case .great, .good:
-            return "Excelente dia pela frente, \(name)! Estarei aqui na aba Dúvidas quando precisar. Vamos com tudo! 💪"
+            return "Excelente dia pela frente, \(name)! Estarei aqui na aba IAssistente quando precisar. Vamos com tudo! 💪"
         case .tired, .stressed:
             return "Cuide-se hoje, \(name). Pequenos passos contam. Volto a te ouvir amanhã às 9h. 🌿"
         case .unmotivated, .neutral:

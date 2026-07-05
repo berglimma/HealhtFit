@@ -189,7 +189,7 @@ enum PostWorkoutCheckInEngine {
         case .great, .good:
             return "Você está evoluindo, \(name). 🏆 Orgulho do seu comprometimento com \"\(checkIn.workoutTitle)\". Descanse bem — você merece. Até o próximo treino!"
         case .neutral:
-            return "Siga firme, \(name). Um dia regular ainda é um dia vencido. Ajuste o que precisar e volte com foco. Estarei aqui na aba Dúvidas. 💪"
+            return "Siga firme, \(name). Um dia regular ainda é um dia vencido. Ajuste o que precisar e volte com foco. Estarei aqui na aba IAssistente. 💪"
         case .tired:
             return "Escute seu corpo, \(name), mas não abandone a rotina. Descanse hoje e planeje um treino mais leve em seguida. Consistência inteligente é o segredo."
         case .sore:
