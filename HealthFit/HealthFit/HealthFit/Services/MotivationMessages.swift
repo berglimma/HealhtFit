@@ -35,6 +35,10 @@ enum MotivationMessages {
         "O melhor treino é aquele que você faz. Faça o de hoje!"
     ]
 
+    static let workoutStartFocusMessage =
+        "Ótimo, vamos treinar! Escolha sua playlist favorita e vamos pra cima! " +
+        "Mesmo que esteja com alguém, treine no foco e evite conversar muito tempo! Vamos lá!"
+
     static let workoutStart: [String] = [
         "Hora de brilhar! Aqueça bem e dê o seu melhor neste treino. 🔥",
         "Treino iniciado! Foco total, técnica perfeita e muita energia!",
@@ -52,8 +56,7 @@ enum MotivationMessages {
     }
 
     static func workoutStartMessage(workoutTitle: String, athleteName: String) -> String {
-        let template = workoutStart[abs(workoutTitle.hashValue) % workoutStart.count]
-        return "\(athleteName), \(template) Treino: \(workoutTitle)."
+        "\(athleteName), \(workoutStartFocusMessage) Treino: \(workoutTitle)."
     }
 
     static func workoutEndMessage(session: WorkoutSession, athleteName: String) -> String {

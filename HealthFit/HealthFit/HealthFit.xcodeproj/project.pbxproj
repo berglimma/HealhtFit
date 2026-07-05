@@ -120,6 +120,16 @@
 		B1000114 /* DailyEveningCheckInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000114 /* DailyEveningCheckInService.swift */; };
 		B1000115 /* SupplementationGuideEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000115 /* SupplementationGuideEngine.swift */; };
 		B1000116 /* AssistantInactivityFollowUpEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000116 /* AssistantInactivityFollowUpEngine.swift */; };
+		B1000117 /* AppLegalConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000117 /* AppLegalConfiguration.swift */; };
+		B1000118 /* LegalLinksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000118 /* LegalLinksView.swift */; };
+		B1000119 /* DeleteAccountSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000119 /* DeleteAccountSheet.swift */; };
+		B1000120 /* UserDataCleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000120 /* UserDataCleaner.swift */; };
+		B1000121 /* AccountDeletionError.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000121 /* AccountDeletionError.swift */; };
+		B1000122 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F1000122 /* PrivacyInfo.xcprivacy */; };
+		B1000123 /* ShoppingReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000123 /* ShoppingReportBuilder.swift */; };
+		B1000124 /* privacy-policy.html in Resources */ = {isa = PBXBuildFile; fileRef = F1000124 /* privacy-policy.html */; };
+		B1000125 /* terms-of-use.html in Resources */ = {isa = PBXBuildFile; fileRef = F1000125 /* terms-of-use.html */; };
+		B1000126 /* LegalDocumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000126 /* LegalDocumentView.swift */; };
 		B1000092 /* peito.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000092 /* peito.mp4 */; };
 		B1000093 /* costas.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000093 /* costas.mp4 */; };
 		B1000094 /* pernas.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000094 /* pernas.mp4 */; };
@@ -273,6 +283,16 @@
 		F1000114 /* DailyEveningCheckInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyEveningCheckInService.swift; sourceTree = "<group>"; };
 		F1000115 /* SupplementationGuideEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementationGuideEngine.swift; sourceTree = "<group>"; };
 		F1000116 /* AssistantInactivityFollowUpEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantInactivityFollowUpEngine.swift; sourceTree = "<group>"; };
+		F1000117 /* AppLegalConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLegalConfiguration.swift; sourceTree = "<group>"; };
+		F1000118 /* LegalLinksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalLinksView.swift; sourceTree = "<group>"; };
+		F1000119 /* DeleteAccountSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteAccountSheet.swift; sourceTree = "<group>"; };
+		F1000120 /* UserDataCleaner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDataCleaner.swift; sourceTree = "<group>"; };
+		F1000121 /* AccountDeletionError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDeletionError.swift; sourceTree = "<group>"; };
+		F1000122 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		F1000123 /* ShoppingReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingReportBuilder.swift; sourceTree = "<group>"; };
+		F1000124 /* privacy-policy.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "privacy-policy.html"; sourceTree = "<group>"; };
+		F1000125 /* terms-of-use.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "terms-of-use.html"; sourceTree = "<group>"; };
+		F1000126 /* LegalDocumentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocumentView.swift; sourceTree = "<group>"; };
 		F1000092 /* peito.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = peito.mp4; sourceTree = "<group>"; };
 		F1000093 /* costas.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = costas.mp4; sourceTree = "<group>"; };
 		F1000094 /* pernas.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = pernas.mp4; sourceTree = "<group>"; };
@@ -357,13 +377,16 @@
 				G1000005 /* Models */,
 				G1000006 /* Services */,
 				G1000007 /* Theme */,
+				G1000094 /* Configuration */,
 				G1000008 /* Views */,
 				F1000029 /* Assets.xcassets */,
 				F1000036 /* HealthFit.entitlements */,
 				F1000037 /* Info.plist */,
+				F1000122 /* PrivacyInfo.xcprivacy */,
 				F1000074 /* GoogleService-Info.plist */,
 				G1000092 /* ExerciseVideos */,
 				G1000093 /* ExerciseGifs */,
+				G1000095 /* Legal */,
 			);
 			path = HealthFit;
 			sourceTree = "<group>";
@@ -397,6 +420,23 @@
 				F1000112 /* corpo_inteiro.gif */,
 			);
 			path = Resources/ExerciseGifs;
+			sourceTree = "<group>";
+		};
+		G1000095 /* Legal */ = {
+			isa = PBXGroup;
+			children = (
+				F1000124 /* privacy-policy.html */,
+				F1000125 /* terms-of-use.html */,
+			);
+			path = Resources/Legal;
+			sourceTree = "<group>";
+		};
+		G1000094 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				F1000117 /* AppLegalConfiguration.swift */,
+			);
+			path = Configuration;
 			sourceTree = "<group>";
 		};
 		G1000003 /* HealthFitWatch */ = {
@@ -466,6 +506,9 @@
 				F1000114 /* DailyEveningCheckInService.swift */,
 				F1000115 /* SupplementationGuideEngine.swift */,
 				F1000116 /* AssistantInactivityFollowUpEngine.swift */,
+				F1000120 /* UserDataCleaner.swift */,
+				F1000121 /* AccountDeletionError.swift */,
+				F1000123 /* ShoppingReportBuilder.swift */,
 				F1000062 /* WelcomeMotivationService.swift */,
 				F1000064 /* MarathonReportBuilder.swift */,
 				F1000083 /* ExerciseVideoRepository.swift */,
@@ -584,6 +627,7 @@
 			isa = PBXGroup;
 			children = (
 				F1000028 /* ProfileView.swift */,
+				F1000119 /* DeleteAccountSheet.swift */,
 			);
 			path = Profile;
 			sourceTree = "<group>";
@@ -603,6 +647,8 @@
 				F1000055 /* DailyWellnessCheckInView.swift */,
 				F1000058 /* PulsingHeartIconView.swift */,
 				F1000063 /* WelcomeMotivationView.swift */,
+				F1000118 /* LegalLinksView.swift */,
+				F1000126 /* LegalDocumentView.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -788,6 +834,7 @@
 			files = (
 				B1000029 /* Assets.xcassets in Resources */,
 				B1000074 /* GoogleService-Info.plist in Resources */,
+				B1000122 /* PrivacyInfo.xcprivacy in Resources */,
 				B1000103 /* peito.gif in Resources */,
 				B1000104 /* triceps.gif in Resources */,
 				B1000105 /* costas.gif in Resources */,
@@ -805,6 +852,8 @@
 				B1000096 /* bracos.mp4 in Resources */,
 				B1000097 /* abdomen.mp4 in Resources */,
 				B1000098 /* corpo_inteiro.mp4 in Resources */,
+				B1000124 /* privacy-policy.html in Resources */,
+				B1000125 /* terms-of-use.html in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -904,6 +953,13 @@
 				B1000114 /* DailyEveningCheckInService.swift in Sources */,
 				B1000115 /* SupplementationGuideEngine.swift in Sources */,
 				B1000116 /* AssistantInactivityFollowUpEngine.swift in Sources */,
+				B1000117 /* AppLegalConfiguration.swift in Sources */,
+				B1000118 /* LegalLinksView.swift in Sources */,
+				B1000126 /* LegalDocumentView.swift in Sources */,
+				B1000119 /* DeleteAccountSheet.swift in Sources */,
+				B1000120 /* UserDataCleaner.swift in Sources */,
+				B1000121 /* AccountDeletionError.swift in Sources */,
+				B1000123 /* ShoppingReportBuilder.swift in Sources */,
 				B1000087 /* ExerciseVideoRepository.swift in Sources */,
 				B1000073 /* ForgotPasswordView.swift in Sources */,
 				B1000075 /* GoogleServiceInfo.swift in Sources */,

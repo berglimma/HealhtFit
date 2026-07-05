@@ -6,6 +6,8 @@ struct AnimatedGIFView: UIViewRepresentable {
     let url: URL
     @Binding var loadState: ExerciseGifLoadState
     var contentMode: UIView.ContentMode = .scaleAspectFit
+    var loopsBeforeCompletion: Int = 1
+    var onAnimationLoopFinished: (() -> Void)?
 
     func makeUIView(context: Context) -> GIFContainerView {
         let view = GIFContainerView()
@@ -20,6 +22,11 @@ struct AnimatedGIFView: UIViewRepresentable {
 
         if context.coordinator.loadedTaskId == taskId, let image = context.coordinator.loadedImage {
             container.setImage(image)
+            context.coordinator.scheduleLoopCompletion(
+                for: image,
+                loops: loopsBeforeCompletion,
+                handler: onAnimationLoopFinished
+            )
             if loadState != .loaded {
                 loadState = .loaded
             }
@@ -47,6 +54,11 @@ struct AnimatedGIFView: UIViewRepresentable {
                     context.coordinator.loadedTaskId = taskId
                     context.coordinator.loadedImage = image
                     container.setImage(image)
+                    context.coordinator.scheduleLoopCompletion(
+                        for: image,
+                        loops: loopsBeforeCompletion,
+                        handler: onAnimationLoopFinished
+                    )
                     loadState = image == nil ? .failed : .loaded
                 }
             } catch {
@@ -68,9 +80,31 @@ struct AnimatedGIFView: UIViewRepresentable {
         var currentTaskId: String?
         var loadedTaskId: String?
         var loadedImage: UIImage?
+        private var loopWorkItem: DispatchWorkItem?
 
         deinit {
             loadTask?.cancel()
+            loopWorkItem?.cancel()
+        }
+
+        func scheduleLoopCompletion(
+            for image: UIImage?,
+            loops: Int,
+            handler: (() -> Void)?
+        ) {
+            loopWorkItem?.cancel()
+            guard let handler, loops > 0 else { return }
+
+            let duration: TimeInterval
+            if let images = image?.images, images.count > 1 {
+                duration = max(image?.duration ?? 0.1, 0.1) * Double(loops)
+            } else {
+                duration = 2.5
+            }
+
+            let work = DispatchWorkItem { handler() }
+            loopWorkItem = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: work)
         }
     }
 

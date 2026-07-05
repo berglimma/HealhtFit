@@ -1,0 +1,22 @@
+HealthFit — Seu personal trainer inteligente
+
+Treine com inteligência, acompanhe sua evolução e cuide da sua saúde em um só lugar.
+
+RECURSOS PRINCIPAIS
+• Treinos personalizados por biotipo e objetivo (hipertrofia, emagrecimento, manutenção)
+• GIFs demonstrativos para cada exercício
+• IAssistente com check-ins matinais e noturnos, dicas de suplementação e motivação diária
+• Plano alimentar semanal com lista de compras
+• Integração com Apple Health (frequência cardíaca, calorias, passos)
+• Cronômetro de descanso entre séries
+• Relatório semanal de progresso
+• Apple Watch companion
+• Notificações de água, treino e descanso
+
+PARA QUEM É
+Atletas iniciantes e intermediários que querem treinar com orientação, registrar evolução e manter consistência — com ou sem personal trainer.
+
+IMPORTANTE
+O HealthFit oferece orientação informativa. Não substitui avaliação médica ou acompanhamento profissional. Consulte um médico antes de iniciar qualquer programa de exercícios.
+
+Desenvolvido por BLSwift Solutions LTDA.

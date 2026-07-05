@@ -12,9 +12,10 @@ struct RegisterView: View {
     @State private var confirmPassword = ""
     @State private var selectedBiotype: Biotype = .mesomorph
     @State private var selectedGoal: FitnessGoal = .muscleGain
+    @State private var acceptedTerms = false
     
     private var isValid: Bool {
-        !name.isEmpty && email.contains("@") && password.count >= 6 && password == confirmPassword
+        !name.isEmpty && email.contains("@") && password.count >= 6 && password == confirmPassword && acceptedTerms
     }
     
     var body: some View {
@@ -113,6 +114,16 @@ struct RegisterView: View {
                             .font(.caption)
                             .foregroundStyle(.red)
                     }
+
+                    Toggle(isOn: $acceptedTerms) {
+                        Text("Li e aceito os Termos de Uso e a Política de Privacidade")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    .toggleStyle(.switch)
+                    .tint(AppTheme.accent)
+
+                    LegalLinksView()
                     
             Button("Cadastrar") {
                         Task {

@@ -14,6 +14,9 @@ struct ActiveWorkoutView: View {
     @State private var finishedSession: WorkoutSession?
     @State private var workoutElapsedSeconds = 0
     @State private var isFinishing = false
+    @State private var isShowingExerciseDemo = true
+    @State private var demoExerciseId: UUID?
+    @State private var showWorkoutStartMotivation = true
 
     private let workoutClock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -69,6 +72,12 @@ struct ActiveWorkoutView: View {
                     RestTimerOverlay()
                         .allowsHitTesting(true)
                 }
+
+                if showWorkoutStartMotivation {
+                    WorkoutStartMotivationOverlay {
+                        showWorkoutStartMotivation = false
+                    }
+                }
             }
             .navigationTitle(sheet.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -86,7 +95,15 @@ struct ActiveWorkoutView: View {
             timerService.onRestOvertime = { exerciseName in
                 watchConnectivity.sendRestOvertimeAlert(exerciseName: exerciseName)
             }
+            prepareDemoForCurrentExercise(force: true)
+            syncWatchWorkoutState()
             updateWorkoutElapsed()
+        }
+        .onChange(of: workoutStore.currentExerciseIndex) { _, _ in
+            prepareDemoForCurrentExercise(force: true)
+        }
+        .onChange(of: workoutStore.currentExercise?.id) { _, _ in
+            prepareDemoForCurrentExercise(force: true)
         }
         .onChange(of: timerService.isRunning) { _, isResting in
             workoutStore.setExerciseTimerPaused(isResting)
@@ -144,96 +161,185 @@ struct ActiveWorkoutView: View {
         Group {
             if let exercise = workoutStore.currentExercise,
                let record = workoutStore.exerciseRecords.first(where: { $0.exerciseId == exercise.id }) {
-                VStack(spacing: 16) {
-                    Text("Exercício Atual")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.textSecondary)
+                if isShowingExerciseDemo && demoExerciseId == exercise.id {
+                    exerciseDemoCard(for: exercise)
+                } else {
+                    exerciseExecutionCard(for: exercise, record: record)
+                }
+            }
+        }
+    }
 
-                    Text(exercise.name)
-                        .font(.title.bold())
-                        .foregroundStyle(AppTheme.textPrimary)
+    private func exerciseDemoCard(for exercise: Exercise) -> some View {
+        VStack(spacing: 16) {
+            Text("Assista a demonstração")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
 
-                    ExerciseExecutionGuideView(steps: exercise.executionGuide, exercise: exercise, compact: true)
+            Text(exercise.name)
+                .font(.title.bold())
+                .foregroundStyle(AppTheme.textPrimary)
 
-                    HStack(spacing: 8) {
-                        Image(systemName: timerService.isRunning ? "pause.circle.fill" : "stopwatch.fill")
-                            .foregroundStyle(timerService.isRunning ? .orange : AppTheme.accent)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(DurationFormatting.format(seconds: record.elapsedSeconds))
-                                .font(.system(size: 28, weight: .bold, design: .monospaced))
-                                .foregroundStyle(timerService.isRunning ? .orange : AppTheme.accent)
-                            if timerService.isRunning {
-                                Text("Cronômetro pausado")
-                                    .font(.caption2)
-                                    .foregroundStyle(.orange)
-                            }
-                        }
-                    }
+            ExerciseDemoGifView(
+                exercise: exercise,
+                compact: false,
+                autoAdvanceAfterOneLoop: true,
+                onDemoFinished: {
+                    beginCurrentExercise(exercise)
+                }
+            )
 
-                    HStack(spacing: 24) {
-                        VStack {
-                            Text("\(completedSets[exercise.id, default: 0])/\(exercise.sets)")
-                                .font(.title2.bold())
-                            Text("Séries")
-                                .font(.caption)
-                        }
-                        VStack {
-                            Text("\(exercise.reps)")
-                                .font(.title2.bold())
-                            Text("Reps")
-                                .font(.caption)
-                        }
-                        if let weight = exercise.weight {
-                            VStack {
-                                Text("\(Int(weight))")
-                                    .font(.title2.bold())
-                                Text("kg")
-                                    .font(.caption)
-                            }
-                        }
-                    }
-                    .foregroundStyle(AppTheme.textPrimary)
+            Button {
+                beginCurrentExercise(exercise)
+            } label: {
+                Label("Começar exercício", systemImage: "play.fill")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(AppTheme.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
 
-                    HStack(spacing: 12) {
-                        Button {
-                            completeSet(for: exercise)
-                        } label: {
-                            Label("Série Completa", systemImage: "checkmark.circle.fill")
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(AppTheme.accent)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
+            Text("A demonstração avança automaticamente após um ciclo do GIF.")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.5))
+    }
 
-                        Button {
-                            startRest(for: exercise)
-                        } label: {
-                            Image(systemName: "timer")
-                                .font(.title2)
-                                .foregroundStyle(AppTheme.accent)
-                                .frame(width: 50, height: 50)
-                                .background(AppTheme.cardBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                    }
+    private func exerciseExecutionCard(for exercise: Exercise, record: ExerciseSessionRecord) -> some View {
+        VStack(spacing: 16) {
+            Text("Exercício Atual")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
 
-                    Button {
-                        markExerciseComplete(exercise)
-                    } label: {
-                        Label("Concluir Exercício", systemImage: "flag.checkered")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(AppTheme.accent)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(AppTheme.accent.opacity(0.15))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+            Text(exercise.name)
+                .font(.title.bold())
+                .foregroundStyle(AppTheme.textPrimary)
+
+            ExerciseExecutionGuideView(
+                steps: exercise.executionGuide,
+                exercise: exercise,
+                compact: true,
+                showsDemo: false
+            )
+
+            HStack(spacing: 8) {
+                Image(systemName: timerService.isRunning ? "pause.circle.fill" : "stopwatch.fill")
+                    .foregroundStyle(timerService.isRunning ? .orange : AppTheme.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(DurationFormatting.format(seconds: record.elapsedSeconds))
+                        .font(.system(size: 28, weight: .bold, design: .monospaced))
+                        .foregroundStyle(timerService.isRunning ? .orange : AppTheme.accent)
+                    if timerService.isRunning {
+                        Text("Cronômetro pausado")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
                     }
                 }
-                .padding()
-                .background(AppTheme.cardBackground.opacity(0.5))
             }
+
+            HStack(spacing: 24) {
+                VStack {
+                    Text("\(completedSets[exercise.id, default: 0])/\(exercise.sets)")
+                        .font(.title2.bold())
+                    Text("Séries")
+                        .font(.caption)
+                }
+                VStack {
+                    Text("\(exercise.reps)")
+                        .font(.title2.bold())
+                    Text("Reps")
+                        .font(.caption)
+                }
+                if let weight = exercise.weight {
+                    VStack {
+                        Text("\(Int(weight))")
+                            .font(.title2.bold())
+                        Text("kg")
+                            .font(.caption)
+                    }
+                }
+            }
+            .foregroundStyle(AppTheme.textPrimary)
+
+            HStack(spacing: 12) {
+                Button {
+                    completeSet(for: exercise)
+                } label: {
+                    Label("Série Completa", systemImage: "checkmark.circle.fill")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(AppTheme.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                Button {
+                    startRest(for: exercise)
+                } label: {
+                    Image(systemName: "timer")
+                        .font(.title2)
+                        .foregroundStyle(AppTheme.accent)
+                        .frame(width: 50, height: 50)
+                        .background(AppTheme.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+
+            Button {
+                markExerciseComplete(exercise)
+            } label: {
+                Label("Concluir Exercício", systemImage: "flag.checkered")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(AppTheme.accent.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.5))
+    }
+
+    private func prepareDemoForCurrentExercise(force: Bool) {
+        guard let exercise = workoutStore.currentExercise else { return }
+        guard force || demoExerciseId != exercise.id else { return }
+        demoExerciseId = exercise.id
+        isShowingExerciseDemo = true
+        workoutStore.setExerciseTimerPaused(true)
+    }
+
+    private func beginCurrentExercise(_ exercise: Exercise) {
+        guard demoExerciseId == exercise.id else { return }
+        isShowingExerciseDemo = false
+        workoutStore.setExerciseTimerPaused(false)
+        syncWatchWorkoutState()
+    }
+
+    private func syncWatchWorkoutState() {
+        guard let session = workoutStore.activeSession else { return }
+        let exerciseName = workoutStore.currentExercise?.name ?? ""
+        let exerciseElapsed = workoutStore.exerciseRecords
+            .first(where: { $0.exerciseId == workoutStore.currentExercise?.id })?
+            .elapsedSeconds ?? 0
+
+        if !watchConnectivity.isWorkoutActiveOnWatch {
+            watchConnectivity.startWorkoutOnWatch(
+                workoutName: session.workoutTitle,
+                exerciseName: exerciseName
+            )
+        } else {
+            watchConnectivity.syncWorkoutProgress(
+                workoutElapsedSeconds: workoutElapsedSeconds,
+                exerciseName: exerciseName,
+                exerciseElapsedSeconds: exerciseElapsed
+            )
         }
     }
 
@@ -311,6 +417,8 @@ struct ActiveWorkoutView: View {
     private func markExerciseComplete(_ exercise: Exercise) {
         guard let index = sheet.exercises.firstIndex(where: { $0.id == exercise.id }) else { return }
         workoutStore.markExerciseCompleted(at: index)
+        prepareDemoForCurrentExercise(force: true)
+        syncWatchWorkoutState()
     }
 
     private func updateWorkoutElapsed() {
@@ -433,6 +541,48 @@ struct ExerciseTrackingRow: View {
     private var statusColor: Color {
         if isCompleted || isCurrent { return AppTheme.accent }
         return AppTheme.textSecondary
+    }
+}
+
+struct WorkoutStartMotivationOverlay: View {
+    let onContinue: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.55)
+                .ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                Image(systemName: "figure.strengthtraining.traditional")
+                    .font(.system(size: 52))
+                    .foregroundStyle(AppTheme.accent)
+                    .symbolEffect(.bounce, options: .repeating.speed(0.4))
+
+                Text("Hora de treinar!")
+                    .font(.title2.bold())
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                Text(MotivationMessages.workoutStartFocusMessage)
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button(action: onContinue) {
+                    Label("Vamos lá!", systemImage: "play.fill")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(AppTheme.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .padding(28)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .padding(.horizontal, 24)
+        }
     }
 }
 

@@ -61,6 +61,11 @@ final class DailyEveningCheckInService: ObservableObject {
         PostWorkoutCheckInService.shared.refreshAssistantBadge()
     }
 
+    func resetForAccountDeletion() {
+        state = nil
+        UserDefaults.standard.removeObject(forKey: storageKey)
+    }
+
     private func notifyIfNeeded() {
         if !PostWorkoutCheckInService.shared.isAssistantTabActive {
             PostWorkoutCheckInService.shared.notifyAssistantMessagePending()

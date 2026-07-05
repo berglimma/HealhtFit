@@ -3,6 +3,8 @@ import SwiftUI
 struct ExerciseDemoGifView: View {
     let exercise: Exercise
     var compact: Bool = false
+    var autoAdvanceAfterOneLoop: Bool = false
+    var onDemoFinished: (() -> Void)?
 
     @State private var loadState: ExerciseGifLoadState = .loading
     @State private var activeURL: URL?
@@ -52,9 +54,15 @@ struct ExerciseDemoGifView: View {
                 )
 
                 if let activeURL {
-                    AnimatedGIFView(url: activeURL, loadState: $loadState, contentMode: .scaleAspectFit)
-                        .id(activeURL)
-                        .opacity(loadState == .loaded ? 1 : 0)
+                    AnimatedGIFView(
+                        url: activeURL,
+                        loadState: $loadState,
+                        contentMode: .scaleAspectFit,
+                        loopsBeforeCompletion: autoAdvanceAfterOneLoop ? 1 : 0,
+                        onAnimationLoopFinished: autoAdvanceAfterOneLoop ? onDemoFinished : nil
+                    )
+                    .id("\(exercise.id.uuidString)-\(activeURL.absoluteString)")
+                    .opacity(loadState == .loaded ? 1 : 0)
                 }
 
                 if loadState == .loading {
@@ -82,7 +90,10 @@ struct ExerciseDemoGifView: View {
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .onAppear {
-            activeURL = primaryURL ?? fallbackURL
+            reloadGIF()
+        }
+        .onChange(of: exercise.id) { _, _ in
+            reloadGIF()
         }
         .onChange(of: loadState) { _, newState in
             guard newState == .failed,
@@ -92,6 +103,11 @@ struct ExerciseDemoGifView: View {
             activeURL = fallback
             loadState = .loading
         }
+    }
+
+    private func reloadGIF() {
+        loadState = .loading
+        activeURL = primaryURL ?? fallbackURL
     }
 
     private var unavailableContent: some View {

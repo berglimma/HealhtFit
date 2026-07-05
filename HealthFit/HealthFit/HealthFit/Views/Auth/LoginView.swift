@@ -120,6 +120,10 @@ struct LoginView: View {
                     .frame(maxWidth: .infinity)
 
                     Spacer()
+
+                    LegalLinksView()
+                        .padding(.horizontal, AppTheme.padding)
+                        .padding(.bottom, 8)
                     
                     DeveloperCreditView()
                         .padding(.horizontal, AppTheme.padding)

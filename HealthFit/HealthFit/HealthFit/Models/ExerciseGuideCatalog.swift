@@ -487,12 +487,13 @@ struct ExerciseExecutionGuideView: View {
     let steps: [String]
     var exercise: Exercise? = nil
     var compact: Bool = false
+    var showsDemo: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: compact ? 10 : 12) {
             guideSection
 
-            if let exercise {
+            if showsDemo, let exercise {
                 ExerciseDemoGifView(exercise: exercise, compact: compact)
             }
         }

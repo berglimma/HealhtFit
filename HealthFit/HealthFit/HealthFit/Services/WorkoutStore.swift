@@ -20,6 +20,17 @@ final class WorkoutStore: ObservableObject {
         cloudUserId = userId
     }
 
+    func clearAllLocalData() {
+        activeSession = nil
+        currentExerciseIndex = 0
+        exerciseRecords = []
+        sessionHistory = []
+        workoutSheets = []
+        cloudUserId = nil
+        UserDefaults.standard.removeObject(forKey: storageKey)
+        UserDefaults.standard.removeObject(forKey: historyKey)
+    }
+
     func loadCloudHistory(userId: String) async {
         guard WorkoutFirestoreService.isAvailable else { return }
 

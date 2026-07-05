@@ -55,6 +55,11 @@ final class DailyMorningCheckInService: ObservableObject {
         PostWorkoutCheckInService.shared.refreshAssistantBadge()
     }
 
+    func resetForAccountDeletion() {
+        state = nil
+        UserDefaults.standard.removeObject(forKey: storageKey)
+    }
+
     private func save(_ state: DailyMorningCheckInState?) {
         guard let state else {
             UserDefaults.standard.removeObject(forKey: storageKey)

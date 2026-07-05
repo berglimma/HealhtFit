@@ -18,6 +18,21 @@ final class MealPlanService: ObservableObject {
 
     @Published private(set) var purchaseStats: [ShoppingPurchaseStat] = []
 
+    func clearAllLocalData() {
+        weeklyPlan = []
+        shoppingList = []
+        basalMetabolicRate = 0
+        dailyCalorieTarget = 0
+        estimatedTDEE = 0
+        caloricDeficit = 0
+        customMenuSelection = .default
+        purchaseStats = []
+        UserDefaults.standard.removeObject(forKey: planKey)
+        UserDefaults.standard.removeObject(forKey: shoppingKey)
+        UserDefaults.standard.removeObject(forKey: customMenuKey)
+        UserDefaults.standard.removeObject(forKey: purchaseStatsKey)
+    }
+
     func generatePlan(for profile: UserProfile) {
         guard customMenuSelection.isReadyToBuild else { return }
 
@@ -186,6 +201,20 @@ final class MealPlanService: ObservableObject {
         savePurchaseStats()
     }
 
+    func removePurchaseStat(_ stat: ShoppingPurchaseStat) {
+        purchaseStats.removeAll { $0.normalizedName == stat.normalizedName }
+        savePurchaseStats()
+    }
+
+    func buildWeeklyShoppingReport(referenceDate: Date = .now) -> WeeklyShoppingReport {
+        ShoppingReportBuilder.build(
+            shoppingList: shoppingList,
+            purchaseStats: purchaseStats,
+            energyDrinksPerWeek: customMenuSelection.energyDrinksPerWeek,
+            referenceDate: referenceDate
+        )
+    }
+
     func addCatalogItem(_ catalogItem: ShoppingCatalogItem) {
         guard !containsShoppingItem(named: catalogItem.name) else { return }
 
@@ -200,6 +229,31 @@ final class MealPlanService: ObservableObject {
         )
         shoppingList.sort { $0.category.rawValue < $1.category.rawValue }
         saveData()
+    }
+
+    @discardableResult
+    func addCustomShoppingItem(
+        name: String,
+        quantity: String = "1 un",
+        category: ShoppingCategory
+    ) -> Bool {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return false }
+        guard !containsShoppingItem(named: trimmedName) else { return false }
+
+        let trimmedQuantity = quantity.trimmingCharacters(in: .whitespacesAndNewlines)
+        let weekStart = Calendar.current.startOfDay(for: .now)
+        shoppingList.append(
+            ShoppingItem(
+                name: trimmedName,
+                quantity: trimmedQuantity.isEmpty ? "1 un" : trimmedQuantity,
+                category: category,
+                weekStartDate: weekStart
+            )
+        )
+        shoppingList.sort { $0.category.rawValue < $1.category.rawValue }
+        saveData()
+        return true
     }
 
     func containsShoppingItem(named name: String) -> Bool {

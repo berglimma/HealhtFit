@@ -120,6 +120,14 @@ final class AppIconInactivityService {
         NotificationService.shared.cancelAppUsageInactivityReminder()
     }
 
+    func resetForAccountDeletion() {
+        stopIconPulse()
+        pulseFrameIndex = 0
+        applyIcon(.normal, pulseFrame: 0)
+        UserDefaults.standard.removeObject(forKey: lastSessionEndKey)
+        UserDefaults.standard.removeObject(forKey: brokenAlertSentKey)
+    }
+
     /// Ao sair do app: inicia contagem e pulsação do ícone.
     func handleAppEnteredBackground() {
         let now = Date.now

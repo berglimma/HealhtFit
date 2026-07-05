@@ -76,4 +76,17 @@ enum WorkoutFirestoreService {
         }
         return try? decoder.decode(WorkoutSession.self, from: payload)
     }
+
+    static func deleteAllUserData(userId: String) async throws {
+        guard isAvailable else { return }
+
+        let userDocument = db.collection("users").document(userId)
+        let sessions = try await userDocument.collection("workoutSessions").getDocuments()
+
+        for document in sessions.documents {
+            try await document.reference.delete()
+        }
+
+        try await userDocument.delete()
+    }
 }

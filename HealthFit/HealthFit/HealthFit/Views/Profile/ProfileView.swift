@@ -11,6 +11,7 @@ struct ProfileView: View {
     @EnvironmentObject var exerciseVideoRepository: ExerciseVideoRepository
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showLogoutAlert = false
+    @State private var showDeleteAccountSheet = false
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var trainerName = ""
     @State private var trainerEmail = ""
@@ -282,9 +283,17 @@ struct ProfileView: View {
                             .foregroundStyle(.secondary)
                     }
 
+                    Section("Legal") {
+                        LegalLinksView(style: .list, showsSupportLink: true)
+                    }
+
                     Section {
                         Button("Sair da Conta", role: .destructive) {
                             showLogoutAlert = true
+                        }
+
+                        Button("Excluir Conta", role: .destructive) {
+                            showDeleteAccountSheet = true
                         }
                     }
                 }
@@ -320,6 +329,12 @@ struct ProfileView: View {
                 Button("Sair", role: .destructive) {
                     authService.logout()
                 }
+            }
+            .sheet(isPresented: $showDeleteAccountSheet) {
+                DeleteAccountSheet(
+                    requiresPassword: authService.usesPasswordProvider,
+                    requiresAppleReauthentication: authService.usesAppleProvider
+                )
             }
         }
     }

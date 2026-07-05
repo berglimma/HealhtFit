@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import UIKit
 import AuthenticationServices
+import FirebaseAuth
 
 @MainActor
 final class AuthService: ObservableObject {
@@ -169,6 +170,87 @@ final class AuthService: ObservableObject {
         clearLocalSession()
     }
 
+    func deleteAccount(
+        password: String?,
+        workoutStore: WorkoutStore,
+        mealPlanService: MealPlanService,
+        wellnessService: DailyWellnessService,
+        skipReauthentication: Bool = false
+    ) async -> Bool {
+        guard ensureFirebaseReady(), let user = currentUser else {
+            errorMessage = "Nenhuma conta ativa encontrada."
+            return false
+        }
+
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            if !skipReauthentication {
+                try await reauthenticateForDeletion(password: password)
+            }
+            try await deleteRemoteData(userId: user.id)
+            purgeLocalData(
+                uid: user.id,
+                email: user.email,
+                workoutStore: workoutStore,
+                mealPlanService: mealPlanService,
+                wellnessService: wellnessService
+            )
+            try await FirebaseAuthProvider.deleteCurrentUser()
+            clearLocalSession()
+            isLoading = false
+            return true
+        } catch {
+            errorMessage = AuthErrorMapper.message(for: error)
+            isLoading = false
+            return false
+        }
+    }
+
+    func reauthenticateWithApple(result: Result<ASAuthorization, Error>, rawNonce: String) async -> Bool {
+        guard ensureFirebaseReady() else { return false }
+
+        switch result {
+        case .failure(let error):
+            let nsError = error as NSError
+            if nsError.domain == ASAuthorizationError.errorDomain,
+               nsError.code == ASAuthorizationError.canceled.rawValue {
+                return false
+            }
+            errorMessage = AuthErrorMapper.message(for: error)
+            return false
+        case .success(let authorization):
+            isLoading = true
+            errorMessage = nil
+            do {
+                try await SocialSignInService.reauthenticateWithApple(
+                    authorization: authorization,
+                    rawNonce: rawNonce
+                )
+                isLoading = false
+                return true
+            } catch let error as SocialSignInError where error == .cancelled {
+                isLoading = false
+                return false
+            } catch {
+                errorMessage = AuthErrorMapper.message(for: error)
+                isLoading = false
+                return false
+            }
+        }
+    }
+
+    var usesPasswordProvider: Bool {
+        guard FirebaseBootstrap.isConfigured else { return false }
+        let provider = FirebaseAuthProvider.primarySignInProvider
+        return provider == EmailAuthProviderID || provider == nil
+    }
+
+    var usesAppleProvider: Bool {
+        FirebaseAuthProvider.primarySignInProvider == "apple.com"
+    }
+
     func updateProfile(_ profile: UserProfile) {
         currentUser = profile
         saveCachedProfile(profile)
@@ -314,6 +396,66 @@ final class AuthService: ObservableObject {
             return false
         }
         return true
+    }
+
+    private func reauthenticateForDeletion(password: String?) async throws {
+        guard let provider = FirebaseAuthProvider.primarySignInProvider else {
+            if let email = currentUser?.email, let password, !password.isEmpty {
+                try await FirebaseAuthProvider.reauthenticate(email: email, password: password)
+            }
+            return
+        }
+
+        switch provider {
+        case EmailAuthProviderID:
+            guard let email = currentUser?.email,
+                  let password,
+                  !password.isEmpty else {
+                throw NSError(
+                    domain: AuthErrorDomain,
+                    code: AuthErrorCode.requiresRecentLogin.rawValue
+                )
+            }
+            try await FirebaseAuthProvider.reauthenticate(email: email, password: password)
+        case "google.com":
+            try await SocialSignInService.reauthenticateWithGoogle()
+        case "apple.com":
+            throw AccountDeletionError.appleReauthenticationRequired
+        default:
+            if let email = currentUser?.email, let password, !password.isEmpty {
+                try await FirebaseAuthProvider.reauthenticate(email: email, password: password)
+            }
+        }
+    }
+
+    private func deleteRemoteData(userId: String) async throws {
+        guard WorkoutFirestoreService.isAvailable else { return }
+        try await WorkoutFirestoreService.deleteAllUserData(userId: userId)
+    }
+
+    private func purgeLocalData(
+        uid: String,
+        email: String,
+        workoutStore: WorkoutStore,
+        mealPlanService: MealPlanService,
+        wellnessService: DailyWellnessService
+    ) {
+        NotificationService.shared.cancelWorkoutInactivityReminder()
+        NotificationService.shared.cancelDailyMotivationNotifications()
+        NotificationService.shared.cancelWaterReminders()
+        NotificationService.shared.cancelDailyAssistantCheckIn()
+        NotificationService.shared.cancelDailyEveningAssistantCheckIn()
+
+        workoutStore.clearAllLocalData()
+        mealPlanService.clearAllLocalData()
+        wellnessService.clearAllLocalData()
+        WeeklyReportService.shared.reset()
+        PostWorkoutCheckInService.shared.resetForAccountDeletion()
+        DailyMorningCheckInService.shared.resetForAccountDeletion()
+        DailyEveningCheckInService.shared.resetForAccountDeletion()
+        AppIconInactivityService.shared.resetForAccountDeletion()
+
+        UserDataCleaner.clearAllLocalData(uid: uid, email: email)
     }
 
     private static func loadLegacyImage(for email: String) -> UIImage? {

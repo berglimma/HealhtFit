@@ -111,6 +111,52 @@ enum SocialSignInService {
         GIDSignIn.sharedInstance.signOut()
     }
 
+    static func reauthenticateWithGoogle() async throws {
+        guard GoogleServiceInfo.isGoogleSignInConfigured,
+              let clientID = GoogleServiceInfo.clientID else {
+            throw SocialSignInError.googleNotConfigured
+        }
+
+        guard let presenter = Self.topViewController() else {
+            throw SocialSignInError.noViewController
+        }
+
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
+
+        do {
+            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presenter)
+            guard let idToken = result.user.idToken?.tokenString else {
+                throw SocialSignInError.missingToken
+            }
+
+            let credential = GoogleAuthProvider.credential(
+                withIDToken: idToken,
+                accessToken: result.user.accessToken.tokenString
+            )
+            try await FirebaseAuthProvider.reauthenticate(credential: credential)
+        } catch let error as GIDSignInError where error.code == .canceled {
+            throw SocialSignInError.cancelled
+        }
+    }
+
+    static func reauthenticateWithApple(
+        authorization: ASAuthorization,
+        rawNonce: String
+    ) async throws {
+        guard let appleCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let tokenData = appleCredential.identityToken,
+              let idToken = String(data: tokenData, encoding: .utf8) else {
+            throw SocialSignInError.invalidAppleCredential
+        }
+
+        let credential = OAuthProvider.appleCredential(
+            withIDToken: idToken,
+            rawNonce: rawNonce,
+            fullName: appleCredential.fullName
+        )
+        try await FirebaseAuthProvider.reauthenticate(credential: credential)
+    }
+
     private static func topViewController() -> UIViewController? {
         guard let windowScene = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })

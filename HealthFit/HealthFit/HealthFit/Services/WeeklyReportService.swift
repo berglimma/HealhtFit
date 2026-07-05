@@ -34,6 +34,11 @@ final class WeeklyReportService: ObservableObject {
         UserDefaults.standard.set(lastViewedAt, forKey: lastViewedKey)
     }
 
+    func reset() {
+        lastViewedAt = nil
+        UserDefaults.standard.removeObject(forKey: lastViewedKey)
+    }
+
     func buildReport(
         sessions: [WorkoutSession],
         goal: FitnessGoal

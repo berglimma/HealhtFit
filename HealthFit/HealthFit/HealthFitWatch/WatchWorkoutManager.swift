@@ -51,9 +51,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
-    func startWorkout(name: String) {
+    func startWorkout(name: String, exerciseName: String = "") {
         resetWorkoutState()
         workoutName = name
+        currentExerciseName = exerciseName
         isCardioWorkout = false
         isMeditationWorkout = false
         isActive = true
@@ -420,7 +421,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         switch action {
         case "startWorkout":
             let name = message["workoutName"] as? String ?? "Treino"
-            startWorkout(name: name)
+            let exerciseName = message["exerciseName"] as? String ?? ""
+            startWorkout(name: name, exerciseName: exerciseName)
+            applyPhoneSync(
+                workoutElapsedSeconds: message["workoutElapsedSeconds"] as? Int,
+                exerciseElapsedSeconds: message["exerciseElapsedSeconds"] as? Int,
+                exerciseName: exerciseName
+            )
         case "startCardio":
             let name = message["workoutName"] as? String ?? "Cardio"
             let targetSeconds = message["targetSeconds"] as? Int ?? 0
@@ -511,7 +518,20 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 }
 
 extension WatchWorkoutManager: WCSessionDelegate {
-    nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {}
+    nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
+        guard activationState == .activated else { return }
+        let context = session.receivedApplicationContext
+        guard !context.isEmpty else { return }
+        Task { @MainActor in
+            handlePhoneMessage(context)
+        }
+    }
+
+    nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        Task { @MainActor in
+            handlePhoneMessage(applicationContext)
+        }
+    }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
         Task { @MainActor in

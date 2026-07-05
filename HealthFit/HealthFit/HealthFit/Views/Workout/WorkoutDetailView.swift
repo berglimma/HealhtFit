@@ -139,7 +139,8 @@ struct WorkoutDetailView: View {
     private func beginWorkout(tookPreWorkout: Bool) {
         workoutStore.startSession(for: sheet, tookPreWorkout: tookPreWorkout)
         wellnessService.applyPreWorkoutFromWorkouts(allTrackedSessions)
-        watchConnectivity.startWorkoutOnWatch(workoutName: sheet.title)
+        let firstExercise = sheet.exercises.first?.name ?? ""
+        watchConnectivity.startWorkoutOnWatch(workoutName: sheet.title, exerciseName: firstExercise)
         let athleteName = authService.currentUser?.greetingName ?? "Atleta"
         NotificationService.shared.deliverWorkoutStartNotification(
             workoutTitle: sheet.title,

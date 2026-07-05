@@ -44,6 +44,8 @@ enum AuthErrorMapper {
             return "Este método de login não está habilitado no Firebase."
         case .accountExistsWithDifferentCredential:
             return "Já existe uma conta com este e-mail usando outro método de login."
+        case .requiresRecentLogin:
+            return "Por segurança, confirme sua identidade novamente antes de excluir a conta."
         default:
             return "Não foi possível concluir a operação. Tente novamente."
         }

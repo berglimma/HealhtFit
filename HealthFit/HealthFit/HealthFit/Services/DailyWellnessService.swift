@@ -23,6 +23,16 @@ final class DailyWellnessService: ObservableObject {
         }
     }
 
+    func clearAllLocalData() {
+        if let userEmail {
+            UserDefaults.standard.removeObject(forKey: storageKey(email: userEmail))
+        }
+        userEmail = nil
+        todayEntry = .empty()
+        pendingSleepHours = 7
+        showSleepCheckIn = false
+    }
+
     func checkInOnAppOpen() {
         loadTodayEntry()
         guard userEmail != nil else { return }

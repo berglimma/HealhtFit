@@ -88,4 +88,30 @@ enum FirebaseAuthProvider {
     static func sendPasswordReset(email: String) async throws {
         try await Auth.auth().sendPasswordReset(withEmail: email)
     }
+
+    static func reauthenticate(email: String, password: String) async throws {
+        let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+        guard let user = Auth.auth().currentUser else {
+            throw NSError(domain: AuthErrorDomain, code: AuthErrorCode.userNotFound.rawValue)
+        }
+        try await user.reauthenticate(with: credential)
+    }
+
+    static func reauthenticate(credential: AuthCredential) async throws {
+        guard let user = Auth.auth().currentUser else {
+            throw NSError(domain: AuthErrorDomain, code: AuthErrorCode.userNotFound.rawValue)
+        }
+        try await user.reauthenticate(with: credential)
+    }
+
+    static func deleteCurrentUser() async throws {
+        guard let user = Auth.auth().currentUser else {
+            throw NSError(domain: AuthErrorDomain, code: AuthErrorCode.userNotFound.rawValue)
+        }
+        try await user.delete()
+    }
+
+    static var primarySignInProvider: String? {
+        Auth.auth().currentUser?.providerData.first?.providerID
+    }
 }

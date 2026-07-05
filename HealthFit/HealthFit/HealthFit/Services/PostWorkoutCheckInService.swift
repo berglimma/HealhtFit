@@ -130,6 +130,14 @@ final class PostWorkoutCheckInService: ObservableObject {
         UserDefaults.standard.removeObject(forKey: storageKey)
     }
 
+    func resetForAccountDeletion() {
+        pendingCheckIn = nil
+        isAssistantTabActive = false
+        UserDefaults.standard.removeObject(forKey: storageKey)
+        UserDefaults.standard.removeObject(forKey: unreadAssistantKey)
+        NotificationService.shared.setAppIconBadgeCount(0)
+    }
+
     private func save(_ checkIn: PendingPostWorkoutCheckIn) {
         if let data = try? JSONEncoder().encode(checkIn) {
             UserDefaults.standard.set(data, forKey: storageKey)

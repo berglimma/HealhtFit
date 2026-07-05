@@ -22,13 +22,18 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         }
     }
 
-    func startWorkoutOnWatch(workoutName: String) {
-        sendToWatch([
+    func startWorkoutOnWatch(workoutName: String, exerciseName: String = "") {
+        let message: [String: Any] = [
             "action": "startWorkout",
             "workoutName": workoutName,
+            "exerciseName": exerciseName,
             "workoutMode": "strength",
+            "workoutElapsedSeconds": 0,
+            "exerciseElapsedSeconds": 0,
             "timestamp": Date().timeIntervalSince1970
-        ])
+        ]
+        sendToWatch(message)
+        publishWorkoutContext(message)
         isWorkoutActiveOnWatch = true
         if session?.isReachable != true {
             simulateWatchData()
@@ -56,12 +61,16 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         exerciseName: String,
         exerciseElapsedSeconds: Int
     ) {
-        sendToWatch([
+        let message: [String: Any] = [
             "action": "syncWorkoutProgress",
+            "workoutName": workoutNameIfActive(),
             "workoutElapsedSeconds": workoutElapsedSeconds,
             "exerciseName": exerciseName,
-            "exerciseElapsedSeconds": exerciseElapsedSeconds
-        ], realtime: true)
+            "exerciseElapsedSeconds": exerciseElapsedSeconds,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        sendToWatch(message, realtime: true)
+        publishWorkoutContext(message)
     }
 
     func syncCardioProgress(
@@ -120,8 +129,11 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     }
 
     func stopWorkoutOnWatch() {
-        sendToWatch(["action": "stopWorkout"])
+        let message: [String: Any] = ["action": "stopWorkout"]
+        sendToWatch(message)
+        publishWorkoutContext(message)
         isWorkoutActiveOnWatch = false
+        lastWorkoutName = ""
     }
 
     func sendRestTimerStart(seconds: Int, exerciseName: String) {
@@ -206,12 +218,42 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         sendToWatch(["action": "cancelInactivityReminder"])
     }
 
+    private var lastWorkoutName = ""
+
+    private func workoutNameIfActive() -> String {
+        lastWorkoutName
+    }
+
     private func sendToWatch(_ message: [String: Any], realtime: Bool = false) {
         guard let session else { return }
+
+        if let action = message["action"] as? String, action == "startWorkout",
+           let workoutName = message["workoutName"] as? String {
+            lastWorkoutName = workoutName
+        }
+
         if session.isReachable {
-            session.sendMessage(message, replyHandler: nil)
-        } else if !realtime {
+            session.sendMessage(message, replyHandler: nil) { _ in
+                session.transferUserInfo(message)
+            }
+        } else {
             session.transferUserInfo(message)
+        }
+    }
+
+    private func publishWorkoutContext(_ message: [String: Any]) {
+        guard let session else { return }
+        guard let action = message["action"] as? String else { return }
+        guard ["startWorkout", "syncWorkoutProgress", "stopWorkout", "startCardio", "startMeditation"].contains(action) else {
+            return
+        }
+
+        do {
+            try session.updateApplicationContext(message)
+        } catch {
+            #if DEBUG
+            print("[HealthFit] Falha ao publicar contexto do Watch: \(error.localizedDescription)")
+            #endif
         }
     }
 
