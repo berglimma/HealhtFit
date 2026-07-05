@@ -27,6 +27,10 @@ enum DailyAssistantCheckInConfiguration {
     static let hour = 9
 }
 
+enum DailyEveningAssistantCheckInConfiguration {
+    static let hour = 21
+}
+
 @MainActor
 final class NotificationService {
     static let shared = NotificationService()
@@ -38,6 +42,7 @@ final class NotificationService {
     private let appUsageInactivityReminderIdentifier = "app_usage_inactivity_48h"
     private let waterReminderIdentifierPrefix = "water_reminder_"
     private let dailyAssistantCheckInIdentifier = "daily_assistant_checkin_9am"
+    private let dailyEveningAssistantCheckInIdentifier = "daily_assistant_checkin_9pm"
 
     static let inactivityThreshold: TimeInterval = 48 * 60 * 60
 
@@ -54,6 +59,7 @@ final class NotificationService {
     func refreshRecurringNotifications() {
         scheduleDailyMotivationNotifications()
         scheduleDailyAssistantCheckIn()
+        scheduleDailyEveningAssistantCheckIn()
         scheduleWaterReminders()
     }
 
@@ -79,6 +85,31 @@ final class NotificationService {
     func cancelDailyAssistantCheckIn() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: [dailyAssistantCheckInIdentifier]
+        )
+    }
+
+    func scheduleDailyEveningAssistantCheckIn(
+        hour: Int = DailyEveningAssistantCheckInConfiguration.hour,
+        minute: Int = 0
+    ) {
+        cancelDailyEveningAssistantCheckIn()
+
+        var components = DateComponents()
+        components.hour = hour
+        components.minute = minute
+
+        scheduleOnPhone(
+            title: "Como foi seu dia? 🌙",
+            body: "Boa noite! O assistente quer saber como foi seu dia e te ajudar a descansar bem.",
+            category: "DAILY_EVENING_ASSISTANT_CHECKIN",
+            identifier: dailyEveningAssistantCheckInIdentifier,
+            trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        )
+    }
+
+    func cancelDailyEveningAssistantCheckIn() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [dailyEveningAssistantCheckInIdentifier]
         )
     }
 

@@ -38,6 +38,7 @@ enum TestFixtures {
             sleepHours: 6.5,
             weeklyWorkoutCount: 2,
             hoursSinceLastWorkout: 30,
+            todayWorkoutSessions: [],
             dailyCalorieTarget: user?.dailyCalorieTarget ?? 2500,
             basalMetabolicRate: user?.basalMetabolicRate ?? 1700,
             estimatedTDEE: user?.estimatedTDEE ?? 2600,

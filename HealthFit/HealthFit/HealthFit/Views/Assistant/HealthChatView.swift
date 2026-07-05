@@ -11,6 +11,7 @@ struct HealthChatView: View {
     @StateObject private var assistant = HealthAssistantService()
     @ObservedObject private var checkInService = PostWorkoutCheckInService.shared
     @ObservedObject private var dailyMorningService = DailyMorningCheckInService.shared
+    @ObservedObject private var dailyEveningService = DailyEveningCheckInService.shared
     @State private var draft = ""
     @FocusState private var isInputFocused: Bool
 
@@ -24,12 +25,17 @@ struct HealthChatView: View {
             Date().timeIntervalSince($0) / 3600
         }
 
+        let todayWorkouts = DailyEveningCheckInEngine.completedSessionsToday(
+            from: workoutStore.sessionHistory
+        )
+
         return HealthAssistantContext(
             user: user,
             waterIntakeMl: wellnessService.todayEntry.waterIntakeMl,
             sleepHours: wellnessService.todayEntry.sleepHours,
             weeklyWorkoutCount: weeklyReport.currentWeek.workoutCount,
             hoursSinceLastWorkout: hoursSinceLastWorkout,
+            todayWorkoutSessions: todayWorkouts,
             dailyCalorieTarget: mealPlanService.dailyCalorieTarget > 0
                 ? mealPlanService.dailyCalorieTarget
                 : (user?.dailyCalorieTarget ?? 0),
@@ -107,6 +113,9 @@ struct HealthChatView: View {
             .onChange(of: dailyMorningService.state?.phase) { _, _ in
                 assistant.refreshGuidedCheckInsIfNeeded(context: context)
             }
+            .onChange(of: dailyEveningService.state?.phase) { _, _ in
+                assistant.refreshGuidedCheckInsIfNeeded(context: context)
+            }
             .task {
                 while !Task.isCancelled {
                     try? await Task.sleep(for: .seconds(30))
@@ -127,6 +136,11 @@ struct HealthChatView: View {
         } else if checkInService.isAwaitingFeelingReply,
                   let checkIn = checkInService.pendingCheckIn {
             assistant.restoreInterruptedPostWorkoutCheckIn(checkIn: checkIn, context: context)
+        } else if dailyEveningService.isDue,
+                  dailyEveningService.state?.phase == .pending {
+            assistant.beginDailyEveningCheckInIfNeeded(context: context)
+        } else if dailyEveningService.isAwaitingReply {
+            assistant.restoreInterruptedDailyEveningCheckIn(context: context)
         } else if dailyMorningService.isDue,
                   dailyMorningService.state?.phase == .pending {
             assistant.beginDailyMorningCheckInIfNeeded(context: context)
@@ -179,6 +193,12 @@ struct HealthChatView: View {
         if assistant.isInPostWorkoutCheckIn {
             return PostWorkoutCheckInEngine.feelingQuickReplies
         }
+        if assistant.isInDailyEveningCheckIn {
+            if dailyEveningService.state?.phase == .askedRestReadiness {
+                return DailyEveningCheckInEngine.restReadinessQuickReplies
+            }
+            return DailyEveningCheckInEngine.dayReflectionQuickReplies
+        }
         if assistant.isInDailyMorningCheckIn {
             return DailyMorningCheckInEngine.feelingQuickReplies
         }
@@ -186,6 +206,12 @@ struct HealthChatView: View {
     }
 
     private var inputPlaceholder: String {
+        if assistant.isInDailyEveningCheckIn {
+            if dailyEveningService.state?.phase == .askedRestReadiness {
+                return "Como está seu corpo e mente agora?"
+            }
+            return "Conte como foi seu dia..."
+        }
         if assistant.isInGuidedCheckIn {
             return "Conte como você está se sentindo..."
         }

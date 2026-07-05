@@ -4,14 +4,35 @@ enum ExerciseGifCatalog {
     static let cdnBaseURL = "https://static.exercisedb.dev/media/"
 
     static func gifURL(for exercise: Exercise) -> URL? {
-        gifURL(forExerciseName: exercise.name, muscleGroup: exercise.muscleGroup)
+        bundledGifURL(for: exercise) ?? remoteGifURL(for: exercise)
     }
 
-    static func gifURL(forExerciseName name: String, muscleGroup: MuscleGroup) -> URL? {
+    static func bundledGifURL(for exercise: Exercise) -> URL? {
+        let resourceName = bundleResourceName(forExerciseName: exercise.name, muscleGroup: exercise.muscleGroup)
+        return bundleURL(forResourceName: resourceName)
+    }
+
+    static func remoteGifURL(for exercise: Exercise) -> URL? {
+        remoteGifURL(forExerciseName: exercise.name, muscleGroup: exercise.muscleGroup)
+    }
+
+    static func remoteGifURL(forExerciseName name: String, muscleGroup: MuscleGroup) -> URL? {
         guard let mediaId = mediaId(forExerciseName: name, muscleGroup: muscleGroup) else {
             return nil
         }
         return URL(string: "\(cdnBaseURL)\(mediaId).gif")
+    }
+
+    static func bundleResourceName(forExerciseName name: String, muscleGroup: MuscleGroup) -> String {
+        if let focus = CustomWorkoutFocusGroup.focusGroup(for: name) {
+            return focus.bundleResourceName
+        }
+        return muscleGroup.bundleResourceName
+    }
+
+    private static func bundleURL(forResourceName name: String) -> URL? {
+        Bundle.main.url(forResource: name, withExtension: "gif", subdirectory: "ExerciseGifs")
+            ?? Bundle.main.url(forResource: name, withExtension: "gif")
     }
 
     static func mediaId(forExerciseName name: String, muscleGroup: MuscleGroup) -> String? {
@@ -123,6 +144,20 @@ enum ExerciseGifCatalog {
         "Kettlebell Swing": "UHJlbu3",
         "Farmer's Walk": "qPEzJjA",
     ]
+}
+
+extension MuscleGroup {
+    var bundleResourceName: String {
+        switch self {
+        case .chest: return "peito"
+        case .back: return "costas"
+        case .legs: return "pernas"
+        case .shoulders: return "ombros"
+        case .arms: return "bracos"
+        case .core: return "abdomen"
+        case .fullBody: return "corpo_inteiro"
+        }
+    }
 }
 
 extension Exercise {

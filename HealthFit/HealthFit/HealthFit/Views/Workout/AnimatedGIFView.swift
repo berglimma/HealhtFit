@@ -4,36 +4,56 @@ import UIKit
 
 struct AnimatedGIFView: UIViewRepresentable {
     let url: URL
+    @Binding var loadState: ExerciseGifLoadState
 
-    func makeUIView(context: Context) -> UIImageView {
-        let imageView = UIImageView()
-        imageView.contentMode = .scaleAspectFit
-        imageView.clipsToBounds = true
-        imageView.backgroundColor = .clear
-        return imageView
+    func makeUIView(context: Context) -> GIFContainerView {
+        let view = GIFContainerView()
+        view.backgroundColor = .clear
+        return view
     }
 
-    func updateUIView(_ imageView: UIImageView, context: Context) {
+    func updateUIView(_ container: GIFContainerView, context: Context) {
         let taskId = url.absoluteString
+
+        if context.coordinator.loadedTaskId == taskId, let image = context.coordinator.loadedImage {
+            container.setImage(image)
+            if loadState != .loaded {
+                loadState = .loaded
+            }
+            return
+        }
+
+        guard context.coordinator.currentTaskId != taskId else { return }
+
         context.coordinator.loadTask?.cancel()
+        context.coordinator.currentTaskId = taskId
+        context.coordinator.loadedTaskId = nil
+        context.coordinator.loadedImage = nil
+        loadState = .loading
+
         context.coordinator.loadTask = Task {
-            guard !Task.isCancelled else { return }
             do {
-                let (data, _) = try await URLSession.shared.data(from: url)
+                let data = try await loadData(from: url)
                 guard !Task.isCancelled else { return }
+
                 let image = UIImage.animatedImage(withGIFData: data)
+                guard !Task.isCancelled else { return }
+
                 await MainActor.run {
                     guard context.coordinator.currentTaskId == taskId else { return }
-                    imageView.image = image
+                    context.coordinator.loadedTaskId = taskId
+                    context.coordinator.loadedImage = image
+                    container.setImage(image)
+                    loadState = image == nil ? .failed : .loaded
                 }
             } catch {
                 await MainActor.run {
                     guard context.coordinator.currentTaskId == taskId else { return }
-                    imageView.image = nil
+                    container.setImage(nil)
+                    loadState = .failed
                 }
             }
         }
-        context.coordinator.currentTaskId = taskId
     }
 
     func makeCoordinator() -> Coordinator {
@@ -43,10 +63,74 @@ struct AnimatedGIFView: UIViewRepresentable {
     final class Coordinator {
         var loadTask: Task<Void, Never>?
         var currentTaskId: String?
+        var loadedTaskId: String?
+        var loadedImage: UIImage?
 
         deinit {
             loadTask?.cancel()
         }
+    }
+
+    private func loadData(from url: URL) async throws -> Data {
+        if url.isFileURL {
+            return try Data(contentsOf: url)
+        }
+
+        var request = URLRequest(url: url)
+        request.cachePolicy = .returnCacheDataElseLoad
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            throw URLError(.badServerResponse)
+        }
+
+        return data
+    }
+}
+
+enum ExerciseGifLoadState {
+    case loading
+    case loaded
+    case failed
+}
+
+final class GIFContainerView: UIView {
+    private let imageView: UIImageView = {
+        let view = UIImageView()
+        view.contentMode = .scaleAspectFit
+        view.clipsToBounds = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        addSubview(imageView)
+        NSLayoutConstraint.activate([
+            imageView.topAnchor.constraint(equalTo: topAnchor),
+            imageView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            imageView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: trailingAnchor),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    override var intrinsicContentSize: CGSize {
+        imageView.image?.size ?? super.intrinsicContentSize
+    }
+
+    func setImage(_ image: UIImage?) {
+        imageView.stopAnimating()
+        imageView.image = image
+        if image?.images != nil {
+            imageView.animationRepeatCount = 0
+            imageView.startAnimating()
+        }
+        invalidateIntrinsicContentSize()
     }
 }
 

@@ -48,7 +48,7 @@ final class PostWorkoutCheckInService: ObservableObject {
 
     var assistantTabBadgeCount: Int {
         guard !isAssistantTabActive else { return 0 }
-        if dueCheckIn != nil || isAwaitingFeelingReply || DailyMorningCheckInService.shared.needsAttention {
+        if dueCheckIn != nil || isAwaitingFeelingReply || DailyMorningCheckInService.shared.needsAttention || DailyEveningCheckInService.shared.needsAttention {
             return 1
         }
         return hasUnreadAssistantMessage ? 1 : 0
@@ -85,7 +85,7 @@ final class PostWorkoutCheckInService: ObservableObject {
         let count: Int
         if isAssistantTabActive {
             count = 0
-        } else if dueCheckIn != nil || isAwaitingFeelingReply || DailyMorningCheckInService.shared.needsAttention || hasUnreadAssistantMessage {
+        } else if dueCheckIn != nil || isAwaitingFeelingReply || DailyMorningCheckInService.shared.needsAttention || DailyEveningCheckInService.shared.needsAttention || hasUnreadAssistantMessage {
             count = 1
         } else {
             count = 0
@@ -95,8 +95,9 @@ final class PostWorkoutCheckInService: ObservableObject {
 
     func refreshAssistantBadge() {
         DailyMorningCheckInService.shared.refreshForToday()
+        DailyEveningCheckInService.shared.refreshForToday()
         if !isAssistantTabActive,
-           dueCheckIn != nil || isAwaitingFeelingReply || DailyMorningCheckInService.shared.needsAttention {
+           dueCheckIn != nil || isAwaitingFeelingReply || DailyMorningCheckInService.shared.needsAttention || DailyEveningCheckInService.shared.needsAttention {
             notifyAssistantMessagePending()
         } else {
             syncAppIconBadge()

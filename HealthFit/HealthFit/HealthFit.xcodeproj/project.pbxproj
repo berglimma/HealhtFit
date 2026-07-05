@@ -106,6 +106,18 @@
 		B1000100 /* DailyMorningCheckInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000100 /* DailyMorningCheckInService.swift */; };
 		B1000101 /* ExerciseGifCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000101 /* ExerciseGifCatalog.swift */; };
 		B1000102 /* AnimatedGIFView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000102 /* AnimatedGIFView.swift */; };
+		B1000103 /* peito.gif in Resources */ = {isa = PBXBuildFile; fileRef = F1000103 /* peito.gif */; };
+		B1000104 /* triceps.gif in Resources */ = {isa = PBXBuildFile; fileRef = F1000104 /* triceps.gif */; };
+		B1000105 /* costas.gif in Resources */ = {isa = PBXBuildFile; fileRef = F1000105 /* costas.gif */; };
+		B1000106 /* ombros.gif in Resources */ = {isa = PBXBuildFile; fileRef = F1000106 /* ombros.gif */; };
+		B1000107 /* biceps.gif in Resources */ = {isa = PBXBuildFile; fileRef = F1000107 /* biceps.gif */; };
+		B1000108 /* pernas.gif in Resources */ = {isa = PBXBuildFile; fileRef = F1000108 /* pernas.gif */; };
+		B1000109 /* trapezio.gif in Resources */ = {isa = PBXBuildFile; fileRef = F1000109 /* trapezio.gif */; };
+		B1000110 /* bracos.gif in Resources */ = {isa = PBXBuildFile; fileRef = F1000110 /* bracos.gif */; };
+		B1000111 /* abdomen.gif in Resources */ = {isa = PBXBuildFile; fileRef = F1000111 /* abdomen.gif */; };
+		B1000112 /* corpo_inteiro.gif in Resources */ = {isa = PBXBuildFile; fileRef = F1000112 /* corpo_inteiro.gif */; };
+		B1000113 /* DailyEveningCheckInEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000113 /* DailyEveningCheckInEngine.swift */; };
+		B1000114 /* DailyEveningCheckInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000114 /* DailyEveningCheckInService.swift */; };
 		B1000092 /* peito.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000092 /* peito.mp4 */; };
 		B1000093 /* costas.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000093 /* costas.mp4 */; };
 		B1000094 /* pernas.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000094 /* pernas.mp4 */; };
@@ -115,6 +127,7 @@
 		B1000098 /* corpo_inteiro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000098 /* corpo_inteiro.mp4 */; };
 		B2000014 /* ExerciseGifCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000023 /* ExerciseGifCatalogTests.swift */; };
 		B2000015 /* CustomWorkoutFocusGroupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000024 /* CustomWorkoutFocusGroupTests.swift */; };
+		B2000016 /* DailyEveningCheckInEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000025 /* DailyEveningCheckInEngineTests.swift */; };
 		B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000022 /* PostWorkoutCheckInEngineTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -242,6 +255,18 @@
 		F1000100 /* DailyMorningCheckInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyMorningCheckInService.swift; sourceTree = "<group>"; };
 		F1000101 /* ExerciseGifCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseGifCatalog.swift; sourceTree = "<group>"; };
 		F1000102 /* AnimatedGIFView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedGIFView.swift; sourceTree = "<group>"; };
+		F1000103 /* peito.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = peito.gif; sourceTree = "<group>"; };
+		F1000104 /* triceps.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = triceps.gif; sourceTree = "<group>"; };
+		F1000105 /* costas.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = costas.gif; sourceTree = "<group>"; };
+		F1000106 /* ombros.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = ombros.gif; sourceTree = "<group>"; };
+		F1000107 /* biceps.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = biceps.gif; sourceTree = "<group>"; };
+		F1000108 /* pernas.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = pernas.gif; sourceTree = "<group>"; };
+		F1000109 /* trapezio.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = trapezio.gif; sourceTree = "<group>"; };
+		F1000110 /* bracos.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = bracos.gif; sourceTree = "<group>"; };
+		F1000111 /* abdomen.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = abdomen.gif; sourceTree = "<group>"; };
+		F1000112 /* corpo_inteiro.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = corpo_inteiro.gif; sourceTree = "<group>"; };
+		F1000113 /* DailyEveningCheckInEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyEveningCheckInEngine.swift; sourceTree = "<group>"; };
+		F1000114 /* DailyEveningCheckInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyEveningCheckInService.swift; sourceTree = "<group>"; };
 		F1000092 /* peito.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = peito.mp4; sourceTree = "<group>"; };
 		F1000093 /* costas.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = costas.mp4; sourceTree = "<group>"; };
 		F1000094 /* pernas.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = pernas.mp4; sourceTree = "<group>"; };
@@ -265,6 +290,7 @@
 		F2000022 /* PostWorkoutCheckInEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostWorkoutCheckInEngineTests.swift; sourceTree = "<group>"; };
 		F2000023 /* ExerciseGifCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseGifCatalogTests.swift; sourceTree = "<group>"; };
 		F2000024 /* CustomWorkoutFocusGroupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomWorkoutFocusGroupTests.swift; sourceTree = "<group>"; };
+		F2000025 /* DailyEveningCheckInEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyEveningCheckInEngineTests.swift; sourceTree = "<group>"; };
 		F2000020 /* HealthFitUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -329,6 +355,7 @@
 				F1000037 /* Info.plist */,
 				F1000074 /* GoogleService-Info.plist */,
 				G1000092 /* ExerciseVideos */,
+				G1000093 /* ExerciseGifs */,
 			);
 			path = HealthFit;
 			sourceTree = "<group>";
@@ -345,6 +372,23 @@
 				F1000098 /* corpo_inteiro.mp4 */,
 			);
 			path = Resources/ExerciseVideos;
+			sourceTree = "<group>";
+		};
+		G1000093 /* ExerciseGifs */ = {
+			isa = PBXGroup;
+			children = (
+				F1000103 /* peito.gif */,
+				F1000104 /* triceps.gif */,
+				F1000105 /* costas.gif */,
+				F1000106 /* ombros.gif */,
+				F1000107 /* biceps.gif */,
+				F1000108 /* pernas.gif */,
+				F1000109 /* trapezio.gif */,
+				F1000110 /* bracos.gif */,
+				F1000111 /* abdomen.gif */,
+				F1000112 /* corpo_inteiro.gif */,
+			);
+			path = Resources/ExerciseGifs;
 			sourceTree = "<group>";
 		};
 		G1000003 /* HealthFitWatch */ = {
@@ -410,6 +454,8 @@
 				F1000086 /* PostWorkoutCheckInService.swift */,
 				F1000099 /* DailyMorningCheckInEngine.swift */,
 				F1000100 /* DailyMorningCheckInService.swift */,
+				F1000113 /* DailyEveningCheckInEngine.swift */,
+				F1000114 /* DailyEveningCheckInService.swift */,
 				F1000062 /* WelcomeMotivationService.swift */,
 				F1000064 /* MarathonReportBuilder.swift */,
 				F1000083 /* ExerciseVideoRepository.swift */,
@@ -567,6 +613,7 @@
 				F2000021 /* ExerciseVideoCatalogTests.swift */,
 				F2000023 /* ExerciseGifCatalogTests.swift */,
 				F2000024 /* CustomWorkoutFocusGroupTests.swift */,
+				F2000025 /* DailyEveningCheckInEngineTests.swift */,
 				F2000022 /* PostWorkoutCheckInEngineTests.swift */,
 			);
 			path = HealthFitTests;
@@ -729,6 +776,16 @@
 			files = (
 				B1000029 /* Assets.xcassets in Resources */,
 				B1000074 /* GoogleService-Info.plist in Resources */,
+				B1000103 /* peito.gif in Resources */,
+				B1000104 /* triceps.gif in Resources */,
+				B1000105 /* costas.gif in Resources */,
+				B1000106 /* ombros.gif in Resources */,
+				B1000107 /* biceps.gif in Resources */,
+				B1000108 /* pernas.gif in Resources */,
+				B1000109 /* trapezio.gif in Resources */,
+				B1000110 /* bracos.gif in Resources */,
+				B1000111 /* abdomen.gif in Resources */,
+				B1000112 /* corpo_inteiro.gif in Resources */,
 				B1000092 /* peito.mp4 in Resources */,
 				B1000093 /* costas.mp4 in Resources */,
 				B1000094 /* pernas.mp4 in Resources */,
@@ -831,6 +888,8 @@
 				B1000091 /* PostWorkoutCheckInService.swift in Sources */,
 				B1000099 /* DailyMorningCheckInEngine.swift in Sources */,
 				B1000100 /* DailyMorningCheckInService.swift in Sources */,
+				B1000113 /* DailyEveningCheckInEngine.swift in Sources */,
+				B1000114 /* DailyEveningCheckInService.swift in Sources */,
 				B1000087 /* ExerciseVideoRepository.swift in Sources */,
 				B1000073 /* ForgotPasswordView.swift in Sources */,
 				B1000075 /* GoogleServiceInfo.swift in Sources */,
@@ -873,6 +932,7 @@
 				B2000012 /* ExerciseVideoCatalogTests.swift in Sources */,
 				B2000014 /* ExerciseGifCatalogTests.swift in Sources */,
 				B2000015 /* CustomWorkoutFocusGroupTests.swift in Sources */,
+				B2000016 /* DailyEveningCheckInEngineTests.swift in Sources */,
 				B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -3,6 +3,7 @@ import SwiftUI
 struct MainTabView: View {
     @ObservedObject private var checkInService = PostWorkoutCheckInService.shared
     @ObservedObject private var dailyMorningService = DailyMorningCheckInService.shared
+    @ObservedObject private var dailyEveningService = DailyEveningCheckInService.shared
     @State private var selectedTab = 0
 
     private let assistantTabTag = 3
@@ -50,6 +51,9 @@ struct MainTabView: View {
             updateAssistantTabVisibility(for: tab)
         }
         .onChange(of: dailyMorningService.state?.phase) { _, _ in
+            checkInService.refreshAssistantBadge()
+        }
+        .onChange(of: dailyEveningService.state?.phase) { _, _ in
             checkInService.refreshAssistantBadge()
         }
         .task {

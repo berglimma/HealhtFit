@@ -78,6 +78,18 @@ enum CustomWorkoutFocusGroup: String, CaseIterable, Codable, Identifiable, Hasha
         }
     }
 
+    var bundleResourceName: String {
+        switch self {
+        case .chest: return "peito"
+        case .triceps: return "triceps"
+        case .back: return "costas"
+        case .shoulders: return "ombros"
+        case .biceps: return "biceps"
+        case .legs: return "pernas"
+        case .trapezius: return "trapezio"
+        }
+    }
+
     static func focusGroup(for exerciseName: String) -> CustomWorkoutFocusGroup? {
         if exerciseNames[exerciseName] != nil {
             return exerciseNames[exerciseName]

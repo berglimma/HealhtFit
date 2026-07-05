@@ -1,0 +1,325 @@
+import Foundation
+
+enum DailyEveningDayFeeling: Equatable {
+    case great
+    case good
+    case tiring
+    case difficult
+    case unmotivated
+    case skippedWorkout
+    case neutral
+}
+
+enum DailyEveningRestReadiness: Equatable {
+    case readyToSleep
+    case restless
+    case sore
+    case anxious
+    case peaceful
+    case neutral
+}
+
+enum DailyEveningCheckInPhase: String, Codable, Equatable {
+    case pending
+    case askedDayReflection
+    case askedRestReadiness
+    case completed
+}
+
+struct DailyEveningCheckInState: Codable, Equatable {
+    var dateKey: String
+    var phase: DailyEveningCheckInPhase
+}
+
+enum DailyEveningCheckInEngine {
+    static let checkInHour = 21
+
+    static let dayReflectionQuickReplies = [
+        "Foi um ótimo dia!",
+        "Dia cansativo",
+        "Treinei muito bem",
+        "Não treinei hoje",
+        "Dia difícil"
+    ]
+
+    static let restReadinessQuickReplies = [
+        "Pronto pra dormir",
+        "Ainda agitado",
+        "Dor muscular",
+        "Ansioso",
+        "Tranquilo e em paz"
+    ]
+
+    static func todayKey(for date: Date = .now) -> String {
+        DailyWellnessEntry.dayKey(for: date)
+    }
+
+    static func isCheckInWindowOpen(now: Date = .now) -> Bool {
+        Calendar.current.component(.hour, from: now) >= checkInHour
+    }
+
+    static func completedSessionsToday(from sessions: [WorkoutSession], on date: Date = .now) -> [WorkoutSession] {
+        let key = todayKey(for: date)
+        return sessions.filter { session in
+            guard let endedAt = session.endedAt else { return false }
+            return todayKey(for: endedAt) == key
+        }
+    }
+
+    static func openingMessage(athleteName: String, context: HealthAssistantContext) -> String {
+        let name = athleteName.isEmpty ? "Atleta" : athleteName
+        let todaySessions = context.todayWorkoutSessions
+
+        if todaySessions.isEmpty {
+            return """
+            Boa noite, \(name)! 🌙
+
+            São 21h — hora de fechar o dia com calma e honestidade.
+
+            Não vi treinos registrados hoje, e tudo bem: nem todo dia precisa ser de academia. O descanso também faz parte do progresso.
+
+            Como foi seu dia de uma forma geral? Energia, humor, conquistas e desafios — quero ouvir você.
+            """
+        }
+
+        let summary = workoutSummaryBlock(for: todaySessions)
+        return """
+        Boa noite, \(name)! 🌙
+
+        São 21h — hora de olhar pra trás e celebrar o que você construiu hoje.
+
+        \(summary)
+
+        Como foi seu dia além dos treinos? Humor, energia e sensações — me conta com sinceridade.
+        """
+    }
+
+    static func classifyDayFeeling(_ text: String) -> DailyEveningDayFeeling {
+        let normalized = text
+            .lowercased()
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+
+        if matches(normalized, any: ["nao treinei", "não treinei", "sem treino", "faltei", "nao fui", "não fui", "pulei"]) {
+            return .skippedWorkout
+        }
+        if matches(normalized, any: ["otimo", "ótimo", "incrivel", "excelente", "top", "treinei muito", "arras", "conquist"]) {
+            return .great
+        }
+        if matches(normalized, any: ["bem", "boa", "tranquilo", "produtivo", "satisfeito"]) {
+            return .good
+        }
+        if matches(normalized, any: ["dificil", "difícil", "pesado", "complicado", "pessimo", "péssimo", "ruim"]) {
+            return .difficult
+        }
+        if matches(normalized, any: ["desanim", "motivacao", "motivação", "preguica", "preguiça", "sem vontade"]) {
+            return .unmotivated
+        }
+        if matches(normalized, any: ["cansativo", "cansado", "exausto", "esgotado", "fadiga", "pesado"]) {
+            return .tiring
+        }
+        return .neutral
+    }
+
+    static func classifyRestReadiness(_ text: String) -> DailyEveningRestReadiness {
+        let normalized = text
+            .lowercased()
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+
+        if matches(normalized, any: ["pronto", "sono", "dormir", "cama", "descansar"]) {
+            return .readyToSleep
+        }
+        if matches(normalized, any: ["agitado", "acelerado", "inquieto", "nao consigo", "não consigo", "insone"]) {
+            return .restless
+        }
+        if matches(normalized, any: ["dor", "dolorido", "doendo", "muscul", "rigidez", "travado"]) {
+            return .sore
+        }
+        if matches(normalized, any: ["ansios", "preocup", "nervoso", "estress", "cabeça cheia"]) {
+            return .anxious
+        }
+        if matches(normalized, any: ["tranquilo", "paz", "calmo", "sereno", "relaxado"]) {
+            return .peaceful
+        }
+        return .neutral
+    }
+
+    static func dayReflectionFollowUp(
+        feeling: DailyEveningDayFeeling,
+        context: HealthAssistantContext
+    ) -> String {
+        let name = context.user?.greetingName ?? "Atleta"
+        let hadWorkout = !context.todayWorkoutSessions.isEmpty
+        let acknowledgment = dayAcknowledgment(for: feeling, hadWorkout: hadWorkout, name: name, sessions: context.todayWorkoutSessions)
+
+        return """
+        \(acknowledgment)
+
+        Agora, na hora de ir pra cama: como está seu corpo e sua mente? Pronto pra desligar, ainda agitado, com dores... me conta.
+        """
+    }
+
+    static func closingSequence(
+        readiness: DailyEveningRestReadiness,
+        dayFeeling: DailyEveningDayFeeling,
+        context: HealthAssistantContext
+    ) -> [String] {
+        let name = context.user?.greetingName ?? "Atleta"
+        let hadWorkout = !context.todayWorkoutSessions.isEmpty
+
+        return [
+            restAcknowledgment(for: readiness, name: name),
+            sleepGuidance(for: readiness, dayFeeling: dayFeeling, hadWorkout: hadWorkout, context: context, name: name),
+            goodNightFarewell(for: readiness, hadWorkout: hadWorkout, name: name)
+        ]
+    }
+
+    private static func workoutSummaryBlock(for sessions: [WorkoutSession]) -> String {
+        let lines = sessions.map(workoutLine(for:))
+        let totalCalories = Int(sessions.reduce(0) { $0 + $1.caloriesBurned }.rounded())
+        var block = "Hoje você registrou \(sessions.count) treino(s):\n\(lines.joined(separator: "\n"))"
+        if totalCalories > 0 {
+            block += "\n\nTotal aproximado: \(totalCalories) kcal queimadas. 💪"
+        }
+        return block
+    }
+
+    private static func workoutLine(for session: WorkoutSession) -> String {
+        let calories = Int(session.caloriesBurned.rounded())
+        let calorieSuffix = calories > 0 ? ", ~\(calories) kcal" : ""
+
+        if let km = session.completedDistanceKm, km > 0 {
+            return "• \(session.workoutTitle) — \(String(format: "%.1f", km)) km\(calorieSuffix)"
+        }
+        if session.completedExercises > 0 {
+            return "• \(session.workoutTitle) — \(session.completedExercises) exercício(s)\(calorieSuffix)"
+        }
+        return "• \(session.workoutTitle)\(calorieSuffix)"
+    }
+
+    private static func dayAcknowledgment(
+        for feeling: DailyEveningDayFeeling,
+        hadWorkout: Bool,
+        name: String,
+        sessions: [WorkoutSession]
+    ) -> String {
+        switch feeling {
+        case .great:
+            if hadWorkout {
+                let highlight = sessions.first?.workoutTitle ?? "treino"
+                return "Que combinação poderosa, \(name)! 🙌 Dia excelente e ainda com \"\(highlight)\" no currículo — consistência assim muda o jogo."
+            }
+            return "Que ótimo fechar o dia assim, \(name)! 🌟 Energia positiva à noite ajuda até no sono."
+        case .good:
+            if hadWorkout {
+                return "Dia sólido, \(name)! Você treinou e ainda manteve o humor em dia — equilíbrio que sustenta resultados."
+            }
+            return "Um dia tranquilo também conta, \(name). O importante é como você se sente agora, sem culpa."
+        case .tiring:
+            if hadWorkout {
+                return "Dia puxado com treino no meio, \(name). Exige bastante do corpo — agora o foco é recuperar com inteligência."
+            }
+            return "Dias cansativos acontecem, \(name). Seu corpo pede descanso de qualidade — vamos preparar isso juntos."
+        case .difficult:
+            return "Obrigado por compartilhar, \(name). Dias difíceis não apagam seu progresso — amanhã é uma página nova. 🌿"
+        case .unmotivated:
+            if hadWorkout {
+                return "Mesmo sem muita motivação, você treinou hoje, \(name). Isso é disciplina de verdade — respeito! 💪"
+            }
+            return "Sem motivação e sem treino hoje, \(name) — e está tudo bem. Um bom sono pode recarregar a mente para amanhã."
+        case .skippedWorkout:
+            return """
+            Sem treino hoje, \(name) — e eu não vou te cobrar. 🌙
+
+            Descanso estratégico faz parte. Amanhã você pode retomar na aba Treinos, no seu ritmo.
+            """
+        case .neutral:
+            if hadWorkout {
+                return "Você treinou hoje e fechou o dia no seu ritmo, \(name). Cada sessão registrada é um tijolo a mais."
+            }
+            return "Obrigado por dividir como foi o dia, \(name). Nem todo dia precisa ser espetacular."
+        }
+    }
+
+    private static func restAcknowledgment(for readiness: DailyEveningRestReadiness, name: String) -> String {
+        switch readiness {
+        case .readyToSleep:
+            return "Perfeito, \(name)! Corpo e mente pedindo descanso — sinal de que você viveu o dia de verdade. 😴"
+        case .peaceful:
+            return "Que bom chegar à noite em paz, \(name). Esse estado é ouro para recuperação muscular e mental. 🌿"
+        case .restless:
+            return "Entendo, \(name). Cabeça acelerada à noite é comum — vamos suavizar a transição pro sono."
+        case .sore:
+            return "Dor muscular após o dia é esperada, \(name). Vamos cuidar disso antes de você deitar."
+        case .anxious:
+            return "Ansiedade à noite merece carinho, \(name). Respiração lenta pode ser seu melhor aliado agora."
+        case .neutral:
+            return "Obrigado por responder, \(name). Vamos preparar uma boa noite de descanso."
+        }
+    }
+
+    private static func sleepGuidance(
+        for readiness: DailyEveningRestReadiness,
+        dayFeeling: DailyEveningDayFeeling,
+        hadWorkout: Bool,
+        context: HealthAssistantContext,
+        name: String
+    ) -> String {
+        var tips: [String] = []
+
+        switch readiness {
+        case .readyToSleep, .peaceful, .neutral:
+            tips.append("🛏️ **Rotina de sono:** quarto escuro, fresco e sem telas nos próximos 30 min.")
+        case .restless, .anxious:
+            tips.append("🧘 **Respiração 4-7-8:** inspire 4s, segure 7s, solte 8s — repita 5 vezes para acalmar o sistema nervoso.")
+            tips.append("📵 **Desconecte:** evite redes e notícias agora — sua mente precisa desacelerar.")
+        case .sore:
+            tips.append("🧊 **Recuperação:** alongamento leve de 5 min e água morna podem aliviar tensão muscular.")
+            if hadWorkout {
+                tips.append("💪 **Lembrete:** dor leve pós-treino é normal — seus músculos se reconstruem no sono.")
+            }
+        }
+
+        if hadWorkout {
+            tips.append("😴 **Sono e ganhos:** a maior parte da recuperação muscular acontece dormindo 7–9 h.")
+        } else if dayFeeling == .skippedWorkout || dayFeeling == .unmotivated {
+            tips.append("🌅 **Amanhã:** às 9h conversamos de novo — um passo de cada vez reconstrói o ritmo.")
+        }
+
+        if let hours = context.sleepHours, hours < 6 {
+            tips.append("⚠️ Você registrou pouco sono recentemente — priorize descanso hoje, \(name).")
+        }
+
+        if context.waterIntakeMl > 0, let user = context.user {
+            let goal = user.recommendedDailyWaterML
+            if goal > 0, context.waterIntakeMl < goal / 2 {
+                tips.append("💧 Hidratação baixa hoje — um gole de água agora, sem exagero antes de dormir.")
+            }
+        }
+
+        return tips.joined(separator: "\n\n")
+    }
+
+    private static func goodNightFarewell(
+        for readiness: DailyEveningRestReadiness,
+        hadWorkout: Bool,
+        name: String
+    ) -> String {
+        switch readiness {
+        case .readyToSleep, .peaceful:
+            if hadWorkout {
+                return "Boa noite, \(name)! Você merece esse descanso depois do que fez hoje. Durma bem — amanhã às 9h estou aqui. 🌙💤"
+            }
+            return "Boa noite, \(name)! Descanse profundamente e recarregue para amanhã. Até às 9h! 🌙"
+        case .restless, .anxious:
+            return "Vai com calma, \(name). Feche os olhos quando puder — cada respiração te aproxima do sono. Boa noite! 🌙"
+        case .sore:
+            return "Recupere bem, \(name). Seu corpo trabalhou — agora deixe o sono fazer o resto. Boa noite! 💤"
+        case .neutral:
+            return "Boa noite, \(name)! Que seu descanso seja reparador. Te espero amanhã às 9h na aba IAssistente. 🌙"
+        }
+    }
+
+    private static func matches(_ text: String, any keywords: [String]) -> Bool {
+        keywords.contains { text.contains($0) }
+    }
+}

@@ -4,8 +4,9 @@ import XCTest
 final class ExerciseGifCatalogTests: XCTestCase {
     func testExactMatchForBenchPressGif() {
         let exercise = Exercise(name: "Supino Reto", muscleGroup: .chest)
-        let url = ExerciseGifCatalog.gifURL(for: exercise)
-        XCTAssertEqual(url?.absoluteString, "https://static.exercisedb.dev/media/EIeI8Vf.gif")
+        let url = ExerciseGifCatalog.bundledGifURL(for: exercise)
+        XCTAssertNotNil(url)
+        XCTAssertEqual(url?.lastPathComponent, "peito.gif")
     }
 
     func testKeywordFallbackForCustomExerciseName() {
@@ -16,8 +17,8 @@ final class ExerciseGifCatalogTests: XCTestCase {
 
     func testMuscleGroupFallbackUsesGroupGif() {
         let exercise = Exercise(name: "Exercício personalizado XYZ", muscleGroup: .legs)
-        let url = ExerciseGifCatalog.gifURL(for: exercise)
-        XCTAssertEqual(url?.absoluteString, "https://static.exercisedb.dev/media/qXTaZnJ.gif")
+        let url = ExerciseGifCatalog.bundledGifURL(for: exercise)
+        XCTAssertEqual(url?.lastPathComponent, "pernas.gif")
     }
 
     func testAllCatalogExercisesHaveGifMapping() {
