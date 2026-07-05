@@ -55,6 +55,119 @@ enum MuscleGroup: String, CaseIterable, Codable, Identifiable, Hashable {
     }
 }
 
+enum CustomWorkoutFocusGroup: String, CaseIterable, Codable, Identifiable, Hashable {
+    case chest = "Peito"
+    case triceps = "Tríceps"
+    case back = "Costas"
+    case shoulders = "Ombros"
+    case biceps = "Bíceps"
+    case legs = "Pernas"
+    case trapezius = "Trapézio"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .chest: return "figure.arms.open"
+        case .triceps: return "figure.strengthtraining.traditional"
+        case .back: return "figure.climbing"
+        case .shoulders: return "figure.boxing"
+        case .biceps: return "figure.strengthtraining.functional"
+        case .legs: return "figure.run"
+        case .trapezius: return "figure.walk"
+        }
+    }
+
+    static func focusGroup(for exerciseName: String) -> CustomWorkoutFocusGroup? {
+        if exerciseNames[exerciseName] != nil {
+            return exerciseNames[exerciseName]
+        }
+
+        let normalized = exerciseName
+            .lowercased()
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+
+        if normalized.contains("triceps") || normalized.contains("tríceps") || normalized.contains("mergulho") {
+            return .triceps
+        }
+        if normalized.contains("rosca") {
+            return .biceps
+        }
+        if normalized.contains("encolhimento") || normalized.contains("remada alta") {
+            return .trapezius
+        }
+        if normalized.contains("supino") || normalized.contains("crucifixo reto") || normalized.contains("crucifixo inclinado")
+            || normalized.contains("crossover") || normalized.contains("flexao") || normalized.contains("flexão") {
+            return .chest
+        }
+        if normalized.contains("desenvolvimento") || normalized.contains("elevacao") || normalized.contains("elevação")
+            || normalized.contains("arnold") || normalized.contains("face pull") || normalized.contains("crucifixo inverso") {
+            return .shoulders
+        }
+        if normalized.contains("agachamento") || normalized.contains("leg press") || normalized.contains("hack")
+            || normalized.contains("extensora") || normalized.contains("flexora") || normalized.contains("stiff")
+            || normalized.contains("afundo") || normalized.contains("adutora") || normalized.contains("abdutora")
+            || normalized.contains("panturrilha") {
+            return .legs
+        }
+        if normalized.contains("remada") || normalized.contains("puxada") || normalized.contains("barra fixa")
+            || normalized.contains("pulldown") || normalized.contains("terra romeno") {
+            return .back
+        }
+        return nil
+    }
+
+    private static let exerciseNames: [String: CustomWorkoutFocusGroup] = [
+        "Supino Reto": .chest,
+        "Supino Inclinado": .chest,
+        "Supino Declinado": .chest,
+        "Crucifixo Reto": .chest,
+        "Crucifixo Inclinado": .chest,
+        "Crossover": .chest,
+        "Flexão de Braços": .chest,
+        "Tríceps Pulley": .triceps,
+        "Tríceps Testa": .triceps,
+        "Tríceps Francês": .triceps,
+        "Mergulho no Banco": .triceps,
+        "Barra Fixa": .back,
+        "Remada Curvada": .back,
+        "Puxada Frontal": .back,
+        "Remada Unilateral": .back,
+        "Pulldown Triângulo": .back,
+        "Levantamento Terra Romeno": .back,
+        "Puxada Alta": .back,
+        "Rosca Direta": .biceps,
+        "Rosca Martelo": .biceps,
+        "Rosca Scott": .biceps,
+        "Rosca Concentrada": .biceps,
+        "Agachamento Livre": .legs,
+        "Leg Press 45°": .legs,
+        "Hack Squat": .legs,
+        "Cadeira Extensora": .legs,
+        "Mesa Flexora": .legs,
+        "Stiff": .legs,
+        "Afundo": .legs,
+        "Cadeira Adutora": .legs,
+        "Cadeira Abdutora": .legs,
+        "Panturrilha em Pé": .legs,
+        "Panturrilha Sentado": .legs,
+        "Encolhimento com Barra": .trapezius,
+        "Desenvolvimento Militar": .shoulders,
+        "Elevação Lateral": .shoulders,
+        "Remada Alta": .trapezius,
+        "Encolhimento com Halteres": .trapezius,
+        "Elevação Frontal": .shoulders,
+        "Crucifixo Inverso": .shoulders,
+        "Face Pull": .shoulders,
+        "Desenvolvimento com Halteres": .shoulders,
+        "Arnold Press": .shoulders,
+        "Elevação Posterior": .shoulders,
+        "Elevação Lateral na Polia": .shoulders,
+        "Desenvolvimento na Máquina": .shoulders,
+        "Crucifixo Inverso no Cabo": .shoulders,
+    ]
+}
+
 struct WorkoutSheet: Identifiable, Codable, Hashable {
     var id: UUID
     var title: String

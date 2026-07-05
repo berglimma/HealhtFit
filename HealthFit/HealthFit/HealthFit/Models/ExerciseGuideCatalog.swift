@@ -492,8 +492,8 @@ struct ExerciseExecutionGuideView: View {
         VStack(alignment: .leading, spacing: compact ? 10 : 12) {
             guideSection
 
-            if let video = exercise?.demoVideo {
-                ExerciseDemoVideoView(video: video, compact: compact)
+            if let exercise {
+                ExerciseDemoGifView(exercise: exercise, compact: compact)
             }
         }
     }

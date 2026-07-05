@@ -82,6 +82,14 @@ final class NotificationService {
         )
     }
 
+    func setAppIconBadgeCount(_ count: Int) {
+        UNUserNotificationCenter.current().setBadgeCount(count) { error in
+            if let error {
+                print("[HealthFit] Falha ao atualizar badge do ícone: \(error.localizedDescription)")
+            }
+        }
+    }
+
     func scheduleWaterReminders(
         startHour: Int = WaterReminderConfiguration.startHour,
         endHour: Int = WaterReminderConfiguration.endHour,

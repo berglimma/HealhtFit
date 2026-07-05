@@ -1467,6 +1467,12 @@ final class HealthAssistantService: ObservableObject {
     private static let replyDelay: Duration = .seconds(3)
     private static let idleReturnThreshold: TimeInterval = 180
 
+    private func deliverAssistantMessage(_ text: String) {
+        messages.append(HealthChatMessage(text: text, isUser: false))
+        guard !PostWorkoutCheckInService.shared.isAssistantTabActive else { return }
+        PostWorkoutCheckInService.shared.notifyAssistantMessagePending()
+    }
+
     var isInPostWorkoutCheckIn: Bool {
         activePostWorkoutCheckIn != nil || PostWorkoutCheckInService.shared.isAwaitingFeelingReply
     }
@@ -1534,7 +1540,7 @@ final class HealthAssistantService: ObservableObject {
                 try await Task.sleep(for: Self.replyDelay)
                 guard !Task.isCancelled else { return }
                 let answer = HealthAssistantEngine.answer(for: trimmed, context: context)
-                messages.append(HealthChatMessage(text: answer, isUser: false))
+                deliverAssistantMessage(answer)
                 isTyping = false
             } catch {
                 isTyping = false
@@ -1594,7 +1600,7 @@ final class HealthAssistantService: ObservableObject {
                     athleteName: athleteName,
                     context: context
                 )
-                messages.append(HealthChatMessage(text: opening, isUser: false))
+                deliverAssistantMessage(opening)
                 DailyMorningCheckInService.shared.markAskedFeeling()
                 isTyping = false
                 lastUserInteractionAt = Date()
@@ -1623,7 +1629,7 @@ final class HealthAssistantService: ObservableObject {
                 for response in responses {
                     try await Task.sleep(for: Self.replyDelay)
                     guard !Task.isCancelled else { return }
-                    messages.append(HealthChatMessage(text: response, isUser: false))
+                    deliverAssistantMessage(response)
                 }
                 isDailyMorningCheckInActive = false
                 DailyMorningCheckInService.shared.markCompleted()
@@ -1646,7 +1652,7 @@ final class HealthAssistantService: ObservableObject {
                     athleteName: athleteName,
                     context: context
                 )
-                messages.append(HealthChatMessage(text: opening, isUser: false))
+                deliverAssistantMessage(opening)
                 isTyping = false
             } catch {
                 isTyping = false
@@ -1668,7 +1674,7 @@ final class HealthAssistantService: ObservableObject {
                 try await Task.sleep(for: Self.replyDelay)
                 guard !Task.isCancelled else { return }
                 let opening = PostWorkoutCheckInEngine.openingMessage(checkIn: checkIn, athleteName: athleteName)
-                messages.append(HealthChatMessage(text: opening, isUser: false))
+                deliverAssistantMessage(opening)
                 PostWorkoutCheckInService.shared.markAskedFeeling()
                 activePostWorkoutCheckIn = PostWorkoutCheckInService.shared.pendingCheckIn
                 isTyping = false
@@ -1706,7 +1712,7 @@ final class HealthAssistantService: ObservableObject {
                 for response in responses {
                     try await Task.sleep(for: Self.replyDelay)
                     guard !Task.isCancelled else { return }
-                    messages.append(HealthChatMessage(text: response, isUser: false))
+                    deliverAssistantMessage(response)
                 }
                 activePostWorkoutCheckIn = nil
                 PostWorkoutCheckInService.shared.markCompleted()
@@ -1749,7 +1755,7 @@ final class HealthAssistantService: ObservableObject {
                 try await Task.sleep(for: Self.replyDelay)
                 guard !Task.isCancelled else { return }
                 let opening = PostWorkoutCheckInEngine.openingMessage(checkIn: checkIn, athleteName: athleteName)
-                messages.append(HealthChatMessage(text: opening, isUser: false))
+                deliverAssistantMessage(opening)
                 isTyping = false
             } catch {
                 isTyping = false
@@ -1783,7 +1789,7 @@ final class HealthAssistantService: ObservableObject {
         let text = HealthAssistantEngine.idleReturnMessage
         if let last = messages.last, !last.isUser, last.text == text { return }
 
-        messages.append(HealthChatMessage(text: text, isUser: false))
+        deliverAssistantMessage(text)
     }
 
     #if DEBUG

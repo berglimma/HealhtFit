@@ -357,6 +357,24 @@ final class WorkoutStore: ObservableObject {
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
+    static func presetExercises(for focusGroups: Set<CustomWorkoutFocusGroup>) -> [Exercise] {
+        guard !focusGroups.isEmpty else { return [] }
+
+        var seen = Set<String>()
+        return (sampleWorkouts + catalogOnlyWorkouts)
+            .flatMap(\.exercises)
+            .filter { exercise in
+                guard let focus = CustomWorkoutFocusGroup.focusGroup(for: exercise.name) else { return false }
+                return focusGroups.contains(focus)
+            }
+            .filter { seen.insert($0.name).inserted }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    static func focusGroup(for exercise: Exercise) -> CustomWorkoutFocusGroup? {
+        CustomWorkoutFocusGroup.focusGroup(for: exercise.name)
+    }
+
     static func copyExerciseForWorkout(_ template: Exercise) -> Exercise {
         Exercise(
             name: template.name,

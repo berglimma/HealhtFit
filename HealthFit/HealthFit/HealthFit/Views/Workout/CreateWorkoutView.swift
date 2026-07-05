@@ -8,7 +8,7 @@ struct CreateWorkoutView: View {
 
     @State private var title = ""
     @State private var description = ""
-    @State private var selectedMuscleGroup: MuscleGroup = .chest
+    @State private var selectedFocusGroups: Set<CustomWorkoutFocusGroup> = [.chest]
     @State private var exercises: [Exercise] = []
     @State private var didSetInitialContent = false
 
@@ -21,23 +21,27 @@ struct CreateWorkoutView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Grupo Muscular") {
-                    Picker("Grupo", selection: $selectedMuscleGroup) {
-                        ForEach(MuscleGroup.allCases) { group in
+                Section {
+                    Text("Selecione um ou mais grupos musculares. Os exercícios do catálogo são carregados automaticamente — remova os que não quiser.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    ForEach(CustomWorkoutFocusGroup.allCases) { group in
+                        Toggle(isOn: focusGroupBinding(for: group)) {
                             Label(group.rawValue, systemImage: group.icon)
-                                .tag(group)
                         }
                     }
-                    .pickerStyle(.menu)
 
-                    if isEditing {
-                        Text("Ao trocar o grupo, novos exercícios do catálogo são adicionados à ficha. Remova os que não quiser.")
+                    if selectedFocusGroups.isEmpty {
+                        Text("Escolha pelo menos um grupo muscular.")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("Todos os exercícios de \(selectedMuscleGroup.rawValue) são carregados automaticamente. Remova os que não quiser incluir.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.orange)
+                    }
+                } header: {
+                    Text("Grupos Musculares")
+                } footer: {
+                    if !selectedFocusGroups.isEmpty {
+                        Text(selectedGroupsSummary)
                     }
                 }
 
@@ -48,7 +52,7 @@ struct CreateWorkoutView: View {
 
                 Section {
                     if exercises.isEmpty {
-                        Text("Nenhum exercício nesta ficha. Escolha outro grupo muscular.")
+                        Text("Nenhum exercício nesta ficha. Selecione ao menos um grupo muscular.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     } else {
@@ -82,7 +86,7 @@ struct CreateWorkoutView: View {
                     Button("Salvar") {
                         saveSheet()
                     }
-                    .disabled(title.isEmpty || exercises.isEmpty)
+                    .disabled(title.isEmpty || exercises.isEmpty || selectedFocusGroups.isEmpty)
                 }
             }
             .onAppear {
@@ -93,25 +97,95 @@ struct CreateWorkoutView: View {
                     title = sheet.title
                     description = sheet.description
                     exercises = sheet.exercises
-                    selectedMuscleGroup = sheet.exercises.first?.muscleGroup ?? .chest
-                } else {
-                    loadExercises(for: selectedMuscleGroup)
-                    if title.isEmpty {
-                        title = "Treino - \(selectedMuscleGroup.rawValue)"
+                    selectedFocusGroups = inferredFocusGroups(from: sheet.exercises)
+                    if selectedFocusGroups.isEmpty {
+                        selectedFocusGroups = [.chest]
                     }
-                    if description.isEmpty {
-                        description = "Ficha personalizada de \(selectedMuscleGroup.rawValue.lowercased())"
-                    }
-                }
-            }
-            .onChange(of: selectedMuscleGroup) { _, newGroup in
-                if isEditing {
-                    appendExercises(from: newGroup)
                 } else {
-                    loadExercises(for: newGroup)
+                    reloadExercisesFromSelection()
+                    updateDefaultMetadataIfNeeded()
                 }
             }
         }
+    }
+
+    private var selectedGroupsSummary: String {
+        let names = CustomWorkoutFocusGroup.allCases
+            .filter { selectedFocusGroups.contains($0) }
+            .map(\.rawValue)
+            .joined(separator: ", ")
+        return "Selecionados: \(names)"
+    }
+
+    private func focusGroupBinding(for group: CustomWorkoutFocusGroup) -> Binding<Bool> {
+        Binding(
+            get: { selectedFocusGroups.contains(group) },
+            set: { isSelected in
+                let previous = selectedFocusGroups
+                if isSelected {
+                    selectedFocusGroups.insert(group)
+                } else {
+                    selectedFocusGroups.remove(group)
+                }
+                syncExercisesAfterSelectionChange(from: previous, to: selectedFocusGroups)
+                updateDefaultMetadataIfNeeded()
+            }
+        )
+    }
+
+    private func inferredFocusGroups(from exercises: [Exercise]) -> Set<CustomWorkoutFocusGroup> {
+        Set(exercises.compactMap { WorkoutStore.focusGroup(for: $0) })
+    }
+
+    private func syncExercisesAfterSelectionChange(
+        from previous: Set<CustomWorkoutFocusGroup>,
+        to current: Set<CustomWorkoutFocusGroup>
+    ) {
+        let removed = previous.subtracting(current)
+        let added = current.subtracting(previous)
+
+        if !removed.isEmpty {
+            exercises.removeAll { exercise in
+                guard let focus = WorkoutStore.focusGroup(for: exercise) else { return false }
+                return removed.contains(focus)
+            }
+        }
+
+        for group in added {
+            appendExercises(from: group)
+        }
+
+        if previous.isEmpty, !current.isEmpty, exercises.isEmpty {
+            reloadExercisesFromSelection()
+        }
+    }
+
+    private func reloadExercisesFromSelection() {
+        exercises = WorkoutStore.presetExercises(for: selectedFocusGroups).map {
+            WorkoutStore.copyExerciseForWorkout($0)
+        }
+    }
+
+    private func appendExercises(from group: CustomWorkoutFocusGroup) {
+        let existingNames = Set(exercises.map(\.name))
+        let additions = WorkoutStore.presetExercises(for: [group])
+            .filter { !existingNames.contains($0.name) }
+            .map { WorkoutStore.copyExerciseForWorkout($0) }
+        exercises.append(contentsOf: additions)
+    }
+
+    private func updateDefaultMetadataIfNeeded() {
+        guard !isEditing else { return }
+
+        let groupNames = CustomWorkoutFocusGroup.allCases
+            .filter { selectedFocusGroups.contains($0) }
+            .map(\.rawValue)
+
+        guard !groupNames.isEmpty else { return }
+
+        let joined = groupNames.joined(separator: ", ")
+        title = "Treino - \(joined)"
+        description = "Ficha personalizada de \(joined.lowercased())"
     }
 
     private func saveSheet() {
@@ -132,20 +206,6 @@ struct CreateWorkoutView: View {
         dismiss()
     }
 
-    private func loadExercises(for group: MuscleGroup) {
-        exercises = WorkoutStore.presetExercises(for: group).map {
-            WorkoutStore.copyExerciseForWorkout($0)
-        }
-    }
-
-    private func appendExercises(from group: MuscleGroup) {
-        let existingNames = Set(exercises.map(\.name))
-        let additions = WorkoutStore.presetExercises(for: group)
-            .filter { !existingNames.contains($0.name) }
-            .map { WorkoutStore.copyExerciseForWorkout($0) }
-        exercises.append(contentsOf: additions)
-    }
-
     private func removeExercise(_ exercise: Exercise) {
         exercises.removeAll { $0.id == exercise.id }
     }
@@ -155,6 +215,10 @@ private struct CreateWorkoutExerciseRow: View {
     let index: Int
     let exercise: Exercise
     let onRemove: () -> Void
+
+    private var focusLabel: String? {
+        CustomWorkoutFocusGroup.focusGroup(for: exercise.name)?.rawValue
+    }
 
     var body: some View {
         DisclosureGroup {
@@ -182,6 +246,9 @@ private struct CreateWorkoutExerciseRow: View {
                         .font(.subheadline.weight(.semibold))
 
                     HStack(spacing: 8) {
+                        if let focusLabel {
+                            Text(focusLabel)
+                        }
                         Text("\(exercise.sets)x\(exercise.reps)")
                         if let weight = exercise.weight {
                             Text("\(Int(weight))kg")

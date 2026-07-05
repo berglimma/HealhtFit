@@ -64,17 +64,33 @@ final class PostWorkoutCheckInService: ObservableObject {
         isAssistantTabActive = active
         if active {
             clearUnreadAssistantMessage()
+        } else {
+            syncAppIconBadge()
         }
     }
 
     func notifyAssistantMessagePending() {
         UserDefaults.standard.set(true, forKey: unreadAssistantKey)
+        syncAppIconBadge()
         objectWillChange.send()
     }
 
     func clearUnreadAssistantMessage() {
         UserDefaults.standard.set(false, forKey: unreadAssistantKey)
+        syncAppIconBadge()
         objectWillChange.send()
+    }
+
+    func syncAppIconBadge() {
+        let count: Int
+        if isAssistantTabActive {
+            count = 0
+        } else if dueCheckIn != nil || isAwaitingFeelingReply || DailyMorningCheckInService.shared.needsAttention || hasUnreadAssistantMessage {
+            count = 1
+        } else {
+            count = 0
+        }
+        NotificationService.shared.setAppIconBadgeCount(count)
     }
 
     func refreshAssistantBadge() {
@@ -82,6 +98,8 @@ final class PostWorkoutCheckInService: ObservableObject {
         if !isAssistantTabActive,
            dueCheckIn != nil || isAwaitingFeelingReply || DailyMorningCheckInService.shared.needsAttention {
             notifyAssistantMessagePending()
+        } else {
+            syncAppIconBadge()
         }
         objectWillChange.send()
     }

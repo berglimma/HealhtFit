@@ -104,6 +104,8 @@
 		B1000091 /* PostWorkoutCheckInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000086 /* PostWorkoutCheckInService.swift */; };
 		B1000099 /* DailyMorningCheckInEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000099 /* DailyMorningCheckInEngine.swift */; };
 		B1000100 /* DailyMorningCheckInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000100 /* DailyMorningCheckInService.swift */; };
+		B1000101 /* ExerciseGifCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000101 /* ExerciseGifCatalog.swift */; };
+		B1000102 /* AnimatedGIFView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000102 /* AnimatedGIFView.swift */; };
 		B1000092 /* peito.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000092 /* peito.mp4 */; };
 		B1000093 /* costas.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000093 /* costas.mp4 */; };
 		B1000094 /* pernas.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000094 /* pernas.mp4 */; };
@@ -111,6 +113,8 @@
 		B1000096 /* bracos.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000096 /* bracos.mp4 */; };
 		B1000097 /* abdomen.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000097 /* abdomen.mp4 */; };
 		B1000098 /* corpo_inteiro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000098 /* corpo_inteiro.mp4 */; };
+		B2000014 /* ExerciseGifCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000023 /* ExerciseGifCatalogTests.swift */; };
+		B2000015 /* CustomWorkoutFocusGroupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000024 /* CustomWorkoutFocusGroupTests.swift */; };
 		B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000022 /* PostWorkoutCheckInEngineTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -236,6 +240,8 @@
 		F1000086 /* PostWorkoutCheckInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostWorkoutCheckInService.swift; sourceTree = "<group>"; };
 		F1000099 /* DailyMorningCheckInEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyMorningCheckInEngine.swift; sourceTree = "<group>"; };
 		F1000100 /* DailyMorningCheckInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyMorningCheckInService.swift; sourceTree = "<group>"; };
+		F1000101 /* ExerciseGifCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseGifCatalog.swift; sourceTree = "<group>"; };
+		F1000102 /* AnimatedGIFView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedGIFView.swift; sourceTree = "<group>"; };
 		F1000092 /* peito.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = peito.mp4; sourceTree = "<group>"; };
 		F1000093 /* costas.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = costas.mp4; sourceTree = "<group>"; };
 		F1000094 /* pernas.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = pernas.mp4; sourceTree = "<group>"; };
@@ -257,6 +263,8 @@
 		F2000019 /* NotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationServiceTests.swift; sourceTree = "<group>"; };
 		F2000021 /* ExerciseVideoCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseVideoCatalogTests.swift; sourceTree = "<group>"; };
 		F2000022 /* PostWorkoutCheckInEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostWorkoutCheckInEngineTests.swift; sourceTree = "<group>"; };
+		F2000023 /* ExerciseGifCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseGifCatalogTests.swift; sourceTree = "<group>"; };
+		F2000024 /* CustomWorkoutFocusGroupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomWorkoutFocusGroupTests.swift; sourceTree = "<group>"; };
 		F2000020 /* HealthFitUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -374,6 +382,7 @@
 				F1000053 /* DailyWellnessModels.swift */,
 				F1000056 /* ExerciseGuideCatalog.swift */,
 				F1000080 /* ExerciseVideoCatalog.swift */,
+				F1000101 /* ExerciseGifCatalog.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -492,6 +501,7 @@
 				F1000051 /* MeditationSetupView.swift */,
 				F1000052 /* ActiveMeditationView.swift */,
 				F1000081 /* ExerciseDemoVideoView.swift */,
+				F1000102 /* AnimatedGIFView.swift */,
 			);
 			path = Workout;
 			sourceTree = "<group>";
@@ -555,6 +565,8 @@
 				F2000018 /* ShoppingCatalogTests.swift */,
 				F2000019 /* NotificationServiceTests.swift */,
 				F2000021 /* ExerciseVideoCatalogTests.swift */,
+				F2000023 /* ExerciseGifCatalogTests.swift */,
+				F2000024 /* CustomWorkoutFocusGroupTests.swift */,
 				F2000022 /* PostWorkoutCheckInEngineTests.swift */,
 			);
 			path = HealthFitTests;
@@ -780,6 +792,7 @@
 				B1000020 /* WorkoutListView.swift in Sources */,
 				B1000021 /* WorkoutDetailView.swift in Sources */,
 				B1000085 /* ExerciseDemoVideoView.swift in Sources */,
+				B1000102 /* AnimatedGIFView.swift in Sources */,
 				B1000022 /* ActiveWorkoutView.swift in Sources */,
 				B1000023 /* CreateWorkoutView.swift in Sources */,
 				B1000035 /* WorkoutSummaryView.swift in Sources */,
@@ -799,6 +812,7 @@
 				B1000053 /* DailyWellnessCheckInView.swift in Sources */,
 				B1000054 /* ExerciseGuideCatalog.swift in Sources */,
 				B1000084 /* ExerciseVideoCatalog.swift in Sources */,
+				B1000101 /* ExerciseGifCatalog.swift in Sources */,
 				B1000055 /* AppIconInactivityService.swift in Sources */,
 				B1000056 /* PulsingHeartIconView.swift in Sources */,
 				B1000057 /* MealCatalog.swift in Sources */,
@@ -857,6 +871,8 @@
 				B2000009 /* ShoppingCatalogTests.swift in Sources */,
 				B2000011 /* NotificationServiceTests.swift in Sources */,
 				B2000012 /* ExerciseVideoCatalogTests.swift in Sources */,
+				B2000014 /* ExerciseGifCatalogTests.swift in Sources */,
+				B2000015 /* CustomWorkoutFocusGroupTests.swift in Sources */,
 				B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
