@@ -105,6 +105,10 @@ struct HealthChatView: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     assistant.refreshGuidedCheckInsIfNeeded(context: context)
+                    assistant.checkInactivityFollowUpIfNeeded(
+                        context: context,
+                        sessions: workoutStore.sessionHistory
+                    )
                 }
             }
             .onChange(of: checkInService.pendingCheckIn?.phase) { _, _ in
@@ -120,6 +124,10 @@ struct HealthChatView: View {
                 while !Task.isCancelled {
                     try? await Task.sleep(for: .seconds(30))
                     assistant.refreshGuidedCheckInsIfNeeded(context: context)
+                    assistant.checkInactivityFollowUpIfNeeded(
+                        context: context,
+                        sessions: workoutStore.sessionHistory
+                    )
                 }
             }
             .onChange(of: draft) { _, newValue in

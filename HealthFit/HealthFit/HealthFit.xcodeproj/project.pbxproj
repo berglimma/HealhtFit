@@ -118,6 +118,8 @@
 		B1000112 /* corpo_inteiro.gif in Resources */ = {isa = PBXBuildFile; fileRef = F1000112 /* corpo_inteiro.gif */; };
 		B1000113 /* DailyEveningCheckInEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000113 /* DailyEveningCheckInEngine.swift */; };
 		B1000114 /* DailyEveningCheckInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000114 /* DailyEveningCheckInService.swift */; };
+		B1000115 /* SupplementationGuideEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000115 /* SupplementationGuideEngine.swift */; };
+		B1000116 /* AssistantInactivityFollowUpEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000116 /* AssistantInactivityFollowUpEngine.swift */; };
 		B1000092 /* peito.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000092 /* peito.mp4 */; };
 		B1000093 /* costas.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000093 /* costas.mp4 */; };
 		B1000094 /* pernas.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000094 /* pernas.mp4 */; };
@@ -128,6 +130,8 @@
 		B2000014 /* ExerciseGifCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000023 /* ExerciseGifCatalogTests.swift */; };
 		B2000015 /* CustomWorkoutFocusGroupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000024 /* CustomWorkoutFocusGroupTests.swift */; };
 		B2000016 /* DailyEveningCheckInEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000025 /* DailyEveningCheckInEngineTests.swift */; };
+		B2000017 /* SupplementationGuideEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000026 /* SupplementationGuideEngineTests.swift */; };
+		B2000018 /* AssistantInactivityFollowUpEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000027 /* AssistantInactivityFollowUpEngineTests.swift */; };
 		B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000022 /* PostWorkoutCheckInEngineTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -267,6 +271,8 @@
 		F1000112 /* corpo_inteiro.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = corpo_inteiro.gif; sourceTree = "<group>"; };
 		F1000113 /* DailyEveningCheckInEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyEveningCheckInEngine.swift; sourceTree = "<group>"; };
 		F1000114 /* DailyEveningCheckInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyEveningCheckInService.swift; sourceTree = "<group>"; };
+		F1000115 /* SupplementationGuideEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementationGuideEngine.swift; sourceTree = "<group>"; };
+		F1000116 /* AssistantInactivityFollowUpEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantInactivityFollowUpEngine.swift; sourceTree = "<group>"; };
 		F1000092 /* peito.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = peito.mp4; sourceTree = "<group>"; };
 		F1000093 /* costas.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = costas.mp4; sourceTree = "<group>"; };
 		F1000094 /* pernas.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = pernas.mp4; sourceTree = "<group>"; };
@@ -291,6 +297,8 @@
 		F2000023 /* ExerciseGifCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseGifCatalogTests.swift; sourceTree = "<group>"; };
 		F2000024 /* CustomWorkoutFocusGroupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomWorkoutFocusGroupTests.swift; sourceTree = "<group>"; };
 		F2000025 /* DailyEveningCheckInEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyEveningCheckInEngineTests.swift; sourceTree = "<group>"; };
+		F2000026 /* SupplementationGuideEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementationGuideEngineTests.swift; sourceTree = "<group>"; };
+		F2000027 /* AssistantInactivityFollowUpEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantInactivityFollowUpEngineTests.swift; sourceTree = "<group>"; };
 		F2000020 /* HealthFitUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -456,6 +464,8 @@
 				F1000100 /* DailyMorningCheckInService.swift */,
 				F1000113 /* DailyEveningCheckInEngine.swift */,
 				F1000114 /* DailyEveningCheckInService.swift */,
+				F1000115 /* SupplementationGuideEngine.swift */,
+				F1000116 /* AssistantInactivityFollowUpEngine.swift */,
 				F1000062 /* WelcomeMotivationService.swift */,
 				F1000064 /* MarathonReportBuilder.swift */,
 				F1000083 /* ExerciseVideoRepository.swift */,
@@ -614,6 +624,8 @@
 				F2000023 /* ExerciseGifCatalogTests.swift */,
 				F2000024 /* CustomWorkoutFocusGroupTests.swift */,
 				F2000025 /* DailyEveningCheckInEngineTests.swift */,
+				F2000026 /* SupplementationGuideEngineTests.swift */,
+				F2000027 /* AssistantInactivityFollowUpEngineTests.swift */,
 				F2000022 /* PostWorkoutCheckInEngineTests.swift */,
 			);
 			path = HealthFitTests;
@@ -890,6 +902,8 @@
 				B1000100 /* DailyMorningCheckInService.swift in Sources */,
 				B1000113 /* DailyEveningCheckInEngine.swift in Sources */,
 				B1000114 /* DailyEveningCheckInService.swift in Sources */,
+				B1000115 /* SupplementationGuideEngine.swift in Sources */,
+				B1000116 /* AssistantInactivityFollowUpEngine.swift in Sources */,
 				B1000087 /* ExerciseVideoRepository.swift in Sources */,
 				B1000073 /* ForgotPasswordView.swift in Sources */,
 				B1000075 /* GoogleServiceInfo.swift in Sources */,
@@ -933,6 +947,8 @@
 				B2000014 /* ExerciseGifCatalogTests.swift in Sources */,
 				B2000015 /* CustomWorkoutFocusGroupTests.swift in Sources */,
 				B2000016 /* DailyEveningCheckInEngineTests.swift in Sources */,
+				B2000017 /* SupplementationGuideEngineTests.swift in Sources */,
+				B2000018 /* AssistantInactivityFollowUpEngineTests.swift in Sources */,
 				B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

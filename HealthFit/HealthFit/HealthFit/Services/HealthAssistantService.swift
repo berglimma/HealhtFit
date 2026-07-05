@@ -46,6 +46,9 @@ enum HealthAssistantEngine {
         "Cerveja zero álcool é liberada?",
         "Cerveja light faz mal?",
         "Treino, cardio ou meditação?",
+        "Quais suplementos devo tomar?",
+        "Para que serve a creatina?",
+        "Whey protein faz mal?",
     ]
 
     static func welcomeMessage(context: HealthAssistantContext) -> String {
@@ -70,7 +73,7 @@ enum HealthAssistantEngine {
             sections.append("")
         }
 
-        sections.append("Posso tirar dúvidas sobre dieta, IMC, biotipos (ecto/meso/endo), sono, treinos conforme orientação profissional, cardio, meditação, macros e consumo de álcool.")
+        sections.append("Posso tirar dúvidas sobre dieta, IMC, biotipos (ecto/meso/endo), sono, treinos conforme orientação profissional, cardio, meditação, macros, suplementação e consumo de álcool.")
         sections.append("")
         sections.append("Toque em uma sugestão abaixo ou escreva sua pergunta.")
 
@@ -197,6 +200,7 @@ enum HealthAssistantEngine {
             "• Biotipos: ectomorfo, mesomorfo e endomorfo",
             "• Sono e recuperação",
             "• Treinos conforme orientação do personal",
+            "• Suplementação: whey, creatina, pré-treino, ômega 3 e mais",
             "",
             "Reformule a pergunta ou toque em uma sugestão abaixo."
         ]
@@ -330,7 +334,11 @@ enum HealthAssistantEngine {
         return "Hoje você registrou \(String(format: "%.1f", hours)) h — \(assessment.title.lowercased()). \(assessment.message)"
     }
 
-    private static let topics: [HealthAssistantTopic] = steroidTopics + dietTopics + imcTopics + workoutTopics + biotypeTopics + generalTopics
+    private static let supplementTopics: [HealthAssistantTopic] = SupplementationGuideEngine.assistantTopics().map {
+        HealthAssistantTopic(keywords: $0.keywords, respond: $0.respond)
+    }
+
+    private static let topics: [HealthAssistantTopic] = steroidTopics + supplementTopics + dietTopics + imcTopics + workoutTopics + biotypeTopics + generalTopics
 
     // MARK: - Esteróides anabolizantes (alerta de saúde)
 
@@ -1222,23 +1230,6 @@ enum HealthAssistantEngine {
             }
         ),
         HealthAssistantTopic(
-            keywords: ["pre treino", "pré-treino", "pre-treino", "creatina", "suplemento", "suplementos", "energetico", "energético", "beta alanina", "beta-alanina", "omega", "ômega"],
-            respond: { _ in
-                """
-                Suplementos no HealthFit:
-
-                • Pré-treino — foco e energia (registre ao iniciar treino)
-                • Creatina — força e volume muscular (3–5 g/dia)
-                • Ômega 3 — saúde cardiovascular e anti-inflamatório
-                • Beta-alanina — resistência muscular
-                • Whey — conveniência proteica (se tolera lactose)
-
-                Energéticos: moderação — alerta OMS acima de 2/semana.
-                Suplementos não substituem alimentação. Consulte profissional se tiver dúvidas médicas.
-                """
-            }
-        ),
-        HealthAssistantTopic(
             keywords: ["overtraining", "excesso de treino", "treinar todo dia", "fadiga", "cansaco", "cansaço"],
             respond: { _ in
                 """
@@ -1464,6 +1455,8 @@ final class HealthAssistantService: ObservableObject {
     private var replyTask: Task<Void, Never>?
     private var hasAppearedOnce = false
     private(set) var lastUserInteractionAt = Date()
+    private var lastUserMessageAt: Date?
+    private var inactivityFollowUpDelivered = false
     private var activePostWorkoutCheckIn: PendingPostWorkoutCheckIn?
     private var isDailyMorningCheckInActive = false
     private var isDailyEveningCheckInActive = false
@@ -1532,6 +1525,8 @@ final class HealthAssistantService: ObservableObject {
         guard !trimmed.isEmpty, !isTyping else { return }
 
         recordUserInteraction()
+        lastUserMessageAt = Date()
+        inactivityFollowUpDelivered = false
         replyTask?.cancel()
         messages.append(HealthChatMessage(text: trimmed, isUser: true))
 
@@ -1886,6 +1881,8 @@ final class HealthAssistantService: ObservableObject {
         isDailyMorningCheckInActive = false
         isDailyEveningCheckInActive = false
         lastEveningDayFeeling = nil
+        lastUserMessageAt = nil
+        inactivityFollowUpDelivered = false
 
         if let checkIn = PostWorkoutCheckInService.shared.dueCheckIn {
             beginPostWorkoutCheckInIfNeeded(checkIn: checkIn, context: context)
@@ -1928,6 +1925,28 @@ final class HealthAssistantService: ObservableObject {
         lastUserInteractionAt = Date()
     }
 
+    func checkInactivityFollowUpIfNeeded(
+        context: HealthAssistantContext,
+        sessions: [WorkoutSession]
+    ) {
+        guard !messages.isEmpty else { return }
+        guard !isTyping else { return }
+        guard !inactivityFollowUpDelivered else { return }
+
+        let lastAssistantPrompt = messages.last(where: { !$0.isUser })?.timestamp
+        guard AssistantInactivityFollowUpEngine.shouldDeliverFollowUp(
+            lastUserMessageAt: lastUserMessageAt,
+            lastAssistantPromptAt: lastAssistantPrompt
+        ) else { return }
+
+        let text = AssistantInactivityFollowUpEngine.message(context: context, sessions: sessions)
+        if let last = messages.last, !last.isUser, last.text == text { return }
+
+        deliverAssistantMessage(text)
+        inactivityFollowUpDelivered = true
+        lastUserInteractionAt = Date()
+    }
+
     func handleTabReturn() {
         guard hasAppearedOnce else {
             hasAppearedOnce = true
@@ -1956,6 +1975,14 @@ final class HealthAssistantService: ObservableObject {
     #if DEBUG
     func setLastUserInteractionForTests(_ date: Date) {
         lastUserInteractionAt = date
+    }
+
+    func setLastUserMessageForTests(_ date: Date?) {
+        lastUserMessageAt = date
+    }
+
+    func setInactivityFollowUpDeliveredForTests(_ delivered: Bool) {
+        inactivityFollowUpDelivered = delivered
     }
     #endif
 
