@@ -104,6 +104,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var caloricDeficit: Int
     var createdAt: Date
 
+    static let maxCaloricDeficit = 3_000
+
     init(
         id: String = UUID().uuidString,
         name: String,

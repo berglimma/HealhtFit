@@ -503,7 +503,7 @@ struct MealPlanView: View {
         heightText = String(format: "%.0f", user.height)
         ageText = "\(user.age)"
         selectedGender = user.gender
-        caloricDeficit = user.caloricDeficit
+        caloricDeficit = min(user.caloricDeficit, UserProfile.maxCaloricDeficit)
 
         if mealPlanService.basalMetabolicRate == 0 {
             mealPlanService.basalMetabolicRate = user.basalMetabolicRate
@@ -552,10 +552,10 @@ struct MealPlanView: View {
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
-                            .foregroundStyle(isDeficitEnabled && caloricDeficit < 1000 ? AppTheme.accent : AppTheme.textSecondary.opacity(0.4))
+                            .foregroundStyle(isDeficitEnabled && caloricDeficit < UserProfile.maxCaloricDeficit ? AppTheme.accent : AppTheme.textSecondary.opacity(0.4))
                     }
                     .buttonStyle(.plain)
-                    .disabled(!isDeficitEnabled || caloricDeficit >= 1000)
+                    .disabled(!isDeficitEnabled || caloricDeficit >= UserProfile.maxCaloricDeficit)
                 }
             }
 
@@ -595,7 +595,7 @@ struct MealPlanView: View {
     }
 
     private func adjustCaloricDeficit(by delta: Int) {
-        let newValue = min(max(caloricDeficit + delta, 0), 1000)
+        let newValue = min(max(caloricDeficit + delta, 0), UserProfile.maxCaloricDeficit)
         guard newValue != caloricDeficit, var user = authService.currentUser else { return }
         caloricDeficit = newValue
         user.caloricDeficit = newValue
