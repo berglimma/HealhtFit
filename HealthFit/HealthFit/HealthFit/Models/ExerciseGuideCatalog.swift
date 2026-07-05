@@ -485,9 +485,20 @@ extension Exercise {
 
 struct ExerciseExecutionGuideView: View {
     let steps: [String]
+    var exercise: Exercise? = nil
     var compact: Bool = false
 
     var body: some View {
+        VStack(alignment: .leading, spacing: compact ? 10 : 12) {
+            guideSection
+
+            if let video = exercise?.demoVideo {
+                ExerciseDemoVideoView(video: video, compact: compact)
+            }
+        }
+    }
+
+    private var guideSection: some View {
         VStack(alignment: .leading, spacing: compact ? 8 : 10) {
             Label("Guia de Execução", systemImage: "list.number")
                 .font(compact ? .caption.weight(.semibold) : .subheadline.weight(.semibold))

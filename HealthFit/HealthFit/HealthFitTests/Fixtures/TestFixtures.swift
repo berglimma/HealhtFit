@@ -96,6 +96,31 @@ enum TestFixtures {
         )
     }
 
+    static func completedWorkoutSession(
+        workoutTitle: String = "Treino A",
+        endedAt: Date = .now,
+        completedExercises: Int = 6,
+        totalExercises: Int = 6
+    ) -> WorkoutSession {
+        WorkoutSession(
+            workoutSheetId: sheetId,
+            workoutTitle: workoutTitle,
+            startedAt: endedAt.addingTimeInterval(-3600),
+            endedAt: endedAt,
+            caloriesBurned: 320,
+            completedExercises: completedExercises,
+            totalExercises: totalExercises,
+            exerciseRecords: [
+                ExerciseSessionRecord(
+                    exerciseId: exerciseId,
+                    exerciseName: "Supino reto",
+                    elapsedSeconds: 2400,
+                    isCompleted: true
+                )
+            ]
+        )
+    }
+
     static var runningExercise: CardioExercise {
         CardioExercise.catalog.first { $0.name == "Corrida" }!
     }

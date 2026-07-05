@@ -79,6 +79,7 @@
 		B2000009 /* ShoppingCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000018 /* ShoppingCatalogTests.swift */; };
 		B2000010 /* HealthFitUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000020 /* HealthFitUITests.swift */; };
 		B2000011 /* NotificationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000019 /* NotificationServiceTests.swift */; };
+		B2000012 /* ExerciseVideoCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000021 /* ExerciseVideoCatalogTests.swift */; };
 		B1000070 /* FirebaseBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000070 /* FirebaseBootstrap.swift */; };
 		B1000071 /* AuthErrorMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000071 /* AuthErrorMapper.swift */; };
 		B1000072 /* FirebaseAuthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000072 /* FirebaseAuthProvider.swift */; };
@@ -92,7 +93,25 @@
 		B1000081 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD001 /* FirebaseAuth */; };
 		B1000082 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD002 /* FirebaseCore */; };
 		B1000083 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD004 /* FirebaseFirestore */; };
+		B1000088 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD005 /* FirebaseStorage */; };
 		B1000079 /* WorkoutFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000079 /* WorkoutFirestoreService.swift */; };
+		B1000084 /* ExerciseVideoCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000080 /* ExerciseVideoCatalog.swift */; };
+		B1000085 /* ExerciseDemoVideoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000081 /* ExerciseDemoVideoView.swift */; };
+		B1000086 /* ExerciseVideoFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000082 /* ExerciseVideoFirestoreService.swift */; };
+		B1000087 /* ExerciseVideoRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000083 /* ExerciseVideoRepository.swift */; };
+		B1000089 /* ExerciseVideoStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000084 /* ExerciseVideoStorageService.swift */; };
+		B1000090 /* PostWorkoutCheckInEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000085 /* PostWorkoutCheckInEngine.swift */; };
+		B1000091 /* PostWorkoutCheckInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000086 /* PostWorkoutCheckInService.swift */; };
+		B1000099 /* DailyMorningCheckInEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000099 /* DailyMorningCheckInEngine.swift */; };
+		B1000100 /* DailyMorningCheckInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000100 /* DailyMorningCheckInService.swift */; };
+		B1000092 /* peito.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000092 /* peito.mp4 */; };
+		B1000093 /* costas.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000093 /* costas.mp4 */; };
+		B1000094 /* pernas.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000094 /* pernas.mp4 */; };
+		B1000095 /* ombros.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000095 /* ombros.mp4 */; };
+		B1000096 /* bracos.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000096 /* bracos.mp4 */; };
+		B1000097 /* abdomen.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000097 /* abdomen.mp4 */; };
+		B1000098 /* corpo_inteiro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F1000098 /* corpo_inteiro.mp4 */; };
+		B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000022 /* PostWorkoutCheckInEngineTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -208,6 +227,22 @@
 		F1000077 /* SocialSignInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialSignInService.swift; sourceTree = "<group>"; };
 		F1000078 /* SocialLoginButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialLoginButtonsView.swift; sourceTree = "<group>"; };
 		F1000079 /* WorkoutFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutFirestoreService.swift; sourceTree = "<group>"; };
+		F1000080 /* ExerciseVideoCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseVideoCatalog.swift; sourceTree = "<group>"; };
+		F1000081 /* ExerciseDemoVideoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDemoVideoView.swift; sourceTree = "<group>"; };
+		F1000082 /* ExerciseVideoFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseVideoFirestoreService.swift; sourceTree = "<group>"; };
+		F1000083 /* ExerciseVideoRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseVideoRepository.swift; sourceTree = "<group>"; };
+		F1000084 /* ExerciseVideoStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseVideoStorageService.swift; sourceTree = "<group>"; };
+		F1000085 /* PostWorkoutCheckInEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostWorkoutCheckInEngine.swift; sourceTree = "<group>"; };
+		F1000086 /* PostWorkoutCheckInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostWorkoutCheckInService.swift; sourceTree = "<group>"; };
+		F1000099 /* DailyMorningCheckInEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyMorningCheckInEngine.swift; sourceTree = "<group>"; };
+		F1000100 /* DailyMorningCheckInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyMorningCheckInService.swift; sourceTree = "<group>"; };
+		F1000092 /* peito.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = peito.mp4; sourceTree = "<group>"; };
+		F1000093 /* costas.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = costas.mp4; sourceTree = "<group>"; };
+		F1000094 /* pernas.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = pernas.mp4; sourceTree = "<group>"; };
+		F1000095 /* ombros.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = ombros.mp4; sourceTree = "<group>"; };
+		F1000096 /* bracos.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = bracos.mp4; sourceTree = "<group>"; };
+		F1000097 /* abdomen.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = abdomen.mp4; sourceTree = "<group>"; };
+		F1000098 /* corpo_inteiro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = corpo_inteiro.mp4; sourceTree = "<group>"; };
 		F2000001 /* HealthFitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2000002 /* HealthFitUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2000010 /* TestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFixtures.swift; sourceTree = "<group>"; };
@@ -220,6 +255,8 @@
 		F2000017 /* SleepAssessmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepAssessmentTests.swift; sourceTree = "<group>"; };
 		F2000018 /* ShoppingCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingCatalogTests.swift; sourceTree = "<group>"; };
 		F2000019 /* NotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationServiceTests.swift; sourceTree = "<group>"; };
+		F2000021 /* ExerciseVideoCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseVideoCatalogTests.swift; sourceTree = "<group>"; };
+		F2000022 /* PostWorkoutCheckInEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostWorkoutCheckInEngineTests.swift; sourceTree = "<group>"; };
 		F2000020 /* HealthFitUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -231,6 +268,7 @@
 				B1000081 /* FirebaseAuth in Frameworks */,
 				B1000082 /* FirebaseCore in Frameworks */,
 				B1000083 /* FirebaseFirestore in Frameworks */,
+				B1000088 /* FirebaseStorage in Frameworks */,
 				B1000080 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -282,8 +320,23 @@
 				F1000036 /* HealthFit.entitlements */,
 				F1000037 /* Info.plist */,
 				F1000074 /* GoogleService-Info.plist */,
+				G1000092 /* ExerciseVideos */,
 			);
 			path = HealthFit;
+			sourceTree = "<group>";
+		};
+		G1000092 /* ExerciseVideos */ = {
+			isa = PBXGroup;
+			children = (
+				F1000092 /* peito.mp4 */,
+				F1000093 /* costas.mp4 */,
+				F1000094 /* pernas.mp4 */,
+				F1000095 /* ombros.mp4 */,
+				F1000096 /* bracos.mp4 */,
+				F1000097 /* abdomen.mp4 */,
+				F1000098 /* corpo_inteiro.mp4 */,
+			);
+			path = Resources/ExerciseVideos;
 			sourceTree = "<group>";
 		};
 		G1000003 /* HealthFitWatch */ = {
@@ -320,6 +373,7 @@
 				F1000050 /* MeditationModels.swift */,
 				F1000053 /* DailyWellnessModels.swift */,
 				F1000056 /* ExerciseGuideCatalog.swift */,
+				F1000080 /* ExerciseVideoCatalog.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -343,8 +397,13 @@
 				F1000054 /* DailyWellnessService.swift */,
 				F1000057 /* AppIconInactivityService.swift */,
 				F1000060 /* HealthAssistantService.swift */,
+				F1000085 /* PostWorkoutCheckInEngine.swift */,
+				F1000086 /* PostWorkoutCheckInService.swift */,
+				F1000099 /* DailyMorningCheckInEngine.swift */,
+				F1000100 /* DailyMorningCheckInService.swift */,
 				F1000062 /* WelcomeMotivationService.swift */,
 				F1000064 /* MarathonReportBuilder.swift */,
+				F1000083 /* ExerciseVideoRepository.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -359,6 +418,8 @@
 				F1000076 /* AppleSignInNonce.swift */,
 				F1000077 /* SocialSignInService.swift */,
 				F1000079 /* WorkoutFirestoreService.swift */,
+				F1000082 /* ExerciseVideoFirestoreService.swift */,
+				F1000084 /* ExerciseVideoStorageService.swift */,
 			);
 			path = Firebase;
 			sourceTree = "<group>";
@@ -430,6 +491,7 @@
 				F1000045 /* ActiveCardioView.swift */,
 				F1000051 /* MeditationSetupView.swift */,
 				F1000052 /* ActiveMeditationView.swift */,
+				F1000081 /* ExerciseDemoVideoView.swift */,
 			);
 			path = Workout;
 			sourceTree = "<group>";
@@ -492,6 +554,8 @@
 				F2000017 /* SleepAssessmentTests.swift */,
 				F2000018 /* ShoppingCatalogTests.swift */,
 				F2000019 /* NotificationServiceTests.swift */,
+				F2000021 /* ExerciseVideoCatalogTests.swift */,
+				F2000022 /* PostWorkoutCheckInEngineTests.swift */,
 			);
 			path = HealthFitTests;
 			sourceTree = "<group>";
@@ -534,6 +598,7 @@
 				PKGPROD001 /* FirebaseAuth */,
 				PKGPROD002 /* FirebaseCore */,
 				PKGPROD004 /* FirebaseFirestore */,
+				PKGPROD005 /* FirebaseStorage */,
 				PKGPROD003 /* GoogleSignIn */,
 			);
 			productName = HealthFit;
@@ -652,6 +717,13 @@
 			files = (
 				B1000029 /* Assets.xcassets in Resources */,
 				B1000074 /* GoogleService-Info.plist in Resources */,
+				B1000092 /* peito.mp4 in Resources */,
+				B1000093 /* costas.mp4 in Resources */,
+				B1000094 /* pernas.mp4 in Resources */,
+				B1000095 /* ombros.mp4 in Resources */,
+				B1000096 /* bracos.mp4 in Resources */,
+				B1000097 /* abdomen.mp4 in Resources */,
+				B1000098 /* corpo_inteiro.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -707,6 +779,7 @@
 				B1000019 /* HealthChartsView.swift in Sources */,
 				B1000020 /* WorkoutListView.swift in Sources */,
 				B1000021 /* WorkoutDetailView.swift in Sources */,
+				B1000085 /* ExerciseDemoVideoView.swift in Sources */,
 				B1000022 /* ActiveWorkoutView.swift in Sources */,
 				B1000023 /* CreateWorkoutView.swift in Sources */,
 				B1000035 /* WorkoutSummaryView.swift in Sources */,
@@ -725,6 +798,7 @@
 				B1000052 /* DailyWellnessService.swift in Sources */,
 				B1000053 /* DailyWellnessCheckInView.swift in Sources */,
 				B1000054 /* ExerciseGuideCatalog.swift in Sources */,
+				B1000084 /* ExerciseVideoCatalog.swift in Sources */,
 				B1000055 /* AppIconInactivityService.swift in Sources */,
 				B1000056 /* PulsingHeartIconView.swift in Sources */,
 				B1000057 /* MealCatalog.swift in Sources */,
@@ -737,6 +811,13 @@
 				B1000071 /* AuthErrorMapper.swift in Sources */,
 				B1000072 /* FirebaseAuthProvider.swift in Sources */,
 				B1000079 /* WorkoutFirestoreService.swift in Sources */,
+				B1000086 /* ExerciseVideoFirestoreService.swift in Sources */,
+				B1000089 /* ExerciseVideoStorageService.swift in Sources */,
+				B1000090 /* PostWorkoutCheckInEngine.swift in Sources */,
+				B1000091 /* PostWorkoutCheckInService.swift in Sources */,
+				B1000099 /* DailyMorningCheckInEngine.swift in Sources */,
+				B1000100 /* DailyMorningCheckInService.swift in Sources */,
+				B1000087 /* ExerciseVideoRepository.swift in Sources */,
 				B1000073 /* ForgotPasswordView.swift in Sources */,
 				B1000075 /* GoogleServiceInfo.swift in Sources */,
 				B1000076 /* AppleSignInNonce.swift in Sources */,
@@ -775,6 +856,8 @@
 				B2000008 /* SleepAssessmentTests.swift in Sources */,
 				B2000009 /* ShoppingCatalogTests.swift in Sources */,
 				B2000011 /* NotificationServiceTests.swift in Sources */,
+				B2000012 /* ExerciseVideoCatalogTests.swift in Sources */,
+				B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1242,6 +1325,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = PKGREF001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		PKGPROD005 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PKGREF001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

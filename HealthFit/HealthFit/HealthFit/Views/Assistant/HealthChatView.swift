@@ -6,8 +6,11 @@ struct HealthChatView: View {
     @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var workoutStore: WorkoutStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.scenePhase) private var scenePhase
 
     @StateObject private var assistant = HealthAssistantService()
+    @ObservedObject private var checkInService = PostWorkoutCheckInService.shared
+    @ObservedObject private var dailyMorningService = DailyMorningCheckInService.shared
     @State private var draft = ""
     @FocusState private var isInputFocused: Bool
 
@@ -90,14 +93,47 @@ struct HealthChatView: View {
                 }
             }
             .onAppear {
-                assistant.bootstrap(context: context)
+                bootstrapOrResumeCheckIn()
                 assistant.handleTabReturn()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    assistant.refreshGuidedCheckInsIfNeeded(context: context)
+                }
+            }
+            .onChange(of: checkInService.pendingCheckIn?.phase) { _, _ in
+                assistant.refreshGuidedCheckInsIfNeeded(context: context)
+            }
+            .onChange(of: dailyMorningService.state?.phase) { _, _ in
+                assistant.refreshGuidedCheckInsIfNeeded(context: context)
+            }
+            .task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(30))
+                    assistant.refreshGuidedCheckInsIfNeeded(context: context)
+                }
             }
             .onChange(of: draft) { _, newValue in
                 if !newValue.isEmpty {
                     assistant.recordUserInteraction()
                 }
             }
+        }
+    }
+
+    private func bootstrapOrResumeCheckIn() {
+        if let checkIn = checkInService.dueCheckIn, checkIn.phase == .scheduled {
+            assistant.beginPostWorkoutCheckInIfNeeded(checkIn: checkIn, context: context)
+        } else if checkInService.isAwaitingFeelingReply,
+                  let checkIn = checkInService.pendingCheckIn {
+            assistant.restoreInterruptedPostWorkoutCheckIn(checkIn: checkIn, context: context)
+        } else if dailyMorningService.isDue,
+                  dailyMorningService.state?.phase == .pending {
+            assistant.beginDailyMorningCheckInIfNeeded(context: context)
+        } else if dailyMorningService.isAwaitingFeelingReply {
+            assistant.restoreInterruptedDailyMorningCheckIn(context: context)
+        } else {
+            assistant.bootstrap(context: context)
         }
     }
 
@@ -114,7 +150,7 @@ struct HealthChatView: View {
     private var suggestionStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(HealthAssistantEngine.suggestedQuestions, id: \.self) { question in
+                ForEach(suggestedReplies, id: \.self) { question in
                     Button {
                         draft = ""
                         isInputFocused = false
@@ -122,10 +158,10 @@ struct HealthChatView: View {
                     } label: {
                         Text(question)
                             .font(.caption.weight(.medium))
-                            .foregroundStyle(AppTheme.textPrimary)
+                            .foregroundStyle(assistant.isInGuidedCheckIn ? .white : AppTheme.textPrimary)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(AppTheme.cardBackground)
+                            .background(assistant.isInGuidedCheckIn ? AppTheme.accent : AppTheme.cardBackground)
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -139,9 +175,30 @@ struct HealthChatView: View {
         .background(AppTheme.background.opacity(0.95))
     }
 
+    private var suggestedReplies: [String] {
+        if assistant.isInPostWorkoutCheckIn {
+            return PostWorkoutCheckInEngine.feelingQuickReplies
+        }
+        if assistant.isInDailyMorningCheckIn {
+            return DailyMorningCheckInEngine.feelingQuickReplies
+        }
+        return HealthAssistantEngine.suggestedQuestions
+    }
+
+    private var inputPlaceholder: String {
+        if assistant.isInGuidedCheckIn {
+            return "Conte como você está se sentindo..."
+        }
+        return "Digite sua dúvida..."
+    }
+
     private var inputBar: some View {
         HStack(spacing: 10) {
-            TextField("Digite sua dúvida...", text: $draft, axis: .vertical)
+            TextField(
+                inputPlaceholder,
+                text: $draft,
+                axis: .vertical
+            )
                 .lineLimit(1...4)
                 .focused($isInputFocused)
                 .disabled(assistant.isTyping)

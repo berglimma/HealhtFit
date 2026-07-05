@@ -1,33 +1,97 @@
-Configuração Firebase (não commitar segredos)
-===========================================
+Configuração Firebase — HealthFit
+=================================
+Projeto: healthfit-30d87
+Console: https://console.firebase.google.com/project/healthfit-30d87
 
-1. Firebase Console → Configurações do projeto → app iOS
-2. Baixe GoogleService-Info.plist
-3. Copie para: HealthFit/GoogleService-Info.plist
-   (use GoogleService-Info.plist.example como referência de estrutura)
+STATUS LOCAL (já configurado no app)
+------------------------------------
+[OK] GoogleService-Info.plist presente
+[OK] Bundle ID: luan.com.healthfit.app
+[OK] URL Scheme Google Sign-In no Info.plist
+[OK] SDK: Auth, Firestore, Storage
 
-4. Login Google: em Info.plist, em CFBundleURLSchemes, use o valor
-   REVERSED_CLIENT_ID do plist baixado.
+PASSO A PASSO NO FIREBASE CONSOLE
+---------------------------------
 
-5. Firebase Console → Authentication → habilite:
+1) Authentication
+   https://console.firebase.google.com/project/healthfit-30d87/authentication/providers
+   Habilitar:
    - E-mail/Senha
-   - Google
-   - Apple
+   - Google (selecione e-mail de suporte do projeto)
+   - Apple (configure Service ID se publicar na App Store)
 
-6. Firebase Console → Firestore Database → criar banco (modo produção ou teste)
+2) Firestore Database
+   https://console.firebase.google.com/project/healthfit-30d87/firestore
+   - Se ainda não existir: Criar banco → modo Produção
+   - Região recomendada: southamerica-east1 (São Paulo) ou us-central1
 
-7. Firestore → Regras → use algo como:
+3) Storage
+   https://console.firebase.google.com/project/healthfit-30d87/storage
+   - Se ainda não existir: Começar → modo Produção (mesma região do Firestore)
+   - Criar pastas:
+     exerciseVideos/groups/
+     exerciseVideos/exercises/   (opcional)
 
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{userId}/workoutSessions/{sessionId} {
-         allow read, write: if request.auth != null && request.auth.uid == userId;
-       }
-     }
-   }
+4) Upload dos vídeos (Storage)
 
-   O app salva os últimos 10 treinos em:
-   users/{uid}/workoutSessions/{sessionId}
+   Opção A — script automático (recomendado):
+   - Coloque os MP4 em videos/groups/ (ver videos/README.md)
+   - Instale Google Cloud SDK: https://cloud.google.com/sdk/docs/install
+   - gcloud auth login
+   - gcloud config set project healthfit-30d87
+   - chmod +x scripts/upload_exercise_videos.sh
+   - ./scripts/upload_exercise_videos.sh
 
-O arquivo GoogleService-Info.plist está no .gitignore e NÃO deve ir para o Git.
+   Opção B — Console manual:
+   https://console.firebase.google.com/project/healthfit-30d87/storage
+   Envie estes arquivos MP4 em exerciseVideos/groups/:
+   - peito.mp4
+   - costas.mp4
+   - pernas.mp4
+   - ombros.mp4
+   - bracos.mp4
+   - abdomen.mp4
+   - corpo_inteiro.mp4
+
+5) Regras de segurança (deploy automático)
+   Na raiz do repositório (/Users/berglimma/Documents/HealhtFit/):
+   
+   chmod +x scripts/deploy_firebase.sh
+   ./scripts/deploy_firebase.sh
+
+   Na primeira vez o Firebase CLI pedirá login no navegador.
+   Isso publica firestore.rules e storage.rules do projeto.
+
+6) Sincronizar catálogo no app
+   - Abra o app HealthFit
+   - Faça login
+   - O app grava exerciseVideos no Firestore e busca URLs no Storage
+
+ESTRUTURA DE DADOS
+------------------
+
+Firestore:
+  users/{uid}/workoutSessions/{sessionId}
+    → últimos 10 treinos do usuário
+
+  exerciseVideos/{slug}
+    → exerciseName, title, storagePath, muscleGroup, keywords, updatedAt
+
+Storage:
+  exerciseVideos/groups/{grupo}.mp4
+  exerciseVideos/exercises/{slug}.mp4
+
+REGRAS (referência — já em firestore.rules e storage.rules)
+------------------------------------------------------------
+
+Firestore:
+  - workoutSessions: só o próprio usuário logado
+  - exerciseVideos: leitura/escrita para usuários autenticados
+
+Storage:
+  - exerciseVideos/**: leitura/escrita para usuários autenticados
+
+SEGURANÇA
+---------
+- GoogleService-Info.plist está no .gitignore — NÃO commitar
+- Não compartilhe API keys publicamente

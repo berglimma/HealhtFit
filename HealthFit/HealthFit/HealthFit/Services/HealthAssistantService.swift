@@ -1462,11 +1462,29 @@ final class HealthAssistantService: ObservableObject {
     private var replyTask: Task<Void, Never>?
     private var hasAppearedOnce = false
     private(set) var lastUserInteractionAt = Date()
+    private var activePostWorkoutCheckIn: PendingPostWorkoutCheckIn?
+    private var isDailyMorningCheckInActive = false
     private static let replyDelay: Duration = .seconds(3)
     private static let idleReturnThreshold: TimeInterval = 180
 
+    var isInPostWorkoutCheckIn: Bool {
+        activePostWorkoutCheckIn != nil || PostWorkoutCheckInService.shared.isAwaitingFeelingReply
+    }
+
+    var isInDailyMorningCheckIn: Bool {
+        isDailyMorningCheckInActive || DailyMorningCheckInService.shared.isAwaitingFeelingReply
+    }
+
+    var isInGuidedCheckIn: Bool {
+        isInPostWorkoutCheckIn || isInDailyMorningCheckIn
+    }
+
     func bootstrap(context: HealthAssistantContext) {
         guard messages.isEmpty else { return }
+        guard PostWorkoutCheckInService.shared.dueCheckIn == nil,
+              !PostWorkoutCheckInService.shared.isAwaitingFeelingReply else { return }
+        guard !DailyMorningCheckInService.shared.isDue,
+              !DailyMorningCheckInService.shared.isAwaitingFeelingReply else { return }
         messages.append(
             HealthChatMessage(
                 text: HealthAssistantEngine.welcomeMessage(context: context),
@@ -1499,8 +1517,18 @@ final class HealthAssistantService: ObservableObject {
         recordUserInteraction()
         replyTask?.cancel()
         messages.append(HealthChatMessage(text: trimmed, isUser: true))
-        isTyping = true
 
+        if isInPostWorkoutCheckIn {
+            handlePostWorkoutReply(trimmed, context: context)
+            return
+        }
+
+        if isInDailyMorningCheckIn {
+            handleDailyMorningReply(trimmed, context: context)
+            return
+        }
+
+        isTyping = true
         replyTask = Task {
             do {
                 try await Task.sleep(for: Self.replyDelay)
@@ -1514,11 +1542,219 @@ final class HealthAssistantService: ObservableObject {
         }
     }
 
+    func refreshGuidedCheckInsIfNeeded(context: HealthAssistantContext) {
+        refreshPostWorkoutCheckInIfNeeded(context: context)
+        if !isInPostWorkoutCheckIn {
+            refreshDailyMorningCheckInIfNeeded(context: context)
+        }
+    }
+
+    func refreshPostWorkoutCheckInIfNeeded(context: HealthAssistantContext) {
+        guard !isTyping else { return }
+
+        if let checkIn = PostWorkoutCheckInService.shared.dueCheckIn {
+            beginPostWorkoutCheckInIfNeeded(checkIn: checkIn, context: context)
+        } else if PostWorkoutCheckInService.shared.isAwaitingFeelingReply,
+                  let checkIn = PostWorkoutCheckInService.shared.pendingCheckIn {
+            resumePostWorkoutCheckIn(checkIn: checkIn)
+        }
+    }
+
+    func refreshDailyMorningCheckInIfNeeded(context: HealthAssistantContext) {
+        guard !isTyping else { return }
+        guard !isInPostWorkoutCheckIn else { return }
+
+        DailyMorningCheckInService.shared.refreshForToday()
+
+        if DailyMorningCheckInService.shared.isDue,
+           DailyMorningCheckInService.shared.state?.phase == .pending {
+            beginDailyMorningCheckInIfNeeded(context: context)
+        } else if DailyMorningCheckInService.shared.isAwaitingFeelingReply {
+            isDailyMorningCheckInActive = true
+        }
+    }
+
+    func beginDailyMorningCheckInIfNeeded(context: HealthAssistantContext) {
+        guard DailyMorningCheckInService.shared.isDue,
+              DailyMorningCheckInService.shared.state?.phase == .pending else { return }
+        guard !isInPostWorkoutCheckIn else { return }
+        guard activePostWorkoutCheckIn == nil else { return }
+        guard !isDailyMorningCheckInActive || messages.isEmpty else { return }
+
+        isDailyMorningCheckInActive = true
+        let athleteName = context.user?.greetingName ?? ""
+
+        isTyping = true
+        replyTask?.cancel()
+        replyTask = Task {
+            do {
+                try await Task.sleep(for: Self.replyDelay)
+                guard !Task.isCancelled else { return }
+                let opening = DailyMorningCheckInEngine.openingMessage(
+                    athleteName: athleteName,
+                    context: context
+                )
+                messages.append(HealthChatMessage(text: opening, isUser: false))
+                DailyMorningCheckInService.shared.markAskedFeeling()
+                isTyping = false
+                lastUserInteractionAt = Date()
+            } catch {
+                isTyping = false
+            }
+        }
+    }
+
+    func restoreInterruptedDailyMorningCheckIn(context: HealthAssistantContext) {
+        isDailyMorningCheckInActive = true
+        guard messages.isEmpty else { return }
+        redeliverDailyMorningOpening(context: context)
+    }
+
+    private func handleDailyMorningReply(_ text: String, context: HealthAssistantContext) {
+        let feeling = DailyMorningCheckInEngine.classifyFeeling(text)
+        let responses = DailyMorningCheckInEngine.responseSequence(
+            feeling: feeling,
+            context: context
+        )
+
+        isTyping = true
+        replyTask = Task {
+            do {
+                for response in responses {
+                    try await Task.sleep(for: Self.replyDelay)
+                    guard !Task.isCancelled else { return }
+                    messages.append(HealthChatMessage(text: response, isUser: false))
+                }
+                isDailyMorningCheckInActive = false
+                DailyMorningCheckInService.shared.markCompleted()
+                PostWorkoutCheckInService.shared.clearUnreadAssistantMessage()
+                isTyping = false
+            } catch {
+                isTyping = false
+            }
+        }
+    }
+
+    private func redeliverDailyMorningOpening(context: HealthAssistantContext) {
+        let athleteName = context.user?.greetingName ?? ""
+        isTyping = true
+        replyTask = Task {
+            do {
+                try await Task.sleep(for: Self.replyDelay)
+                guard !Task.isCancelled else { return }
+                let opening = DailyMorningCheckInEngine.openingMessage(
+                    athleteName: athleteName,
+                    context: context
+                )
+                messages.append(HealthChatMessage(text: opening, isUser: false))
+                isTyping = false
+            } catch {
+                isTyping = false
+            }
+        }
+    }
+
+    func beginPostWorkoutCheckInIfNeeded(checkIn: PendingPostWorkoutCheckIn, context: HealthAssistantContext) {
+        guard checkIn.phase == .scheduled else { return }
+        guard activePostWorkoutCheckIn?.sessionId != checkIn.sessionId || messages.isEmpty else { return }
+
+        activePostWorkoutCheckIn = checkIn
+        let athleteName = context.user?.greetingName ?? ""
+
+        isTyping = true
+        replyTask?.cancel()
+        replyTask = Task {
+            do {
+                try await Task.sleep(for: Self.replyDelay)
+                guard !Task.isCancelled else { return }
+                let opening = PostWorkoutCheckInEngine.openingMessage(checkIn: checkIn, athleteName: athleteName)
+                messages.append(HealthChatMessage(text: opening, isUser: false))
+                PostWorkoutCheckInService.shared.markAskedFeeling()
+                activePostWorkoutCheckIn = PostWorkoutCheckInService.shared.pendingCheckIn
+                isTyping = false
+                lastUserInteractionAt = Date()
+            } catch {
+                isTyping = false
+            }
+        }
+    }
+
+    func resumePostWorkoutCheckIn(checkIn: PendingPostWorkoutCheckIn) {
+        activePostWorkoutCheckIn = checkIn
+    }
+
+    func restoreInterruptedPostWorkoutCheckIn(checkIn: PendingPostWorkoutCheckIn, context: HealthAssistantContext) {
+        resumePostWorkoutCheckIn(checkIn: checkIn)
+        guard messages.isEmpty else { return }
+        redeliverPostWorkoutOpening(checkIn: checkIn, context: context)
+    }
+
+    private func handlePostWorkoutReply(_ text: String, context: HealthAssistantContext) {
+        guard let checkIn = activePostWorkoutCheckIn ?? PostWorkoutCheckInService.shared.pendingCheckIn else { return }
+
+        let feeling = PostWorkoutCheckInEngine.classifyFeeling(text)
+        let athleteName = context.user?.greetingName ?? ""
+        let responses = PostWorkoutCheckInEngine.responseSequence(
+            feeling: feeling,
+            checkIn: checkIn,
+            athleteName: athleteName
+        )
+
+        isTyping = true
+        replyTask = Task {
+            do {
+                for response in responses {
+                    try await Task.sleep(for: Self.replyDelay)
+                    guard !Task.isCancelled else { return }
+                    messages.append(HealthChatMessage(text: response, isUser: false))
+                }
+                activePostWorkoutCheckIn = nil
+                PostWorkoutCheckInService.shared.markCompleted()
+                PostWorkoutCheckInService.shared.clearIfCompleted()
+                isTyping = false
+            } catch {
+                isTyping = false
+            }
+        }
+    }
+
     func clear(context: HealthAssistantContext) {
         replyTask?.cancel()
         isTyping = false
         messages.removeAll()
-        bootstrap(context: context)
+        activePostWorkoutCheckIn = nil
+        isDailyMorningCheckInActive = false
+
+        if let checkIn = PostWorkoutCheckInService.shared.dueCheckIn {
+            beginPostWorkoutCheckInIfNeeded(checkIn: checkIn, context: context)
+        } else if PostWorkoutCheckInService.shared.isAwaitingFeelingReply,
+                  let checkIn = PostWorkoutCheckInService.shared.pendingCheckIn {
+            resumePostWorkoutCheckIn(checkIn: checkIn)
+            redeliverPostWorkoutOpening(checkIn: checkIn, context: context)
+        } else if DailyMorningCheckInService.shared.isDue,
+                  DailyMorningCheckInService.shared.state?.phase == .pending {
+            beginDailyMorningCheckInIfNeeded(context: context)
+        } else if DailyMorningCheckInService.shared.isAwaitingFeelingReply {
+            restoreInterruptedDailyMorningCheckIn(context: context)
+        } else {
+            bootstrap(context: context)
+        }
+    }
+
+    private func redeliverPostWorkoutOpening(checkIn: PendingPostWorkoutCheckIn, context: HealthAssistantContext) {
+        let athleteName = context.user?.greetingName ?? ""
+        isTyping = true
+        replyTask = Task {
+            do {
+                try await Task.sleep(for: Self.replyDelay)
+                guard !Task.isCancelled else { return }
+                let opening = PostWorkoutCheckInEngine.openingMessage(checkIn: checkIn, athleteName: athleteName)
+                messages.append(HealthChatMessage(text: opening, isUser: false))
+                isTyping = false
+            } catch {
+                isTyping = false
+            }
+        }
     }
 
     func recordUserInteraction() {
@@ -1531,6 +1767,8 @@ final class HealthAssistantService: ObservableObject {
             lastUserInteractionAt = Date()
             return
         }
+
+        guard !isInGuidedCheckIn else { return }
 
         let idleSeconds = Date().timeIntervalSince(lastUserInteractionAt)
         guard idleSeconds >= Self.idleReturnThreshold else { return }

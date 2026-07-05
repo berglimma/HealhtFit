@@ -1,7 +1,11 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @ObservedObject private var checkInService = PostWorkoutCheckInService.shared
+    @ObservedObject private var dailyMorningService = DailyMorningCheckInService.shared
     @State private var selectedTab = 0
+
+    private let assistantTabTag = 3
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -27,7 +31,8 @@ struct MainTabView: View {
                 .tabItem {
                     Label("Dúvidas", systemImage: "bubble.left.and.bubble.right.fill")
                 }
-                .tag(3)
+                .tag(assistantTabTag)
+                .badge(checkInService.assistantTabBadgeCount)
 
             ProfileView()
                 .tabItem {
@@ -37,5 +42,25 @@ struct MainTabView: View {
         }
         .tint(AppTheme.accent)
         .tabViewStyle(.automatic)
+        .onAppear {
+            updateAssistantTabVisibility(for: selectedTab)
+            checkInService.refreshAssistantBadge()
+        }
+        .onChange(of: selectedTab) { _, tab in
+            updateAssistantTabVisibility(for: tab)
+        }
+        .onChange(of: dailyMorningService.state?.phase) { _, _ in
+            checkInService.refreshAssistantBadge()
+        }
+        .task {
+            while !Task.isCancelled {
+                checkInService.refreshAssistantBadge()
+                try? await Task.sleep(for: .seconds(30))
+            }
+        }
+    }
+
+    private func updateAssistantTabVisibility(for tab: Int) {
+        checkInService.setAssistantTabActive(tab == assistantTabTag)
     }
 }

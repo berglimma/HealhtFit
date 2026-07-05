@@ -1,28 +1,15 @@
 import Foundation
 import UserNotifications
 
-@MainActor
-final class NotificationService {
-    static let shared = NotificationService()
+enum WaterReminderConfiguration {
+    static let intervalHours = 3
+    static let startHour = 8
+    static let endHour = 21
 
-    private let lastWorkoutKey = "healthfit_last_workout_completed_at"
-    private let inactivityNotifiedKey = "healthfit_inactivity_notified_for_workout_at"
-    private let inactivityReminderIdentifier = "workout_inactivity_48h"
-    private let appUsageInactivityNotifiedKey = "healthfit_app_usage_inactivity_notified_for_session"
-    private let appUsageInactivityReminderIdentifier = "app_usage_inactivity_48h"
-    private let waterReminderIdentifierPrefix = "water_reminder_"
-
-    static let inactivityThreshold: TimeInterval = 48 * 60 * 60
-    static let waterReminderIntervalHours = 3
-    static let waterReminderStartHour = 8
-    static let waterReminderEndHour = 21
-
-    private init() {}
-
-    nonisolated static func waterReminderHours(
-        startHour: Int = waterReminderStartHour,
-        endHour: Int = waterReminderEndHour,
-        intervalHours: Int = waterReminderIntervalHours
+    static func reminderHours(
+        startHour: Int = startHour,
+        endHour: Int = endHour,
+        intervalHours: Int = intervalHours
     ) -> [Int] {
         guard intervalHours > 0, startHour <= endHour else { return [] }
 
@@ -34,6 +21,27 @@ final class NotificationService {
         }
         return hours
     }
+}
+
+enum DailyAssistantCheckInConfiguration {
+    static let hour = 9
+}
+
+@MainActor
+final class NotificationService {
+    static let shared = NotificationService()
+
+    private let lastWorkoutKey = "healthfit_last_workout_completed_at"
+    private let inactivityNotifiedKey = "healthfit_inactivity_notified_for_workout_at"
+    private let inactivityReminderIdentifier = "workout_inactivity_48h"
+    private let appUsageInactivityNotifiedKey = "healthfit_app_usage_inactivity_notified_for_session"
+    private let appUsageInactivityReminderIdentifier = "app_usage_inactivity_48h"
+    private let waterReminderIdentifierPrefix = "water_reminder_"
+    private let dailyAssistantCheckInIdentifier = "daily_assistant_checkin_9am"
+
+    static let inactivityThreshold: TimeInterval = 48 * 60 * 60
+
+    private init() {}
 
     func requestAuthorization() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
@@ -45,18 +53,44 @@ final class NotificationService {
 
     func refreshRecurringNotifications() {
         scheduleDailyMotivationNotifications()
+        scheduleDailyAssistantCheckIn()
         scheduleWaterReminders()
     }
 
+    func scheduleDailyAssistantCheckIn(
+        hour: Int = DailyAssistantCheckInConfiguration.hour,
+        minute: Int = 0
+    ) {
+        cancelDailyAssistantCheckIn()
+
+        var components = DateComponents()
+        components.hour = hour
+        components.minute = minute
+
+        scheduleOnPhone(
+            title: "Como você está se sentindo? ☀️",
+            body: "Bom dia! O assistente quer saber como você começou o dia — meditação, treino e cardio.",
+            category: "DAILY_ASSISTANT_CHECKIN",
+            identifier: dailyAssistantCheckInIdentifier,
+            trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        )
+    }
+
+    func cancelDailyAssistantCheckIn() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [dailyAssistantCheckInIdentifier]
+        )
+    }
+
     func scheduleWaterReminders(
-        startHour: Int = waterReminderStartHour,
-        endHour: Int = waterReminderEndHour,
-        intervalHours: Int = waterReminderIntervalHours,
+        startHour: Int = WaterReminderConfiguration.startHour,
+        endHour: Int = WaterReminderConfiguration.endHour,
+        intervalHours: Int = WaterReminderConfiguration.intervalHours,
         minute: Int = 0
     ) {
         cancelWaterReminders()
 
-        for hour in Self.waterReminderHours(
+        for hour in WaterReminderConfiguration.reminderHours(
             startHour: startHour,
             endHour: endHour,
             intervalHours: intervalHours
@@ -80,7 +114,7 @@ final class NotificationService {
     }
 
     func cancelWaterReminders() {
-        let hours = Self.waterReminderHours()
+        let hours = WaterReminderConfiguration.reminderHours()
         let identifiers = hours.map { "\(waterReminderIdentifierPrefix)\($0)" }
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: identifiers)
     }
@@ -202,6 +236,35 @@ final class NotificationService {
             category: "WORKOUT_COMPLETE",
             identifier: "workout_complete_\(UUID().uuidString)"
         )
+    }
+
+    func schedulePostWorkoutCheckIn(sessionId: UUID, workoutTitle: String, fireDate: Date) {
+        cancelPostWorkoutCheckIn(sessionId: sessionId)
+
+        let title = "Como você está se sentindo? 💬"
+        let body = "Já passaram 90 minutos desde \"\(workoutTitle)\". O assistente quer saber como está sua recuperação."
+        let identifier = postWorkoutCheckInIdentifier(sessionId)
+        let interval = fireDate.timeIntervalSinceNow
+
+        guard interval > 0 else { return }
+
+        scheduleOnPhone(
+            title: title,
+            body: body,
+            category: "POST_WORKOUT_CHECKIN",
+            identifier: identifier,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+        )
+    }
+
+    func cancelPostWorkoutCheckIn(sessionId: UUID) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [postWorkoutCheckInIdentifier(sessionId)]
+        )
+    }
+
+    private func postWorkoutCheckInIdentifier(_ sessionId: UUID) -> String {
+        "post_workout_checkin_\(sessionId.uuidString)"
     }
 
     func recordWorkoutCompleted(at date: Date = .now) {

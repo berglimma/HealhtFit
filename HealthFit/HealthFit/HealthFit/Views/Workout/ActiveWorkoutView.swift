@@ -27,20 +27,39 @@ struct ActiveWorkoutView: View {
                         HStack(alignment: .top, spacing: 0) {
                             VStack(spacing: 0) {
                                 progressHeader
-                                currentExerciseCard
+
+                                ScrollView {
+                                    currentExerciseCard
+                                        .padding(.bottom, 8)
+                                }
+                                .scrollIndicators(.visible)
+
                                 bottomBar
                             }
                             .frame(maxWidth: 420)
 
-                            exerciseList
-                                .frame(maxWidth: .infinity)
+                            ScrollView {
+                                exerciseListContent
+                                    .padding(.vertical, 8)
+                            }
+                            .scrollIndicators(.visible)
+                            .frame(maxWidth: .infinity)
                         }
                         .adaptiveContentWidth(960)
                     } else {
                         VStack(spacing: 0) {
                             progressHeader
-                            currentExerciseCard
-                            exerciseList
+
+                            ScrollView {
+                                LazyVStack(spacing: 12) {
+                                    currentExerciseCard
+                                    exerciseListContent
+                                }
+                                .padding(.vertical, 8)
+                            }
+                            .scrollIndicators(.visible)
+                        }
+                        .safeAreaInset(edge: .bottom, spacing: 0) {
                             bottomBar
                         }
                     }
@@ -48,6 +67,7 @@ struct ActiveWorkoutView: View {
 
                 if timerService.isRunning {
                     RestTimerOverlay()
+                        .allowsHitTesting(true)
                 }
             }
             .navigationTitle(sheet.title)
@@ -133,7 +153,7 @@ struct ActiveWorkoutView: View {
                         .font(.title.bold())
                         .foregroundStyle(AppTheme.textPrimary)
 
-                    ExerciseExecutionGuideView(steps: exercise.executionGuide, compact: true)
+                    ExerciseExecutionGuideView(steps: exercise.executionGuide, exercise: exercise, compact: true)
 
                     HStack(spacing: 8) {
                         Image(systemName: timerService.isRunning ? "pause.circle.fill" : "stopwatch.fill")
@@ -217,24 +237,21 @@ struct ActiveWorkoutView: View {
         }
     }
 
-    private var exerciseList: some View {
-        ScrollView {
-            LazyVStack(spacing: 8) {
-                ForEach(Array(sheet.exercises.enumerated()), id: \.element.id) { index, exercise in
-                    ExerciseTrackingRow(
-                        exercise: exercise,
-                        index: index,
-                        record: workoutStore.exerciseRecords.first(where: { $0.exerciseId == exercise.id }),
-                        isCurrent: index == workoutStore.currentExerciseIndex,
-                        isPaused: index == workoutStore.currentExerciseIndex && timerService.isRunning,
-                        completedSets: completedSets[exercise.id, default: 0],
-                        onMarkComplete: {
-                            markExerciseComplete(exercise)
-                        }
-                    )
-                }
+    private var exerciseListContent: some View {
+        LazyVStack(spacing: 8) {
+            ForEach(Array(sheet.exercises.enumerated()), id: \.element.id) { index, exercise in
+                ExerciseTrackingRow(
+                    exercise: exercise,
+                    index: index,
+                    record: workoutStore.exerciseRecords.first(where: { $0.exerciseId == exercise.id }),
+                    isCurrent: index == workoutStore.currentExerciseIndex,
+                    isPaused: index == workoutStore.currentExerciseIndex && timerService.isRunning,
+                    completedSets: completedSets[exercise.id, default: 0],
+                    onMarkComplete: {
+                        markExerciseComplete(exercise)
+                    }
+                )
             }
-            .padding(.vertical, 8)
         }
     }
 
@@ -261,7 +278,11 @@ struct ActiveWorkoutView: View {
             }
         }
         .padding()
+        .frame(maxWidth: .infinity)
         .background(AppTheme.cardBackground)
+        .overlay(alignment: .top) {
+            Divider()
+        }
     }
 
     private func completeSet(for exercise: Exercise) {

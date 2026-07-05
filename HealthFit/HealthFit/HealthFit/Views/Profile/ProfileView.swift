@@ -8,6 +8,7 @@ struct ProfileView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var workoutStore: WorkoutStore
+    @EnvironmentObject var exerciseVideoRepository: ExerciseVideoRepository
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showLogoutAlert = false
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -183,6 +184,41 @@ struct ProfileView: View {
                         LabeledContent("IMC", value: String(format: "%.1f", user.bmi))
                         LabeledContent("Metabolismo Basal", value: "\(user.basalMetabolicRate) kcal")
                         LabeledContent("Meta Calórica", value: "\(user.dailyCalorieTarget) kcal")
+                    }
+
+                    Section("Vídeos demonstrativos") {
+                        HStack {
+                            Label("Firebase Storage", systemImage: "play.rectangle.fill")
+                            Spacer()
+                            if exerciseVideoRepository.isSyncing {
+                                ProgressView()
+                            } else if let summary = exerciseVideoRepository.uploadSummary, summary.isSuccess {
+                                Text("Sincronizado")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                            } else {
+                                Text("Pendente")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                            }
+                        }
+
+                        if let message = exerciseVideoRepository.lastSyncMessage {
+                            Text(message)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("Os vídeos do app são enviados ao Firebase ao fazer login.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Button {
+                            Task { await exerciseVideoRepository.uploadVideosToFirebase() }
+                        } label: {
+                            Label("Sincronizar vídeos agora", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .disabled(exerciseVideoRepository.isSyncing || !authService.isFirebaseReady)
                     }
 
                     Section("Integrações") {

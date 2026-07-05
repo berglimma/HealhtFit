@@ -4,11 +4,19 @@ struct CreateWorkoutView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @Environment(\.dismiss) private var dismiss
 
+    private let editingSheet: WorkoutSheet?
+
     @State private var title = ""
     @State private var description = ""
     @State private var selectedMuscleGroup: MuscleGroup = .chest
     @State private var exercises: [Exercise] = []
     @State private var didSetInitialContent = false
+
+    init(editingSheet: WorkoutSheet? = nil) {
+        self.editingSheet = editingSheet
+    }
+
+    private var isEditing: Bool { editingSheet != nil }
 
     var body: some View {
         NavigationStack {
@@ -22,9 +30,15 @@ struct CreateWorkoutView: View {
                     }
                     .pickerStyle(.menu)
 
-                    Text("Todos os exercícios de \(selectedMuscleGroup.rawValue) são carregados automaticamente. Remova os que não quiser incluir.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if isEditing {
+                        Text("Ao trocar o grupo, novos exercícios do catálogo são adicionados à ficha. Remova os que não quiser.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Todos os exercícios de \(selectedMuscleGroup.rawValue) são carregados automaticamente. Remova os que não quiser incluir.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Section("Informações") {
@@ -58,7 +72,7 @@ struct CreateWorkoutView: View {
                     }
                 }
             }
-            .navigationTitle("Nova Ficha")
+            .navigationTitle(isEditing ? "Editar Ficha" : "Nova Ficha")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -66,13 +80,7 @@ struct CreateWorkoutView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Salvar") {
-                        let sheet = WorkoutSheet(
-                            title: title,
-                            description: description,
-                            exercises: exercises
-                        )
-                        workoutStore.addWorkoutSheet(sheet)
-                        dismiss()
+                        saveSheet()
                     }
                     .disabled(title.isEmpty || exercises.isEmpty)
                 }
@@ -80,24 +88,62 @@ struct CreateWorkoutView: View {
             .onAppear {
                 guard !didSetInitialContent else { return }
                 didSetInitialContent = true
-                loadExercises(for: selectedMuscleGroup)
-                if title.isEmpty {
-                    title = "Treino - \(selectedMuscleGroup.rawValue)"
-                }
-                if description.isEmpty {
-                    description = "Ficha personalizada de \(selectedMuscleGroup.rawValue.lowercased())"
+
+                if let sheet = editingSheet {
+                    title = sheet.title
+                    description = sheet.description
+                    exercises = sheet.exercises
+                    selectedMuscleGroup = sheet.exercises.first?.muscleGroup ?? .chest
+                } else {
+                    loadExercises(for: selectedMuscleGroup)
+                    if title.isEmpty {
+                        title = "Treino - \(selectedMuscleGroup.rawValue)"
+                    }
+                    if description.isEmpty {
+                        description = "Ficha personalizada de \(selectedMuscleGroup.rawValue.lowercased())"
+                    }
                 }
             }
             .onChange(of: selectedMuscleGroup) { _, newGroup in
-                loadExercises(for: newGroup)
+                if isEditing {
+                    appendExercises(from: newGroup)
+                } else {
+                    loadExercises(for: newGroup)
+                }
             }
         }
+    }
+
+    private func saveSheet() {
+        if var existing = editingSheet {
+            existing.title = title
+            existing.description = description
+            existing.exercises = exercises
+            workoutStore.updateWorkoutSheet(existing)
+        } else {
+            let sheet = WorkoutSheet(
+                title: title,
+                description: description,
+                exercises: exercises,
+                isUserCreated: true
+            )
+            workoutStore.addWorkoutSheet(sheet)
+        }
+        dismiss()
     }
 
     private func loadExercises(for group: MuscleGroup) {
         exercises = WorkoutStore.presetExercises(for: group).map {
             WorkoutStore.copyExerciseForWorkout($0)
         }
+    }
+
+    private func appendExercises(from group: MuscleGroup) {
+        let existingNames = Set(exercises.map(\.name))
+        let additions = WorkoutStore.presetExercises(for: group)
+            .filter { !existingNames.contains($0.name) }
+            .map { WorkoutStore.copyExerciseForWorkout($0) }
+        exercises.append(contentsOf: additions)
     }
 
     private func removeExercise(_ exercise: Exercise) {
@@ -113,7 +159,7 @@ private struct CreateWorkoutExerciseRow: View {
     var body: some View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: 12) {
-                ExerciseExecutionGuideView(steps: exercise.executionGuide, compact: true)
+                ExerciseExecutionGuideView(steps: exercise.executionGuide, exercise: exercise, compact: true)
 
                 Button(role: .destructive, action: onRemove) {
                     Label("Remover da ficha", systemImage: "trash")

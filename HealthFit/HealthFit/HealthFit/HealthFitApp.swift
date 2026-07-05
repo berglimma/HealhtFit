@@ -11,6 +11,7 @@ struct HealthFitApp: App {
     @StateObject private var watchConnectivity = WatchConnectivityManager.shared
     @StateObject private var weeklyReportService = WeeklyReportService.shared
     @StateObject private var wellnessService = DailyWellnessService.shared
+    @StateObject private var exerciseVideoRepository = ExerciseVideoRepository.shared
 
     init() {
         AppIconInactivityService.shared.registerBackgroundTasks()
@@ -28,6 +29,7 @@ struct HealthFitApp: App {
                 .environmentObject(watchConnectivity)
                 .environmentObject(weeklyReportService)
                 .environmentObject(wellnessService)
+                .environmentObject(exerciseVideoRepository)
                 .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     _ = SocialSignInService.handleIncomingURL(url)

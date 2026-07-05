@@ -50,6 +50,7 @@ final class WorkoutStore: ObservableObject {
     }
 
     func updateWorkoutSheet(_ sheet: WorkoutSheet) {
+        guard canModify(sheet) else { return }
         if let index = workoutSheets.firstIndex(where: { $0.id == sheet.id }) {
             workoutSheets[index] = sheet
             saveData()
@@ -57,9 +58,28 @@ final class WorkoutStore: ObservableObject {
     }
 
     func deleteWorkoutSheet(_ sheet: WorkoutSheet) {
+        guard canModify(sheet) else { return }
         workoutSheets.removeAll { $0.id == sheet.id }
         saveData()
     }
+
+    func canModify(_ sheet: WorkoutSheet) -> Bool {
+        sheet.isUserCreated || !Self.sampleWorkoutTitles.contains(sheet.title)
+    }
+
+    func isStandardWorkout(_ sheet: WorkoutSheet) -> Bool {
+        !canModify(sheet)
+    }
+
+    var standardWorkoutSheets: [WorkoutSheet] {
+        workoutSheets.filter(isStandardWorkout)
+    }
+
+    var customWorkoutSheets: [WorkoutSheet] {
+        workoutSheets.filter { !isStandardWorkout($0) }
+    }
+
+    private static let sampleWorkoutTitles = Set(sampleWorkouts.map(\.title))
 
     func startSession(for sheet: WorkoutSheet, tookPreWorkout: Bool? = nil) {
         activeSession = WorkoutSession(
@@ -225,6 +245,8 @@ final class WorkoutStore: ObservableObject {
         if let endedAt = session.endedAt {
             NotificationService.shared.recordWorkoutCompleted(at: endedAt)
         }
+
+        PostWorkoutCheckInService.shared.scheduleCheckIn(for: session)
     }
 
     var lastCompletedWorkoutAt: Date? {
@@ -252,7 +274,13 @@ final class WorkoutStore: ObservableObject {
     private func loadData() {
         if let data = UserDefaults.standard.data(forKey: storageKey),
            let sheets = try? JSONDecoder().decode([WorkoutSheet].self, from: data) {
-            workoutSheets = sheets
+            workoutSheets = sheets.map { sheet in
+                var updated = sheet
+                if !updated.isUserCreated, !Self.sampleWorkoutTitles.contains(updated.title) {
+                    updated.isUserCreated = true
+                }
+                return updated
+            }
         }
         if let data = UserDefaults.standard.data(forKey: historyKey),
            let history = try? JSONDecoder().decode([WorkoutSession].self, from: data) {

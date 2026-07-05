@@ -6,10 +6,17 @@ struct WorkoutDetailView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var wellnessService: DailyWellnessService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dismiss) private var dismiss
     @State var sheet: WorkoutSheet
     @State private var showActiveWorkout = false
     @State private var showVision = false
     @State private var showPreWorkoutPrompt = false
+    @State private var showEditWorkout = false
+    @State private var showDeleteConfirmation = false
+
+    private var canModify: Bool {
+        workoutStore.canModify(sheet)
+    }
 
     var body: some View {
         ScrollView {
@@ -24,6 +31,45 @@ struct WorkoutDetailView: View {
         .background(AppTheme.background)
         .navigationTitle(sheet.title)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            if canModify {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button {
+                            showEditWorkout = true
+                        } label: {
+                            Label("Editar ficha", systemImage: "pencil")
+                        }
+
+                        Button(role: .destructive) {
+                            showDeleteConfirmation = true
+                        } label: {
+                            Label("Excluir ficha", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showEditWorkout) {
+            CreateWorkoutView(editingSheet: sheet)
+        }
+        .onChange(of: workoutStore.workoutSheets) { _, sheets in
+            if let updated = sheets.first(where: { $0.id == sheet.id }) {
+                sheet = updated
+            }
+        }
+        .alert("Excluir treino?", isPresented: $showDeleteConfirmation) {
+            Button("Excluir", role: .destructive) {
+                workoutStore.deleteWorkoutSheet(sheet)
+                dismiss()
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("“\(sheet.title)” será removido permanentemente.")
+        }
         .fullScreenCover(isPresented: $showActiveWorkout) {
             ActiveWorkoutView(sheet: sheet)
         }
@@ -140,7 +186,7 @@ struct ExerciseRow: View {
 
     var body: some View {
         DisclosureGroup {
-            ExerciseExecutionGuideView(steps: exercise.executionGuide)
+            ExerciseExecutionGuideView(steps: exercise.executionGuide, exercise: exercise)
                 .padding(.top, 4)
         } label: {
             HStack(spacing: 14) {

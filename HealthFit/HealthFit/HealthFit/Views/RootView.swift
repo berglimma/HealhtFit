@@ -6,6 +6,7 @@ struct RootView: View {
     @EnvironmentObject var mealPlanService: MealPlanService
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var wellnessService: DailyWellnessService
+    @EnvironmentObject var exerciseVideoRepository: ExerciseVideoRepository
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var showWelcomeMotivation = false
@@ -35,6 +36,7 @@ struct RootView: View {
                             mealPlanService.generatePlan(for: user)
                         }
                         syncWorkoutCloudHistory()
+                        await exerciseVideoRepository.bootstrapRemoteCatalog()
                         NotificationService.shared.refreshRecurringNotifications()
                         refreshInactivityReminder()
                     }
@@ -58,6 +60,7 @@ struct RootView: View {
                     wellnessService.checkInOnAppOpen()
                     NotificationService.shared.refreshRecurringNotifications()
                     refreshInactivityReminder()
+                    Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
                 }
                 AppIconInactivityService.shared.handleAppBecameActive()
             case .background:
@@ -71,6 +74,7 @@ struct RootView: View {
                 prepareWelcomeIfAuthenticated(trigger: .login)
                 wellnessService.configure(for: authService.currentUser)
                 syncWorkoutCloudHistory()
+                Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
             } else {
                 workoutStore.configureCloudSync(userId: nil)
             }

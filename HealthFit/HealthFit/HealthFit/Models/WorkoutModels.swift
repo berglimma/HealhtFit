@@ -63,6 +63,7 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
     var assignedTo: String?
     var createdAt: Date
     var isActive: Bool
+    var isUserCreated: Bool
 
     init(
         id: UUID = UUID(),
@@ -71,7 +72,8 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         exercises: [Exercise] = [],
         assignedTo: String? = nil,
         createdAt: Date = .now,
-        isActive: Bool = true
+        isActive: Bool = true,
+        isUserCreated: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -80,6 +82,35 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         self.assignedTo = assignedTo
         self.createdAt = createdAt
         self.isActive = isActive
+        self.isUserCreated = isUserCreated
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, description, exercises, assignedTo, createdAt, isActive, isUserCreated
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        description = try container.decode(String.self, forKey: .description)
+        exercises = try container.decode([Exercise].self, forKey: .exercises)
+        assignedTo = try container.decodeIfPresent(String.self, forKey: .assignedTo)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
+        isUserCreated = try container.decodeIfPresent(Bool.self, forKey: .isUserCreated) ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encode(description, forKey: .description)
+        try container.encode(exercises, forKey: .exercises)
+        try container.encodeIfPresent(assignedTo, forKey: .assignedTo)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(isActive, forKey: .isActive)
+        try container.encode(isUserCreated, forKey: .isUserCreated)
     }
 
     var totalExercises: Int { exercises.count }

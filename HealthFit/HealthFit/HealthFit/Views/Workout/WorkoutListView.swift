@@ -12,6 +12,8 @@ struct WorkoutListView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showCreateWorkout = false
+    @State private var sheetToEdit: WorkoutSheet?
+    @State private var sheetPendingDeletion: WorkoutSheet?
     @State private var selectedSection: WorkoutSection = .strength
 
     var body: some View {
@@ -62,7 +64,36 @@ struct WorkoutListView: View {
             .sheet(isPresented: $showCreateWorkout) {
                 CreateWorkoutView()
             }
+            .sheet(item: $sheetToEdit) { sheet in
+                CreateWorkoutView(editingSheet: sheet)
+            }
+            .alert("Excluir treino?", isPresented: deletionAlertBinding) {
+                Button("Excluir", role: .destructive) {
+                    if let sheet = sheetPendingDeletion {
+                        workoutStore.deleteWorkoutSheet(sheet)
+                    }
+                    sheetPendingDeletion = nil
+                }
+                Button("Cancelar", role: .cancel) {
+                    sheetPendingDeletion = nil
+                }
+            } message: {
+                if let sheet = sheetPendingDeletion {
+                    Text("“\(sheet.title)” será removido permanentemente.")
+                }
+            }
         }
+    }
+
+    private var deletionAlertBinding: Binding<Bool> {
+        Binding(
+            get: { sheetPendingDeletion != nil },
+            set: { isPresented in
+                if !isPresented {
+                    sheetPendingDeletion = nil
+                }
+            }
+        )
     }
 
     private var sectionPicker: some View {
@@ -75,12 +106,77 @@ struct WorkoutListView: View {
     }
 
     private var strengthSection: some View {
-        LazyVStack(spacing: 12) {
-            ForEach(workoutStore.workoutSheets) { sheet in
-                NavigationLink(value: sheet) {
-                    WorkoutSheetCard(sheet: sheet)
+        VStack(alignment: .leading, spacing: 20) {
+            workoutGroupSection(
+                title: "Treinos Padrão",
+                subtitle: "Fichas A, B, C e D do app",
+                sheets: workoutStore.standardWorkoutSheets
+            )
+
+            workoutGroupSection(
+                title: "Treinos Personalizados",
+                subtitle: "Treino criado especialmente pra você",
+                sheets: workoutStore.customWorkoutSheets,
+                emptyMessage: "Nenhum treino personalizado ainda. Toque em + para criar o seu."
+            )
+        }
+    }
+
+    private func workoutGroupSection(
+        title: String,
+        subtitle: String,
+        sheets: [WorkoutSheet],
+        emptyMessage: String? = nil
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            if sheets.isEmpty, let emptyMessage {
+                Text(emptyMessage)
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(AppTheme.cardBackground.opacity(0.6))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(sheets) { sheet in
+                        workoutSheetRow(sheet)
+                    }
                 }
-                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func workoutSheetRow(_ sheet: WorkoutSheet) -> some View {
+        NavigationLink(value: sheet) {
+            WorkoutSheetCard(
+                sheet: sheet,
+                showsPersonalBadge: false
+            )
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            if workoutStore.canModify(sheet) {
+                Button {
+                    sheetToEdit = sheet
+                } label: {
+                    Label("Editar", systemImage: "pencil")
+                }
+
+                Button(role: .destructive) {
+                    sheetPendingDeletion = sheet
+                } label: {
+                    Label("Excluir", systemImage: "trash")
+                }
             }
         }
     }
@@ -122,6 +218,7 @@ struct WorkoutListView: View {
 
 struct WorkoutSheetCard: View {
     let sheet: WorkoutSheet
+    var showsPersonalBadge = false
 
     var body: some View {
         HStack(spacing: 16) {
@@ -134,13 +231,26 @@ struct WorkoutSheetCard: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(sheet.title)
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.textPrimary)
+                HStack(spacing: 6) {
+                    Text(sheet.title)
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    if showsPersonalBadge {
+                        Text("Personalizado")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(AppTheme.accent.opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                }
                 Text(sheet.description)
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 12) {
                     Label("\(sheet.totalExercises) exercícios", systemImage: "list.bullet")
                     Label("~\(sheet.estimatedDuration / 60) min", systemImage: "clock")
@@ -155,6 +265,7 @@ struct WorkoutSheetCard: View {
                 .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }

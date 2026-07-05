@@ -3,12 +3,12 @@ import XCTest
 
 final class NotificationServiceTests: XCTestCase {
     func testWaterReminderHoursEveryThreeHours() {
-        let hours = NotificationService.waterReminderHours()
+        let hours = WaterReminderConfiguration.reminderHours()
         XCTAssertEqual(hours, [8, 11, 14, 17, 20])
     }
 
     func testWaterReminderHoursRespectsCustomWindow() {
-        let hours = NotificationService.waterReminderHours(startHour: 9, endHour: 21, intervalHours: 3)
+        let hours = WaterReminderConfiguration.reminderHours(startHour: 9, endHour: 21, intervalHours: 3)
         XCTAssertEqual(hours, [9, 12, 15, 18, 21])
     }
 
