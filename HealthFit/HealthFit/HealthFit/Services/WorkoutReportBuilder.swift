@@ -52,6 +52,8 @@ enum WorkoutReportBuilder {
             "Duração total: \(DurationFormatting.format(seconds: Int(session.duration)))"
         ]
 
+        lines.append(contentsOf: athleteProfileReportLines(athlete: athlete, dateFormatter: dateFormatter))
+
         if isCardioSession(session) {
             lines.append("Tipo: Cardio")
             if let record = session.exerciseRecords.first {
@@ -179,6 +181,27 @@ enum WorkoutReportBuilder {
             }
         }
 
+        return lines
+    }
+
+    static func athleteProfileReportLines(
+        athlete: UserProfile,
+        dateFormatter: DateFormatter
+    ) -> [String] {
+        var lines: [String] = [
+            "",
+            "Perfil do atleta:",
+            "Peso: \(String(format: "%.1f kg", athlete.weight))",
+            "Altura: \(String(format: "%.0f cm", athlete.height))",
+            "Idade: \(athlete.age) anos",
+            "Objetivo: \(athlete.goal.rawValue)",
+            "Biotipo: \(athlete.biotype.rawValue)"
+        ]
+        lines.append(contentsOf: athlete.bodyMeasurements.reportLines(dateFormatter: dateFormatter))
+        if let comparison = athlete.latestMeasurementComparison,
+           comparison.periodDays >= BodyMeasurements.comparisonIntervalDays {
+            lines.append(contentsOf: comparison.reportLines(dateFormatter: dateFormatter))
+        }
         return lines
     }
 

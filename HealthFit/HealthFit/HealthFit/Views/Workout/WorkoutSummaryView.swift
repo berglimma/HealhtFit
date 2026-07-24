@@ -41,6 +41,10 @@ struct WorkoutSummaryView: View {
                     if session.endedEarly {
                         earlyEndSection
                     }
+                    if let user = authService.currentUser,
+                       user.bodyMeasurements.hasAnyValue {
+                        bodyMeasurementsSection(user: user)
+                    }
                     if session.targetCalories != nil {
                         calorieGoalResultSection
                     }
@@ -268,6 +272,46 @@ struct WorkoutSummaryView: View {
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.red.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private func bodyMeasurementsSection(user: UserProfile) -> some View {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+
+        let lines = user.bodyMeasurements.reportLines(dateFormatter: formatter)
+            .filter { !$0.isEmpty && $0 != "Medidas corporais:" }
+
+        let comparison = user.latestMeasurementComparison
+        let comparisonLines = (comparison?.periodDays ?? 0) >= BodyMeasurements.comparisonIntervalDays
+            ? (comparison?.reportLines(dateFormatter: formatter) ?? []).filter { !$0.isEmpty }
+            : []
+
+        return VStack(alignment: .leading, spacing: 10) {
+            Label("Medidas corporais", systemImage: "ruler")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                Text(line)
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            if !comparisonLines.isEmpty {
+                Divider()
+                ForEach(Array(comparisonLines.enumerated()), id: \.offset) { _, line in
+                    Text(line)
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 

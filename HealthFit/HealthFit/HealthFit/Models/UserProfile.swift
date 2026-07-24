@@ -88,6 +88,180 @@ enum Gender: String, CaseIterable, Codable, Identifiable {
     var id: String { rawValue }
 }
 
+/// Circunferências corporais em centímetros (valores opcionais).
+struct BodyMeasurements: Codable, Equatable {
+    var neckCm: Double?
+    var shouldersCm: Double?
+    var chestCm: Double?
+    var rightArmCm: Double?
+    var leftArmCm: Double?
+    var waistCm: Double?
+    var abdomenCm: Double?
+    var hipCm: Double?
+    var rightThighCm: Double?
+    var leftThighCm: Double?
+    var rightCalfCm: Double?
+    var leftCalfCm: Double?
+    var measuredAt: Date?
+
+    static let empty = BodyMeasurements()
+    static let comparisonIntervalDays = 30
+
+    var hasAnyValue: Bool {
+        labeledValues.contains { $0.value != nil }
+    }
+
+    var labeledValues: [(label: String, value: Double?)] {
+        [
+            ("Pescoço", neckCm),
+            ("Ombros", shouldersCm),
+            ("Peito", chestCm),
+            ("Braço direito", rightArmCm),
+            ("Braço esquerdo", leftArmCm),
+            ("Cintura", waistCm),
+            ("Abdômen", abdomenCm),
+            ("Quadril", hipCm),
+            ("Coxa direita", rightThighCm),
+            ("Coxa esquerda", leftThighCm),
+            ("Panturrilha direita", rightCalfCm),
+            ("Panturrilha esquerda", leftCalfCm)
+        ]
+    }
+
+    func reportLines(dateFormatter: DateFormatter) -> [String] {
+        guard hasAnyValue else { return [] }
+
+        var lines = ["", "Medidas corporais:"]
+        if let measuredAt {
+            lines.append("Atualizado em: \(dateFormatter.string(from: measuredAt))")
+        }
+
+        for (label, value) in labeledValues {
+            guard let value else { continue }
+            lines.append("\(label): \(Self.formatCm(value))")
+        }
+        return lines
+    }
+
+    static func formatCm(_ value: Double) -> String {
+        value.truncatingRemainder(dividingBy: 1) == 0
+            ? "\(Int(value)) cm"
+            : String(format: "%.1f cm", value)
+    }
+
+    static func formatDelta(_ value: Double) -> String {
+        let sign = value > 0 ? "+" : ""
+        let formatted = value.truncatingRemainder(dividingBy: 1) == 0
+            ? "\(Int(value))"
+            : String(format: "%.1f", value)
+        return "\(sign)\(formatted) cm"
+    }
+
+    /// Compara medidas anteriores com as atuais e retorna apenas as que variaram.
+    static func changes(
+        from previous: BodyMeasurements,
+        to current: BodyMeasurements
+    ) -> [BodyMeasurementChange] {
+        zip(previous.labeledValues, current.labeledValues).compactMap { prev, curr in
+            guard prev.label == curr.label,
+                  let before = prev.value,
+                  let after = curr.value else { return nil }
+            let delta = after - before
+            guard abs(delta) >= 0.05 else { return nil }
+            return BodyMeasurementChange(
+                label: prev.label,
+                previous: before,
+                current: after,
+                delta: delta
+            )
+        }
+    }
+
+    static func daysBetween(_ from: Date, _ to: Date = .now) -> Int {
+        Calendar.current.dateComponents([.day], from: from, to: to).day ?? 0
+    }
+
+    /// True quando a medição anterior tem pelo menos 30 dias.
+    static func isEligibleForPeriodComparison(
+        previous: BodyMeasurements,
+        referenceDate: Date = .now
+    ) -> Bool {
+        guard let measuredAt = previous.measuredAt, previous.hasAnyValue else { return false }
+        return daysBetween(measuredAt, referenceDate) >= comparisonIntervalDays
+    }
+}
+
+struct BodyMeasurementChange: Identifiable, Equatable {
+    let label: String
+    let previous: Double
+    let current: Double
+    let delta: Double
+
+    var id: String { label }
+
+    var directionLabel: String {
+        if delta > 0 { return "Aumentou" }
+        if delta < 0 { return "Diminuiu" }
+        return "Estável"
+    }
+}
+
+struct BodyMeasurementComparison: Equatable {
+    let previous: BodyMeasurements
+    let current: BodyMeasurements
+    let changes: [BodyMeasurementChange]
+    let periodDays: Int
+
+    var hasChanges: Bool { !changes.isEmpty }
+
+    static func make(
+        previous: BodyMeasurements,
+        current: BodyMeasurements
+    ) -> BodyMeasurementComparison? {
+        guard previous.hasAnyValue, current.hasAnyValue else { return nil }
+        let days: Int = {
+            if let from = previous.measuredAt, let to = current.measuredAt {
+                return BodyMeasurements.daysBetween(from, to)
+            }
+            if let from = previous.measuredAt {
+                return BodyMeasurements.daysBetween(from)
+            }
+            return BodyMeasurements.comparisonIntervalDays
+        }()
+
+        return BodyMeasurementComparison(
+            previous: previous,
+            current: current,
+            changes: BodyMeasurements.changes(from: previous, to: current),
+            periodDays: max(days, 0)
+        )
+    }
+
+    func reportLines(dateFormatter: DateFormatter) -> [String] {
+        var lines = [
+            "",
+            "Comparativo de medidas (\(periodDays) dia(s)):"
+        ]
+
+        if let from = previous.measuredAt, let to = current.measuredAt {
+            lines.append("De \(dateFormatter.string(from: from)) até \(dateFormatter.string(from: to))")
+        }
+
+        if changes.isEmpty {
+            lines.append("Nenhuma medida variou no período.")
+            return lines
+        }
+
+        lines.append("Medidas que variaram:")
+        for change in changes {
+            lines.append(
+                "• \(change.label): \(BodyMeasurements.formatCm(change.previous)) → \(BodyMeasurements.formatCm(change.current)) (\(BodyMeasurements.formatDelta(change.delta)))"
+            )
+        }
+        return lines
+    }
+}
+
 struct UserProfile: Codable, Identifiable, Equatable {
     var id: String
     var name: String
@@ -102,6 +276,9 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var height: Double
     var age: Int
     var caloricDeficit: Int
+    var bodyMeasurements: BodyMeasurements
+    /// Snapshot da medição anterior (usado no comparativo de 30 dias).
+    var previousBodyMeasurements: BodyMeasurements?
     var createdAt: Date
 
     static let maxCaloricDeficit = 3_000
@@ -120,6 +297,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
         height: Double = 175,
         age: Int = 28,
         caloricDeficit: Int = 400,
+        bodyMeasurements: BodyMeasurements = .empty,
+        previousBodyMeasurements: BodyMeasurements? = nil,
         createdAt: Date = .now
     ) {
         self.id = id
@@ -135,6 +314,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
         self.height = height
         self.age = age
         self.caloricDeficit = caloricDeficit
+        self.bodyMeasurements = bodyMeasurements
+        self.previousBodyMeasurements = previousBodyMeasurements
         self.createdAt = createdAt
     }
 
@@ -153,12 +334,20 @@ struct UserProfile: Codable, Identifiable, Equatable {
         height = try container.decode(Double.self, forKey: .height)
         age = try container.decode(Int.self, forKey: .age)
         caloricDeficit = try container.decodeIfPresent(Int.self, forKey: .caloricDeficit) ?? 400
+        bodyMeasurements = try container.decodeIfPresent(BodyMeasurements.self, forKey: .bodyMeasurements) ?? .empty
+        previousBodyMeasurements = try container.decodeIfPresent(BodyMeasurements.self, forKey: .previousBodyMeasurements)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, displayName, email, personalTrainerName, personalTrainerEmail
-        case biotype, goal, gender, weight, height, age, caloricDeficit, createdAt
+        case biotype, goal, gender, weight, height, age, caloricDeficit
+        case bodyMeasurements, previousBodyMeasurements, createdAt
+    }
+
+    var latestMeasurementComparison: BodyMeasurementComparison? {
+        guard let previous = previousBodyMeasurements else { return nil }
+        return BodyMeasurementComparison.make(previous: previous, current: bodyMeasurements)
     }
 
     var hasPersonalTrainer: Bool {

@@ -13,9 +13,15 @@ struct MealPlanView: View {
     @State private var heightText = ""
     @State private var ageText = ""
     @State private var selectedGender: Gender = .male
-    @State private var selectedGoal: FitnessGoal = .muscleGain
-    @State private var selectedBiotype: Biotype = .mesomorph
     @State private var caloricDeficit = 400
+
+    private var selectedGoal: FitnessGoal {
+        authService.currentUser?.goal ?? .muscleGain
+    }
+
+    private var selectedBiotype: Biotype {
+        authService.currentUser?.biotype ?? .mesomorph
+    }
 
     private var previewProfile: UserProfile? {
         guard var user = authService.currentUser else { return nil }
@@ -79,8 +85,31 @@ struct MealPlanView: View {
             .onAppear {
                 syncFromProfile()
             }
-            .onChange(of: authService.currentUser) { _, _ in
+            .onChange(of: authService.currentUser?.goal) { _, _ in
                 syncFromProfile()
+            }
+            .onChange(of: authService.currentUser?.biotype) { _, _ in
+                syncFromProfile()
+            }
+            .onChange(of: authService.currentUser?.id) { _, _ in
+                syncFromProfile()
+            }
+            .onChange(of: authService.currentUser?.weight) { _, _ in
+                syncMetricFieldsFromProfile()
+            }
+            .onChange(of: authService.currentUser?.height) { _, _ in
+                syncMetricFieldsFromProfile()
+            }
+            .onChange(of: authService.currentUser?.age) { _, _ in
+                syncMetricFieldsFromProfile()
+            }
+            .onChange(of: authService.currentUser?.gender) { _, _ in
+                syncMetricFieldsFromProfile()
+            }
+            .onChange(of: authService.currentUser?.caloricDeficit) { _, _ in
+                if let deficit = authService.currentUser?.caloricDeficit {
+                    caloricDeficit = min(deficit, UserProfile.maxCaloricDeficit)
+                }
             }
             .onChange(of: selectedDay) { _, _ in
                 selectedOption = 0
@@ -497,12 +526,7 @@ struct MealPlanView: View {
 
     private func syncFromProfile() {
         guard let user = authService.currentUser else { return }
-        selectedBiotype = user.biotype
-        selectedGoal = user.goal
-        weightText = String(format: "%.1f", user.weight)
-        heightText = String(format: "%.0f", user.height)
-        ageText = "\(user.age)"
-        selectedGender = user.gender
+        syncMetricFieldsFromProfile()
         caloricDeficit = min(user.caloricDeficit, UserProfile.maxCaloricDeficit)
 
         if mealPlanService.basalMetabolicRate == 0 {
@@ -511,6 +535,14 @@ struct MealPlanView: View {
             mealPlanService.caloricDeficit = user.caloricDeficit
             mealPlanService.dailyCalorieTarget = user.dailyCalorieTarget
         }
+    }
+
+    private func syncMetricFieldsFromProfile() {
+        guard let user = authService.currentUser else { return }
+        weightText = String(format: "%.1f", user.weight)
+        heightText = String(format: "%.0f", user.height)
+        ageText = "\(user.age)"
+        selectedGender = user.gender
     }
 
     private var isDeficitEnabled: Bool {
@@ -617,7 +649,6 @@ struct MealPlanView: View {
         guard var user = authService.currentUser, user.biotype != biotype else { return }
         user.biotype = biotype
         authService.updateProfile(user)
-        selectedBiotype = biotype
         mealPlanService.regeneratePlanIfNeeded(for: user)
         ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
     }
@@ -630,7 +661,6 @@ struct MealPlanView: View {
             caloricDeficit = 400
         }
         authService.updateProfile(user)
-        selectedGoal = goal
         mealPlanService.regeneratePlanIfNeeded(for: user)
         ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
     }

@@ -128,6 +128,7 @@
 		B1000126 /* LegalDocumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000126 /* LegalDocumentView.swift */; };
 		B1000127 /* PasswordPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000127 /* PasswordPolicy.swift */; };
 		B1000201 /* ProfileDataReminderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000201 /* ProfileDataReminderService.swift */; };
+		B1000202 /* ProfileFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000202 /* ProfileFirestoreService.swift */; };
 		B1000128 /* PasswordRequirementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000128 /* PasswordRequirementsView.swift */; };
 		B2000001 /* TestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000010 /* TestFixtures.swift */; };
 		B2000002 /* UserProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000011 /* UserProfileTests.swift */; };
@@ -309,6 +310,7 @@
 		F1000126 /* LegalDocumentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocumentView.swift; sourceTree = "<group>"; };
 		F1000127 /* PasswordPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordPolicy.swift; sourceTree = "<group>"; };
 		F1000201 /* ProfileDataReminderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileDataReminderService.swift; sourceTree = "<group>"; };
+		F1000202 /* ProfileFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileFirestoreService.swift; sourceTree = "<group>"; };
 		F1000128 /* PasswordRequirementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordRequirementsView.swift; sourceTree = "<group>"; };
 		F2000001 /* HealthFitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2000002 /* HealthFitUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -615,6 +617,7 @@
 				F1000076 /* AppleSignInNonce.swift */,
 				F1000077 /* SocialSignInService.swift */,
 				F1000079 /* WorkoutFirestoreService.swift */,
+				F1000202 /* ProfileFirestoreService.swift */,
 				F1000082 /* ExerciseVideoFirestoreService.swift */,
 				F1000084 /* ExerciseVideoStorageService.swift */,
 			);
@@ -961,6 +964,7 @@
 				B1000071 /* AuthErrorMapper.swift in Sources */,
 				B1000072 /* FirebaseAuthProvider.swift in Sources */,
 				B1000079 /* WorkoutFirestoreService.swift in Sources */,
+				B1000202 /* ProfileFirestoreService.swift in Sources */,
 				B1000086 /* ExerciseVideoFirestoreService.swift in Sources */,
 				B1000089 /* ExerciseVideoStorageService.swift in Sources */,
 				B1000090 /* PostWorkoutCheckInEngine.swift in Sources */,

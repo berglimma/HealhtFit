@@ -82,6 +82,7 @@ final class AuthService: ObservableObject {
             )
             persistSession(with: profile)
             isLoading = false
+            syncProfileToCloud(profile)
         } catch {
             errorMessage = AuthErrorMapper.message(for: error)
             isLoading = false
@@ -261,6 +262,7 @@ final class AuthService: ObservableObject {
         currentUser = profile
         saveCachedProfile(profile)
         NotificationService.shared.refreshRecurringNotifications()
+        syncProfileToCloud(profile)
     }
 
     func updateProfileImage(_ image: UIImage?) {
@@ -312,11 +314,13 @@ final class AuthService: ObservableObject {
                 saveCachedProfile(profile)
             }
             persistSession(with: profile)
+            Task { await refreshProfileFromCloud(userId: authUser.uid, email: authUser.email) }
             return
         }
 
         if let migrated = migrateLegacyProfile(for: authUser) {
             persistSession(with: migrated)
+            Task { await refreshProfileFromCloud(userId: authUser.uid, email: authUser.email) }
             return
         }
 
@@ -331,6 +335,41 @@ final class AuthService: ObservableObject {
             email: authUser.email
         )
         persistSession(with: profile)
+        Task { await refreshProfileFromCloud(userId: authUser.uid, email: authUser.email) }
+    }
+
+    private func syncProfileToCloud(_ profile: UserProfile) {
+        guard ProfileFirestoreService.isAvailable else { return }
+        Task {
+            do {
+                try await ProfileFirestoreService.saveProfile(profile)
+            } catch {
+                print("[HealthFit] Falha ao salvar perfil no Firebase: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func refreshProfileFromCloud(userId: String, email: String) async {
+        guard ProfileFirestoreService.isAvailable else { return }
+
+        do {
+            if let remote = try await ProfileFirestoreService.fetchProfile(userId: userId) {
+                var profile = remote
+                profile.id = userId
+                if profile.email != email {
+                    profile.email = email
+                }
+                // Preferir dados remotos (fonte de verdade no Firebase).
+                persistSession(with: profile)
+            } else if let local = currentUser, local.id == userId {
+                try await ProfileFirestoreService.saveProfile(local)
+            }
+        } catch {
+            print("[HealthFit] Falha ao carregar perfil do Firebase: \(error.localizedDescription)")
+            if let local = currentUser, local.id == userId {
+                syncProfileToCloud(local)
+            }
+        }
     }
 
     private func persistSession(with profile: UserProfile) {

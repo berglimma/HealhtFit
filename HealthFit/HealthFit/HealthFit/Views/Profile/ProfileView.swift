@@ -16,6 +16,22 @@ struct ProfileView: View {
     @State private var trainerEmail = ""
     @State private var displayName = ""
     @State private var sleepHoursInput: Double = 7
+    @State private var neckText = ""
+    @State private var shouldersText = ""
+    @State private var chestText = ""
+    @State private var rightArmText = ""
+    @State private var leftArmText = ""
+    @State private var waistText = ""
+    @State private var abdomenText = ""
+    @State private var hipText = ""
+    @State private var rightThighText = ""
+    @State private var leftThighText = ""
+    @State private var rightCalfText = ""
+    @State private var leftCalfText = ""
+    @State private var showMeasurementsSavedAlert = false
+    @State private var measurementsSaveError: String?
+    @State private var measurementComparison: BodyMeasurementComparison?
+    @State private var showMeasurementComparison = false
 
     var body: some View {
         NavigationStack {
@@ -182,6 +198,10 @@ struct ProfileView: View {
                         LabeledContent("Meta Calórica", value: "\(user.dailyCalorieTarget) kcal")
                     }
 
+                    Section("Medidas Corporais") {
+                        bodyMeasurementsSection(for: user)
+                    }
+
                     Section("Integrações") {
                         HStack {
                             Label("HealthKit", systemImage: "heart.text.square.fill")
@@ -265,10 +285,12 @@ struct ProfileView: View {
                 syncDisplayNameField()
                 syncWellnessFields()
                 syncPreWorkoutFromWorkouts()
+                syncBodyMeasurementFields()
             }
             .onChange(of: authService.currentUser) { _, _ in
                 syncTrainerFields()
                 syncDisplayNameField()
+                syncBodyMeasurementFields()
             }
             .onChange(of: wellnessService.todayEntry) { _, _ in
                 syncWellnessFields()
@@ -289,6 +311,27 @@ struct ProfileView: View {
                 Button("Sair", role: .destructive) {
                     authService.logout()
                 }
+            }
+            .alert("Medidas salvas", isPresented: $showMeasurementsSavedAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal.")
+            }
+            .sheet(isPresented: $showMeasurementComparison) {
+                if let comparison = measurementComparison {
+                    BodyMeasurementComparisonView(comparison: comparison)
+                }
+            }
+            .alert(
+                "Não foi possível salvar",
+                isPresented: Binding(
+                    get: { measurementsSaveError != nil },
+                    set: { if !$0 { measurementsSaveError = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) { measurementsSaveError = nil }
+            } message: {
+                Text(measurementsSaveError ?? "")
             }
             .sheet(isPresented: $showDeleteAccountSheet) {
                 DeleteAccountSheet(
@@ -626,9 +669,162 @@ struct ProfileView: View {
         authService.updateProfile(user)
     }
 
+    private func syncBodyMeasurementFields() {
+        let m = authService.currentUser?.bodyMeasurements ?? .empty
+        neckText = formatMeasurementField(m.neckCm)
+        shouldersText = formatMeasurementField(m.shouldersCm)
+        chestText = formatMeasurementField(m.chestCm)
+        rightArmText = formatMeasurementField(m.rightArmCm)
+        leftArmText = formatMeasurementField(m.leftArmCm)
+        waistText = formatMeasurementField(m.waistCm)
+        abdomenText = formatMeasurementField(m.abdomenCm)
+        hipText = formatMeasurementField(m.hipCm)
+        rightThighText = formatMeasurementField(m.rightThighCm)
+        leftThighText = formatMeasurementField(m.leftThighCm)
+        rightCalfText = formatMeasurementField(m.rightCalfCm)
+        leftCalfText = formatMeasurementField(m.leftCalfCm)
+    }
+
+    private func formatMeasurementField(_ value: Double?) -> String {
+        guard let value else { return "" }
+        return value.truncatingRemainder(dividingBy: 1) == 0
+            ? "\(Int(value))"
+            : String(format: "%.1f", value)
+    }
+
+    private func parseMeasurement(_ text: String) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: ".")
+        guard !trimmed.isEmpty else { return nil }
+        guard let value = Double(trimmed), value > 0, value < 500 else { return nil }
+        return value
+    }
+
+    @ViewBuilder
+    private func bodyMeasurementsSection(for user: UserProfile) -> some View {
+        Text("Informe as circunferências em centímetros. Os campos vazios não entram no relatório.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+        if let measuredAt = user.bodyMeasurements.measuredAt {
+            Text("Última atualização: \(measuredAt.formatted(date: .abbreviated, time: .shortened))")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.accent)
+        }
+
+        if let comparison = user.latestMeasurementComparison,
+           comparison.periodDays >= BodyMeasurements.comparisonIntervalDays {
+            Button {
+                measurementComparison = comparison
+                showMeasurementComparison = true
+            } label: {
+                Label(
+                    "Ver comparativo de \(comparison.periodDays) dia(s)",
+                    systemImage: "arrow.left.arrow.right"
+                )
+                .font(.subheadline.weight(.semibold))
+            }
+        } else if let measuredAt = user.bodyMeasurements.measuredAt {
+            let days = BodyMeasurements.daysBetween(measuredAt)
+            let remaining = max(BodyMeasurements.comparisonIntervalDays - days, 0)
+            if remaining > 0 {
+                Text("Comparativo disponível após \(remaining) dia(s), quando você atualizar as medidas.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+
+        measurementField("Pescoço", text: $neckText)
+        measurementField("Ombros", text: $shouldersText)
+        measurementField("Peito", text: $chestText)
+        measurementField("Braço direito", text: $rightArmText)
+        measurementField("Braço esquerdo", text: $leftArmText)
+        measurementField("Cintura", text: $waistText)
+        measurementField("Abdômen", text: $abdomenText)
+        measurementField("Quadril", text: $hipText)
+        measurementField("Coxa direita", text: $rightThighText)
+        measurementField("Coxa esquerda", text: $leftThighText)
+        measurementField("Panturrilha direita", text: $rightCalfText)
+        measurementField("Panturrilha esquerda", text: $leftCalfText)
+
+        Button {
+            saveBodyMeasurements()
+        } label: {
+            Label("Salvar medidas", systemImage: "checkmark.circle.fill")
+                .frame(maxWidth: .infinity)
+        }
+        .tint(AppTheme.accent)
+    }
+
+    private func measurementField(_ title: String, text: Binding<String>) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            TextField("cm", text: text)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 90)
+        }
+    }
+
+    private func saveBodyMeasurements() {
+        guard var user = authService.currentUser else { return }
+
+        let previousSnapshot = user.bodyMeasurements
+        let shouldGenerateComparison = BodyMeasurements.isEligibleForPeriodComparison(
+            previous: previousSnapshot
+        )
+
+        let measurements = BodyMeasurements(
+            neckCm: parseMeasurement(neckText),
+            shouldersCm: parseMeasurement(shouldersText),
+            chestCm: parseMeasurement(chestText),
+            rightArmCm: parseMeasurement(rightArmText),
+            leftArmCm: parseMeasurement(leftArmText),
+            waistCm: parseMeasurement(waistText),
+            abdomenCm: parseMeasurement(abdomenText),
+            hipCm: parseMeasurement(hipText),
+            rightThighCm: parseMeasurement(rightThighText),
+            leftThighCm: parseMeasurement(leftThighText),
+            rightCalfCm: parseMeasurement(rightCalfText),
+            leftCalfCm: parseMeasurement(leftCalfText),
+            measuredAt: .now
+        )
+
+        if shouldGenerateComparison && previousSnapshot.hasAnyValue {
+            user.previousBodyMeasurements = previousSnapshot
+        }
+        user.bodyMeasurements = measurements
+        authService.updateProfile(user)
+        ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
+
+        if shouldGenerateComparison,
+           let comparison = BodyMeasurementComparison.make(
+            previous: previousSnapshot,
+            current: measurements
+           ) {
+            measurementComparison = comparison
+            showMeasurementComparison = true
+        } else {
+            showMeasurementsSavedAlert = true
+        }
+
+        // Garante persistência imediata no Firebase e avisa se falhar.
+        Task {
+            do {
+                try await ProfileFirestoreService.saveProfile(user)
+            } catch {
+                measurementsSaveError = "As medidas ficaram salvas no aparelho, mas a sincronização com o Firebase falhou. Verifique a conexão e tente novamente."
+            }
+        }
+    }
+
     private func updateGoal(_ goal: FitnessGoal) {
         guard var user = authService.currentUser, user.goal != goal else { return }
         user.goal = goal
+        if goal == .fatLoss && user.caloricDeficit == 0 {
+            user.caloricDeficit = 400
+        }
         authService.updateProfile(user)
         mealPlanService.regeneratePlanIfNeeded(for: user)
         ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
@@ -673,5 +869,75 @@ private struct ProfileAvatarView: View {
                 .clipShape(Circle())
                 .overlay(Circle().stroke(AppTheme.background, lineWidth: 2))
         }
+    }
+}
+
+private struct BodyMeasurementComparisonView: View {
+    @Environment(\.dismiss) private var dismiss
+    let comparison: BodyMeasurementComparison
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Comparativo de \(comparison.periodDays) dia(s)")
+                        .font(.title2.bold())
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    Text("Após atualizar as medidas, estas são as que variaram no período.")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    if let from = comparison.previous.measuredAt,
+                       let to = comparison.current.measuredAt {
+                        Text("\(from.formatted(date: .abbreviated, time: .omitted)) → \(to.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                    }
+
+                    if comparison.changes.isEmpty {
+                        Text("Nenhuma medida variou entre as duas aferições.")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(AppTheme.cardBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    } else {
+                        VStack(spacing: 10) {
+                            ForEach(comparison.changes) { change in
+                                HStack(alignment: .top) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(change.label)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(AppTheme.textPrimary)
+                                        Text("\(BodyMeasurements.formatCm(change.previous)) → \(BodyMeasurements.formatCm(change.current))")
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.textSecondary)
+                                    }
+                                    Spacer()
+                                    Text(BodyMeasurements.formatDelta(change.delta))
+                                        .font(.subheadline.weight(.bold))
+                                        .foregroundStyle(change.delta < 0 ? .green : (change.delta > 0 ? .orange : AppTheme.textSecondary))
+                                }
+                                .padding()
+                                .background(AppTheme.cardBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        }
+                    }
+                }
+                .padding()
+            }
+            .background(AppTheme.background.ignoresSafeArea())
+            .navigationTitle("Comparativo")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
