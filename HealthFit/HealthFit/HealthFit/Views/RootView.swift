@@ -37,6 +37,7 @@ struct RootView: View {
                 MainTabView()
                     .task {
                         wellnessService.configure(for: authService.currentUser)
+                        syncWellnessCloudHistory()
                         await healthKitManager.requestAuthorization()
                         mealPlanService.loadSavedData()
                         if mealPlanService.weeklyPlan.isEmpty, let user = authService.currentUser {
@@ -65,6 +66,7 @@ struct RootView: View {
                 if authService.isAuthenticated {
                     prepareWelcomeIfAuthenticated(trigger: .returnFromBackground)
                     wellnessService.configure(for: authService.currentUser)
+                    syncWellnessCloudHistory()
                     wellnessService.checkInOnAppOpen()
                     NotificationService.shared.refreshRecurringNotifications()
                     refreshInactivityReminder()
@@ -84,6 +86,7 @@ struct RootView: View {
                 welcomeContext = nil
                 prepareWelcomeIfAuthenticated(trigger: .login)
                 wellnessService.configure(for: authService.currentUser)
+                syncWellnessCloudHistory()
                 syncWorkoutCloudHistory()
                 Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
             } else {
@@ -118,6 +121,18 @@ struct RootView: View {
         workoutStore.configureCloudSync(userId: userId)
         Task {
             await workoutStore.loadCloudHistory(userId: userId)
+        }
+    }
+
+    private func syncWellnessCloudHistory() {
+        guard let userId = authService.currentUser?.id else {
+            wellnessService.configureCloudSync(userId: nil)
+            return
+        }
+
+        wellnessService.configureCloudSync(userId: userId)
+        Task {
+            await wellnessService.syncFromCloudIfNeeded()
         }
     }
 

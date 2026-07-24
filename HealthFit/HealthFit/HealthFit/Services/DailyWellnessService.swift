@@ -45,6 +45,7 @@ final class DailyWellnessService: ObservableObject {
     @Published var showSleepCheckIn = false
 
     private var userEmail: String?
+    private var cloudUserId: String?
     private let storagePrefix = "healthfit_wellness"
     private let lastUpdatePrefix = "healthfit_wellness_last_update"
     private let trackingStartPrefix = "healthfit_wellness_tracking_start"
@@ -53,6 +54,7 @@ final class DailyWellnessService: ObservableObject {
 
     func configure(for user: UserProfile?) {
         userEmail = user?.email
+        cloudUserId = user?.id
         if user != nil {
             ensureTrackingStarted()
         }
@@ -63,6 +65,50 @@ final class DailyWellnessService: ObservableObject {
         }
     }
 
+    func configureCloudSync(userId: String?) {
+        cloudUserId = userId
+    }
+
+    /// Carrega o dia atual (e metadados) do Firebase e mescla com o cache local.
+    func syncFromCloudIfNeeded() async {
+        guard let userId = cloudUserId, DailyWellnessFirestoreService.isAvailable else { return }
+
+        do {
+            let todayKey = DailyWellnessEntry.dayKey(for: .now)
+            if let remote = try await DailyWellnessFirestoreService.fetchEntry(userId: userId, dayKey: todayKey) {
+                let merged = mergeEntries(local: todayEntry.dayKey == todayKey ? todayEntry : .empty(), remote: remote)
+                todayEntry = merged
+                persistLocally(merged)
+            }
+
+            let meta = try await DailyWellnessFirestoreService.fetchMeta(userId: userId)
+            if let remoteLast = meta.lastWaterOrSleepUpdateAt {
+                let localLast = lastWaterOrSleepUpdateAt
+                if localLast == nil || remoteLast > localLast! {
+                    setLastWaterOrSleepUpdateAt(remoteLast)
+                }
+            }
+            if let remoteTracking = meta.trackingStartedAt, trackingStartedAt == nil {
+                setTrackingStartedAt(remoteTracking)
+            }
+
+            // Garante que o estado local atual também exista na nuvem.
+            if todayEntry.dayKey == todayKey {
+                try await pushEntryToCloud(todayEntry)
+                try await pushMetaToCloud()
+            }
+
+            if todayEntry.sleepHours == nil {
+                pendingSleepHours = 7
+                showSleepCheckIn = true
+            } else {
+                showSleepCheckIn = false
+            }
+        } catch {
+            print("[HealthFit] Falha ao sincronizar wellness do Firebase: \(error.localizedDescription)")
+        }
+    }
+
     func clearAllLocalData() {
         if let userEmail {
             UserDefaults.standard.removeObject(forKey: storageKey(email: userEmail))
@@ -70,6 +116,7 @@ final class DailyWellnessService: ObservableObject {
             UserDefaults.standard.removeObject(forKey: trackingStartKey(email: userEmail))
         }
         userEmail = nil
+        cloudUserId = nil
         todayEntry = .empty()
         pendingSleepHours = 7
         showSleepCheckIn = false
@@ -223,16 +270,29 @@ final class DailyWellnessService: ObservableObject {
     }
 
     private func markWaterOrSleepUpdated(at date: Date = .now) {
-        guard let userEmail else { return }
-        UserDefaults.standard.set(date, forKey: lastUpdateKey(email: userEmail))
+        setLastWaterOrSleepUpdateAt(date)
         objectWillChange.send()
+        Task {
+            await pushMetaToCloudSafely()
+        }
     }
 
     private func ensureTrackingStarted(at date: Date = .now) {
+        guard trackingStartedAt == nil else { return }
+        setTrackingStartedAt(date)
+        Task {
+            await pushMetaToCloudSafely()
+        }
+    }
+
+    private func setLastWaterOrSleepUpdateAt(_ date: Date) {
         guard let userEmail else { return }
-        let key = trackingStartKey(email: userEmail)
-        guard UserDefaults.standard.object(forKey: key) == nil else { return }
-        UserDefaults.standard.set(date, forKey: key)
+        UserDefaults.standard.set(date, forKey: lastUpdateKey(email: userEmail))
+    }
+
+    private func setTrackingStartedAt(_ date: Date) {
+        guard let userEmail else { return }
+        UserDefaults.standard.set(date, forKey: trackingStartKey(email: userEmail))
     }
 
     private func currentTodayEntry() -> DailyWellnessEntry {
@@ -260,11 +320,77 @@ final class DailyWellnessService: ObservableObject {
     }
 
     private func save(_ entry: DailyWellnessEntry) {
+        persistLocally(entry)
+        Task {
+            await pushEntryToCloudSafely(entry)
+            await pushMetaToCloudSafely()
+        }
+    }
+
+    private func persistLocally(_ entry: DailyWellnessEntry) {
         guard let userEmail else { return }
         todayEntry = entry
         if let data = try? JSONEncoder().encode(entry) {
             UserDefaults.standard.set(data, forKey: storageKey(email: userEmail))
         }
+    }
+
+    private func pushEntryToCloudSafely(_ entry: DailyWellnessEntry) async {
+        do {
+            try await pushEntryToCloud(entry)
+        } catch {
+            print("[HealthFit] Falha ao salvar wellness no Firebase: \(error.localizedDescription)")
+        }
+    }
+
+    private func pushEntryToCloud(_ entry: DailyWellnessEntry) async throws {
+        guard let userId = cloudUserId else { return }
+        try await DailyWellnessFirestoreService.saveEntry(entry, userId: userId)
+    }
+
+    private func pushMetaToCloudSafely() async {
+        do {
+            try await pushMetaToCloud()
+        } catch {
+            print("[HealthFit] Falha ao salvar meta de wellness no Firebase: \(error.localizedDescription)")
+        }
+    }
+
+    private func pushMetaToCloud() async throws {
+        guard let userId = cloudUserId else { return }
+        try await DailyWellnessFirestoreService.saveMeta(
+            userId: userId,
+            lastWaterOrSleepUpdateAt: lastWaterOrSleepUpdateAt,
+            trackingStartedAt: trackingStartedAt
+        )
+    }
+
+    private func mergeEntries(local: DailyWellnessEntry, remote: DailyWellnessEntry) -> DailyWellnessEntry {
+        var merged = local
+        merged.dayKey = remote.dayKey
+
+        // Prefere o sono mais recente; se só um lado tem, usa esse.
+        switch (local.sleepUpdatedAt, remote.sleepUpdatedAt) {
+        case let (l?, r?) where r >= l:
+            merged.sleepHours = remote.sleepHours
+            merged.sleepUpdatedAt = remote.sleepUpdatedAt
+        case (nil, .some):
+            merged.sleepHours = remote.sleepHours
+            merged.sleepUpdatedAt = remote.sleepUpdatedAt
+        default:
+            break
+        }
+
+        if remote.waterIntakeMl > merged.waterIntakeMl {
+            merged.waterIntakeMl = remote.waterIntakeMl
+            merged.waterUpdatedAt = remote.waterUpdatedAt ?? merged.waterUpdatedAt
+        } else if merged.waterUpdatedAt == nil {
+            merged.waterUpdatedAt = remote.waterUpdatedAt
+        }
+
+        merged.energyDrinksCount = max(local.energyDrinksCount, remote.energyDrinksCount)
+        merged.preWorkoutCount = max(local.preWorkoutCount, remote.preWorkoutCount)
+        return merged
     }
 
     private func storageKey(email: String) -> String {

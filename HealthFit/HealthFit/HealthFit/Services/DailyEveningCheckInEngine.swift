@@ -120,6 +120,72 @@ enum DailyEveningCheckInEngine {
         return .neutral
     }
 
+    static func isDayFeelingReply(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        if PostWorkoutCheckInEngine.looksLikeOffTopicQuestion(trimmed) { return false }
+
+        let normalized = trimmed
+            .lowercased()
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+
+        for reply in dayReflectionQuickReplies {
+            let replyNormalized = reply
+                .lowercased()
+                .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+            if normalized == replyNormalized || normalized.contains(replyNormalized) {
+                return true
+            }
+        }
+
+        let signals = [
+            "otimo", "bem", "dificil", "cansativ", "desanim", "treinei", "nao treinei",
+            "faltei", "produtivo", "ruim", "pesado", "me sinto", "estou", "foi "
+        ]
+        if signals.contains(where: { normalized.contains($0) }) { return true }
+        return trimmed.count <= 48
+    }
+
+    static func isRestReadinessReply(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        if PostWorkoutCheckInEngine.looksLikeOffTopicQuestion(trimmed) { return false }
+
+        let normalized = trimmed
+            .lowercased()
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+
+        for reply in restReadinessQuickReplies {
+            let replyNormalized = reply
+                .lowercased()
+                .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+            if normalized == replyNormalized || normalized.contains(replyNormalized) {
+                return true
+            }
+        }
+
+        let signals = [
+            "pronto", "sono", "dormir", "agitado", "dor", "ansios", "cansado",
+            "descans", "inquiet", "me sinto", "estou"
+        ]
+        if signals.contains(where: { normalized.contains($0) }) { return true }
+        return trimmed.count <= 48
+    }
+
+    static func reminderToAnswerDayFeeling() -> String {
+        """
+        E, voltando ao check-in da noite: como foi seu dia além dos treinos — humor, energia e sensações?
+        Pode responder com sinceridade (ou usar uma das sugestões).
+        """
+    }
+
+    static func reminderToAnswerRestReadiness() -> String {
+        """
+        E, voltando à pergunta: como está seu corpo e mente agora para descansar?
+        Pode responder com sinceridade (ou usar uma das sugestões).
+        """
+    }
+
     static func classifyRestReadiness(_ text: String) -> DailyEveningRestReadiness {
         let normalized = text
             .lowercased()

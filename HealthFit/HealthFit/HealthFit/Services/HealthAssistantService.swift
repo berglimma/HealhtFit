@@ -1885,6 +1885,23 @@ final class HealthAssistantService: ObservableObject {
     }
 
     private func handleDailyMorningReply(_ text: String, context: HealthAssistantContext) {
+        if !DailyMorningCheckInEngine.isFeelingReply(text) {
+            isTyping = true
+            replyTask = Task {
+                do {
+                    try await Task.sleep(for: Self.replyDelay)
+                    guard !Task.isCancelled else { return }
+                    let answer = HealthAssistantEngine.answer(for: text, context: context)
+                    let reminder = DailyMorningCheckInEngine.reminderToAnswerFeeling()
+                    deliverAssistantMessage("\(answer)\n\n\(reminder)")
+                    isTyping = false
+                } catch {
+                    isTyping = false
+                }
+            }
+            return
+        }
+
         let feeling = DailyMorningCheckInEngine.classifyFeeling(text)
         let responses = DailyMorningCheckInEngine.responseSequence(
             feeling: feeling,
@@ -1993,6 +2010,23 @@ final class HealthAssistantService: ObservableObject {
     }
 
     private func handleEveningDayReflectionReply(_ text: String, context: HealthAssistantContext) {
+        if !DailyEveningCheckInEngine.isDayFeelingReply(text) {
+            isTyping = true
+            replyTask = Task {
+                do {
+                    try await Task.sleep(for: Self.replyDelay)
+                    guard !Task.isCancelled else { return }
+                    let answer = HealthAssistantEngine.answer(for: text, context: context)
+                    let reminder = DailyEveningCheckInEngine.reminderToAnswerDayFeeling()
+                    deliverAssistantMessage("\(answer)\n\n\(reminder)")
+                    isTyping = false
+                } catch {
+                    isTyping = false
+                }
+            }
+            return
+        }
+
         let feeling = DailyEveningCheckInEngine.classifyDayFeeling(text)
         lastEveningDayFeeling = feeling
         let followUp = DailyEveningCheckInEngine.dayReflectionFollowUp(
@@ -2015,6 +2049,23 @@ final class HealthAssistantService: ObservableObject {
     }
 
     private func handleEveningRestReadinessReply(_ text: String, context: HealthAssistantContext) {
+        if !DailyEveningCheckInEngine.isRestReadinessReply(text) {
+            isTyping = true
+            replyTask = Task {
+                do {
+                    try await Task.sleep(for: Self.replyDelay)
+                    guard !Task.isCancelled else { return }
+                    let answer = HealthAssistantEngine.answer(for: text, context: context)
+                    let reminder = DailyEveningCheckInEngine.reminderToAnswerRestReadiness()
+                    deliverAssistantMessage("\(answer)\n\n\(reminder)")
+                    isTyping = false
+                } catch {
+                    isTyping = false
+                }
+            }
+            return
+        }
+
         let readiness = DailyEveningCheckInEngine.classifyRestReadiness(text)
         let dayFeeling = lastEveningDayFeeling ?? .neutral
         let responses = DailyEveningCheckInEngine.closingSequence(
@@ -2098,6 +2149,24 @@ final class HealthAssistantService: ObservableObject {
 
     private func handlePostWorkoutReply(_ text: String, context: HealthAssistantContext) {
         guard let checkIn = activePostWorkoutCheckIn ?? PostWorkoutCheckInService.shared.pendingCheckIn else { return }
+
+        // Pergunta paralela: responde o tema, mas mantém o check-in aberto.
+        if !PostWorkoutCheckInEngine.isFeelingReply(text) {
+            isTyping = true
+            replyTask = Task {
+                do {
+                    try await Task.sleep(for: Self.replyDelay)
+                    guard !Task.isCancelled else { return }
+                    let answer = HealthAssistantEngine.answer(for: text, context: context)
+                    let reminder = PostWorkoutCheckInEngine.reminderToAnswerFeeling(checkIn: checkIn)
+                    deliverAssistantMessage("\(answer)\n\n\(reminder)")
+                    isTyping = false
+                } catch {
+                    isTyping = false
+                }
+            }
+            return
+        }
 
         let feeling = PostWorkoutCheckInEngine.classifyFeeling(text)
         let athleteName = context.user?.greetingName ?? ""

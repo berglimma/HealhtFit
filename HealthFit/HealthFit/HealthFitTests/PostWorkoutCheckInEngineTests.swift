@@ -26,6 +26,23 @@ final class PostWorkoutCheckInEngineTests: XCTestCase {
         XCTAssertEqual(PostWorkoutCheckInEngine.classifyFeeling("Estou com dores no joelho"), .sore)
     }
 
+    func testDetectsFeelingVersusOffTopicQuestion() {
+        XCTAssertTrue(PostWorkoutCheckInEngine.isFeelingReply("Estou ótimo!"))
+        XCTAssertTrue(PostWorkoutCheckInEngine.isFeelingReply("Me sinto bem"))
+        XCTAssertTrue(PostWorkoutCheckInEngine.isFeelingReply("Mais ou menos"))
+        XCTAssertFalse(PostWorkoutCheckInEngine.isFeelingReply("Qual é meu IMC?"))
+        XCTAssertFalse(PostWorkoutCheckInEngine.isFeelingReply("Quanto de proteína comer?"))
+        XCTAssertFalse(PostWorkoutCheckInEngine.isFeelingReply("Posso beber álcool?"))
+    }
+
+    func testReminderMentionsWorkoutTitle() {
+        let session = TestFixtures.completedWorkoutSession(workoutTitle: "Feminino A")
+        let checkIn = PendingPostWorkoutCheckIn(session: session)
+        let reminder = PostWorkoutCheckInEngine.reminderToAnswerFeeling(checkIn: checkIn)
+        XCTAssertTrue(reminder.contains("Feminino A"))
+        XCTAssertTrue(reminder.localizedCaseInsensitiveContains("se sentindo"))
+    }
+
     func testOpeningMessageMentionsWorkoutTitle() {
         let session = TestFixtures.completedWorkoutSession(workoutTitle: "Treino A — Peito")
         let checkIn = PendingPostWorkoutCheckIn(session: session)

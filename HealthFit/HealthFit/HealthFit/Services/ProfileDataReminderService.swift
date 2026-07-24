@@ -6,9 +6,16 @@ final class ProfileDataReminderService: ObservableObject {
     static let shared = ProfileDataReminderService()
     static let refreshIntervalDays = 30
 
-    enum PromptKind: Equatable {
+    enum PromptKind: Equatable, Identifiable {
         case firstFill
         case refreshDue
+
+        var id: String {
+            switch self {
+            case .firstFill: return "firstFill"
+            case .refreshDue: return "refreshDue"
+            }
+        }
 
         var title: String {
             switch self {
@@ -41,9 +48,18 @@ final class ProfileDataReminderService: ObservableObject {
             return
         }
 
+        // Mantém o prompt de primeiro acesso até o usuário escolher uma ação no pop-up.
+        if activePrompt == .firstFill {
+            return
+        }
+
         if lastUpdated(for: user.id) == nil {
             if looksLikeUnsetMetrics(user) {
-                activePrompt = .firstFill
+                if shouldSuppressFirstFillPrompt(for: user.id) {
+                    activePrompt = nil
+                } else {
+                    activePrompt = .firstFill
+                }
             } else {
                 // Contas já em uso: não força o fluxo de primeiro preenchimento.
                 seedLastUpdated(for: user.id)
@@ -73,9 +89,11 @@ final class ProfileDataReminderService: ObservableObject {
         guard let userId else { return }
         defaults.set(Date().timeIntervalSince1970, forKey: updatedKey(userId))
         defaults.removeObject(forKey: dismissedRefreshDayKey(userId))
+        defaults.removeObject(forKey: dismissedFirstFillDayKey(userId))
         activePrompt = nil
     }
 
+    /// Só deve ser chamado pelos botões do pop-up (não no dismiss automático do SwiftUI).
     func dismissPrompt(for userId: String?) {
         guard let userId else {
             activePrompt = nil
@@ -84,6 +102,10 @@ final class ProfileDataReminderService: ObservableObject {
 
         if activePrompt == .refreshDue {
             defaults.set(dayKey(for: .now), forKey: dismissedRefreshDayKey(userId))
+        }
+
+        if activePrompt == .firstFill {
+            defaults.set(dayKey(for: .now), forKey: dismissedFirstFillDayKey(userId))
         }
 
         activePrompt = nil
@@ -108,12 +130,20 @@ final class ProfileDataReminderService: ObservableObject {
         defaults.string(forKey: dismissedRefreshDayKey(userId)) == dayKey(for: .now)
     }
 
+    private func shouldSuppressFirstFillPrompt(for userId: String) -> Bool {
+        defaults.string(forKey: dismissedFirstFillDayKey(userId)) == dayKey(for: .now)
+    }
+
     private func updatedKey(_ userId: String) -> String {
         "healthfit.profileBodyData.updatedAt.\(userId)"
     }
 
     private func dismissedRefreshDayKey(_ userId: String) -> String {
         "healthfit.profileBodyData.refreshDismissedDay.\(userId)"
+    }
+
+    private func dismissedFirstFillDayKey(_ userId: String) -> String {
+        "healthfit.profileBodyData.firstFillDismissedDay.\(userId)"
     }
 
     private func dayKey(for date: Date) -> String {

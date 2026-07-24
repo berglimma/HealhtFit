@@ -38,6 +38,7 @@ enum ProfileFirestoreService {
             "weight": profile.weight,
             "height": profile.height,
             "age": profile.age,
+            "gender": profile.gender.rawValue,
             "goal": profile.goal.rawValue,
             "biotype": profile.biotype.rawValue,
             "hasBodyMeasurements": profile.bodyMeasurements.hasAnyValue,
@@ -45,12 +46,28 @@ enum ProfileFirestoreService {
             "createdAt": Timestamp(date: profile.createdAt),
         ]
 
-            if let measuredAt = profile.bodyMeasurements.measuredAt {
-                data["bodyMeasurementsUpdatedAt"] = Timestamp(date: measuredAt)
-            }
-            data["hasPreviousBodyMeasurements"] = profile.previousBodyMeasurements?.hasAnyValue == true
+        let measurements = profile.bodyMeasurements
+        var bodyMeasurementsData: [String: Any] = [:]
+        if let value = measurements.neckCm { bodyMeasurementsData["neckCm"] = value }
+        if let value = measurements.shouldersCm { bodyMeasurementsData["shouldersCm"] = value }
+        if let value = measurements.chestCm { bodyMeasurementsData["chestCm"] = value }
+        if let value = measurements.rightArmCm { bodyMeasurementsData["rightArmCm"] = value }
+        if let value = measurements.leftArmCm { bodyMeasurementsData["leftArmCm"] = value }
+        if let value = measurements.waistCm { bodyMeasurementsData["waistCm"] = value }
+        if let value = measurements.abdomenCm { bodyMeasurementsData["abdomenCm"] = value }
+        if let value = measurements.hipCm { bodyMeasurementsData["hipCm"] = value }
+        if let value = measurements.rightThighCm { bodyMeasurementsData["rightThighCm"] = value }
+        if let value = measurements.leftThighCm { bodyMeasurementsData["leftThighCm"] = value }
+        if let value = measurements.rightCalfCm { bodyMeasurementsData["rightCalfCm"] = value }
+        if let value = measurements.leftCalfCm { bodyMeasurementsData["leftCalfCm"] = value }
+        if let measuredAt = measurements.measuredAt {
+            bodyMeasurementsData["measuredAt"] = Timestamp(date: measuredAt)
+            data["bodyMeasurementsUpdatedAt"] = Timestamp(date: measuredAt)
+        }
+        data["bodyMeasurements"] = bodyMeasurementsData
+        data["hasPreviousBodyMeasurements"] = profile.previousBodyMeasurements?.hasAnyValue == true
 
-            try await userDocument(userId: profile.id).setData(data, merge: true)
+        try await userDocument(userId: profile.id).setData(data, merge: true)
     }
 
     static func fetchProfile(userId: String) async throws -> UserProfile? {

@@ -475,6 +475,7 @@ final class AuthService: ObservableObject {
 
     private func deleteRemoteData(userId: String) async throws {
         guard WorkoutFirestoreService.isAvailable else { return }
+        try await DailyWellnessFirestoreService.deleteAllEntries(userId: userId)
         try await WorkoutFirestoreService.deleteAllUserData(userId: userId)
     }
 

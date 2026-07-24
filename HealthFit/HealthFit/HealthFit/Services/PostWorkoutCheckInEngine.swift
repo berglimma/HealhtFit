@@ -108,6 +108,69 @@ enum PostWorkoutCheckInEngine {
         return .neutral
     }
 
+    /// Indica se o texto responde ao check-in de como o usuário está se sentindo.
+    static func isFeelingReply(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+
+        if looksLikeOffTopicQuestion(trimmed) {
+            return false
+        }
+
+        let normalized = trimmed
+            .lowercased()
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+
+        for reply in feelingQuickReplies {
+            let replyNormalized = reply
+                .lowercased()
+                .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+            if normalized == replyNormalized || normalized.contains(replyNormalized) {
+                return true
+            }
+        }
+
+        let feelingSignals = [
+            "otimo", "bem", "boa", "cansado", "dor", "mais ou menos", "exausto", "dolorido",
+            "tranquilo", "legal", "mal", "ruim", "normal", "regular", "dispos", "energia",
+            "forte", "top", "incrivel", "ok", "neutro", "pesado", "rigidez", "machuc",
+            "fadiga", "acabado", "morto", "me sinto", "estou", "to ", "tô "
+        ]
+        if feelingSignals.contains(where: { normalized.contains($0) }) {
+            return true
+        }
+
+        // Resposta curta e livre, sem cara de pergunta.
+        return trimmed.count <= 48
+    }
+
+    static func looksLikeOffTopicQuestion(_ text: String) -> Bool {
+        let normalized = text
+            .lowercased()
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+
+        if text.contains("?") {
+            return true
+        }
+
+        let questionSignals = [
+            "o que e", "o que sao", "qual e", "quais ", "quanto", "quando", "onde ",
+            "por que", "porque", "como faco", "como treinar", "como montar", "como dormir",
+            "posso ", "devo ", "me explica", "me diga", "quero saber", "montar treino",
+            "criar ficha", "gerar treino", "meu imc", " imc", "proteina", "creatina",
+            "whey", "suplemento", "cardapio", "biotipo", "ectomorfo", "mesomorfo",
+            "endomorfo", "alcool", "cerveja", "deficit", "calorias", "series", "repeticoes"
+        ]
+        return questionSignals.contains(where: { normalized.contains($0) })
+    }
+
+    static func reminderToAnswerFeeling(checkIn: PendingPostWorkoutCheckIn) -> String {
+        """
+        E, voltando ao check-in do treino: ainda quero saber como você está se sentindo agora depois de "\(checkIn.workoutTitle)" — corpo, energia e disposição.
+        Pode responder com sinceridade (ou usar uma das sugestões).
+        """
+    }
+
     static func responseSequence(
         feeling: PostWorkoutFeeling,
         checkIn: PendingPostWorkoutCheckIn,
