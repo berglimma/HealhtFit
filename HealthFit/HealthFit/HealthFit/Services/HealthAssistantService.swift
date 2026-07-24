@@ -1516,6 +1516,7 @@ final class HealthAssistantService: ObservableObject {
     private(set) var lastUserInteractionAt = Date()
     private var lastUserMessageAt: Date?
     private var inactivityFollowUpDelivered = false
+    private var cardioMeditationNudgeDelivered = false
     private var activePostWorkoutCheckIn: PendingPostWorkoutCheckIn?
     private var isDailyMorningCheckInActive = false
     private var isDailyEveningCheckInActive = false
@@ -1607,6 +1608,7 @@ final class HealthAssistantService: ObservableObject {
         recordUserInteraction()
         lastUserMessageAt = Date()
         inactivityFollowUpDelivered = false
+        cardioMeditationNudgeDelivered = false
         replyTask?.cancel()
         messages.append(HealthChatMessage(text: trimmed, isUser: true))
 
@@ -2204,6 +2206,7 @@ final class HealthAssistantService: ObservableObject {
         lastEveningDayFeeling = nil
         lastUserMessageAt = nil
         inactivityFollowUpDelivered = false
+        cardioMeditationNudgeDelivered = false
         resetWorkoutBuilderDraft()
 
         if let checkIn = PostWorkoutCheckInService.shared.dueCheckIn {
@@ -2266,6 +2269,81 @@ final class HealthAssistantService: ObservableObject {
 
         deliverAssistantMessage(text)
         inactivityFollowUpDelivered = true
+        lastUserInteractionAt = Date()
+    }
+
+    func checkCardioMeditationNudgeIfNeeded(
+        context: HealthAssistantContext,
+        sessions: [WorkoutSession],
+        accountCreatedAt: Date?
+    ) {
+        guard !isTyping else { return }
+        guard !isInGuidedCheckIn else { return }
+        guard !cardioMeditationNudgeDelivered else { return }
+
+        guard let evaluation = AssistantCardioMeditationNudgeEngine.evaluate(
+            sessions: sessions,
+            recordedCardioAt: NotificationService.shared.lastRecordedCardioAt,
+            recordedMeditationAt: NotificationService.shared.lastRecordedMeditationAt,
+            accountCreatedAt: accountCreatedAt
+        ) else { return }
+
+        let needsCardio = evaluation.cardioReference.map {
+            !NotificationService.shared.hasAssistantCardioNudge(for: $0)
+        } ?? false
+        let needsMeditation = evaluation.meditationReference.map {
+            !NotificationService.shared.hasAssistantMeditationNudge(for: $0)
+        } ?? false
+
+        let kindToDeliver: AssistantCardioMeditationNudgeKind?
+        switch evaluation.kind {
+        case .both:
+            if needsCardio && needsMeditation {
+                kindToDeliver = .both
+            } else if needsCardio {
+                kindToDeliver = .cardio
+            } else if needsMeditation {
+                kindToDeliver = .meditation
+            } else {
+                kindToDeliver = nil
+            }
+        case .cardio:
+            kindToDeliver = needsCardio ? .cardio : nil
+        case .meditation:
+            kindToDeliver = needsMeditation ? .meditation : nil
+        }
+
+        guard let kindToDeliver else {
+            cardioMeditationNudgeDelivered = true
+            return
+        }
+
+        let name = context.user?.greetingName ?? "Atleta"
+        let text = AssistantCardioMeditationNudgeEngine.message(kind: kindToDeliver, athleteName: name)
+        if let last = messages.last, !last.isUser, last.text == text {
+            cardioMeditationNudgeDelivered = true
+            return
+        }
+
+        deliverAssistantMessage(text)
+        switch kindToDeliver {
+        case .cardio:
+            if let reference = evaluation.cardioReference {
+                NotificationService.shared.markAssistantCardioNudgeDelivered(for: reference)
+            }
+        case .meditation:
+            if let reference = evaluation.meditationReference {
+                NotificationService.shared.markAssistantMeditationNudgeDelivered(for: reference)
+            }
+        case .both:
+            if let reference = evaluation.cardioReference {
+                NotificationService.shared.markAssistantCardioNudgeDelivered(for: reference)
+            }
+            if let reference = evaluation.meditationReference {
+                NotificationService.shared.markAssistantMeditationNudgeDelivered(for: reference)
+            }
+        }
+        cardioMeditationNudgeDelivered = true
         lastUserInteractionAt = Date()
     }
 

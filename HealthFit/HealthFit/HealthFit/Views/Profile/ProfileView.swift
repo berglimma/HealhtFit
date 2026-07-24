@@ -165,6 +165,10 @@ struct ProfileView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
+
+                                Text("O ícone do app na tela inicial usa a mesma cor.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
                             }
                         }
                         .padding(.vertical, 4)

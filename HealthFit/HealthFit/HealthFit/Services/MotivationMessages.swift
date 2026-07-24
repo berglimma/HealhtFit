@@ -166,6 +166,42 @@ enum MotivationMessages {
         appUsageInactivityReminder.randomElement() ?? appUsageInactivityReminder[0]
     }
 
+    static let cardioInactivityReminder: [String] = [
+        "Faz 48h sem cardio 🏃💨 Benefícios: coração mais forte, mais energia e queima de gordura. 20 min hoje já contam!",
+        "Seu coração sente falta do ritmo ❤️🏃 Cardio regular melhora humor, sono e resistência. Bora na aba Treinos?",
+        "2 dias sem cardio ⏱️ Condicionamento cai rápido — retome com caminhada, bike ou corrida leve hoje!",
+    ]
+
+    static let meditationInactivityReminder: [String] = [
+        "Faz 48h sem meditar 🧘✨ Benefícios: menos estresse, mais foco e sono melhor. 5–10 min já transformam o dia!",
+        "A mente também treina 🧠🕊️ Meditação reduz ansiedade e melhora recuperação. Que tal uma sessão curta agora?",
+        "2 dias sem meditação ⏳ Respire fundo e volte à rotina — clareza mental impulsiona treinos e hábitos saudáveis.",
+    ]
+
+    static func cardioInactivityMessage() -> String {
+        cardioInactivityReminder.randomElement() ?? cardioInactivityReminder[0]
+    }
+
+    static func meditationInactivityMessage() -> String {
+        meditationInactivityReminder.randomElement() ?? meditationInactivityReminder[0]
+    }
+
+    static func healthIconYellowMessage(detail: String) -> String {
+        let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return "Atualize água e sono hoje para voltar ao verde 💛💧😴"
+        }
+        return "\(trimmed) 💛💧😴"
+    }
+
+    static func healthIconRedMessage(detail: String) -> String {
+        let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return "Mais de 24h sem atualizar água e sono. Registre agora no Perfil! 🚨❤️💧😴"
+        }
+        return "\(trimmed) 🚨❤️💧😴"
+    }
+
     static func welcomeActiveMessage() -> String {
         welcomeActiveMessages.randomElement() ?? welcomeActiveMessages[0]
     }

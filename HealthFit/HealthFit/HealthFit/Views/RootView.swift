@@ -180,9 +180,19 @@ struct RootView: View {
     }
 
     private func refreshInactivityReminder() {
+        let accountCreatedAt = authService.currentUser?.createdAt
         NotificationService.shared.refreshWorkoutInactivityReminder(
             lastWorkoutAt: workoutStore.lastCompletedWorkoutAt,
-            accountCreatedAt: authService.currentUser?.createdAt
+            accountCreatedAt: accountCreatedAt
         )
+        NotificationService.shared.refreshCardioInactivityReminder(
+            lastCardioAt: workoutStore.lastCompletedCardioAt,
+            accountCreatedAt: accountCreatedAt
+        )
+        NotificationService.shared.refreshMeditationInactivityReminder(
+            lastMeditationAt: workoutStore.lastCompletedMeditationAt,
+            accountCreatedAt: accountCreatedAt
+        )
+        wellnessService.refreshHealthIconNotifications()
     }
 }

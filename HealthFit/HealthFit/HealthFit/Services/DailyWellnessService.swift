@@ -63,6 +63,9 @@ final class DailyWellnessService: ObservableObject {
             pendingSleepHours = 7
             showSleepCheckIn = true
         }
+        if user != nil {
+            refreshHealthIconNotifications()
+        }
     }
 
     func configureCloudSync(userId: String?) {
@@ -104,6 +107,7 @@ final class DailyWellnessService: ObservableObject {
             } else {
                 showSleepCheckIn = false
             }
+            refreshHealthIconNotifications()
         } catch {
             print("[HealthFit] Falha ao sincronizar wellness do Firebase: \(error.localizedDescription)")
         }
@@ -150,10 +154,15 @@ final class DailyWellnessService: ObservableObject {
         return UserDefaults.standard.object(forKey: lastUpdateKey(email: userEmail)) as? Date
     }
 
+    /// Exposto para agendar atualização do ícone da tela inicial.
+    var lastWaterOrSleepUpdateAtForIconScheduling: Date? { lastWaterOrSleepUpdateAt }
+
     private var trackingStartedAt: Date? {
         guard let userEmail else { return nil }
         return UserDefaults.standard.object(forKey: trackingStartKey(email: userEmail)) as? Date
     }
+
+    var trackingStartedAtForIconScheduling: Date? { trackingStartedAt }
 
     var hasLoggedSleepToday: Bool {
         todayEntry.sleepHours != nil
@@ -196,6 +205,24 @@ final class DailyWellnessService: ObservableObject {
             let missing = reasons.joined(separator: " e ")
             return "Ícone amarelo porque você ainda não atualizou \(missing) hoje. Registre em Sono e Hidratação."
         }
+    }
+
+    /// Avalia o ícone de saúde e dispara notificação ao mudar para amarelo/vermelho.
+    func refreshHealthIconNotifications(referenceDate: Date = .now) {
+        guard userEmail != nil else { return }
+
+        let status = healthIconStatus(referenceDate: referenceDate)
+        let staleAnchor = lastWaterOrSleepUpdateAt ?? trackingStartedAt
+        let redFireDate = staleAnchor.map { $0.addingTimeInterval(Self.staleUpdateThreshold) }
+
+        NotificationService.shared.refreshHealthIconNotifications(
+            status: status,
+            detailMessage: healthIconDetailMessage(referenceDate: referenceDate),
+            redFireDate: redFireDate,
+            dayKey: DailyWellnessEntry.dayKey(for: referenceDate),
+            staleAnchor: staleAnchor
+        )
+        AppIconInactivityService.shared.syncWithWellnessHealthIcon(status: status)
     }
 
     func logSleep(hours: Double) {
@@ -272,6 +299,7 @@ final class DailyWellnessService: ObservableObject {
     private func markWaterOrSleepUpdated(at date: Date = .now) {
         setLastWaterOrSleepUpdateAt(date)
         objectWillChange.send()
+        refreshHealthIconNotifications()
         Task {
             await pushMetaToCloudSafely()
         }

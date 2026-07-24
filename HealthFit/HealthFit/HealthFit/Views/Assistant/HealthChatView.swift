@@ -108,6 +108,11 @@ struct HealthChatView: View {
             .onAppear {
                 bootstrapOrResumeCheckIn()
                 assistant.handleTabReturn()
+                assistant.checkCardioMeditationNudgeIfNeeded(
+                    context: context,
+                    sessions: workoutStore.sessionHistory,
+                    accountCreatedAt: authService.currentUser?.createdAt
+                )
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
@@ -115,6 +120,11 @@ struct HealthChatView: View {
                     assistant.checkInactivityFollowUpIfNeeded(
                         context: context,
                         sessions: workoutStore.sessionHistory
+                    )
+                    assistant.checkCardioMeditationNudgeIfNeeded(
+                        context: context,
+                        sessions: workoutStore.sessionHistory,
+                        accountCreatedAt: authService.currentUser?.createdAt
                     )
                 }
             }
@@ -134,6 +144,11 @@ struct HealthChatView: View {
                     assistant.checkInactivityFollowUpIfNeeded(
                         context: context,
                         sessions: workoutStore.sessionHistory
+                    )
+                    assistant.checkCardioMeditationNudgeIfNeeded(
+                        context: context,
+                        sessions: workoutStore.sessionHistory,
+                        accountCreatedAt: authService.currentUser?.createdAt
                     )
                 }
             }

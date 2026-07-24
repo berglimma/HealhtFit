@@ -1,0 +1,404 @@
+{
+  "product": "HealthFit",
+  "version": "1.0.0",
+  "generatedAt": "24/07/2026",
+  "company": "BLSwift Solutions LTDA",
+  "designTokens": {
+    "colors": {
+      "AccentGreen": "#2ECC71",
+      "AccentOrange": "#F39C12",
+      "Background": "#0B0F14",
+      "CardBackground": "#1A2330",
+      "TextPrimary": "#FFFFFF",
+      "TextSecondary": "rgba(255,255,255,0.65)"
+    },
+    "radius": {
+      "card": 16
+    },
+    "spacing": {
+      "page": 20
+    },
+    "typography": {
+      "title": "SF Pro Display / Semibold",
+      "body": "SF Pro Text / Regular"
+    },
+    "mode": "dark"
+  },
+  "figmaPages": [
+    "00 Cover",
+    "01 Foundations",
+    "02 Components",
+    "03 Auth",
+    "04 Onboarding",
+    "05 Início",
+    "06 Treinos",
+    "07 Nutrição",
+    "08 IAssistente",
+    "09 Perfil",
+    "10 Watch",
+    "11 Flows"
+  ],
+  "screens": [
+    {
+      "id": "auth-login",
+      "area": "Autenticação",
+      "title": "Login",
+      "swiftFile": "LoginView.swift",
+      "purpose": "Entrada do usuário não autenticado.",
+      "actions": [
+        "Entrar com e-mail/senha",
+        "Google / Apple",
+        "Esqueci minha senha",
+        "Criar conta"
+      ],
+      "figmaFrame": "Auth / 01 Login",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "auth-register",
+      "area": "Autenticação",
+      "title": "Criar Conta",
+      "swiftFile": "RegisterView.swift",
+      "purpose": "Cadastro com perfil inicial (biotipo, objetivo, senha).",
+      "actions": [
+        "Validar senha",
+        "Aceitar termos",
+        "Registrar",
+        "Social signup"
+      ],
+      "figmaFrame": "Auth / 02 Criar Conta",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "auth-forgot",
+      "area": "Autenticação",
+      "title": "Esqueci minha senha",
+      "swiftFile": "ForgotPasswordView.swift",
+      "purpose": "Recuperação de senha por e-mail.",
+      "actions": [
+        "Enviar link de redefinição"
+      ],
+      "figmaFrame": "Auth / 03 Recuperar Senha",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "welcome",
+      "area": "Onboarding",
+      "title": "Boas-vindas",
+      "swiftFile": "WelcomeMotivationView.swift",
+      "purpose": "Slides motivacionais pós-login / retorno após 24h.",
+      "actions": [
+        "Avançar slides",
+        "Entrar no app"
+      ],
+      "figmaFrame": "Onboarding / 01 Welcome",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "sleep-checkin",
+      "area": "Onboarding",
+      "title": "Check-in diário (sono)",
+      "swiftFile": "DailyWellnessCheckInView.swift",
+      "purpose": "Registro de horas de sono ao abrir o app.",
+      "actions": [
+        "Ajustar horas",
+        "Confirmar sono"
+      ],
+      "figmaFrame": "Onboarding / 02 Check-in Sono",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "tab-home",
+      "area": "Início",
+      "title": "Dashboard",
+      "swiftFile": "DashboardView.swift",
+      "purpose": "Visão geral: métricas HealthKit, treinos recentes, Watch.",
+      "actions": [
+        "Pull-to-refresh",
+        "Abrir relatório semanal",
+        "Ver desempenho"
+      ],
+      "figmaFrame": "Início / 01 Dashboard",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "tab-charts",
+      "area": "Início",
+      "title": "Desempenho Semanal",
+      "swiftFile": "HealthChartsView.swift",
+      "purpose": "Gráficos de treino, passos, calorias, FC e meditação.",
+      "actions": [
+        "Trocar métrica",
+        "Interpretar tendência"
+      ],
+      "figmaFrame": "Início / 02 Charts",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "tab-weekly",
+      "area": "Início",
+      "title": "Relatório Semanal",
+      "swiftFile": "WeeklyReportView.swift",
+      "purpose": "Score semanal, destaques e sugestões de melhoria.",
+      "actions": [
+        "Comparar com semana anterior"
+      ],
+      "figmaFrame": "Início / 03 Relatório Semanal",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "workouts-hub",
+      "area": "Treinos",
+      "title": "Treinos (Hub)",
+      "swiftFile": "WorkoutListView.swift",
+      "purpose": "Hub Musculação / Cardio / Meditação.",
+      "actions": [
+        "Abrir gênero",
+        "Abrir cardio",
+        "Abrir meditação",
+        "Criar ficha"
+      ],
+      "figmaFrame": "Treinos / 01 Hub",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "workouts-gender",
+      "area": "Treinos",
+      "title": "Hub Masculino / Feminino",
+      "swiftFile": "GenderWorkoutHubView.swift",
+      "purpose": "Fichas recomendadas e personalizadas por gênero.",
+      "actions": [
+        "Abrir ficha",
+        "Criar personalizado"
+      ],
+      "figmaFrame": "Treinos / 02 Gender Hub",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "workouts-detail",
+      "area": "Treinos",
+      "title": "Detalhe da Ficha",
+      "swiftFile": "WorkoutDetailView.swift",
+      "purpose": "Lista de exercícios e início de sessão.",
+      "actions": [
+        "Iniciar treino",
+        "Editar/Excluir",
+        "Vision AI",
+        "Pré-treino"
+      ],
+      "figmaFrame": "Treinos / 03 Detalhe",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "workouts-create",
+      "area": "Treinos",
+      "title": "Nova / Editar Ficha",
+      "swiftFile": "CreateWorkoutView.swift",
+      "purpose": "Montagem de ficha personalizada.",
+      "actions": [
+        "Escolher foco",
+        "Adicionar exercícios",
+        "Salvar"
+      ],
+      "figmaFrame": "Treinos / 04 Criar Ficha",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "workouts-active",
+      "area": "Treinos",
+      "title": "Treino Ativo",
+      "swiftFile": "ActiveWorkoutView.swift",
+      "purpose": "Sessão de musculação com descanso e Watch.",
+      "actions": [
+        "Concluir série",
+        "Descanso",
+        "Encerrar",
+        "Encerrar cedo"
+      ],
+      "figmaFrame": "Treinos / 05 Ativo",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "workouts-summary",
+      "area": "Treinos",
+      "title": "Resumo do Treino",
+      "swiftFile": "WorkoutSummaryView.swift",
+      "purpose": "Relatório pós-sessão e envio ao personal.",
+      "actions": [
+        "Ver métricas",
+        "Enviar e-mail"
+      ],
+      "figmaFrame": "Treinos / 06 Resumo",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "cardio-setup",
+      "area": "Cardio",
+      "title": "Configurar Cardio",
+      "swiftFile": "CardioSetupView.swift",
+      "purpose": "Intensidade, distância e meta calórica.",
+      "actions": [
+        "Escolher exercício",
+        "Definir meta",
+        "Iniciar"
+      ],
+      "figmaFrame": "Cardio / 01 Setup",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "cardio-active",
+      "area": "Cardio",
+      "title": "Cardio Ativo",
+      "swiftFile": "ActiveCardioView.swift",
+      "purpose": "Sessão ao vivo com progresso de kcal/distância.",
+      "actions": [
+        "Acompanhar progresso",
+        "Encerrar"
+      ],
+      "figmaFrame": "Cardio / 02 Ativo",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "meditation-setup",
+      "area": "Meditação",
+      "title": "Configurar Meditação",
+      "swiftFile": "MeditationSetupView.swift",
+      "purpose": "Tópico e duração (5–20 min).",
+      "actions": [
+        "Escolher tópico",
+        "Iniciar"
+      ],
+      "figmaFrame": "Meditação / 01 Setup",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "meditation-active",
+      "area": "Meditação",
+      "title": "Meditação Ativa",
+      "swiftFile": "ActiveMeditationView.swift",
+      "purpose": "Sessão guiada com prompts e countdown.",
+      "actions": [
+        "Seguir prompts",
+        "Encerrar"
+      ],
+      "figmaFrame": "Meditação / 02 Ativa",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "nutrition",
+      "area": "Nutrição",
+      "title": "Nutrição",
+      "swiftFile": "MealPlanView.swift",
+      "purpose": "Plano alimentar semanal e menu personalizado.",
+      "actions": [
+        "Ajustar preferências",
+        "Gerar plano",
+        "Abrir compras"
+      ],
+      "figmaFrame": "Nutrição / 01 Plano",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "shopping",
+      "area": "Nutrição",
+      "title": "Lista de Compras",
+      "swiftFile": "ShoppingListView.swift",
+      "purpose": "Lista + catálogo + suplementos.",
+      "actions": [
+        "Marcar itens",
+        "Adicionar item",
+        "Relatório"
+      ],
+      "figmaFrame": "Nutrição / 02 Compras",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "assistant",
+      "area": "IAssistente",
+      "title": "Assistente",
+      "swiftFile": "HealthChatView.swift",
+      "purpose": "Coach por regras: dúvidas, check-ins, montar treino.",
+      "actions": [
+        "Enviar mensagem",
+        "Sugestões",
+        "Check-ins",
+        "Montar treino"
+      ],
+      "figmaFrame": "IAssistente / 01 Chat",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "profile",
+      "area": "Perfil",
+      "title": "Perfil",
+      "swiftFile": "ProfileView.swift",
+      "purpose": "Dados, ícone de saúde, sono/água, medidas, integrações.",
+      "actions": [
+        "Editar perfil",
+        "Registrar água/sono",
+        "Medidas",
+        "Logout/Excluir"
+      ],
+      "figmaFrame": "Perfil / 01 Perfil",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "profile-measures",
+      "area": "Perfil",
+      "title": "Comparativo de Medidas",
+      "swiftFile": "BodyMeasurementComparisonView.swift",
+      "purpose": "Deltas de medidas corporais (~30 dias).",
+      "actions": [
+        "Visualizar evolução"
+      ],
+      "figmaFrame": "Perfil / 02 Comparativo",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "profile-delete",
+      "area": "Perfil",
+      "title": "Excluir Conta",
+      "swiftFile": "DeleteAccountSheet.swift",
+      "purpose": "Exclusão permanente com reautenticação.",
+      "actions": [
+        "Confirmar exclusão"
+      ],
+      "figmaFrame": "Perfil / 03 Excluir Conta",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "vision",
+      "area": "Experimental",
+      "title": "Vision AI",
+      "swiftFile": "VisionWorkoutView.swift",
+      "purpose": "Treino assistido por câmera (experimental).",
+      "actions": [
+        "Iniciar câmera"
+      ],
+      "figmaFrame": "Experimental / 01 Vision AI",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "watch",
+      "area": "Apple Watch",
+      "title": "Watch Companion",
+      "swiftFile": "WatchContentView.swift",
+      "purpose": "Cronômetro e métricas sincronizadas com o iPhone.",
+      "actions": [
+        "Acompanhar sessão",
+        "Encerrar"
+      ],
+      "figmaFrame": "Watch / 01 Active",
+      "device": "Apple Watch Ultra"
+    }
+  ],
+  "prototypeFlow": [
+    "Login → Register",
+    "Login → ForgotPassword",
+    "Login → Welcome → MainTab",
+    "MainTab/Treinos → Detail → Active → Summary",
+    "MainTab/Nutrição → ShoppingList",
+    "MainTab/IAssistente → Check-ins",
+    "MainTab/Perfil → Measurements / DeleteAccount"
+  ]
+}

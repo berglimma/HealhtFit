@@ -4,8 +4,7 @@
 <dict>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>luan.com.healthfit.appicon.yellow</string>
-		<string>luan.com.healthfit.appicon.red</string>
+		<string>luan.com.healthfit.appicon.healthsync</string>
 		<string>luan.com.healthfit.appicon.broken</string>
 	</array>
 	<key>CFBundleIcons</key>

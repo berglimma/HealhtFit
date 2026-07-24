@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>HealthFit — Mapa de Telas (estilo Figma)</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #121821;
+    --card: #1a2330;
+    --accent: #2ecc71;
+    --orange: #f39c12;
+    --text: #f4f7fb;
+    --muted: #9aa8b8;
+    --line: #2a3648;
+    --phone: #0e141c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "SF Pro Display", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: radial-gradient(1200px 600px at 10% -10%, #163024 0%, transparent 50%),
+                radial-gradient(900px 500px at 100% 0%, #2a1c0a 0%, transparent 45%),
+                var(--bg);
+    color: var(--text);
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; gap: 16px; align-items: center; justify-content: space-between;
+    padding: 14px 24px; background: rgba(11,15,20,.88); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; gap: 12px; align-items: center; }
+  .logo {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--orange));
+  }
+  .brand h1 { margin: 0; font-size: 16px; }
+  .brand p { margin: 0; color: var(--muted); font-size: 12px; }
+  .topnav { display: flex; flex-wrap: wrap; gap: 8px; }
+  .topnav a {
+    color: var(--muted); text-decoration: none; font-size: 12px;
+    padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px;
+  }
+  .topnav a:hover { color: var(--text); border-color: var(--accent); }
+  .hero {
+    padding: 40px 24px 20px; max-width: 1200px; margin: 0 auto;
+  }
+  .hero h2 { margin: 0 0 8px; font-size: 34px; letter-spacing: -0.03em; }
+  .hero p { color: var(--muted); max-width: 720px; line-height: 1.55; }
+  .tokens {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px; margin-top: 22px;
+  }
+  .token {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+  }
+  .swatch { height: 28px; border-radius: 8px; margin-bottom: 8px; }
+  .token code { font-size: 11px; color: var(--muted); }
+  .flow {
+    margin: 16px 24px 32px; padding: 18px; border-radius: 16px;
+    background: var(--panel); border: 1px solid var(--line); max-width: 1200px;
+  }
+  .flow pre {
+    margin: 0; white-space: pre-wrap; color: #cfead9; font-size: 12px; line-height: 1.45;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .board-section { padding: 8px 24px 40px; }
+  .board-section h2 {
+    font-size: 20px; margin: 0 0 16px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--line); color: var(--accent);
+  }
+  .board {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+  }
+  .phone {
+    background: var(--phone); border: 1px solid #314156; border-radius: 28px;
+    overflow: hidden; box-shadow: 0 18px 40px rgba(0,0,0,.35);
+    min-height: 420px; display: flex; flex-direction: column;
+  }
+  .phone-status, .phone-nav, .phone-home {
+    padding: 10px 16px; background: #0a1018;
+  }
+  .phone-status {
+    display: flex; justify-content: space-between; font-size: 11px; color: var(--muted);
+  }
+  .phone-nav {
+    text-align: center; font-weight: 650; font-size: 14px;
+    border-top: 1px solid #1d2838; border-bottom: 1px solid #1d2838;
+  }
+  .phone-body { padding: 16px; flex: 1; }
+  .eyebrow {
+    margin: 0 0 6px; text-transform: uppercase; letter-spacing: .08em;
+    font-size: 10px; color: var(--orange);
+  }
+  .phone-body h3 { margin: 0 0 8px; font-size: 18px; }
+  .purpose { color: var(--muted); font-size: 13px; line-height: 1.45; margin: 0 0 10px; }
+  .file code {
+    font-size: 11px; color: #8fd6a8; background: #132018; padding: 2px 6px; border-radius: 6px;
+  }
+  .label { margin: 14px 0 6px; font-size: 11px; color: var(--muted); text-transform: uppercase; }
+  .phone-body ul { margin: 0; padding-left: 16px; color: var(--text); font-size: 12.5px; }
+  .phone-body li { margin: 4px 0; }
+  .figma-tag {
+    margin-top: 14px; font-size: 11px; color: #7eb6ff;
+    border: 1px dashed #335a86; border-radius: 8px; padding: 8px;
+  }
+  .phone-home { display: flex; justify-content: center; }
+  .phone-home span {
+    width: 96px; height: 4px; border-radius: 999px; background: #3a4a5f;
+  }
+  footer.doc-foot {
+    padding: 28px 24px 48px; color: var(--muted); font-size: 12px; text-align: center;
+  }
+  @media print {
+    .topbar { position: static; }
+    .phone { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>HealthFit — Screen Map</h1>
+        <p>Documentação visual estilo Figma · v1.0.0 · 24/07/2026</p>
+      </div>
+    </div>
+    <nav class="topnav"><a href="#autenticação">Autenticação</a><a href="#onboarding">Onboarding</a><a href="#início">Início</a><a href="#treinos">Treinos</a><a href="#cardio">Cardio</a><a href="#meditação">Meditação</a><a href="#nutrição">Nutrição</a><a href="#iassistente">IAssistente</a><a href="#perfil">Perfil</a><a href="#experimental">Experimental</a><a href="#apple-watch">Apple Watch</a></nav>
+  </div>
+
+  <section class="hero">
+    <h2>Mapa de telas do produto</h2>
+    <p>
+      Catálogo visual das telas do HealthFit (iOS + watchOS), organizado por área de produto.
+      Cada card representa um frame Figma sugerido (<code>Área / NN Nome</code>), com propósito,
+      arquivo SwiftUI e ações principais. Tokens de design alinhados ao <code>AppTheme</code>.
+    </p>
+    <div class="tokens">
+      <div class="token"><div class="swatch" style="background:#2ecc71"></div><strong>AccentGreen</strong><br/><code>#2ECC71</code></div>
+      <div class="token"><div class="swatch" style="background:#f39c12"></div><strong>AccentOrange</strong><br/><code>#F39C12</code></div>
+      <div class="token"><div class="swatch" style="background:#0b0f14"></div><strong>Background</strong><br/><code>#0B0F14</code></div>
+      <div class="token"><div class="swatch" style="background:#1a2330"></div><strong>CardBackground</strong><br/><code>#1A2330</code></div>
+      <div class="token"><div class="swatch" style="background:#ffffff"></div><strong>Text Primary</strong><br/><code>#FFFFFF</code></div>
+      <div class="token"><div class="swatch" style="background:#9aa8b8"></div><strong>Text Secondary</strong><br/><code>65% white</code></div>
+    </div>
+  </section>
+
+  <section class="flow">
+    <h3 style="margin:0 0 10px;font-size:14px;color:var(--accent)">Fluxo de navegação (Figma → FigJam / Prototype)</h3>
+    <pre>Login → (Register | Forgot Password)
+  → WelcomeMotivationView
+  → Check-in Sono (se necessário)
+  → MainTabView
+       ├─ Início → Dashboard → Charts / Relatório Semanal
+       ├─ Treinos → Hub → (Musculação | Cardio | Meditação)
+       │              → Detalhe → Ativo → Resumo
+       ├─ Nutrição → Plano → Lista de Compras
+       ├─ IAssistente → Chat / Check-ins / Montar treino
+       └─ Perfil → Medidas / Excluir Conta
+Apple Watch ← WatchConnectivity ← Sessão ativa no iPhone</pre>
+  </section>
+
+  <section class="board-section" id="autenticação"><h2>Autenticação</h2><div class="board">
+    <article class="phone" id="auth-login" data-frame="Auth / 01 Login">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Login</div>
+      <div class="phone-body">
+        <p class="eyebrow">Autenticação</p>
+        <h3>Login</h3>
+        <p class="purpose">Entrada do usuário não autenticado.</p>
+        <p class="file"><code>LoginView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Entrar com e-mail/senha</li><li>Google / Apple</li><li>Esqueci minha senha</li><li>Criar conta</li></ul>
+        <p class="figma-tag">Figma: Auth / 01 Login</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="auth-register" data-frame="Auth / 02 Criar Conta">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Criar Conta</div>
+      <div class="phone-body">
+        <p class="eyebrow">Autenticação</p>
+        <h3>Criar Conta</h3>
+        <p class="purpose">Cadastro com perfil inicial (biotipo, objetivo, senha).</p>
+        <p class="file"><code>RegisterView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Validar senha</li><li>Aceitar termos</li><li>Registrar</li><li>Social signup</li></ul>
+        <p class="figma-tag">Figma: Auth / 02 Criar Conta</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="auth-forgot" data-frame="Auth / 03 Recuperar Senha">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Esqueci minha senha</div>
+      <div class="phone-body">
+        <p class="eyebrow">Autenticação</p>
+        <h3>Esqueci minha senha</h3>
+        <p class="purpose">Recuperação de senha por e-mail.</p>
+        <p class="file"><code>ForgotPasswordView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Enviar link de redefinição</li></ul>
+        <p class="figma-tag">Figma: Auth / 03 Recuperar Senha</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    </div></section><section class="board-section" id="onboarding"><h2>Onboarding</h2><div class="board">
+    <article class="phone" id="welcome" data-frame="Onboarding / 01 Welcome">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Boas-vindas</div>
+      <div class="phone-body">
+        <p class="eyebrow">Onboarding</p>
+        <h3>Boas-vindas</h3>
+        <p class="purpose">Slides motivacionais pós-login / retorno após 24h.</p>
+        <p class="file"><code>WelcomeMotivationView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Avançar slides</li><li>Entrar no app</li></ul>
+        <p class="figma-tag">Figma: Onboarding / 01 Welcome</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="sleep-checkin" data-frame="Onboarding / 02 Check-in Sono">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Check-in diário (sono)</div>
+      <div class="phone-body">
+        <p class="eyebrow">Onboarding</p>
+        <h3>Check-in diário (sono)</h3>
+        <p class="purpose">Registro de horas de sono ao abrir o app.</p>
+        <p class="file"><code>DailyWellnessCheckInView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Ajustar horas</li><li>Confirmar sono</li></ul>
+        <p class="figma-tag">Figma: Onboarding / 02 Check-in Sono</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    </div></section><section class="board-section" id="início"><h2>Início</h2><div class="board">
+    <article class="phone" id="tab-home" data-frame="Início / 01 Dashboard">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Dashboard</div>
+      <div class="phone-body">
+        <p class="eyebrow">Início</p>
+        <h3>Dashboard</h3>
+        <p class="purpose">Visão geral: métricas HealthKit, treinos recentes, Watch.</p>
+        <p class="file"><code>DashboardView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Pull-to-refresh</li><li>Abrir relatório semanal</li><li>Ver desempenho</li></ul>
+        <p class="figma-tag">Figma: Início / 01 Dashboard</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="tab-charts" data-frame="Início / 02 Charts">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Desempenho Semanal</div>
+      <div class="phone-body">
+        <p class="eyebrow">Início</p>
+        <h3>Desempenho Semanal</h3>
+        <p class="purpose">Gráficos de treino, passos, calorias, FC e meditação.</p>
+        <p class="file"><code>HealthChartsView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Trocar métrica</li><li>Interpretar tendência</li></ul>
+        <p class="figma-tag">Figma: Início / 02 Charts</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="tab-weekly" data-frame="Início / 03 Relatório Semanal">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Relatório Semanal</div>
+      <div class="phone-body">
+        <p class="eyebrow">Início</p>
+        <h3>Relatório Semanal</h3>
+        <p class="purpose">Score semanal, destaques e sugestões de melhoria.</p>
+        <p class="file"><code>WeeklyReportView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Comparar com semana anterior</li></ul>
+        <p class="figma-tag">Figma: Início / 03 Relatório Semanal</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    </div></section><section class="board-section" id="treinos"><h2>Treinos</h2><div class="board">
+    <article class="phone" id="workouts-hub" data-frame="Treinos / 01 Hub">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Treinos (Hub)</div>
+      <div class="phone-body">
+        <p class="eyebrow">Treinos</p>
+        <h3>Treinos (Hub)</h3>
+        <p class="purpose">Hub Musculação / Cardio / Meditação.</p>
+        <p class="file"><code>WorkoutListView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Abrir gênero</li><li>Abrir cardio</li><li>Abrir meditação</li><li>Criar ficha</li></ul>
+        <p class="figma-tag">Figma: Treinos / 01 Hub</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="workouts-gender" data-frame="Treinos / 02 Gender Hub">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Hub Masculino / Feminino</div>
+      <div class="phone-body">
+        <p class="eyebrow">Treinos</p>
+        <h3>Hub Masculino / Feminino</h3>
+        <p class="purpose">Fichas recomendadas e personalizadas por gênero.</p>
+        <p class="file"><code>GenderWorkoutHubView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Abrir ficha</li><li>Criar personalizado</li></ul>
+        <p class="figma-tag">Figma: Treinos / 02 Gender Hub</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="workouts-detail" data-frame="Treinos / 03 Detalhe">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Detalhe da Ficha</div>
+      <div class="phone-body">
+        <p class="eyebrow">Treinos</p>
+        <h3>Detalhe da Ficha</h3>
+        <p class="purpose">Lista de exercícios e início de sessão.</p>
+        <p class="file"><code>WorkoutDetailView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Iniciar treino</li><li>Editar/Excluir</li><li>Vision AI</li><li>Pré-treino</li></ul>
+        <p class="figma-tag">Figma: Treinos / 03 Detalhe</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="workouts-create" data-frame="Treinos / 04 Criar Ficha">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Nova / Editar Ficha</div>
+      <div class="phone-body">
+        <p class="eyebrow">Treinos</p>
+        <h3>Nova / Editar Ficha</h3>
+        <p class="purpose">Montagem de ficha personalizada.</p>
+        <p class="file"><code>CreateWorkoutView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Escolher foco</li><li>Adicionar exercícios</li><li>Salvar</li></ul>
+        <p class="figma-tag">Figma: Treinos / 04 Criar Ficha</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="workouts-active" data-frame="Treinos / 05 Ativo">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Treino Ativo</div>
+      <div class="phone-body">
+        <p class="eyebrow">Treinos</p>
+        <h3>Treino Ativo</h3>
+        <p class="purpose">Sessão de musculação com descanso e Watch.</p>
+        <p class="file"><code>ActiveWorkoutView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Concluir série</li><li>Descanso</li><li>Encerrar</li><li>Encerrar cedo</li></ul>
+        <p class="figma-tag">Figma: Treinos / 05 Ativo</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="workouts-summary" data-frame="Treinos / 06 Resumo">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Resumo do Treino</div>
+      <div class="phone-body">
+        <p class="eyebrow">Treinos</p>
+        <h3>Resumo do Treino</h3>
+        <p class="purpose">Relatório pós-sessão e envio ao personal.</p>
+        <p class="file"><code>WorkoutSummaryView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Ver métricas</li><li>Enviar e-mail</li></ul>
+        <p class="figma-tag">Figma: Treinos / 06 Resumo</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    </div></section><section class="board-section" id="cardio"><h2>Cardio</h2><div class="board">
+    <article class="phone" id="cardio-setup" data-frame="Cardio / 01 Setup">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Configurar Cardio</div>
+      <div class="phone-body">
+        <p class="eyebrow">Cardio</p>
+        <h3>Configurar Cardio</h3>
+        <p class="purpose">Intensidade, distância e meta calórica.</p>
+        <p class="file"><code>CardioSetupView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Escolher exercício</li><li>Definir meta</li><li>Iniciar</li></ul>
+        <p class="figma-tag">Figma: Cardio / 01 Setup</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="cardio-active" data-frame="Cardio / 02 Ativo">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Cardio Ativo</div>
+      <div class="phone-body">
+        <p class="eyebrow">Cardio</p>
+        <h3>Cardio Ativo</h3>
+        <p class="purpose">Sessão ao vivo com progresso de kcal/distância.</p>
+        <p class="file"><code>ActiveCardioView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Acompanhar progresso</li><li>Encerrar</li></ul>
+        <p class="figma-tag">Figma: Cardio / 02 Ativo</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    </div></section><section class="board-section" id="meditação"><h2>Meditação</h2><div class="board">
+    <article class="phone" id="meditation-setup" data-frame="Meditação / 01 Setup">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Configurar Meditação</div>
+      <div class="phone-body">
+        <p class="eyebrow">Meditação</p>
+        <h3>Configurar Meditação</h3>
+        <p class="purpose">Tópico e duração (5–20 min).</p>
+        <p class="file"><code>MeditationSetupView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Escolher tópico</li><li>Iniciar</li></ul>
+        <p class="figma-tag">Figma: Meditação / 01 Setup</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="meditation-active" data-frame="Meditação / 02 Ativa">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Meditação Ativa</div>
+      <div class="phone-body">
+        <p class="eyebrow">Meditação</p>
+        <h3>Meditação Ativa</h3>
+        <p class="purpose">Sessão guiada com prompts e countdown.</p>
+        <p class="file"><code>ActiveMeditationView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Seguir prompts</li><li>Encerrar</li></ul>
+        <p class="figma-tag">Figma: Meditação / 02 Ativa</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    </div></section><section class="board-section" id="nutrição"><h2>Nutrição</h2><div class="board">
+    <article class="phone" id="nutrition" data-frame="Nutrição / 01 Plano">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Nutrição</div>
+      <div class="phone-body">
+        <p class="eyebrow">Nutrição</p>
+        <h3>Nutrição</h3>
+        <p class="purpose">Plano alimentar semanal e menu personalizado.</p>
+        <p class="file"><code>MealPlanView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Ajustar preferências</li><li>Gerar plano</li><li>Abrir compras</li></ul>
+        <p class="figma-tag">Figma: Nutrição / 01 Plano</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="shopping" data-frame="Nutrição / 02 Compras">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Lista de Compras</div>
+      <div class="phone-body">
+        <p class="eyebrow">Nutrição</p>
+        <h3>Lista de Compras</h3>
+        <p class="purpose">Lista + catálogo + suplementos.</p>
+        <p class="file"><code>ShoppingListView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Marcar itens</li><li>Adicionar item</li><li>Relatório</li></ul>
+        <p class="figma-tag">Figma: Nutrição / 02 Compras</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    </div></section><section class="board-section" id="iassistente"><h2>IAssistente</h2><div class="board">
+    <article class="phone" id="assistant" data-frame="IAssistente / 01 Chat">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Assistente</div>
+      <div class="phone-body">
+        <p class="eyebrow">IAssistente</p>
+        <h3>Assistente</h3>
+        <p class="purpose">Coach por regras: dúvidas, check-ins, montar treino.</p>
+        <p class="file"><code>HealthChatView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Enviar mensagem</li><li>Sugestões</li><li>Check-ins</li><li>Montar treino</li></ul>
+        <p class="figma-tag">Figma: IAssistente / 01 Chat</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    </div></section><section class="board-section" id="perfil"><h2>Perfil</h2><div class="board">
+    <article class="phone" id="profile" data-frame="Perfil / 01 Perfil">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Perfil</div>
+      <div class="phone-body">
+        <p class="eyebrow">Perfil</p>
+        <h3>Perfil</h3>
+        <p class="purpose">Dados, ícone de saúde, sono/água, medidas, integrações.</p>
+        <p class="file"><code>ProfileView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Editar perfil</li><li>Registrar água/sono</li><li>Medidas</li><li>Logout/Excluir</li></ul>
+        <p class="figma-tag">Figma: Perfil / 01 Perfil</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="profile-measures" data-frame="Perfil / 02 Comparativo">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Comparativo de Medidas</div>
+      <div class="phone-body">
+        <p class="eyebrow">Perfil</p>
+        <h3>Comparativo de Medidas</h3>
+        <p class="purpose">Deltas de medidas corporais (~30 dias).</p>
+        <p class="file"><code>BodyMeasurementComparisonView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Visualizar evolução</li></ul>
+        <p class="figma-tag">Figma: Perfil / 02 Comparativo</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    
+    <article class="phone" id="profile-delete" data-frame="Perfil / 03 Excluir Conta">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Excluir Conta</div>
+      <div class="phone-body">
+        <p class="eyebrow">Perfil</p>
+        <h3>Excluir Conta</h3>
+        <p class="purpose">Exclusão permanente com reautenticação.</p>
+        <p class="file"><code>DeleteAccountSheet.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Confirmar exclusão</li></ul>
+        <p class="figma-tag">Figma: Perfil / 03 Excluir Conta</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    </div></section><section class="board-section" id="experimental"><h2>Experimental</h2><div class="board">
+    <article class="phone" id="vision" data-frame="Experimental / 01 Vision AI">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Vision AI</div>
+      <div class="phone-body">
+        <p class="eyebrow">Experimental</p>
+        <h3>Vision AI</h3>
+        <p class="purpose">Treino assistido por câmera (experimental).</p>
+        <p class="file"><code>VisionWorkoutView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Iniciar câmera</li></ul>
+        <p class="figma-tag">Figma: Experimental / 01 Vision AI</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    </div></section><section class="board-section" id="apple-watch"><h2>Apple Watch</h2><div class="board">
+    <article class="phone" id="watch" data-frame="Watch / 01 Active">
+      <header class="phone-status">
+        <span>9:41</span><span class="dots">●●●</span>
+      </header>
+      <div class="phone-nav">Watch Companion</div>
+      <div class="phone-body">
+        <p class="eyebrow">Apple Watch</p>
+        <h3>Watch Companion</h3>
+        <p class="purpose">Cronômetro e métricas sincronizadas com o iPhone.</p>
+        <p class="file"><code>WatchContentView.swift</code></p>
+        <p class="label">Ações principais</p>
+        <ul><li>Acompanhar sessão</li><li>Encerrar</li></ul>
+        <p class="figma-tag">Figma: Watch / 01 Active</p>
+      </div>
+      <footer class="phone-home"><span></span></footer>
+    </article>
+    </div></section>
+
+  <footer class="doc-foot">
+    HealthFit · BLSwift Solutions LTDA · BERG / LUAN · Documento gerado automaticamente em 24/07/2026<br/>
+    Use este mapa como referência para criar frames no Figma com a nomenclatura indicada em cada card.
+  </footer>
+</body>
+</html>

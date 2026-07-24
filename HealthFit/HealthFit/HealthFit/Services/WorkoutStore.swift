@@ -329,6 +329,11 @@ final class WorkoutStore: ObservableObject {
 
         if let endedAt = session.endedAt {
             NotificationService.shared.recordWorkoutCompleted(at: endedAt)
+            if WeeklyProgressAnalyzer.isCardioSession(session) {
+                NotificationService.shared.recordCardioCompleted(at: endedAt)
+            } else if WeeklyProgressAnalyzer.isMeditationSession(session) {
+                NotificationService.shared.recordMeditationCompleted(at: endedAt)
+            }
         }
 
         PostWorkoutCheckInService.shared.scheduleCheckIn(for: session)
@@ -341,6 +346,20 @@ final class WorkoutStore: ObservableObject {
         return sessionHistory
             .compactMap { $0.endedAt ?? $0.startedAt }
             .max()
+    }
+
+    var lastCompletedCardioAt: Date? {
+        if let recorded = NotificationService.shared.lastRecordedCardioAt {
+            return recorded
+        }
+        return AssistantCardioMeditationNudgeEngine.lastCardioDate(from: sessionHistory)
+    }
+
+    var lastCompletedMeditationAt: Date? {
+        if let recorded = NotificationService.shared.lastRecordedMeditationAt {
+            return recorded
+        }
+        return AssistantCardioMeditationNudgeEngine.lastMeditationDate(from: sessionHistory)
     }
 
     var currentExercise: Exercise? {

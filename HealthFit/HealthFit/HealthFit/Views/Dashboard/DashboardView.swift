@@ -7,12 +7,17 @@ struct DashboardView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var weeklyReportService: WeeklyReportService
+    @EnvironmentObject var wellnessService: DailyWellnessService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var showWeeklyReport = false
     @State private var isSyncingWatch = false
     @State private var watchSyncResult: WatchSyncResult?
     @State private var showWatchSyncAlert = false
+
+    private var healthStatus: WellnessHealthIconStatus {
+        wellnessService.healthIconStatus()
+    }
 
     var body: some View {
         NavigationStack {
@@ -106,17 +111,33 @@ struct DashboardView: View {
     }
 
     private var headerSection: some View {
-        HStack {
+        HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Olá, \(authService.currentUser?.greetingName ?? "Atleta")!")
                     .font(.title2.bold())
                     .foregroundStyle(AppTheme.textPrimary)
-                Text("Pronto para treinar hoje?")
+                Text(dashboardHealthSubtitle)
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.textSecondary)
             }
             Spacer()
-            PulsingHeartIconView(size: DeviceLayout.isPad ? 52 : 44)
+            PulsingHeartIconView(
+                size: DeviceLayout.isPad ? 52 : 44,
+                glowColor: healthStatus.glowColor
+            )
+            .accessibilityLabel(healthStatus.title)
+            .accessibilityValue(wellnessService.healthIconDetailMessage())
+        }
+    }
+
+    private var dashboardHealthSubtitle: String {
+        switch healthStatus {
+        case .green:
+            return "Pronto para treinar hoje?"
+        case .yellow:
+            return "Atualize água e sono para manter o ícone verde."
+        case .red:
+            return "Ícone vermelho — registre água e sono no Perfil."
         }
     }
 

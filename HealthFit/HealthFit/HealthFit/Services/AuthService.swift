@@ -167,6 +167,9 @@ final class AuthService: ObservableObject {
 
     func logout() {
         NotificationService.shared.cancelWorkoutInactivityReminder()
+        NotificationService.shared.cancelCardioInactivityReminder()
+        NotificationService.shared.cancelMeditationInactivityReminder()
+        NotificationService.shared.cancelHealthIconRedReminder()
         NotificationService.shared.cancelDailyMotivationNotifications()
         NotificationService.shared.cancelWaterReminders()
 
@@ -382,6 +385,14 @@ final class AuthService: ObservableObject {
             lastWorkoutAt: nil,
             accountCreatedAt: profile.createdAt
         )
+        NotificationService.shared.refreshCardioInactivityReminder(
+            lastCardioAt: nil,
+            accountCreatedAt: profile.createdAt
+        )
+        NotificationService.shared.refreshMeditationInactivityReminder(
+            lastMeditationAt: nil,
+            accountCreatedAt: profile.createdAt
+        )
     }
 
     private func clearLocalSession() {
@@ -487,6 +498,9 @@ final class AuthService: ObservableObject {
         wellnessService: DailyWellnessService
     ) {
         NotificationService.shared.cancelWorkoutInactivityReminder()
+        NotificationService.shared.cancelCardioInactivityReminder()
+        NotificationService.shared.cancelMeditationInactivityReminder()
+        NotificationService.shared.cancelHealthIconRedReminder()
         NotificationService.shared.cancelDailyMotivationNotifications()
         NotificationService.shared.cancelWaterReminders()
         NotificationService.shared.cancelDailyAssistantCheckIn()

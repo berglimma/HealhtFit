@@ -2,9 +2,9 @@ import XCTest
 @testable import HealthFit
 
 final class NotificationServiceTests: XCTestCase {
-    func testWaterReminderHoursEveryThreeHours() {
+    func testWaterReminderHoursEveryTwoHours() {
         let hours = WaterReminderConfiguration.reminderHours()
-        XCTAssertEqual(hours, [8, 11, 14, 17, 20])
+        XCTAssertEqual(hours, [8, 10, 12, 14, 16, 18, 20])
     }
 
     func testWaterReminderHoursRespectsCustomWindow() {
@@ -19,5 +19,13 @@ final class NotificationServiceTests: XCTestCase {
         XCTAssertTrue(first.contains("água") || first.contains("Hidratação") || first.contains("Água"))
         XCTAssertFalse(first.isEmpty)
         XCTAssertFalse(second.isEmpty)
+    }
+
+    func testHealthIconMessagesIncludeEmoji() {
+        let yellow = MotivationMessages.healthIconYellowMessage(detail: "Atualize água e sono")
+        let red = MotivationMessages.healthIconRedMessage(detail: "24h sem atualizar")
+
+        XCTAssertTrue(yellow.contains("💛") || yellow.contains("💧"))
+        XCTAssertTrue(red.contains("🚨") || red.contains("❤️"))
     }
 }

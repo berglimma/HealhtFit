@@ -7,21 +7,17 @@ import UIKit
 final class AppIconInactivityService {
     static let shared = AppIconInactivityService()
 
-    /// 24h sem abrir o app.
+    /// Mantido para alerta de 48h sem abrir o app (welcome / notificação).
     static let yellowThreshold: TimeInterval = 24 * 60 * 60
-    /// 36h sem abrir o app.
     static let redThreshold: TimeInterval = 36 * 60 * 60
-    /// Após o vermelho: ícone quebrado + alerta.
     static let brokenThreshold: TimeInterval = 48 * 60 * 60
     static let pulseInterval: TimeInterval = 0.65
 
-    private static let backgroundTaskYellow = "luan.com.healthfit.appicon.yellow"
-    private static let backgroundTaskRed = "luan.com.healthfit.appicon.red"
+    private static let backgroundTaskHealthSync = "luan.com.healthfit.appicon.healthsync"
     private static let backgroundTaskBroken = "luan.com.healthfit.appicon.broken"
 
     static let backgroundTaskIdentifiers = [
-        backgroundTaskYellow,
-        backgroundTaskRed,
+        backgroundTaskHealthSync,
         backgroundTaskBroken,
     ]
 
@@ -31,23 +27,28 @@ final class AppIconInactivityService {
         case red
         case broken
 
+        init(healthStatus: WellnessHealthIconStatus) {
+            switch healthStatus {
+            case .green: self = .normal
+            case .yellow: self = .yellow
+            case .red: self = .red
+            }
+        }
+
         var title: String {
             switch self {
-            case .normal: "Ícone saudável"
-            case .yellow: "Ícone amarelo — 24h sem uso"
-            case .red: "Ícone vermelho — 36h sem abrir"
+            case .normal: WellnessHealthIconStatus.green.title
+            case .yellow: WellnessHealthIconStatus.yellow.title
+            case .red: WellnessHealthIconStatus.red.title
             case .broken: "Ícone quebrado — retome os treinos"
             }
         }
 
         var detail: String {
             switch self {
-            case .normal:
-                "Ícone verde ao usar o app."
-            case .yellow:
-                "Após 24h sem abrir o app, o ícone fica amarelo."
-            case .red:
-                "Após 36h sem abrir o app, o ícone fica vermelho."
+            case .normal: WellnessHealthIconStatus.green.message
+            case .yellow: WellnessHealthIconStatus.yellow.message
+            case .red: WellnessHealthIconStatus.red.message
             case .broken:
                 "Após 48h sem abrir, o ícone quebra e você recebe um alerta para voltar a se movimentar."
             }
@@ -55,9 +56,9 @@ final class AppIconInactivityService {
 
         var glowColor: Color {
             switch self {
-            case .normal: AppTheme.accent
-            case .yellow: .yellow
-            case .red: .red
+            case .normal: WellnessHealthIconStatus.green.glowColor
+            case .yellow: WellnessHealthIconStatus.yellow.glowColor
+            case .red: WellnessHealthIconStatus.red.glowColor
             case .broken: Color(red: 0.86, green: 0.18, blue: 0.16)
             }
         }
@@ -105,19 +106,29 @@ final class AppIconInactivityService {
     private init() {}
 
     func registerBackgroundTasks() {
-        registerBackgroundTask(identifier: Self.backgroundTaskYellow)
-        registerBackgroundTask(identifier: Self.backgroundTaskRed)
+        registerBackgroundTask(identifier: Self.backgroundTaskHealthSync)
         registerBackgroundTask(identifier: Self.backgroundTaskBroken)
     }
 
-    /// Ao abrir o app: ícone volta ao verde padrão.
+    /// Sincroniza o ícone da tela inicial com o ícone de saúde do Perfil (água/sono).
+    func syncWithWellnessHealthIcon(
+        status: WellnessHealthIconStatus? = nil,
+        pulseFrame: Int? = nil
+    ) {
+        let resolved = status ?? DailyWellnessService.shared.healthIconStatus()
+        let frame = pulseFrame ?? pulseFrameIndex
+        applyIcon(IconState(healthStatus: resolved), pulseFrame: frame)
+    }
+
+    /// Ao abrir o app: aplica a cor atual do ícone de saúde (não força verde).
     func handleAppBecameActive() {
         stopIconPulse()
         pulseFrameIndex = 0
-        applyIcon(.normal, pulseFrame: 0)
+        syncWithWellnessHealthIcon(pulseFrame: 0)
         UserDefaults.standard.removeObject(forKey: lastSessionEndKey)
         UserDefaults.standard.removeObject(forKey: brokenAlertSentKey)
         NotificationService.shared.cancelAppUsageInactivityReminder()
+        scheduleWellnessBackgroundUpdates()
     }
 
     func resetForAccountDeletion() {
@@ -128,37 +139,35 @@ final class AppIconInactivityService {
         UserDefaults.standard.removeObject(forKey: brokenAlertSentKey)
     }
 
-    /// Ao sair do app: inicia contagem e pulsação do ícone.
+    /// Ao sair do app: mantém o ícone alinhado ao status de saúde e agenda atualizações.
     func handleAppEnteredBackground() {
         let now = Date.now
         UserDefaults.standard.set(now, forKey: lastSessionEndKey)
-        scheduleAllBackgroundUpdates(from: now)
+        scheduleWellnessBackgroundUpdates()
+        scheduleBrokenAlertIfNeeded(from: now)
         NotificationService.shared.refreshAppUsageInactivityReminder(lastSessionEndAt: now)
 
         pulseFrameIndex = 0
-        applyIcon(.normal, pulseFrame: 0)
+        syncWithWellnessHealthIcon(pulseFrame: 0)
         startIconPulse()
     }
 
     func refreshIconForCurrentInactivity() async {
-        guard UIApplication.shared.applicationState != .active else {
-            applyIcon(.normal, pulseFrame: 0)
-            return
-        }
+        let healthState = IconState(healthStatus: DailyWellnessService.shared.healthIconStatus())
 
-        guard let sessionEnd = lastSessionEndAt else { return }
-
-        let elapsed = Date.now.timeIntervalSince(sessionEnd)
-        let state = iconState(forElapsed: elapsed)
-        applyIcon(state, pulseFrame: pulseFrameIndex)
-
-        if state == .broken {
+        // Ícone quebrado só aparece com o app em segundo plano após 48h sem abrir.
+        if UIApplication.shared.applicationState != .active,
+           let sessionEnd = lastSessionEndAt,
+           Date.now.timeIntervalSince(sessionEnd) >= Self.brokenThreshold {
+            applyIcon(.broken, pulseFrame: pulseFrameIndex)
             await NotificationService.shared.deliverAppUsageInactivityAlertIfNeeded(
                 referenceSessionEnd: sessionEnd
             )
+        } else {
+            applyIcon(healthState, pulseFrame: pulseFrameIndex)
         }
 
-        if !isPulsing {
+        if UIApplication.shared.applicationState != .active, !isPulsing {
             startIconPulse()
         }
     }
@@ -173,10 +182,13 @@ final class AppIconInactivityService {
         return referenceDate.timeIntervalSince(sessionEnd) / 3600
     }
 
-    /// Estado que o ícone teria agora se o app estivesse fechado.
+    /// Estado projetado do ícone: prioriza saúde; quebrado só após 48h fechado.
     func projectedIconState(from referenceDate: Date = .now) -> IconState {
-        guard let sessionEnd = lastSessionEndAt else { return .normal }
-        return iconState(forElapsed: referenceDate.timeIntervalSince(sessionEnd))
+        if let sessionEnd = lastSessionEndAt,
+           referenceDate.timeIntervalSince(sessionEnd) >= Self.brokenThreshold {
+            return .broken
+        }
+        return IconState(healthStatus: DailyWellnessService.shared.healthIconStatus(referenceDate: referenceDate))
     }
 
     func iconState(forElapsed elapsed: TimeInterval) -> IconState {
@@ -190,35 +202,6 @@ final class AppIconInactivityService {
         default:
             return .broken
         }
-    }
-
-    func formattedTimeUntilNextChange(from referenceDate: Date = .now) -> String? {
-        guard let sessionEnd = lastSessionEndAt else { return nil }
-
-        let elapsed = referenceDate.timeIntervalSince(sessionEnd)
-        let nextThreshold: TimeInterval?
-
-        switch iconState(forElapsed: elapsed) {
-        case .normal:
-            nextThreshold = Self.yellowThreshold
-        case .yellow:
-            nextThreshold = Self.redThreshold
-        case .red:
-            nextThreshold = Self.brokenThreshold
-        case .broken:
-            nextThreshold = nil
-        }
-
-        guard let nextThreshold else { return nil }
-        let remaining = nextThreshold - elapsed
-        guard remaining > 0 else { return nil }
-
-        let hours = Int(remaining) / 3600
-        let minutes = (Int(remaining) % 3600) / 60
-        if hours > 0 {
-            return "Próxima mudança em \(hours)h \(minutes)min"
-        }
-        return "Próxima mudança em \(minutes) min"
     }
 
     private func registerBackgroundTask(identifier: String) {
@@ -235,8 +218,9 @@ final class AppIconInactivityService {
     }
 
     private func handleBackgroundRefresh(task: BGAppRefreshTask) {
+        scheduleWellnessBackgroundUpdates()
         if let sessionEnd = lastSessionEndAt {
-            scheduleAllBackgroundUpdates(from: sessionEnd)
+            scheduleBrokenAlertIfNeeded(from: sessionEnd)
         }
 
         task.expirationHandler = {
@@ -249,32 +233,44 @@ final class AppIconInactivityService {
         }
     }
 
-    private func scheduleAllBackgroundUpdates(from referenceDate: Date) {
+    private func scheduleWellnessBackgroundUpdates() {
         let scheduler = BGTaskScheduler.shared
+        scheduler.cancel(taskRequestWithIdentifier: Self.backgroundTaskHealthSync)
 
-        for identifier in Self.backgroundTaskIdentifiers {
-            scheduler.cancel(taskRequestWithIdentifier: identifier)
-        }
+        let wellness = DailyWellnessService.shared
+        let status = wellness.healthIconStatus()
+        guard status != .red else { return }
 
-        let milestones: [(String, TimeInterval)] = [
-            (Self.backgroundTaskYellow, Self.yellowThreshold),
-            (Self.backgroundTaskRed, Self.redThreshold),
-            (Self.backgroundTaskBroken, Self.brokenThreshold),
-        ]
+        let anchor = wellness.lastWaterOrSleepUpdateAtForIconScheduling
+            ?? wellness.trackingStartedAtForIconScheduling
+            ?? Date.now
+        let redFireDate = anchor.addingTimeInterval(DailyWellnessService.staleUpdateThreshold)
+        guard redFireDate > .now else { return }
 
-        for (identifier, milestone) in milestones {
-            let fireDate = referenceDate.addingTimeInterval(milestone)
-            guard fireDate > .now else { continue }
-
-            let request = BGAppRefreshTaskRequest(identifier: identifier)
-            request.earliestBeginDate = fireDate
-            try? scheduler.submit(request)
-        }
+        let request = BGAppRefreshTaskRequest(identifier: Self.backgroundTaskHealthSync)
+        request.earliestBeginDate = redFireDate
+        try? scheduler.submit(request)
     }
 
-    private func currentInactivityState() -> IconState {
-        guard let sessionEnd = lastSessionEndAt else { return .normal }
-        return iconState(forElapsed: Date.now.timeIntervalSince(sessionEnd))
+    private func scheduleBrokenAlertIfNeeded(from referenceDate: Date) {
+        let scheduler = BGTaskScheduler.shared
+        scheduler.cancel(taskRequestWithIdentifier: Self.backgroundTaskBroken)
+
+        let fireDate = referenceDate.addingTimeInterval(Self.brokenThreshold)
+        guard fireDate > .now else { return }
+
+        let request = BGAppRefreshTaskRequest(identifier: Self.backgroundTaskBroken)
+        request.earliestBeginDate = fireDate
+        try? scheduler.submit(request)
+    }
+
+    private func currentDisplayState() -> IconState {
+        if UIApplication.shared.applicationState != .active,
+           let sessionEnd = lastSessionEndAt,
+           Date.now.timeIntervalSince(sessionEnd) >= Self.brokenThreshold {
+            return .broken
+        }
+        return IconState(healthStatus: DailyWellnessService.shared.healthIconStatus())
     }
 
     private func startIconPulse() {
@@ -309,7 +305,7 @@ final class AppIconInactivityService {
 
     private func advancePulseFrame() {
         pulseFrameIndex = (pulseFrameIndex + 1) % 3
-        let state = currentInactivityState()
+        let state = currentDisplayState()
         applyIcon(state, pulseFrame: pulseFrameIndex)
 
         if state == .broken, let sessionEnd = lastSessionEndAt {

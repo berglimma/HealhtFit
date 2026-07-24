@@ -2,9 +2,9 @@ import Foundation
 import UserNotifications
 
 enum WaterReminderConfiguration {
-    static let intervalHours = 3
+    static let intervalHours = 2
     static let startHour = 8
-    static let endHour = 21
+    static let endHour = 20
 
     static func reminderHours(
         startHour: Int = startHour,
@@ -36,13 +36,24 @@ final class NotificationService {
     static let shared = NotificationService()
 
     private let lastWorkoutKey = "healthfit_last_workout_completed_at"
+    private let lastCardioKey = "healthfit_last_cardio_completed_at"
+    private let lastMeditationKey = "healthfit_last_meditation_completed_at"
     private let inactivityNotifiedKey = "healthfit_inactivity_notified_for_workout_at"
     private let inactivityReminderIdentifier = "workout_inactivity_48h"
+    private let cardioInactivityNotifiedKey = "healthfit_inactivity_notified_for_cardio_at"
+    private let cardioInactivityReminderIdentifier = "cardio_inactivity_48h"
+    private let meditationInactivityNotifiedKey = "healthfit_inactivity_notified_for_meditation_at"
+    private let meditationInactivityReminderIdentifier = "meditation_inactivity_48h"
     private let appUsageInactivityNotifiedKey = "healthfit_app_usage_inactivity_notified_for_session"
     private let appUsageInactivityReminderIdentifier = "app_usage_inactivity_48h"
     private let waterReminderIdentifierPrefix = "water_reminder_"
     private let dailyAssistantCheckInIdentifier = "daily_assistant_checkin_9am"
     private let dailyEveningAssistantCheckInIdentifier = "daily_assistant_checkin_9pm"
+    private let healthIconYellowNotifiedDayKey = "healthfit_health_icon_yellow_notified_day"
+    private let healthIconRedNotifiedAnchorKey = "healthfit_health_icon_red_notified_anchor"
+    private let healthIconRedReminderIdentifier = "health_icon_red_24h"
+    private let assistantCardioNudgeKey = "healthfit_assistant_cardio_nudge_for"
+    private let assistantMeditationNudgeKey = "healthfit_assistant_meditation_nudge_for"
 
     static let inactivityThreshold: TimeInterval = 48 * 60 * 60
 
@@ -154,9 +165,92 @@ final class NotificationService {
     }
 
     func cancelWaterReminders() {
-        let hours = WaterReminderConfiguration.reminderHours()
-        let identifiers = hours.map { "\(waterReminderIdentifierPrefix)\($0)" }
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: identifiers)
+        // Cancela por prefixo para limpar horários antigos (ex.: intervalo de 3h).
+        let prefix = waterReminderIdentifierPrefix
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let ids = requests
+                .filter { $0.identifier.hasPrefix(prefix) }
+                .map(\.identifier)
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        }
+    }
+
+    // MARK: - Health icon (yellow / red)
+
+    func refreshHealthIconNotifications(
+        status: WellnessHealthIconStatus,
+        detailMessage: String,
+        redFireDate: Date?,
+        dayKey: String,
+        staleAnchor: Date?
+    ) {
+        switch status {
+        case .green:
+            cancelHealthIconRedReminder()
+        case .yellow:
+            deliverHealthIconYellowIfNeeded(dayKey: dayKey, detailMessage: detailMessage)
+            if let redFireDate {
+                scheduleHealthIconRedReminder(fireDate: redFireDate, detailMessage: detailMessage, staleAnchor: staleAnchor)
+            }
+        case .red:
+            deliverHealthIconRedIfNeeded(staleAnchor: staleAnchor, detailMessage: detailMessage)
+        }
+    }
+
+    func cancelHealthIconRedReminder() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [healthIconRedReminderIdentifier]
+        )
+    }
+
+    private func deliverHealthIconYellowIfNeeded(dayKey: String, detailMessage: String) {
+        let notifiedDay = UserDefaults.standard.string(forKey: healthIconYellowNotifiedDayKey)
+        guard notifiedDay != dayKey else { return }
+
+        deliverImmediately(
+            title: "Ícone de saúde amarelo ⚠️💛",
+            body: MotivationMessages.healthIconYellowMessage(detail: detailMessage),
+            category: "HEALTH_ICON_YELLOW",
+            identifier: "health_icon_yellow_\(dayKey)"
+        )
+        UserDefaults.standard.set(dayKey, forKey: healthIconYellowNotifiedDayKey)
+    }
+
+    private func scheduleHealthIconRedReminder(fireDate: Date, detailMessage: String, staleAnchor: Date?) {
+        cancelHealthIconRedReminder()
+
+        let title = "Ícone de saúde vermelho 🚨❤️"
+        let body = MotivationMessages.healthIconRedMessage(detail: detailMessage)
+
+        if fireDate <= .now {
+            deliverHealthIconRedIfNeeded(staleAnchor: staleAnchor, detailMessage: detailMessage)
+            return
+        }
+
+        let interval = fireDate.timeIntervalSinceNow
+        scheduleOnPhone(
+            title: title,
+            body: body,
+            category: "HEALTH_ICON_RED",
+            identifier: healthIconRedReminderIdentifier,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+        )
+    }
+
+    private func deliverHealthIconRedIfNeeded(staleAnchor: Date?, detailMessage: String) {
+        if let staleAnchor {
+            let notified = UserDefaults.standard.object(forKey: healthIconRedNotifiedAnchorKey) as? Date
+            guard notified != staleAnchor else { return }
+            UserDefaults.standard.set(staleAnchor, forKey: healthIconRedNotifiedAnchorKey)
+        }
+
+        cancelHealthIconRedReminder()
+        deliverImmediately(
+            title: "Ícone de saúde vermelho 🚨❤️",
+            body: MotivationMessages.healthIconRedMessage(detail: detailMessage),
+            category: "HEALTH_ICON_RED",
+            identifier: "health_icon_red_\(UUID().uuidString)"
+        )
     }
 
     func scheduleDailyMotivationNotifications(hour: Int = 8, minute: Int = 0) {
@@ -355,6 +449,20 @@ final class NotificationService {
         refreshWorkoutInactivityReminder(lastWorkoutAt: date)
     }
 
+    func recordCardioCompleted(at date: Date = .now) {
+        UserDefaults.standard.set(date, forKey: lastCardioKey)
+        UserDefaults.standard.removeObject(forKey: cardioInactivityNotifiedKey)
+        UserDefaults.standard.removeObject(forKey: assistantCardioNudgeKey)
+        refreshCardioInactivityReminder(lastCardioAt: date)
+    }
+
+    func recordMeditationCompleted(at date: Date = .now) {
+        UserDefaults.standard.set(date, forKey: lastMeditationKey)
+        UserDefaults.standard.removeObject(forKey: meditationInactivityNotifiedKey)
+        UserDefaults.standard.removeObject(forKey: assistantMeditationNudgeKey)
+        refreshMeditationInactivityReminder(lastMeditationAt: date)
+    }
+
     func refreshWorkoutInactivityReminder(lastWorkoutAt: Date?, accountCreatedAt: Date? = nil) {
         cancelWorkoutInactivityReminder()
 
@@ -362,7 +470,7 @@ final class NotificationService {
         guard let referenceDate else { return }
 
         let fireDate = referenceDate.addingTimeInterval(Self.inactivityThreshold)
-        let title = "Hora de voltar a treinar!"
+        let title = "Hora de voltar a treinar! 💪"
         let body = MotivationMessages.inactivityMessage()
 
         if fireDate <= .now {
@@ -386,11 +494,112 @@ final class NotificationService {
         }
     }
 
+    func refreshCardioInactivityReminder(lastCardioAt: Date?, accountCreatedAt: Date? = nil) {
+        cancelCardioInactivityReminder()
+
+        let referenceDate = lastCardioAt ?? accountCreatedAt
+        guard let referenceDate else { return }
+
+        let fireDate = referenceDate.addingTimeInterval(Self.inactivityThreshold)
+        let title = "Cardio te espera! 🏃💨"
+        let body = MotivationMessages.cardioInactivityMessage()
+
+        if fireDate <= .now {
+            Task {
+                await deliverTypedInactivityIfNeeded(
+                    referenceAt: referenceDate,
+                    notifiedKey: cardioInactivityNotifiedKey,
+                    category: "CARDIO_INACTIVITY",
+                    title: title,
+                    body: body
+                )
+            }
+        } else {
+            let interval = fireDate.timeIntervalSinceNow
+            scheduleOnPhone(
+                title: title,
+                body: body,
+                category: "CARDIO_INACTIVITY",
+                identifier: cardioInactivityReminderIdentifier,
+                trigger: UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+            )
+        }
+    }
+
+    func refreshMeditationInactivityReminder(lastMeditationAt: Date?, accountCreatedAt: Date? = nil) {
+        cancelMeditationInactivityReminder()
+
+        let referenceDate = lastMeditationAt ?? accountCreatedAt
+        guard let referenceDate else { return }
+
+        let fireDate = referenceDate.addingTimeInterval(Self.inactivityThreshold)
+        let title = "Hora de meditar 🧘✨"
+        let body = MotivationMessages.meditationInactivityMessage()
+
+        if fireDate <= .now {
+            Task {
+                await deliverTypedInactivityIfNeeded(
+                    referenceAt: referenceDate,
+                    notifiedKey: meditationInactivityNotifiedKey,
+                    category: "MEDITATION_INACTIVITY",
+                    title: title,
+                    body: body
+                )
+            }
+        } else {
+            let interval = fireDate.timeIntervalSinceNow
+            scheduleOnPhone(
+                title: title,
+                body: body,
+                category: "MEDITATION_INACTIVITY",
+                identifier: meditationInactivityReminderIdentifier,
+                trigger: UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+            )
+        }
+    }
+
     func cancelWorkoutInactivityReminder() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: [inactivityReminderIdentifier]
         )
         WatchConnectivityManager.shared.cancelInactivityReminderOnWatch()
+    }
+
+    func cancelCardioInactivityReminder() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [cardioInactivityReminderIdentifier]
+        )
+    }
+
+    func cancelMeditationInactivityReminder() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [meditationInactivityReminderIdentifier]
+        )
+    }
+
+    /// Marca que o IAssistente já enviou o estímulo de cardio/meditação para este período.
+    func markAssistantCardioNudgeDelivered(for referenceDate: Date) {
+        UserDefaults.standard.set(referenceDate, forKey: assistantCardioNudgeKey)
+    }
+
+    func markAssistantMeditationNudgeDelivered(for referenceDate: Date) {
+        UserDefaults.standard.set(referenceDate, forKey: assistantMeditationNudgeKey)
+    }
+
+    func hasAssistantCardioNudge(for referenceDate: Date) -> Bool {
+        (UserDefaults.standard.object(forKey: assistantCardioNudgeKey) as? Date) == referenceDate
+    }
+
+    func hasAssistantMeditationNudge(for referenceDate: Date) -> Bool {
+        (UserDefaults.standard.object(forKey: assistantMeditationNudgeKey) as? Date) == referenceDate
+    }
+
+    var lastRecordedCardioAt: Date? {
+        UserDefaults.standard.object(forKey: lastCardioKey) as? Date
+    }
+
+    var lastRecordedMeditationAt: Date? {
+        UserDefaults.standard.object(forKey: lastMeditationKey) as? Date
     }
 
     func refreshAppUsageInactivityReminder(lastSessionEndAt: Date) {
@@ -452,26 +661,42 @@ final class NotificationService {
         title: String,
         body: String
     ) async {
-        let notifiedFor = UserDefaults.standard.object(forKey: inactivityNotifiedKey) as? Date
-        guard notifiedFor != referenceWorkoutAt else { return }
+        await deliverTypedInactivityIfNeeded(
+            referenceAt: referenceWorkoutAt,
+            notifiedKey: inactivityNotifiedKey,
+            category: "WORKOUT_INACTIVITY",
+            title: title,
+            body: body
+        )
+    }
+
+    private func deliverTypedInactivityIfNeeded(
+        referenceAt: Date,
+        notifiedKey: String,
+        category: String,
+        title: String,
+        body: String
+    ) async {
+        let notifiedFor = UserDefaults.standard.object(forKey: notifiedKey) as? Date
+        guard notifiedFor != referenceAt else { return }
 
         let delivered = await pendingDeliveredNotifications()
         let alreadyShown = delivered.contains {
-            $0.request.content.categoryIdentifier == "WORKOUT_INACTIVITY"
+            $0.request.content.categoryIdentifier == category
         }
 
         if alreadyShown {
-            UserDefaults.standard.set(referenceWorkoutAt, forKey: inactivityNotifiedKey)
+            UserDefaults.standard.set(referenceAt, forKey: notifiedKey)
             return
         }
 
         deliverImmediately(
             title: title,
             body: body,
-            category: "WORKOUT_INACTIVITY",
-            identifier: "workout_inactivity_\(UUID().uuidString)"
+            category: category,
+            identifier: "\(category.lowercased())_\(UUID().uuidString)"
         )
-        UserDefaults.standard.set(referenceWorkoutAt, forKey: inactivityNotifiedKey)
+        UserDefaults.standard.set(referenceAt, forKey: notifiedKey)
     }
 
     private func pendingDeliveredNotifications() async -> [UNNotification] {
