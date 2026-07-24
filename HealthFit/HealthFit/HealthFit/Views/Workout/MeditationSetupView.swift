@@ -138,8 +138,8 @@ struct MeditationSetupView: View {
                 totalPrompts: topic.prompts.count
             )
             let athleteName = authService.currentUser?.greetingName ?? "Atleta"
-            NotificationService.shared.deliverWorkoutStartNotification(
-                workoutTitle: config.title,
+            NotificationService.shared.deliverMeditationStartNotification(
+                sessionTitle: config.title,
                 athleteName: athleteName
             )
             showActiveMeditation = true

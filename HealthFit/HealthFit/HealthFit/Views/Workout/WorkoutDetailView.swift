@@ -126,10 +126,26 @@ struct WorkoutDetailView: View {
     }
 
     private var overviewSection: some View {
-        HStack(spacing: 16) {
-            StatPill(value: "\(sheet.totalExercises)", label: "Exercícios", icon: "list.bullet")
-            StatPill(value: "~\(sheet.estimatedDuration / 60)", label: "Minutos", icon: "clock")
-            StatPill(value: "\(sheet.exercises.reduce(0) { $0 + $1.sets })", label: "Séries", icon: "repeat")
+        VStack(spacing: 12) {
+            if sheet.createdByAssistant {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                        .foregroundStyle(Color(red: 0.35, green: 0.55, blue: 0.95))
+                    Text("Gerado pelo IAssistente — sugestão educativa. É essencial consultar um profissional de Educação Física antes de seguir esta ficha.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(red: 0.35, green: 0.55, blue: 0.95).opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            HStack(spacing: 16) {
+                StatPill(value: "\(sheet.totalExercises)", label: "Exercícios", icon: "list.bullet")
+                StatPill(value: "~\(sheet.estimatedDuration / 60)", label: "Minutos", icon: "clock")
+                StatPill(value: "\(sheet.exercises.reduce(0) { $0 + $1.sets })", label: "Séries", icon: "repeat")
+            }
         }
     }
 
@@ -140,7 +156,11 @@ struct WorkoutDetailView: View {
                 .foregroundStyle(AppTheme.textPrimary)
 
             ForEach(Array(sheet.exercises.enumerated()), id: \.element.id) { index, exercise in
-                ExerciseRow(index: index + 1, exercise: exercise)
+                ExerciseRow(
+                    index: index + 1,
+                    exercise: exercise,
+                    preferredGender: sheet.resolvedProgramGender
+                )
             }
         }
     }
@@ -225,10 +245,15 @@ struct StatPill: View {
 struct ExerciseRow: View {
     let index: Int
     let exercise: Exercise
+    var preferredGender: Gender? = nil
 
     var body: some View {
         DisclosureGroup {
-            ExerciseExecutionGuideView(steps: exercise.executionGuide, exercise: exercise)
+            ExerciseExecutionGuideView(
+                steps: exercise.executionGuide,
+                exercise: exercise,
+                preferredGender: preferredGender
+            )
                 .padding(.top, 4)
         } label: {
             HStack(spacing: 14) {

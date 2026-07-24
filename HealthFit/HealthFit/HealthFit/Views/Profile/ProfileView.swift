@@ -32,6 +32,12 @@ struct ProfileView: View {
     @State private var measurementsSaveError: String?
     @State private var measurementComparison: BodyMeasurementComparison?
     @State private var showMeasurementComparison = false
+    @State private var weightText = ""
+    @State private var heightText = ""
+    @State private var ageText = ""
+    @State private var selectedGender: Gender = .male
+    @State private var showBodyDataSavedAlert = false
+    @State private var bodyDataSaveError: String?
 
     var body: some View {
         NavigationStack {
@@ -176,14 +182,8 @@ struct ProfileView: View {
                         energyDrinksSection
                     }
 
-                    Section("Perfil Físico") {
-                        LabeledContent("Peso", value: String(format: "%.1f kg", user.weight))
-                        LabeledContent("Altura", value: String(format: "%.0f cm", user.height))
-                        LabeledContent("Idade", value: "\(user.age) anos")
-                        LabeledContent("Sexo", value: user.gender.rawValue)
-                        LabeledContent("IMC", value: String(format: "%.1f", user.bmi))
-                        LabeledContent("Metabolismo Basal", value: "\(user.basalMetabolicRate) kcal")
-                        LabeledContent("Meta Calórica", value: "\(user.dailyCalorieTarget) kcal")
+                    Section("Seus Dados") {
+                        bodyDataSection(for: user)
                     }
 
                     Section("Medidas Corporais") {
@@ -268,17 +268,21 @@ struct ProfileView: View {
             }
             .adaptiveContentWidth()
             .navigationTitle("Perfil")
+            .scrollDismissesKeyboard(.interactively)
+            .numericKeyboardDismiss()
             .onAppear {
                 syncTrainerFields()
                 syncDisplayNameField()
                 syncWellnessFields()
                 syncPreWorkoutFromWorkouts()
                 syncBodyMeasurementFields()
+                syncBodyDataFields()
             }
             .onChange(of: authService.currentUser) { _, _ in
                 syncTrainerFields()
                 syncDisplayNameField()
                 syncBodyMeasurementFields()
+                syncBodyDataFields()
             }
             .onChange(of: wellnessService.todayEntry) { _, _ in
                 syncWellnessFields()
@@ -305,6 +309,11 @@ struct ProfileView: View {
             } message: {
                 Text("As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal.")
             }
+            .alert("Dados salvos", isPresented: $showBodyDataSavedAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Peso, altura, idade e sexo foram salvos e sincronizados. A Nutrição usa esses dados para o cardápio.")
+            }
             .sheet(isPresented: $showMeasurementComparison) {
                 if let comparison = measurementComparison {
                     BodyMeasurementComparisonView(comparison: comparison)
@@ -313,13 +322,19 @@ struct ProfileView: View {
             .alert(
                 "Não foi possível salvar",
                 isPresented: Binding(
-                    get: { measurementsSaveError != nil },
-                    set: { if !$0 { measurementsSaveError = nil } }
+                    get: { measurementsSaveError != nil || bodyDataSaveError != nil },
+                    set: { if !$0 {
+                        measurementsSaveError = nil
+                        bodyDataSaveError = nil
+                    } }
                 )
             ) {
-                Button("OK", role: .cancel) { measurementsSaveError = nil }
+                Button("OK", role: .cancel) {
+                    measurementsSaveError = nil
+                    bodyDataSaveError = nil
+                }
             } message: {
-                Text(measurementsSaveError ?? "")
+                Text(measurementsSaveError ?? bodyDataSaveError ?? "")
             }
             .sheet(isPresented: $showDeleteAccountSheet) {
                 DeleteAccountSheet(
@@ -655,6 +670,109 @@ struct ProfileView: View {
         user.personalTrainerName = name
         user.personalTrainerEmail = email
         authService.updateProfile(user)
+    }
+
+    private func syncBodyDataFields() {
+        guard let user = authService.currentUser else { return }
+        weightText = String(format: "%.1f", user.weight)
+        heightText = String(format: "%.0f", user.height)
+        ageText = "\(user.age)"
+        selectedGender = user.gender
+    }
+
+    private var isBodyDataValid: Bool {
+        guard let weight = Double(weightText.replacingOccurrences(of: ",", with: ".")),
+              let height = Double(heightText.replacingOccurrences(of: ",", with: ".")),
+              let age = Int(ageText) else { return false }
+        return weight >= 30 && weight <= 300 && height >= 100 && height <= 250 && age >= 14 && age <= 100
+    }
+
+    @ViewBuilder
+    private func bodyDataSection(for user: UserProfile) -> some View {
+        Text("Esses dados alimentam o cálculo de calorias e o cardápio em Nutrição.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+        MetricField(label: "Peso", unit: "kg", text: $weightText)
+        MetricField(label: "Altura", unit: "cm", text: $heightText)
+        MetricField(label: "Idade", unit: "anos", text: $ageText, keyboard: .numberPad)
+
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Sexo")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Picker("Sexo", selection: $selectedGender) {
+                ForEach(Gender.allCases) { gender in
+                    Text(gender.rawValue).tag(gender)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+
+        LabeledContent("IMC", value: String(format: "%.1f", previewBMI(for: user)))
+        LabeledContent("Metabolismo Basal", value: "\(previewBMR(for: user)) kcal")
+        LabeledContent("Meta Calórica", value: "\(previewCalorieTarget(for: user)) kcal")
+
+        Button {
+            saveBodyData()
+        } label: {
+            Label("Salvar dados", systemImage: "checkmark.circle.fill")
+                .frame(maxWidth: .infinity)
+        }
+        .tint(AppTheme.accent)
+        .disabled(!isBodyDataValid)
+    }
+
+    private func previewProfile(from user: UserProfile) -> UserProfile {
+        var preview = user
+        if let weight = Double(weightText.replacingOccurrences(of: ",", with: ".")) {
+            preview.weight = weight
+        }
+        if let height = Double(heightText.replacingOccurrences(of: ",", with: ".")) {
+            preview.height = height
+        }
+        if let age = Int(ageText) {
+            preview.age = age
+        }
+        preview.gender = selectedGender
+        return preview
+    }
+
+    private func previewBMI(for user: UserProfile) -> Double {
+        previewProfile(from: user).bmi
+    }
+
+    private func previewBMR(for user: UserProfile) -> Int {
+        previewProfile(from: user).basalMetabolicRate
+    }
+
+    private func previewCalorieTarget(for user: UserProfile) -> Int {
+        previewProfile(from: user).dailyCalorieTarget
+    }
+
+    private func saveBodyData() {
+        guard var user = authService.currentUser,
+              let weight = Double(weightText.replacingOccurrences(of: ",", with: ".")),
+              let height = Double(heightText.replacingOccurrences(of: ",", with: ".")),
+              let age = Int(ageText),
+              isBodyDataValid else { return }
+
+        user.weight = weight
+        user.height = height
+        user.age = age
+        user.gender = selectedGender
+        authService.updateProfile(user)
+        mealPlanService.regeneratePlanIfNeeded(for: user)
+        ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
+        showBodyDataSavedAlert = true
+
+        Task {
+            do {
+                try await ProfileFirestoreService.saveProfile(user)
+            } catch {
+                bodyDataSaveError = "Os dados ficaram salvos no aparelho, mas a sincronização com o Firebase falhou. Verifique a conexão e tente novamente."
+            }
+        }
     }
 
     private func syncBodyMeasurementFields() {

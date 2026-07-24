@@ -81,7 +81,7 @@ enum FitnessGoal: String, CaseIterable, Codable, Identifiable {
     }
 }
 
-enum Gender: String, CaseIterable, Codable, Identifiable {
+enum Gender: String, CaseIterable, Codable, Identifiable, Hashable {
     case male = "Masculino"
     case female = "Feminino"
 

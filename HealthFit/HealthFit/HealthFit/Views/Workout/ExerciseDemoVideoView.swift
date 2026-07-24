@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ExerciseDemoGifView: View {
     let exercise: Exercise
+    var preferredGender: Gender? = nil
     var compact: Bool = false
     var autoAdvanceAfterOneLoop: Bool = false
     var onDemoFinished: (() -> Void)?
@@ -10,7 +11,7 @@ struct ExerciseDemoGifView: View {
     @State private var activeURL: URL?
 
     private var primaryURL: URL? {
-        exercise.demoGifURL
+        exercise.demoGifURL(preferredGender: preferredGender)
     }
 
     private var fallbackURL: URL? {
@@ -93,6 +94,9 @@ struct ExerciseDemoGifView: View {
             reloadGIF()
         }
         .onChange(of: exercise.id) { _, _ in
+            reloadGIF()
+        }
+        .onChange(of: preferredGender) { _, _ in
             reloadGIF()
         }
         .onChange(of: loadState) { _, newState in

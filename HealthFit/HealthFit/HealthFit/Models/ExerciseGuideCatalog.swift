@@ -486,6 +486,7 @@ extension Exercise {
 struct ExerciseExecutionGuideView: View {
     let steps: [String]
     var exercise: Exercise? = nil
+    var preferredGender: Gender? = nil
     var compact: Bool = false
     var showsDemo: Bool = true
 
@@ -494,7 +495,11 @@ struct ExerciseExecutionGuideView: View {
             guideSection
 
             if showsDemo, let exercise {
-                ExerciseDemoGifView(exercise: exercise, compact: compact)
+                ExerciseDemoGifView(
+                    exercise: exercise,
+                    preferredGender: preferredGender,
+                    compact: compact
+                )
             }
         }
     }

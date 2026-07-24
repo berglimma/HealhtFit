@@ -21,6 +21,7 @@ struct ActiveWorkoutView: View {
     @State private var performedWeightTextByExercise: [UUID: String] = [:]
     @State private var showEarlyEndSheet = false
     @State private var earlyEndJustification = ""
+    @State private var liveExerciseElapsedSeconds = 0
 
     private let workoutClock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -89,6 +90,8 @@ struct ActiveWorkoutView: View {
             }
             .navigationTitle(sheet.title)
             .navigationBarTitleDisplayMode(.inline)
+            .scrollDismissesKeyboard(.interactively)
+            .numericKeyboardDismiss()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Encerrar") {
@@ -122,9 +125,11 @@ struct ActiveWorkoutView: View {
             prepareDemoForCurrentExercise(force: true)
             syncWatchWorkoutState()
             updateWorkoutElapsed()
+            syncLiveExerciseElapsed()
         }
         .onChange(of: workoutStore.currentExerciseIndex) { _, _ in
             prepareDemoForCurrentExercise(force: true)
+            syncLiveExerciseElapsed()
         }
         .onChange(of: workoutStore.currentExercise?.id) { _, _ in
             prepareDemoForCurrentExercise(force: true)
@@ -139,6 +144,9 @@ struct ActiveWorkoutView: View {
         }
         .onReceive(workoutClock) { _ in
             updateWorkoutElapsed()
+        }
+        .onReceive(workoutStore.exerciseElapsedTick) { seconds in
+            liveExerciseElapsedSeconds = seconds
         }
         .onReceive(Timer.publish(every: 3, on: .main, in: .common).autoconnect()) { _ in
             syncWatchData()
@@ -216,6 +224,7 @@ struct ActiveWorkoutView: View {
 
             ExerciseDemoGifView(
                 exercise: exercise,
+                preferredGender: sheet.resolvedProgramGender,
                 compact: false,
                 autoAdvanceAfterOneLoop: true,
                 onDemoFinished: {
@@ -265,7 +274,7 @@ struct ActiveWorkoutView: View {
                 Image(systemName: timerService.isRunning ? "pause.circle.fill" : "stopwatch.fill")
                     .foregroundStyle(timerService.isRunning ? .orange : AppTheme.accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(DurationFormatting.format(seconds: record.elapsedSeconds))
+                    Text(DurationFormatting.format(seconds: liveExerciseElapsedSeconds))
                         .font(.system(size: 28, weight: .bold, design: .monospaced))
                         .foregroundStyle(timerService.isRunning ? .orange : AppTheme.accent)
                     if timerService.isRunning {
@@ -519,6 +528,12 @@ struct ActiveWorkoutView: View {
             exerciseName: exerciseName,
             exerciseElapsedSeconds: exerciseElapsed
         )
+    }
+
+    private func syncLiveExerciseElapsed() {
+        liveExerciseElapsedSeconds = workoutStore.exerciseRecords
+            .first(where: { $0.exerciseId == workoutStore.currentExercise?.id })?
+            .elapsedSeconds ?? 0
     }
 
     private func syncWatchData() {

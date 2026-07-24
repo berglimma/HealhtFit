@@ -127,8 +127,10 @@
 		B1000125 /* terms-of-use.html in Resources */ = {isa = PBXBuildFile; fileRef = F1000125 /* terms-of-use.html */; };
 		B1000126 /* LegalDocumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000126 /* LegalDocumentView.swift */; };
 		B1000127 /* PasswordPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000127 /* PasswordPolicy.swift */; };
+		B1000130 /* AssistantWorkoutBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000130 /* AssistantWorkoutBuilder.swift */; };
 		B1000201 /* ProfileDataReminderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000201 /* ProfileDataReminderService.swift */; };
 		B1000202 /* ProfileFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000202 /* ProfileFirestoreService.swift */; };
+		B1000203 /* KeyboardDismiss.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000203 /* KeyboardDismiss.swift */; };
 		B1000128 /* PasswordRequirementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000128 /* PasswordRequirementsView.swift */; };
 		B2000001 /* TestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000010 /* TestFixtures.swift */; };
 		B2000002 /* UserProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000011 /* UserProfileTests.swift */; };
@@ -149,6 +151,7 @@
 		B2000017 /* SupplementationGuideEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000026 /* SupplementationGuideEngineTests.swift */; };
 		B2000018 /* AssistantInactivityFollowUpEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000027 /* AssistantInactivityFollowUpEngineTests.swift */; };
 		B2000019 /* PasswordPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000028 /* PasswordPolicyTests.swift */; };
+		B2000020 /* AssistantWorkoutBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000029 /* AssistantWorkoutBuilderTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -309,8 +312,10 @@
 		F1000125 /* terms-of-use.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "terms-of-use.html"; sourceTree = "<group>"; };
 		F1000126 /* LegalDocumentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocumentView.swift; sourceTree = "<group>"; };
 		F1000127 /* PasswordPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordPolicy.swift; sourceTree = "<group>"; };
+		F1000130 /* AssistantWorkoutBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantWorkoutBuilder.swift; sourceTree = "<group>"; };
 		F1000201 /* ProfileDataReminderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileDataReminderService.swift; sourceTree = "<group>"; };
 		F1000202 /* ProfileFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileFirestoreService.swift; sourceTree = "<group>"; };
+		F1000203 /* KeyboardDismiss.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardDismiss.swift; sourceTree = "<group>"; };
 		F1000128 /* PasswordRequirementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordRequirementsView.swift; sourceTree = "<group>"; };
 		F2000001 /* HealthFitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2000002 /* HealthFitUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -333,6 +338,7 @@
 		F2000026 /* SupplementationGuideEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementationGuideEngineTests.swift; sourceTree = "<group>"; };
 		F2000027 /* AssistantInactivityFollowUpEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantInactivityFollowUpEngineTests.swift; sourceTree = "<group>"; };
 		F2000028 /* PasswordPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordPolicyTests.swift; sourceTree = "<group>"; };
+		F2000029 /* AssistantWorkoutBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantWorkoutBuilderTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -476,6 +482,7 @@
 				F1000121 /* AccountDeletionError.swift */,
 				F1000123 /* ShoppingReportBuilder.swift */,
 				F1000127 /* PasswordPolicy.swift */,
+				F1000130 /* AssistantWorkoutBuilder.swift */,
 				F1000201 /* ProfileDataReminderService.swift */,
 				F1000062 /* WelcomeMotivationService.swift */,
 				F1000064 /* MarathonReportBuilder.swift */,
@@ -592,6 +599,7 @@
 				F1000041 /* MailComposeView.swift */,
 				F1000055 /* DailyWellnessCheckInView.swift */,
 				F1000058 /* PulsingHeartIconView.swift */,
+				F1000203 /* KeyboardDismiss.swift */,
 				F1000063 /* WelcomeMotivationView.swift */,
 				F1000118 /* LegalLinksView.swift */,
 				F1000126 /* LegalDocumentView.swift */,
@@ -692,6 +700,7 @@
 				F2000026 /* SupplementationGuideEngineTests.swift */,
 				F2000027 /* AssistantInactivityFollowUpEngineTests.swift */,
 				F2000028 /* PasswordPolicyTests.swift */,
+				F2000029 /* AssistantWorkoutBuilderTests.swift */,
 				F2000022 /* PostWorkoutCheckInEngineTests.swift */,
 			);
 			path = HealthFitTests;
@@ -965,6 +974,7 @@
 				B1000072 /* FirebaseAuthProvider.swift in Sources */,
 				B1000079 /* WorkoutFirestoreService.swift in Sources */,
 				B1000202 /* ProfileFirestoreService.swift in Sources */,
+				B1000203 /* KeyboardDismiss.swift in Sources */,
 				B1000086 /* ExerciseVideoFirestoreService.swift in Sources */,
 				B1000089 /* ExerciseVideoStorageService.swift in Sources */,
 				B1000090 /* PostWorkoutCheckInEngine.swift in Sources */,
@@ -979,6 +989,7 @@
 				B1000118 /* LegalLinksView.swift in Sources */,
 				B1000126 /* LegalDocumentView.swift in Sources */,
 				B1000127 /* PasswordPolicy.swift in Sources */,
+				B1000130 /* AssistantWorkoutBuilder.swift in Sources */,
 				B1000201 /* ProfileDataReminderService.swift in Sources */,
 				B1000128 /* PasswordRequirementsView.swift in Sources */,
 				B1000119 /* DeleteAccountSheet.swift in Sources */,
@@ -1031,6 +1042,7 @@
 				B2000017 /* SupplementationGuideEngineTests.swift in Sources */,
 				B2000018 /* AssistantInactivityFollowUpEngineTests.swift in Sources */,
 				B2000019 /* PasswordPolicyTests.swift in Sources */,
+				B2000020 /* AssistantWorkoutBuilderTests.swift in Sources */,
 				B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

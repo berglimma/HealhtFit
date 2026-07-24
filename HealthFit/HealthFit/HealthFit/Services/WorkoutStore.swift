@@ -7,7 +7,10 @@ final class WorkoutStore: ObservableObject {
     @Published var activeSession: WorkoutSession?
     @Published var sessionHistory: [WorkoutSession] = []
     @Published var currentExerciseIndex = 0
-    @Published private(set) var exerciseRecords: [ExerciseSessionRecord] = []
+    /// Mutações do cronômetro (1s) não publicam para não travar abas que observam o store.
+    private(set) var exerciseRecords: [ExerciseSessionRecord] = []
+    /// Tick leve para a tela de treino ativo atualizar o cronômetro.
+    let exerciseElapsedTick = PassthroughSubject<Int, Never>()
 
     @Published private(set) var isExerciseTimerPaused = false
 
@@ -86,11 +89,36 @@ final class WorkoutStore: ObservableObject {
         workoutSheets.filter(isStandardWorkout)
     }
 
+    var maleStandardWorkoutSheets: [WorkoutSheet] {
+        standardWorkoutSheets.filter { Self.maleSampleTitles.contains($0.title) }
+    }
+
+    var femaleStandardWorkoutSheets: [WorkoutSheet] {
+        standardWorkoutSheets.filter { Self.femaleSampleTitles.contains($0.title) }
+    }
+
+    func recommendedStandardWorkouts(for gender: Gender?) -> [WorkoutSheet] {
+        switch gender {
+        case .female:
+            return femaleStandardWorkoutSheets
+        case .male, .none:
+            return maleStandardWorkoutSheets
+        }
+    }
+
+    func customWorkoutSheets(for gender: Gender) -> [WorkoutSheet] {
+        customWorkoutSheets.filter { sheet in
+            sheet.resolvedProgramGender == gender
+        }
+    }
+
     var customWorkoutSheets: [WorkoutSheet] {
         workoutSheets.filter { !isStandardWorkout($0) }
     }
 
     private static let sampleWorkoutTitles = Set(sampleWorkouts.map(\.title))
+    private static let maleSampleTitles = Set(maleSampleWorkouts.map(\.title))
+    private static let femaleSampleTitles = Set(femaleSampleWorkouts.map(\.title))
 
     /// Retorna a última sessão concluída desta ficha se foi há menos de `hours` horas.
     func recentSameWorkoutSession(
@@ -114,14 +142,14 @@ final class WorkoutStore: ObservableObject {
             tookPreWorkout: tookPreWorkout
         )
         currentExerciseIndex = 0
-        exerciseRecords = sheet.exercises.map {
+        replaceExerciseRecords(sheet.exercises.map {
             ExerciseSessionRecord(
                 exerciseId: $0.id,
                 exerciseName: $0.name,
                 recommendedWeight: $0.recommendedWeight,
                 performedWeight: $0.recommendedWeight
             )
-        }
+        })
         isExerciseTimerPaused = false
         startExerciseTimer()
     }
@@ -137,12 +165,12 @@ final class WorkoutStore: ObservableObject {
             targetCalories: config.targetCalories
         )
         currentExerciseIndex = 0
-        exerciseRecords = [
+        replaceExerciseRecords([
             ExerciseSessionRecord(
                 exerciseId: config.exercise.id,
                 exerciseName: "\(config.exercise.name) (\(config.intensity.rawValue))"
             )
-        ]
+        ])
         isExerciseTimerPaused = false
     }
 
@@ -154,12 +182,12 @@ final class WorkoutStore: ObservableObject {
             totalExercises: 1
         )
         currentExerciseIndex = 0
-        exerciseRecords = [
+        replaceExerciseRecords([
             ExerciseSessionRecord(
                 exerciseId: config.topic.id,
                 exerciseName: config.topic.name
             )
-        ]
+        ])
         isExerciseTimerPaused = false
     }
 
@@ -171,7 +199,9 @@ final class WorkoutStore: ObservableObject {
         let idx = index ?? currentExerciseIndex
         guard idx < exerciseRecords.count, !exerciseRecords[idx].isCompleted else { return }
 
-        exerciseRecords[idx].isCompleted = true
+        mutateExerciseRecords { records in
+            records[idx].isCompleted = true
+        }
         syncCompletedExerciseCount()
 
         if idx == currentExerciseIndex {
@@ -184,9 +214,11 @@ final class WorkoutStore: ObservableObject {
     }
 
     func applyRestSeconds(from timerService: RestTimerService) {
-        for (exerciseId, seconds) in timerService.restByExerciseId {
-            guard let idx = exerciseRecords.firstIndex(where: { $0.exerciseId == exerciseId }) else { continue }
-            exerciseRecords[idx].restSeconds = seconds
+        mutateExerciseRecords { records in
+            for (exerciseId, seconds) in timerService.restByExerciseId {
+                guard let idx = records.firstIndex(where: { $0.exerciseId == exerciseId }) else { continue }
+                records[idx].restSeconds = seconds
+            }
         }
     }
 
@@ -208,6 +240,18 @@ final class WorkoutStore: ObservableObject {
               currentExerciseIndex < exerciseRecords.count,
               !exerciseRecords[currentExerciseIndex].isCompleted else { return }
         exerciseRecords[currentExerciseIndex].elapsedSeconds += 1
+        exerciseElapsedTick.send(exerciseRecords[currentExerciseIndex].elapsedSeconds)
+    }
+
+    /// Publica mudanças estruturais nos registros (não usar no tick de 1s).
+    private func replaceExerciseRecords(_ records: [ExerciseSessionRecord]) {
+        exerciseRecords = records
+        objectWillChange.send()
+    }
+
+    private func mutateExerciseRecords(_ mutate: (inout [ExerciseSessionRecord]) -> Void) {
+        mutate(&exerciseRecords)
+        objectWillChange.send()
     }
 
     private func advanceToNextIncomplete() {
@@ -229,19 +273,25 @@ final class WorkoutStore: ObservableObject {
 
     func addHeartRateSample(_ bpm: Double) {
         guard var session = activeSession else { return }
+        if let last = session.heartRateSamples.last, abs(last.bpm - bpm) < 1 {
+            return
+        }
         session.heartRateSamples.append(HeartRateSample(bpm: bpm))
         activeSession = session
     }
 
     func updateCalories(_ calories: Double) {
         guard var session = activeSession else { return }
+        guard abs(session.caloriesBurned - calories) >= 1 else { return }
         session.caloriesBurned = calories
         activeSession = session
     }
 
     func updatePerformedWeight(exerciseId: UUID, weight: Double?) {
         guard let index = exerciseRecords.firstIndex(where: { $0.exerciseId == exerciseId }) else { return }
-        exerciseRecords[index].performedWeight = weight
+        mutateExerciseRecords { records in
+            records[index].performedWeight = weight
+        }
     }
 
     func endSession(persisting persistedSession: WorkoutSession? = nil) {
@@ -336,6 +386,15 @@ final class WorkoutStore: ObservableObject {
         let sampleByTitle = Dictionary(uniqueKeysWithValues: Self.sampleWorkouts.map { ($0.title, $0) })
         var didUpdate = false
 
+        // Remove fichas padrão antigas (A/B/C/D genéricas) substituídas pelos programas por sexo.
+        let beforeCount = workoutSheets.count
+        workoutSheets.removeAll { sheet in
+            !sheet.isUserCreated && Self.legacySampleTitles.contains(sheet.title)
+        }
+        if workoutSheets.count != beforeCount {
+            didUpdate = true
+        }
+
         workoutSheets = workoutSheets.map { sheet in
             guard let sample = sampleByTitle[sheet.title], sheet.exercises.count < 10 else {
                 return sheet
@@ -348,7 +407,9 @@ final class WorkoutStore: ObservableObject {
                 exercises: sample.exercises,
                 assignedTo: sheet.assignedTo,
                 createdAt: sheet.createdAt,
-                isActive: sheet.isActive
+                isActive: sheet.isActive,
+                targetGender: sample.targetGender,
+                createdByAssistant: sheet.createdByAssistant
             )
         }
 
@@ -362,6 +423,13 @@ final class WorkoutStore: ObservableObject {
             saveData()
         }
     }
+
+    private static let legacySampleTitles: Set<String> = [
+        "Treino A - Peito e Tríceps",
+        "Treino B - Costas e Bíceps",
+        "Treino C - Pernas",
+        "Treino D - Trapézio e Ombros"
+    ]
 
     private func mergeSessions(local: [WorkoutSession], remote: [WorkoutSession]) -> [WorkoutSession] {
         var merged: [UUID: WorkoutSession] = [:]
@@ -422,70 +490,136 @@ final class WorkoutStore: ObservableObject {
         )
     }
 
-    static let sampleWorkouts: [WorkoutSheet] = [
+    static let sampleWorkouts: [WorkoutSheet] = maleSampleWorkouts + femaleSampleWorkouts
+
+    /// Programa padrão masculino — hipertrofia clássica com ênfase em peito, costas e força.
+    static let maleSampleWorkouts: [WorkoutSheet] = [
         WorkoutSheet(
-            title: "Treino A - Peito e Tríceps",
-            description: "Foco em hipertrofia do peitoral e tríceps",
+            title: "Masculino A — Peito e Tríceps",
+            description: "Hipertrofia de peitoral e tríceps — perfil masculino",
             exercises: [
-                Exercise(name: "Supino Reto", sets: 4, reps: 10, weight: 60, restSeconds: 90, muscleGroup: .chest),
-                Exercise(name: "Supino Inclinado", sets: 4, reps: 10, weight: 50, restSeconds: 90, muscleGroup: .chest),
-                Exercise(name: "Supino Declinado", sets: 3, reps: 12, weight: 55, restSeconds: 75, muscleGroup: .chest),
-                Exercise(name: "Crucifixo Reto", sets: 3, reps: 15, weight: 14, restSeconds: 60, muscleGroup: .chest),
-                Exercise(name: "Crucifixo Inclinado", sets: 3, reps: 15, weight: 12, restSeconds: 60, muscleGroup: .chest),
-                Exercise(name: "Crossover", sets: 3, reps: 15, weight: 10, restSeconds: 60, muscleGroup: .chest),
+                Exercise(name: "Supino Reto", sets: 4, reps: 8, weight: 70, restSeconds: 90, muscleGroup: .chest),
+                Exercise(name: "Supino Inclinado", sets: 4, reps: 10, weight: 55, restSeconds: 90, muscleGroup: .chest),
+                Exercise(name: "Supino Declinado", sets: 3, reps: 10, weight: 60, restSeconds: 75, muscleGroup: .chest),
+                Exercise(name: "Crucifixo Reto", sets: 3, reps: 12, weight: 16, restSeconds: 60, muscleGroup: .chest),
+                Exercise(name: "Crossover", sets: 3, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .chest),
                 Exercise(name: "Flexão de Braços", sets: 3, reps: 15, restSeconds: 60, muscleGroup: .chest),
-                Exercise(name: "Tríceps Pulley", sets: 4, reps: 12, weight: 25, restSeconds: 60, muscleGroup: .arms),
-                Exercise(name: "Tríceps Testa", sets: 3, reps: 12, weight: 20, restSeconds: 60, muscleGroup: .arms),
-                Exercise(name: "Tríceps Francês", sets: 3, reps: 12, weight: 14, restSeconds: 60, muscleGroup: .arms),
+                Exercise(name: "Tríceps Pulley", sets: 4, reps: 10, weight: 30, restSeconds: 60, muscleGroup: .arms),
+                Exercise(name: "Tríceps Testa", sets: 3, reps: 10, weight: 25, restSeconds: 60, muscleGroup: .arms),
+                Exercise(name: "Tríceps Francês", sets: 3, reps: 12, weight: 16, restSeconds: 60, muscleGroup: .arms),
                 Exercise(name: "Mergulho no Banco", sets: 3, reps: 12, restSeconds: 60, muscleGroup: .arms)
             ]
         ),
         WorkoutSheet(
-            title: "Treino B - Costas e Bíceps",
-            description: "Desenvolvimento dorsal e bíceps completo",
+            title: "Masculino B — Costas e Bíceps",
+            description: "Largura dorsal e bíceps — perfil masculino",
             exercises: [
                 Exercise(name: "Barra Fixa", sets: 4, reps: 8, restSeconds: 90, muscleGroup: .back),
-                Exercise(name: "Remada Curvada", sets: 4, reps: 10, weight: 50, restSeconds: 75, muscleGroup: .back),
-                Exercise(name: "Puxada Frontal", sets: 4, reps: 12, weight: 45, restSeconds: 75, muscleGroup: .back),
-                Exercise(name: "Remada Unilateral", sets: 3, reps: 12, weight: 22, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Pulldown Triângulo", sets: 3, reps: 12, weight: 40, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Levantamento Terra Romeno", sets: 3, reps: 10, weight: 40, restSeconds: 90, muscleGroup: .back),
-                Exercise(name: "Puxada Alta", sets: 3, reps: 15, weight: 30, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Rosca Direta", sets: 4, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .arms),
-                Exercise(name: "Rosca Martelo", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .arms),
-                Exercise(name: "Rosca Scott", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .arms),
-                Exercise(name: "Rosca Concentrada", sets: 3, reps: 12, weight: 8, restSeconds: 45, muscleGroup: .arms)
+                Exercise(name: "Remada Curvada", sets: 4, reps: 8, weight: 60, restSeconds: 90, muscleGroup: .back),
+                Exercise(name: "Puxada Frontal", sets: 4, reps: 10, weight: 50, restSeconds: 75, muscleGroup: .back),
+                Exercise(name: "Remada Unilateral", sets: 3, reps: 10, weight: 26, restSeconds: 60, muscleGroup: .back),
+                Exercise(name: "Pulldown Triângulo", sets: 3, reps: 12, weight: 45, restSeconds: 60, muscleGroup: .back),
+                Exercise(name: "Levantamento Terra", sets: 3, reps: 6, weight: 90, restSeconds: 120, muscleGroup: .fullBody),
+                Exercise(name: "Rosca Direta", sets: 4, reps: 10, weight: 16, restSeconds: 60, muscleGroup: .arms),
+                Exercise(name: "Rosca Martelo", sets: 3, reps: 10, weight: 14, restSeconds: 60, muscleGroup: .arms),
+                Exercise(name: "Rosca Scott", sets: 3, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .arms),
+                Exercise(name: "Rosca Concentrada", sets: 3, reps: 12, weight: 10, restSeconds: 45, muscleGroup: .arms)
             ]
         ),
         WorkoutSheet(
-            title: "Treino C - Pernas",
-            description: "Membros inferiores completo",
+            title: "Masculino C — Pernas",
+            description: "Força e volume de membros inferiores — perfil masculino",
             exercises: [
-                Exercise(name: "Agachamento Livre", sets: 4, reps: 10, weight: 80, restSeconds: 120, muscleGroup: .legs),
-                Exercise(name: "Leg Press 45°", sets: 4, reps: 12, weight: 150, restSeconds: 90, muscleGroup: .legs),
-                Exercise(name: "Hack Squat", sets: 3, reps: 12, weight: 100, restSeconds: 90, muscleGroup: .legs),
-                Exercise(name: "Cadeira Extensora", sets: 4, reps: 15, weight: 40, restSeconds: 60, muscleGroup: .legs),
-                Exercise(name: "Mesa Flexora", sets: 4, reps: 12, weight: 35, restSeconds: 60, muscleGroup: .legs),
-                Exercise(name: "Stiff", sets: 3, reps: 12, weight: 50, restSeconds: 75, muscleGroup: .legs),
-                Exercise(name: "Afundo", sets: 3, reps: 12, weight: 20, restSeconds: 75, muscleGroup: .legs),
-                Exercise(name: "Cadeira Adutora", sets: 3, reps: 15, weight: 50, restSeconds: 45, muscleGroup: .legs),
-                Exercise(name: "Cadeira Abdutora", sets: 3, reps: 15, weight: 45, restSeconds: 45, muscleGroup: .legs),
-                Exercise(name: "Panturrilha em Pé", sets: 4, reps: 20, weight: 80, restSeconds: 45, muscleGroup: .legs),
-                Exercise(name: "Panturrilha Sentado", sets: 4, reps: 20, weight: 50, restSeconds: 45, muscleGroup: .legs)
+                Exercise(name: "Agachamento Livre", sets: 4, reps: 8, weight: 90, restSeconds: 120, muscleGroup: .legs),
+                Exercise(name: "Leg Press 45°", sets: 4, reps: 10, weight: 180, restSeconds: 90, muscleGroup: .legs),
+                Exercise(name: "Hack Squat", sets: 3, reps: 10, weight: 120, restSeconds: 90, muscleGroup: .legs),
+                Exercise(name: "Cadeira Extensora", sets: 3, reps: 12, weight: 45, restSeconds: 60, muscleGroup: .legs),
+                Exercise(name: "Mesa Flexora", sets: 4, reps: 10, weight: 40, restSeconds: 60, muscleGroup: .legs),
+                Exercise(name: "Stiff", sets: 3, reps: 10, weight: 60, restSeconds: 75, muscleGroup: .legs),
+                Exercise(name: "Afundo", sets: 3, reps: 10, weight: 24, restSeconds: 75, muscleGroup: .legs),
+                Exercise(name: "Panturrilha em Pé", sets: 4, reps: 15, weight: 90, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Panturrilha Sentado", sets: 4, reps: 15, weight: 55, restSeconds: 45, muscleGroup: .legs)
             ]
         ),
         WorkoutSheet(
-            title: "Treino D - Trapézio e Ombros",
-            description: "Desenvolvimento de trapézio e deltoides",
+            title: "Masculino D — Ombros e Trapézio",
+            description: "Deltoides e trapézio para estrutura — perfil masculino",
             exercises: [
-                Exercise(name: "Encolhimento com Barra", sets: 4, reps: 12, weight: 60, restSeconds: 75, muscleGroup: .back),
-                Exercise(name: "Desenvolvimento Militar", sets: 4, reps: 10, weight: 40, restSeconds: 90, muscleGroup: .shoulders),
-                Exercise(name: "Elevação Lateral", sets: 4, reps: 15, weight: 10, restSeconds: 60, muscleGroup: .shoulders),
-                Exercise(name: "Remada Alta", sets: 4, reps: 12, weight: 30, restSeconds: 75, muscleGroup: .shoulders),
-                Exercise(name: "Encolhimento com Halteres", sets: 3, reps: 15, weight: 22, restSeconds: 60, muscleGroup: .back),
+                Exercise(name: "Desenvolvimento Militar", sets: 4, reps: 8, weight: 45, restSeconds: 90, muscleGroup: .shoulders),
+                Exercise(name: "Desenvolvimento com Halteres", sets: 3, reps: 10, weight: 20, restSeconds: 75, muscleGroup: .shoulders),
+                Exercise(name: "Elevação Lateral", sets: 4, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .shoulders),
                 Exercise(name: "Elevação Frontal", sets: 3, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .shoulders),
-                Exercise(name: "Crucifixo Inverso", sets: 3, reps: 15, weight: 10, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Face Pull", sets: 3, reps: 15, weight: 20, restSeconds: 60, muscleGroup: .back)
+                Exercise(name: "Remada Alta", sets: 4, reps: 10, weight: 35, restSeconds: 75, muscleGroup: .shoulders),
+                Exercise(name: "Encolhimento com Barra", sets: 4, reps: 12, weight: 70, restSeconds: 75, muscleGroup: .back),
+                Exercise(name: "Encolhimento com Halteres", sets: 3, reps: 15, weight: 26, restSeconds: 60, muscleGroup: .back),
+                Exercise(name: "Face Pull", sets: 3, reps: 15, weight: 22, restSeconds: 60, muscleGroup: .back),
+                Exercise(name: "Crucifixo Inverso", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .shoulders)
+            ]
+        )
+    ]
+
+    /// Programa padrão feminino — ênfase em glúteos, posteriores, core e postura.
+    static let femaleSampleWorkouts: [WorkoutSheet] = [
+        WorkoutSheet(
+            title: "Feminino A — Glúteos e Posteriores",
+            description: "Ativação e hipertrofia de glúteos e cadeia posterior — perfil feminino",
+            exercises: [
+                Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 4, reps: 12, weight: 40, restSeconds: 75, muscleGroup: .legs),
+                Exercise(name: "Agachamento Sumô", sets: 4, reps: 12, weight: 40, restSeconds: 90, muscleGroup: .legs),
+                Exercise(name: "Stiff", sets: 4, reps: 12, weight: 30, restSeconds: 75, muscleGroup: .legs),
+                Exercise(name: "Afundo Búlgaro", sets: 3, reps: 12, weight: 12, restSeconds: 75, muscleGroup: .legs),
+                Exercise(name: "Cadeira Abdutora", sets: 4, reps: 15, weight: 40, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Coice na Polia", sets: 3, reps: 15, weight: 15, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Mesa Flexora", sets: 3, reps: 12, weight: 25, restSeconds: 60, muscleGroup: .legs),
+                Exercise(name: "Panturrilha em Pé", sets: 3, reps: 15, weight: 40, restSeconds: 45, muscleGroup: .legs)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Feminino B — Pernas e Core",
+            description: "Quadríceps, adutores e abdômen — perfil feminino",
+            exercises: [
+                Exercise(name: "Agachamento Livre", sets: 4, reps: 12, weight: 35, restSeconds: 90, muscleGroup: .legs),
+                Exercise(name: "Leg Press 45°", sets: 4, reps: 15, weight: 80, restSeconds: 75, muscleGroup: .legs),
+                Exercise(name: "Cadeira Extensora", sets: 4, reps: 15, weight: 30, restSeconds: 60, muscleGroup: .legs),
+                Exercise(name: "Cadeira Adutora", sets: 3, reps: 15, weight: 40, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Afundo", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .legs),
+                Exercise(name: "Panturrilha Sentado", sets: 3, reps: 20, weight: 30, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Prancha", sets: 3, reps: 40, restSeconds: 45, muscleGroup: .core),
+                Exercise(name: "Abdominal Infra", sets: 3, reps: 15, restSeconds: 45, muscleGroup: .core),
+                Exercise(name: "Abdominal Oblíquo", sets: 3, reps: 20, restSeconds: 45, muscleGroup: .core),
+                Exercise(name: "Elevação de Pernas", sets: 3, reps: 12, restSeconds: 45, muscleGroup: .core)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Feminino C — Costas e Postura",
+            description: "Costas, ombros posteriores e braços leves — perfil feminino",
+            exercises: [
+                Exercise(name: "Puxada Frontal", sets: 4, reps: 12, weight: 30, restSeconds: 75, muscleGroup: .back),
+                Exercise(name: "Remada Unilateral", sets: 3, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .back),
+                Exercise(name: "Pulldown Triângulo", sets: 3, reps: 12, weight: 25, restSeconds: 60, muscleGroup: .back),
+                Exercise(name: "Remada Curvada", sets: 3, reps: 12, weight: 25, restSeconds: 75, muscleGroup: .back),
+                Exercise(name: "Face Pull", sets: 3, reps: 15, weight: 12, restSeconds: 45, muscleGroup: .back),
+                Exercise(name: "Crucifixo Inverso", sets: 3, reps: 15, weight: 6, restSeconds: 45, muscleGroup: .shoulders),
+                Exercise(name: "Elevação Lateral", sets: 3, reps: 15, weight: 6, restSeconds: 45, muscleGroup: .shoulders),
+                Exercise(name: "Rosca Direta", sets: 3, reps: 12, weight: 8, restSeconds: 45, muscleGroup: .arms),
+                Exercise(name: "Tríceps Pulley", sets: 3, reps: 12, weight: 15, restSeconds: 45, muscleGroup: .arms),
+                Exercise(name: "Prancha Lateral", sets: 3, reps: 30, restSeconds: 45, muscleGroup: .core)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Feminino D — Full Body e Ombros",
+            description: "Corpo inteiro com ênfase em ombros e core — perfil feminino",
+            exercises: [
+                Exercise(name: "Agachamento Livre", sets: 3, reps: 12, weight: 30, restSeconds: 75, muscleGroup: .legs),
+                Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 3, reps: 12, weight: 35, restSeconds: 60, muscleGroup: .legs),
+                Exercise(name: "Puxada Frontal", sets: 3, reps: 12, weight: 25, restSeconds: 60, muscleGroup: .back),
+                Exercise(name: "Desenvolvimento com Halteres", sets: 3, reps: 12, weight: 8, restSeconds: 60, muscleGroup: .shoulders),
+                Exercise(name: "Elevação Lateral", sets: 3, reps: 15, weight: 5, restSeconds: 45, muscleGroup: .shoulders),
+                Exercise(name: "Flexão de Braços", sets: 3, reps: 10, restSeconds: 60, muscleGroup: .chest),
+                Exercise(name: "Remada Unilateral", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .back),
+                Exercise(name: "Kettlebell Swing", sets: 3, reps: 15, weight: 12, restSeconds: 60, muscleGroup: .fullBody),
+                Exercise(name: "Abdominal Crunch", sets: 3, reps: 20, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Prancha", sets: 3, reps: 35, restSeconds: 40, muscleGroup: .core)
             ]
         )
     ]

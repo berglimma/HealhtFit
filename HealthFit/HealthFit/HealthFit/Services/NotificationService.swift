@@ -221,12 +221,44 @@ final class NotificationService {
         )
     }
 
-    func deliverWorkoutEndNotification(session: WorkoutSession, athleteName: String) {
+    func deliverCardioStartNotification(sessionTitle: String, athleteName: String) {
         deliverImmediately(
-            title: "Treino finalizado! 🏆",
+            title: "Cardio iniciado! 🏃",
+            body: MotivationMessages.cardioStartMessage(sessionTitle: sessionTitle, athleteName: athleteName),
+            category: "CARDIO_START",
+            identifier: "cardio_start_\(UUID().uuidString)"
+        )
+    }
+
+    func deliverMeditationStartNotification(sessionTitle: String, athleteName: String) {
+        deliverImmediately(
+            title: "Meditação iniciada 🧘",
+            body: MotivationMessages.meditationStartMessage(sessionTitle: sessionTitle, athleteName: athleteName),
+            category: "MEDITATION_START",
+            identifier: "meditation_start_\(UUID().uuidString)"
+        )
+    }
+
+    func deliverWorkoutEndNotification(session: WorkoutSession, athleteName: String) {
+        let titleLower = session.workoutTitle.lowercased()
+        let title: String
+        let category: String
+        if titleLower.hasPrefix("meditação") || titleLower.hasPrefix("meditacao") {
+            title = "Meditação concluída 🧘‍♀️"
+            category = "MEDITATION_END"
+        } else if titleLower.hasPrefix("cardio") {
+            title = "Cardio finalizado! 🏆"
+            category = "CARDIO_END"
+        } else {
+            title = "Treino finalizado! 🏆"
+            category = "WORKOUT_END"
+        }
+
+        deliverImmediately(
+            title: title,
             body: MotivationMessages.workoutEndMessage(session: session, athleteName: athleteName),
-            category: "WORKOUT_END",
-            identifier: "workout_end_\(UUID().uuidString)"
+            category: category,
+            identifier: "session_end_\(UUID().uuidString)"
         )
     }
 

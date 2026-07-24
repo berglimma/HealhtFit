@@ -5,15 +5,18 @@ struct CreateWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
 
     private let editingSheet: WorkoutSheet?
+    private let initialTargetGender: Gender?
 
     @State private var title = ""
     @State private var description = ""
     @State private var selectedFocusGroups: Set<CustomWorkoutFocusGroup> = [.chest]
     @State private var exercises: [Exercise] = []
     @State private var didSetInitialContent = false
+    @State private var targetGender: Gender = .male
 
-    init(editingSheet: WorkoutSheet? = nil) {
+    init(editingSheet: WorkoutSheet? = nil, initialTargetGender: Gender? = nil) {
         self.editingSheet = editingSheet
+        self.initialTargetGender = initialTargetGender
     }
 
     private var isEditing: Bool { editingSheet != nil }
@@ -21,6 +24,20 @@ struct CreateWorkoutView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    Picker("Perfil", selection: $targetGender) {
+                        Text("Masculino").tag(Gender.male)
+                        Text("Feminino").tag(Gender.female)
+                    }
+                    .pickerStyle(.segmented)
+                } header: {
+                    Text("Perfil")
+                } footer: {
+                    Text(targetGender == .female
+                         ? "Ficha vinculada ao programa feminino."
+                         : "Ficha vinculada ao programa masculino.")
+                }
+
                 Section {
                     Text("Selecione um ou mais grupos musculares. Os exercícios do catálogo são carregados automaticamente — remova os que não quiser.")
                         .font(.caption)
@@ -59,7 +76,8 @@ struct CreateWorkoutView: View {
                         ForEach($exercises) { $exercise in
                             CreateWorkoutExerciseRow(
                                 index: (exercises.firstIndex(where: { $0.id == exercise.id }) ?? 0) + 1,
-                                exercise: $exercise
+                                exercise: $exercise,
+                                preferredGender: targetGender
                             ) {
                                 removeExercise(exercise)
                             }
@@ -78,6 +96,8 @@ struct CreateWorkoutView: View {
             }
             .navigationTitle(isEditing ? "Editar Ficha" : "Nova Ficha")
             .navigationBarTitleDisplayMode(.inline)
+            .scrollDismissesKeyboard(.interactively)
+            .numericKeyboardDismiss()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") { dismiss() }
@@ -97,11 +117,13 @@ struct CreateWorkoutView: View {
                     title = sheet.title
                     description = sheet.description
                     exercises = sheet.exercises
+                    targetGender = sheet.targetGender ?? .male
                     selectedFocusGroups = inferredFocusGroups(from: sheet.exercises)
                     if selectedFocusGroups.isEmpty {
                         selectedFocusGroups = [.chest]
                     }
                 } else {
+                    targetGender = initialTargetGender ?? .male
                     reloadExercisesFromSelection()
                     updateDefaultMetadataIfNeeded()
                 }
@@ -193,13 +215,15 @@ struct CreateWorkoutView: View {
             existing.title = title
             existing.description = description
             existing.exercises = exercises
+            existing.targetGender = targetGender
             workoutStore.updateWorkoutSheet(existing)
         } else {
             let sheet = WorkoutSheet(
                 title: title,
                 description: description,
                 exercises: exercises,
-                isUserCreated: true
+                isUserCreated: true,
+                targetGender: targetGender
             )
             workoutStore.addWorkoutSheet(sheet)
         }
@@ -214,6 +238,7 @@ struct CreateWorkoutView: View {
 private struct CreateWorkoutExerciseRow: View {
     let index: Int
     @Binding var exercise: Exercise
+    var preferredGender: Gender? = nil
     let onRemove: () -> Void
 
     private var focusLabel: String? {
@@ -249,7 +274,12 @@ private struct CreateWorkoutExerciseRow: View {
                     }
                 }
 
-                ExerciseExecutionGuideView(steps: exercise.executionGuide, exercise: exercise, compact: true)
+                ExerciseExecutionGuideView(
+                    steps: exercise.executionGuide,
+                    exercise: exercise,
+                    preferredGender: preferredGender,
+                    compact: true
+                )
 
                 Button(role: .destructive, action: onRemove) {
                     Label("Remover da ficha", systemImage: "trash")

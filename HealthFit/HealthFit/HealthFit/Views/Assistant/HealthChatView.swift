@@ -183,7 +183,7 @@ struct HealthChatView: View {
                     Button {
                         draft = ""
                         isInputFocused = false
-                        assistant.send(question, context: context)
+                        assistant.send(question, context: context, workoutStore: workoutStore)
                     } label: {
                         Text(question)
                             .font(.caption.weight(.medium))
@@ -217,6 +217,9 @@ struct HealthChatView: View {
         if assistant.isInDailyMorningCheckIn {
             return DailyMorningCheckInEngine.feelingQuickReplies
         }
+        if assistant.isInWorkoutBuilder {
+            return assistant.workoutBuilderQuickReplies
+        }
         return HealthAssistantEngine.suggestedQuestions
     }
 
@@ -226,6 +229,9 @@ struct HealthChatView: View {
                 return "Como está seu corpo e mente agora?"
             }
             return "Conte como foi seu dia..."
+        }
+        if assistant.isInWorkoutBuilder {
+            return "Responda à pergunta do IAssistente..."
         }
         if assistant.isInGuidedCheckIn {
             return "Conte como você está se sentindo..."
@@ -253,7 +259,7 @@ struct HealthChatView: View {
                 let text = draft
                 draft = ""
                 isInputFocused = false
-                assistant.send(text, context: context)
+                assistant.send(text, context: context, workoutStore: workoutStore)
             } label: {
                 Image(systemName: "paperplane.fill")
                     .font(.title3)

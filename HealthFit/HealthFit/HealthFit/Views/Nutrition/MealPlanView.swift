@@ -9,10 +9,6 @@ struct MealPlanView: View {
     @State private var selectedOption = 0
     @State private var showShoppingList = false
     @State private var nutritionTab = 0
-    @State private var weightText = ""
-    @State private var heightText = ""
-    @State private var ageText = ""
-    @State private var selectedGender: Gender = .male
     @State private var caloricDeficit = 400
 
     private var selectedGoal: FitnessGoal {
@@ -25,16 +21,6 @@ struct MealPlanView: View {
 
     private var previewProfile: UserProfile? {
         guard var user = authService.currentUser else { return nil }
-        if let weight = Double(weightText.replacingOccurrences(of: ",", with: ".")) {
-            user.weight = weight
-        }
-        if let height = Double(heightText.replacingOccurrences(of: ",", with: ".")) {
-            user.height = height
-        }
-        if let age = Int(ageText) {
-            user.age = age
-        }
-        user.gender = selectedGender
         user.goal = selectedGoal
         user.biotype = selectedBiotype
         user.caloricDeficit = caloricDeficit
@@ -67,6 +53,7 @@ struct MealPlanView: View {
                 }
             }
             .scrollDismissesKeyboard(.interactively)
+            .numericKeyboardDismiss()
             .background(AppTheme.background)
             .navigationTitle("Nutrição")
             .toolbar {
@@ -95,16 +82,16 @@ struct MealPlanView: View {
                 syncFromProfile()
             }
             .onChange(of: authService.currentUser?.weight) { _, _ in
-                syncMetricFieldsFromProfile()
+                regeneratePlanFromProfileIfPossible()
             }
             .onChange(of: authService.currentUser?.height) { _, _ in
-                syncMetricFieldsFromProfile()
+                regeneratePlanFromProfileIfPossible()
             }
             .onChange(of: authService.currentUser?.age) { _, _ in
-                syncMetricFieldsFromProfile()
+                regeneratePlanFromProfileIfPossible()
             }
             .onChange(of: authService.currentUser?.gender) { _, _ in
-                syncMetricFieldsFromProfile()
+                regeneratePlanFromProfileIfPossible()
             }
             .onChange(of: authService.currentUser?.caloricDeficit) { _, _ in
                 if let deficit = authService.currentUser?.caloricDeficit {
@@ -162,33 +149,11 @@ struct MealPlanView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Seus Dados")
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.textPrimary)
-
-                HStack(spacing: 12) {
-                    MetricField(label: "Peso", unit: "kg", text: $weightText)
-                    MetricField(label: "Altura", unit: "cm", text: $heightText)
-                }
-
-                HStack(spacing: 12) {
-                    MetricField(label: "Idade", unit: "anos", text: $ageText, keyboard: .numberPad)
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Sexo")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                        Picker("Sexo", selection: $selectedGender) {
-                            ForEach(Gender.allCases) { gender in
-                                Text(gender.rawValue).tag(gender)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                    }
-                }
-            }
-
             if let profile = previewProfile {
+                Text("Dados físicos vêm do Perfil (peso, altura, idade e sexo).")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+
                 caloricDeficitSection(profile: profile)
 
                 HStack(spacing: 12) {
@@ -226,8 +191,8 @@ struct MealPlanView: View {
             } label: {
                 Label("Atualizar Cardápio", systemImage: "arrow.triangle.2.circlepath")
             }
-            .buttonStyle(PrimaryButtonStyle(isEnabled: isMetricsValid && mealPlanService.customMenuSelection.isReadyToBuild))
-            .disabled(!isMetricsValid || !mealPlanService.customMenuSelection.isReadyToBuild)
+            .buttonStyle(PrimaryButtonStyle(isEnabled: hasProfileMetrics && mealPlanService.customMenuSelection.isReadyToBuild))
+            .disabled(!hasProfileMetrics || !mealPlanService.customMenuSelection.isReadyToBuild)
         }
         .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
         .adaptiveContentWidth()
@@ -415,11 +380,11 @@ struct MealPlanView: View {
                 } label: {
                     Label("Salvar no Plano Semanal", systemImage: "checkmark.circle.fill")
                 }
-                .buttonStyle(PrimaryButtonStyle(isEnabled: isMetricsValid))
-                .disabled(!isMetricsValid)
+                .buttonStyle(PrimaryButtonStyle(isEnabled: hasProfileMetrics))
+                .disabled(!hasProfileMetrics)
                 .padding(.top, 8)
             } else {
-                Text("Complete seus dados acima para montar o cardápio.")
+                Text("Complete Seus Dados no Perfil (peso, altura, idade e sexo) para montar o cardápio.")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.textSecondary)
                     .padding(.vertical, 24)
@@ -517,16 +482,15 @@ struct MealPlanView: View {
         mealPlanService.updateLactoseTolerance(tolerance, profile: previewProfile ?? authService.currentUser)
     }
 
-    private var isMetricsValid: Bool {
-        guard let weight = Double(weightText.replacingOccurrences(of: ",", with: ".")),
-              let height = Double(heightText.replacingOccurrences(of: ",", with: ".")),
-              let age = Int(ageText) else { return false }
-        return weight >= 30 && weight <= 300 && height >= 100 && height <= 250 && age >= 14 && age <= 100
+    private var hasProfileMetrics: Bool {
+        guard let user = authService.currentUser else { return false }
+        return user.weight >= 30 && user.weight <= 300
+            && user.height >= 100 && user.height <= 250
+            && user.age >= 14 && user.age <= 100
     }
 
     private func syncFromProfile() {
         guard let user = authService.currentUser else { return }
-        syncMetricFieldsFromProfile()
         caloricDeficit = min(user.caloricDeficit, UserProfile.maxCaloricDeficit)
 
         if mealPlanService.basalMetabolicRate == 0 {
@@ -537,12 +501,9 @@ struct MealPlanView: View {
         }
     }
 
-    private func syncMetricFieldsFromProfile() {
+    private func regeneratePlanFromProfileIfPossible() {
         guard let user = authService.currentUser else { return }
-        weightText = String(format: "%.1f", user.weight)
-        heightText = String(format: "%.0f", user.height)
-        ageText = "\(user.age)"
-        selectedGender = user.gender
+        mealPlanService.regeneratePlanIfNeeded(for: user)
     }
 
     private var isDeficitEnabled: Bool {
@@ -667,15 +628,8 @@ struct MealPlanView: View {
 
     private func applyMetricsAndRegenerate() {
         guard mealPlanService.customMenuSelection.isReadyToBuild,
-              var user = authService.currentUser,
-              let weight = Double(weightText.replacingOccurrences(of: ",", with: ".")),
-              let height = Double(heightText.replacingOccurrences(of: ",", with: ".")),
-              let age = Int(ageText) else { return }
+              var user = authService.currentUser else { return }
 
-        user.weight = weight
-        user.height = height
-        user.age = age
-        user.gender = selectedGender
         user.goal = selectedGoal
         user.biotype = selectedBiotype
         user.caloricDeficit = caloricDeficit

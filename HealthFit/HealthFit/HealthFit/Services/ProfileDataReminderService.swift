@@ -22,9 +22,9 @@ final class ProfileDataReminderService: ObservableObject {
         var message: String {
             switch self {
             case .firstFill:
-                return "No primeiro acesso, preencha Perfil e Nutrição (peso, altura, idade, biotipo e, em Nutrição, o objetivo) para personalizar treinos e cardápio."
+                return "No primeiro acesso, preencha Perfil (peso, altura, idade e sexo) e Nutrição (biotipo e objetivo) para personalizar treinos e cardápio."
             case .refreshDue:
-                return "Já se passaram 30 dias desde a última atualização. Revise Perfil e Nutrição (incluindo o objetivo) para manter metas e calorias corretas."
+                return "Já se passaram 30 dias desde a última atualização. Revise Perfil e Nutrição para manter metas e calorias corretas."
             }
         }
     }

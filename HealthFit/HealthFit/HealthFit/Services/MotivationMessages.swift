@@ -59,8 +59,53 @@ enum MotivationMessages {
         "\(athleteName), \(workoutStartFocusMessage) Treino: \(workoutTitle)."
     }
 
+    static let cardioStart: [String] = [
+        "Cada passo te fortalece. Respire, mantenha o ritmo e vá além do que imaginava!",
+        "Hoje o coração comanda: intensidade com inteligência. Você nasce pra se superar!",
+        "Movimento é liberdade. Queime dúvidas, acelere conquistas — o cardio é seu aliado!",
+        "Sua resistência cresce a cada minuto. Foque no agora e deixe o suor contar a história!",
+        "Disciplina em movimento! Aqueça, acelere e prove pra você mesmo do que é capaz!",
+        "Corpo em marcha, mente no objetivo. Este cardio é investimento no seu futuro!",
+        "Não espere motivação — crie impulso. Um ritmo de cada vez até a meta!",
+        "Você já começou: isso é metade da vitória. Agora sustente o fôlego e avance!"
+    ]
+
+    static let meditationStart: [String] = [
+        "A quietude não é ausência — é presença plena. Encontre-se neste silêncio.",
+        "Como a água reflete o céu, a mente calma reflete a verdade. Observe sem julgar.",
+        "Quem domina a respiração começa a dominar a si mesmo. Inspire paz, expire o resto.",
+        "O presente é o único tempo que existe. Nesta meditação, habite apenas o agora.",
+        "A sabedoria nasce do silêncio interior. Deixe pensamentos passarem como nuvens.",
+        "Não busque esvaziar a mente — apenas não se apegue ao que surge. Observe e solte.",
+        "Em cada respiração há um recomeço. Cultive serenidade; o mundo espera do lado de fora.",
+        "Conhece-te a ti mesmo no silêncio. Esta pausa é força, não fuga."
+    ]
+
+    static func cardioStartMessage(sessionTitle: String, athleteName: String) -> String {
+        let tip = cardioStart[abs(sessionTitle.hashValue) % cardioStart.count]
+        return "\(athleteName), \(tip) Sessão: \(sessionTitle)."
+    }
+
+    static func meditationStartMessage(sessionTitle: String, athleteName: String) -> String {
+        let tip = meditationStart[abs(sessionTitle.hashValue) % meditationStart.count]
+        return "\(athleteName), \(tip) Sessão: \(sessionTitle)."
+    }
+
     static func workoutEndMessage(session: WorkoutSession, athleteName: String) -> String {
         let duration = DurationFormatting.format(seconds: Int(session.duration))
+        let title = session.workoutTitle.lowercased()
+
+        if title.hasPrefix("meditação") || title.hasPrefix("meditacao") {
+            return "\(athleteName), meditação concluída. \(session.workoutTitle) — \(duration). Que a clareza desta pausa acompanhe o seu dia."
+        }
+
+        if title.hasPrefix("cardio") {
+            let calories = session.caloriesBurned > 0
+                ? ", \(Int(session.caloriesBurned)) kcal"
+                : ""
+            return "\(athleteName), cardio finalizado! \(session.workoutTitle) — \(duration)\(calories). Resistência construída, mente reforçada! 🏃"
+        }
+
         let exercises = "\(session.completedExercises)/\(session.totalExercises)"
         return "\(athleteName), treino finalizado! \(session.workoutTitle) — \(duration), \(exercises) exercícios concluídos. Parabéns pelo esforço! 🏆"
     }

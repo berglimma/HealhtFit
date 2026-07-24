@@ -202,6 +202,10 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
     var createdAt: Date
     var isActive: Bool
     var isUserCreated: Bool
+    /// Perfil do programa (masculino/feminino). Padrões e personalizados filtrados por isso.
+    var targetGender: Gender?
+    /// Ficha gerada pelo IAssistente (não criada manualmente em Nova Ficha).
+    var createdByAssistant: Bool
 
     init(
         id: UUID = UUID(),
@@ -211,7 +215,9 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         assignedTo: String? = nil,
         createdAt: Date = .now,
         isActive: Bool = true,
-        isUserCreated: Bool = false
+        isUserCreated: Bool = false,
+        targetGender: Gender? = nil,
+        createdByAssistant: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -221,10 +227,12 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         self.createdAt = createdAt
         self.isActive = isActive
         self.isUserCreated = isUserCreated
+        self.targetGender = targetGender ?? Self.inferredGender(from: title)
+        self.createdByAssistant = createdByAssistant
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, title, description, exercises, assignedTo, createdAt, isActive, isUserCreated
+        case id, title, description, exercises, assignedTo, createdAt, isActive, isUserCreated, targetGender, createdByAssistant
     }
 
     init(from decoder: Decoder) throws {
@@ -237,6 +245,9 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
         isUserCreated = try container.decodeIfPresent(Bool.self, forKey: .isUserCreated) ?? false
+        targetGender = try container.decodeIfPresent(Gender.self, forKey: .targetGender)
+            ?? Self.inferredGender(from: title)
+        createdByAssistant = try container.decodeIfPresent(Bool.self, forKey: .createdByAssistant) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -249,6 +260,19 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(isActive, forKey: .isActive)
         try container.encode(isUserCreated, forKey: .isUserCreated)
+        try container.encodeIfPresent(targetGender, forKey: .targetGender)
+        try container.encode(createdByAssistant, forKey: .createdByAssistant)
+    }
+
+    var resolvedProgramGender: Gender? {
+        targetGender ?? Self.inferredGender(from: title)
+    }
+
+    private static func inferredGender(from title: String) -> Gender? {
+        let lower = title.lowercased()
+        if lower.hasPrefix("masculino") { return .male }
+        if lower.hasPrefix("feminino") { return .female }
+        return nil
     }
 
     var totalExercises: Int { exercises.count }

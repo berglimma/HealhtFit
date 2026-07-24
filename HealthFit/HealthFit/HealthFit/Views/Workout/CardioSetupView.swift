@@ -384,8 +384,8 @@ struct CardioSetupView: View {
                 targetCalories: config.targetCalories
             )
             let athleteName = authService.currentUser?.greetingName ?? "Atleta"
-            NotificationService.shared.deliverWorkoutStartNotification(
-                workoutTitle: config.title,
+            NotificationService.shared.deliverCardioStartNotification(
+                sessionTitle: config.title,
                 athleteName: athleteName
             )
             showActiveCardio = true

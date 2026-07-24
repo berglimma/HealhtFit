@@ -39,6 +39,7 @@ enum HealthAssistantEngine {
         "Não use ferramentas de IA (incluindo este assistente) para diagnóstico, tratamento ou decisão médica."
 
     static let suggestedQuestions: [String] = [
+        "Montar treino sem personal",
         "Qual é meu IMC?",
         "O que é ectomorfo?",
         "O que é mesomorfo?",
@@ -975,16 +976,49 @@ enum HealthAssistantEngine {
 
     private static let workoutTopics: [HealthAssistantTopic] = [
         HealthAssistantTopic(
+            keywords: [
+                "montar treino", "criar treino", "gerar treino", "montar ficha", "criar ficha", "gerar ficha",
+                "treino sem personal", "nao tenho personal", "não tenho personal", "sem personal",
+                "ficha personalizada", "treino pelo assistente", "sugestao de treino", "sugestão de treino"
+            ],
+            respond: { ctx in
+                if ctx.user?.hasPersonalTrainer == true {
+                    let name = ctx.user?.personalTrainerName.isEmpty == false
+                        ? ctx.user!.personalTrainerName
+                        : "seu personal"
+                    return """
+                    Você tem personal cadastrado (\(name)). O ideal é seguir a ficha prescrita em Treinos.
+
+                    Se mesmo assim quiser uma sugestão educativa do IAssistente, diga: “montar treino mesmo assim”.
+
+                    \(AssistantWorkoutBuilder.professionalDisclaimer)
+
+                    \(healthSafetyDisclaimer)
+                    """
+                }
+                return """
+                Posso montar uma sugestão de treino para quem não tem personal.
+
+                Digite “montar treino” (ou toque na sugestão) para começarmos: escolhemos perfil masculino/feminino e o foco (massa, resistência ou perda de gordura).
+
+                \(AssistantWorkoutBuilder.professionalDisclaimer)
+                """
+            }
+        ),
+        HealthAssistantTopic(
             keywords: ["treino", "musculacao", "musculação", "forca", "força", "exercicio", "exercício", "academia", "ficha"],
             respond: { ctx in
                 let goal = ctx.user?.goal ?? .maintenance
+                let tip = (ctx.user?.hasPersonalTrainer == true)
+                    ? "No app: Treinos → Musculação. Escolha a ficha do seu plano."
+                    : "Sem personal? Peça “montar treino” ao IAssistente para uma sugestão personalizada (sempre valide com um profissional de Educação Física)."
                 return """
                 Treino de musculação (força) ganha/preserva massa muscular, acelera metabolismo e melhora composição corporal.
 
                 Para \(goal.rawValue):
                 \(goalTrainingSummary(goal))
 
-                No app: Treinos → Musculação. Escolha uma ficha, registre séries e envie relatório ao personal.
+                \(tip)
                 """
             }
         ),
@@ -1471,6 +1505,12 @@ final class HealthAssistantService: ObservableObject {
     @Published private(set) var messages: [HealthChatMessage] = []
     @Published private(set) var isTyping = false
 
+    private enum WorkoutBuilderPhase {
+        case askingGender
+        case askingFocus
+        case confirming
+    }
+
     private var replyTask: Task<Void, Never>?
     private var hasAppearedOnce = false
     private(set) var lastUserInteractionAt = Date()
@@ -1480,7 +1520,11 @@ final class HealthAssistantService: ObservableObject {
     private var isDailyMorningCheckInActive = false
     private var isDailyEveningCheckInActive = false
     private var lastEveningDayFeeling: DailyEveningDayFeeling?
+    private var workoutBuilderPhase: WorkoutBuilderPhase?
+    private var draftWorkoutGender: Gender?
+    private var draftWorkoutFocus: AssistantWorkoutGoalFocus?
     private static let replyDelay: Duration = .seconds(3)
+    private static let workoutBuilderReplyDelay: Duration = .seconds(1)
     private static let idleReturnThreshold: TimeInterval = 180
 
     private func deliverAssistantMessage(_ text: String) {
@@ -1501,8 +1545,25 @@ final class HealthAssistantService: ObservableObject {
         isDailyEveningCheckInActive || DailyEveningCheckInService.shared.isAwaitingReply
     }
 
+    var isInWorkoutBuilder: Bool {
+        workoutBuilderPhase != nil
+    }
+
     var isInGuidedCheckIn: Bool {
-        isInPostWorkoutCheckIn || isInDailyMorningCheckIn || isInDailyEveningCheckIn
+        isInPostWorkoutCheckIn || isInDailyMorningCheckIn || isInDailyEveningCheckIn || isInWorkoutBuilder
+    }
+
+    var workoutBuilderQuickReplies: [String] {
+        switch workoutBuilderPhase {
+        case .askingGender:
+            return AssistantWorkoutBuilder.quickGenderReplies
+        case .askingFocus:
+            return AssistantWorkoutBuilder.quickFocusReplies
+        case .confirming:
+            return AssistantWorkoutBuilder.quickConfirmReplies
+        case .none:
+            return []
+        }
     }
 
     func bootstrap(context: HealthAssistantContext) {
@@ -1539,7 +1600,7 @@ final class HealthAssistantService: ObservableObject {
         ))
     }
 
-    func send(_ question: String, context: HealthAssistantContext) {
+    func send(_ question: String, context: HealthAssistantContext, workoutStore: WorkoutStore? = nil) {
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isTyping else { return }
 
@@ -1564,6 +1625,16 @@ final class HealthAssistantService: ObservableObject {
             return
         }
 
+        if isInWorkoutBuilder {
+            handleWorkoutBuilderReply(trimmed, context: context, workoutStore: workoutStore)
+            return
+        }
+
+        if AssistantWorkoutBuilder.detectsWorkoutBuildIntent(trimmed) {
+            beginWorkoutBuilderFlow(context: context, forceDespitePersonal: AssistantWorkoutBuilder.detectsForceBuildDespitePersonal(trimmed))
+            return
+        }
+
         isTyping = true
         replyTask = Task {
             do {
@@ -1571,6 +1642,168 @@ final class HealthAssistantService: ObservableObject {
                 guard !Task.isCancelled else { return }
                 let answer = HealthAssistantEngine.answer(for: trimmed, context: context)
                 deliverAssistantMessage(answer)
+                isTyping = false
+            } catch {
+                isTyping = false
+            }
+        }
+    }
+
+    private func resetWorkoutBuilderDraft() {
+        workoutBuilderPhase = nil
+        draftWorkoutGender = nil
+        draftWorkoutFocus = nil
+    }
+
+    private func beginWorkoutBuilderFlow(context: HealthAssistantContext, forceDespitePersonal: Bool) {
+        if context.user?.hasPersonalTrainer == true, !forceDespitePersonal {
+            deliverDelayedWorkoutBuilderMessage("""
+            Você tem personal cadastrado\(context.user?.personalTrainerName.isEmpty == false ? " (\(context.user!.personalTrainerName))" : ""). \
+            O ideal é seguir a ficha do profissional em Treinos.
+
+            Se quiser uma sugestão educativa do IAssistente mesmo assim, diga: “montar treino mesmo assim”.
+
+            \(AssistantWorkoutBuilder.professionalDisclaimer)
+            """)
+            return
+        }
+
+        workoutBuilderPhase = .askingGender
+        draftWorkoutGender = nil
+        draftWorkoutFocus = nil
+
+        let name = context.user?.greetingName ?? ""
+        let greeting = name.isEmpty ? "" : "\(name), "
+
+        deliverDelayedWorkoutBuilderMessage("""
+        \(greeting)posso montar uma sugestão de treino para quem não tem personal (ou quer uma referência educativa).
+
+        \(AssistantWorkoutBuilder.professionalDisclaimer)
+
+        Primeiro: deseja treino **Masculino** ou **Feminino**?
+        """)
+    }
+
+    private func handleWorkoutBuilderReply(
+        _ text: String,
+        context: HealthAssistantContext,
+        workoutStore: WorkoutStore?
+    ) {
+        switch workoutBuilderPhase {
+        case .askingGender:
+            guard let gender = AssistantWorkoutBuilder.parseGender(from: text) else {
+                deliverDelayedWorkoutBuilderMessage(
+                    "Não entendi o perfil. Responda **Masculino** ou **Feminino**."
+                )
+                return
+            }
+            draftWorkoutGender = gender
+            workoutBuilderPhase = .askingFocus
+            deliverDelayedWorkoutBuilderMessage("""
+            Perfil \(gender == .female ? "feminino" : "masculino") selecionado.
+
+            Qual o foco eficaz do treino?
+            • Ganho de massa
+            • Resistência
+            • Perda de gordura
+            """)
+
+        case .askingFocus:
+            guard let focus = AssistantWorkoutGoalFocus.parse(from: text) else {
+                deliverDelayedWorkoutBuilderMessage(
+                    "Escolha um foco: **Ganho de massa**, **Resistência** ou **Perda de gordura**."
+                )
+                return
+            }
+            draftWorkoutFocus = focus
+            workoutBuilderPhase = .confirming
+
+            guard let profile = context.user, AssistantWorkoutBuilder.hasRequiredProfileData(profile) else {
+                resetWorkoutBuilderDraft()
+                let gaps = AssistantWorkoutBuilder.profileGaps(for: context.user).map { "• \($0)" }.joined(separator: "\n")
+                deliverDelayedWorkoutBuilderMessage("""
+                Antes de montar, preciso dos seus dados básicos atualizados.
+
+                \(gaps.isEmpty ? "• Complete peso, altura e idade em Perfil." : gaps)
+
+                Atualize em **Perfil** (e biotipo em **Nutrição**) e diga de novo “montar treino”.
+
+                \(AssistantWorkoutBuilder.professionalDisclaimer)
+                """)
+                return
+            }
+
+            deliverDelayedWorkoutBuilderMessage(
+                AssistantWorkoutBuilder.confirmationSummary(
+                    gender: draftWorkoutGender ?? .male,
+                    focus: focus,
+                    profile: profile
+                )
+            )
+
+        case .confirming:
+            if AssistantWorkoutBuilder.isNegative(text) {
+                resetWorkoutBuilderDraft()
+                deliverDelayedWorkoutBuilderMessage(
+                    "Tudo bem — cancelei a criação. Quando quiser, diga “montar treino” novamente."
+                )
+                return
+            }
+
+            guard AssistantWorkoutBuilder.isAffirmative(text) else {
+                deliverDelayedWorkoutBuilderMessage(
+                    "Para continuar, responda **Sim, autorizo** ou **Não, cancelar**."
+                )
+                return
+            }
+
+            guard let gender = draftWorkoutGender,
+                  let focus = draftWorkoutFocus,
+                  let profile = context.user,
+                  AssistantWorkoutBuilder.hasRequiredProfileData(profile) else {
+                resetWorkoutBuilderDraft()
+                deliverDelayedWorkoutBuilderMessage(
+                    "Faltam dados do perfil. Atualize Perfil/Nutrição e peça “montar treino” de novo."
+                )
+                return
+            }
+
+            guard let workoutStore else {
+                resetWorkoutBuilderDraft()
+                deliverDelayedWorkoutBuilderMessage(
+                    "Não consegui salvar a ficha agora. Tente novamente em instantes."
+                )
+                return
+            }
+
+            let sheet = AssistantWorkoutBuilder.buildSheet(gender: gender, focus: focus, profile: profile)
+            workoutStore.addWorkoutSheet(sheet)
+            resetWorkoutBuilderDraft()
+
+            let program = gender == .female ? "Feminino" : "Masculino"
+            deliverDelayedWorkoutBuilderMessage("""
+            Pronto! Criei a ficha **\(sheet.title)** com \(sheet.totalExercises) exercícios.
+
+            Onde encontrar: **Treinos → Musculação → \(program) → Personalizados** (badge IAssistente).
+
+            \(AssistantWorkoutBuilder.professionalDisclaimer)
+
+            \(HealthAssistantEngine.healthSafetyDisclaimer)
+            """)
+
+        case .none:
+            break
+        }
+    }
+
+    private func deliverDelayedWorkoutBuilderMessage(_ text: String) {
+        isTyping = true
+        replyTask?.cancel()
+        replyTask = Task {
+            do {
+                try await Task.sleep(for: Self.workoutBuilderReplyDelay)
+                guard !Task.isCancelled else { return }
+                deliverAssistantMessage(text)
                 isTyping = false
             } catch {
                 isTyping = false
@@ -1902,6 +2135,7 @@ final class HealthAssistantService: ObservableObject {
         lastEveningDayFeeling = nil
         lastUserMessageAt = nil
         inactivityFollowUpDelivered = false
+        resetWorkoutBuilderDraft()
 
         if let checkIn = PostWorkoutCheckInService.shared.dueCheckIn {
             beginPostWorkoutCheckInIfNeeded(checkIn: checkIn, context: context)

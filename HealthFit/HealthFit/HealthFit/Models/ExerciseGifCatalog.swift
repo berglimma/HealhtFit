@@ -2,18 +2,33 @@ import Foundation
 
 enum ExerciseGifCatalog {
     /// ExerciseGymGifsDB — 1.300+ GIFs demonstrativos via jsDelivr CDN.
+    /// Poucos arquivos são rotulados como `*-female`; quando o programa é feminino,
+    /// priorizamos esses e variantes mais alinhadas a glúteos/pernas.
     static let cdnBaseURL = "https://cdn.jsdelivr.net/gh/JahelCuadrado/ExerciseGymGifsDB@main/"
 
-    static func gifURL(for exercise: Exercise) -> URL? {
-        remoteGifURL(for: exercise) ?? bundledGifURL(for: exercise)
+    static func gifURL(for exercise: Exercise, preferredGender: Gender? = nil) -> URL? {
+        remoteGifURL(for: exercise, preferredGender: preferredGender)
+            ?? bundledGifURL(for: exercise)
     }
 
-    static func remoteGifURL(for exercise: Exercise) -> URL? {
-        remoteGifURL(forExerciseName: exercise.name, muscleGroup: exercise.muscleGroup)
+    static func remoteGifURL(for exercise: Exercise, preferredGender: Gender? = nil) -> URL? {
+        remoteGifURL(
+            forExerciseName: exercise.name,
+            muscleGroup: exercise.muscleGroup,
+            preferredGender: preferredGender
+        )
     }
 
-    static func remoteGifURL(forExerciseName name: String, muscleGroup: MuscleGroup) -> URL? {
-        guard let filePath = filePath(forExerciseName: name, muscleGroup: muscleGroup) else {
+    static func remoteGifURL(
+        forExerciseName name: String,
+        muscleGroup: MuscleGroup,
+        preferredGender: Gender? = nil
+    ) -> URL? {
+        guard let filePath = filePath(
+            forExerciseName: name,
+            muscleGroup: muscleGroup,
+            preferredGender: preferredGender
+        ) else {
             return nil
         }
         return URL(string: "\(cdnBaseURL)\(filePath)")
@@ -31,7 +46,15 @@ enum ExerciseGifCatalog {
         return muscleGroup.bundleResourceName
     }
 
-    static func filePath(forExerciseName name: String, muscleGroup: MuscleGroup) -> String? {
+    static func filePath(
+        forExerciseName name: String,
+        muscleGroup: MuscleGroup,
+        preferredGender: Gender? = nil
+    ) -> String? {
+        if preferredGender == .female, let female = femaleExerciseFilePaths[name] {
+            return female
+        }
+
         if let exact = exerciseFilePaths[name] {
             return exact
         }
@@ -40,10 +63,22 @@ enum ExerciseGifCatalog {
             .lowercased()
             .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
 
+        if preferredGender == .female {
+            for rule in femaleKeywordFilePaths {
+                if rule.keywords.contains(where: { normalized.contains($0) }) {
+                    return rule.filePath
+                }
+            }
+        }
+
         for rule in keywordFilePaths {
             if rule.keywords.contains(where: { normalized.contains($0) }) {
                 return rule.filePath
             }
+        }
+
+        if preferredGender == .female, let fallback = femaleGroupFallbackFilePaths[muscleGroup] {
+            return fallback
         }
 
         return groupFallbackFilePaths[muscleGroup]
@@ -78,6 +113,10 @@ enum ExerciseGifCatalog {
         (["rosca"], "biceps/barbell-curl.gif"),
         (["remada"], "upper-back/barbell-bent-over-row.gif"),
         (["puxada", "pulldown", "barra fixa"], "lats/cable-pulldown.gif"),
+        (["hip thrust", "elevacao pelvica", "elevação pélvica"], "glutes/resistance-band-hip-thrusts-on-knees-female.gif"),
+        (["agachamento sumo", "agachamento sumô"], "glutes/smith-sumo-squat.gif"),
+        (["afundo bulgaro", "afundo búlgaro"], "quads/dumbbell-single-leg-split-squat.gif"),
+        (["coice"], "glutes/cable-pull-through-with-rope.gif"),
         (["agachamento", "leg press", "hack"], "glutes/barbell-full-squat.gif"),
         (["extensora", "flexora", "stiff", "afundo", "adutora", "abdutora"], "quads/lever-leg-extension.gif"),
         (["panturrilha"], "calves/lever-standing-calf-raise.gif"),
@@ -86,6 +125,47 @@ enum ExerciseGifCatalog {
         (["face pull"], "delts/cable-standing-rear-delt-row-with-rope.gif"),
         (["abdominal", "prancha", "mountain", "russian"], "abs/crunch.gif"),
         (["burpee", "thruster", "kettlebell", "farmer", "terra"], "glutes/barbell-deadlift.gif"),
+    ]
+
+    /// GIFs rotulados `*-female` no CDN + variantes com foco em glúteos/pernas.
+    private static let femaleExerciseFilePaths: [String: String] = [
+        "Elevação Pélvica (Hip Thrust)": "glutes/resistance-band-hip-thrusts-on-knees-female.gif",
+        "Agachamento Sumô": "glutes/smith-sumo-squat.gif",
+        "Afundo Búlgaro": "quads/dumbbell-single-leg-split-squat.gif",
+        "Coice na Polia": "glutes/cable-pull-through-with-rope.gif",
+        "Stiff": "glutes/barbell-romanian-deadlift.gif",
+        "Afundo": "glutes/dumbbell-lunge.gif",
+        "Cadeira Abdutora": "abductors/lever-seated-hip-abduction.gif",
+        "Cadeira Adutora": "adductors/lever-seated-hip-adduction.gif",
+        "Agachamento Livre": "glutes/barbell-full-squat.gif",
+        "Leg Press 45°": "glutes/sled-45-leg-press.gif",
+        "Elevação de Pernas": "abs/twisted-leg-raise-female.gif",
+        "Abdominal Infra": "abs/barbell-sitted-alternate-leg-raise-female.gif",
+        "Abdominal Oblíquo": "abs/twisted-leg-raise-female.gif",
+        "Remada Unilateral": "upper-back/dumbbell-reverse-grip-row-female.gif",
+        "Remada Curvada": "upper-back/dumbbell-reverse-grip-row-female.gif",
+        "Kettlebell Swing": "glutes/kettlebell-swing.gif",
+    ]
+
+    private static let femaleKeywordFilePaths: [(keywords: [String], filePath: String)] = [
+        (["hip thrust", "elevacao pelvica", "elevação pélvica", "glute bridge"], "glutes/resistance-band-hip-thrusts-on-knees-female.gif"),
+        (["sumo"], "glutes/smith-sumo-squat.gif"),
+        (["bulgaro", "búlgaro", "split squat"], "quads/dumbbell-single-leg-split-squat.gif"),
+        (["coice", "kickback gluteo", "kickback glúteo"], "glutes/cable-pull-through-with-rope.gif"),
+        (["elevacao de pernas", "elevação de pernas"], "abs/twisted-leg-raise-female.gif"),
+        (["abdominal infra"], "abs/barbell-sitted-alternate-leg-raise-female.gif"),
+        (["obliquo", "oblíquo"], "abs/twisted-leg-raise-female.gif"),
+        (["remada"], "upper-back/dumbbell-reverse-grip-row-female.gif"),
+    ]
+
+    private static let femaleGroupFallbackFilePaths: [MuscleGroup: String] = [
+        .chest: "pectorals/push-up.gif",
+        .back: "upper-back/dumbbell-reverse-grip-row-female.gif",
+        .legs: "glutes/resistance-band-hip-thrusts-on-knees-female.gif",
+        .shoulders: "delts/dumbbell-lateral-raise.gif",
+        .arms: "biceps/dumbbell-hammer-curl.gif",
+        .core: "abs/twisted-leg-raise-female.gif",
+        .fullBody: "glutes/kettlebell-swing.gif",
     ]
 
     private static let exerciseFilePaths: [String: String] = [
@@ -111,6 +191,10 @@ enum ExerciseGifCatalog {
         "Rosca Martelo": "biceps/dumbbell-hammer-curl.gif",
         "Rosca Scott": "biceps/barbell-lying-preacher-curl.gif",
         "Rosca Concentrada": "biceps/dumbbell-concentration-curl.gif",
+        "Elevação Pélvica (Hip Thrust)": "glutes/resistance-band-hip-thrusts-on-knees-female.gif",
+        "Agachamento Sumô": "glutes/smith-sumo-squat.gif",
+        "Afundo Búlgaro": "quads/dumbbell-single-leg-split-squat.gif",
+        "Coice na Polia": "glutes/cable-pull-through-with-rope.gif",
         "Agachamento Livre": "glutes/barbell-full-squat.gif",
         "Leg Press 45°": "glutes/sled-45-leg-press.gif",
         "Hack Squat": "glutes/sled-hack-squat.gif",
@@ -171,5 +255,9 @@ extension MuscleGroup {
 extension Exercise {
     var demoGifURL: URL? {
         ExerciseGifCatalog.gifURL(for: self)
+    }
+
+    func demoGifURL(preferredGender: Gender?) -> URL? {
+        ExerciseGifCatalog.gifURL(for: self, preferredGender: preferredGender)
     }
 }
