@@ -69,6 +69,10 @@ struct DailyWellnessEntry: Codable, Equatable {
     var waterIntakeMl: Int
     var energyDrinksCount: Int
     var preWorkoutCount: Int
+    /// Última vez que o sono foi registrado neste dia.
+    var sleepUpdatedAt: Date?
+    /// Última vez que a água foi registrada neste dia.
+    var waterUpdatedAt: Date?
 
     static func empty(for date: Date = .now) -> DailyWellnessEntry {
         DailyWellnessEntry(
@@ -76,7 +80,9 @@ struct DailyWellnessEntry: Codable, Equatable {
             sleepHours: nil,
             waterIntakeMl: 0,
             energyDrinksCount: 0,
-            preWorkoutCount: 0
+            preWorkoutCount: 0,
+            sleepUpdatedAt: nil,
+            waterUpdatedAt: nil
         )
     }
 
@@ -93,13 +99,17 @@ struct DailyWellnessEntry: Codable, Equatable {
         sleepHours: Double? = nil,
         waterIntakeMl: Int = 0,
         energyDrinksCount: Int = 0,
-        preWorkoutCount: Int = 0
+        preWorkoutCount: Int = 0,
+        sleepUpdatedAt: Date? = nil,
+        waterUpdatedAt: Date? = nil
     ) {
         self.dayKey = dayKey
         self.sleepHours = sleepHours
         self.waterIntakeMl = waterIntakeMl
         self.energyDrinksCount = max(0, energyDrinksCount)
         self.preWorkoutCount = max(0, preWorkoutCount)
+        self.sleepUpdatedAt = sleepUpdatedAt
+        self.waterUpdatedAt = waterUpdatedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -109,10 +119,24 @@ struct DailyWellnessEntry: Codable, Equatable {
         waterIntakeMl = try container.decodeIfPresent(Int.self, forKey: .waterIntakeMl) ?? 0
         energyDrinksCount = max(0, try container.decodeIfPresent(Int.self, forKey: .energyDrinksCount) ?? 0)
         preWorkoutCount = max(0, try container.decodeIfPresent(Int.self, forKey: .preWorkoutCount) ?? 0)
+        sleepUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .sleepUpdatedAt)
+        waterUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .waterUpdatedAt)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(dayKey, forKey: .dayKey)
+        try container.encodeIfPresent(sleepHours, forKey: .sleepHours)
+        try container.encode(waterIntakeMl, forKey: .waterIntakeMl)
+        try container.encode(energyDrinksCount, forKey: .energyDrinksCount)
+        try container.encode(preWorkoutCount, forKey: .preWorkoutCount)
+        try container.encodeIfPresent(sleepUpdatedAt, forKey: .sleepUpdatedAt)
+        try container.encodeIfPresent(waterUpdatedAt, forKey: .waterUpdatedAt)
     }
 
     private enum CodingKeys: String, CodingKey {
         case dayKey, sleepHours, waterIntakeMl, energyDrinksCount, preWorkoutCount
+        case sleepUpdatedAt, waterUpdatedAt
     }
 }
 

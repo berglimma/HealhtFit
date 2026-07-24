@@ -1,9 +1,44 @@
 import Foundation
 import Combine
+import SwiftUI
+
+enum WellnessHealthIconStatus: Equatable {
+    case green
+    case yellow
+    case red
+
+    var title: String {
+        switch self {
+        case .green: return "Ícone saudável"
+        case .yellow: return "Ícone amarelo — atualize hoje"
+        case .red: return "Ícone vermelho — 24h sem atualizar"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .green:
+            return "Parabéns, mantenha o foco em sua saúde"
+        case .yellow:
+            return "Atualize água e sono durante o dia para manter o ícone verde."
+        case .red:
+            return "Passou mais de 24 horas sem atualizar água e sono. Registre agora em Sono e Hidratação."
+        }
+    }
+
+    var glowColor: Color {
+        switch self {
+        case .green: return AppTheme.accent
+        case .yellow: return .yellow
+        case .red: return .red
+        }
+    }
+}
 
 @MainActor
 final class DailyWellnessService: ObservableObject {
     static let shared = DailyWellnessService()
+    static let staleUpdateThreshold: TimeInterval = 24 * 60 * 60
 
     @Published private(set) var todayEntry: DailyWellnessEntry = .empty()
     @Published var pendingSleepHours: Double = 7
@@ -11,11 +46,16 @@ final class DailyWellnessService: ObservableObject {
 
     private var userEmail: String?
     private let storagePrefix = "healthfit_wellness"
+    private let lastUpdatePrefix = "healthfit_wellness_last_update"
+    private let trackingStartPrefix = "healthfit_wellness_tracking_start"
 
     private init() {}
 
     func configure(for user: UserProfile?) {
         userEmail = user?.email
+        if user != nil {
+            ensureTrackingStarted()
+        }
         loadTodayEntry()
         if user != nil, todayEntry.sleepHours == nil {
             pendingSleepHours = 7
@@ -26,6 +66,8 @@ final class DailyWellnessService: ObservableObject {
     func clearAllLocalData() {
         if let userEmail {
             UserDefaults.standard.removeObject(forKey: storageKey(email: userEmail))
+            UserDefaults.standard.removeObject(forKey: lastUpdateKey(email: userEmail))
+            UserDefaults.standard.removeObject(forKey: trackingStartKey(email: userEmail))
         }
         userEmail = nil
         todayEntry = .empty()
@@ -55,17 +97,78 @@ final class DailyWellnessService: ObservableObject {
         return SleepAssessment.evaluate(hours: hours)
     }
 
+    /// Última atualização de água ou sono (persiste entre dias).
+    var lastWaterOrSleepUpdateAt: Date? {
+        guard let userEmail else { return nil }
+        return UserDefaults.standard.object(forKey: lastUpdateKey(email: userEmail)) as? Date
+    }
+
+    private var trackingStartedAt: Date? {
+        guard let userEmail else { return nil }
+        return UserDefaults.standard.object(forKey: trackingStartKey(email: userEmail)) as? Date
+    }
+
+    var hasLoggedSleepToday: Bool {
+        todayEntry.sleepHours != nil
+    }
+
+    var hasLoggedWaterToday: Bool {
+        todayEntry.waterIntakeMl > 0
+    }
+
+    func healthIconStatus(referenceDate: Date = .now) -> WellnessHealthIconStatus {
+        let anchor = lastWaterOrSleepUpdateAt ?? trackingStartedAt
+        if let anchor, referenceDate.timeIntervalSince(anchor) >= Self.staleUpdateThreshold {
+            return .red
+        }
+
+        if hasLoggedSleepToday && hasLoggedWaterToday {
+            return .green
+        }
+
+        return .yellow
+    }
+
+    func healthIconDetailMessage(referenceDate: Date = .now) -> String {
+        let status = healthIconStatus(referenceDate: referenceDate)
+        switch status {
+        case .green:
+            return status.message
+        case .red:
+            var parts: [String] = [status.message]
+            if !hasLoggedSleepToday { parts.append("Sono de hoje ainda não registrado.") }
+            if !hasLoggedWaterToday { parts.append("Água de hoje ainda não registrada.") }
+            return parts.joined(separator: " ")
+        case .yellow:
+            var reasons: [String] = []
+            if !hasLoggedSleepToday { reasons.append("sono") }
+            if !hasLoggedWaterToday { reasons.append("água") }
+            if reasons.isEmpty {
+                return status.message
+            }
+            let missing = reasons.joined(separator: " e ")
+            return "Ícone amarelo porque você ainda não atualizou \(missing) hoje. Registre em Sono e Hidratação."
+        }
+    }
+
     func logSleep(hours: Double) {
         var entry = currentTodayEntry()
         entry.sleepHours = max(0, min(hours, 14))
+        entry.sleepUpdatedAt = .now
         todayEntry = entry
         save(entry)
+        markWaterOrSleepUpdated()
         showSleepCheckIn = false
     }
 
     func updateWaterIntake(_ milliliters: Int) {
         var entry = currentTodayEntry()
-        entry.waterIntakeMl = min(max(0, milliliters), WaterServing.maxDailyIntakeML)
+        let clamped = min(max(0, milliliters), WaterServing.maxDailyIntakeML)
+        entry.waterIntakeMl = clamped
+        if clamped > 0 {
+            entry.waterUpdatedAt = .now
+            markWaterOrSleepUpdated()
+        }
         todayEntry = entry
         save(entry)
     }
@@ -119,6 +222,19 @@ final class DailyWellnessService: ObservableObject {
         return "Você precisa hidratar-se melhor."
     }
 
+    private func markWaterOrSleepUpdated(at date: Date = .now) {
+        guard let userEmail else { return }
+        UserDefaults.standard.set(date, forKey: lastUpdateKey(email: userEmail))
+        objectWillChange.send()
+    }
+
+    private func ensureTrackingStarted(at date: Date = .now) {
+        guard let userEmail else { return }
+        let key = trackingStartKey(email: userEmail)
+        guard UserDefaults.standard.object(forKey: key) == nil else { return }
+        UserDefaults.standard.set(date, forKey: key)
+    }
+
     private func currentTodayEntry() -> DailyWellnessEntry {
         let today = DailyWellnessEntry.dayKey(for: .now)
         if todayEntry.dayKey == today {
@@ -154,5 +270,15 @@ final class DailyWellnessService: ObservableObject {
     private func storageKey(email: String) -> String {
         let safeEmail = email.lowercased().replacingOccurrences(of: "@", with: "_at_")
         return "\(storagePrefix)_\(safeEmail)_today"
+    }
+
+    private func lastUpdateKey(email: String) -> String {
+        let safeEmail = email.lowercased().replacingOccurrences(of: "@", with: "_at_")
+        return "\(lastUpdatePrefix)_\(safeEmail)"
+    }
+
+    private func trackingStartKey(email: String) -> String {
+        let safeEmail = email.lowercased().replacingOccurrences(of: "@", with: "_at_")
+        return "\(trackingStartPrefix)_\(safeEmail)"
     }
 }

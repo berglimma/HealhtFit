@@ -67,7 +67,8 @@ struct ProfileView: View {
 
                             Spacer()
 
-                            PulsingHeartIconView(size: 44)
+                            let healthStatus = wellnessService.healthIconStatus()
+                            PulsingHeartIconView(size: 44, glowColor: healthStatus.glowColor)
 
                             if profileImage != nil {
                                 Button {
@@ -146,30 +147,27 @@ struct ProfileView: View {
                         }
                     }
 
-                    Section("Ícone do App") {
-                        let projectedState = AppIconInactivityService.shared.projectedIconState()
+                    Section("Ícone de Saúde") {
+                        let healthStatus = wellnessService.healthIconStatus()
 
-                        HStack(spacing: 14) {
+                        HStack(alignment: .top, spacing: 14) {
                             PulsingHeartIconView(
                                 size: 40,
-                                glowColor: projectedState.glowColor
+                                glowColor: healthStatus.glowColor
                             )
 
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(projectedState.title)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(healthStatus.title)
                                     .font(.subheadline.weight(.semibold))
-                                Text(projectedState.detail)
+                                    .foregroundStyle(healthStatus.glowColor)
+
+                                Text(wellnessService.healthIconDetailMessage())
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
                         .padding(.vertical, 4)
-
-                        if let nextChange = AppIconInactivityService.shared.formattedTimeUntilNextChange() {
-                            Label(nextChange, systemImage: "clock")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.accent)
-                        }
                     }
 
                     Section("Sono e Hidratação") {
