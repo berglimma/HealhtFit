@@ -113,18 +113,6 @@ struct ProfileView: View {
                     }
                     .listRowBackground(AppTheme.cardBackground)
 
-                    Section("Objetivo") {
-                        AdaptiveGoalGrid {
-                            ForEach(FitnessGoal.allCases) { goal in
-                                GoalCard(goal: goal, isSelected: user.goal == goal) {
-                                    updateGoal(goal)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    .listRowBackground(AppTheme.cardBackground)
-
                     Section("Personal Trainer") {
                         TextField("Nome do Personal", text: $trainerName)
                             .textContentType(.name)
@@ -817,17 +805,6 @@ struct ProfileView: View {
                 measurementsSaveError = "As medidas ficaram salvas no aparelho, mas a sincronização com o Firebase falhou. Verifique a conexão e tente novamente."
             }
         }
-    }
-
-    private func updateGoal(_ goal: FitnessGoal) {
-        guard var user = authService.currentUser, user.goal != goal else { return }
-        user.goal = goal
-        if goal == .fatLoss && user.caloricDeficit == 0 {
-            user.caloricDeficit = 400
-        }
-        authService.updateProfile(user)
-        mealPlanService.regeneratePlanIfNeeded(for: user)
-        ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
     }
 
     private func updateBiotype(_ biotype: Biotype) {
