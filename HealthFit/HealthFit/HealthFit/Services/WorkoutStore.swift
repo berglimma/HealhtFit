@@ -92,6 +92,20 @@ final class WorkoutStore: ObservableObject {
 
     private static let sampleWorkoutTitles = Set(sampleWorkouts.map(\.title))
 
+    /// Retorna a última sessão concluída desta ficha se foi há menos de `hours` horas.
+    func recentSameWorkoutSession(
+        as sheet: WorkoutSheet,
+        withinHours hours: Double = 24
+    ) -> WorkoutSession? {
+        guard let last = sessionHistory.first(where: { $0.endedAt != nil }) else { return nil }
+        guard last.workoutSheetId == sheet.id else { return nil }
+
+        let endedAt = last.endedAt ?? last.startedAt
+        let elapsed = Date.now.timeIntervalSince(endedAt)
+        guard elapsed >= 0, elapsed <= hours * 3600 else { return nil }
+        return last
+    }
+
     func startSession(for sheet: WorkoutSheet, tookPreWorkout: Bool? = nil) {
         activeSession = WorkoutSession(
             workoutSheetId: sheet.id,
@@ -101,7 +115,12 @@ final class WorkoutStore: ObservableObject {
         )
         currentExerciseIndex = 0
         exerciseRecords = sheet.exercises.map {
-            ExerciseSessionRecord(exerciseId: $0.id, exerciseName: $0.name)
+            ExerciseSessionRecord(
+                exerciseId: $0.id,
+                exerciseName: $0.name,
+                recommendedWeight: $0.recommendedWeight,
+                performedWeight: $0.recommendedWeight
+            )
         }
         isExerciseTimerPaused = false
         startExerciseTimer()
@@ -218,6 +237,11 @@ final class WorkoutStore: ObservableObject {
         guard var session = activeSession else { return }
         session.caloriesBurned = calories
         activeSession = session
+    }
+
+    func updatePerformedWeight(exerciseId: UUID, weight: Double?) {
+        guard let index = exerciseRecords.firstIndex(where: { $0.exerciseId == exerciseId }) else { return }
+        exerciseRecords[index].performedWeight = weight
     }
 
     func endSession(persisting persistedSession: WorkoutSession? = nil) {

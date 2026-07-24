@@ -6,13 +6,13 @@ struct HealthChartsView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var authService: AuthService
 
-    @State private var selectedMetric: ChartMetric = .steps
+    @State private var selectedMetric: ChartMetric = .workout
 
     enum ChartMetric: String, CaseIterable {
+        case workout = "Treino (min)"
         case steps = "Passos"
         case calories = "Calorias"
         case heartRate = "FC Repouso"
-        case workout = "Treino (min)"
         case meditation = "Meditação (min)"
     }
 

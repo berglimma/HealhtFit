@@ -49,6 +49,7 @@ final class NotificationService {
     private init() {}
 
     func requestAuthorization() {
+        UNUserNotificationCenter.current().delegate = AppNotificationCenterDelegate.shared
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
             Task { @MainActor in
                 self.refreshRecurringNotifications()
@@ -230,24 +231,29 @@ final class NotificationService {
     }
 
     func deliverRestOvertimeNotification(exerciseName: String) {
+        deliverRestCompleteNotification(exerciseName: exerciseName)
+    }
+
+    func deliverRestCompleteNotification(exerciseName: String) {
         deliverImmediately(
-            title: Self.restOvertimeTitle,
-            body: Self.restOvertimeBody(exerciseName: exerciseName),
-            category: "REST_OVERTIME",
-            identifier: "rest_overtime_\(UUID().uuidString)",
-            exerciseName: exerciseName
+            title: Self.restCompleteTitle,
+            body: Self.restCompleteBody(exerciseName: exerciseName),
+            category: "REST_COMPLETE",
+            identifier: "rest_complete_\(UUID().uuidString)",
+            exerciseName: exerciseName,
+            immediate: true
         )
     }
 
-    func scheduleRestReminder(after seconds: TimeInterval, exerciseName: String) {
-        let title = "Descanso prolongado!"
-        let body = "Você está descansando há muito tempo após \(exerciseName). Hora de voltar ao treino!"
+    func scheduleRestEndReminder(after seconds: TimeInterval, exerciseName: String) {
+        let title = Self.restCompleteTitle
+        let body = Self.restCompleteBody(exerciseName: exerciseName)
         let identifier = "rest_reminder_\(UUID().uuidString)"
 
         scheduleOnPhone(
             title: title,
             body: body,
-            category: "REST_REMINDER",
+            category: "REST_COMPLETE",
             identifier: identifier,
             trigger: UNTimeIntervalNotificationTrigger(timeInterval: max(seconds, 1), repeats: false)
         )
@@ -255,9 +261,14 @@ final class NotificationService {
         WatchConnectivityManager.shared.deliverNotificationToWatch(
             title: title,
             body: body,
-            category: "REST_REMINDER",
-            identifier: identifier
+            category: "REST_COMPLETE",
+            identifier: identifier,
+            exerciseName: exerciseName
         )
+    }
+
+    func scheduleRestReminder(after seconds: TimeInterval, exerciseName: String) {
+        scheduleRestEndReminder(after: seconds, exerciseName: exerciseName)
     }
 
     func cancelRestReminders() {
@@ -455,9 +466,14 @@ final class NotificationService {
     }
 
     static let restOvertimeTitle = "Descanso encerrado!"
+    static let restCompleteTitle = "Descanso encerrado!"
 
     static func restOvertimeBody(exerciseName: String) -> String {
-        "O tempo de descanso após \(exerciseName) terminou. Hora de voltar ao treino!"
+        restCompleteBody(exerciseName: exerciseName)
+    }
+
+    static func restCompleteBody(exerciseName: String) -> String {
+        "O tempo de descanso após \(exerciseName) terminou. Toque em OK vamos lá e continue o treino!"
     }
 
     private func deliverImmediately(
@@ -465,14 +481,19 @@ final class NotificationService {
         body: String,
         category: String,
         identifier: String,
-        exerciseName: String? = nil
+        exerciseName: String? = nil,
+        immediate: Bool = false
     ) {
+        let trigger: UNNotificationTrigger? = immediate
+            ? nil
+            : UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+
         scheduleOnPhone(
             title: title,
             body: body,
             category: category,
             identifier: identifier,
-            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            trigger: trigger
         )
 
         WatchConnectivityManager.shared.deliverNotificationToWatch(
@@ -489,15 +510,29 @@ final class NotificationService {
         body: String,
         category: String,
         identifier: String,
-        trigger: UNNotificationTrigger
+        trigger: UNNotificationTrigger?
     ) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
         content.categoryIdentifier = category
+        content.interruptionLevel = .timeSensitive
 
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request)
+    }
+}
+
+/// Exibe banner e som mesmo com o app em primeiro plano (ex.: fim do descanso).
+final class AppNotificationCenterDelegate: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = AppNotificationCenterDelegate()
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .list, .sound])
     }
 }

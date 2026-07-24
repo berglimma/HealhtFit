@@ -6,6 +6,13 @@ final class HealthAssistantEngineTests: XCTestCase {
         let message = HealthAssistantEngine.welcomeMessage(context: TestFixtures.assistantContext())
         XCTAssertTrue(message.contains("João"))
         XCTAssertTrue(message.contains("assistente HealthFit"))
+        XCTAssertTrue(message.contains(HealthAssistantEngine.healthSafetyDisclaimer))
+    }
+
+    func testPainAnswerDirectsToHealthcareProfessionalNotAI() {
+        let answer = HealthAssistantEngine.answer(for: "Estou com dor no ombro", context: TestFixtures.assistantContext())
+        XCTAssertTrue(answer.contains(HealthAssistantEngine.healthSafetyDisclaimer))
+        XCTAssertTrue(answer.localizedCaseInsensitiveContains("qualificado e habilitado"))
     }
 
     func testWelcomeMessageUsesDisplayName() {

@@ -84,6 +84,13 @@ struct HealthChatView: View {
 
                 suggestionStrip
 
+                Text(HealthAssistantEngine.healthSafetyDisclaimer)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                    .padding(.bottom, 6)
+
                 inputBar
             }
             .background(AppTheme.background)

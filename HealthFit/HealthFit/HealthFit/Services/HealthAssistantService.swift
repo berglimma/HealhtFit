@@ -32,6 +32,12 @@ struct HealthAssistantContext {
 enum HealthAssistantEngine {
     static let idleReturnMessage = "Vi que você está focado em outra demanda, qualquer dúvida estou à disposição, bom treino e foco sempre, você vai vencer!"
 
+    /// Aviso de segurança exibido nas mensagens do IAssistente.
+    static let healthSafetyDisclaimer =
+        "Importante: em caso de qualquer dúvida, desconforto ou dor no exercício, procure um profissional de saúde qualificado e habilitado. " +
+        "Se sentir dor, mal-estar, tontura ou sintoma preocupante, busque atendimento imediatamente. " +
+        "Não use ferramentas de IA (incluindo este assistente) para diagnóstico, tratamento ou decisão médica."
+
     static let suggestedQuestions: [String] = [
         "Qual é meu IMC?",
         "O que é ectomorfo?",
@@ -74,6 +80,8 @@ enum HealthAssistantEngine {
         }
 
         sections.append("Posso tirar dúvidas sobre dieta, IMC, biotipos (ecto/meso/endo), sono, treinos conforme orientação profissional, cardio, meditação, macros, suplementação e consumo de álcool.")
+        sections.append("")
+        sections.append(healthSafetyDisclaimer)
         sections.append("")
         sections.append("Toque em uma sugestão abaixo ou escreva sua pergunta.")
 
@@ -201,6 +209,8 @@ enum HealthAssistantEngine {
             "• Sono e recuperação",
             "• Treinos conforme orientação do personal",
             "• Suplementação: whey, creatina, pré-treino, ômega 3 e mais",
+            "",
+            healthSafetyDisclaimer,
             "",
             "Reformule a pergunta ou toque em uma sugestão abaixo."
         ]
@@ -1161,19 +1171,26 @@ enum HealthAssistantEngine {
             }
         ),
         HealthAssistantTopic(
-            keywords: ["lesao", "lesão", "dor", "machucado", "contusao", "contusão", "tendinite"],
+            keywords: [
+                "lesao", "lesão", "dor", "machucado", "contusao", "contusão", "tendinite",
+                "mal-estar", "mal estar", "tontura", "ferido", "inflamacao", "inflamação",
+                "desconforto", "duvida no exercicio", "dúvida no exercício"
+            ],
             respond: { _ in
                 """
+                \(healthSafetyDisclaimer)
+
                 Dor vs desconforto muscular:
                 • Desconforto muscular (DOMS) 24–48 h após treino — normal
-                • Dor aguda, articular ou pontual — pare e avalie
+                • Dor aguda, articular, pontual, com formigamento ou falta de ar — pare imediatamente
 
-                Se lesionado:
+                Se sentir dor, dúvida ou desconforto no exercício:
+                • Interrompa o exercício na hora
                 • Não treine a região afetada
-                • Gelo nas primeiras 48 h se inflamação
-                • Busque fisioterapeuta/médico se persistir
+                • Procure um profissional de saúde qualificado e habilitado (médico, fisioterapeuta ou emergência)
+                • Não busque diagnóstico, tratamento ou “o que fazer” em ferramentas de IA
 
-                O app não substitui orientação médica.
+                Este assistente é apenas informativo e não substitui atendimento médico.
                 """
             }
         ),
@@ -1226,6 +1243,8 @@ enum HealthAssistantEngine {
                     : "• Cadastre nome e e-mail do personal em Perfil para envio automático\n                • Leve o histórico de treinos nas consultas")
 
                 O app complementa o acompanhamento — dúvidas técnicas ou dores persistentes, consulte sempre o profissional.
+
+                \(healthSafetyDisclaimer)
                 """
             }
         ),

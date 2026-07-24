@@ -9,6 +9,7 @@ struct ActiveCardioView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     let config: CardioWorkoutConfig
+    var onReturnToWorkoutList: (() -> Void)? = nil
 
     @State private var elapsedSeconds = 0
     @State private var finishedSession: WorkoutSession?
@@ -27,13 +28,13 @@ struct ActiveCardioView: View {
         return config.estimatedDistanceKm(elapsedSeconds: elapsedSeconds)
     }
 
-    /// Prioriza calorias do Apple Watch; estimativa do app como fallback.
+    /// Prioriza apenas calorias do Apple Watch; sem Watch sincronizado fica 0.
     private var liveCalories: Double {
-        let estimated = config.estimatedCalories(for: elapsedSeconds)
-        if watchConnectivity.watchCalories > 0 {
-            return max(watchConnectivity.watchCalories, estimated)
-        }
-        return estimated
+        max(0, watchConnectivity.watchCalories)
+    }
+
+    private var hasWatchMetrics: Bool {
+        watchConnectivity.hasLiveWatchMetrics || watchConnectivity.watchCalories > 0 || watchConnectivity.watchHeartRate > 0
     }
 
     private var calorieProgress: Double {
@@ -127,10 +128,20 @@ struct ActiveCardioView: View {
             syncWithWatch()
         }
         .fullScreenCover(item: $finishedSession) { session in
-            WorkoutSummaryView(session: session) {
-                finishedSession = nil
-                dismiss()
-            }
+            WorkoutSummaryView(
+                session: session,
+                onFinish: {
+                    finishedSession = nil
+                    dismiss()
+                },
+                onReturnToWorkoutList: {
+                    onReturnToWorkoutList?()
+                    finishedSession = nil
+                    DispatchQueue.main.async {
+                        dismiss()
+                    }
+                }
+            )
         }
     }
 
@@ -265,12 +276,12 @@ struct ActiveCardioView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
-                if watchConnectivity.isWatchConnected || watchConnectivity.watchCalories > 0 {
+                if hasWatchMetrics {
                     Label("Apple Watch", systemImage: "applewatch")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(AppTheme.accent)
                 } else {
-                    Label("Estimativa", systemImage: "iphone")
+                    Label("Sem Apple Watch · 0 kcal", systemImage: "applewatch.slash")
                         .font(.caption2)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
@@ -454,7 +465,7 @@ struct ActiveCardioView: View {
         if watchConnectivity.watchHeartRate > 0 {
             workoutStore.addHeartRateSample(watchConnectivity.watchHeartRate)
         }
-        workoutStore.updateCalories(liveCalories)
+        workoutStore.updateCalories(watchConnectivity.watchCalories)
     }
 
     private func finishCardio() {
@@ -484,7 +495,7 @@ struct ActiveCardioView: View {
         }()
 
         session.endedAt = .now
-        session.caloriesBurned = liveCalories
+        session.caloriesBurned = watchConnectivity.watchCalories
         session.completedDistanceKm = (config.isDistanceRun || config.isFreeRun) ? distanceKm : nil
         session.averagePaceSecondsPerKm = (config.isDistanceRun || config.isFreeRun) ? pace : nil
         session.cardioIntensityLabel = config.intensity.rawValue

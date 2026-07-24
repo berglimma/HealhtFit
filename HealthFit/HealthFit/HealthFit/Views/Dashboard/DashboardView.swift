@@ -10,6 +10,9 @@ struct DashboardView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var showWeeklyReport = false
+    @State private var isSyncingWatch = false
+    @State private var watchSyncResult: WatchSyncResult?
+    @State private var showWatchSyncAlert = false
 
     var body: some View {
         NavigationStack {
@@ -32,6 +35,14 @@ struct DashboardView: View {
             }
             .sheet(isPresented: $showWeeklyReport) {
                 WeeklyReportView()
+            }
+            .alert(
+                watchSyncResult?.title ?? "Apple Watch",
+                isPresented: $showWatchSyncAlert
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(watchSyncResult?.message ?? "")
             }
         }
     }
@@ -133,24 +144,54 @@ struct DashboardView: View {
     }
 
     private var watchSection: some View {
-        HStack {
-            Image(systemName: "applewatch")
-                .font(.title2)
-                .foregroundStyle(watchConnectivity.isWatchConnected ? AppTheme.accent : .gray)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Apple Watch")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(AppTheme.textPrimary)
-                Text(watchConnectivity.isWatchConnected ? "Conectado" : "Sincronização automática ativa")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
+        Button {
+            Task { await syncAppleWatch() }
+        } label: {
+            HStack {
+                Image(systemName: "applewatch")
+                    .font(.title2)
+                    .foregroundStyle(watchConnectivity.isWatchConnected ? AppTheme.accent : .gray)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Apple Watch")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Text(watchStatusSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                Spacer()
+                if isSyncingWatch {
+                    ProgressView()
+                } else {
+                    Circle()
+                        .fill(watchConnectivity.isWatchConnected ? AppTheme.accent : .gray)
+                        .frame(width: 10, height: 10)
+                }
             }
-            Spacer()
-            Circle()
-                .fill(watchConnectivity.isWatchConnected ? AppTheme.accent : .orange)
-                .frame(width: 10, height: 10)
+            .cardStyle()
         }
-        .cardStyle()
+        .buttonStyle(.plain)
+        .disabled(isSyncingWatch)
+        .accessibilityHint("Toca para sincronizar com o Apple Watch")
+    }
+
+    private var watchStatusSubtitle: String {
+        if isSyncingWatch {
+            return "Buscando sincronismo..."
+        }
+        if watchConnectivity.isWatchConnected {
+            return "Conectado · Toque para sincronizar"
+        }
+        return "Desconectado · Toque para tentar sincronizar"
+    }
+
+    private func syncAppleWatch() async {
+        guard !isSyncingWatch else { return }
+        isSyncingWatch = true
+        let result = await watchConnectivity.attemptSyncWithWatch()
+        isSyncingWatch = false
+        watchSyncResult = result
+        showWatchSyncAlert = true
     }
 
     private var recentWorkoutsSection: some View {

@@ -40,6 +40,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var restElapsedSeconds = 0
     private var secondsSincePhoneSync = 0
     private var hasSentRestOvertimeNotification = false
+    private var workoutStartedAt: Date?
     private let healthStore = HKHealthStore()
 
     override init() {
@@ -128,6 +129,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         meditationPromptIndex = 0
         meditationTotalPrompts = 1
         calories = 0
+        heartRate = 0
+        workoutStartedAt = nil
         secondsSincePhoneSync = 0
     }
 
@@ -158,7 +161,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         exerciseName: String? = nil,
         targetSeconds: Int? = nil,
         targetCalories: Int? = nil,
-        currentCalories: Double? = nil,
+        currentCalories _: Double? = nil,
         meditationPrompt: String? = nil,
         promptIndex: Int? = nil
     ) {
@@ -182,10 +185,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         if let targetCalories, targetCalories > 0 {
             cardioTargetCalories = targetCalories
         }
-        if let currentCalories {
-            calories = max(calories, currentCalories)
-            updateCalorieSuperation()
-        }
+        // Ignora currentCalories vindas do iPhone — calorias só do HealthKit do Watch.
         if let meditationPrompt, !meditationPrompt.isEmpty {
             self.meditationPrompt = meditationPrompt
         }
@@ -378,29 +378,58 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     private func startHeartRateMonitoring() {
+        requestHealthKitAuthorizationIfNeeded()
+        workoutStartedAt = Date()
         heartRateTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.fetchHeartRate()
-                self?.calories += Double.random(in: 1...5)
-                self?.updateCalorieSuperation()
+                self?.fetchActiveCalories()
                 self?.sendMetricsToPhone()
             }
         }
     }
 
-    private func fetchHeartRate() {
-        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else {
-            heartRate = Double.random(in: 100...150)
-            return
+    private func requestHealthKitAuthorizationIfNeeded() {
+        var types = Set<HKObjectType>()
+        if let heartRate = HKObjectType.quantityType(forIdentifier: .heartRate) {
+            types.insert(heartRate)
         }
+        if let energy = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned) {
+            types.insert(energy)
+        }
+        guard !types.isEmpty else { return }
+        healthStore.requestAuthorization(toShare: [], read: types) { _, _ in }
+    }
+
+    private func fetchHeartRate() {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return }
 
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
         let query = HKSampleQuery(sampleType: type, predicate: nil, limit: 1, sortDescriptors: [sortDescriptor]) { [weak self] _, samples, _ in
             Task { @MainActor in
                 if let sample = samples?.first as? HKQuantitySample {
                     self?.heartRate = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
-                } else {
-                    self?.heartRate = Double.random(in: 100...150)
+                }
+                // Sem amostra real do sensor, mantém o último valor ou 0 — nunca simula.
+            }
+        }
+        healthStore.execute(query)
+    }
+
+    private func fetchActiveCalories() {
+        guard let start = workoutStartedAt,
+              let type = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) else { return }
+
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
+        let query = HKStatisticsQuery(
+            quantityType: type,
+            quantitySamplePredicate: predicate,
+            options: .cumulativeSum
+        ) { [weak self] _, statistics, _ in
+            Task { @MainActor in
+                if let sum = statistics?.sumQuantity() {
+                    self?.calories = sum.doubleValue(for: .kilocalorie())
+                    self?.updateCalorieSuperation()
                 }
             }
         }
@@ -511,6 +540,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         case "restTimer":
             let seconds = message["seconds"] as? Int ?? 60
             startRestCountdown(seconds: seconds, exerciseName: "Exercício")
+        case "ping":
+            break
         default:
             break
         }
@@ -537,6 +568,27 @@ extension WatchWorkoutManager: WCSessionDelegate {
         Task { @MainActor in
             handlePhoneMessage(message)
         }
+    }
+
+    nonisolated func session(
+        _ session: WCSession,
+        didReceiveMessage message: [String: Any],
+        replyHandler: @escaping ([String: Any]) -> Void
+    ) {
+        let action = message["action"] as? String
+        if action == "ping" {
+            replyHandler([
+                "action": "pong",
+                "ok": true,
+                "timestamp": Date().timeIntervalSince1970
+            ])
+            return
+        }
+
+        Task { @MainActor in
+            handlePhoneMessage(message)
+        }
+        replyHandler(["ok": true])
     }
 
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {

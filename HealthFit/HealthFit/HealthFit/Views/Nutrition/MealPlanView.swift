@@ -603,6 +603,7 @@ struct MealPlanView: View {
         mealPlanService.caloricDeficit = newValue
         mealPlanService.dailyCalorieTarget = user.dailyCalorieTarget
         mealPlanService.regeneratePlanIfNeeded(for: user)
+        ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
     }
 
     private func deficitSubtitle(for profile: UserProfile) -> String {
@@ -618,6 +619,7 @@ struct MealPlanView: View {
         authService.updateProfile(user)
         selectedBiotype = biotype
         mealPlanService.regeneratePlanIfNeeded(for: user)
+        ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
     }
 
     private func updateGoal(_ goal: FitnessGoal) {
@@ -630,6 +632,7 @@ struct MealPlanView: View {
         authService.updateProfile(user)
         selectedGoal = goal
         mealPlanService.regeneratePlanIfNeeded(for: user)
+        ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
     }
 
     private func applyMetricsAndRegenerate() {
@@ -648,6 +651,7 @@ struct MealPlanView: View {
         user.caloricDeficit = caloricDeficit
         authService.updateProfile(user)
         mealPlanService.generatePlan(for: user)
+        ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
     }
 
     private var dayPicker: some View {

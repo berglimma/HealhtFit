@@ -11,20 +11,27 @@ struct RootView: View {
 
     @State private var showWelcomeMotivation = false
     @State private var welcomeContext: WelcomeMotivationContext?
+    /// Evita flash do painel: só libera o MainTab depois que a transição for concluída (ou dispensada).
+    @State private var didCompleteWelcomeForSession = false
 
     var body: some View {
         Group {
             if authService.isRestoringSession {
-                ZStack {
-                    AppTheme.background.ignoresSafeArea()
-                    ProgressView("Carregando...")
-                        .tint(AppTheme.accent)
-                }
+                loadingScreen(message: "Carregando...")
             } else if !authService.isAuthenticated {
                 LoginView()
-            } else if showWelcomeMotivation, let welcomeContext {
-                WelcomeMotivationView(context: welcomeContext) {
-                    showWelcomeMotivation = false
+            } else if !didCompleteWelcomeForSession {
+                // Após login/sessão, a transição tem prioridade — nunca renderiza o painel antes.
+                if showWelcomeMotivation, let welcomeContext {
+                    WelcomeMotivationView(context: welcomeContext) {
+                        showWelcomeMotivation = false
+                        didCompleteWelcomeForSession = true
+                    }
+                } else {
+                    loadingScreen(message: nil)
+                        .onAppear {
+                            presentWelcome()
+                        }
                 }
             } else {
                 MainTabView()
@@ -47,6 +54,7 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: authService.isRestoringSession)
         .animation(.easeInOut(duration: 0.25), value: showWelcomeMotivation)
+        .animation(.easeInOut(duration: 0.25), value: didCompleteWelcomeForSession)
         .onAppear {
             prepareWelcomeIfAuthenticated(trigger: .coldStart)
             AppIconInactivityService.shared.handleAppBecameActive()
@@ -71,12 +79,32 @@ struct RootView: View {
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             if isAuthenticated {
+                didCompleteWelcomeForSession = false
+                showWelcomeMotivation = false
+                welcomeContext = nil
                 prepareWelcomeIfAuthenticated(trigger: .login)
                 wellnessService.configure(for: authService.currentUser)
                 syncWorkoutCloudHistory()
                 Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
             } else {
+                didCompleteWelcomeForSession = false
+                showWelcomeMotivation = false
+                welcomeContext = nil
                 workoutStore.configureCloudSync(userId: nil)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func loadingScreen(message: String?) -> some View {
+        ZStack {
+            AppTheme.background.ignoresSafeArea()
+            if let message {
+                ProgressView(message)
+                    .tint(AppTheme.accent)
+            } else {
+                ProgressView()
+                    .tint(AppTheme.accent)
             }
         }
     }
@@ -104,9 +132,11 @@ struct RootView: View {
 
         switch trigger {
         case .login, .coldStart:
+            didCompleteWelcomeForSession = false
             presentWelcome()
         case .returnFromBackground:
             if let hours = AppIconInactivityService.shared.hoursSinceLastSessionEnd(), hours >= 24 {
+                didCompleteWelcomeForSession = false
                 presentWelcome()
             }
         }
@@ -131,6 +161,7 @@ struct RootView: View {
             weeklyWorkoutCount: weeklyReport.currentWeek.workoutCount
         )
         showWelcomeMotivation = true
+        didCompleteWelcomeForSession = false
     }
 
     private func refreshInactivityReminder() {

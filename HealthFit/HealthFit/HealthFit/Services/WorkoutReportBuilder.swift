@@ -69,6 +69,11 @@ enum WorkoutReportBuilder {
             lines.append("Descanso total: \(DurationFormatting.format(seconds: session.totalRestSeconds))")
         }
 
+        lines.append(contentsOf: earlyEndReportLines(
+            currentSession: session,
+            allSessions: allSessions
+        ))
+
         if session.caloriesBurned > 0 {
             lines.append("Calorias: \(Int(session.caloriesBurned)) kcal")
         }
@@ -102,7 +107,11 @@ enum WorkoutReportBuilder {
                 if isCardioSession(session) {
                     lines.append("\(status) \(record.exerciseName) — \(DurationFormatting.format(seconds: record.elapsedSeconds))")
                 } else {
-                    lines.append("\(status) \(record.exerciseName) — \(DurationFormatting.format(seconds: record.elapsedSeconds)) (descanso: \(DurationFormatting.format(seconds: record.restSeconds)))")
+                    var detail = "\(status) \(record.exerciseName) — \(DurationFormatting.format(seconds: record.elapsedSeconds)) (descanso: \(DurationFormatting.format(seconds: record.restSeconds)))"
+                    if let weights = record.weightComparisonLabel {
+                        detail += " · \(weights)"
+                    }
+                    lines.append(detail)
                 }
             }
         }
@@ -168,6 +177,40 @@ enum WorkoutReportBuilder {
                 let answer = entry.tookPreWorkout ? "Sim" : "Não"
                 lines.append("• \(dateFormatter.string(from: entry.date)) — \(entry.workoutTitle) — \(answer)")
             }
+        }
+
+        return lines
+    }
+
+    static func earlyEndCount(from sessions: [WorkoutSession]) -> Int {
+        sessions.filter(\.endedEarly).count
+    }
+
+    static func earlyEndReportLines(
+        currentSession: WorkoutSession,
+        allSessions: [WorkoutSession]
+    ) -> [String] {
+        let historyIncludingCurrent: [WorkoutSession] = {
+            if allSessions.contains(where: { $0.id == currentSession.id }) {
+                return allSessions
+            }
+            return [currentSession] + allSessions
+        }()
+        let count = earlyEndCount(from: historyIncludingCurrent)
+
+        var lines: [String] = []
+
+        if currentSession.endedEarly {
+            lines.append("Encerramento: Antecipado (sem concluir todos os exercícios)")
+            if let justification = currentSession.earlyEndJustification?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+               !justification.isEmpty {
+                lines.append("Justificativa: \(justification)")
+            }
+        }
+
+        if count > 0 || currentSession.endedEarly {
+            lines.append("Encerramentos antecipados (histórico): \(count) vez(es)")
         }
 
         return lines

@@ -90,6 +90,6 @@ final class MailComposeHostingController: UIViewController, MFMailComposeViewCon
 
     private func finish(with result: MFMailComposeResult) {
         onFinish?(result)
-        dismiss(animated: true)
+        // O sheet SwiftUI é fechado ao limpar mailDraft no callback — evita dismiss duplo.
     }
 }

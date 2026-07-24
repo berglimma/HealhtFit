@@ -9,6 +9,8 @@ struct MeditationSetupView: View {
     let topic: MeditationTopic
     @State private var selectedDuration: MeditationDuration = .ten
     @State private var showActiveMeditation = false
+    @State private var shouldPopToWorkoutList = false
+    @Environment(\.dismiss) private var dismiss
 
     private var config: MeditationWorkoutConfig {
         MeditationWorkoutConfig(topic: topic, duration: selectedDuration)
@@ -28,8 +30,15 @@ struct MeditationSetupView: View {
         .background(AppTheme.background)
         .navigationTitle(topic.name)
         .navigationBarTitleDisplayMode(.large)
-        .fullScreenCover(isPresented: $showActiveMeditation) {
-            ActiveMeditationView(config: config)
+        .fullScreenCover(isPresented: $showActiveMeditation, onDismiss: {
+            if shouldPopToWorkoutList {
+                shouldPopToWorkoutList = false
+                dismiss()
+            }
+        }) {
+            ActiveMeditationView(config: config) {
+                shouldPopToWorkoutList = true
+            }
         }
     }
 

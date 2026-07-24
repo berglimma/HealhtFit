@@ -56,10 +56,10 @@ struct CreateWorkoutView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
+                        ForEach($exercises) { $exercise in
                             CreateWorkoutExerciseRow(
-                                index: index + 1,
-                                exercise: exercise
+                                index: (exercises.firstIndex(where: { $0.id == exercise.id }) ?? 0) + 1,
+                                exercise: $exercise
                             ) {
                                 removeExercise(exercise)
                             }
@@ -213,16 +213,42 @@ struct CreateWorkoutView: View {
 
 private struct CreateWorkoutExerciseRow: View {
     let index: Int
-    let exercise: Exercise
+    @Binding var exercise: Exercise
     let onRemove: () -> Void
 
     private var focusLabel: String? {
         CustomWorkoutFocusGroup.focusGroup(for: exercise.name)?.rawValue
     }
 
+    private var recommendedWeightText: Binding<String> {
+        Binding(
+            get: { ExerciseLoadEditor.text(from: exercise.recommendedWeight) },
+            set: { exercise.recommendedWeight = ExerciseLoadEditor.weight(from: $0) }
+        )
+    }
+
     var body: some View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Carga recomendada")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 8) {
+                        TextField("Ex: 40", text: recommendedWeightText)
+                            .keyboardType(.decimalPad)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 10)
+                            .background(Color.secondary.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                        Text("kg")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 ExerciseExecutionGuideView(steps: exercise.executionGuide, exercise: exercise, compact: true)
 
                 Button(role: .destructive, action: onRemove) {
@@ -250,9 +276,7 @@ private struct CreateWorkoutExerciseRow: View {
                             Text(focusLabel)
                         }
                         Text("\(exercise.sets)x\(exercise.reps)")
-                        if let weight = exercise.weight {
-                            Text("\(Int(weight))kg")
-                        }
+                        Text("Rec. \(exercise.recommendedWeightLabel)")
                         Text("\(exercise.restSeconds)s descanso")
                     }
                     .font(.caption)

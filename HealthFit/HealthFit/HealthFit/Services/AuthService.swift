@@ -59,8 +59,14 @@ final class AuthService: ObservableObject {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
-        guard !trimmedName.isEmpty, normalizedEmail.contains("@"), password.count >= 6 else {
+        guard !trimmedName.isEmpty, normalizedEmail.contains("@") else {
             errorMessage = "Preencha todos os campos corretamente"
+            isLoading = false
+            return
+        }
+
+        guard PasswordPolicy.isValid(password) else {
+            errorMessage = PasswordPolicy.failureMessage
             isLoading = false
             return
         }

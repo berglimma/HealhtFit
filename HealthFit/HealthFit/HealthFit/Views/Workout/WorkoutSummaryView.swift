@@ -15,8 +15,11 @@ struct WorkoutSummaryView: View {
 
     let session: WorkoutSession
     let onFinish: () -> Void
+    /// Chamado ao confirmar "E-mail enviado" — deve voltar à lista de treinos.
+    var onReturnToWorkoutList: (() -> Void)? = nil
 
     @State private var mailDraft: TrainerMailDraft?
+    @State private var pendingMailResult: MFMailComposeResult?
     @State private var showMailUnavailableAlert = false
     @State private var showEmailSentAlert = false
     @State private var showEmailFailedAlert = false
@@ -35,6 +38,9 @@ struct WorkoutSummaryView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     summaryHeader
+                    if session.endedEarly {
+                        earlyEndSection
+                    }
                     if session.targetCalories != nil {
                         calorieGoalResultSection
                     }
@@ -51,24 +57,30 @@ struct WorkoutSummaryView: View {
                 .adaptiveContentWidth()
             }
             .background(AppTheme.background)
-            .navigationTitle("Treino Concluído")
+            .navigationTitle(session.endedEarly ? "Treino Encerrado" : "Treino Concluído")
             .navigationBarTitleDisplayMode(.inline)
         }
-        .sheet(item: $mailDraft) { draft in
+        .sheet(item: $mailDraft, onDismiss: {
+            presentAlertForPendingMailResult()
+        }) { draft in
             MailComposeView(
                 recipients: draft.recipients,
                 subject: draft.subject,
                 body: draft.body
             ) { result in
+                pendingMailResult = result
                 mailDraft = nil
-                handleMailResult(result)
             }
         }
         .alert("E-mail enviado", isPresented: $showEmailSentAlert) {
-            Button("OK", role: .cancel) {}
+            Button("OK") {
+                returnToWorkoutListAfterEmail()
+            }
         } message: {
             if let user = authService.currentUser {
                 Text("O relatório foi enviado para \(user.personalTrainerName.isEmpty ? user.personalTrainerEmail : user.personalTrainerName) com sucesso.")
+            } else {
+                Text("O relatório foi enviado com sucesso.")
             }
         }
         .alert("Falha no envio", isPresented: $showEmailFailedAlert) {
@@ -158,6 +170,35 @@ struct WorkoutSummaryView: View {
         return "Enviar e-mail para o Personal"
     }
 
+    private func presentAlertForPendingMailResult() {
+        guard let result = pendingMailResult else { return }
+        pendingMailResult = nil
+
+        switch result {
+        case .sent:
+            emailWasSent = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                showEmailSentAlert = true
+            }
+        case .failed:
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                showEmailFailedAlert = true
+            }
+        case .cancelled, .saved:
+            break
+        @unknown default:
+            break
+        }
+    }
+
+    private func returnToWorkoutListAfterEmail() {
+        if let onReturnToWorkoutList {
+            onReturnToWorkoutList()
+        } else {
+            onFinish()
+        }
+    }
+
     private func sendReportToTrainer(user: UserProfile) {
         let recipient = user.personalTrainerEmail.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !recipient.isEmpty else {
@@ -173,6 +214,7 @@ struct WorkoutSummaryView: View {
         )
 
         if MailComposeView.canSendMail {
+            pendingMailResult = nil
             mailDraft = TrainerMailDraft(
                 recipients: [recipient],
                 subject: subject,
@@ -193,32 +235,59 @@ struct WorkoutSummaryView: View {
         }
     }
 
-    private func handleMailResult(_ result: MFMailComposeResult) {
-        switch result {
-        case .sent:
-            emailWasSent = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                showEmailSentAlert = true
-            }
-        case .failed:
-            showEmailFailedAlert = true
-        case .cancelled, .saved:
-            break
-        @unknown default:
-            break
+    private var earlyEndCount: Int {
+        let history = workoutStore.sessionHistory
+        if history.contains(where: { $0.id == session.id }) {
+            return WorkoutReportBuilder.earlyEndCount(from: history)
         }
+        return WorkoutReportBuilder.earlyEndCount(from: [session] + history)
+    }
+
+    private var earlyEndSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                Text("Encerrado antecipadamente")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+            }
+
+            if let justification = session.earlyEndJustification?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+               !justification.isEmpty {
+                Text(justification)
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            Text("Total de encerramentos antecipados: \(earlyEndCount) vez(es)")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.red.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
     private var summaryHeader: some View {
         VStack(spacing: 12) {
-            Image(systemName: "checkmark.circle.fill")
+            Image(systemName: session.endedEarly ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
                 .font(.system(size: 56))
-                .foregroundStyle(AppTheme.accent)
+                .foregroundStyle(session.endedEarly ? Color.red : AppTheme.accent)
 
             Text(session.workoutTitle)
                 .font(.title2.bold())
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
+
+            if session.endedEarly {
+                Text("Treino encerrado sem conclusão completa")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            }
 
             HStack(spacing: 20) {
                 SummaryStat(
@@ -506,6 +575,11 @@ struct WorkoutSummaryView: View {
                         Text(record.exerciseName)
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(AppTheme.textPrimary)
+                        if let weightLabel = record.weightComparisonLabel {
+                            Text(weightLabel)
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
                         if record.restSeconds > 0 {
                             Text("Descanso: \(DurationFormatting.format(seconds: record.restSeconds))")
                                 .font(.caption)

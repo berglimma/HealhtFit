@@ -13,9 +13,24 @@ struct WorkoutDetailView: View {
     @State private var showPreWorkoutPrompt = false
     @State private var showEditWorkout = false
     @State private var showDeleteConfirmation = false
+    @State private var shouldPopToWorkoutList = false
+    @State private var showRepeatedWorkoutAlert = false
+    @State private var repeatedWorkoutSession: WorkoutSession?
 
     private var canModify: Bool {
         workoutStore.canModify(sheet)
+    }
+
+    private var repeatedWorkoutAlertMessage: String {
+        guard let session = repeatedWorkoutSession else {
+            return "Este treino é o mesmo que o último realizado nas últimas 24 horas."
+        }
+        let when = session.endedAt ?? session.startedAt
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.unitsStyle = .full
+        let relative = formatter.localizedString(for: when, relativeTo: .now)
+        return "Este treino é o mesmo que o último realizado (\(session.workoutTitle), \(relative)). Descansar o mesmo grupo muscular ajuda na recuperação. Deseja continuar mesmo assim?"
     }
 
     var body: some View {
@@ -70,8 +85,25 @@ struct WorkoutDetailView: View {
         } message: {
             Text("“\(sheet.title)” será removido permanentemente.")
         }
-        .fullScreenCover(isPresented: $showActiveWorkout) {
-            ActiveWorkoutView(sheet: sheet)
+        .alert("Treino repetido", isPresented: $showRepeatedWorkoutAlert) {
+            Button("Continuar mesmo assim") {
+                showPreWorkoutPrompt = true
+            }
+            Button("Escolher outro", role: .cancel) {
+                repeatedWorkoutSession = nil
+            }
+        } message: {
+            Text(repeatedWorkoutAlertMessage)
+        }
+        .fullScreenCover(isPresented: $showActiveWorkout, onDismiss: {
+            if shouldPopToWorkoutList {
+                shouldPopToWorkoutList = false
+                dismiss()
+            }
+        }) {
+            ActiveWorkoutView(sheet: sheet) {
+                shouldPopToWorkoutList = true
+            }
         }
         .sheet(isPresented: $showVision) {
             VisionWorkoutView()
@@ -116,7 +148,7 @@ struct WorkoutDetailView: View {
     private var actionButtons: some View {
         VStack(spacing: 12) {
             Button {
-                showPreWorkoutPrompt = true
+                requestStartWorkout()
             } label: {
                 Label("Iniciar Treino", systemImage: "play.fill")
             }
@@ -133,6 +165,15 @@ struct WorkoutDetailView: View {
                     .background(AppTheme.cardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+        }
+    }
+
+    private func requestStartWorkout() {
+        if let repeated = workoutStore.recentSameWorkoutSession(as: sheet) {
+            repeatedWorkoutSession = repeated
+            showRepeatedWorkoutAlert = true
+        } else {
+            showPreWorkoutPrompt = true
         }
     }
 
@@ -204,9 +245,7 @@ struct ExerciseRow: View {
                         .foregroundStyle(AppTheme.textPrimary)
                     HStack(spacing: 8) {
                         Text("\(exercise.sets)x\(exercise.reps)")
-                        if let weight = exercise.weight {
-                            Text("\(Int(weight))kg")
-                        }
+                        Text("Rec. \(exercise.recommendedWeightLabel)")
                         Text("\(exercise.restSeconds)s descanso")
                     }
                     .font(.caption)

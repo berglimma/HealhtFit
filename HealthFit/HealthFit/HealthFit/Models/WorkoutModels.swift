@@ -5,6 +5,7 @@ struct Exercise: Identifiable, Codable, Hashable {
     var name: String
     var sets: Int
     var reps: Int
+    /// Carga recomendada na ficha (kg).
     var weight: Double?
     var restSeconds: Int
     var notes: String
@@ -28,6 +29,18 @@ struct Exercise: Identifiable, Codable, Hashable {
         self.restSeconds = restSeconds
         self.notes = notes
         self.muscleGroup = muscleGroup
+    }
+
+    var recommendedWeight: Double? {
+        get { weight }
+        set { weight = newValue }
+    }
+
+    var recommendedWeightLabel: String {
+        guard let weight else { return "—" }
+        return weight.truncatingRemainder(dividingBy: 1) == 0
+            ? "\(Int(weight)) kg"
+            : String(format: "%.1f kg", weight)
     }
 }
 
@@ -250,6 +263,8 @@ struct ExerciseSessionRecord: Identifiable, Codable, Hashable {
     var elapsedSeconds: Int
     var restSeconds: Int
     var isCompleted: Bool
+    var recommendedWeight: Double?
+    var performedWeight: Double?
 
     var id: UUID { exerciseId }
 
@@ -258,13 +273,38 @@ struct ExerciseSessionRecord: Identifiable, Codable, Hashable {
         exerciseName: String,
         elapsedSeconds: Int = 0,
         restSeconds: Int = 0,
-        isCompleted: Bool = false
+        isCompleted: Bool = false,
+        recommendedWeight: Double? = nil,
+        performedWeight: Double? = nil
     ) {
         self.exerciseId = exerciseId
         self.exerciseName = exerciseName
         self.elapsedSeconds = elapsedSeconds
         self.restSeconds = restSeconds
         self.isCompleted = isCompleted
+        self.recommendedWeight = recommendedWeight
+        self.performedWeight = performedWeight
+    }
+
+    var weightComparisonLabel: String? {
+        let recommended = recommendedWeight.map { formatKg($0) }
+        let performed = performedWeight.map { formatKg($0) }
+        switch (recommended, performed) {
+        case let (rec?, perf?):
+            return "Rec. \(rec) · Feita \(perf)"
+        case let (rec?, nil):
+            return "Rec. \(rec)"
+        case let (nil, perf?):
+            return "Feita \(perf)"
+        default:
+            return nil
+        }
+    }
+
+    private func formatKg(_ value: Double) -> String {
+        value.truncatingRemainder(dividingBy: 1) == 0
+            ? "\(Int(value)) kg"
+            : String(format: "%.1f kg", value)
     }
 }
 
@@ -285,6 +325,10 @@ struct WorkoutSession: Identifiable, Codable {
     var averagePaceSecondsPerKm: Int?
     var cardioIntensityLabel: String?
     var targetCalories: Int?
+    /// Encerrado antes de concluir todos os exercícios.
+    var endedEarly: Bool
+    /// Motivo informado pelo aluno ao encerrar antecipadamente.
+    var earlyEndJustification: String?
 
     init(
         id: UUID = UUID(),
@@ -302,7 +346,9 @@ struct WorkoutSession: Identifiable, Codable {
         completedDistanceKm: Double? = nil,
         averagePaceSecondsPerKm: Int? = nil,
         cardioIntensityLabel: String? = nil,
-        targetCalories: Int? = nil
+        targetCalories: Int? = nil,
+        endedEarly: Bool = false,
+        earlyEndJustification: String? = nil
     ) {
         self.id = id
         self.workoutSheetId = workoutSheetId
@@ -320,6 +366,8 @@ struct WorkoutSession: Identifiable, Codable {
         self.averagePaceSecondsPerKm = averagePaceSecondsPerKm
         self.cardioIntensityLabel = cardioIntensityLabel
         self.targetCalories = targetCalories
+        self.endedEarly = endedEarly
+        self.earlyEndJustification = earlyEndJustification
     }
 
     init(from decoder: Decoder) throws {
@@ -340,6 +388,8 @@ struct WorkoutSession: Identifiable, Codable {
         averagePaceSecondsPerKm = try container.decodeIfPresent(Int.self, forKey: .averagePaceSecondsPerKm)
         cardioIntensityLabel = try container.decodeIfPresent(String.self, forKey: .cardioIntensityLabel)
         targetCalories = try container.decodeIfPresent(Int.self, forKey: .targetCalories)
+        endedEarly = try container.decodeIfPresent(Bool.self, forKey: .endedEarly) ?? false
+        earlyEndJustification = try container.decodeIfPresent(String.self, forKey: .earlyEndJustification)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -347,7 +397,7 @@ struct WorkoutSession: Identifiable, Codable {
         case heartRateSamples, caloriesBurned, completedExercises, totalExercises
         case exerciseRecords, tookPreWorkout
         case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel
-        case targetCalories
+        case targetCalories, endedEarly, earlyEndJustification
     }
 
     var duration: TimeInterval {

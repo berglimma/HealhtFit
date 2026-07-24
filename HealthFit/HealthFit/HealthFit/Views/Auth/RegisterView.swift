@@ -15,7 +15,11 @@ struct RegisterView: View {
     @State private var acceptedTerms = false
     
     private var isValid: Bool {
-        !name.isEmpty && email.contains("@") && password.count >= 6 && password == confirmPassword && acceptedTerms
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && email.contains("@")
+            && PasswordPolicy.isValid(password)
+            && password == confirmPassword
+            && acceptedTerms
     }
     
     var body: some View {
@@ -61,10 +65,13 @@ struct RegisterView: View {
                         SecureField(
                             "",
                             text: $password,
-                            prompt: Text("Senha (mín. 6 caracteres)")
+                            prompt: Text("Senha")
                                 .foregroundStyle(Color.black.opacity(0.6))
                         )
                         .textFieldStyle(HealthFitTextFieldStyle())
+                        .textContentType(.newPassword)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                         
                         SecureField(
                             "",
@@ -74,6 +81,14 @@ struct RegisterView: View {
                             
                         )
                         .textFieldStyle(HealthFitTextFieldStyle())
+                        .textContentType(.newPassword)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+
+                        PasswordRequirementsView(
+                            password: password,
+                            confirmPassword: confirmPassword
+                        )
                     }
                     
                     VStack(alignment: .leading, spacing: 12) {
@@ -263,7 +278,7 @@ struct GoalCard: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .foregroundStyle(isSelected ? .white : AppTheme.textSecondary)
-            .background(isSelected ? AppTheme.accent : AppTheme.cardBackground)
+            .background(isSelected ? goal.color : AppTheme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }

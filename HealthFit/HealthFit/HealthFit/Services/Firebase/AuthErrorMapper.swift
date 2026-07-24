@@ -33,7 +33,7 @@ enum AuthErrorMapper {
         case .emailAlreadyInUse:
             return "Este e-mail já está cadastrado."
         case .weakPassword:
-            return "Senha muito fraca. Use pelo menos 6 caracteres."
+            return PasswordPolicy.failureMessage
         case .networkError:
             return "Sem conexão. Verifique sua internet e tente novamente."
         case .tooManyRequests:

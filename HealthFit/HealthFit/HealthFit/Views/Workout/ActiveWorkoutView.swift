@@ -10,6 +10,7 @@ struct ActiveWorkoutView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     let sheet: WorkoutSheet
+    var onReturnToWorkoutList: (() -> Void)? = nil
     @State private var completedSets: [UUID: Int] = [:]
     @State private var finishedSession: WorkoutSession?
     @State private var workoutElapsedSeconds = 0
@@ -17,8 +18,15 @@ struct ActiveWorkoutView: View {
     @State private var isShowingExerciseDemo = true
     @State private var demoExerciseId: UUID?
     @State private var showWorkoutStartMotivation = true
+    @State private var performedWeightTextByExercise: [UUID: String] = [:]
+    @State private var showEarlyEndSheet = false
+    @State private var earlyEndJustification = ""
 
     private let workoutClock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    private var trimmedEarlyEndJustification: String {
+        earlyEndJustification.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     var body: some View {
         NavigationStack {
@@ -84,10 +92,26 @@ struct ActiveWorkoutView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Encerrar") {
-                        finishWorkout()
+                        requestEarlyEnd()
                     }
                     .foregroundStyle(.red)
+                    .disabled(isFinishing)
                 }
+            }
+            .sheet(isPresented: $showEarlyEndSheet) {
+                EarlyEndJustificationSheet(
+                    justification: $earlyEndJustification,
+                    onCancel: {
+                        showEarlyEndSheet = false
+                        earlyEndJustification = ""
+                    },
+                    onConfirm: {
+                        let reason = trimmedEarlyEndJustification
+                        showEarlyEndSheet = false
+                        finishWorkout(endedEarly: true, justification: reason)
+                    }
+                )
+                .presentationDetents([.medium])
             }
         }
         .onAppear {
@@ -125,10 +149,20 @@ struct ActiveWorkoutView: View {
             }
         }
         .fullScreenCover(item: $finishedSession) { session in
-            WorkoutSummaryView(session: session) {
-                finishedSession = nil
-                dismiss()
-            }
+            WorkoutSummaryView(
+                session: session,
+                onFinish: {
+                    finishedSession = nil
+                    dismiss()
+                },
+                onReturnToWorkoutList: {
+                    onReturnToWorkoutList?()
+                    finishedSession = nil
+                    DispatchQueue.main.async {
+                        dismiss()
+                    }
+                }
+            )
         }
     }
 
@@ -255,16 +289,13 @@ struct ActiveWorkoutView: View {
                     Text("Reps")
                         .font(.caption)
                 }
-                if let weight = exercise.weight {
-                    VStack {
-                        Text("\(Int(weight))")
-                            .font(.title2.bold())
-                        Text("kg")
-                            .font(.caption)
-                    }
-                }
             }
             .foregroundStyle(AppTheme.textPrimary)
+
+            ExerciseLoadEditor(
+                recommendedWeight: exercise.recommendedWeight,
+                performedWeightText: performedWeightBinding(for: exercise)
+            )
 
             HStack(spacing: 12) {
                 Button {
@@ -282,13 +313,18 @@ struct ActiveWorkoutView: View {
                 Button {
                     startRest(for: exercise)
                 } label: {
-                    Image(systemName: "timer")
-                        .font(.title2)
-                        .foregroundStyle(AppTheme.accent)
-                        .frame(width: 50, height: 50)
-                        .background(AppTheme.cardBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    VStack(spacing: 2) {
+                        Image(systemName: "timer")
+                            .font(.title3)
+                        Text("Pausa")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 56, height: 50)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                .accessibilityLabel("Pausa \(timerService.configuredRestSeconds) segundos")
             }
 
             Button {
@@ -313,13 +349,40 @@ struct ActiveWorkoutView: View {
         demoExerciseId = exercise.id
         isShowingExerciseDemo = true
         workoutStore.setExerciseTimerPaused(true)
+        ensurePerformedWeightText(for: exercise)
     }
 
     private func beginCurrentExercise(_ exercise: Exercise) {
         guard demoExerciseId == exercise.id else { return }
+        ensurePerformedWeightText(for: exercise)
         isShowingExerciseDemo = false
         workoutStore.setExerciseTimerPaused(false)
         syncWatchWorkoutState()
+    }
+
+    private func ensurePerformedWeightText(for exercise: Exercise) {
+        guard performedWeightTextByExercise[exercise.id] == nil else { return }
+        if let recorded = workoutStore.exerciseRecords.first(where: { $0.exerciseId == exercise.id })?.performedWeight {
+            performedWeightTextByExercise[exercise.id] = ExerciseLoadEditor.text(from: recorded)
+        } else {
+            performedWeightTextByExercise[exercise.id] = ExerciseLoadEditor.text(from: exercise.recommendedWeight)
+        }
+    }
+
+    private func performedWeightBinding(for exercise: Exercise) -> Binding<String> {
+        Binding(
+            get: {
+                performedWeightTextByExercise[exercise.id]
+                    ?? ExerciseLoadEditor.text(from: exercise.recommendedWeight)
+            },
+            set: { newValue in
+                performedWeightTextByExercise[exercise.id] = newValue
+                workoutStore.updatePerformedWeight(
+                    exerciseId: exercise.id,
+                    weight: ExerciseLoadEditor.weight(from: newValue)
+                )
+            }
+        )
     }
 
     private func syncWatchWorkoutState() {
@@ -362,25 +425,41 @@ struct ActiveWorkoutView: View {
     }
 
     private var bottomBar: some View {
-        HStack(spacing: 16) {
-            NavigationLink {
-                VisionWorkoutView()
+        VStack(spacing: 12) {
+            Button {
+                requestEarlyEnd()
             } label: {
-                Label("Vision", systemImage: "camera.fill")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(AppTheme.accent)
+                Label("Encerrar treino sem concluir", systemImage: "xmark.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.red)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+            .disabled(isFinishing)
+            .accessibilityHint("Encerra o treino antes de concluir todos os exercícios e pede uma justificativa")
 
-            Spacer()
+            HStack(spacing: 16) {
+                NavigationLink {
+                    VisionWorkoutView()
+                } label: {
+                    Label("Vision", systemImage: "camera.fill")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(AppTheme.accent)
+                }
 
-            if timerService.isRunning {
-                Label("Descanso: \(timerService.formattedTime)", systemImage: "timer")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.accentSecondary)
-            } else {
-                Text("Descanso acumulado: \(DurationFormatting.format(seconds: timerService.totalRestSeconds))")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
+                Spacer()
+
+                if timerService.isRunning {
+                    Label("Descanso: \(timerService.formattedTime)", systemImage: "timer")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.accentSecondary)
+                } else {
+                    Text("Descanso acumulado: \(DurationFormatting.format(seconds: timerService.totalRestSeconds))")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
             }
         }
         .padding()
@@ -389,6 +468,12 @@ struct ActiveWorkoutView: View {
         .overlay(alignment: .top) {
             Divider()
         }
+    }
+
+    private func requestEarlyEnd() {
+        guard !isFinishing else { return }
+        earlyEndJustification = ""
+        showEarlyEndSheet = true
     }
 
     private func completeSet(for exercise: Exercise) {
@@ -404,14 +489,13 @@ struct ActiveWorkoutView: View {
     }
 
     private func startRest(for exercise: Exercise) {
-        timerService.configure(
-            restSeconds: exercise.restSeconds,
-            maxRest: exercise.restSeconds * 2,
-            notifications: true
-        )
+        // Usa o descanso configurado no Perfil (não sobrescreve com o valor do exercício).
         timerService.startRest(for: exercise.name, exerciseId: exercise.id)
         workoutStore.setExerciseTimerPaused(true)
-        watchConnectivity.sendRestTimerStart(seconds: exercise.restSeconds, exerciseName: exercise.name)
+        watchConnectivity.sendRestTimerStart(
+            seconds: timerService.configuredRestSeconds,
+            exerciseName: exercise.name
+        )
     }
 
     private func markExerciseComplete(_ exercise: Exercise) {
@@ -444,7 +528,7 @@ struct ActiveWorkoutView: View {
         workoutStore.updateCalories(watchConnectivity.watchCalories)
     }
 
-    private func finishWorkout() {
+    private func finishWorkout(endedEarly: Bool = false, justification: String? = nil) {
         guard !isFinishing else { return }
         isFinishing = true
 
@@ -461,6 +545,10 @@ struct ActiveWorkoutView: View {
         session.endedAt = .now
         session.exerciseRecords = workoutStore.exerciseRecords
         session.completedExercises = workoutStore.exerciseRecords.filter(\.isCompleted).count
+        session.endedEarly = endedEarly
+        session.earlyEndJustification = endedEarly
+            ? justification?.trimmingCharacters(in: .whitespacesAndNewlines)
+            : nil
 
         Task {
             await healthKitManager.saveWorkout(
@@ -474,8 +562,66 @@ struct ActiveWorkoutView: View {
             athleteName: authService.currentUser?.greetingName ?? "Atleta"
         )
 
-        workoutStore.endSession()
+        workoutStore.endSession(persisting: session)
         finishedSession = session
+    }
+}
+
+private struct EarlyEndJustificationSheet: View {
+    @Binding var justification: String
+    let onCancel: () -> Void
+    let onConfirm: () -> Void
+
+    private var canConfirm: Bool {
+        !justification.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Por que você está encerrando o treino antes de concluir todos os exercícios?")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                TextEditor(text: $justification)
+                    .frame(minHeight: 120)
+                    .padding(8)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(AppTheme.textSecondary.opacity(0.25), lineWidth: 1)
+                    )
+
+                Text("Essa justificativa será enviada no relatório ao personal.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                Spacer()
+
+                Button {
+                    onConfirm()
+                } label: {
+                    Text("Confirmar encerramento")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(canConfirm ? Color.red : Color.red.opacity(0.4))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(!canConfirm)
+            }
+            .padding()
+            .background(AppTheme.background.ignoresSafeArea())
+            .navigationTitle("Encerrar antecipadamente")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar", action: onCancel)
+                }
+            }
+        }
     }
 }
 
@@ -505,6 +651,15 @@ struct ExerciseTrackingRow: View {
                 Text("\(completedSets)/\(exercise.sets) séries")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
+                if let weightLabel = record?.weightComparisonLabel {
+                    Text(weightLabel)
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                } else if exercise.recommendedWeight != nil {
+                    Text("Rec. \(exercise.recommendedWeightLabel)")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
             }
 
             Spacer()
@@ -591,46 +746,81 @@ struct WorkoutStartMotivationOverlay: View {
 
 struct RestTimerOverlay: View {
     @EnvironmentObject var timerService: RestTimerService
+    @EnvironmentObject var watchConnectivity: WatchConnectivityManager
 
     var body: some View {
         VStack {
             Spacer()
             VStack(spacing: 16) {
-                Text("Descanso")
+                Text(timerService.isAwaitingResumeAcknowledgment ? "Descanso encerrado!" : "Pausa")
                     .font(.headline)
-                    .foregroundStyle(AppTheme.textSecondary)
+                    .foregroundStyle(timerService.isAwaitingResumeAcknowledgment ? AppTheme.accentSecondary : AppTheme.textSecondary)
+
+                if !timerService.currentExerciseName.isEmpty {
+                    Text(timerService.currentExerciseName)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
 
                 ZStack {
                     Circle()
                         .stroke(Color.white.opacity(0.1), lineWidth: 8)
                         .frame(width: 120, height: 120)
                     Circle()
-                        .trim(from: 0, to: timerService.progress)
+                        .trim(from: 0, to: timerService.isAwaitingResumeAcknowledgment ? 1 : timerService.progress)
                         .stroke(
-                            timerService.isOvertime ? Color.red : AppTheme.accent,
+                            timerService.isAwaitingResumeAcknowledgment || timerService.isOvertime
+                                ? Color.red
+                                : AppTheme.accent,
                             style: StrokeStyle(lineWidth: 8, lineCap: .round)
                         )
                         .frame(width: 120, height: 120)
                         .rotationEffect(.degrees(-90))
                         .animation(.linear(duration: 1), value: timerService.progress)
 
-                    Text(timerService.formattedTime)
-                        .font(.system(size: 32, weight: .bold, design: .monospaced))
-                        .foregroundStyle(timerService.isOvertime ? .red : AppTheme.textPrimary)
+                    if timerService.isAwaitingResumeAcknowledgment {
+                        VStack(spacing: 4) {
+                            Image(systemName: "bell.badge.fill")
+                                .font(.title2)
+                                .foregroundStyle(.orange)
+                            Text("00:00")
+                                .font(.system(size: 28, weight: .bold, design: .monospaced))
+                                .foregroundStyle(.red)
+                        }
+                    } else {
+                        Text(timerService.formattedTime)
+                            .font(.system(size: 32, weight: .bold, design: .monospaced))
+                            .foregroundStyle(timerService.isOvertime ? .red : AppTheme.textPrimary)
+                    }
                 }
 
-                if timerService.isOvertime {
-                    Text("Descanso prolongado — notificações enviadas ao iPhone e Apple Watch")
+                if timerService.isAwaitingResumeAcknowledgment {
+                    Text("Notificação e alerta sonoro enviados.\nToque para continuar o treino.")
                         .font(.caption)
                         .foregroundStyle(.orange)
                         .multilineTextAlignment(.center)
-                }
 
-                Button("Pular Descanso") {
-                    timerService.stopTimer()
+                    Button {
+                        timerService.acknowledgeRestAndResume()
+                        watchConnectivity.sendRestTimerStop()
+                    } label: {
+                        Text("OK vamos lá")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(AppTheme.accent)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                } else {
+                    Button("Pular Descanso") {
+                        timerService.stopTimer()
+                        watchConnectivity.sendRestTimerStop()
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(AppTheme.accent)
                 }
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(AppTheme.accent)
             }
             .padding(32)
             .background(.ultraThinMaterial)

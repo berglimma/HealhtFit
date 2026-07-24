@@ -8,6 +8,7 @@ struct ActiveMeditationView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     let config: MeditationWorkoutConfig
+    var onReturnToWorkoutList: (() -> Void)? = nil
 
     @State private var elapsedSeconds = 0
     @State private var finishedSession: WorkoutSession?
@@ -81,10 +82,20 @@ struct ActiveMeditationView: View {
             )
         }
         .fullScreenCover(item: $finishedSession) { session in
-            WorkoutSummaryView(session: session) {
-                finishedSession = nil
-                dismiss()
-            }
+            WorkoutSummaryView(
+                session: session,
+                onFinish: {
+                    finishedSession = nil
+                    dismiss()
+                },
+                onReturnToWorkoutList: {
+                    onReturnToWorkoutList?()
+                    finishedSession = nil
+                    DispatchQueue.main.async {
+                        dismiss()
+                    }
+                }
+            )
         }
     }
 
