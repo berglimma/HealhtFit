@@ -353,6 +353,8 @@ struct WorkoutSession: Identifiable, Codable {
     var endedEarly: Bool
     /// Motivo informado pelo aluno ao encerrar antecipadamente.
     var earlyEndJustification: String?
+    /// Encerrado automaticamente por inatividade (mais de 2h30 sem finalizar).
+    var autoEndedByInactivity: Bool
 
     init(
         id: UUID = UUID(),
@@ -372,7 +374,8 @@ struct WorkoutSession: Identifiable, Codable {
         cardioIntensityLabel: String? = nil,
         targetCalories: Int? = nil,
         endedEarly: Bool = false,
-        earlyEndJustification: String? = nil
+        earlyEndJustification: String? = nil,
+        autoEndedByInactivity: Bool = false
     ) {
         self.id = id
         self.workoutSheetId = workoutSheetId
@@ -392,6 +395,7 @@ struct WorkoutSession: Identifiable, Codable {
         self.targetCalories = targetCalories
         self.endedEarly = endedEarly
         self.earlyEndJustification = earlyEndJustification
+        self.autoEndedByInactivity = autoEndedByInactivity
     }
 
     init(from decoder: Decoder) throws {
@@ -414,6 +418,30 @@ struct WorkoutSession: Identifiable, Codable {
         targetCalories = try container.decodeIfPresent(Int.self, forKey: .targetCalories)
         endedEarly = try container.decodeIfPresent(Bool.self, forKey: .endedEarly) ?? false
         earlyEndJustification = try container.decodeIfPresent(String.self, forKey: .earlyEndJustification)
+        autoEndedByInactivity = try container.decodeIfPresent(Bool.self, forKey: .autoEndedByInactivity) ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(workoutSheetId, forKey: .workoutSheetId)
+        try container.encode(workoutTitle, forKey: .workoutTitle)
+        try container.encode(startedAt, forKey: .startedAt)
+        try container.encodeIfPresent(endedAt, forKey: .endedAt)
+        try container.encode(heartRateSamples, forKey: .heartRateSamples)
+        try container.encode(caloriesBurned, forKey: .caloriesBurned)
+        try container.encode(completedExercises, forKey: .completedExercises)
+        try container.encode(totalExercises, forKey: .totalExercises)
+        try container.encode(exerciseRecords, forKey: .exerciseRecords)
+        try container.encodeIfPresent(tookPreWorkout, forKey: .tookPreWorkout)
+        try container.encodeIfPresent(targetDistanceKm, forKey: .targetDistanceKm)
+        try container.encodeIfPresent(completedDistanceKm, forKey: .completedDistanceKm)
+        try container.encodeIfPresent(averagePaceSecondsPerKm, forKey: .averagePaceSecondsPerKm)
+        try container.encodeIfPresent(cardioIntensityLabel, forKey: .cardioIntensityLabel)
+        try container.encodeIfPresent(targetCalories, forKey: .targetCalories)
+        try container.encode(endedEarly, forKey: .endedEarly)
+        try container.encodeIfPresent(earlyEndJustification, forKey: .earlyEndJustification)
+        try container.encode(autoEndedByInactivity, forKey: .autoEndedByInactivity)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -421,7 +449,7 @@ struct WorkoutSession: Identifiable, Codable {
         case heartRateSamples, caloriesBurned, completedExercises, totalExercises
         case exerciseRecords, tookPreWorkout
         case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel
-        case targetCalories, endedEarly, earlyEndJustification
+        case targetCalories, endedEarly, earlyEndJustification, autoEndedByInactivity
     }
 
     var duration: TimeInterval {

@@ -31,6 +31,38 @@ enum DailyEveningAssistantCheckInConfiguration {
     static let hour = 21
 }
 
+/// Horários padrão das refeições do cardápio e disparo 5 min antes.
+enum MealReminderConfiguration {
+    static let minutesBeforeMeal = 5
+
+    /// (hora, minuto) do horário da refeição.
+    static func mealClock(for mealType: MealType) -> (hour: Int, minute: Int) {
+        switch mealType {
+        case .breakfast: return (7, 0)
+        case .morningSnack: return (10, 0)
+        case .lunch: return (12, 30)
+        case .afternoonSnack: return (16, 0)
+        case .dinner: return (19, 0)
+        case .supper: return (21, 30)
+        }
+    }
+
+    /// Horário do alerta = refeição − 5 minutos.
+    static func reminderClock(for mealType: MealType) -> (hour: Int, minute: Int) {
+        let meal = mealClock(for: mealType)
+        var totalMinutes = meal.hour * 60 + meal.minute - minutesBeforeMeal
+        if totalMinutes < 0 {
+            totalMinutes += 24 * 60
+        }
+        return (totalMinutes / 60, totalMinutes % 60)
+    }
+
+    static func formattedMealTime(for mealType: MealType) -> String {
+        let clock = mealClock(for: mealType)
+        return String(format: "%02d:%02d", clock.hour, clock.minute)
+    }
+}
+
 @MainActor
 final class NotificationService {
     static let shared = NotificationService()
@@ -47,6 +79,7 @@ final class NotificationService {
     private let appUsageInactivityNotifiedKey = "healthfit_app_usage_inactivity_notified_for_session"
     private let appUsageInactivityReminderIdentifier = "app_usage_inactivity_48h"
     private let waterReminderIdentifierPrefix = "water_reminder_"
+    private let mealReminderIdentifierPrefix = "meal_reminder_"
     private let dailyAssistantCheckInIdentifier = "daily_assistant_checkin_9am"
     private let dailyEveningAssistantCheckInIdentifier = "daily_assistant_checkin_9pm"
     private let healthIconYellowNotifiedDayKey = "healthfit_health_icon_yellow_notified_day"
@@ -54,10 +87,16 @@ final class NotificationService {
     private let healthIconRedReminderIdentifier = "health_icon_red_24h"
     private let assistantCardioNudgeKey = "healthfit_assistant_cardio_nudge_for"
     private let assistantMeditationNudgeKey = "healthfit_assistant_meditation_nudge_for"
+    private let mealRemindersEnabledKey = "healthfit_meal_reminders_enabled"
 
     static let inactivityThreshold: TimeInterval = 48 * 60 * 60
 
     private init() {}
+
+    private var mealRemindersEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: mealRemindersEnabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: mealRemindersEnabledKey) }
+    }
 
     func requestAuthorization() {
         UNUserNotificationCenter.current().delegate = AppNotificationCenterDelegate.shared
@@ -73,6 +112,21 @@ final class NotificationService {
         scheduleDailyAssistantCheckIn()
         scheduleDailyEveningAssistantCheckIn()
         scheduleWaterReminders()
+        if mealRemindersEnabled {
+            scheduleMealReminders()
+        } else {
+            cancelMealReminders()
+        }
+    }
+
+    /// Ativa/desativa alertas 5 min antes de cada refeição conforme o usuário tenha cardápio.
+    func updateMealReminders(hasMealPlan: Bool) {
+        mealRemindersEnabled = hasMealPlan
+        if hasMealPlan {
+            scheduleMealReminders()
+        } else {
+            cancelMealReminders()
+        }
     }
 
     func scheduleDailyAssistantCheckIn(
@@ -175,6 +229,35 @@ final class NotificationService {
         }
     }
 
+    func scheduleMealReminders() {
+        cancelMealReminders()
+
+        for mealType in MealType.allCases {
+            let clock = MealReminderConfiguration.reminderClock(for: mealType)
+            var components = DateComponents()
+            components.hour = clock.hour
+            components.minute = clock.minute
+
+            scheduleOnPhone(
+                title: "Refeição em 5 minutos 🍽️",
+                body: MotivationMessages.mealReminderMessage(for: mealType),
+                category: "MEAL_REMINDER",
+                identifier: "\(mealReminderIdentifierPrefix)\(String(describing: mealType))",
+                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+            )
+        }
+    }
+
+    func cancelMealReminders() {
+        let prefix = mealReminderIdentifierPrefix
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let ids = requests
+                .filter { $0.identifier.hasPrefix(prefix) }
+                .map(\.identifier)
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        }
+    }
+
     // MARK: - Health icon (yellow / red)
 
     func refreshHealthIconNotifications(
@@ -269,7 +352,7 @@ final class NotificationService {
 
             guard let scheduledDate = calendar.date(from: components), scheduledDate > .now else { continue }
 
-            let title = "Hora de treinar! 💪"
+            let title = MotivationMessages.dailyNotificationTitle(for: day)
             let body = MotivationMessages.dailyMessage(for: day)
             let identifier = "daily_motivation_\(dayOffset)"
 
@@ -334,6 +417,11 @@ final class NotificationService {
     }
 
     func deliverWorkoutEndNotification(session: WorkoutSession, athleteName: String) {
+        if session.autoEndedByInactivity {
+            deliverForgottenWorkoutEndNotification(session: session, athleteName: athleteName)
+            return
+        }
+
         let titleLower = session.workoutTitle.lowercased()
         let title: String
         let category: String
@@ -354,6 +442,64 @@ final class NotificationService {
             category: category,
             identifier: "session_end_\(UUID().uuidString)"
         )
+    }
+
+    /// Notificação triste/alerta quando o treino passa de 2h30 sem finalizar.
+    func deliverForgottenWorkoutEndNotification(session: WorkoutSession, athleteName: String) {
+        deliverImmediately(
+            title: "⚠️ Treino encerrado por inatividade",
+            body: MotivationMessages.forgottenWorkoutEndNotification(
+                workoutTitle: session.workoutTitle,
+                athleteName: athleteName
+            ),
+            category: "WORKOUT_AUTO_END",
+            identifier: "workout_auto_end_\(session.id.uuidString)",
+            immediate: true
+        )
+    }
+
+    func scheduleActiveWorkoutAutoEnd(sessionId: UUID, workoutTitle: String, fireDate: Date) {
+        cancelActiveWorkoutAutoEnd(sessionId: sessionId)
+        let interval = fireDate.timeIntervalSince(.now)
+        guard interval > 1 else {
+            deliverImmediately(
+                title: "⚠️ Treino aberto há muito tempo",
+                body: MotivationMessages.forgottenWorkoutEndNotification(
+                    workoutTitle: workoutTitle,
+                    athleteName: "Atleta"
+                ),
+                category: "WORKOUT_AUTO_END",
+                identifier: "workout_auto_end_\(sessionId.uuidString)",
+                immediate: true
+            )
+            return
+        }
+
+        scheduleOnPhone(
+            title: "⚠️ Você esqueceu de encerrar o treino?",
+            body: MotivationMessages.forgottenWorkoutPendingNotification(workoutTitle: workoutTitle),
+            category: "WORKOUT_AUTO_END",
+            identifier: "workout_auto_end_\(sessionId.uuidString)",
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+        )
+    }
+
+    func cancelActiveWorkoutAutoEnd(sessionId: UUID? = nil) {
+        if let sessionId {
+            UNUserNotificationCenter.current().removePendingNotificationRequests(
+                withIdentifiers: ["workout_auto_end_\(sessionId.uuidString)"]
+            )
+            UNUserNotificationCenter.current().removeDeliveredNotifications(
+                withIdentifiers: ["workout_auto_end_\(sessionId.uuidString)"]
+            )
+            return
+        }
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let ids = requests
+                .filter { $0.identifier.hasPrefix("workout_auto_end_") }
+                .map(\.identifier)
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        }
     }
 
     func deliverRestOvertimeNotification(exerciseName: String) {

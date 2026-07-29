@@ -250,11 +250,21 @@ struct WorkoutSummaryView: View {
     private var earlyEndSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
-                Text("Encerrado antecipadamente")
+                Image(systemName: session.autoEndedByInactivity
+                      ? "clock.badge.exclamationmark.fill"
+                      : "exclamationmark.triangle.fill")
+                    .foregroundStyle(session.autoEndedByInactivity ? .orange : .red)
+                Text(session.autoEndedByInactivity
+                     ? "Esqueceu de finalizar o treino"
+                     : "Encerrado antecipadamente")
                     .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
+            }
+
+            if session.autoEndedByInactivity {
+                Text("Poxa… o treino ficou aberto por mais de 2h30. Eu encerrei por segurança — não se preocupe, estou aqui pra te ajudar no próximo.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             if let justification = session.earlyEndJustification?
@@ -271,7 +281,7 @@ struct WorkoutSummaryView: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.red.opacity(0.08))
+        .background((session.autoEndedByInactivity ? Color.orange : Color.red).opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
@@ -326,7 +336,12 @@ struct WorkoutSummaryView: View {
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
 
-            if session.endedEarly {
+            if session.autoEndedByInactivity {
+                Text("Encerrado automaticamente — você esqueceu de finalizar (mais de 2h30)")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.orange)
+                    .multilineTextAlignment(.center)
+            } else if session.endedEarly {
                 Text("Treino encerrado sem conclusão completa")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.red)

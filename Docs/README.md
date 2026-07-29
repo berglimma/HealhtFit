@@ -1,26 +1,33 @@
 # Documentação HealthFit
 
-Pacote profissional de documentação de produto e engenharia.
-
-## Entregáveis
-
-| Arquivo | Descrição |
-|---------|-----------|
-| [HealthFit_Documentacao_Completa.pdf](./HealthFit_Documentacao_Completa.pdf) | **PDF mestre** — visão de produto, telas, arquitetura, Firebase, notificações, Watch |
-| [HealthFit_Documentacao_Completa.html](./HealthFit_Documentacao_Completa.html) | Versão HTML do PDF (editável / reimprimível) |
-| [figma/HealthFit_Screen_Map_Figma.pdf](./figma/HealthFit_Screen_Map_Figma.pdf) | Mapa visual de telas (estilo Figma) em PDF |
-| [figma/HealthFit_Screen_Map_Figma.html](./figma/HealthFit_Screen_Map_Figma.html) | Board interativo de frames por área |
-| [figma/figma_design_tokens_and_screens.json](./figma/figma_design_tokens_and_screens.json) | Tokens + inventário de frames para importar no Figma |
-| [figma/FIGMA_IMPORT_GUIDE.md](./figma/FIGMA_IMPORT_GUIDE.md) | Passo a passo para montar o arquivo Figma |
-
-## Regenerar
-
-```bash
-python3 Docs/generate_docs.py
-```
-
-Requisitos: Python 3 e Google Chrome (para `--print-to-pdf`).
+Documentação oficial de produto e engenharia — alinhada ao código e ao Figma.
 
 ## Figma
 
-O MCP do Figma pode não estar autenticado no ambiente do agente. Os artefatos em `Docs/figma/` permitem criar o arquivo Figma com nomenclatura de frames alinhada ao código (`Área / NN Nome`).
+**Arquivo do time:** [HealthFit — Telas e Documentação](https://www.figma.com/design/WPvjXR5t3EZbuO962iay3K)
+
+| Página | Conteúdo |
+|--------|----------|
+| 01 | Cover, tokens reais do Asset Catalog, Auth, Onboarding |
+| 02 | App: Dashboard (ícone sync), Treinos, Cardio, Meditação, Nutrição, IAssistente, Perfil |
+| 03 | Watch, Vision AI, trio Verde/Amarelo/Vermelho, fluxos e Firebase |
+
+## PDF profissional
+
+**Arquivo:** [HealthFit_Documentacao_Completa.pdf](./HealthFit_Documentacao_Completa.pdf) (12 páginas A4)
+
+Capítulos: sumário executivo, stack, arquitetura, catálogo de 26 telas, design system + ícone de saúde, treinos, nutrição, IAssistente rule-based, Firebase, notificações (água 2h), Watch/HealthKit, qualidade e Figma.
+
+### Regenerar
+
+```bash
+python3 Docs/generate_professional_pdf.py
+```
+
+## Fatos críticos (código atual)
+
+- Ícone de saúde: `DailyWellnessService.healthIconStatus` → Dashboard + Perfil + Home Screen
+- Água: a cada **2h**, **08–20h**
+- Abas: Início · Treinos · Nutrição · IAssistente · Perfil
+- IAssistente: **regras locais** (sem LLM cloud)
+- Nudges cardio/meditação: **48h**

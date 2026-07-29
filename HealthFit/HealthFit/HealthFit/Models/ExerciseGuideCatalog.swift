@@ -315,6 +315,162 @@ enum ExerciseGuideCatalog {
             "Execute uma flexão opcional, depois traga os pés de volta.",
             "Salte para cima com braços estendidos e aterrisse com controle."
         ],
+        "Polichinelo": [
+            "Fique em pé com os pés juntos e os braços ao lado do corpo.",
+            "Salte abrindo as pernas e elevando os braços acima da cabeça.",
+            "Retorne à posição inicial no próximo salto, em ritmo contínuo.",
+            "Mantenha o tronco ereto e aterrise com os joelhos levemente flexionados."
+        ],
+        "Ponte de Glúteos": [
+            "Deite de costas com joelhos flexionados e pés apoiados no chão.",
+            "Empurre o calcanhar e eleve o quadril até alinhar ombros, quadril e joelhos.",
+            "Contraia os glúteos no topo sem arquear a lombar em excesso.",
+            "Desça controlando até quase tocar o chão e repita."
+        ],
+        "Superman": [
+            "Deite de bruços com braços estendidos à frente e pernas longas.",
+            "Eleve simultaneamente braços, peito e pernas do chão.",
+            "Mantenha o olhar no chão e o pescoço neutro.",
+            "Segure um instante no topo e desça de forma controlada."
+        ],
+        "Isometria na Parede": [
+            "Encoste as costas na parede e deslize até os joelhos formarem ~90°.",
+            "Mantenha os pés afastados na largura do quadril, bem plantados.",
+            "Contraia quadríceps e glúteos sem deixar o tronco inclinar.",
+            "Segure a posição pelo tempo indicado (reps = segundos)."
+        ],
+        "Flexão Diamante": [
+            "Apoie as mãos formando um losango (polegares e indicadores juntos) sob o peito.",
+            "Corpo alinhado em prancha alta, abdômen contraído.",
+            "Desça o peito em direção às mãos flexionando os cotovelos junto ao tronco.",
+            "Empurre de volta até quase estender os braços, sem travar os cotovelos."
+        ],
+        "Flexão Inclinada": [
+            "Apoie as mãos em uma superfície elevada (sofá, banco ou degrau).",
+            "Corpo em linha reta da cabeça aos calcanhares.",
+            "Desça o peito em direção ao apoio com cotovelos em ~45°.",
+            "Empurre de volta mantendo o core firme; quanto mais baixo o apoio, mais difícil."
+        ],
+        "Panturrilha Corporal": [
+            "Em pé, pés na largura do quadril, use uma parede para equilíbrio se precisar.",
+            "Eleve os calcanhares o máximo possível contraindo a panturrilha.",
+            "Faça uma pausa breve no topo.",
+            "Desça controlando até quase tocar o chão e repita."
+        ],
+        "Círculos de Tornozelo": [
+            "Sente ou fique em pé apoiando-se levemente.",
+            "Levante um pé e desenhe círculos amplos com o tornozelo.",
+            "Complete as repetições em um sentido e inverta.",
+            "Troque o lado mantendo o movimento lento e controlado."
+        ],
+        "Círculos de Punho": [
+            "Estenda os braços à frente com os cotovelos levemente soltos.",
+            "Gire os punhos em círculos amplos e fluidos.",
+            "Inverta o sentido após a metade das repetições.",
+            "Evite forçar se sentir pontada — reduza a amplitude."
+        ],
+        "Inchworm": [
+            "Em pé, incline o tronco e apoie as mãos no chão mantendo as pernas o mais estendidas possível.",
+            "Ande com as mãos para frente até a posição de prancha.",
+            "Mantenha o abdômen firme e a coluna neutra.",
+            "Caminhe com os pés em direção às mãos e repita."
+        ],
+        "Alongamento Mundial": [
+            "Em posição de afundo, mão interna no chão e perna de trás estendida.",
+            "Gire o tronco abrindo o braço externo em direção ao teto.",
+            "Sinta o alongamento no quadril, posterior e torácica.",
+            "Retorne e alterne os lados com controle."
+        ],
+        "Alongamento de Coluna": [
+            "Sente ou ajoelhe com a coluna alongada.",
+            "Flexione e estenda a coluna de forma suave, vértebra por vértebra.",
+            "Respire fundo em cada fase do movimento.",
+            "Evite forçar a lombar — amplitude confortável."
+        ],
+        "Alongamento de Costas Altas": [
+            "Entrelaçe as mãos à frente ou atrás da cabeça, conforme a variação.",
+            "Arredonde levemente a parte alta das costas alongando entre as escápulas.",
+            "Mantenha o pescoço relaxado.",
+            "Retorne à postura neutra e repita."
+        ],
+        "Alongamento de Panturrilha": [
+            "Apoie as mãos na parede, uma perna à frente e outra atrás.",
+            "Mantenha o calcanhar de trás no chão e incline o tronco à frente.",
+            "Sinta o alongamento na panturrilha da perna de trás.",
+            "Troque o lado após o tempo indicado."
+        ],
+        "Alongamento de Peito": [
+            "Abra o peito com o braço apoiado em parede ou porta, cotovelo na altura do ombro.",
+            "Gire o tronco suavemente para o lado oposto.",
+            "Respire e mantenha sem dor aguda.",
+            "Alterar o lado ao final do tempo."
+        ],
+        "Alongamento Peitoral Atrás da Cabeça": [
+            "Leve as mãos atrás da cabeça ou entrelaçadas nas costas altas.",
+            "Abra o peito elevando o olhar levemente sem comprimir a cervical.",
+            "Mantenha ombros longe das orelhas.",
+            "Segure o tempo indicado e relaxe."
+        ],
+        "Alongamento de Deltoide Posterior": [
+            "Cruze um braço à frente do peito.",
+            "Com a outra mão, puxe suavemente o braço em direção ao tronco.",
+            "Mantenha os ombros baixos e o peito aberto.",
+            "Troque o lado após o tempo."
+        ],
+        "Alongamento de Tríceps": [
+            "Eleve um braço e dobre o cotovelo atrás da cabeça.",
+            "Com a outra mão, pressione levemente o cotovelo para alongar o tríceps.",
+            "Mantenha o tronco ereto.",
+            "Troque o braço ao final."
+        ],
+        "Alongamento de Dorsal": [
+            "Ajoelhe ou fique em pé e estenda um braço à frente/acima alongando a lateral do tronco.",
+            "Incline levemente para o lado oposto sem colapsar a lombar.",
+            "Respire e aprofunde o alongamento com controle.",
+            "Troque o lado."
+        ],
+        "Alongamento de Pescoço": [
+            "Sente ou fique em pé com ombros relaxados.",
+            "Incline a cabeça lateralmente levando a orelha em direção ao ombro.",
+            "Não force nem gire com carga — movimento suave.",
+            "Troque o lado após o tempo."
+        ],
+        "Alongamento de Flexor de Quadril": [
+            "Em afundo baixo, joelho de trás no chão e tronco ereto.",
+            "Projete o quadril à frente até sentir alongar a frente do quadril.",
+            "Contraia levemente o glúteo da perna de trás.",
+            "Troque o lado."
+        ],
+        "Alongamento de Posterior": [
+            "Com uma perna estendida, incline o tronco sobre ela mantendo a coluna alongada.",
+            "Flexione o outro joelho se precisar reduzir a intensidade.",
+            "Evite arredondar excessivamente a lombar.",
+            "Troque a perna após o tempo."
+        ],
+        "Alongamento de Glúteo": [
+            "Sente e cruze um tornozelo sobre o joelho oposto (figura 4) ou puxe o joelho ao peito.",
+            "Incline o tronco à frente até sentir o glúteo alongar.",
+            "Mantenha a coluna o mais neutra possível.",
+            "Troque o lado."
+        ],
+        "Alongamento de Piriforme": [
+            "Sente com uma perna cruzada e puxe o joelho em direção ao peito oposto.",
+            "Mantenha o quadril apoiado e a respiração calma.",
+            "Aprofunde só até tensão confortável — sem formigamento intenso.",
+            "Troque o lado."
+        ],
+        "Borboleta (Addutores)": [
+            "Sente com as solas dos pés unidas e joelhos abertos para os lados.",
+            "Segure os pés e mantenha a coluna alongada.",
+            "Incline o tronco à frente levemente se quiser intensificar.",
+            "Respire e mantenha o tempo indicado."
+        ],
+        "Escápula na Barra": [
+            "Pendure na barra com braços estendidos (sem flexionar cotovelos).",
+            "Apenas eleve e abaixe o corpo usando as escápulas (depressão/elevação).",
+            "Evite balançar; o movimento é curto e controlado.",
+            "Se for difícil, use assistência ou faça o mesmo apoiado em anilhas/máquina."
+        ],
         "Levantamento Terra": [
             "Pés na largura do quadril, barra próxima às canelas.",
             "Flexione quadril e joelhos mantendo coluna neutra e peito aberto.",

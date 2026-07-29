@@ -44,5 +44,6 @@ Conecte os fluxos de `prototypeFlow` com setas de protótipo (On click / Navigat
 Exporte:
 
 - PDF do arquivo Figma (File → Export frames to PDF), **ou**
-- Use o PDF gerado em `Docs/HealthFit_Documentacao_Completa.pdf` como documento mestre
+- Use o PDF gerado em `Docs/HealthFit_Documentacao_Completa.pdf
+ como documento mestre
   de produto/engenharia, e o Figma como source of truth visual.

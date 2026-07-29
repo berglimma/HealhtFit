@@ -29,6 +29,7 @@ struct PendingPostWorkoutCheckIn: Codable, Equatable, Identifiable {
     let caloriesBurned: Double
     let workoutKind: PostWorkoutKind
     let cardioIntensityLabel: String?
+    let autoEndedByInactivity: Bool
     var phase: PostWorkoutCheckInPhase
 
     var id: UUID { sessionId }
@@ -42,7 +43,27 @@ struct PendingPostWorkoutCheckIn: Codable, Equatable, Identifiable {
         caloriesBurned = session.caloriesBurned
         workoutKind = Self.kind(for: session)
         cardioIntensityLabel = session.cardioIntensityLabel
+        autoEndedByInactivity = session.autoEndedByInactivity
         self.phase = phase
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try container.decode(UUID.self, forKey: .sessionId)
+        workoutTitle = try container.decode(String.self, forKey: .workoutTitle)
+        endedAt = try container.decode(Date.self, forKey: .endedAt)
+        completedExercises = try container.decode(Int.self, forKey: .completedExercises)
+        totalExercises = try container.decode(Int.self, forKey: .totalExercises)
+        caloriesBurned = try container.decode(Double.self, forKey: .caloriesBurned)
+        workoutKind = try container.decode(PostWorkoutKind.self, forKey: .workoutKind)
+        cardioIntensityLabel = try container.decodeIfPresent(String.self, forKey: .cardioIntensityLabel)
+        autoEndedByInactivity = try container.decodeIfPresent(Bool.self, forKey: .autoEndedByInactivity) ?? false
+        phase = try container.decode(PostWorkoutCheckInPhase.self, forKey: .phase)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case sessionId, workoutTitle, endedAt, completedExercises, totalExercises
+        case caloriesBurned, workoutKind, cardioIntensityLabel, autoEndedByInactivity, phase
     }
 
     private static func kind(for session: WorkoutSession) -> PostWorkoutKind {
@@ -70,10 +91,19 @@ enum PostWorkoutCheckInEngine {
 
     static func isDue(_ checkIn: PendingPostWorkoutCheckIn, now: Date = .now) -> Bool {
         guard checkIn.phase != .completed else { return false }
+        // Esqueceu de encerrar: fala com o usuário assim que abrir o IAssistente.
+        if checkIn.autoEndedByInactivity { return true }
         return now.timeIntervalSince(checkIn.endedAt) >= delaySeconds
     }
 
     static func openingMessage(checkIn: PendingPostWorkoutCheckIn, athleteName: String) -> String {
+        if checkIn.autoEndedByInactivity {
+            return MotivationMessages.forgottenWorkoutAssistantOpening(
+                workoutTitle: checkIn.workoutTitle,
+                athleteName: athleteName
+            )
+        }
+
         let name = athleteName.isEmpty ? "Atleta" : athleteName
         let workoutFocus = workoutFocusLine(for: checkIn)
 
@@ -177,11 +207,19 @@ enum PostWorkoutCheckInEngine {
         athleteName: String
     ) -> [String] {
         let name = athleteName.isEmpty ? "Atleta" : athleteName
-        return [
+        var messages = [
             acknowledgment(for: feeling, checkIn: checkIn, name: name),
-            motivation(for: feeling, checkIn: checkIn, name: name),
-            farewell(for: feeling, checkIn: checkIn, name: name)
+            motivation(for: feeling, checkIn: checkIn, name: name)
         ]
+        if checkIn.autoEndedByInactivity {
+            let tip = MotivationMessages.forgottenWorkoutMotivation.randomElement()
+                ?? MotivationMessages.forgottenWorkoutMotivation[0]
+            messages.append(
+                "Sobre esquecer de finalizar: acontece com muita gente. Da próxima vez, encerre na tela do treino — e se precisar, eu te lembro. \(tip)"
+            )
+        }
+        messages.append(farewell(for: feeling, checkIn: checkIn, name: name))
+        return messages
     }
 
     private static func workoutFocusLine(for checkIn: PendingPostWorkoutCheckIn) -> String {

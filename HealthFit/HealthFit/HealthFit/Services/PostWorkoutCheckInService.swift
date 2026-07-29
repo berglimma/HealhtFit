@@ -23,12 +23,17 @@ final class PostWorkoutCheckInService: ObservableObject {
         pendingCheckIn = checkIn
         save(checkIn)
 
-        NotificationService.shared.schedulePostWorkoutCheckIn(
-            sessionId: session.id,
-            workoutTitle: session.workoutTitle,
-            fireDate: checkIn.endedAt.addingTimeInterval(PostWorkoutCheckInEngine.delaySeconds)
-        )
-        refreshAssistantBadge()
+        if session.autoEndedByInactivity {
+            // Mensagem imediata no IAssistente + alerta local já enviado no auto-end.
+            notifyAssistantMessagePending()
+        } else {
+            NotificationService.shared.schedulePostWorkoutCheckIn(
+                sessionId: session.id,
+                workoutTitle: session.workoutTitle,
+                fireDate: checkIn.endedAt.addingTimeInterval(PostWorkoutCheckInEngine.delaySeconds)
+            )
+            refreshAssistantBadge()
+        }
     }
 
     var dueCheckIn: PendingPostWorkoutCheckIn? {

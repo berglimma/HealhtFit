@@ -144,6 +144,14 @@ struct ActiveWorkoutView: View {
         }
         .onReceive(workoutClock) { _ in
             updateWorkoutElapsed()
+            if let ended = workoutStore.autoEndStaleActiveSessionIfNeeded(
+                athleteName: authService.currentUser?.greetingName ?? "Atleta"
+            ) {
+                presentAutoEndedSession(ended)
+            }
+        }
+        .onReceive(workoutStore.sessionAutoEnded) { ended in
+            presentAutoEndedSession(ended)
         }
         .onReceive(workoutStore.exerciseElapsedTick) { seconds in
             liveExerciseElapsedSeconds = seconds
@@ -483,6 +491,15 @@ struct ActiveWorkoutView: View {
         guard !isFinishing else { return }
         earlyEndJustification = ""
         showEarlyEndSheet = true
+    }
+
+    private func presentAutoEndedSession(_ session: WorkoutSession) {
+        guard finishedSession == nil else { return }
+        isFinishing = true
+        timerService.stopTimer()
+        watchConnectivity.sendRestTimerStop()
+        watchConnectivity.stopWorkoutOnWatch()
+        finishedSession = session
     }
 
     private func completeSet(for exercise: Exercise) {

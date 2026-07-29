@@ -223,13 +223,26 @@ enum WorkoutReportBuilder {
 
         var lines: [String] = []
 
-        if currentSession.endedEarly {
+        if currentSession.autoEndedByInactivity {
+            lines.append("Encerramento: Automático por inatividade (mais de 2h30 sem finalizar)")
+            lines.append("Alerta: o aluno esqueceu de encerrar o treino; a sessão foi fechada pelo app.")
+            if let justification = currentSession.earlyEndJustification?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+               !justification.isEmpty {
+                lines.append("Detalhe: \(justification)")
+            }
+        } else if currentSession.endedEarly {
             lines.append("Encerramento: Antecipado (sem concluir todos os exercícios)")
             if let justification = currentSession.earlyEndJustification?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !justification.isEmpty {
                 lines.append("Justificativa: \(justification)")
             }
+        }
+
+        let autoEndCount = historyIncludingCurrent.filter(\.autoEndedByInactivity).count
+        if autoEndCount > 0 {
+            lines.append("Encerramentos automáticos por inatividade (histórico): \(autoEndCount) vez(es)")
         }
 
         if count > 0 || currentSession.endedEarly {

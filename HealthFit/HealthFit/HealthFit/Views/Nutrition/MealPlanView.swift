@@ -1,5 +1,13 @@
 import SwiftUI
 import UIKit
+import MessageUI
+
+private struct NutritionistMailDraft: Identifiable {
+    let id = UUID()
+    let recipients: [String]
+    let subject: String
+    let body: String
+}
 
 struct MealPlanView: View {
     @EnvironmentObject var authService: AuthService
@@ -7,9 +15,16 @@ struct MealPlanView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selectedDay = 0
     @State private var selectedOption = 0
+    @State private var selectedMealId: UUID?
     @State private var showShoppingList = false
     @State private var nutritionTab = 0
     @State private var caloricDeficit = 400
+    @State private var mailDraft: NutritionistMailDraft?
+    @State private var pendingMailResult: MFMailComposeResult?
+    @State private var showMailUnavailableAlert = false
+    @State private var showEmailSentAlert = false
+    @State private var showEmailFailedAlert = false
+    @State private var emailWasSent = false
 
     private var selectedGoal: FitnessGoal {
         authService.currentUser?.goal ?? .muscleGain
@@ -47,6 +62,11 @@ struct MealPlanView: View {
                         } else {
                             menuBuilderSection
                         }
+
+                        nutritionistReportSection
+                            .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                            .padding(.bottom, 24)
+                            .adaptiveContentWidth()
                     } else {
                         preferencesRequiredState
                     }
@@ -68,6 +88,37 @@ struct MealPlanView: View {
             }
             .sheet(isPresented: $showShoppingList) {
                 ShoppingListView()
+            }
+            .sheet(item: $mailDraft, onDismiss: {
+                presentAlertForPendingMailResult()
+            }) { draft in
+                MailComposeView(
+                    recipients: draft.recipients,
+                    subject: draft.subject,
+                    body: draft.body
+                ) { result in
+                    pendingMailResult = result
+                    mailDraft = nil
+                }
+            }
+            .alert("E-mail enviado", isPresented: $showEmailSentAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                if let user = authService.currentUser {
+                    Text("O relatório de nutrição foi enviado para \(user.nutritionistName.isEmpty ? user.nutritionistEmail : user.nutritionistName) com sucesso.")
+                } else {
+                    Text("O relatório de nutrição foi enviado com sucesso.")
+                }
+            }
+            .alert("Falha no envio", isPresented: $showEmailFailedAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas).")
+            }
+            .alert("E-mail indisponível", isPresented: $showMailUnavailableAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Configure uma conta de e-mail no iPhone ou cadastre o e-mail do nutricionista no Perfil.")
             }
             .onAppear {
                 syncFromProfile()
@@ -100,6 +151,10 @@ struct MealPlanView: View {
             }
             .onChange(of: selectedDay) { _, _ in
                 selectedOption = 0
+                selectedMealId = nil
+            }
+            .onChange(of: selectedOption) { _, _ in
+                selectedMealId = nil
             }
         }
     }
@@ -210,10 +265,29 @@ struct MealPlanView: View {
                     let activeOption = dayPlan.options[safeOption]
 
                     VStack(spacing: 16) {
+                        mealReminderNotice
                         optionPicker(for: dayPlan, selected: safeOption)
                         macrosSummary(activeOption)
+                        Text("Toque na refeição para selecionar e marque como concluída quando comer.")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         ForEach(activeOption.meals) { meal in
-                            MealCard(meal: meal)
+                            MealCard(
+                                meal: meal,
+                                isSelected: selectedMealId == meal.id,
+                                onSelect: {
+                                    selectedMealId = meal.id
+                                },
+                                onToggleCompleted: {
+                                    selectedMealId = meal.id
+                                    mealPlanService.toggleMealCompleted(
+                                        dayIndex: selectedDay,
+                                        optionIndex: safeOption,
+                                        mealId: meal.id
+                                    )
+                                }
+                            )
                         }
                     }
                     .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
@@ -340,6 +414,66 @@ struct MealPlanView: View {
         .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
         .adaptiveContentWidth()
         .padding(.vertical, 8)
+    }
+
+    private var nutritionistReportSection: some View {
+        VStack(spacing: 12) {
+            if let user = authService.currentUser, user.hasNutritionist {
+                Button {
+                    sendNutritionReport(to: user)
+                } label: {
+                    Label(
+                        emailWasSent ? "Relatório enviado" : "Enviar relatório ao nutricionista",
+                        systemImage: emailWasSent ? "checkmark.circle.fill" : "envelope.fill"
+                    )
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(emailWasSent ? Color.green : AppTheme.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(mailDraft != nil || emailWasSent || mealPlanService.weeklyPlan.isEmpty)
+
+                if emailWasSent {
+                    Label("E-mail enviado ao nutricionista", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.green)
+                }
+
+                if !user.nutritionistName.isEmpty {
+                    Text("Para: \(user.nutritionistName) · \(user.nutritionistEmail)")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("Para: \(user.nutritionistEmail)")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                Text("O relatório de Nutrição é enviado apenas ao nutricionista. Treinos continuam indo só para o personal.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+            } else {
+                VStack(spacing: 8) {
+                    Label("Nutricionista não cadastrado", systemImage: "person.crop.circle.badge.exclamationmark")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.orange)
+                    Text("Cadastre nome e e-mail do nutricionista no Perfil para enviar o relatório desta aba.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(.top, 8)
     }
 
     private var preferencesRequiredState: some View {
@@ -487,6 +621,68 @@ struct MealPlanView: View {
         return user.weight >= 30 && user.weight <= 300
             && user.height >= 100 && user.height <= 250
             && user.age >= 14 && user.age <= 100
+    }
+
+    private func sendNutritionReport(to user: UserProfile) {
+        let recipient = user.nutritionistEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !recipient.isEmpty else {
+            showMailUnavailableAlert = true
+            return
+        }
+        guard !mealPlanService.weeklyPlan.isEmpty else { return }
+
+        let subject = NutritionReportBuilder.emailSubject(athleteName: user.name)
+        let body = NutritionReportBuilder.emailBody(
+            athlete: user,
+            weeklyPlan: mealPlanService.weeklyPlan,
+            customMenu: mealPlanService.customMenuSelection,
+            shoppingList: mealPlanService.shoppingList,
+            selectedOptionIndex: selectedOption
+        )
+
+        if MailComposeView.canSendMail {
+            pendingMailResult = nil
+            mailDraft = NutritionistMailDraft(
+                recipients: [recipient],
+                subject: subject,
+                body: body
+            )
+        } else if let url = MailComposeView.mailtoURL(
+            recipients: [recipient],
+            subject: subject,
+            body: body
+        ) {
+            UIApplication.shared.open(url) { accepted in
+                if accepted {
+                    emailWasSent = true
+                } else {
+                    showMailUnavailableAlert = true
+                }
+            }
+        } else {
+            showMailUnavailableAlert = true
+        }
+    }
+
+    private func presentAlertForPendingMailResult() {
+        guard let result = pendingMailResult else { return }
+        pendingMailResult = nil
+
+        switch result {
+        case .sent:
+            emailWasSent = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                showEmailSentAlert = true
+            }
+        case .failed:
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                showEmailFailedAlert = true
+            }
+        case .cancelled, .saved:
+            break
+        @unknown default:
+            break
+        }
     }
 
     private func syncFromProfile() {
@@ -638,6 +834,20 @@ struct MealPlanView: View {
         ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
     }
 
+    private var mealReminderNotice: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "bell.badge.fill")
+                .foregroundStyle(AppTheme.accentSecondary)
+            Text("Com o cardápio ativo, você recebe alerta e notificação 5 minutos antes de cada refeição (horários padrão do dia).")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
     private var dayPicker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -694,7 +904,11 @@ struct MealPlanView: View {
     }
 
     private func macrosSummary(_ option: MealPlanOption) -> some View {
-        VStack(spacing: 12) {
+        let completedCount = option.meals.filter(\.isCompleted).count
+        let totalMeals = option.meals.count
+        let eatenCalories = option.meals.filter(\.isCompleted).reduce(0) { $0 + $1.calories }
+
+        return VStack(spacing: 12) {
             if mealPlanService.dailyCalorieTarget > 0 {
                 HStack {
                     Text("Meta: \(mealPlanService.dailyCalorieTarget) kcal")
@@ -734,7 +948,25 @@ struct MealPlanView: View {
                         .foregroundStyle(difference <= 0 ? AppTheme.accent : AppTheme.accentSecondary)
                 }
             }
+
+            if totalMeals > 0 {
+                HStack {
+                    Label(
+                        "Refeições: \(completedCount)/\(totalMeals) concluídas",
+                        systemImage: completedCount == totalMeals ? "checkmark.seal.fill" : "fork.knife.circle"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(completedCount == totalMeals ? AppTheme.accent : AppTheme.textSecondary)
+                    Spacer()
+                    Text("\(eatenCalories) kcal feitas")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
         }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
     private var emptyState: some View {
@@ -757,36 +989,75 @@ struct MealPlanView: View {
 
 struct MealCard: View {
     let meal: Meal
+    var isSelected: Bool = false
+    var onSelect: (() -> Void)? = nil
+    var onToggleCompleted: (() -> Void)? = nil
     @State private var isExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Button {
-                withAnimation { isExpanded.toggle() }
-            } label: {
-                HStack {
-                    Image(systemName: meal.mealType.icon)
-                        .foregroundStyle(AppTheme.accent)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(meal.mealType.rawValue)
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                        Text(meal.name)
-                            .font(.headline)
-                            .foregroundStyle(AppTheme.textPrimary)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing) {
-                        Text("\(meal.calories) kcal")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(AppTheme.accentSecondary)
-                        Text("P:\(meal.protein)g C:\(meal.carbs)g G:\(meal.fat)g")
-                            .font(.caption2)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .foregroundStyle(AppTheme.textSecondary)
+            HStack(alignment: .top, spacing: 10) {
+                Button {
+                    onToggleCompleted?()
+                } label: {
+                    Image(systemName: meal.isCompleted ? "checkmark.circle.fill" : "circle")
+                        .font(.title2)
+                        .foregroundStyle(meal.isCompleted ? AppTheme.accent : AppTheme.textSecondary)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel(meal.isCompleted ? "Marcar como não concluída" : "Marcar como concluída")
+
+                Button {
+                    onSelect?()
+                    withAnimation { isExpanded.toggle() }
+                } label: {
+                    HStack {
+                        Image(systemName: meal.mealType.icon)
+                            .foregroundStyle(meal.isCompleted ? AppTheme.accent : AppTheme.accentSecondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text(meal.mealType.rawValue)
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                                if meal.isCompleted {
+                                    Text("Concluída")
+                                        .font(.caption2.weight(.bold))
+                                        .foregroundStyle(AppTheme.accent)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(AppTheme.accent.opacity(0.15))
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            Text(meal.name)
+                                .font(.headline)
+                                .foregroundStyle(AppTheme.textPrimary)
+                                .strikethrough(meal.isCompleted, color: AppTheme.textSecondary)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing) {
+                            Text("\(meal.calories) kcal")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(AppTheme.accentSecondary)
+                            Text("P:\(meal.protein)g C:\(meal.carbs)g G:\(meal.fat)g")
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+
+            if isSelected {
+                Text(meal.isCompleted
+                     ? "Selecionada · toque no círculo para desmarcar a conclusão"
+                     : "Selecionada · toque no círculo para marcar como concluída")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.accent)
             }
 
             if isExpanded {
@@ -809,11 +1080,36 @@ struct MealCard: View {
                         .foregroundStyle(AppTheme.textSecondary)
                         .padding(.top, 4)
                 }
+
+                Button {
+                    onToggleCompleted?()
+                } label: {
+                    Label(
+                        meal.isCompleted ? "Marcar como não concluída" : "Marcar como concluída",
+                        systemImage: meal.isCompleted ? "xmark.circle" : "checkmark.circle.fill"
+                    )
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(meal.isCompleted ? AppTheme.textSecondary : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(meal.isCompleted ? AppTheme.background : AppTheme.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
             }
         }
         .padding()
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .stroke(
+                    isSelected ? AppTheme.accent.opacity(0.8) : (meal.isCompleted ? AppTheme.accent.opacity(0.35) : Color.clear),
+                    lineWidth: isSelected ? 2 : 1
+                )
+        )
+        .opacity(meal.isCompleted && !isSelected ? 0.85 : 1)
     }
 }
 

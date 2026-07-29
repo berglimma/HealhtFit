@@ -55,9 +55,82 @@ final class AssistantWorkoutBuilderTests: XCTestCase {
         let text = AssistantWorkoutBuilder.confirmationSummary(
             gender: .male,
             focus: .fatLoss,
-            profile: profile
+            profile: profile,
+            experience: .firstTime,
+            location: .gym
         )
         XCTAssertTrue(text.contains(AssistantWorkoutBuilder.professionalDisclaimer))
         XCTAssertTrue(text.localizedCaseInsensitiveContains("autoriza"))
+        XCTAssertTrue(text.localizedCaseInsensitiveContains("primeira vez"))
+    }
+
+    func testParsesTrainingExperienceAnswers() {
+        XCTAssertEqual(AssistantWorkoutBuilder.parseAlreadyTrains(from: "Sim, já treino"), true)
+        XCTAssertEqual(AssistantWorkoutBuilder.parseAlreadyTrains(from: "Não, ainda não"), false)
+        XCTAssertEqual(AssistantWorkoutBuilder.parseFirstTimeAtGym(from: "Sim, primeira vez"), true)
+        XCTAssertEqual(AssistantWorkoutBuilder.parseFirstTimeAtGym(from: "Não, já treinei antes"), false)
+        XCTAssertEqual(AssistantTrainingExperience.parseLevel(from: "Intermediário"), .intermediate)
+        XCTAssertEqual(AssistantTrainingExperience.fromFirstTimeAnswer(true), .firstTime)
+        XCTAssertEqual(AssistantTrainingExperience.fromFirstTimeAnswer(false), .returning)
+    }
+
+    func testParsesHomeOnlyPreference() {
+        XCTAssertEqual(AssistantWorkoutBuilder.parseHomeOnly(from: "Sim, só em casa"), true)
+        XCTAssertEqual(AssistantWorkoutBuilder.parseHomeOnly(from: "Não, na academia"), false)
+        XCTAssertEqual(AssistantWorkoutBuilder.parseHomeOnly(from: "quero treinar em casa"), true)
+        XCTAssertTrue(AssistantWorkoutBuilder.detectsWorkoutBuildIntent("Montar treino em casa"))
+    }
+
+    func testBuildsHomeSheetWithoutWeights() {
+        let profile = UserProfile(
+            name: "Ana",
+            email: "a@b.com",
+            biotype: .mesomorph,
+            gender: .female,
+            weight: 62,
+            height: 165,
+            age: 30
+        )
+        let sheet = AssistantWorkoutBuilder.buildSheet(
+            gender: .female,
+            focus: .muscleGain,
+            profile: profile,
+            experience: .beginner,
+            location: .homeOnly
+        )
+        XCTAssertTrue(sheet.title.localizedCaseInsensitiveContains("Casa"))
+        XCTAssertTrue(sheet.description.localizedCaseInsensitiveContains("casa"))
+        XCTAssertTrue(sheet.exercises.allSatisfy { $0.weight == nil })
+        XCTAssertFalse(sheet.exercises.isEmpty)
+    }
+
+    func testFirstTimeSheetUsesLighterLoadsThanAdvanced() {
+        let profile = UserProfile(
+            name: "João",
+            email: "j@b.com",
+            biotype: .mesomorph,
+            gender: .male,
+            weight: 80,
+            height: 180,
+            age: 32
+        )
+        let beginner = AssistantWorkoutBuilder.buildSheet(
+            gender: .male,
+            focus: .muscleGain,
+            profile: profile,
+            experience: .firstTime,
+            location: .gym
+        )
+        let advanced = AssistantWorkoutBuilder.buildSheet(
+            gender: .male,
+            focus: .muscleGain,
+            profile: profile,
+            experience: .advanced,
+            location: .gym
+        )
+        let beginnerLoad = beginner.exercises.compactMap(\.weight).reduce(0, +)
+        let advancedLoad = advanced.exercises.compactMap(\.weight).reduce(0, +)
+        XCTAssertLessThan(beginnerLoad, advancedLoad)
+        XCTAssertTrue(beginner.description.localizedCaseInsensitiveContains("primeira vez"))
     }
 }

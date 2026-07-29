@@ -345,7 +345,7 @@ Apple Watch ← WatchConnectivity ← Sessão ativa no iPhone</pre>
   {groups}
 
   <footer class="doc-foot">
-    HealthFit · BLSwift Solutions LTDA · BERG / LUAN · Documento gerado automaticamente em {TODAY}<br/>
+    HealthFit · BERG / LUAN · Documento gerado automaticamente em {TODAY}<br/>
     Use este mapa como referência para criar frames no Figma com a nomenclatura indicada em cada card.
   </footer>
 </body>
@@ -448,7 +448,7 @@ def build_full_html() -> str:
   <div class="meta">
     <div><strong>Versão do produto:</strong> {VERSION}</div>
     <div><strong>Data:</strong> {TODAY}</div>
-    <div><strong>Empresa:</strong> BLSwift Solutions LTDA</div>
+    <div><strong>Desenvolvimento:</strong> BERG / LUAN</div>
     <div><strong>Desenvolvimento:</strong> BERG / LUAN</div>
     <div><strong>Plataformas:</strong> iOS 17+ · watchOS 10+</div>
     <div><strong>Bundle ID:</strong> luan.com.healthfit.app</div>
@@ -696,7 +696,7 @@ def build_full_html() -> str:
   <h2>A. Como regenerar esta documentação</h2>
   <pre>python3 Docs/generate_docs.py</pre>
   <h2>B. Contato</h2>
-  <p>BLSwift Solutions LTDA — BERG / LUAN — HealthFit v{VERSION}</p>
+  <p>BERG / LUAN — HealthFit v{VERSION}</p>
   <footer class="page-foot">
     <span>HealthFit — Documentação profissional</span>
     <span>Gerado em {TODAY}</span>
@@ -713,7 +713,7 @@ def build_figma_json() -> dict:
         "product": "HealthFit",
         "version": VERSION,
         "generatedAt": TODAY,
-        "company": "BLSwift Solutions LTDA",
+        "company": "BERG / LUAN",
         "designTokens": {
             "colors": {
                 "AccentGreen": "#2ECC71",

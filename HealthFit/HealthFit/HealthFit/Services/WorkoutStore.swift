@@ -11,11 +11,20 @@ final class WorkoutStore: ObservableObject {
     private(set) var exerciseRecords: [ExerciseSessionRecord] = []
     /// Tick leve para a tela de treino ativo atualizar o cronômetro.
     let exerciseElapsedTick = PassthroughSubject<Int, Never>()
+    /// Emitido quando o treino é encerrado automaticamente por inatividade (2h30).
+    let sessionAutoEnded = PassthroughSubject<WorkoutSession, Never>()
 
     @Published private(set) var isExerciseTimerPaused = false
 
     private let storageKey = "healthfit_workout_sheets"
     private let historyKey = "healthfit_session_history"
+    private let activeSessionKey = "healthfit_active_session"
+    private let activeRecordsKey = "healthfit_active_exercise_records"
+    private let activeExerciseIndexKey = "healthfit_active_exercise_index"
+    /// Após 2h30 sem finalizar, o treino é encerrado automaticamente.
+    static let autoEndInactivityLimit: TimeInterval = 2.5 * 60 * 60
+    static let autoEndJustification =
+        "Encerrado automaticamente após 2h30 sem finalização (inatividade)."
     private var exerciseTimer: Timer?
     private var cloudUserId: String?
 
@@ -32,6 +41,8 @@ final class WorkoutStore: ObservableObject {
         cloudUserId = nil
         UserDefaults.standard.removeObject(forKey: storageKey)
         UserDefaults.standard.removeObject(forKey: historyKey)
+        clearPersistedActiveSession()
+        NotificationService.shared.cancelActiveWorkoutAutoEnd()
     }
 
     func loadCloudHistory(userId: String) async {
@@ -56,6 +67,44 @@ final class WorkoutStore: ObservableObject {
         } else {
             refreshSampleWorkoutsIfNeeded()
         }
+        restorePersistedActiveSessionIfNeeded()
+        autoEndStaleActiveSessionIfNeeded()
+    }
+
+    /// Verifica se o treino ativo ultrapassou 2h30 e encerra automaticamente.
+    @discardableResult
+    func autoEndStaleActiveSessionIfNeeded(now: Date = .now, athleteName: String = "Atleta") -> WorkoutSession? {
+        if activeSession == nil {
+            restorePersistedActiveSessionIfNeeded()
+        }
+        guard var session = activeSession else { return nil }
+
+        let elapsed = now.timeIntervalSince(session.startedAt)
+        guard elapsed >= Self.autoEndInactivityLimit else { return nil }
+
+        session.endedAt = now
+        var records = exerciseRecords
+        let elapsedSeconds = max(0, Int(elapsed))
+        if !records.isEmpty {
+            for index in records.indices where records[index].elapsedSeconds == 0 {
+                records[index].elapsedSeconds = elapsedSeconds
+            }
+            session.exerciseRecords = records
+            session.completedExercises = records.filter(\.isCompleted).count
+        }
+        session.endedEarly = true
+        session.autoEndedByInactivity = true
+        session.earlyEndJustification = Self.autoEndJustification
+
+        NotificationService.shared.cancelActiveWorkoutAutoEnd(sessionId: session.id)
+        NotificationService.shared.deliverForgottenWorkoutEndNotification(
+            session: session,
+            athleteName: athleteName
+        )
+
+        endSession(persisting: session)
+        sessionAutoEnded.send(session)
+        return session
     }
 
     func addWorkoutSheet(_ sheet: WorkoutSheet) {
@@ -97,6 +146,14 @@ final class WorkoutStore: ObservableObject {
         standardWorkoutSheets.filter { Self.femaleSampleTitles.contains($0.title) }
     }
 
+    var homeStandardWorkoutSheets: [WorkoutSheet] {
+        standardWorkoutSheets.filter { Self.homeSampleTitles.contains($0.title) }
+    }
+
+    var mobilityStandardWorkoutSheets: [WorkoutSheet] {
+        standardWorkoutSheets.filter { Self.mobilitySampleTitles.contains($0.title) }
+    }
+
     func recommendedStandardWorkouts(for gender: Gender?) -> [WorkoutSheet] {
         switch gender {
         case .female:
@@ -119,6 +176,8 @@ final class WorkoutStore: ObservableObject {
     private static let sampleWorkoutTitles = Set(sampleWorkouts.map(\.title))
     private static let maleSampleTitles = Set(maleSampleWorkouts.map(\.title))
     private static let femaleSampleTitles = Set(femaleSampleWorkouts.map(\.title))
+    private static let homeSampleTitles = Set(homeSampleWorkouts.map(\.title))
+    private static let mobilitySampleTitles = Set(mobilitySampleWorkouts.map(\.title))
 
     /// Retorna a última sessão concluída desta ficha se foi há menos de `hours` horas.
     func recentSameWorkoutSession(
@@ -135,12 +194,13 @@ final class WorkoutStore: ObservableObject {
     }
 
     func startSession(for sheet: WorkoutSheet, tookPreWorkout: Bool? = nil) {
-        activeSession = WorkoutSession(
+        let session = WorkoutSession(
             workoutSheetId: sheet.id,
             workoutTitle: sheet.title,
             totalExercises: sheet.exercises.count,
             tookPreWorkout: tookPreWorkout
         )
+        activeSession = session
         currentExerciseIndex = 0
         replaceExerciseRecords(sheet.exercises.map {
             ExerciseSessionRecord(
@@ -152,11 +212,13 @@ final class WorkoutStore: ObservableObject {
         })
         isExerciseTimerPaused = false
         startExerciseTimer()
+        persistActiveSession()
+        scheduleAutoEnd(for: session)
     }
 
     func startCardioSession(config: CardioWorkoutConfig) {
         stopExerciseTimer()
-        activeSession = WorkoutSession(
+        let session = WorkoutSession(
             workoutSheetId: config.exercise.id,
             workoutTitle: config.title,
             totalExercises: 1,
@@ -164,6 +226,7 @@ final class WorkoutStore: ObservableObject {
             cardioIntensityLabel: config.intensity.rawValue,
             targetCalories: config.targetCalories
         )
+        activeSession = session
         currentExerciseIndex = 0
         replaceExerciseRecords([
             ExerciseSessionRecord(
@@ -172,15 +235,18 @@ final class WorkoutStore: ObservableObject {
             )
         ])
         isExerciseTimerPaused = false
+        persistActiveSession()
+        scheduleAutoEnd(for: session)
     }
 
     func startMeditationSession(config: MeditationWorkoutConfig) {
         stopExerciseTimer()
-        activeSession = WorkoutSession(
+        let session = WorkoutSession(
             workoutSheetId: config.topic.id,
             workoutTitle: config.title,
             totalExercises: 1
         )
+        activeSession = session
         currentExerciseIndex = 0
         replaceExerciseRecords([
             ExerciseSessionRecord(
@@ -189,6 +255,8 @@ final class WorkoutStore: ObservableObject {
             )
         ])
         isExerciseTimerPaused = false
+        persistActiveSession()
+        scheduleAutoEnd(for: session)
     }
 
     func completeExercise() {
@@ -236,11 +304,16 @@ final class WorkoutStore: ObservableObject {
     }
 
     private func tickCurrentExercise() {
+        autoEndStaleActiveSessionIfNeeded()
+        guard activeSession != nil else { return }
         guard !isExerciseTimerPaused,
               currentExerciseIndex < exerciseRecords.count,
               !exerciseRecords[currentExerciseIndex].isCompleted else { return }
         exerciseRecords[currentExerciseIndex].elapsedSeconds += 1
         exerciseElapsedTick.send(exerciseRecords[currentExerciseIndex].elapsedSeconds)
+        if exerciseRecords[currentExerciseIndex].elapsedSeconds % 30 == 0 {
+            persistActiveSession()
+        }
     }
 
     /// Publica mudanças estruturais nos registros (não usar no tick de 1s).
@@ -307,6 +380,8 @@ final class WorkoutStore: ObservableObject {
             session.endedAt = .now
         }
 
+        NotificationService.shared.cancelActiveWorkoutAutoEnd(sessionId: session.id)
+
         sessionHistory.insert(session, at: 0)
         if sessionHistory.count > WorkoutFirestoreService.maxStoredSessions {
             sessionHistory = Array(sessionHistory.prefix(WorkoutFirestoreService.maxStoredSessions))
@@ -315,6 +390,7 @@ final class WorkoutStore: ObservableObject {
         currentExerciseIndex = 0
         exerciseRecords = []
         isExerciseTimerPaused = false
+        clearPersistedActiveSession()
         saveHistory()
 
         if let userId = cloudUserId {
@@ -337,6 +413,54 @@ final class WorkoutStore: ObservableObject {
         }
 
         PostWorkoutCheckInService.shared.scheduleCheckIn(for: session)
+    }
+
+    private func scheduleAutoEnd(for session: WorkoutSession) {
+        let fireDate = session.startedAt.addingTimeInterval(Self.autoEndInactivityLimit)
+        NotificationService.shared.scheduleActiveWorkoutAutoEnd(
+            sessionId: session.id,
+            workoutTitle: session.workoutTitle,
+            fireDate: fireDate
+        )
+    }
+
+    private func persistActiveSession() {
+        guard let session = activeSession else {
+            clearPersistedActiveSession()
+            return
+        }
+        if let data = try? JSONEncoder().encode(session) {
+            UserDefaults.standard.set(data, forKey: activeSessionKey)
+        }
+        if let recordsData = try? JSONEncoder().encode(exerciseRecords) {
+            UserDefaults.standard.set(recordsData, forKey: activeRecordsKey)
+        }
+        UserDefaults.standard.set(currentExerciseIndex, forKey: activeExerciseIndexKey)
+    }
+
+    private func clearPersistedActiveSession() {
+        UserDefaults.standard.removeObject(forKey: activeSessionKey)
+        UserDefaults.standard.removeObject(forKey: activeRecordsKey)
+        UserDefaults.standard.removeObject(forKey: activeExerciseIndexKey)
+    }
+
+    private func restorePersistedActiveSessionIfNeeded() {
+        guard activeSession == nil,
+              let data = UserDefaults.standard.data(forKey: activeSessionKey),
+              let session = try? JSONDecoder().decode(WorkoutSession.self, from: data),
+              session.endedAt == nil else { return }
+
+        activeSession = session
+        if let recordsData = UserDefaults.standard.data(forKey: activeRecordsKey),
+           let records = try? JSONDecoder().decode([ExerciseSessionRecord].self, from: recordsData) {
+            exerciseRecords = records
+        }
+        currentExerciseIndex = UserDefaults.standard.integer(forKey: activeExerciseIndexKey)
+        isExerciseTimerPaused = false
+        if !WeeklyProgressAnalyzer.isCardioSession(session),
+           !WeeklyProgressAnalyzer.isMeditationSession(session) {
+            startExerciseTimer()
+        }
     }
 
     var lastCompletedWorkoutAt: Date? {
@@ -509,7 +633,8 @@ final class WorkoutStore: ObservableObject {
         )
     }
 
-    static let sampleWorkouts: [WorkoutSheet] = maleSampleWorkouts + femaleSampleWorkouts
+    static let sampleWorkouts: [WorkoutSheet] =
+        maleSampleWorkouts + femaleSampleWorkouts + homeSampleWorkouts + mobilitySampleWorkouts
 
     /// Programa padrão masculino — hipertrofia clássica com ênfase em peito, costas e força.
     static let maleSampleWorkouts: [WorkoutSheet] = [
@@ -639,6 +764,165 @@ final class WorkoutStore: ObservableObject {
                 Exercise(name: "Kettlebell Swing", sets: 3, reps: 15, weight: 12, restSeconds: 60, muscleGroup: .fullBody),
                 Exercise(name: "Abdominal Crunch", sets: 3, reps: 20, restSeconds: 40, muscleGroup: .core),
                 Exercise(name: "Prancha", sets: 3, reps: 35, restSeconds: 40, muscleGroup: .core)
+            ]
+        )
+    ]
+
+    /// Programa em casa — peso corporal com demos em vídeo/GIF durante o treino.
+    static let homeSampleWorkouts: [WorkoutSheet] = [
+        WorkoutSheet(
+            title: "Casa A — Full Body",
+            description: "Corpo inteiro sem equipamentos — ideal para iniciar em casa",
+            exercises: [
+                Exercise(name: "Agachamento Livre", sets: 3, reps: 15, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Flexão de Braços", sets: 3, reps: 12, restSeconds: 45, muscleGroup: .chest),
+                Exercise(name: "Afundo", sets: 3, reps: 12, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Mergulho no Banco", sets: 3, reps: 12, restSeconds: 45, muscleGroup: .arms),
+                Exercise(name: "Prancha", sets: 3, reps: 40, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Mountain Climber", sets: 3, reps: 20, restSeconds: 40, muscleGroup: .fullBody),
+                Exercise(name: "Burpee", sets: 3, reps: 10, restSeconds: 50, muscleGroup: .fullBody),
+                Exercise(name: "Polichinelo", sets: 3, reps: 30, restSeconds: 40, muscleGroup: .fullBody)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa B — Core e Abdômen",
+            description: "Abdômen, oblíquos e estabilidade — só o peso do corpo",
+            exercises: [
+                Exercise(name: "Prancha", sets: 3, reps: 45, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Prancha Lateral", sets: 3, reps: 30, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Abdominal Crunch", sets: 3, reps: 20, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Abdominal Infra", sets: 3, reps: 15, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Abdominal Oblíquo", sets: 3, reps: 20, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Elevação de Pernas", sets: 3, reps: 12, restSeconds: 45, muscleGroup: .core),
+                Exercise(name: "Bicicleta no Ar", sets: 3, reps: 24, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Russian Twist", sets: 3, reps: 24, restSeconds: 40, muscleGroup: .core)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa C — HIIT Em Casa",
+            description: "Alta intensidade em circuitos curtos — cardio + força",
+            exercises: [
+                Exercise(name: "Polichinelo", sets: 4, reps: 40, restSeconds: 30, muscleGroup: .fullBody),
+                Exercise(name: "Burpee", sets: 4, reps: 10, restSeconds: 40, muscleGroup: .fullBody),
+                Exercise(name: "Mountain Climber", sets: 4, reps: 30, restSeconds: 30, muscleGroup: .fullBody),
+                Exercise(name: "Agachamento Livre", sets: 4, reps: 20, restSeconds: 35, muscleGroup: .legs),
+                Exercise(name: "Flexão de Braços", sets: 4, reps: 12, restSeconds: 35, muscleGroup: .chest),
+                Exercise(name: "Prancha", sets: 3, reps: 40, restSeconds: 30, muscleGroup: .core),
+                Exercise(name: "Afundo", sets: 3, reps: 16, restSeconds: 35, muscleGroup: .legs),
+                Exercise(name: "Polichinelo", sets: 3, reps: 35, restSeconds: 45, notes: "Finalizador — ritmo máximo", muscleGroup: .fullBody)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa D — Pernas e Glúteos",
+            description: "Inferiores em casa — agachamentos, afundos e ponte",
+            exercises: [
+                Exercise(name: "Agachamento Livre", sets: 4, reps: 15, restSeconds: 50, muscleGroup: .legs),
+                Exercise(name: "Afundo", sets: 3, reps: 12, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Ponte de Glúteos", sets: 4, reps: 15, restSeconds: 40, muscleGroup: .legs),
+                Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 3, reps: 15, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Isometria na Parede", sets: 3, reps: 40, restSeconds: 45, notes: "Segure a posição (reps = segundos)", muscleGroup: .legs),
+                Exercise(name: "Agachamento Sumô", sets: 3, reps: 15, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Panturrilha Corporal", sets: 4, reps: 20, restSeconds: 30, muscleGroup: .legs),
+                Exercise(name: "Prancha", sets: 3, reps: 35, restSeconds: 40, muscleGroup: .core)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa E — Superiores",
+            description: "Peito, tríceps e postura — flexões e isometrias",
+            exercises: [
+                Exercise(name: "Flexão de Braços", sets: 4, reps: 12, restSeconds: 45, muscleGroup: .chest),
+                Exercise(name: "Flexão Diamante", sets: 3, reps: 10, restSeconds: 45, muscleGroup: .arms),
+                Exercise(name: "Flexão Inclinada", sets: 3, reps: 12, restSeconds: 45, notes: "Mãos em sofá ou banco", muscleGroup: .chest),
+                Exercise(name: "Mergulho no Banco", sets: 3, reps: 12, restSeconds: 45, muscleGroup: .arms),
+                Exercise(name: "Superman", sets: 3, reps: 15, restSeconds: 40, muscleGroup: .back),
+                Exercise(name: "Prancha", sets: 3, reps: 40, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Prancha Lateral", sets: 3, reps: 30, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Flexão de Braços", sets: 2, reps: 10, restSeconds: 50, notes: "Séries finais até a falha próxima", muscleGroup: .chest)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa F — Mobilidade e Postura",
+            description: "Core, lombar e estabilidade para o dia a dia",
+            exercises: [
+                Exercise(name: "Superman", sets: 3, reps: 12, restSeconds: 40, muscleGroup: .back),
+                Exercise(name: "Ponte de Glúteos", sets: 3, reps: 15, restSeconds: 40, muscleGroup: .legs),
+                Exercise(name: "Prancha", sets: 3, reps: 40, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Prancha Lateral", sets: 3, reps: 30, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Elevação de Pernas", sets: 3, reps: 12, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Russian Twist", sets: 3, reps: 20, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Bicicleta no Ar", sets: 3, reps: 24, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Isometria na Parede", sets: 3, reps: 35, restSeconds: 45, notes: "Segure a posição (reps = segundos)", muscleGroup: .legs)
+            ]
+        )
+    ]
+
+    /// Mobilidade voltada à musculação — aquecimento, articulações e pós-treino.
+    static let mobilitySampleWorkouts: [WorkoutSheet] = [
+        WorkoutSheet(
+            title: "Mobilidade A — Aquecimento Geral",
+            description: "Ativação articular antes de treinar com carga — 8–10 min",
+            exercises: [
+                Exercise(name: "Círculos de Tornozelo", sets: 2, reps: 12, restSeconds: 20, notes: "Cada lado · movimento lento", muscleGroup: .legs),
+                Exercise(name: "Círculos de Punho", sets: 2, reps: 12, restSeconds: 20, notes: "Cada direção", muscleGroup: .arms),
+                Exercise(name: "Inchworm", sets: 2, reps: 8, restSeconds: 30, muscleGroup: .fullBody),
+                Exercise(name: "Alongamento Mundial", sets: 2, reps: 6, restSeconds: 25, notes: "3 por lado", muscleGroup: .fullBody),
+                Exercise(name: "Alongamento de Coluna", sets: 2, reps: 10, restSeconds: 25, muscleGroup: .back),
+                Exercise(name: "Alongamento de Costas Altas", sets: 2, reps: 10, restSeconds: 25, muscleGroup: .back),
+                Exercise(name: "Alongamento de Panturrilha", sets: 2, reps: 30, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .legs)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Mobilidade B — Ombros e Peito",
+            description: "Preparo para supino, desenvolvimento e remadas",
+            exercises: [
+                Exercise(name: "Alongamento de Peito", sets: 3, reps: 30, restSeconds: 20, notes: "Segure · reps = segundos", muscleGroup: .chest),
+                Exercise(name: "Alongamento Peitoral Atrás da Cabeça", sets: 2, reps: 25, restSeconds: 20, notes: "reps = segundos", muscleGroup: .chest),
+                Exercise(name: "Alongamento de Deltoide Posterior", sets: 2, reps: 25, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .shoulders),
+                Exercise(name: "Alongamento de Tríceps", sets: 2, reps: 25, restSeconds: 20, notes: "Cada braço · reps = segundos", muscleGroup: .arms),
+                Exercise(name: "Alongamento de Dorsal", sets: 2, reps: 25, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .back),
+                Exercise(name: "Alongamento de Costas Altas", sets: 2, reps: 12, restSeconds: 25, muscleGroup: .back),
+                Exercise(name: "Alongamento de Pescoço", sets: 2, reps: 20, restSeconds: 15, notes: "Cada lado · suave · reps = segundos", muscleGroup: .shoulders)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Mobilidade C — Quadril e Posterior",
+            description: "Preparo para agachamento, terra e afundos",
+            exercises: [
+                Exercise(name: "Alongamento Mundial", sets: 2, reps: 6, restSeconds: 25, notes: "3 por lado", muscleGroup: .fullBody),
+                Exercise(name: "Alongamento de Flexor de Quadril", sets: 2, reps: 30, restSeconds: 25, notes: "Cada lado · reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Alongamento de Posterior", sets: 2, reps: 30, restSeconds: 25, notes: "Cada perna · reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Alongamento de Glúteo", sets: 2, reps: 30, restSeconds: 25, notes: "Cada lado · reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Alongamento de Piriforme", sets: 2, reps: 30, restSeconds: 25, notes: "Cada lado · reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Borboleta (Addutores)", sets: 2, reps: 35, restSeconds: 25, notes: "reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Círculos de Tornozelo", sets: 2, reps: 12, restSeconds: 20, notes: "Cada lado", muscleGroup: .legs),
+                Exercise(name: "Alongamento de Panturrilha", sets: 2, reps: 30, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .legs)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Mobilidade D — Torácica e Escápulas",
+            description: "Abertura torácica e controle escapular para puxadas e presses",
+            exercises: [
+                Exercise(name: "Alongamento de Coluna", sets: 3, reps: 12, restSeconds: 25, muscleGroup: .back),
+                Exercise(name: "Alongamento de Costas Altas", sets: 3, reps: 12, restSeconds: 25, muscleGroup: .back),
+                Exercise(name: "Alongamento de Dorsal", sets: 2, reps: 30, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .back),
+                Exercise(name: "Alongamento de Peito", sets: 2, reps: 30, restSeconds: 20, notes: "reps = segundos", muscleGroup: .chest),
+                Exercise(name: "Alongamento de Deltoide Posterior", sets: 2, reps: 25, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .shoulders),
+                Exercise(name: "Escápula na Barra", sets: 3, reps: 10, restSeconds: 40, notes: "Só depressão/elevação das escápulas", muscleGroup: .back),
+                Exercise(name: "Inchworm", sets: 2, reps: 6, restSeconds: 30, muscleGroup: .fullBody)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Mobilidade E — Pós-treino",
+            description: "Alongamento estático para recuperação após a musculação",
+            exercises: [
+                Exercise(name: "Alongamento de Peito", sets: 2, reps: 40, restSeconds: 15, notes: "reps = segundos", muscleGroup: .chest),
+                Exercise(name: "Alongamento de Dorsal", sets: 2, reps: 40, restSeconds: 15, notes: "Cada lado · reps = segundos", muscleGroup: .back),
+                Exercise(name: "Alongamento de Posterior", sets: 2, reps: 40, restSeconds: 15, notes: "Cada perna · reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Alongamento de Flexor de Quadril", sets: 2, reps: 40, restSeconds: 15, notes: "Cada lado · reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Alongamento de Glúteo", sets: 2, reps: 40, restSeconds: 15, notes: "Cada lado · reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Alongamento de Tríceps", sets: 2, reps: 35, restSeconds: 15, notes: "Cada braço · reps = segundos", muscleGroup: .arms),
+                Exercise(name: "Alongamento de Panturrilha", sets: 2, reps: 35, restSeconds: 15, notes: "Cada lado · reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Alongamento de Pescoço", sets: 2, reps: 25, restSeconds: 10, notes: "Cada lado · suave · reps = segundos", muscleGroup: .shoulders)
             ]
         )
     ]

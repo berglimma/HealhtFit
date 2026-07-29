@@ -47,6 +47,9 @@ struct RootView: View {
                         await exerciseVideoRepository.bootstrapRemoteCatalog()
                         NotificationService.shared.refreshRecurringNotifications()
                         refreshInactivityReminder()
+                        _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
+                            athleteName: authService.currentUser?.greetingName ?? "Atleta"
+                        )
                     }
                     .sheet(isPresented: $wellnessService.showSleepCheckIn) {
                         DailyWellnessCheckInView()
@@ -70,6 +73,9 @@ struct RootView: View {
                     wellnessService.checkInOnAppOpen()
                     NotificationService.shared.refreshRecurringNotifications()
                     refreshInactivityReminder()
+                    _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
+                        athleteName: authService.currentUser?.greetingName ?? "Atleta"
+                    )
                     Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
                 }
                 AppIconInactivityService.shared.handleAppBecameActive()

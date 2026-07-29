@@ -43,14 +43,26 @@ enum DailyMorningCheckInEngine {
         Calendar.current.component(.hour, from: now) >= checkInHour
     }
 
-    static func openingMessage(athleteName: String, context: HealthAssistantContext) -> String {
+    /// Horário atual do dispositivo, ex.: "9h", "14h30".
+    static func formattedClockTime(now: Date = .now) -> String {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: now)
+        let minute = calendar.component(.minute, from: now)
+        if minute == 0 {
+            return "\(hour)h"
+        }
+        return String(format: "%dh%02d", hour, minute)
+    }
+
+    static func openingMessage(athleteName: String, context: HealthAssistantContext, now: Date = .now) -> String {
         let name = athleteName.isEmpty ? "Atleta" : athleteName
-        let dayGreeting = dayPartGreeting(for: .now)
+        let dayGreeting = dayPartGreeting(for: now)
+        let clock = formattedClockTime(now: now)
 
         return """
         \(dayGreeting), \(name)! ☀️
 
-        São 9h — momento ideal para alinhar corpo e mente antes do dia.
+        Agora são \(clock) — momento ideal para alinhar corpo e mente.
 
         Como você está se sentindo agora? Energia, humor e disposição — me conte com sinceridade.
 
@@ -113,7 +125,7 @@ enum DailyMorningCheckInEngine {
 
     static func reminderToAnswerFeeling() -> String {
         """
-        E, voltando ao check-in da manhã: como você está se sentindo agora — energia, humor e disposição?
+        E, voltando ao check-in: como você está se sentindo agora — energia, humor e disposição?
         Pode responder com sinceridade (ou usar uma das sugestões).
         """
     }
@@ -139,18 +151,28 @@ enum DailyMorningCheckInEngine {
         }
     }
 
-    private static func acknowledgment(for feeling: DailyMorningFeeling, name: String) -> String {
+    private static func dayPartNoun(for date: Date) -> String {
+        let hour = Calendar.current.component(.hour, from: date)
+        switch hour {
+        case 5..<12: return "pela manhã"
+        case 12..<18: return "à tarde"
+        default: return "à noite"
+        }
+    }
+
+    private static func acknowledgment(for feeling: DailyMorningFeeling, name: String, now: Date = .now) -> String {
+        let period = dayPartNoun(for: now)
         switch feeling {
         case .great, .good:
-            return "Que ótimo começar o dia assim, \(name)! 🙌 Energia positiva pela manhã costuma refletir no resto do dia."
+            return "Que ótimo começar assim, \(name)! 🙌 Energia positiva \(period) costuma refletir no resto do dia."
         case .tired:
-            return "Obrigado por ser honesto, \(name). Acordar cansado acontece — vamos ajustar o dia com leveza."
+            return "Obrigado por ser honesto, \(name). Estar cansado acontece — vamos ajustar o dia com leveza."
         case .stressed:
-            return "Entendo, \(name). Estresse pela manhã merece cuidado antes de exigir mais do corpo."
+            return "Entendo, \(name). Estresse merece cuidado antes de exigir mais do corpo."
         case .unmotivated:
             return "Tudo bem sentir falta de motivação, \(name). Um passo pequeno já reacende o ritmo."
         case .neutral:
-            return "Obrigado por compartilhar, \(name). Nem todo dia começa intenso — e está tudo bem."
+            return "Obrigado por compartilhar, \(name). Nem todo momento começa intenso — e está tudo bem."
         }
     }
 
@@ -226,9 +248,9 @@ enum DailyMorningCheckInEngine {
         case .great, .good:
             return "Excelente dia pela frente, \(name)! Estarei aqui na aba IAssistente quando precisar. Vamos com tudo! 💪"
         case .tired, .stressed:
-            return "Cuide-se hoje, \(name). Pequenos passos contam. Volto a te ouvir amanhã às 9h. 🌿"
+            return "Cuide-se hoje, \(name). Pequenos passos contam. Quando voltar, conversamos de novo. 🌿"
         case .unmotivated, .neutral:
-            return "Um dia de cada vez, \(name). Amanhã às 9h conversamos de novo. Você consegue! ☀️"
+            return "Um dia de cada vez, \(name). Estou aqui no IAssistente quando quiser. Você consegue! ☀️"
         }
     }
 

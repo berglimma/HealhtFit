@@ -26,10 +26,10 @@ enum AppTheme {
 }
 
 enum AppInfo {
-    static let developerName = AppLegalConfiguration.developerCompany
+    static let developerName = AppLegalConfiguration.developerNames
     static let developerPeople = AppLegalConfiguration.developerNames
     static let developerCredit =
-        "Sistema HealthFit desenvolvido por \(AppLegalConfiguration.developerNames) — \(AppLegalConfiguration.developerCompany)"
+        "Sistema HealthFit desenvolvido por \(AppLegalConfiguration.developerNames)"
 }
 
 struct CardModifier: ViewModifier {

@@ -19,4 +19,4 @@ Atletas iniciantes e intermediários que querem treinar com orientação, regist
 IMPORTANTE
 O HealthFit oferece orientação informativa. Não substitui avaliação médica ou acompanhamento profissional. Consulte um médico antes de iniciar qualquer programa de exercícios.
 
-Desenvolvido por BLSwift Solutions LTDA.
+Desenvolvido por BERG / LUAN.

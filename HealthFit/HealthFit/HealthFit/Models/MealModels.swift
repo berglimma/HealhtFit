@@ -11,6 +11,8 @@ struct Meal: Identifiable, Codable, Hashable {
     var fat: Int
     var ingredients: [String]
     var instructions: String
+    /// Marcada como concluída pelo usuário na aba Nutrição.
+    var isCompleted: Bool
 
     init(
         id: UUID = UUID(),
@@ -21,7 +23,8 @@ struct Meal: Identifiable, Codable, Hashable {
         carbs: Int,
         fat: Int,
         ingredients: [String],
-        instructions: String = ""
+        instructions: String = "",
+        isCompleted: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -32,6 +35,25 @@ struct Meal: Identifiable, Codable, Hashable {
         self.fat = fat
         self.ingredients = ingredients
         self.instructions = instructions
+        self.isCompleted = isCompleted
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        mealType = try container.decode(MealType.self, forKey: .mealType)
+        calories = try container.decode(Int.self, forKey: .calories)
+        protein = try container.decode(Int.self, forKey: .protein)
+        carbs = try container.decode(Int.self, forKey: .carbs)
+        fat = try container.decode(Int.self, forKey: .fat)
+        ingredients = try container.decode([String].self, forKey: .ingredients)
+        instructions = try container.decodeIfPresent(String.self, forKey: .instructions) ?? ""
+        isCompleted = try container.decodeIfPresent(Bool.self, forKey: .isCompleted) ?? false
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, mealType, calories, protein, carbs, fat, ingredients, instructions, isCompleted
     }
 }
 

@@ -123,6 +123,15 @@ struct ActiveCardioView: View {
             syncWithWatch()
             updateCalorieMotivation()
             syncWatchData()
+            if shouldAutoEndByInactivity {
+                finishCardio(autoEndedByInactivity: true)
+            }
+        }
+        .onReceive(workoutStore.sessionAutoEnded) { ended in
+            guard finishedSession == nil, !isFinishing else { return }
+            isFinishing = true
+            watchConnectivity.stopWorkoutOnWatch()
+            finishedSession = ended
         }
         .onAppear {
             syncWithWatch()
@@ -468,20 +477,32 @@ struct ActiveCardioView: View {
         workoutStore.updateCalories(watchConnectivity.watchCalories)
     }
 
-    private func finishCardio() {
+    private var shouldAutoEndByInactivity: Bool {
+        guard let startedAt = workoutStore.activeSession?.startedAt, !isFinishing else { return false }
+        return Date.now.timeIntervalSince(startedAt) >= WorkoutStore.autoEndInactivityLimit
+    }
+
+    private func finishCardio(autoEndedByInactivity: Bool = false) {
         guard !isFinishing else { return }
         isFinishing = true
 
         watchConnectivity.stopWorkoutOnWatch()
 
         guard var session = workoutStore.activeSession else {
-            dismiss()
+            if finishedSession == nil,
+               let last = workoutStore.sessionHistory.first,
+               last.autoEndedByInactivity {
+                finishedSession = last
+            } else if finishedSession == nil {
+                dismiss()
+            }
             return
         }
 
         let distanceKm = completedDistanceKm
         let pace = config.paceSecondsPerKm(elapsedSeconds: elapsedSeconds, distanceKm: max(distanceKm, 0.01))
         let goalReached: Bool = {
+            if autoEndedByInactivity { return false }
             if config.hasCalorieGoal, let target = config.targetCalories {
                 return liveCalories >= Double(target) * 0.98
             }
@@ -518,6 +539,11 @@ struct ActiveCardioView: View {
             )
         ]
         session.completedExercises = session.exerciseRecords.filter(\.isCompleted).count
+        if autoEndedByInactivity {
+            session.endedEarly = true
+            session.autoEndedByInactivity = true
+            session.earlyEndJustification = WorkoutStore.autoEndJustification
+        }
 
         Task {
             await healthKitManager.saveWorkout(

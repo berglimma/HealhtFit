@@ -58,6 +58,11 @@ enum DailyEveningCheckInEngine {
         Calendar.current.component(.hour, from: now) >= checkInHour
     }
 
+    /// Horário atual do dispositivo, ex.: "21h", "21h45".
+    static func formattedClockTime(now: Date = .now) -> String {
+        DailyMorningCheckInEngine.formattedClockTime(now: now)
+    }
+
     static func completedSessionsToday(from sessions: [WorkoutSession], on date: Date = .now) -> [WorkoutSession] {
         let key = todayKey(for: date)
         return sessions.filter { session in
@@ -66,15 +71,17 @@ enum DailyEveningCheckInEngine {
         }
     }
 
-    static func openingMessage(athleteName: String, context: HealthAssistantContext) -> String {
+    static func openingMessage(athleteName: String, context: HealthAssistantContext, now: Date = .now) -> String {
         let name = athleteName.isEmpty ? "Atleta" : athleteName
         let todaySessions = context.todayWorkoutSessions
+        let greeting = dayPartGreeting(for: now)
+        let clock = formattedClockTime(now: now)
 
         if todaySessions.isEmpty {
             return """
-            Boa noite, \(name)! 🌙
+            \(greeting), \(name)! 🌙
 
-            São 21h — hora de fechar o dia com calma e honestidade.
+            Agora são \(clock) — hora de fechar o dia com calma e honestidade.
 
             Não vi treinos registrados hoje, e tudo bem: nem todo dia precisa ser de academia. O descanso também faz parte do progresso.
 
@@ -84,9 +91,9 @@ enum DailyEveningCheckInEngine {
 
         let summary = workoutSummaryBlock(for: todaySessions)
         return """
-        Boa noite, \(name)! 🌙
+        \(greeting), \(name)! 🌙
 
-        São 21h — hora de olhar pra trás e celebrar o que você construiu hoje.
+        Agora são \(clock) — hora de olhar pra trás e celebrar o que você construiu hoje.
 
         \(summary)
 
@@ -348,7 +355,7 @@ enum DailyEveningCheckInEngine {
         if hadWorkout {
             tips.append("😴 **Sono e ganhos:** a maior parte da recuperação muscular acontece dormindo 7–9 h.")
         } else if dayFeeling == .skippedWorkout || dayFeeling == .unmotivated {
-            tips.append("🌅 **Amanhã:** às 9h conversamos de novo — um passo de cada vez reconstrói o ritmo.")
+            tips.append("🌅 **Amanhã:** quando voltar ao IAssistente, conversamos de novo — um passo de cada vez reconstrói o ritmo.")
         }
 
         if let hours = context.sleepHours, hours < 6 {
@@ -373,15 +380,24 @@ enum DailyEveningCheckInEngine {
         switch readiness {
         case .readyToSleep, .peaceful:
             if hadWorkout {
-                return "Boa noite, \(name)! Você merece esse descanso depois do que fez hoje. Durma bem — amanhã às 9h estou aqui. 🌙💤"
+                return "Boa noite, \(name)! Você merece esse descanso depois do que fez hoje. Durma bem — estou aqui no IAssistente quando precisar. 🌙💤"
             }
-            return "Boa noite, \(name)! Descanse profundamente e recarregue para amanhã. Até às 9h! 🌙"
+            return "Boa noite, \(name)! Descanse profundamente e recarregue. Te vejo no próximo check-in! 🌙"
         case .restless, .anxious:
             return "Vai com calma, \(name). Feche os olhos quando puder — cada respiração te aproxima do sono. Boa noite! 🌙"
         case .sore:
             return "Recupere bem, \(name). Seu corpo trabalhou — agora deixe o sono fazer o resto. Boa noite! 💤"
         case .neutral:
-            return "Boa noite, \(name)! Que seu descanso seja reparador. Te espero amanhã às 9h na aba IAssistente. 🌙"
+            return "Boa noite, \(name)! Que seu descanso seja reparador. Estou na aba IAssistente quando quiser conversar. 🌙"
+        }
+    }
+
+    private static func dayPartGreeting(for date: Date) -> String {
+        let hour = Calendar.current.component(.hour, from: date)
+        switch hour {
+        case 5..<12: return "Bom dia"
+        case 12..<18: return "Boa tarde"
+        default: return "Boa noite"
         }
     }
 

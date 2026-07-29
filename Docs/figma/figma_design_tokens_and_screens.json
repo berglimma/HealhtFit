@@ -1,14 +1,14 @@
 {
   "product": "HealthFit",
   "version": "1.0.0",
-  "generatedAt": "24/07/2026",
-  "company": "BLSwift Solutions LTDA",
+  "generatedAt": "25/07/2026",
+  "company": "BERG / LUAN",
   "designTokens": {
     "colors": {
-      "AccentGreen": "#2ECC71",
-      "AccentOrange": "#F39C12",
-      "Background": "#0B0F14",
-      "CardBackground": "#1A2330",
+      "AccentGreen": "sRGB 0.20 0.85 0.18",
+      "AccentOrange": "sRGB 1.00 0.55 0.20",
+      "Background": "sRGB 0.08 0.10 0.10",
+      "CardBackground": "sRGB 0.14 0.16 0.18",
       "TextPrimary": "#FFFFFF",
       "TextSecondary": "rgba(255,255,255,0.65)"
     },
@@ -25,18 +25,9 @@
     "mode": "dark"
   },
   "figmaPages": [
-    "00 Cover",
-    "01 Foundations",
-    "02 Components",
-    "03 Auth",
-    "04 Onboarding",
-    "05 Início",
-    "06 Treinos",
-    "07 Nutrição",
-    "08 IAssistente",
-    "09 Perfil",
-    "10 Watch",
-    "11 Flows"
+    "01 Cover · Foundations · Auth · Onboarding",
+    "02 App · Início · Treinos · Nutrição · IAssistente · Perfil",
+    "03 Watch · Flows · Health Icon Sync"
   ],
   "screens": [
     {
@@ -400,5 +391,12 @@
     "MainTab/Nutrição → ShoppingList",
     "MainTab/IAssistente → Check-ins",
     "MainTab/Perfil → Measurements / DeleteAccount"
+  ],
+  "figmaFileUrl": "https://www.figma.com/design/WPvjXR5t3EZbuO962iay3K",
+  "notes": [
+    "Health icon sync: Dashboard + Profile + AppIcon via DailyWellnessService.healthIconStatus",
+    "Water reminders every 2h 08-20",
+    "IAssistente is rule-based (no cloud LLM)",
+    "Starter plan limited to 3 Figma pages"
   ]
 }

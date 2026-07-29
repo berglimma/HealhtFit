@@ -123,6 +123,7 @@
 		B1000121 /* AccountDeletionError.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000121 /* AccountDeletionError.swift */; };
 		B1000122 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F1000122 /* PrivacyInfo.xcprivacy */; };
 		B1000123 /* ShoppingReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000123 /* ShoppingReportBuilder.swift */; };
+		B1000131 /* NutritionReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000131 /* NutritionReportBuilder.swift */; };
 		B1000124 /* privacy-policy.html in Resources */ = {isa = PBXBuildFile; fileRef = F1000124 /* privacy-policy.html */; };
 		B1000125 /* terms-of-use.html in Resources */ = {isa = PBXBuildFile; fileRef = F1000125 /* terms-of-use.html */; };
 		B1000126 /* LegalDocumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000126 /* LegalDocumentView.swift */; };
@@ -155,6 +156,8 @@
 		B2000021 /* AssistantCardioMeditationNudgeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000030 /* AssistantCardioMeditationNudgeEngineTests.swift */; };
 		B2000019 /* PasswordPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000028 /* PasswordPolicyTests.swift */; };
 		B2000020 /* AssistantWorkoutBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000029 /* AssistantWorkoutBuilderTests.swift */; };
+		B2000022 /* WorkoutInactivityAutoEndTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000031 /* WorkoutInactivityAutoEndTests.swift */; };
+		B2000023 /* NutritionReportBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000032 /* NutritionReportBuilderTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -311,6 +314,7 @@
 		F1000121 /* AccountDeletionError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDeletionError.swift; sourceTree = "<group>"; };
 		F1000122 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F1000123 /* ShoppingReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingReportBuilder.swift; sourceTree = "<group>"; };
+		F1000131 /* NutritionReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionReportBuilder.swift; sourceTree = "<group>"; };
 		F1000124 /* privacy-policy.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "privacy-policy.html"; sourceTree = "<group>"; };
 		F1000125 /* terms-of-use.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "terms-of-use.html"; sourceTree = "<group>"; };
 		F1000126 /* LegalDocumentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocumentView.swift; sourceTree = "<group>"; };
@@ -345,6 +349,8 @@
 		F2000028 /* PasswordPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordPolicyTests.swift; sourceTree = "<group>"; };
 		F2000030 /* AssistantCardioMeditationNudgeEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCardioMeditationNudgeEngineTests.swift; sourceTree = "<group>"; };
 		F2000029 /* AssistantWorkoutBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantWorkoutBuilderTests.swift; sourceTree = "<group>"; };
+		F2000031 /* WorkoutInactivityAutoEndTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutInactivityAutoEndTests.swift; sourceTree = "<group>"; };
+		F2000032 /* NutritionReportBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionReportBuilderTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -488,6 +494,7 @@
 				F1000120 /* UserDataCleaner.swift */,
 				F1000121 /* AccountDeletionError.swift */,
 				F1000123 /* ShoppingReportBuilder.swift */,
+				F1000131 /* NutritionReportBuilder.swift */,
 				F1000127 /* PasswordPolicy.swift */,
 				F1000130 /* AssistantWorkoutBuilder.swift */,
 				F1000201 /* ProfileDataReminderService.swift */,
@@ -711,6 +718,8 @@
 				F2000028 /* PasswordPolicyTests.swift */,
 				F2000029 /* AssistantWorkoutBuilderTests.swift */,
 				F2000022 /* PostWorkoutCheckInEngineTests.swift */,
+				F2000031 /* WorkoutInactivityAutoEndTests.swift */,
+				F2000032 /* NutritionReportBuilderTests.swift */,
 			);
 			path = HealthFitTests;
 			sourceTree = "<group>";
@@ -1007,6 +1016,7 @@
 				B1000120 /* UserDataCleaner.swift in Sources */,
 				B1000121 /* AccountDeletionError.swift in Sources */,
 				B1000123 /* ShoppingReportBuilder.swift in Sources */,
+				B1000131 /* NutritionReportBuilder.swift in Sources */,
 				B1000087 /* ExerciseVideoRepository.swift in Sources */,
 				B1000073 /* ForgotPasswordView.swift in Sources */,
 				B1000075 /* GoogleServiceInfo.swift in Sources */,
@@ -1056,6 +1066,8 @@
 				B2000019 /* PasswordPolicyTests.swift in Sources */,
 				B2000020 /* AssistantWorkoutBuilderTests.swift in Sources */,
 				B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */,
+				B2000022 /* WorkoutInactivityAutoEndTests.swift in Sources */,
+				B2000023 /* NutritionReportBuilderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -172,6 +172,7 @@ final class AuthService: ObservableObject {
         NotificationService.shared.cancelHealthIconRedReminder()
         NotificationService.shared.cancelDailyMotivationNotifications()
         NotificationService.shared.cancelWaterReminders()
+        NotificationService.shared.updateMealReminders(hasMealPlan: false)
 
         if FirebaseBootstrap.isConfigured {
             try? FirebaseAuthProvider.signOut()
@@ -503,6 +504,7 @@ final class AuthService: ObservableObject {
         NotificationService.shared.cancelHealthIconRedReminder()
         NotificationService.shared.cancelDailyMotivationNotifications()
         NotificationService.shared.cancelWaterReminders()
+        NotificationService.shared.updateMealReminders(hasMealPlan: false)
         NotificationService.shared.cancelDailyAssistantCheckIn()
         NotificationService.shared.cancelDailyEveningAssistantCheckIn()
 

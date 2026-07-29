@@ -269,6 +269,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var email: String
     var personalTrainerName: String
     var personalTrainerEmail: String
+    var nutritionistName: String
+    var nutritionistEmail: String
     var biotype: Biotype
     var goal: FitnessGoal
     var gender: Gender
@@ -290,6 +292,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
         displayName: String = "",
         personalTrainerName: String = "",
         personalTrainerEmail: String = "",
+        nutritionistName: String = "",
+        nutritionistEmail: String = "",
         biotype: Biotype = .mesomorph,
         goal: FitnessGoal = .muscleGain,
         gender: Gender = .male,
@@ -307,6 +311,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
         self.email = email
         self.personalTrainerName = personalTrainerName
         self.personalTrainerEmail = personalTrainerEmail
+        self.nutritionistName = nutritionistName
+        self.nutritionistEmail = nutritionistEmail
         self.biotype = biotype
         self.goal = goal
         self.gender = gender
@@ -327,6 +333,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
         email = try container.decode(String.self, forKey: .email)
         personalTrainerName = try container.decodeIfPresent(String.self, forKey: .personalTrainerName) ?? ""
         personalTrainerEmail = try container.decodeIfPresent(String.self, forKey: .personalTrainerEmail) ?? ""
+        nutritionistName = try container.decodeIfPresent(String.self, forKey: .nutritionistName) ?? ""
+        nutritionistEmail = try container.decodeIfPresent(String.self, forKey: .nutritionistEmail) ?? ""
         biotype = try container.decode(Biotype.self, forKey: .biotype)
         goal = try container.decode(FitnessGoal.self, forKey: .goal)
         gender = try container.decodeIfPresent(Gender.self, forKey: .gender) ?? .male
@@ -341,6 +349,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case id, name, displayName, email, personalTrainerName, personalTrainerEmail
+        case nutritionistName, nutritionistEmail
         case biotype, goal, gender, weight, height, age, caloricDeficit
         case bodyMeasurements, previousBodyMeasurements, createdAt
     }
@@ -352,6 +361,10 @@ struct UserProfile: Codable, Identifiable, Equatable {
 
     var hasPersonalTrainer: Bool {
         !personalTrainerEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var hasNutritionist: Bool {
+        !nutritionistEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// Nome usado em saudações e mensagens do app.

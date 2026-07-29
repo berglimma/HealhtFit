@@ -80,6 +80,48 @@ final class PostWorkoutCheckInEngineTests: XCTestCase {
         XCTAssertEqual(checkIn.workoutKind, .cardio)
     }
 
+    func testAutoEndedCheckInIsDueImmediately() {
+        var session = TestFixtures.completedWorkoutSession(endedAt: .now)
+        session.autoEndedByInactivity = true
+        session.endedEarly = true
+        let checkIn = PendingPostWorkoutCheckIn(session: session)
+
+        XCTAssertTrue(checkIn.autoEndedByInactivity)
+        XCTAssertTrue(PostWorkoutCheckInEngine.isDue(checkIn))
+    }
+
+    func testForgottenWorkoutOpeningMessage() {
+        var session = TestFixtures.completedWorkoutSession(workoutTitle: "Treino Peito")
+        session.autoEndedByInactivity = true
+        session.endedEarly = true
+        let checkIn = PendingPostWorkoutCheckIn(session: session)
+        let message = PostWorkoutCheckInEngine.openingMessage(checkIn: checkIn, athleteName: "Luan")
+
+        XCTAssertTrue(message.contains("Treino Peito"))
+        XCTAssertTrue(message.contains("Luan") || message.localizedCaseInsensitiveContains("esqueceu") || message.contains("2h30"))
+        XCTAssertTrue(
+            message.localizedCaseInsensitiveContains("esqueceu")
+                || message.localizedCaseInsensitiveContains("2h30")
+                || message.localizedCaseInsensitiveContains("finalizar")
+        )
+    }
+
+    func testAutoEndedResponseAddsMotivationTip() {
+        var session = TestFixtures.completedWorkoutSession()
+        session.autoEndedByInactivity = true
+        session.endedEarly = true
+        let checkIn = PendingPostWorkoutCheckIn(session: session)
+        let responses = PostWorkoutCheckInEngine.responseSequence(
+            feeling: .good,
+            checkIn: checkIn,
+            athleteName: "Maria"
+        )
+
+        XCTAssertEqual(responses.count, 4)
+        XCTAssertTrue(responses[2].localizedCaseInsensitiveContains("finalizar")
+                      || responses[2].localizedCaseInsensitiveContains("esquecer"))
+    }
+
     func testPositiveFarewellPraisesUser() {
         let session = TestFixtures.completedWorkoutSession()
         let checkIn = PendingPostWorkoutCheckIn(session: session)

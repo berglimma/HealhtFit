@@ -10,7 +10,7 @@ Aplicativo iOS + watchOS de saúde e fitness desenvolvido em **Swift** e **Swift
 **Versão:** 1.0.0  
 **Linguagem:** Swift 5  
 **UI:** SwiftUI (tema escuro por padrão)  
-**Desenvolvimento:** BERG / LUAN — BLSwift Solutions LTDA
+**Desenvolvimento:** BERG / LUAN
 
 ---
 
@@ -487,9 +487,9 @@ python3 generate_report.py
 
 ## Créditos
 
-**BERG / LUAN — BLSwift Solutions LTDA**
+**BERG / LUAN**
 
-Código desenvolvido por BERG / LUAN - BLSwift Solutions LTDA.
+Código desenvolvido por BERG / LUAN.
 
 ---
 

@@ -35,6 +35,53 @@ enum MotivationMessages {
         "O melhor treino é aquele que você faz. Faça o de hoje!"
     ]
 
+    /// Segunda a quarta — foco em treino.
+    static let weekdayWorkoutMotivation: [String] = [
+        "Segunda a quarta: semana em construção. Treine com foco e avance 1% hoje! 💪",
+        "Corpo e mente agradecem a consistência. Abra o HealthFit e faça seu treino!",
+        "Hoje é dia de evoluir! Cada série te aproxima do objetivo.",
+        "Disciplina vence desculpa. Apareça, aqueça e execute o treino do dia!",
+        "Quem treina no meio da semana colhe o fim de semana mais leve. Bora!",
+        "Seu futuro eu está pedindo esse treino. Não negociemos com a preguiça!",
+        "Foco total: técnica boa, intensidade certa e hidratação. Você consegue!",
+    ]
+
+    /// Quinta — #TBD + motivação.
+    static let thursdayMotivation: [String] = [
+        "#TBD Quinta é dia de virar a chave: treine com presença e feche a semana forte! 🔥",
+        "#TBD Lembre quem você quer ser. Um treino agora muda o restante da semana.",
+        "#TBD Não espere sexta para começar — conquiste hoje o que o fim de semana celebra.",
+        "#TBD Corpo em movimento, mente no objetivo. Sua melhor versão treina na quinta!",
+        "#TBD Throwback de disciplina: volte ao foco, complete o treino e orgulhe-se.",
+    ]
+
+    /// Sexta — #sextou + bebidas leves + motivação.
+    static let fridayMotivation: [String] = [
+        "#sextou Se for sair, prefira bebidas leves e em baixa quantidade — e não pule o treino de hoje! 🥂💪",
+        "#sextou Celebre com consciência: se for beber, escolha opções leves e poucas doses. Seu treino te espera!",
+        "#sextou Sextou com equilíbrio: treine, hidrate e, se sair, priorize bebidas leves e baixa quantidade.",
+        "#sextou Diversão sem exagero: prefira bebidas leves e em pouca quantidade. Seu corpo agradece amanhã!",
+        "#sextou Feche a semana treinando. Se for para algum lugar, bebidas leves e baixa quantidade mantêm o progresso.",
+    ]
+
+    /// Sábado — FDS.
+    static let saturdayMotivation: [String] = [
+        "FDS chegou! Movimente-se com leveza — um treino curto ou cardio já faz o sábado valer. 🌤️",
+        "FDS de verdade inclui autocuidado: treine, hidrate e descanse com qualidade.",
+        "Sábado de FDS: mantenha o ritmo sem pressão. Um treino ativo deixa o fim de semana melhor!",
+        "FDS em movimento! Aproveite o sábado para treinar e curtir a energia que o corpo devolve.",
+        "FDS: equilíbrio entre descanso e ação. Um treino hoje deixa domingo ainda mais leve.",
+    ]
+
+    /// Domingo — motivação para fechar/semana.
+    static let sundayMotivation: [String] = [
+        "Domingo de recomeço: prepare corpo e mente — um treino ou alongamento muda a semana. ✨",
+        "Domingo motivacional: organize a semana, hidrate-se e dê um treino de qualidade a si mesmo!",
+        "Feche o ciclo com orgulho. Domingo é chance de treinar leve e começar segunda em alta.",
+        "Domingo: respire, movimente e planeje. Sua consistência começa com a escolha de hoje!",
+        "Motivação de domingo: cuide do corpo agora para a semana fluir com mais força e clareza.",
+    ]
+
     static let workoutStartFocusMessage =
         "Ótimo, vamos treinar! Escolha sua playlist favorita e vamos pra cima! " +
         "Mesmo que esteja com alguém, treine no foco e evite conversar muito tempo! Vamos lá!"
@@ -51,8 +98,37 @@ enum MotivationMessages {
     ]
 
     static func dailyMessage(for date: Date = .now) -> String {
+        let weekday = Calendar.current.component(.weekday, from: date)
+        // 1 = domingo … 7 = sábado
+        switch weekday {
+        case 5: // quinta
+            return pick(from: thursdayMotivation, on: date)
+        case 6: // sexta
+            return pick(from: fridayMotivation, on: date)
+        case 7: // sábado
+            return pick(from: saturdayMotivation, on: date)
+        case 1: // domingo
+            return pick(from: sundayMotivation, on: date)
+        default: // segunda a quarta
+            return pick(from: weekdayWorkoutMotivation, on: date)
+        }
+    }
+
+    static func dailyNotificationTitle(for date: Date = .now) -> String {
+        let weekday = Calendar.current.component(.weekday, from: date)
+        switch weekday {
+        case 5: return "#TBD — Hora de treinar! 💪"
+        case 6: return "#sextou — Treino + equilíbrio 🥂"
+        case 7: return "FDS — Movimente-se! 🌤️"
+        case 1: return "Domingo motivacional ✨"
+        default: return "Hora de treinar! 💪"
+        }
+    }
+
+    private static func pick(from messages: [String], on date: Date) -> String {
+        guard !messages.isEmpty else { return daily[0] }
         let day = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 1
-        return daily[(day - 1) % daily.count]
+        return messages[(day - 1) % messages.count]
     }
 
     static func workoutStartMessage(workoutTitle: String, athleteName: String) -> String {
@@ -92,6 +168,13 @@ enum MotivationMessages {
     }
 
     static func workoutEndMessage(session: WorkoutSession, athleteName: String) -> String {
+        if session.autoEndedByInactivity {
+            return forgottenWorkoutEndNotification(
+                workoutTitle: session.workoutTitle,
+                athleteName: athleteName
+            )
+        }
+
         let duration = DurationFormatting.format(seconds: Int(session.duration))
         let title = session.workoutTitle.lowercased()
 
@@ -108,6 +191,53 @@ enum MotivationMessages {
 
         let exercises = "\(session.completedExercises)/\(session.totalExercises)"
         return "\(athleteName), treino finalizado! \(session.workoutTitle) — \(duration), \(exercises) exercícios concluídos. Parabéns pelo esforço! 🏆"
+    }
+
+    static let forgottenWorkoutEndMessages: [String] = [
+        "Poxa, você esqueceu de finalizar o treino — mas não se preocupe, estou aqui pra te ajudar. 💙",
+        "O treino ficou aberto por mais de 2h30 e eu encerrei por segurança. Sem culpa: o próximo você finaliza comigo!",
+        "Esquecer de encerrar acontece. O importante é voltar, aprender e seguir firme. Estou com você! 💪",
+        "Alerta de inatividade: o treino passou de 2h30 sem finalização. Eu cuidei do encerramento — agora respira e segue em frente.",
+        "Poxa… o treino ficou sem finalizar. Tudo bem! Use isso como lembrete e conte comigo no próximo."
+    ]
+
+    static let forgottenWorkoutMotivation: [String] = [
+        "Cada dia é uma nova chance de evoluir. Você não precisa ser perfeito — só consistente. 🌟",
+        "Errar o processo faz parte. O que te define é voltar. Vamos juntos! 🔥",
+        "Seu progresso não some porque um treino ficou aberto. Amanhã é recomeço.",
+        "Disciplina também é lembrar de encerrar. Da próxima vez, eu te lembro — e você brilha!",
+        "Corpo e mente agradecem a honestidade. Agora hidrate, descanse e retome com leveza."
+    ]
+
+    static func forgottenWorkoutEndNotification(workoutTitle: String, athleteName: String) -> String {
+        let tip = forgottenWorkoutEndMessages[abs(workoutTitle.hashValue) % forgottenWorkoutEndMessages.count]
+        return "\(athleteName), \(tip) Sessão: \(workoutTitle)."
+    }
+
+    static func forgottenWorkoutPendingNotification(workoutTitle: String) -> String {
+        "O treino \"\(workoutTitle)\" passou de 2h30 sem finalização. Abra o HealthFit — vou encerrar e te ajudar a retomar com carinho."
+    }
+
+    static func forgottenWorkoutAssistantOpening(workoutTitle: String, athleteName: String) -> String {
+        let name = athleteName.isEmpty ? "Atleta" : athleteName
+        let empathy = forgottenWorkoutEndMessages.randomElement() ?? forgottenWorkoutEndMessages[0]
+        let motivation = forgottenWorkoutMotivation.randomElement() ?? forgottenWorkoutMotivation[0]
+
+        return """
+        \(empathy)
+
+        Olá, \(name)! 😢⚠️
+
+        Notei que o treino "\(workoutTitle)" ficou iniciado por mais de 2h30 sem ser finalizado.
+        Por segurança e para o relatório ficar correto, eu encerrei a sessão automaticamente.
+
+        Lembrete importante: sempre finalize o treino na tela ativa (ou peça para encerrar) para o histórico, o personal e as metas baterem certo.
+
+        \(motivation)
+
+        Como você está se sentindo agora — corpo, energia e disposição?
+        Me conte com sinceridade. Estou aqui pra te ajudar.
+        """
     }
 
     static let inactivityReminder: [String] = [
@@ -292,4 +422,20 @@ enum MotivationMessages {
         let index = max(hour, 0) % waterReminderMessages.count
         return waterReminderMessages[index]
     }
+
+    static func mealReminderMessage(for mealType: MealType) -> String {
+        let time = MealReminderConfiguration.formattedMealTime(for: mealType)
+        let tips = mealReminderTips
+        let tip = tips[abs(mealType.rawValue.hashValue) % tips.count]
+        return "Em 5 minutos: \(mealType.rawValue) (\(time)). \(tip)"
+    }
+
+    static let mealReminderTips = [
+        "Separe o prato do cardápio e hidrate-se um pouco antes. 🥗",
+        "Alerta do cardápio: prepare a refeição com calma e aproveite cada mordida.",
+        "Lembrete nutricional: comer no horário ajuda energia, foco e resultados. 💪",
+        "Seu cardápio te espera — organize a porção e evite pular esta refeição.",
+        "5 minutos para se organizar: água, prato e atenção plena na comida. 🌿",
+        "Constância no cardápio = evolução. Não deixe esta refeição passar!",
+    ]
 }

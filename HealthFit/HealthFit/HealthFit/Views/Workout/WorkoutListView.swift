@@ -2,6 +2,7 @@ import SwiftUI
 
 private enum WorkoutSection: String, CaseIterable, Identifiable {
     case strength = "Musculação"
+    case home = "Treine em Casa"
     case cardio = "Cardio"
     case meditation = "Meditação"
 
@@ -31,6 +32,8 @@ struct WorkoutListView: View {
                     switch selectedSection {
                     case .strength:
                         strengthSection
+                    case .home:
+                        homeSection
                     case .cardio:
                         cardioSection
                     case .meditation:
@@ -50,6 +53,12 @@ struct WorkoutListView: View {
                     createTargetGender = targetGender
                     showCreateWorkout = true
                 }
+            }
+            .navigationDestination(for: HomeWorkoutHubRoute.self) { _ in
+                HomeWorkoutHubView()
+            }
+            .navigationDestination(for: MobilityWorkoutHubRoute.self) { _ in
+                MobilityWorkoutHubView()
             }
             .navigationDestination(for: CardioExercise.self) { exercise in
                 CardioSetupView(exercise: exercise)
@@ -101,6 +110,27 @@ struct WorkoutListView: View {
         .pickerStyle(.segmented)
     }
 
+    private var homeSection: some View {
+        VStack(spacing: 16) {
+            Text("Treinos com peso corporal — sem academia")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            NavigationLink(value: HomeWorkoutHubRoute()) {
+                HomeProgramHeroCard(
+                    recommendedCount: workoutStore.homeStandardWorkoutSheets.count
+                )
+            }
+            .buttonStyle(.plain)
+
+            Text("Cada ficha inclui demos em vídeo/GIF dos exercícios durante o treino.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
     private var strengthSection: some View {
         VStack(spacing: 16) {
             Text("Escolha o programa")
@@ -125,6 +155,18 @@ struct WorkoutListView: View {
                 )
             }
             .buttonStyle(.plain)
+
+            NavigationLink(value: MobilityWorkoutHubRoute()) {
+                MobilityProgramHeroCard(
+                    recommendedCount: workoutStore.mobilityStandardWorkoutSheets.count
+                )
+            }
+            .buttonStyle(.plain)
+
+            Text("Mobilidade ajuda a preparar articulações para agachamento, terra, supino e desenvolvimento.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -160,6 +202,250 @@ struct WorkoutListView: View {
                 }
             }
         }
+    }
+}
+
+struct HomeWorkoutHubRoute: Hashable {}
+struct MobilityWorkoutHubRoute: Hashable {}
+
+struct HomeProgramHeroCard: View {
+    let recommendedCount: Int
+
+    private let accent = Color(red: 0.35, green: 0.72, blue: 0.55)
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.12, green: 0.28, blue: 0.22),
+                    Color(red: 0.06, green: 0.12, blue: 0.10),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            // Decorative circles
+            Circle()
+                .fill(accent.opacity(0.18))
+                .frame(width: 160, height: 160)
+                .offset(x: 180, y: -40)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label("SEM EQUIPAMENTOS", systemImage: "house.fill")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(accent)
+
+                Text("TREINE EM CASA")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+
+                Text("Full body, core, HIIT, pernas e superiores com demos")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.85))
+
+                Label("\(recommendedCount) fichas recomendadas", systemImage: "star.fill")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+            }
+            .padding(16)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 180)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .stroke(accent.opacity(0.45), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+}
+
+struct HomeWorkoutHubView: View {
+    @EnvironmentObject var workoutStore: WorkoutStore
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var recommendedSheets: [WorkoutSheet] {
+        workoutStore.homeStandardWorkoutSheets
+    }
+
+    private let accent = Color(red: 0.35, green: 0.72, blue: 0.55)
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                hubHeader
+
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Recomendados")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Fichas de peso corporal com demonstrações durante o treino")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+
+                    LazyVStack(spacing: 12) {
+                        ForEach(recommendedSheets) { sheet in
+                            NavigationLink(value: sheet) {
+                                WorkoutSheetCard(sheet: sheet, iconSystemName: "house.fill")
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+            .adaptiveContentWidth()
+        }
+        .background(AppTheme.background)
+        .navigationTitle("Treine em Casa")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var hubHeader: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "house.fill")
+                .font(.title2)
+                .foregroundStyle(accent)
+                .frame(width: 44, height: 44)
+                .background(accent.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("TREINE EM CASA")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("\(recommendedSheets.count) fichas · peso corporal · demos em vídeo")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            Spacer()
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+}
+
+struct MobilityProgramHeroCard: View {
+    let recommendedCount: Int
+
+    private let accent = Color(red: 0.45, green: 0.65, blue: 0.95)
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            Image("WorkoutProgramMobility")
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
+                .frame(height: 180)
+                .clipped()
+
+            LinearGradient(
+                colors: [.black.opacity(0.05), .black.opacity(0.75)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label("PARA MUSCULAÇÃO", systemImage: "figure.flexibility")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(accent)
+
+                Text("MOBILIDADE")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+
+                Text("Aquecimento, quadril, ombros e pós-treino com demos")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.85))
+
+                Label("\(recommendedCount) fichas recomendadas", systemImage: "star.fill")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+            }
+            .padding(16)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 180)
+        .background(accent.opacity(0.25))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .stroke(accent.opacity(0.45), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+}
+
+struct MobilityWorkoutHubView: View {
+    @EnvironmentObject var workoutStore: WorkoutStore
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var recommendedSheets: [WorkoutSheet] {
+        workoutStore.mobilityStandardWorkoutSheets
+    }
+
+    private let accent = Color(red: 0.45, green: 0.65, blue: 0.95)
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                hubHeader
+
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Recomendados")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Rotinas de mobilidade voltadas à musculação, com GIFs na execução")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+
+                    LazyVStack(spacing: 12) {
+                        ForEach(recommendedSheets) { sheet in
+                            NavigationLink(value: sheet) {
+                                WorkoutSheetCard(sheet: sheet, iconSystemName: "figure.flexibility")
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+            .adaptiveContentWidth()
+        }
+        .background(AppTheme.background)
+        .navigationTitle("Mobilidade")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var hubHeader: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "figure.flexibility")
+                .font(.title2)
+                .foregroundStyle(accent)
+                .frame(width: 44, height: 44)
+                .background(accent.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("MOBILIDADE")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("\(recommendedSheets.count) fichas · preparo para carga · demos em GIF")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            Spacer()
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 }
 
@@ -410,6 +696,15 @@ struct GenderWorkoutHubView: View {
 struct WorkoutSheetCard: View {
     let sheet: WorkoutSheet
     var showsPersonalBadge = false
+    var iconSystemName: String?
+
+    private var resolvedIcon: String {
+        if let iconSystemName { return iconSystemName }
+        if sheet.createdByAssistant { return "bubble.left.and.bubble.right.fill" }
+        if sheet.title.lowercased().hasPrefix("casa") { return "house.fill" }
+        if sheet.title.lowercased().hasPrefix("mobilidade") { return "figure.flexibility" }
+        return "dumbbell.fill"
+    }
 
     var body: some View {
         HStack(spacing: 16) {
@@ -417,7 +712,7 @@ struct WorkoutSheetCard: View {
                 Circle()
                     .fill(AppTheme.accent.opacity(0.2))
                     .frame(width: 50, height: 50)
-                Image(systemName: sheet.createdByAssistant ? "bubble.left.and.bubble.right.fill" : "dumbbell.fill")
+                Image(systemName: resolvedIcon)
                     .foregroundStyle(AppTheme.accent)
             }
 
@@ -442,6 +737,22 @@ struct WorkoutSheetCard: View {
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(AppTheme.accent.opacity(0.15))
+                            .clipShape(Capsule())
+                    } else if sheet.title.lowercased().hasPrefix("casa") {
+                        Text("Treine em Casa")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color(red: 0.35, green: 0.72, blue: 0.55))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color(red: 0.35, green: 0.72, blue: 0.55).opacity(0.15))
+                            .clipShape(Capsule())
+                    } else if sheet.title.lowercased().hasPrefix("mobilidade") {
+                        Text("Mobilidade")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color(red: 0.45, green: 0.65, blue: 0.95))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color(red: 0.45, green: 0.65, blue: 0.95).opacity(0.15))
                             .clipShape(Capsule())
                     }
                 }

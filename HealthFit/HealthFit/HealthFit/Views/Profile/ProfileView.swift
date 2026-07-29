@@ -14,6 +14,8 @@ struct ProfileView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var trainerName = ""
     @State private var trainerEmail = ""
+    @State private var nutritionistName = ""
+    @State private var nutritionistEmail = ""
     @State private var displayName = ""
     @State private var sleepHoursInput: Double = 7
     @State private var neckText = ""
@@ -142,6 +144,33 @@ struct ProfileView: View {
                                 .foregroundStyle(AppTheme.accent)
                         } else {
                             Text("Cadastre o e-mail para enviar relatórios após cada treino.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Section("Nutricionista") {
+                        TextField("Nome do Nutricionista", text: $nutritionistName)
+                            .textContentType(.name)
+                            .onChange(of: nutritionistName) { _, _ in
+                                saveNutritionist()
+                            }
+
+                        TextField("E-mail do Nutricionista", text: $nutritionistEmail)
+                            .textContentType(.emailAddress)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .onChange(of: nutritionistEmail) { _, _ in
+                                saveNutritionist()
+                            }
+
+                        if authService.currentUser?.hasNutritionist == true {
+                            Label("Relatórios da aba Nutrição poderão ser enviados por e-mail", systemImage: "envelope.fill")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.accent)
+                        } else {
+                            Text("Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -350,6 +379,8 @@ struct ProfileView: View {
     private func syncTrainerFields() {
         trainerName = authService.currentUser?.personalTrainerName ?? ""
         trainerEmail = authService.currentUser?.personalTrainerEmail ?? ""
+        nutritionistName = authService.currentUser?.nutritionistName ?? ""
+        nutritionistEmail = authService.currentUser?.nutritionistEmail ?? ""
     }
 
     private func syncDisplayNameField() {
@@ -671,6 +702,16 @@ struct ProfileView: View {
         guard user.personalTrainerName != name || user.personalTrainerEmail != email else { return }
         user.personalTrainerName = name
         user.personalTrainerEmail = email
+        authService.updateProfile(user)
+    }
+
+    private func saveNutritionist() {
+        guard var user = authService.currentUser else { return }
+        let name = nutritionistName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let email = nutritionistEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard user.nutritionistName != name || user.nutritionistEmail != email else { return }
+        user.nutritionistName = name
+        user.nutritionistEmail = email
         authService.updateProfile(user)
     }
 

@@ -71,7 +71,15 @@ struct ActiveMeditationView: View {
             )
             if elapsedSeconds >= config.targetDurationSeconds && !isFinishing {
                 finishMeditation()
+            } else if shouldAutoEndByInactivity {
+                finishMeditation(autoEndedByInactivity: true)
             }
+        }
+        .onReceive(workoutStore.sessionAutoEnded) { ended in
+            guard finishedSession == nil, !isFinishing else { return }
+            isFinishing = true
+            watchConnectivity.stopWorkoutOnWatch()
+            finishedSession = ended
         }
         .onAppear {
             watchConnectivity.syncMeditationProgress(
@@ -166,14 +174,25 @@ struct ActiveMeditationView: View {
         .buttonStyle(PrimaryButtonStyle())
     }
 
-    private func finishMeditation() {
+    private var shouldAutoEndByInactivity: Bool {
+        guard let startedAt = workoutStore.activeSession?.startedAt, !isFinishing else { return false }
+        return Date.now.timeIntervalSince(startedAt) >= WorkoutStore.autoEndInactivityLimit
+    }
+
+    private func finishMeditation(autoEndedByInactivity: Bool = false) {
         guard !isFinishing else { return }
         isFinishing = true
 
         watchConnectivity.stopWorkoutOnWatch()
 
         guard var session = workoutStore.activeSession else {
-            dismiss()
+            if finishedSession == nil,
+               let last = workoutStore.sessionHistory.first,
+               last.autoEndedByInactivity {
+                finishedSession = last
+            } else if finishedSession == nil {
+                dismiss()
+            }
             return
         }
 
@@ -184,17 +203,22 @@ struct ActiveMeditationView: View {
                 exerciseName: config.topic.name,
                 elapsedSeconds: elapsedSeconds,
                 restSeconds: 0,
-                isCompleted: elapsedSeconds >= config.targetDurationSeconds / 2
+                isCompleted: !autoEndedByInactivity && elapsedSeconds >= config.targetDurationSeconds / 2
             )
         ]
         session.completedExercises = session.exerciseRecords.filter(\.isCompleted).count
+        if autoEndedByInactivity {
+            session.endedEarly = true
+            session.autoEndedByInactivity = true
+            session.earlyEndJustification = WorkoutStore.autoEndJustification
+        }
 
         NotificationService.shared.deliverWorkoutEndNotification(
             session: session,
             athleteName: authService.currentUser?.greetingName ?? "Atleta"
         )
 
-        workoutStore.endSession()
+        workoutStore.endSession(persisting: session)
         finishedSession = session
     }
 }

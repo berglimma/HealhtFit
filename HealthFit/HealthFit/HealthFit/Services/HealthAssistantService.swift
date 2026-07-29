@@ -40,6 +40,8 @@ enum HealthAssistantEngine {
 
     static let suggestedQuestions: [String] = [
         "Montar treino sem personal",
+        "Treino em casa funciona?",
+        "Como treinar em casa sem equipamento?",
         "Qual é meu IMC?",
         "O que é ectomorfo?",
         "O que é mesomorfo?",
@@ -80,7 +82,7 @@ enum HealthAssistantEngine {
             sections.append("")
         }
 
-        sections.append("Posso tirar dúvidas sobre dieta, IMC, biotipos (ecto/meso/endo), sono, treinos conforme orientação profissional, cardio, meditação, macros, suplementação e consumo de álcool.")
+        sections.append("Posso tirar dúvidas sobre dieta, IMC, biotipos (ecto/meso/endo), sono, treinos (academia ou em casa), cardio, meditação, macros, suplementação e consumo de álcool.")
         sections.append("")
         sections.append(healthSafetyDisclaimer)
         sections.append("")
@@ -999,9 +1001,99 @@ enum HealthAssistantEngine {
                 return """
                 Posso montar uma sugestão de treino para quem não tem personal.
 
-                Digite “montar treino” (ou toque na sugestão) para começarmos: escolhemos perfil masculino/feminino e o foco (massa, resistência ou perda de gordura).
+                Digite “montar treino” (ou toque na sugestão) para começarmos: perfil masculino/feminino, se treina só em casa ou na academia, experiência e o foco (massa, resistência ou perda de gordura).
 
                 \(AssistantWorkoutBuilder.professionalDisclaimer)
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: [
+                "treino em casa", "treinar em casa", "sem academia", "sem equipamento",
+                "peso corporal", "bodyweight", "casa funciona", "só em casa", "so em casa",
+                "treino caseiro", "montar treino em casa", "como treinar em casa"
+            ],
+            respond: { _ in
+                """
+                Treinar em casa funciona — principalmente com consistência, progressão e boa técnica.
+
+                O que priorizar em casa:
+                • Full body ou divisão simples (superior/inferior) 3–5x/semana
+                • Progressão: mais reps, menos descanso, variações mais difíceis (ex.: flexão diamante)
+                • Core, pernas e empurrar/puxar com peso corporal
+                • Use demos em GIF no app (**Treinos → Treine em Casa**)
+
+                Limitações honestas:
+                • Hipertrofia avançada de certos grupos fica mais fácil com carga externa
+                • Elásticos/halteres leves ajudam, mas não são obrigatórios para começar
+
+                Quer uma ficha personalizada? Digite “montar treino” e escolha **Sim, só em casa** no fluxo.
+
+                \(AssistantWorkoutBuilder.professionalDisclaimer)
+
+                \(healthSafetyDisclaimer)
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: [
+                "ganhar massa em casa", "hipertrofia em casa", "crescer em casa",
+                "musculo em casa", "músculo em casa"
+            ],
+            respond: { _ in
+                """
+                Dá para ganhar músculo em casa, sobretudo no início e intermediário:
+
+                • Chegue perto da falha em 8–20 reps (flexões, agachamentos, afundos, ponte, mergulhos)
+                • Aumente dificuldade: pausas, tempo sob tensão, unilateral, elevações
+                • Proteína adequada + sono 7–9 h + superávit leve se o objetivo for massa
+                • 3–4 sessões/semana com recuperação entre estímulos do mesmo grupo
+
+                No app: peça “montar treino” → **Sim, só em casa** → foco **Ganho de massa**, ou use as fichas em **Treine em Casa**.
+
+                \(AssistantWorkoutBuilder.professionalDisclaimer)
+
+                \(healthSafetyDisclaimer)
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: [
+                "emagrecer em casa", "perder gordura em casa", "secar em casa",
+                "hiit em casa", "cardio em casa"
+            ],
+            respond: { _ in
+                """
+                Emagrecer em casa combina déficit calórico + movimento consistente:
+
+                • Circuitos com agachamento, burpee, polichinelo, mountain climber e prancha
+                • 20–35 min, 3–5x/semana, mantendo esforço sustentável
+                • Força em casa 2–3x ajuda a preservar músculo no déficit
+                • Água, sono e proteína continuam essenciais
+
+                Peça “montar treino” e escolha **Só em casa** + foco **Perda de gordura**, ou veja HIIT em **Treinos → Treine em Casa**.
+
+                \(healthSafetyDisclaimer)
+                """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: [
+                "espaco pequeno", "espaço pequeno", "apartamento", "vizinho",
+                "sem barulho", "treino silencioso"
+            ],
+            respond: { _ in
+                """
+                Em apartamento / espaço pequeno:
+
+                • Prefira afundos, agachamento controlado, ponte, prancha, flexões e isometrias
+                • Evite burpees/saltos se o barulho incomodar vizinhos
+                • Tapete antiderrapante e janela ventilada ajudam
+                • Sessões curtas (20–30 min) bem feitas valem mais que treinos longos irregulares
+
+                No IAssistente: “montar treino” → **Sim, só em casa**. Em **Treine em Casa** há fichas full body e core com demos.
+
+                \(healthSafetyDisclaimer)
                 """
             }
         ),
@@ -1011,7 +1103,7 @@ enum HealthAssistantEngine {
                 let goal = ctx.user?.goal ?? .maintenance
                 let tip = (ctx.user?.hasPersonalTrainer == true)
                     ? "No app: Treinos → Musculação. Escolha a ficha do seu plano."
-                    : "Sem personal? Peça “montar treino” ao IAssistente para uma sugestão personalizada (sempre valide com um profissional de Educação Física)."
+                    : "Sem personal? Peça “montar treino” ao IAssistente (casa ou academia) para uma sugestão personalizada (sempre valide com um profissional de Educação Física)."
                 return """
                 Treino de musculação (força) ganha/preserva massa muscular, acelera metabolismo e melhora composição corporal.
 
@@ -1019,6 +1111,8 @@ enum HealthAssistantEngine {
                 \(goalTrainingSummary(goal))
 
                 \(tip)
+
+                Também há **Treine em Casa** (peso corporal) e **Mobilidade** dentro de Musculação.
                 """
             }
         ),
@@ -1507,6 +1601,10 @@ final class HealthAssistantService: ObservableObject {
 
     private enum WorkoutBuilderPhase {
         case askingGender
+        case askingHomeOnly
+        case askingAlreadyTrains
+        case askingFirstTimeGym
+        case askingExperienceLevel
         case askingFocus
         case confirming
     }
@@ -1523,6 +1621,8 @@ final class HealthAssistantService: ObservableObject {
     private var lastEveningDayFeeling: DailyEveningDayFeeling?
     private var workoutBuilderPhase: WorkoutBuilderPhase?
     private var draftWorkoutGender: Gender?
+    private var draftWorkoutLocation: AssistantTrainingLocation?
+    private var draftWorkoutExperience: AssistantTrainingExperience?
     private var draftWorkoutFocus: AssistantWorkoutGoalFocus?
     private static let replyDelay: Duration = .seconds(3)
     private static let workoutBuilderReplyDelay: Duration = .seconds(1)
@@ -1558,6 +1658,14 @@ final class HealthAssistantService: ObservableObject {
         switch workoutBuilderPhase {
         case .askingGender:
             return AssistantWorkoutBuilder.quickGenderReplies
+        case .askingHomeOnly:
+            return AssistantWorkoutBuilder.quickHomeOnlyReplies
+        case .askingAlreadyTrains:
+            return AssistantWorkoutBuilder.quickAlreadyTrainsReplies
+        case .askingFirstTimeGym:
+            return AssistantWorkoutBuilder.quickFirstTimeReplies
+        case .askingExperienceLevel:
+            return AssistantWorkoutBuilder.quickLevelReplies
         case .askingFocus:
             return AssistantWorkoutBuilder.quickFocusReplies
         case .confirming:
@@ -1654,6 +1762,8 @@ final class HealthAssistantService: ObservableObject {
     private func resetWorkoutBuilderDraft() {
         workoutBuilderPhase = nil
         draftWorkoutGender = nil
+        draftWorkoutLocation = nil
+        draftWorkoutExperience = nil
         draftWorkoutFocus = nil
     }
 
@@ -1672,13 +1782,17 @@ final class HealthAssistantService: ObservableObject {
 
         workoutBuilderPhase = .askingGender
         draftWorkoutGender = nil
+        draftWorkoutLocation = nil
+        draftWorkoutExperience = nil
         draftWorkoutFocus = nil
 
         let name = context.user?.greetingName ?? ""
         let greeting = name.isEmpty ? "" : "\(name), "
 
         deliverDelayedWorkoutBuilderMessage("""
-        \(greeting)posso montar uma sugestão de treino para quem não tem personal (ou quer uma referência educativa).
+        \(greeting)posso montar uma sugestão de treino personalizada.
+
+        Vou entender seu perfil: se treina em casa ou academia, experiência e foco — depois gero a ficha.
 
         \(AssistantWorkoutBuilder.professionalDisclaimer)
 
@@ -1700,11 +1814,105 @@ final class HealthAssistantService: ObservableObject {
                 return
             }
             draftWorkoutGender = gender
-            workoutBuilderPhase = .askingFocus
+            workoutBuilderPhase = .askingHomeOnly
             deliverDelayedWorkoutBuilderMessage("""
             Perfil \(gender == .female ? "feminino" : "masculino") selecionado.
 
-            Qual o foco eficaz do treino?
+            Você deseja treinar **apenas em casa** (peso corporal, sem academia)?
+            Responda **Sim, só em casa** ou **Não, na academia**.
+            """)
+
+        case .askingHomeOnly:
+            guard let homeOnly = AssistantWorkoutBuilder.parseHomeOnly(from: text) else {
+                deliverDelayedWorkoutBuilderMessage(
+                    "Prefere treinar só em casa ou na academia? Responda **Sim, só em casa** ou **Não, na academia**."
+                )
+                return
+            }
+            draftWorkoutLocation = homeOnly ? .homeOnly : .gym
+            workoutBuilderPhase = .askingAlreadyTrains
+            let place = homeOnly ? "em casa" : "na academia"
+            deliverDelayedWorkoutBuilderMessage("""
+            Beleza — montarei a ficha para treinar \(place).
+
+            Você **já treina** atualmente?
+            Responda **Sim, já treino** ou **Não, ainda não**.
+            """)
+
+        case .askingAlreadyTrains:
+            guard let alreadyTrains = AssistantWorkoutBuilder.parseAlreadyTrains(from: text) else {
+                deliverDelayedWorkoutBuilderMessage(
+                    "Me diga se você já treina: **Sim, já treino** ou **Não, ainda não**."
+                )
+                return
+            }
+            if alreadyTrains {
+                workoutBuilderPhase = .askingExperienceLevel
+                deliverDelayedWorkoutBuilderMessage("""
+                Ótimo — então vamos calibrar a intensidade.
+
+                Qual o seu nível hoje?
+                • **Iniciante**
+                • **Intermediário**
+                • **Avançado**
+                """)
+            } else {
+                workoutBuilderPhase = .askingFirstTimeGym
+                let firstTimePrompt = draftWorkoutLocation == .homeOnly
+                    ? "É a sua **primeira vez** com treinos estruturados em casa?"
+                    : "É a sua **primeira vez na academia**?"
+                deliverDelayedWorkoutBuilderMessage("""
+                Sem problemas — começamos com calma.
+
+                \(firstTimePrompt)
+                Responda **Sim, primeira vez** ou **Não, já treinei antes**.
+                """)
+            }
+
+        case .askingFirstTimeGym:
+            guard let isFirstTime = AssistantWorkoutBuilder.parseFirstTimeAtGym(from: text) else {
+                let hint = draftWorkoutLocation == .homeOnly
+                    ? "É a primeira vez treinando em casa?"
+                    : "É a primeira vez na academia?"
+                deliverDelayedWorkoutBuilderMessage(
+                    "\(hint) Responda **Sim, primeira vez** ou **Não, já treinei antes**."
+                )
+                return
+            }
+            draftWorkoutExperience = AssistantTrainingExperience.fromFirstTimeAnswer(isFirstTime)
+            workoutBuilderPhase = .askingFocus
+            let experienceNote: String
+            if draftWorkoutLocation == .homeOnly {
+                experienceNote = isFirstTime
+                    ? "Perfil: primeira vez em casa — volume moderado e foco em técnica (use os GIFs)."
+                    : "Perfil: retomando em casa — progressão cuidadosa sem equipamentos."
+            } else {
+                experienceNote = isFirstTime
+                    ? "Perfil: primeira vez na academia — cargas leves e foco em técnica."
+                    : "Perfil: retomando após pausa — progressão cuidadosa."
+            }
+            deliverDelayedWorkoutBuilderMessage("""
+            \(experienceNote)
+
+            Qual o foco do treino?
+            • Ganho de massa
+            • Resistência
+            • Perda de gordura
+            """)
+
+        case .askingExperienceLevel:
+            guard let level = AssistantTrainingExperience.parseLevel(from: text) else {
+                deliverDelayedWorkoutBuilderMessage(
+                    "Escolha o nível: **Iniciante**, **Intermediário** ou **Avançado**."
+                )
+                return
+            }
+            draftWorkoutExperience = level
+            workoutBuilderPhase = .askingFocus
+            deliverDelayedWorkoutBuilderMessage("""
+            Nível \(level.rawValue.lowercased()) anotado.
+
+            Qual o foco do treino?
             • Ganho de massa
             • Resistência
             • Perda de gordura
@@ -1739,7 +1947,9 @@ final class HealthAssistantService: ObservableObject {
                 AssistantWorkoutBuilder.confirmationSummary(
                     gender: draftWorkoutGender ?? .male,
                     focus: focus,
-                    profile: profile
+                    profile: profile,
+                    experience: draftWorkoutExperience ?? .intermediate,
+                    location: draftWorkoutLocation ?? .gym
                 )
             )
 
@@ -1761,6 +1971,8 @@ final class HealthAssistantService: ObservableObject {
 
             guard let gender = draftWorkoutGender,
                   let focus = draftWorkoutFocus,
+                  let experience = draftWorkoutExperience,
+                  let location = draftWorkoutLocation,
                   let profile = context.user,
                   AssistantWorkoutBuilder.hasRequiredProfileData(profile) else {
                 resetWorkoutBuilderDraft()
@@ -1778,15 +1990,20 @@ final class HealthAssistantService: ObservableObject {
                 return
             }
 
-            let sheet = AssistantWorkoutBuilder.buildSheet(gender: gender, focus: focus, profile: profile)
+            let sheet = AssistantWorkoutBuilder.buildSheet(
+                gender: gender,
+                focus: focus,
+                profile: profile,
+                experience: experience,
+                location: location
+            )
             workoutStore.addWorkoutSheet(sheet)
             resetWorkoutBuilderDraft()
 
-            let program = gender == .female ? "Feminino" : "Masculino"
             deliverDelayedWorkoutBuilderMessage("""
-            Pronto! Criei a ficha **\(sheet.title)** com \(sheet.totalExercises) exercícios.
+            Pronto! Com base no seu perfil (\(experience.summaryLabel(for: location))), criei a ficha **\(sheet.title)** com \(sheet.totalExercises) exercícios.
 
-            Onde encontrar: **Treinos → Musculação → \(program) → Personalizados** (badge IAssistente).
+            \(AssistantWorkoutBuilder.createdSheetLocationHint(gender: gender, location: location))
 
             \(AssistantWorkoutBuilder.professionalDisclaimer)
 

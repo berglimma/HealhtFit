@@ -31,6 +31,7 @@ final class MealPlanService: ObservableObject {
         UserDefaults.standard.removeObject(forKey: shoppingKey)
         UserDefaults.standard.removeObject(forKey: customMenuKey)
         UserDefaults.standard.removeObject(forKey: purchaseStatsKey)
+        syncMealReminders()
     }
 
     func generatePlan(for profile: UserProfile) {
@@ -49,6 +50,7 @@ final class MealPlanService: ObservableObject {
         )
         generateShoppingList()
         saveData()
+        syncMealReminders()
     }
 
     func regeneratePlanIfNeeded(for profile: UserProfile) {
@@ -165,6 +167,37 @@ final class MealPlanService: ObservableObject {
 
             saveData()
         }
+    }
+
+    func setMealCompleted(
+        dayIndex: Int,
+        optionIndex: Int,
+        mealId: UUID,
+        completed: Bool
+    ) {
+        guard weeklyPlan.indices.contains(dayIndex),
+              weeklyPlan[dayIndex].options.indices.contains(optionIndex),
+              let mealIndex = weeklyPlan[dayIndex].options[optionIndex].meals.firstIndex(where: { $0.id == mealId })
+        else { return }
+
+        weeklyPlan[dayIndex].options[optionIndex].meals[mealIndex].isCompleted = completed
+        objectWillChange.send()
+        saveData()
+    }
+
+    func toggleMealCompleted(dayIndex: Int, optionIndex: Int, mealId: UUID) {
+        guard weeklyPlan.indices.contains(dayIndex),
+              weeklyPlan[dayIndex].options.indices.contains(optionIndex),
+              let mealIndex = weeklyPlan[dayIndex].options[optionIndex].meals.firstIndex(where: { $0.id == mealId })
+        else { return }
+
+        let current = weeklyPlan[dayIndex].options[optionIndex].meals[mealIndex].isCompleted
+        setMealCompleted(
+            dayIndex: dayIndex,
+            optionIndex: optionIndex,
+            mealId: mealId,
+            completed: !current
+        )
     }
 
     var topPurchasedItems: [ShoppingPurchaseStat] {
@@ -292,6 +325,11 @@ final class MealPlanService: ObservableObject {
             customMenuSelection = selection
         }
         loadPurchaseStats()
+        syncMealReminders()
+    }
+
+    private func syncMealReminders() {
+        NotificationService.shared.updateMealReminders(hasMealPlan: !weeklyPlan.isEmpty)
     }
 
     private func loadPurchaseStats() {

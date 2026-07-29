@@ -19,7 +19,8 @@ final class DailyEveningCheckInEngineTests: XCTestCase {
         let message = DailyEveningCheckInEngine.openingMessage(athleteName: "João", context: context)
 
         XCTAssertTrue(message.contains("Treino Peito"))
-        XCTAssertTrue(message.contains("21h"))
+        XCTAssertTrue(message.contains("Agora são"))
+        XCTAssertFalse(message.contains("São 21h"))
     }
 
     func testOpeningMessageWithoutWorkoutsIsMotivational() {
