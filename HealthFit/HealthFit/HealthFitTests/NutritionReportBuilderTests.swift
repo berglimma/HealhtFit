@@ -9,14 +9,20 @@ final class NutritionReportBuilderTests: XCTestCase {
         profile.nutritionistName = "Dra. Ana"
         XCTAssertFalse(profile.hasNutritionist)
 
+        profile.usesNutritionist = true
         profile.nutritionistEmail = "ana@nutri.com"
         XCTAssertTrue(profile.hasNutritionist)
+
+        profile.usesNutritionist = false
+        XCTAssertFalse(profile.hasNutritionist)
     }
 
     func testEmailBodyIsAddressedToNutritionistOnly() {
         var athlete = TestFixtures.userProfile(name: "João Silva")
+        athlete.usesNutritionist = true
         athlete.nutritionistName = "Dra. Ana"
         athlete.nutritionistEmail = "ana@nutri.com"
+        athlete.usesPersonalTrainer = true
         athlete.personalTrainerName = "Coach Berg"
         athlete.personalTrainerEmail = "berg@pt.com"
 
@@ -69,15 +75,43 @@ final class NutritionReportBuilderTests: XCTestCase {
 
     func testNutritionistFieldsSurviveCodableRoundTrip() throws {
         var profile = TestFixtures.userProfile()
+        profile.usesNutritionist = true
         profile.nutritionistName = "Nutri Luan"
         profile.nutritionistEmail = "luan@nutri.com"
 
         let data = try JSONEncoder().encode(profile)
         let decoded = try JSONDecoder().decode(UserProfile.self, from: data)
 
+        XCTAssertTrue(decoded.usesNutritionist)
         XCTAssertEqual(decoded.nutritionistName, "Nutri Luan")
         XCTAssertEqual(decoded.nutritionistEmail, "luan@nutri.com")
         XCTAssertTrue(decoded.hasNutritionist)
+    }
+
+    func testLegacyProfileInfersUsesFlagsFromEmail() throws {
+        let json = """
+        {
+          "id": "u1",
+          "name": "João",
+          "email": "j@test.com",
+          "personalTrainerName": "PT",
+          "personalTrainerEmail": "pt@test.com",
+          "nutritionistName": "",
+          "nutritionistEmail": "",
+          "biotype": "Mesomorfo",
+          "goal": "Ganho de Massa",
+          "gender": "Masculino",
+          "weight": 75,
+          "height": 175,
+          "age": 28,
+          "createdAt": 0
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(UserProfile.self, from: json)
+        XCTAssertTrue(decoded.usesPersonalTrainer)
+        XCTAssertFalse(decoded.usesNutritionist)
+        XCTAssertTrue(decoded.hasPersonalTrainer)
     }
 
     func testMealCompletionSurvivesCodableRoundTrip() throws {
@@ -98,6 +132,7 @@ final class NutritionReportBuilderTests: XCTestCase {
 
     func testReportShowsMealCompletionStatus() {
         var athlete = TestFixtures.userProfile(name: "Maria")
+        athlete.usesNutritionist = true
         athlete.nutritionistEmail = "nutri@test.com"
 
         let day = DailyMealPlan(

@@ -14,8 +14,10 @@ struct ProfileView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var trainerName = ""
     @State private var trainerEmail = ""
+    @State private var usesPersonalTrainer = false
     @State private var nutritionistName = ""
     @State private var nutritionistEmail = ""
+    @State private var usesNutritionist = false
     @State private var displayName = ""
     @State private var sleepHoursInput: Double = 7
     @State private var neckText = ""
@@ -123,54 +125,92 @@ struct ProfileView: View {
                     .listRowBackground(AppTheme.cardBackground)
 
                     Section("Personal Trainer") {
-                        TextField("Nome do Personal", text: $trainerName)
-                            .textContentType(.name)
-                            .onChange(of: trainerName) { _, _ in
-                                savePersonalTrainer()
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Você possui personal trainer?")
+                                .font(.subheadline.weight(.medium))
+                            Picker("Possui personal?", selection: $usesPersonalTrainer) {
+                                Text("Não").tag(false)
+                                Text("Sim").tag(true)
                             }
-
-                        TextField("E-mail do Personal", text: $trainerEmail)
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .onChange(of: trainerEmail) { _, _ in
-                                savePersonalTrainer()
+                            .pickerStyle(.segmented)
+                            .onChange(of: usesPersonalTrainer) { _, enabled in
+                                updatePersonalTrainerAvailability(enabled)
                             }
+                        }
 
-                        if authService.currentUser?.hasPersonalTrainer == true {
-                            Label("Relatórios de treino poderão ser enviados por e-mail", systemImage: "envelope.fill")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.accent)
+                        if usesPersonalTrainer {
+                            TextField("Nome do Personal", text: $trainerName)
+                                .textContentType(.name)
+                                .onChange(of: trainerName) { _, _ in
+                                    savePersonalTrainer()
+                                }
+
+                            TextField("E-mail do Personal", text: $trainerEmail)
+                                .textContentType(.emailAddress)
+                                .keyboardType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .onChange(of: trainerEmail) { _, _ in
+                                    savePersonalTrainer()
+                                }
+
+                            if authService.currentUser?.hasPersonalTrainer == true {
+                                Label("Relatórios de treino poderão ser enviados por e-mail", systemImage: "envelope.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.accent)
+                            } else {
+                                Text("Cadastre o e-mail para enviar relatórios após cada treino.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         } else {
-                            Text("Cadastre o e-mail para enviar relatórios após cada treino.")
+                            Text("Sem personal cadastrado. A edição de nome e e-mail fica bloqueada.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                     }
 
                     Section("Nutricionista") {
-                        TextField("Nome do Nutricionista", text: $nutritionistName)
-                            .textContentType(.name)
-                            .onChange(of: nutritionistName) { _, _ in
-                                saveNutritionist()
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Você possui nutricionista?")
+                                .font(.subheadline.weight(.medium))
+                            Picker("Possui nutricionista?", selection: $usesNutritionist) {
+                                Text("Não").tag(false)
+                                Text("Sim").tag(true)
                             }
-
-                        TextField("E-mail do Nutricionista", text: $nutritionistEmail)
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .onChange(of: nutritionistEmail) { _, _ in
-                                saveNutritionist()
+                            .pickerStyle(.segmented)
+                            .onChange(of: usesNutritionist) { _, enabled in
+                                updateNutritionistAvailability(enabled)
                             }
+                        }
 
-                        if authService.currentUser?.hasNutritionist == true {
-                            Label("Relatórios da aba Nutrição poderão ser enviados por e-mail", systemImage: "envelope.fill")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.accent)
+                        if usesNutritionist {
+                            TextField("Nome do Nutricionista", text: $nutritionistName)
+                                .textContentType(.name)
+                                .onChange(of: nutritionistName) { _, _ in
+                                    saveNutritionist()
+                                }
+
+                            TextField("E-mail do Nutricionista", text: $nutritionistEmail)
+                                .textContentType(.emailAddress)
+                                .keyboardType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .onChange(of: nutritionistEmail) { _, _ in
+                                    saveNutritionist()
+                                }
+
+                            if authService.currentUser?.hasNutritionist == true {
+                                Label("Relatórios da aba Nutrição poderão ser enviados por e-mail", systemImage: "envelope.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.accent)
+                            } else {
+                                Text("Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         } else {
-                            Text("Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista.")
+                            Text("Sem nutricionista cadastrado. A edição de nome e e-mail fica bloqueada.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -379,8 +419,10 @@ struct ProfileView: View {
     private func syncTrainerFields() {
         trainerName = authService.currentUser?.personalTrainerName ?? ""
         trainerEmail = authService.currentUser?.personalTrainerEmail ?? ""
+        usesPersonalTrainer = authService.currentUser?.usesPersonalTrainer ?? false
         nutritionistName = authService.currentUser?.nutritionistName ?? ""
         nutritionistEmail = authService.currentUser?.nutritionistEmail ?? ""
+        usesNutritionist = authService.currentUser?.usesNutritionist ?? false
     }
 
     private func syncDisplayNameField() {
@@ -695,21 +737,59 @@ struct ProfileView: View {
         .padding(.vertical, 4)
     }
 
+    private func updatePersonalTrainerAvailability(_ enabled: Bool) {
+        guard var user = authService.currentUser else { return }
+        if !enabled {
+            trainerName = ""
+            trainerEmail = ""
+            user.personalTrainerName = ""
+            user.personalTrainerEmail = ""
+        }
+        guard user.usesPersonalTrainer != enabled
+                || user.personalTrainerName != trainerName
+                || user.personalTrainerEmail != trainerEmail else { return }
+        user.usesPersonalTrainer = enabled
+        authService.updateProfile(user)
+    }
+
+    private func updateNutritionistAvailability(_ enabled: Bool) {
+        guard var user = authService.currentUser else { return }
+        if !enabled {
+            nutritionistName = ""
+            nutritionistEmail = ""
+            user.nutritionistName = ""
+            user.nutritionistEmail = ""
+        }
+        guard user.usesNutritionist != enabled
+                || user.nutritionistName != nutritionistName
+                || user.nutritionistEmail != nutritionistEmail else { return }
+        user.usesNutritionist = enabled
+        authService.updateProfile(user)
+    }
+
     private func savePersonalTrainer() {
+        guard usesPersonalTrainer else { return }
         guard var user = authService.currentUser else { return }
         let name = trainerName.trimmingCharacters(in: .whitespacesAndNewlines)
         let email = trainerEmail.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard user.personalTrainerName != name || user.personalTrainerEmail != email else { return }
+        guard user.personalTrainerName != name
+                || user.personalTrainerEmail != email
+                || !user.usesPersonalTrainer else { return }
+        user.usesPersonalTrainer = true
         user.personalTrainerName = name
         user.personalTrainerEmail = email
         authService.updateProfile(user)
     }
 
     private func saveNutritionist() {
+        guard usesNutritionist else { return }
         guard var user = authService.currentUser else { return }
         let name = nutritionistName.trimmingCharacters(in: .whitespacesAndNewlines)
         let email = nutritionistEmail.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard user.nutritionistName != name || user.nutritionistEmail != email else { return }
+        guard user.nutritionistName != name
+                || user.nutritionistEmail != email
+                || !user.usesNutritionist else { return }
+        user.usesNutritionist = true
         user.nutritionistName = name
         user.nutritionistEmail = email
         authService.updateProfile(user)

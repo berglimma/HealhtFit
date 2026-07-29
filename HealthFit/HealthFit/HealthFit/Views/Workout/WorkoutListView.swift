@@ -215,20 +215,18 @@ struct HomeProgramHeroCard: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.12, green: 0.28, blue: 0.22),
-                    Color(red: 0.06, green: 0.12, blue: 0.10),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            Image("WorkoutProgramHome")
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
+                .frame(height: 180)
+                .clipped()
 
-            // Decorative circles
-            Circle()
-                .fill(accent.opacity(0.18))
-                .frame(width: 160, height: 160)
-                .offset(x: 180, y: -40)
+            LinearGradient(
+                colors: [.black.opacity(0.08), .black.opacity(0.72)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
 
             VStack(alignment: .leading, spacing: 8) {
                 Label("SEM EQUIPAMENTOS", systemImage: "house.fill")
@@ -251,6 +249,7 @@ struct HomeProgramHeroCard: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: 180)
+        .background(accent.opacity(0.25))
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.cornerRadius)

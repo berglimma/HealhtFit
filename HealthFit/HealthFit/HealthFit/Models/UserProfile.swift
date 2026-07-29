@@ -269,8 +269,12 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var email: String
     var personalTrainerName: String
     var personalTrainerEmail: String
+    /// Usuário declarou que possui personal trainer (libera edição dos campos).
+    var usesPersonalTrainer: Bool
     var nutritionistName: String
     var nutritionistEmail: String
+    /// Usuário declarou que possui nutricionista (libera edição dos campos).
+    var usesNutritionist: Bool
     var biotype: Biotype
     var goal: FitnessGoal
     var gender: Gender
@@ -292,8 +296,10 @@ struct UserProfile: Codable, Identifiable, Equatable {
         displayName: String = "",
         personalTrainerName: String = "",
         personalTrainerEmail: String = "",
+        usesPersonalTrainer: Bool = false,
         nutritionistName: String = "",
         nutritionistEmail: String = "",
+        usesNutritionist: Bool = false,
         biotype: Biotype = .mesomorph,
         goal: FitnessGoal = .muscleGain,
         gender: Gender = .male,
@@ -311,8 +317,10 @@ struct UserProfile: Codable, Identifiable, Equatable {
         self.email = email
         self.personalTrainerName = personalTrainerName
         self.personalTrainerEmail = personalTrainerEmail
+        self.usesPersonalTrainer = usesPersonalTrainer
         self.nutritionistName = nutritionistName
         self.nutritionistEmail = nutritionistEmail
+        self.usesNutritionist = usesNutritionist
         self.biotype = biotype
         self.goal = goal
         self.gender = gender
@@ -335,6 +343,11 @@ struct UserProfile: Codable, Identifiable, Equatable {
         personalTrainerEmail = try container.decodeIfPresent(String.self, forKey: .personalTrainerEmail) ?? ""
         nutritionistName = try container.decodeIfPresent(String.self, forKey: .nutritionistName) ?? ""
         nutritionistEmail = try container.decodeIfPresent(String.self, forKey: .nutritionistEmail) ?? ""
+        // Migração: se já havia e-mail cadastrado, assume que o usuário possui o profissional.
+        usesPersonalTrainer = try container.decodeIfPresent(Bool.self, forKey: .usesPersonalTrainer)
+            ?? !personalTrainerEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        usesNutritionist = try container.decodeIfPresent(Bool.self, forKey: .usesNutritionist)
+            ?? !nutritionistEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         biotype = try container.decode(Biotype.self, forKey: .biotype)
         goal = try container.decode(FitnessGoal.self, forKey: .goal)
         gender = try container.decodeIfPresent(Gender.self, forKey: .gender) ?? .male
@@ -348,8 +361,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, displayName, email, personalTrainerName, personalTrainerEmail
-        case nutritionistName, nutritionistEmail
+        case id, name, displayName, email, personalTrainerName, personalTrainerEmail, usesPersonalTrainer
+        case nutritionistName, nutritionistEmail, usesNutritionist
         case biotype, goal, gender, weight, height, age, caloricDeficit
         case bodyMeasurements, previousBodyMeasurements, createdAt
     }
@@ -360,11 +373,13 @@ struct UserProfile: Codable, Identifiable, Equatable {
     }
 
     var hasPersonalTrainer: Bool {
-        !personalTrainerEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        usesPersonalTrainer
+            && !personalTrainerEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var hasNutritionist: Bool {
-        !nutritionistEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        usesNutritionist
+            && !nutritionistEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// Nome usado em saudações e mensagens do app.
