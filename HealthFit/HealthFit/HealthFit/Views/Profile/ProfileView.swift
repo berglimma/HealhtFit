@@ -922,14 +922,6 @@ struct ProfileView: View {
         mealPlanService.regeneratePlanIfNeeded(for: user)
         ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
         showBodyDataSavedAlert = true
-
-        Task {
-            do {
-                try await ProfileFirestoreService.saveProfile(user)
-            } catch {
-                bodyDataSaveError = "Os dados ficaram salvos no aparelho, mas a sincronização com o Firebase falhou. Verifique a conexão e tente novamente."
-            }
-        }
     }
 
     private func syncBodyMeasurementFields() {
@@ -1070,15 +1062,6 @@ struct ProfileView: View {
             showMeasurementComparison = true
         } else {
             showMeasurementsSavedAlert = true
-        }
-
-        // Garante persistência imediata no Firebase e avisa se falhar.
-        Task {
-            do {
-                try await ProfileFirestoreService.saveProfile(user)
-            } catch {
-                measurementsSaveError = "As medidas ficaram salvas no aparelho, mas a sincronização com o Firebase falhou. Verifique a conexão e tente novamente."
-            }
         }
     }
 

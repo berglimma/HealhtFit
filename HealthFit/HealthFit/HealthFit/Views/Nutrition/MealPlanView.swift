@@ -45,71 +45,36 @@ struct MealPlanView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 8) {
-                    bodyMetricsSection
-                    menuPreferencesSection
+            contentWithLifecycleHandlers
+        }
+    }
 
-                    if mealPlanService.customMenuSelection.isReadyToBuild {
-                        Picker("Modo", selection: $nutritionTab) {
-                            Text("Plano Semanal").tag(0)
-                            Text("Montar Cardápio").tag(1)
-                        }
-                        .pickerStyle(.segmented)
-                        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+    private var contentWithLifecycleHandlers: some View {
+        contentWithAlerts
+            .onAppear(perform: syncFromProfile)
+            .onChange(of: authService.currentUser?.goal) { _, _ in syncFromProfile() }
+            .onChange(of: authService.currentUser?.biotype) { _, _ in syncFromProfile() }
+            .onChange(of: authService.currentUser?.id) { _, _ in syncFromProfile() }
+            .onChange(of: authService.currentUser?.weight) { _, _ in regeneratePlanFromProfileIfPossible() }
+            .onChange(of: authService.currentUser?.height) { _, _ in regeneratePlanFromProfileIfPossible() }
+            .onChange(of: authService.currentUser?.age) { _, _ in regeneratePlanFromProfileIfPossible() }
+            .onChange(of: authService.currentUser?.gender) { _, _ in regeneratePlanFromProfileIfPossible() }
+            .onChange(of: authService.currentUser?.caloricDeficit) { _, _ in syncCaloricDeficitFromProfile() }
+            .onChange(of: selectedDay) { _, _ in
+                selectedOption = 0
+                selectedMealId = nil
+            }
+            .onChange(of: selectedOption) { _, _ in
+                selectedMealId = nil
+            }
+    }
 
-                        if nutritionTab == 0 {
-                            weeklyPlanSection
-                        } else {
-                            menuBuilderSection
-                        }
-
-                        nutritionistReportSection
-                            .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                            .padding(.bottom, 24)
-                            .adaptiveContentWidth()
-                    } else {
-                        preferencesRequiredState
-                    }
-                }
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .numericKeyboardDismiss()
-            .background(AppTheme.background)
-            .navigationTitle("Nutrição")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showShoppingList = true
-                    } label: {
-                        Image(systemName: "cart.fill")
-                            .foregroundStyle(AppTheme.accent)
-                    }
-                }
-            }
-            .sheet(isPresented: $showShoppingList) {
-                ShoppingListView()
-            }
-            .sheet(item: $mailDraft, onDismiss: {
-                presentAlertForPendingMailResult()
-            }) { draft in
-                MailComposeView(
-                    recipients: draft.recipients,
-                    subject: draft.subject,
-                    body: draft.body
-                ) { result in
-                    pendingMailResult = result
-                    mailDraft = nil
-                }
-            }
+    private var contentWithAlerts: some View {
+        contentWithSheets
             .alert("E-mail enviado", isPresented: $showEmailSentAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                if let user = authService.currentUser {
-                    Text("O relatório de nutrição foi enviado para \(user.nutritionistName.isEmpty ? user.nutritionistEmail : user.nutritionistName) com sucesso.")
-                } else {
-                    Text("O relatório de nutrição foi enviado com sucesso.")
-                }
+                emailSentAlertMessage
             }
             .alert("Falha no envio", isPresented: $showEmailFailedAlert) {
                 Button("OK", role: .cancel) {}
@@ -126,42 +91,98 @@ struct MealPlanView: View {
             } message: {
                 Text("Seu cardápio semanal foi atualizado com base nas suas preferências e metas.")
             }
-            .onAppear {
-                syncFromProfile()
+    }
+
+    private var contentWithSheets: some View {
+        mealPlanChrome
+            .sheet(isPresented: $showShoppingList) {
+                ShoppingListView()
             }
-            .onChange(of: authService.currentUser?.goal) { _, _ in
-                syncFromProfile()
+            .sheet(item: $mailDraft, onDismiss: presentAlertForPendingMailResult) { draft in
+                nutritionistMailSheet(draft)
             }
-            .onChange(of: authService.currentUser?.biotype) { _, _ in
-                syncFromProfile()
+    }
+
+    private var mealPlanChrome: some View {
+        mealPlanContent
+            .scrollDismissesKeyboard(.interactively)
+            .numericKeyboardDismiss()
+            .background(AppTheme.background)
+            .navigationTitle("Nutrição")
+            .toolbar { shoppingCartToolbar }
+    }
+
+    @ViewBuilder
+    private var mealPlanContent: some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                bodyMetricsSection
+                menuPreferencesSection
+                nutritionModeContent
             }
-            .onChange(of: authService.currentUser?.id) { _, _ in
-                syncFromProfile()
+        }
+    }
+
+    @ViewBuilder
+    private var nutritionModeContent: some View {
+        if mealPlanService.customMenuSelection.isReadyToBuild {
+            Picker("Modo", selection: $nutritionTab) {
+                Text("Plano Semanal").tag(0)
+                Text("Montar Cardápio").tag(1)
             }
-            .onChange(of: authService.currentUser?.weight) { _, _ in
-                regeneratePlanFromProfileIfPossible()
+            .pickerStyle(.segmented)
+            .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+
+            if nutritionTab == 0 {
+                weeklyPlanSection
+            } else {
+                menuBuilderSection
             }
-            .onChange(of: authService.currentUser?.height) { _, _ in
-                regeneratePlanFromProfileIfPossible()
+
+            nutritionistReportSection
+                .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                .padding(.bottom, 24)
+                .adaptiveContentWidth()
+        } else {
+            preferencesRequiredState
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var shoppingCartToolbar: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                showShoppingList = true
+            } label: {
+                Image(systemName: "cart.fill")
+                    .foregroundStyle(AppTheme.accent)
             }
-            .onChange(of: authService.currentUser?.age) { _, _ in
-                regeneratePlanFromProfileIfPossible()
-            }
-            .onChange(of: authService.currentUser?.gender) { _, _ in
-                regeneratePlanFromProfileIfPossible()
-            }
-            .onChange(of: authService.currentUser?.caloricDeficit) { _, _ in
-                if let deficit = authService.currentUser?.caloricDeficit {
-                    caloricDeficit = min(deficit, UserProfile.maxCaloricDeficit)
-                }
-            }
-            .onChange(of: selectedDay) { _, _ in
-                selectedOption = 0
-                selectedMealId = nil
-            }
-            .onChange(of: selectedOption) { _, _ in
-                selectedMealId = nil
-            }
+        }
+    }
+
+    private func nutritionistMailSheet(_ draft: NutritionistMailDraft) -> some View {
+        MailComposeView(
+            recipients: draft.recipients,
+            subject: draft.subject,
+            body: draft.body
+        ) { result in
+            pendingMailResult = result
+            mailDraft = nil
+        }
+    }
+
+    @ViewBuilder
+    private var emailSentAlertMessage: some View {
+        if let user = authService.currentUser {
+            Text("O relatório de nutrição foi enviado para \(user.nutritionistName.isEmpty ? user.nutritionistEmail : user.nutritionistName) com sucesso.")
+        } else {
+            Text("O relatório de nutrição foi enviado com sucesso.")
+        }
+    }
+
+    private func syncCaloricDeficitFromProfile() {
+        if let deficit = authService.currentUser?.caloricDeficit {
+            caloricDeficit = min(deficit, UserProfile.maxCaloricDeficit)
         }
     }
 

@@ -549,7 +549,8 @@ struct ActiveCardioView: View {
             await healthKitManager.saveWorkout(
                 duration: session.duration,
                 calories: session.caloriesBurned,
-                heartRate: session.averageHeartRate
+                heartRate: session.averageHeartRate,
+                activityType: config.isDistanceRun ? .running : .walking
             )
         }
 

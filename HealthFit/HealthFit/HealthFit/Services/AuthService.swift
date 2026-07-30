@@ -263,10 +263,19 @@ final class AuthService: ObservableObject {
     }
 
     func updateProfile(_ profile: UserProfile) {
+        var profile = profile
+        profile.updatedAt = .now
         currentUser = profile
         saveCachedProfile(profile)
+        markProfileDirty(true, userId: profile.id)
         NotificationService.shared.refreshRecurringNotifications()
         syncProfileToCloud(profile)
+    }
+
+    /// Garante envio pendente ao Firebase (ex.: ao ir para background).
+    func flushProfileToCloudIfNeeded() {
+        guard let user = currentUser, isProfileDirty(userId: user.id) else { return }
+        syncProfileToCloud(user)
     }
 
     func updateProfileImage(_ image: UIImage?) {
@@ -344,13 +353,33 @@ final class AuthService: ObservableObject {
 
     private func syncProfileToCloud(_ profile: UserProfile) {
         guard ProfileFirestoreService.isAvailable else { return }
+        let profileToSave = profile
         Task {
             do {
-                try await ProfileFirestoreService.saveProfile(profile)
+                try await ProfileFirestoreService.saveProfile(profileToSave)
+                await MainActor.run {
+                    reconcileSuccessfulCloudSave(profileToSave)
+                }
             } catch {
                 print("[HealthFit] Falha ao salvar perfil no Firebase: \(error.localizedDescription)")
             }
         }
+    }
+
+    private func reconcileSuccessfulCloudSave(_ saved: UserProfile) {
+        guard let current = currentUser, current.id == saved.id else {
+            markProfileDirty(false, userId: saved.id)
+            return
+        }
+
+        if current.updatedAt > saved.updatedAt {
+            // Há alteração local mais nova — mantém dirty e reenvia.
+            markProfileDirty(true, userId: current.id)
+            syncProfileToCloud(current)
+            return
+        }
+
+        markProfileDirty(false, userId: saved.id)
     }
 
     private func refreshProfileFromCloud(userId: String, email: String) async {
@@ -358,15 +387,42 @@ final class AuthService: ObservableObject {
 
         do {
             if let remote = try await ProfileFirestoreService.fetchProfile(userId: userId) {
-                var profile = remote
-                profile.id = userId
-                if profile.email != email {
-                    profile.email = email
+                var remoteProfile = remote
+                remoteProfile.id = userId
+                if remoteProfile.email != email {
+                    remoteProfile.email = email
                 }
-                // Preferir dados remotos (fonte de verdade no Firebase).
-                persistSession(with: profile)
+
+                let local = currentUser?.id == userId
+                    ? currentUser
+                    : loadCachedProfile(uid: userId)
+                let dirty = isProfileDirty(userId: userId)
+
+                if let local, dirty || local.updatedAt > remoteProfile.updatedAt {
+                    // Local é mais recente (ou sync pendente): não sobrescreve e empurra ao Firebase.
+                    var kept = local
+                    if kept.email != email {
+                        kept.email = email
+                        kept.updatedAt = .now
+                        saveCachedProfile(kept)
+                        currentUser = kept
+                    }
+                    try await ProfileFirestoreService.saveProfile(kept)
+                    await MainActor.run {
+                        markProfileDirty(false, userId: userId)
+                        persistSession(with: kept)
+                    }
+                } else {
+                    await MainActor.run {
+                        markProfileDirty(false, userId: userId)
+                        persistSession(with: remoteProfile)
+                    }
+                }
             } else if let local = currentUser, local.id == userId {
                 try await ProfileFirestoreService.saveProfile(local)
+                await MainActor.run {
+                    markProfileDirty(false, userId: userId)
+                }
             }
         } catch {
             print("[HealthFit] Falha ao carregar perfil do Firebase: \(error.localizedDescription)")
@@ -374,6 +430,18 @@ final class AuthService: ObservableObject {
                 syncProfileToCloud(local)
             }
         }
+    }
+
+    private func profileDirtyKey(for userId: String) -> String {
+        "healthfit_profile_dirty_\(userId)"
+    }
+
+    private func markProfileDirty(_ dirty: Bool, userId: String) {
+        UserDefaults.standard.set(dirty, forKey: profileDirtyKey(for: userId))
+    }
+
+    private func isProfileDirty(userId: String) -> Bool {
+        UserDefaults.standard.bool(forKey: profileDirtyKey(for: userId))
     }
 
     private func persistSession(with profile: UserProfile) {

@@ -286,6 +286,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
     /// Snapshot da medição anterior (usado no comparativo de 30 dias).
     var previousBodyMeasurements: BodyMeasurements?
     var createdAt: Date
+    /// Última alteração local/remota — usado para não sobrescrever dados novos com Firestore antigo.
+    var updatedAt: Date
 
     static let maxCaloricDeficit = 3_000
 
@@ -309,7 +311,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
         caloricDeficit: Int = 400,
         bodyMeasurements: BodyMeasurements = .empty,
         previousBodyMeasurements: BodyMeasurements? = nil,
-        createdAt: Date = .now
+        createdAt: Date = .now,
+        updatedAt: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -331,6 +334,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         self.bodyMeasurements = bodyMeasurements
         self.previousBodyMeasurements = previousBodyMeasurements
         self.createdAt = createdAt
+        self.updatedAt = updatedAt ?? createdAt
     }
 
     init(from decoder: Decoder) throws {
@@ -358,13 +362,14 @@ struct UserProfile: Codable, Identifiable, Equatable {
         bodyMeasurements = try container.decodeIfPresent(BodyMeasurements.self, forKey: .bodyMeasurements) ?? .empty
         previousBodyMeasurements = try container.decodeIfPresent(BodyMeasurements.self, forKey: .previousBodyMeasurements)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, displayName, email, personalTrainerName, personalTrainerEmail, usesPersonalTrainer
         case nutritionistName, nutritionistEmail, usesNutritionist
         case biotype, goal, gender, weight, height, age, caloricDeficit
-        case bodyMeasurements, previousBodyMeasurements, createdAt
+        case bodyMeasurements, previousBodyMeasurements, createdAt, updatedAt
     }
 
     var latestMeasurementComparison: BodyMeasurementComparison? {

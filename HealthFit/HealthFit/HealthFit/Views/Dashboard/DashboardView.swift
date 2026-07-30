@@ -35,8 +35,11 @@ struct DashboardView: View {
             }
             .background(AppTheme.background)
             .navigationTitle("Dashboard")
+            .task {
+                await healthKitManager.refreshFromHealthKit()
+            }
             .refreshable {
-                await healthKitManager.fetchWeeklyMetrics()
+                await healthKitManager.refreshFromHealthKit()
             }
             .sheet(isPresented: $showWeeklyReport) {
                 WeeklyReportView()
@@ -145,7 +148,7 @@ struct DashboardView: View {
         HStack(spacing: 12) {
             MetricBadge(
                 icon: "figure.walk",
-                value: "\(healthKitManager.todaySteps)",
+                value: "\(dashboardSteps)",
                 label: "Passos",
                 color: AppTheme.accent
             )
@@ -157,11 +160,22 @@ struct DashboardView: View {
             )
             MetricBadge(
                 icon: "heart.fill",
-                value: String(format: "%.0f", healthKitManager.currentHeartRate > 0 ? healthKitManager.currentHeartRate : healthKitManager.restingHeartRate),
+                value: String(format: "%.0f", dashboardHeartRate),
                 label: "BPM",
                 color: .red
             )
         }
+    }
+
+    private var dashboardSteps: Int {
+        max(healthKitManager.todaySteps, watchConnectivity.watchSteps)
+    }
+
+    private var dashboardHeartRate: Double {
+        if watchConnectivity.watchHeartRate > 0 {
+            return watchConnectivity.watchHeartRate
+        }
+        return healthKitManager.displayedHeartRate
     }
 
     private var watchSection: some View {
@@ -210,6 +224,7 @@ struct DashboardView: View {
         guard !isSyncingWatch else { return }
         isSyncingWatch = true
         let result = await watchConnectivity.attemptSyncWithWatch()
+        await healthKitManager.refreshFromHealthKit()
         isSyncingWatch = false
         watchSyncResult = result
         showWatchSyncAlert = true

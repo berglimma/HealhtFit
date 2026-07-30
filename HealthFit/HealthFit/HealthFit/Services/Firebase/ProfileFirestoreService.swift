@@ -42,7 +42,7 @@ enum ProfileFirestoreService {
             "goal": profile.goal.rawValue,
             "biotype": profile.biotype.rawValue,
             "hasBodyMeasurements": profile.bodyMeasurements.hasAnyValue,
-            "updatedAt": Timestamp(date: .now),
+            "updatedAt": Timestamp(date: profile.updatedAt),
             "createdAt": Timestamp(date: profile.createdAt),
         ]
 

@@ -586,7 +586,8 @@ struct ActiveWorkoutView: View {
             await healthKitManager.saveWorkout(
                 duration: session.duration,
                 calories: session.caloriesBurned,
-                heartRate: session.averageHeartRate
+                heartRate: session.averageHeartRate,
+                activityType: .traditionalStrengthTraining
             )
         }
         NotificationService.shared.deliverWorkoutEndNotification(

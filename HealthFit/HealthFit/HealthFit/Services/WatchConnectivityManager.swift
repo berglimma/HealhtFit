@@ -55,6 +55,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     @Published var isWatchConnected = false
     @Published var watchHeartRate: Double = 0
     @Published var watchCalories: Double = 0
+    @Published var watchSteps: Int = 0
     @Published var isWorkoutActiveOnWatch = false
 
     private var session: WCSession?
@@ -284,6 +285,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     private func clearWatchMetrics() {
         watchHeartRate = 0
         watchCalories = 0
+        // Passos do dia permanecem; vêm do HealthKit/Watch ao longo do dia.
     }
 
     private func refreshConnectionStatus() {
@@ -476,11 +478,30 @@ extension WatchConnectivityManager: WCSessionDelegate {
 
     private func handleWatchMessage(_ message: [String: Any]) {
         refreshConnectionStatus()
-        if let heartRate = message["heartRate"] as? Double {
-            watchHeartRate = max(0, heartRate)
+        var heartRate: Double?
+        var calories: Double?
+        var steps: Int?
+
+        if let value = message["heartRate"] as? Double {
+            watchHeartRate = max(0, value)
+            heartRate = watchHeartRate
         }
-        if let calories = message["calories"] as? Double {
-            watchCalories = max(0, calories)
+        if let value = message["calories"] as? Double {
+            watchCalories = max(0, value)
+            calories = watchCalories
         }
+        if let value = message["steps"] as? Int {
+            watchSteps = max(0, value)
+            steps = watchSteps
+        } else if let value = message["steps"] as? Double {
+            watchSteps = max(0, Int(value))
+            steps = watchSteps
+        }
+
+        HealthKitManager.shared.applyLiveWatchMetrics(
+            heartRate: heartRate,
+            calories: calories,
+            steps: steps
+        )
     }
 }

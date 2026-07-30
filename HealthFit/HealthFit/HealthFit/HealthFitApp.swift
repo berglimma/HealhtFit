@@ -4,7 +4,7 @@ import UserNotifications
 @main
 struct HealthFitApp: App {
     @StateObject private var authService = AuthService()
-    @StateObject private var healthKitManager = HealthKitManager()
+    @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var workoutStore = WorkoutStore()
     @StateObject private var mealPlanService = MealPlanService()
     @StateObject private var timerService = RestTimerService()

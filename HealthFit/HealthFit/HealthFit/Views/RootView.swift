@@ -76,10 +76,14 @@ struct RootView: View {
                     _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
                         athleteName: authService.currentUser?.greetingName ?? "Atleta"
                     )
-                    Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
+                    Task {
+                        await exerciseVideoRepository.bootstrapRemoteCatalog()
+                        await healthKitManager.refreshFromHealthKit()
+                    }
                 }
                 AppIconInactivityService.shared.handleAppBecameActive()
             case .background:
+                authService.flushProfileToCloudIfNeeded()
                 AppIconInactivityService.shared.handleAppEnteredBackground()
             default:
                 break
