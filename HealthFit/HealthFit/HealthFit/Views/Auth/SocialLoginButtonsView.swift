@@ -33,7 +33,7 @@ struct SocialLoginButtonsView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "g.circle.fill")
                         .font(.title3)
-                    Text("Continuar com Google")
+                    Text(L10n.Auth.continueGoogle)
                         .font(.subheadline.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity)
@@ -100,7 +100,7 @@ struct SocialLoginButtonsView: View {
             Rectangle()
                 .fill(AppTheme.textSecondary.opacity(0.35))
                 .frame(height: 1)
-            Text("ou")
+            Text(L10n.Auth.or)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(AppTheme.textSecondary)
             Rectangle()

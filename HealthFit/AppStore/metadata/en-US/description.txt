@@ -1,0 +1,22 @@
+HealthFit — Your smart personal trainer
+
+Train smarter, track your progress, and take care of your health in one place.
+
+KEY FEATURES
+• Personalized workouts by body type and goal (hypertrophy, fat loss, maintenance)
+• Demo GIFs for every exercise
+• AI Assistant with morning and evening check-ins, supplement tips, and daily motivation
+• Weekly meal plan with shopping list
+• Apple Health integration (heart rate, calories, steps)
+• Rest timer between sets
+• Weekly progress report
+• Apple Watch companion
+• Water, workout, and rest reminders
+
+WHO IT'S FOR
+Beginner and intermediate athletes who want guided training, progress tracking, and consistency — with or without a personal trainer.
+
+IMPORTANT
+HealthFit provides informational guidance only. It does not replace medical evaluation or professional coaching. Consult a physician before starting any exercise program.
+
+Developed by BERG / LUAN.

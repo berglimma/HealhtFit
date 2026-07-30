@@ -1,12 +1,21 @@
 import SwiftUI
 
 private enum WorkoutSection: String, CaseIterable, Identifiable {
-    case strength = "Musculação"
-    case home = "Treine em Casa"
-    case cardio = "Cardio"
-    case meditation = "Meditação"
+    case strength
+    case home
+    case cardio
+    case meditation
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .strength: return L10n.Workout.strength
+        case .home: return L10n.Workout.home
+        case .cardio: return L10n.Workout.cardio
+        case .meditation: return L10n.Workout.meditation
+        }
+    }
 }
 
 struct WorkoutListView: View {
@@ -104,7 +113,7 @@ struct WorkoutListView: View {
     private var sectionPicker: some View {
         Picker("Seção", selection: $selectedSection) {
             ForEach(WorkoutSection.allCases) { section in
-                Text(section.rawValue).tag(section)
+                Text(section.title).tag(section)
             }
         }
         .pickerStyle(.segmented)
@@ -233,7 +242,7 @@ struct HomeProgramHeroCard: View {
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(accent)
 
-                Text("TREINE EM CASA")
+                Text(L10n.Workout.homeTitle)
                     .font(.title2.bold())
                     .foregroundStyle(.white)
 
@@ -353,7 +362,7 @@ struct MobilityProgramHeroCard: View {
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(accent)
 
-                Text("MOBILIDADE")
+                Text(L10n.Workout.mobility)
                     .font(.title2.bold())
                     .foregroundStyle(.white)
 
@@ -454,7 +463,7 @@ struct GenderProgramHeroCard: View {
     let customCount: Int
 
     private var title: String {
-        gender == .female ? "FEMININO" : "MASCULINO"
+        gender == .female ? L10n.Workout.female : L10n.Workout.male
     }
 
     private var subtitle: String {

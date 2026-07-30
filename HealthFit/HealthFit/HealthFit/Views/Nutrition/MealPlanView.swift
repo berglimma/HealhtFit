@@ -423,7 +423,7 @@ struct MealPlanView: View {
                     sendNutritionReport(to: user)
                 } label: {
                     Label(
-                        emailWasSent ? "Relatório enviado" : "Enviar relatório ao nutricionista",
+                        emailWasSent ? "Relatório enviado" : L10n.Nutrition.sendReport,
                         systemImage: emailWasSent ? "checkmark.circle.fill" : "envelope.fill"
                     )
                     .font(.headline)
@@ -1022,7 +1022,7 @@ struct MealCard: View {
                                     .font(.caption)
                                     .foregroundStyle(AppTheme.textSecondary)
                                 if meal.isCompleted {
-                                    Text("Concluída")
+                                    Text(L10n.Nutrition.mealCompleted)
                                         .font(.caption2.weight(.bold))
                                         .foregroundStyle(AppTheme.accent)
                                         .padding(.horizontal, 6)
@@ -1085,7 +1085,7 @@ struct MealCard: View {
                     onToggleCompleted?()
                 } label: {
                     Label(
-                        meal.isCompleted ? "Marcar como não concluída" : "Marcar como concluída",
+                        meal.isCompleted ? L10n.Nutrition.markIncomplete : L10n.Nutrition.markCompleted,
                         systemImage: meal.isCompleted ? "xmark.circle" : "checkmark.circle.fill"
                     )
                     .font(.subheadline.weight(.semibold))

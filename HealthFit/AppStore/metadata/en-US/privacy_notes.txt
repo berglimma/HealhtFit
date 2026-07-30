@@ -1,0 +1,11 @@
+Data collected and purpose (for the App Privacy questionnaire):
+
+1. Email — account creation and password recovery
+2. Name — personalization and greetings
+3. Profile photo (optional) — display on profile
+4. Health/fitness data — workouts, sleep, hydration, HealthKit (with user permission)
+5. User ID — Firebase sync
+
+Data is NOT used for tracking across apps.
+Account deletion is available in the app (Profile → Delete Account).
+Policy: https://blswiftsolutions.com/healthfit/privacidade

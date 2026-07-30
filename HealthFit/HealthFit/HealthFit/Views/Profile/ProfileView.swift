@@ -124,13 +124,13 @@ struct ProfileView: View {
                     }
                     .listRowBackground(AppTheme.cardBackground)
 
-                    Section("Personal Trainer") {
+                    Section(L10n.Profile.personalTrainer) {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Você possui personal trainer?")
+                            Text(L10n.Profile.hasPersonalTrainer)
                                 .font(.subheadline.weight(.medium))
                             Picker("Possui personal?", selection: $usesPersonalTrainer) {
-                                Text("Não").tag(false)
-                                Text("Sim").tag(true)
+                                Text(L10n.Common.no).tag(false)
+                                Text(L10n.Common.yes).tag(true)
                             }
                             .pickerStyle(.segmented)
                             .onChange(of: usesPersonalTrainer) { _, enabled in
@@ -139,13 +139,13 @@ struct ProfileView: View {
                         }
 
                         if usesPersonalTrainer {
-                            TextField("Nome do Personal", text: $trainerName)
+                            TextField(L10n.Profile.trainerName, text: $trainerName)
                                 .textContentType(.name)
                                 .onChange(of: trainerName) { _, _ in
                                     savePersonalTrainer()
                                 }
 
-                            TextField("E-mail do Personal", text: $trainerEmail)
+                            TextField(L10n.Profile.trainerEmail, text: $trainerEmail)
                                 .textContentType(.emailAddress)
                                 .keyboardType(.emailAddress)
                                 .textInputAutocapitalization(.never)
@@ -170,13 +170,13 @@ struct ProfileView: View {
                         }
                     }
 
-                    Section("Nutricionista") {
+                    Section(L10n.Profile.nutritionist) {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Você possui nutricionista?")
+                            Text(L10n.Profile.hasNutritionist)
                                 .font(.subheadline.weight(.medium))
                             Picker("Possui nutricionista?", selection: $usesNutritionist) {
-                                Text("Não").tag(false)
-                                Text("Sim").tag(true)
+                                Text(L10n.Common.no).tag(false)
+                                Text(L10n.Common.yes).tag(true)
                             }
                             .pickerStyle(.segmented)
                             .onChange(of: usesNutritionist) { _, enabled in
@@ -185,13 +185,13 @@ struct ProfileView: View {
                         }
 
                         if usesNutritionist {
-                            TextField("Nome do Nutricionista", text: $nutritionistName)
+                            TextField(L10n.Profile.nutritionistName, text: $nutritionistName)
                                 .textContentType(.name)
                                 .onChange(of: nutritionistName) { _, _ in
                                     saveNutritionist()
                                 }
 
-                            TextField("E-mail do Nutricionista", text: $nutritionistEmail)
+                            TextField(L10n.Profile.nutritionistEmail, text: $nutritionistEmail)
                                 .textContentType(.emailAddress)
                                 .keyboardType(.emailAddress)
                                 .textInputAutocapitalization(.never)

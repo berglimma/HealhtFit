@@ -1,0 +1,11 @@
+Datos recopilados y finalidad (para el cuestionario App Privacy):
+
+1. Correo electrónico — creación de cuenta y recuperación de contraseña
+2. Nombre — personalización y saludos
+3. Foto de perfil (opcional) — visualización en el perfil
+4. Datos de salud/fitness — entrenos, sueño, hidratación, HealthKit (con permiso del usuario)
+5. ID de usuario — sincronización con Firebase
+
+Los datos NO se usan para seguimiento entre apps.
+Eliminación de cuenta disponible en la app (Perfil → Eliminar cuenta).
+Política: https://blswiftsolutions.com/healthfit/privacidade

@@ -18,32 +18,32 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             DashboardView()
                 .tabItem {
-                    Label("Início", systemImage: "house.fill")
+                    Label(L10n.Tab.home, systemImage: "house.fill")
                 }
                 .tag(0)
 
             WorkoutListView()
                 .tabItem {
-                    Label("Treinos", systemImage: "dumbbell.fill")
+                    Label(L10n.Tab.workouts, systemImage: "dumbbell.fill")
                 }
                 .tag(1)
 
             MealPlanView()
                 .tabItem {
-                    Label("Nutrição", systemImage: "fork.knife")
+                    Label(L10n.Tab.nutrition, systemImage: "fork.knife")
                 }
                 .tag(nutritionTabTag)
 
             HealthChatView()
                 .tabItem {
-                    Label("IAssistente", systemImage: "bubble.left.and.bubble.right.fill")
+                    Label(L10n.Tab.assistant, systemImage: "bubble.left.and.bubble.right.fill")
                 }
                 .tag(assistantTabTag)
                 .badge(checkInService.assistantTabBadgeCount)
 
             ProfileView()
                 .tabItem {
-                    Label("Perfil", systemImage: "person.fill")
+                    Label(L10n.Tab.profile, systemImage: "person.fill")
                 }
                 .tag(profileTabTag)
         }

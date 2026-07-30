@@ -481,7 +481,7 @@ python3 generate_report.py
 | Backup | Dados em UserDefaults — não há sync iCloud |
 | Ícone animado | Pulsação via alternância de frames estáticos (limitação do iOS) |
 | Testes automatizados | Sem target de unit/UI tests no projeto |
-| Internacionalização | Apenas pt-BR |
+| Internacionalização | pt-BR, en, es, fr (App Store + catálogo de strings) |
 
 ---
 

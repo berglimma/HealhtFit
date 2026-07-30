@@ -23,7 +23,7 @@ struct LoginView: View {
                             .font(.system(size: DeviceLayout.isPad ? 42 : 36, weight: .bold, design: .rounded))
                             .foregroundStyle(AppTheme.textPrimary)
 
-                        Text("Seu personal trainer inteligente")
+                        Text(L10n.Auth.appTagline)
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.textSecondary)
                     }
@@ -33,13 +33,13 @@ struct LoginView: View {
                         SocialLoginButtonsView(style: .iconCards)
 
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("E-mail")
+                            Text(L10n.Auth.email)
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(AppTheme.textSecondary)
 
                             ZStack(alignment: .leading) {
                                 if email.isEmpty {
-                                    Text("seu@email.com")
+                                    Text(L10n.Auth.emailPlaceholder)
                                         .font(.body.weight(.semibold))
                                         .foregroundStyle(AppTheme.accent)
                                         .padding(.horizontal, 16)
@@ -57,13 +57,13 @@ struct LoginView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Senha")
+                            Text(L10n.Auth.password)
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(AppTheme.textSecondary)
 
                             ZStack(alignment: .leading) {
                                 if password.isEmpty {
-                                    Text("Sua senha")
+                                    Text(L10n.Auth.passwordPlaceholder)
                                         .font(.body.weight(.semibold))
                                         .foregroundStyle(AppTheme.accent.opacity(0.55))
                                         .padding(.horizontal, 16)
@@ -77,7 +77,7 @@ struct LoginView: View {
                             }
                         }
 
-                        Button("Esqueci minha senha") {
+                        Button(L10n.Auth.forgotPassword) {
                             showForgotPassword = true
                         }
                         .font(.caption.weight(.medium))
@@ -101,7 +101,7 @@ struct LoginView: View {
                             Task { await authService.login(email: email, password: password) }
                         } label: {
                             HStack(spacing: 8) {
-                                Text("Entrar")
+                                Text(L10n.Auth.signIn)
                                 Image(systemName: "arrow.right")
                                     .font(.subheadline.weight(.bold))
                             }
@@ -185,11 +185,11 @@ struct CreateAccountCard: View {
                 .animation(.easeInOut(duration: 0.35), value: iconIndex)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Criar conta")
+                    Text(L10n.Auth.createAccount)
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(AppTheme.textPrimary)
 
-                    Text("Monte seu plano e comece a treinar")
+                    Text(L10n.Auth.createAccountSubtitle)
                         .font(.caption2)
                         .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(2)

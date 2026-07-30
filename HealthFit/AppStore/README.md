@@ -1,61 +1,52 @@
 # App Store Connect — HealthFit
 
-Metadados em `metadata/pt-BR/` para copiar na ficha do app.
+Metadados por idioma em `metadata/`:
 
-## Campos obrigatórios
+| Locale | Pasta | Idioma |
+|--------|-------|--------|
+| Português (Brasil) | `pt-BR/` | padrão |
+| English (U.S.) | `en-US/` | inglês |
+| Español (España) | `es-ES/` | espanhol |
+| Français (France) | `fr-FR/` | francês |
 
-| Campo | Arquivo / valor |
-|-------|------------------|
+Copie cada pasta para a localização correspondente na ficha do app no App Store Connect.
+
+## Campos por pasta
+
+| Campo | Arquivo |
+|-------|---------|
 | Nome | `name.txt` |
 | Subtítulo | `subtitle.txt` |
 | Descrição | `description.txt` |
 | Palavras-chave | `keywords.txt` |
 | URL de suporte | `support_url.txt` |
-| URL de marketing (opcional) | `marketing_url.txt` |
+| URL de marketing | `marketing_url.txt` |
 | Política de privacidade | `privacy_url.txt` |
+| Notas App Privacy | `privacy_notes.txt` |
 
-## Privacidade (questionário)
+## Localização no app (código)
 
-Marque conforme o app:
+- Catálogo: `HealthFit/Resources/Localizable.xcstrings` (`pt-BR`, `en`, `es`, `fr`)
+- Permissões Info.plist: `pt-BR.lproj/`, `en.lproj/`, `es.lproj/`, `fr.lproj/`
+- Helper: `Utilities/L10n.swift`
 
-- **Dados de contato:** e-mail, nome (vinculados à conta)
-- **Saúde e fitness:** treinos, sono, hidratação, HealthKit (com consentimento)
-- **Fotos:** foto de perfil opcional
-- **Identificadores:** ID de usuário Firebase
-- **Sem rastreamento** entre apps de terceiros
-- **Exclusão de conta:** disponível em Perfil → Excluir Conta
+Idioma do dispositivo do usuário define a UI. Conteúdo longo (IAssistente, catálogos de treino/cardápio) ainda está majoritariamente em português e pode ser expandido no catálogo aos poucos.
 
-## Screenshots (capturar manualmente)
+## Screenshots
 
-Use simulador ou dispositivo. Tamanhos mínimos para iPhone 6.7":
+Organize em:
 
-1. **Login** — tela inicial com logo e botões sociais
-2. **Dashboard** — gráficos e resumo do dia
-3. **Treino ativo** — exercício com GIF demonstrativo
-4. **IAssistente** — chat com check-in ou dica de suplementação
-5. **Plano alimentar** — cardápio semanal
-6. **Perfil** — biotipo, objetivo e integrações
-
-### Como capturar no simulador
-
-```bash
-# iPhone 16 Pro Max (6.7")
-xcrun simctl boot "iPhone 16 Pro Max"
-open -a Simulator
-# No app: Cmd+S para salvar screenshot na área de trabalho
+```
+AppStore/screenshots/pt-BR/iphone-6.7/
+AppStore/screenshots/en-US/iphone-6.7/
+AppStore/screenshots/es-ES/iphone-6.7/
+AppStore/screenshots/fr-FR/iphone-6.7/
 ```
 
-Organize em `AppStore/screenshots/pt-BR/iphone-6.7/` antes do upload.
+## Checklist antes do envio mundial
 
-## Criptografia
-
-`ITSAppUsesNonExemptEncryption = false` já está no Info.plist (apenas HTTPS padrão).
-
-## Checklist antes do envio
-
-- [ ] Publicar `docs/legal/*.html` nas URLs de privacidade e termos
-- [ ] Preencher App Privacy no App Store Connect
-- [ ] Upload de screenshots 6.7" e 6.5"
-- [ ] Ícone 1024×1024 (já no projeto)
+- [ ] Preencher as 4 localizações no App Store Connect
+- [ ] Upload de screenshots por idioma (ou reutilizar as mesmas se a UI estiver localizada)
+- [ ] App Privacy + exclusão de conta
+- [ ] Testar idioma do sistema em inglês/espanhol/francês no simulador
 - [ ] `GoogleService-Info.plist` no build de release
-- [ ] Testar exclusão de conta em dispositivo real
