@@ -384,9 +384,29 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             Task { @MainActor in
                 self?.fetchHeartRate()
                 self?.fetchActiveCalories()
+                self?.applySimulatorMetricsIfNeeded()
                 self?.sendMetricsToPhone()
             }
         }
+    }
+
+    /// No simulador não há sensor óptico — gera BPM/kcal realistas para testar o sync.
+    private func applySimulatorMetricsIfNeeded() {
+        #if targetEnvironment(simulator)
+        guard isActive else { return }
+        if heartRate < 40 {
+            heartRate = isMeditationWorkout
+                ? Double.random(in: 58...72)
+                : Double.random(in: 118...142)
+        } else {
+            let jitter = Double.random(in: -3...3)
+            let base = isMeditationWorkout ? 65.0 : 130.0
+            heartRate = min(175, max(50, heartRate + jitter * 0.4 + (base - heartRate) * 0.05))
+        }
+        let burnRate: Double = isMeditationWorkout ? 0.15 : (isCardioWorkout ? 1.1 : 0.7)
+        calories += burnRate + Double.random(in: 0...0.25)
+        updateCalorieSuperation()
+        #endif
     }
 
     private func requestHealthKitAuthorizationIfNeeded() {
@@ -437,11 +457,18 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     private func sendMetricsToPhone() {
-        guard let session, session.isReachable else { return }
-        session.sendMessage([
+        guard let session else { return }
+        let payload: [String: Any] = [
             "heartRate": heartRate,
             "calories": calories
-        ], replyHandler: nil)
+        ]
+        if session.isReachable {
+            session.sendMessage(payload, replyHandler: nil) { _ in
+                session.transferUserInfo(payload)
+            }
+        } else if session.activationState == .activated {
+            session.transferUserInfo(payload)
+        }
     }
 
     private func handlePhoneMessage(_ message: [String: Any]) {

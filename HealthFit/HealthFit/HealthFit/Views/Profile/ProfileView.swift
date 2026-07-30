@@ -47,294 +47,31 @@ struct ProfileView: View {
         NavigationStack {
             List {
                 if let user = authService.currentUser {
-                    let profileImage = authService.profileImage
-                    Section {
-                        HStack(spacing: 16) {
-                            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                                ProfileAvatarView(
-                                    image: profileImage,
-                                    initial: String(user.greetingName.prefix(1).uppercased())
-                                )
-                            }
-                            .buttonStyle(.plain)
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(user.shownName)
-                                    .font(.headline)
-                                Text(user.email)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Text(profileImage == nil ? "Toque para adicionar foto" : "Toque para alterar foto")
-                                    .font(.caption2)
-                                    .foregroundStyle(AppTheme.accent)
-                            }
-
-                            Spacer()
-
-                            let healthStatus = wellnessService.healthIconStatus()
-                            PulsingHeartIconView(size: 44, glowColor: healthStatus.glowColor)
-
-                            if profileImage != nil {
-                                Button {
-                                    selectedPhotoItem = nil
-                                    authService.updateProfileImage(nil)
-                                } label: {
-                                    Image(systemName: "trash")
-                                        .foregroundStyle(.red)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    }
-
-                    Section("Como você gostaria de ser chamado?") {
-                        TextField("Seu apelido ou primeiro nome", text: $displayName)
-                            .textContentType(.nickname)
-                            .onChange(of: displayName) { _, _ in
-                                saveDisplayName()
-                            }
-
-                        if !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                           displayName.trimmingCharacters(in: .whitespacesAndNewlines) != user.name {
-                            Text("Nome completo: \(user.name)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Text("Usado nas saudações, motivação e mensagens do app.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Section("Biotipo") {
-                        AdaptiveBiotypeRow {
-                            ForEach(Biotype.allCases) { biotype in
-                                BiotypeCard(
-                                    biotype: biotype,
-                                    isSelected: user.biotype == biotype
-                                ) {
-                                    updateBiotype(biotype)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 4)
-
-                        BiotypeIdentificationHint(biotype: user.biotype)
-                    }
-                    .listRowBackground(AppTheme.cardBackground)
-
-                    Section(L10n.Profile.personalTrainer) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(L10n.Profile.hasPersonalTrainer)
-                                .font(.subheadline.weight(.medium))
-                            Picker("Possui personal?", selection: $usesPersonalTrainer) {
-                                Text(L10n.Common.no).tag(false)
-                                Text(L10n.Common.yes).tag(true)
-                            }
-                            .pickerStyle(.segmented)
-                            .onChange(of: usesPersonalTrainer) { _, enabled in
-                                updatePersonalTrainerAvailability(enabled)
-                            }
-                        }
-
-                        if usesPersonalTrainer {
-                            TextField(L10n.Profile.trainerName, text: $trainerName)
-                                .textContentType(.name)
-                                .onChange(of: trainerName) { _, _ in
-                                    savePersonalTrainer()
-                                }
-
-                            TextField(L10n.Profile.trainerEmail, text: $trainerEmail)
-                                .textContentType(.emailAddress)
-                                .keyboardType(.emailAddress)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .onChange(of: trainerEmail) { _, _ in
-                                    savePersonalTrainer()
-                                }
-
-                            if authService.currentUser?.hasPersonalTrainer == true {
-                                Label("Relatórios de treino poderão ser enviados por e-mail", systemImage: "envelope.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(AppTheme.accent)
-                            } else {
-                                Text("Cadastre o e-mail para enviar relatórios após cada treino.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        } else {
-                            Text("Sem personal cadastrado. A edição de nome e e-mail fica bloqueada.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Section(L10n.Profile.nutritionist) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(L10n.Profile.hasNutritionist)
-                                .font(.subheadline.weight(.medium))
-                            Picker("Possui nutricionista?", selection: $usesNutritionist) {
-                                Text(L10n.Common.no).tag(false)
-                                Text(L10n.Common.yes).tag(true)
-                            }
-                            .pickerStyle(.segmented)
-                            .onChange(of: usesNutritionist) { _, enabled in
-                                updateNutritionistAvailability(enabled)
-                            }
-                        }
-
-                        if usesNutritionist {
-                            TextField(L10n.Profile.nutritionistName, text: $nutritionistName)
-                                .textContentType(.name)
-                                .onChange(of: nutritionistName) { _, _ in
-                                    saveNutritionist()
-                                }
-
-                            TextField(L10n.Profile.nutritionistEmail, text: $nutritionistEmail)
-                                .textContentType(.emailAddress)
-                                .keyboardType(.emailAddress)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .onChange(of: nutritionistEmail) { _, _ in
-                                    saveNutritionist()
-                                }
-
-                            if authService.currentUser?.hasNutritionist == true {
-                                Label("Relatórios da aba Nutrição poderão ser enviados por e-mail", systemImage: "envelope.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(AppTheme.accent)
-                            } else {
-                                Text("Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        } else {
-                            Text("Sem nutricionista cadastrado. A edição de nome e e-mail fica bloqueada.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Section("Ícone de Saúde") {
-                        let healthStatus = wellnessService.healthIconStatus()
-
-                        HStack(alignment: .top, spacing: 14) {
-                            PulsingHeartIconView(
-                                size: 40,
-                                glowColor: healthStatus.glowColor
-                            )
-
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(healthStatus.title)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(healthStatus.glowColor)
-
-                                Text(wellnessService.healthIconDetailMessage())
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-
-                                Text("O ícone do app na tela inicial usa a mesma cor.")
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-
+                    profileHeaderSection(for: user)
+                    displayNameSection(for: user)
+                    biotypeSection(for: user)
+                    personalTrainerSection
+                    nutritionistSection
+                    healthIconSection
                     Section("Sono e Hidratação") {
-                        if let user = authService.currentUser {
-                            wellnessSection(for: user)
-                        }
+                        wellnessSection(for: user)
                     }
-
                     Section("Energéticos e Pré-treino") {
                         energyDrinksSection
                     }
-
                     Section("Seus Dados") {
                         bodyDataSection(for: user)
                     }
-
                     Section("Medidas Corporais") {
                         bodyMeasurementsSection(for: user)
                     }
-
-                    Section("Integrações") {
-                        HStack {
-                            Label("HealthKit", systemImage: "heart.text.square.fill")
-                            Spacer()
-                            Text(healthKitManager.isAuthorized ? "Conectado" : "Pendente")
-                                .foregroundStyle(healthKitManager.isAuthorized ? .green : .orange)
-                                .font(.caption)
-                        }
-
-                        HStack {
-                            Label("Apple Watch", systemImage: "applewatch")
-                            Spacer()
-                            Text("Sincronização ativa")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        HStack {
-                            Label("Notificações", systemImage: "bell.fill")
-                            Spacer()
-                            Text("Ativas")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Section("Cronômetro de Descanso") {
-                        Stepper(
-                            "Descanso padrão: \(timerService.configuredRestSeconds)s",
-                            value: Binding(
-                                get: { timerService.configuredRestSeconds },
-                                set: { timerService.configure(restSeconds: $0, maxRest: timerService.maxRestSeconds, notifications: timerService.notificationEnabled) }
-                            ),
-                            in: 15...300,
-                            step: 15
-                        )
-
-                        Stepper(
-                            "Alerta após: \(timerService.maxRestSeconds)s",
-                            value: Binding(
-                                get: { timerService.maxRestSeconds },
-                                set: { timerService.configure(restSeconds: timerService.configuredRestSeconds, maxRest: $0, notifications: timerService.notificationEnabled) }
-                            ),
-                            in: 30...600,
-                            step: 30
-                        )
-
-                        Toggle("Notificações de descanso", isOn: Binding(
-                            get: { timerService.notificationEnabled },
-                            set: { timerService.configure(restSeconds: timerService.configuredRestSeconds, maxRest: timerService.maxRestSeconds, notifications: $0) }
-                        ))
-                    }
-
-                    Section("Sobre") {
-                        LabeledContent("App", value: "HealthFit")
-                        LabeledContent("Desenvolvedores", value: AppInfo.developerPeople)
-                        Text(AppInfo.developerCredit)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
+                    integrationsSection
+                    restTimerSection
+                    aboutSection
                     Section("Legal") {
                         LegalLinksView(style: .list, showsSupportLink: true)
                     }
-
-                    Section {
-                        Button("Sair da Conta", role: .destructive) {
-                            showLogoutAlert = true
-                        }
-
-                        Button("Excluir Conta", role: .destructive) {
-                            showDeleteAccountSheet = true
-                        }
-                    }
+                    accountActionsSection
                 }
             }
             .adaptiveContentWidth()
@@ -412,6 +149,303 @@ struct ProfileView: View {
                     requiresPassword: authService.usesPasswordProvider,
                     requiresAppleReauthentication: authService.usesAppleProvider
                 )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func profileHeaderSection(for user: UserProfile) -> some View {
+        let profileImage = authService.profileImage
+        Section {
+            HStack(spacing: 16) {
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    ProfileAvatarView(
+                        image: profileImage,
+                        initial: String(user.greetingName.prefix(1).uppercased())
+                    )
+                }
+                .buttonStyle(.plain)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(user.shownName)
+                        .font(.headline)
+                    Text(user.email)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(profileImage == nil ? "Toque para adicionar foto" : "Toque para alterar foto")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.accent)
+                }
+
+                Spacer()
+
+                let healthStatus = wellnessService.healthIconStatus()
+                PulsingHeartIconView(size: 44, glowColor: healthStatus.glowColor)
+
+                if profileImage != nil {
+                    Button {
+                        selectedPhotoItem = nil
+                        authService.updateProfileImage(nil)
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundStyle(.red)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    @ViewBuilder
+    private func displayNameSection(for user: UserProfile) -> some View {
+        Section("Como você gostaria de ser chamado?") {
+            TextField("Seu apelido ou primeiro nome", text: $displayName)
+                .textContentType(.nickname)
+                .onChange(of: displayName) { _, _ in
+                    saveDisplayName()
+                }
+
+            if !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               displayName.trimmingCharacters(in: .whitespacesAndNewlines) != user.name {
+                Text("Nome completo: \(user.name)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text("Usado nas saudações, motivação e mensagens do app.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func biotypeSection(for user: UserProfile) -> some View {
+        Section("Biotipo") {
+            AdaptiveBiotypeRow {
+                ForEach(Biotype.allCases) { biotype in
+                    BiotypeCard(
+                        biotype: biotype,
+                        isSelected: user.biotype == biotype
+                    ) {
+                        updateBiotype(biotype)
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+
+            BiotypeIdentificationHint(biotype: user.biotype)
+        }
+        .listRowBackground(AppTheme.cardBackground)
+    }
+
+    @ViewBuilder
+    private var personalTrainerSection: some View {
+        Section(L10n.Profile.personalTrainer) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L10n.Profile.hasPersonalTrainer)
+                    .font(.subheadline.weight(.medium))
+                Picker("Possui personal?", selection: $usesPersonalTrainer) {
+                    Text(L10n.Common.no).tag(false)
+                    Text(L10n.Common.yes).tag(true)
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: usesPersonalTrainer) { _, enabled in
+                    updatePersonalTrainerAvailability(enabled)
+                }
+            }
+
+            if usesPersonalTrainer {
+                TextField(L10n.Profile.trainerName, text: $trainerName)
+                    .textContentType(.name)
+                    .onChange(of: trainerName) { _, _ in
+                        savePersonalTrainer()
+                    }
+
+                TextField(L10n.Profile.trainerEmail, text: $trainerEmail)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .onChange(of: trainerEmail) { _, _ in
+                        savePersonalTrainer()
+                    }
+
+                if authService.currentUser?.hasPersonalTrainer == true {
+                    Label("Relatórios de treino poderão ser enviados por e-mail", systemImage: "envelope.fill")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.accent)
+                } else {
+                    Text("Cadastre o e-mail para enviar relatórios após cada treino.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("Sem personal cadastrado. A edição de nome e e-mail fica bloqueada.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var nutritionistSection: some View {
+        Section(L10n.Profile.nutritionist) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L10n.Profile.hasNutritionist)
+                    .font(.subheadline.weight(.medium))
+                Picker("Possui nutricionista?", selection: $usesNutritionist) {
+                    Text(L10n.Common.no).tag(false)
+                    Text(L10n.Common.yes).tag(true)
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: usesNutritionist) { _, enabled in
+                    updateNutritionistAvailability(enabled)
+                }
+            }
+
+            if usesNutritionist {
+                TextField(L10n.Profile.nutritionistName, text: $nutritionistName)
+                    .textContentType(.name)
+                    .onChange(of: nutritionistName) { _, _ in
+                        saveNutritionist()
+                    }
+
+                TextField(L10n.Profile.nutritionistEmail, text: $nutritionistEmail)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .onChange(of: nutritionistEmail) { _, _ in
+                        saveNutritionist()
+                    }
+
+                if authService.currentUser?.hasNutritionist == true {
+                    Label("Relatórios da aba Nutrição poderão ser enviados por e-mail", systemImage: "envelope.fill")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.accent)
+                } else {
+                    Text("Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("Sem nutricionista cadastrado. A edição de nome e e-mail fica bloqueada.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var healthIconSection: some View {
+        Section("Ícone de Saúde") {
+            let healthStatus = wellnessService.healthIconStatus()
+
+            HStack(alignment: .top, spacing: 14) {
+                PulsingHeartIconView(
+                    size: 40,
+                    glowColor: healthStatus.glowColor
+                )
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(healthStatus.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(healthStatus.glowColor)
+
+                    Text(wellnessService.healthIconDetailMessage())
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("O ícone do app na tela inicial usa a mesma cor.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    @ViewBuilder
+    private var integrationsSection: some View {
+        Section("Integrações") {
+            HStack {
+                Label("HealthKit", systemImage: "heart.text.square.fill")
+                Spacer()
+                Text(healthKitManager.isAuthorized ? "Conectado" : "Pendente")
+                    .foregroundStyle(healthKitManager.isAuthorized ? .green : .orange)
+                    .font(.caption)
+            }
+
+            HStack {
+                Label("Apple Watch", systemImage: "applewatch")
+                Spacer()
+                Text("Sincronização ativa")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack {
+                Label("Notificações", systemImage: "bell.fill")
+                Spacer()
+                Text("Ativas")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var restTimerSection: some View {
+        Section("Cronômetro de Descanso") {
+            Stepper(
+                "Descanso padrão: \(timerService.configuredRestSeconds)s",
+                value: Binding(
+                    get: { timerService.configuredRestSeconds },
+                    set: { timerService.configure(restSeconds: $0, maxRest: timerService.maxRestSeconds, notifications: timerService.notificationEnabled) }
+                ),
+                in: 15...300,
+                step: 15
+            )
+
+            Stepper(
+                "Alerta após: \(timerService.maxRestSeconds)s",
+                value: Binding(
+                    get: { timerService.maxRestSeconds },
+                    set: { timerService.configure(restSeconds: timerService.configuredRestSeconds, maxRest: $0, notifications: timerService.notificationEnabled) }
+                ),
+                in: 30...600,
+                step: 30
+            )
+
+            Toggle("Notificações de descanso", isOn: Binding(
+                get: { timerService.notificationEnabled },
+                set: { timerService.configure(restSeconds: timerService.configuredRestSeconds, maxRest: timerService.maxRestSeconds, notifications: $0) }
+            ))
+        }
+    }
+
+    @ViewBuilder
+    private var aboutSection: some View {
+        Section("Sobre") {
+            LabeledContent("App", value: "HealthFit")
+            LabeledContent("Desenvolvedores", value: AppInfo.developerPeople)
+            Text(AppInfo.developerCredit)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var accountActionsSection: some View {
+        Section {
+            Button("Sair da Conta", role: .destructive) {
+                showLogoutAlert = true
+            }
+
+            Button("Excluir Conta", role: .destructive) {
+                showDeleteAccountSheet = true
             }
         }
     }

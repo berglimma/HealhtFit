@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "T1000001"
-               BuildableName = "HealthFit.app"
-               BlueprintName = "HealthFit"
+               BlueprintIdentifier = "T1000002"
+               BuildableName = "HealthFitWatch.app"
+               BlueprintName = "HealthFitWatch"
                ReferencedContainer = "container:HealthFit.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -28,37 +28,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "T1000002"
-               BuildableName = "HealthFitWatch.app"
-               BlueprintName = "HealthFitWatch"
-               ReferencedContainer = "container:HealthFit.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "NO"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "T1000003"
-               BuildableName = "HealthFitTests.xctest"
-               BlueprintName = "HealthFitTests"
-               ReferencedContainer = "container:HealthFit.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "NO"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "T1000004"
-               BuildableName = "HealthFitUITests.xctest"
-               BlueprintName = "HealthFitUITests"
+               BlueprintIdentifier = "T1000001"
+               BuildableName = "HealthFit.app"
+               BlueprintName = "HealthFit"
                ReferencedContainer = "container:HealthFit.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -71,28 +43,6 @@
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
       <Testables>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "T1000003"
-               BuildableName = "HealthFitTests.xctest"
-               BlueprintName = "HealthFitTests"
-               ReferencedContainer = "container:HealthFit.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "T1000004"
-               BuildableName = "HealthFitUITests.xctest"
-               BlueprintName = "HealthFitUITests"
-               ReferencedContainer = "container:HealthFit.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
@@ -109,9 +59,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "T1000001"
-            BuildableName = "HealthFit.app"
-            BlueprintName = "HealthFit"
+            BlueprintIdentifier = "T1000002"
+            BuildableName = "HealthFitWatch.app"
+            BlueprintName = "HealthFitWatch"
             ReferencedContainer = "container:HealthFit.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -126,9 +76,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "T1000001"
-            BuildableName = "HealthFit.app"
-            BlueprintName = "HealthFit"
+            BlueprintIdentifier = "T1000002"
+            BuildableName = "HealthFitWatch.app"
+            BlueprintName = "HealthFitWatch"
             ReferencedContainer = "container:HealthFit.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

@@ -129,6 +129,8 @@
 		B1000128 /* PasswordRequirementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000128 /* PasswordRequirementsView.swift */; };
 		B1000130 /* AssistantWorkoutBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000130 /* AssistantWorkoutBuilder.swift */; };
 		B1000131 /* NutritionReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000131 /* NutritionReportBuilder.swift */; };
+		B1000140 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000140 /* L10n.swift */; };
+		B1000141 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F1000141 /* Localizable.xcstrings */; };
 		B1000200 /* ExerciseLoadEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000200 /* ExerciseLoadEditor.swift */; };
 		B1000201 /* ProfileDataReminderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000201 /* ProfileDataReminderService.swift */; };
 		B1000202 /* ProfileFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000202 /* ProfileFirestoreService.swift */; };
@@ -929,6 +931,7 @@
 				B1000098 /* corpo_inteiro.mp4 in Resources */,
 				B1000124 /* privacy-policy.html in Resources */,
 				B1000125 /* terms-of-use.html in Resources */,
+				B1000141 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1045,6 +1048,7 @@
 				B1000121 /* AccountDeletionError.swift in Sources */,
 				B1000123 /* ShoppingReportBuilder.swift in Sources */,
 				B1000131 /* NutritionReportBuilder.swift in Sources */,
+				B1000140 /* L10n.swift in Sources */,
 				B1000087 /* ExerciseVideoRepository.swift in Sources */,
 				B1000073 /* ForgotPasswordView.swift in Sources */,
 				B1000075 /* GoogleServiceInfo.swift in Sources */,
@@ -1274,6 +1278,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentGreen;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthFit/HealthFitDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1309,6 +1314,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentGreen;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthFit/HealthFit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

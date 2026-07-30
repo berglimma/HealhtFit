@@ -9,6 +9,17 @@
 	</array>
 	<key>CFBundleIcons</key>
 	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>AppIcon</string>
+			</array>
+			<key>CFBundleIconName</key>
+			<string>AppIcon</string>
+			<key>UIPrerenderedIcon</key>
+			<false/>
+		</dict>
 		<key>CFBundleAlternateIcons</key>
 		<dict>
 			<key>AppIconBroken</key>
@@ -132,8 +143,6 @@
 	<dict>
 		<key>UIColorName</key>
 		<string>Background</string>
-		<key>UIImageName</key>
-		<string>AppIcon</string>
 	</dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>

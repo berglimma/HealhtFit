@@ -25,11 +25,23 @@ enum WatchSyncResult: Equatable {
         case .notSupported:
             return "Este dispositivo não oferece sincronização com Apple Watch."
         case .notPaired:
+            #if targetEnvironment(simulator)
+            return "No simulador: use um iPhone e um Apple Watch pareados (ambos Booted). No Xcode, rode também o scheme HealthFitWatch."
+            #else
             return "Nenhum Apple Watch pareado. Pareie o relógio em Ajustes → Bluetooth / app Watch."
+            #endif
         case .appNotInstalled:
+            #if targetEnvironment(simulator)
+            return "Instale o HealthFit no Watch Simulator: rode o scheme HealthFitWatch (ou rode o iPhone com o Watch pareado para embutir o app)."
+            #else
             return "O app HealthFit não está instalado no Apple Watch. Instale pelo app Watch no iPhone."
+            #endif
         case .unreachable:
+            #if targetEnvironment(simulator)
+            return "Watch pareado, mas inacessível. Abra o app HealthFit no Apple Watch Simulator e toque em sincronizar de novo."
+            #else
             return "O Apple Watch está pareado, mas não respondeu agora. Desbloqueie o relógio, abra o HealthFit no Watch e tente de novo."
+            #endif
         case .activationFailed:
             return "A sessão com o Apple Watch não pôde ser ativada. Verifique o pareamento e tente novamente."
         }
@@ -93,22 +105,27 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             return .appNotInstalled
         }
 
-        // Aguarda um pouco a reachability após ativação.
+        // Aguarda reachability — no simulador o Watch precisa estar com o app aberto.
         if !session.isReachable {
-            for _ in 0..<15 {
+            for _ in 0..<40 {
                 if session.isReachable { break }
-                try? await Task.sleep(for: .milliseconds(100))
+                try? await Task.sleep(for: .milliseconds(150))
             }
         }
 
-        guard session.isReachable else {
+        if session.isReachable {
+            let replied = await pingWatch(using: session)
             refreshConnectionStatus()
-            return .unreachable
+            return replied ? .synced : .unreachable
         }
 
-        let replied = await pingWatch(using: session)
+        // Pareado + app instalado, mas sem reachability: o Watch precisa estar aberto.
         refreshConnectionStatus()
-        return replied ? .synced : .unreachable
+        session.transferUserInfo([
+            "action": "ping",
+            "timestamp": Date().timeIntervalSince1970
+        ])
+        return .unreachable
     }
 
     private func pingWatch(using session: WCSession) async -> Bool {
@@ -370,6 +387,10 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     private func sendToWatch(_ message: [String: Any], realtime: Bool = false) {
         guard let session else { return }
 
+        if session.activationState != .activated {
+            session.activate()
+        }
+
         if let action = message["action"] as? String, action == "startWorkout",
            let workoutName = message["workoutName"] as? String {
             lastWorkoutName = workoutName
@@ -379,7 +400,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             session.sendMessage(message, replyHandler: nil) { _ in
                 session.transferUserInfo(message)
             }
-        } else {
+        } else if session.activationState == .activated {
             session.transferUserInfo(message)
         }
     }
@@ -421,6 +442,12 @@ extension WatchConnectivityManager: WCSessionDelegate {
             if !session.isReachable {
                 clearWatchMetrics()
             }
+        }
+    }
+
+    nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
+        Task { @MainActor in
+            refreshConnectionStatus()
         }
     }
 

@@ -1,1546 +1,3197 @@
 {
-  "sourceLanguage": "pt-BR",
-  "strings": {
-    "tab.home": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Início"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Home"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inicio"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accueil"
+  "sourceLanguage" : "pt-BR",
+  "strings" : {
+    "" : {
+
+    },
+    "-%lld kcal" : {
+
+    },
+    "·" : {
+
+    },
+    "“%@” será removido permanentemente." : {
+
+    },
+    "%@ — escolha um cardápio" : {
+
+    },
+    "%@ · %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
           }
         }
       }
     },
-    "tab.workouts": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Treinos"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Workouts"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Entrenos"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Séances"
+    "%@ → %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ → %2$@"
           }
         }
       }
     },
-    "tab.nutrition": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nutrição"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nutrition"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nutrición"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nutrition"
+    "%@. %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. %2$@"
           }
         }
       }
     },
-    "tab.assistant": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IAssistente"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI Coach"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IAsistente"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IAssistant"
+    "%@%lld kcal" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@%2$lld kcal"
           }
         }
       }
     },
-    "tab.profile": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Perfil"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Profile"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Perfil"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Profil"
+    "%lld" : {
+
+    },
+    "%lld / %lld kcal" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld kcal"
           }
         }
       }
     },
-    "auth.app_tagline": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seu personal trainer inteligente"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your smart personal trainer"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu entrenador personal inteligente"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Votre coach personnel intelligent"
+    "%lld BPM" : {
+
+    },
+    "%lld doses" : {
+
+    },
+    "%lld etapas guiadas" : {
+
+    },
+    "%lld exercícios" : {
+
+    },
+    "%lld fichas · peso corporal · demos em vídeo" : {
+
+    },
+    "%lld fichas · preparo para carga · demos em GIF" : {
+
+    },
+    "%lld fichas recomendadas" : {
+
+    },
+    "%lld hoje" : {
+
+    },
+    "%lld itens exibidos" : {
+
+    },
+    "%lld kcal" : {
+
+    },
+    "%lld kcal feitas" : {
+
+    },
+    "%lld kcal/dia" : {
+
+    },
+    "%lld min" : {
+
+    },
+    "%lld min sugeridos" : {
+
+    },
+    "%lld ml" : {
+
+    },
+    "%lld ml ingeridos" : {
+
+    },
+    "%lld personalizados" : {
+
+    },
+    "%lld recomendados" : {
+
+    },
+    "%lld recomendados · %lld personalizados" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld recomendados · %2$lld personalizados"
           }
         }
       }
     },
-    "auth.email": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "E-mail"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Email"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Correo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "E-mail"
+    "%lld sessões · %lld min" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld sessões · %2$lld min"
           }
         }
       }
     },
-    "auth.email_placeholder": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "seu@email.com"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "you@email.com"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "tu@email.com"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "vous@email.com"
+    "%lld un na lista de compras" : {
+
+    },
+    "%lld unidades" : {
+
+    },
+    "%lld." : {
+
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
           }
         }
       }
     },
-    "auth.password": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Senha"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Password"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Contraseña"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mot de passe"
+    "%lld/%lld itens comprados" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld itens comprados"
           }
         }
       }
     },
-    "auth.password_placeholder": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sua senha"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your password"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu contraseña"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Votre mot de passe"
+    "%lld/%lld séries" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld séries"
           }
         }
       }
     },
-    "auth.forgot_password": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esqueci minha senha"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Forgot password"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Olvidé mi contraseña"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mot de passe oublié"
+    "%lld%%" : {
+
+    },
+    "%llds descanso" : {
+
+    },
+    "%lldx" : {
+
+    },
+    "%lldx%lld" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lldx%2$lld"
           }
         }
       }
     },
-    "auth.sign_in": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Entrar"
+    "+%lld min vs recorde" : {
+
+    },
+    "+1 copo" : {
+
+    },
+    "+1 garrafa" : {
+
+    },
+    "~%lld kcal" : {
+
+    },
+    "~%lld min" : {
+
+    },
+    "0" : {
+
+    },
+    "00:00" : {
+
+    },
+    "0h" : {
+
+    },
+    "1 dose" : {
+
+    },
+    "1 unidade" : {
+
+    },
+    "12h" : {
+
+    },
+    "A demonstração avança automaticamente após um ciclo do GIF." : {
+
+    },
+    "A senha deve conter:" : {
+
+    },
+    "Acompanhe a queima em tempo real — dados do relógio quando conectado." : {
+
+    },
+    "Acompanhe durante o treino" : {
+
+    },
+    "Acompanhe treinos, calorias e sugestões de melhoria" : {
+
+    },
+    "Adicionar" : {
+
+    },
+    "Adicionar \"%@\" como item personalizado" : {
+
+    },
+    "Adicionar %@" : {
+
+    },
+    "Adicionar à lista" : {
+
+    },
+    "Adicionar item personalizado" : {
+
+    },
+    "Agora não" : {
+
+    },
+    "Água recomendada" : {
+
+    },
+    "Alerta após: %llds" : {
+
+    },
+    "Alerta de cafeína" : {
+
+    },
+    "Alerta de pré-treino" : {
+
+    },
+    "Alerta OMS" : {
+
+    },
+    "Antes: %@" : {
+
+    },
+    "Ao iniciar um treino, sua resposta sobre pré-treino aparecerá aqui." : {
+
+    },
+    "Ao vivo" : {
+
+    },
+    "Apenas corrida" : {
+
+    },
+    "Apenas corrida — sem distância ou tempo fixo. Encerre quando quiser." : {
+
+    },
+    "Após atualizar as medidas, estas são as que variaram no período." : {
+
+    },
+    "App" : {
+
+    },
+    "Apple Watch" : {
+
+    },
+    "Aquecimento, quadril, ombros e pós-treino com demos" : {
+
+    },
+    "As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal." : {
+
+    },
+    "Assista a demonstração" : {
+
+    },
+    "Assistente" : {
+
+    },
+    "Assistente digitando" : {
+
+    },
+    "Atenção ao consumo de doces" : {
+
+    },
+    "Atingida" : {
+
+    },
+    "Ativas" : {
+
+    },
+    "Atividade diária" : {
+
+    },
+    "Atualizar Cardápio" : {
+
+    },
+    "auth.accept_terms" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I have read and accept the Terms of Use and Privacy Policy"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sign In"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "He leído y acepto los Términos de Uso y la Política de Privacidad"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Entrar"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "J'ai lu et j'accepte les Conditions d'utilisation et la Politique de confidentialité"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connexion"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Li e aceito os Termos de Uso e a Política de Privacidade"
           }
         }
       }
     },
-    "auth.create_account": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Criar conta"
+    "auth.app_tagline" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your smart personal trainer"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create account"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu entrenador personal inteligente"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crear cuenta"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre coach personnel intelligent"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Créer un compte"
-          }
-        }
-      }
-    },
-    "auth.create_account_subtitle": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monte seu plano e comece a treinar"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Build your plan and start training"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arma tu plan y empieza a entrenar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Créez votre plan et commencez à vous entraîner"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seu personal trainer inteligente"
           }
         }
       }
     },
-    "auth.register_title": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Criar Conta"
+    "auth.biotype" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Body type"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create Account"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biotipo"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crear cuenta"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biotype"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Créer un compte"
-          }
-        }
-      }
-    },
-    "auth.register_subtitle": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configure seu perfil de atleta"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Set up your athlete profile"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configura tu perfil de atleta"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configurez votre profil d'athlète"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biotipo"
           }
         }
       }
     },
-    "auth.full_name": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nome completo"
+    "auth.close" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Full name"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerrar"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nombre completo"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nom complet"
-          }
-        }
-      }
-    },
-    "auth.confirm_password": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirmar senha"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirm password"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirmar contraseña"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirmer le mot de passe"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fechar"
           }
         }
       }
     },
-    "auth.biotype": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Biotipo"
+    "auth.confirm_password" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm password"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Body type"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmar contraseña"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Biotipo"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmer le mot de passe"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Biotype"
-          }
-        }
-      }
-    },
-    "auth.goal": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Objetivo"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Goal"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Objetivo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Objectif"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmar senha"
           }
         }
       }
     },
-    "auth.accept_terms": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Li e aceito os Termos de Uso e a Política de Privacidade"
+    "auth.continue_apple" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue with Apple"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "I have read and accept the Terms of Use and Privacy Policy"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuar con Apple"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "He leído y acepto los Términos de Uso y la Política de Privacidad"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuer avec Apple"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "J'ai lu et j'accepte les Conditions d'utilisation et la Politique de confidentialité"
-          }
-        }
-      }
-    },
-    "auth.register": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cadastrar"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sign Up"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Registrarse"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "S'inscrire"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuar com Apple"
           }
         }
       }
     },
-    "auth.continue_google": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continuar com Google"
+    "auth.continue_google" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue with Google"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continue with Google"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuar con Google"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continuar con Google"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuer avec Google"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continuer avec Google"
-          }
-        }
-      }
-    },
-    "auth.continue_apple": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continuar com Apple"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continue with Apple"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continuar con Apple"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continuer avec Apple"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuar com Google"
           }
         }
       }
     },
-    "auth.or": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ou"
+    "auth.create_account" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create account"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "or"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crear cuenta"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "o"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer un compte"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ou"
-          }
-        }
-      }
-    },
-    "auth.reset_title": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Redefinir senha"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reset password"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restablecer contraseña"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Réinitialiser le mot de passe"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Criar conta"
           }
         }
       }
     },
-    "auth.reset_subtitle": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enviaremos um link para o seu e-mail com instruções para criar uma nova senha."
+    "auth.create_account_subtitle" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Build your plan and start training"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "We'll send a link to your email with instructions to create a new password."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arma tu plan y empieza a entrenar"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enviaremos un enlace a tu correo con instrucciones para crear una nueva contraseña."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créez votre plan et commencez à vous entraîner"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nous enverrons un lien à votre e-mail avec les instructions pour créer un nouveau mot de passe."
-          }
-        }
-      }
-    },
-    "auth.reset_send": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enviar link de redefinição"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Send reset link"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enviar enlace"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Envoyer le lien"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monte seu plano e comece a treinar"
           }
         }
       }
     },
-    "auth.close": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fechar"
+    "auth.email" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Close"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Correo"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cerrar"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-mail"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fermer"
-          }
-        }
-      }
-    },
-    "common.yes": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sim"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Yes"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sí"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oui"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-mail"
           }
         }
       }
     },
-    "common.no": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Não"
+    "auth.email_placeholder" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you@email.com"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tu@email.com"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vous@email.com"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Non"
-          }
-        }
-      }
-    },
-    "common.cancel": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancelar"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancel"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancelar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Annuler"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "seu@email.com"
           }
         }
       }
     },
-    "common.save": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Salvar"
+    "auth.forgot_password" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forgot password"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Olvidé mi contraseña"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guardar"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot de passe oublié"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enregistrer"
-          }
-        }
-      }
-    },
-    "common.ok": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OK"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OK"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OK"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OK"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esqueci minha senha"
           }
         }
       }
     },
-    "common.loading": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carregando..."
+    "auth.full_name" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Full name"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Loading..."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nombre completo"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cargando..."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nom complet"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chargement..."
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nome completo"
           }
         }
       }
     },
-    "profile.personal_trainer": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Personal Trainer"
+    "auth.goal" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Goal"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Personal Trainer"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Objetivo"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Entrenador personal"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Objectif"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach personnel"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Objetivo"
           }
         }
       }
     },
-    "profile.has_personal_trainer": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Você possui personal trainer?"
+    "auth.or" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "or"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Do you have a personal trainer?"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "o"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¿Tienes entrenador personal?"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ou"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avez-vous un coach personnel ?"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ou"
           }
         }
       }
     },
-    "profile.nutritionist": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nutricionista"
+    "auth.password" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nutritionist"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contraseña"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nutricionista"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot de passe"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nutritionniste"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senha"
           }
         }
       }
     },
-    "profile.has_nutritionist": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Você possui nutricionista?"
+    "auth.password_placeholder" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your password"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Do you have a nutritionist?"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu contraseña"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¿Tienes nutricionista?"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre mot de passe"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avez-vous un nutritionniste ?"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sua senha"
           }
         }
       }
     },
-    "profile.trainer_name": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nome do Personal"
+    "auth.register" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign Up"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trainer name"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrarse"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nombre del entrenador"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S'inscrire"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nom du coach"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cadastrar"
           }
         }
       }
     },
-    "profile.trainer_email": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "E-mail do Personal"
+    "auth.register_subtitle" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set up your athlete profile"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trainer email"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configura tu perfil de atleta"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Correo del entrenador"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurez votre profil d'athlète"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "E-mail du coach"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configure seu perfil de atleta"
           }
         }
       }
     },
-    "profile.nutritionist_name": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nome do Nutricionista"
+    "auth.register_title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create Account"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nutritionist name"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crear cuenta"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nombre del nutricionista"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer un compte"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nom du nutritionniste"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Criar Conta"
           }
         }
       }
     },
-    "profile.nutritionist_email": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "E-mail do Nutricionista"
+    "auth.reset_send" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send reset link"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nutritionist email"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar enlace"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Correo del nutricionista"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer le lien"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "E-mail du nutritionniste"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar link de redefinição"
           }
         }
       }
     },
-    "workout.section.strength": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Musculação"
+    "auth.reset_subtitle" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We'll send a link to your email with instructions to create a new password."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Strength"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviaremos un enlace a tu correo con instrucciones para crear una nueva contraseña."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Musculación"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nous enverrons un lien à votre e-mail avec les instructions pour créer un nouveau mot de passe."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Musculation"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviaremos um link para o seu e-mail com instruções para criar uma nova senha."
           }
         }
       }
     },
-    "workout.section.home": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Treine em Casa"
+    "auth.reset_title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset password"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Train at Home"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restablecer contraseña"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Entrena en Casa"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réinitialiser le mot de passe"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "S'entraîner à la maison"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redefinir senha"
           }
         }
       }
     },
-    "workout.section.cardio": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cardio"
+    "auth.sign_in" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign In"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cardio"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entrar"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cardio"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connexion"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cardio"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entrar"
           }
         }
       }
     },
-    "workout.section.meditation": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Meditação"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Meditation"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Meditación"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Méditation"
+    "Bebidas" : {
+
+    },
+    "Biotipo" : {
+
+    },
+    "Buscar proteínas, vegetais, frutas..." : {
+
+    },
+    "Cada ficha inclui demos em vídeo/GIF dos exercícios durante o treino." : {
+
+    },
+    "Cadastrar" : {
+
+    },
+    "Cadastre nome e e-mail do nutricionista no Perfil para enviar o relatório desta aba." : {
+
+    },
+    "Cadastre o e-mail do personal no Perfil para enviar o relatório deste treino." : {
+
+    },
+    "Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista." : {
+
+    },
+    "Cadastre o e-mail para enviar relatórios após cada treino." : {
+
+    },
+    "Cálculo: 35 ml por kg de peso corporal (%@ kg). Equivale a cerca de %lld copos (%lld ml) ou %lld garrafas (%lld ml)." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cálculo: 35 ml por kg de peso corporal (%1$@ kg). Equivale a cerca de %2$lld copos (%3$lld ml) ou %4$lld garrafas (%5$lld ml)."
           }
         }
       }
     },
-    "workout.mobility": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MOBILIDADE"
+    "Calorias (referência)" : {
+
+    },
+    "Calorias em tempo real via Apple Watch" : {
+
+    },
+    "Calorias estimadas" : {
+
+    },
+    "Câmera com Vision" : {
+
+    },
+    "Cancelar" : {
+
+    },
+    "Cardio" : {
+
+    },
+    "Carga recomendada" : {
+
+    },
+    "Carregando demonstração..." : {
+
+    },
+    "Carregando..." : {
+
+    },
+    "Categoria" : {
+
+    },
+    "Check-in diário" : {
+
+    },
+    "cm" : {
+
+    },
+    "Com base no seu peso (%@ kg), beba:" : {
+
+    },
+    "Com o cardápio ativo, você recebe alerta e notificação 5 minutos antes de cada refeição (horários padrão do dia)." : {
+
+    },
+    "Começar exercício" : {
+
+    },
+    "common.cancel" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MOBILITY"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelar"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MOVILIDAD"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MOBILITÉ"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelar"
           }
         }
       }
     },
-    "workout.home_title": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TREINE EM CASA"
+    "common.loading" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading..."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TRAIN AT HOME"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cargando..."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ENTRENA EN CASA"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chargement..."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "À LA MAISON"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carregando..."
           }
         }
       }
     },
-    "workout.male": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MASCULINO"
+    "common.no" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MALE"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MASCULINO"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HOMME"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não"
           }
         }
       }
     },
-    "workout.female": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FEMININO"
+    "common.ok" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FEMALE"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FEMENINO"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FEMME"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
           }
         }
       }
     },
-    "nutrition.send_report": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enviar relatório ao nutricionista"
+    "common.save" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Send report to nutritionist"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enviar informe al nutricionista"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Envoyer le rapport au nutritionniste"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salvar"
           }
         }
       }
     },
-    "nutrition.meal_completed": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Concluída"
+    "common.yes" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Completed"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sí"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Completada"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oui"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Terminée"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sim"
           }
         }
       }
     },
-    "nutrition.mark_completed": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Marcar como concluída"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mark as completed"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Marcar como completada"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Marquer comme terminée"
+    "Como saber se você é %@" : {
+
+    },
+    "Como você gostaria de ser chamado?" : {
+
+    },
+    "Comparado à semana anterior" : {
+
+    },
+    "Comparativo" : {
+
+    },
+    "Comparativo de %lld dia(s)" : {
+
+    },
+    "Comparativo disponível após %lld dia(s), quando você atualizar as medidas." : {
+
+    },
+    "Complete Seus Dados no Perfil (peso, altura, idade e sexo) para montar o cardápio." : {
+
+    },
+    "Comprado %lld vezes" : {
+
+    },
+    "Comprado 1 vez" : {
+
+    },
+    "Concluir Exercício" : {
+
+    },
+    "Conectado" : {
+
+    },
+    "Confiança: %lld%%" : {
+
+    },
+    "Configure seu perfil de atleta" : {
+
+    },
+    "Configure uma conta de e-mail no iPhone ou cadastre o e-mail do nutricionista no Perfil." : {
+
+    },
+    "Configure uma conta de e-mail no iPhone ou cadastre o e-mail do personal no Perfil." : {
+
+    },
+    "Confirmação" : {
+
+    },
+    "Confirmar encerramento" : {
+
+    },
+    "Confirmar senha" : {
+
+    },
+    "Confirme com a Apple" : {
+
+    },
+    "Confirme sua senha" : {
+
+    },
+    "Consumo dentro do limite diário recomendado." : {
+
+    },
+    "Consumo moderado. Evite energéticos à noite para não prejudicar o sono." : {
+
+    },
+    "Continuar" : {
+
+    },
+    "Continuar mesmo assim" : {
+
+    },
+    "Copos (%lld ml): %lld" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copos (%1$lld ml): %2$lld"
           }
         }
       }
     },
-    "nutrition.mark_incomplete": {
-      "localizations": {
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Marcar como não concluída"
+    "Corrida" : {
+
+    },
+    "Corrida livre — encerre quando quiser · Ritmo ref. %@" : {
+
+    },
+    "Criar Conta" : {
+
+    },
+    "Cronômetro de Descanso" : {
+
+    },
+    "Cronômetro pausado" : {
+
+    },
+    "Dados físicos vêm do Perfil (peso, altura, idade e sexo)." : {
+
+    },
+    "Dados salvos" : {
+
+    },
+    "Dashboard" : {
+
+    },
+    "de %lld kcal" : {
+
+    },
+    "Déficit Calórico" : {
+
+    },
+    "Déficit desativado para objetivos de ganho de massa ou resistência." : {
+
+    },
+    "Déficit diário" : {
+
+    },
+    "Déficit: −%lld kcal" : {
+
+    },
+    "Defina quantas calorias pretende gastar neste cardio." : {
+
+    },
+    "Demonstração" : {
+
+    },
+    "Demonstração indisponível" : {
+
+    },
+    "Depois" : {
+
+    },
+    "Descanso acumulado: %@" : {
+
+    },
+    "Descanso encerrado!" : {
+
+    },
+    "Descanso padrão: %llds" : {
+
+    },
+    "Descanso total" : {
+
+    },
+    "Descanso: %@" : {
+
+    },
+    "Descrição" : {
+
+    },
+    "Deseja mesmo excluir sua conta?" : {
+
+    },
+    "Desempenho Semanal" : {
+
+    },
+    "Desenvolvedores" : {
+
+    },
+    "Deslize para a esquerda ou toque no ícone de lixeira para remover um exercício." : {
+
+    },
+    "Destaques da semana" : {
+
+    },
+    "Detalhes do Cardio" : {
+
+    },
+    "Dia" : {
+
+    },
+    "Distância meta" : {
+
+    },
+    "Documento indisponível" : {
+
+    },
+    "Duração" : {
+
+    },
+    "Duração sugerida" : {
+
+    },
+    "E-mail" : {
+
+    },
+    "E-mail do personal não cadastrado" : {
+
+    },
+    "E-mail enviado" : {
+
+    },
+    "E-mail enviado ao nutricionista" : {
+
+    },
+    "E-mail indisponível" : {
+
+    },
+    "Editar" : {
+
+    },
+    "Editar ficha" : {
+
+    },
+    "Editar Ficha" : {
+
+    },
+    "Empate com recorde" : {
+
+    },
+    "Encerra o treino antes de concluir todos os exercícios e pede uma justificativa" : {
+
+    },
+    "Encerrado antecipadamente" : {
+
+    },
+    "Encerrado automaticamente — você esqueceu de finalizar (mais de 2h30)" : {
+
+    },
+    "Encerrar" : {
+
+    },
+    "Encerrar antecipadamente" : {
+
+    },
+    "Encerrar treino sem concluir" : {
+
+    },
+    "Energéticos e Pré-treino" : {
+
+    },
+    "Energéticos hoje" : {
+
+    },
+    "Energéticos por semana" : {
+
+    },
+    "Entendo que não poderei recuperar minha conta" : {
+
+    },
+    "Entrar com Apple" : {
+
+    },
+    "Entrar com Google" : {
+
+    },
+    "Entre em contato para dúvidas, sugestões ou problemas com o HealthFit." : {
+
+    },
+    "Enviar e-mail" : {
+
+    },
+    "Enviar link de redefinição" : {
+
+    },
+    "Enviaremos um link para o seu e-mail com instruções para criar uma nova senha." : {
+
+    },
+    "Equivale a cerca de %lld copos de %lld ml ou %lld garrafas de %lld ml." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Equivale a cerca de %1$lld copos de %2$lld ml ou %3$lld garrafas de %4$lld ml."
+          }
+        }
+      }
+    },
+    "Escolha em qual seção da lista o item deve aparecer." : {
+
+    },
+    "Escolha o programa" : {
+
+    },
+    "Escolha pelo menos um grupo muscular." : {
+
+    },
+    "Escolha um exercício e defina a intensidade" : {
+
+    },
+    "Escolha um tópico e a duração da sessão" : {
+
+    },
+    "Escolha uma opção para cada refeição do dia" : {
+
+    },
+    "Escolher outro" : {
+
+    },
+    "Esqueceu de finalizar o treino" : {
+
+    },
+    "Essa justificativa será enviada no relatório ao personal." : {
+
+    },
+    "Esses dados alimentam o cálculo de calorias e o cardápio em Nutrição." : {
+
+    },
+    "Esta ação é permanente. Sua conta, treinos na nuvem, perfil e dados locais serão removidos." : {
+
+    },
+    "Etapa %lld de %lld" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Etapa %1$lld de %2$lld"
+          }
+        }
+      }
+    },
+    "Evolução calórica" : {
+
+    },
+    "Evolução da meditação" : {
+
+    },
+    "Evolução diária" : {
+
+    },
+    "Ex: 40" : {
+
+    },
+    "Excluindo conta…" : {
+
+    },
+    "Excluir" : {
+
+    },
+    "Excluir Conta" : {
+
+    },
+    "Excluir ficha" : {
+
+    },
+    "Excluir treino?" : {
+
+    },
+    "Exercício Atual" : {
+
+    },
+    "Exercícios" : {
+
+    },
+    "Exercícios (%lld)" : {
+
+    },
+    "Falha no envio" : {
+
+    },
+    "Fechar" : {
+
+    },
+    "Feminino" : {
+
+    },
+    "FEMININO" : {
+
+    },
+    "Ficha vinculada ao programa feminino." : {
+
+    },
+    "Ficha vinculada ao programa masculino." : {
+
+    },
+    "Fichas de peso corporal com demonstrações durante o treino" : {
+
+    },
+    "Finalizar Cardio" : {
+
+    },
+    "Finalizar Corrida" : {
+
+    },
+    "Finalizar Meditação" : {
+
+    },
+    "Firebase não configurado. Substitua o GoogleService-Info.plist pelo arquivo do Firebase Console." : {
+
+    },
+    "Full body, core, HIIT, pernas e superiores com demos" : {
+
+    },
+    "Garrafas (%lld ml): %lld" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Garrafas (%1$lld ml): %2$lld"
+          }
+        }
+      }
+    },
+    "Gasto diário estimado (TDEE): %lld kcal" : {
+
+    },
+    "Gerado pelo IAssistente — sugestão educativa. É essencial consultar um profissional de Educação Física antes de seguir esta ficha." : {
+
+    },
+    "Gerar Cardápio" : {
+
+    },
+    "Grupos Musculares" : {
+
+    },
+    "Guia de Execução" : {
+
+    },
+    "HealthFit" : {
+
+    },
+    "HealthKit" : {
+
+    },
+    "Hidratação diária" : {
+
+    },
+    "Hora de treinar!" : {
+
+    },
+    "Horas de sono (hoje)" : {
+
+    },
+    "IAssistente" : {
+
+    },
+    "Ícone de Saúde" : {
+
+    },
+    "Identidade confirmada" : {
+
+    },
+    "IMC" : {
+
+    },
+    "IMC: %@" : {
+
+    },
+    "Informações" : {
+
+    },
+    "Informe as circunferências em centímetros. Os campos vazios não entram no relatório." : {
+
+    },
+    "Informe seu sono da noite passada para acompanharmos sua recuperação." : {
+
+    },
+    "Ingredientes" : {
+
+    },
+    "Iniciar Cardio" : {
+
+    },
+    "Iniciar Corrida" : {
+
+    },
+    "Iniciar Meditação" : {
+
+    },
+    "Iniciar Treino" : {
+
+    },
+    "Integrações" : {
+
+    },
+    "Intensidade" : {
+
+    },
+    "Intensidade %@" : {
+
+    },
+    "Ir para Nutrição" : {
+
+    },
+    "Ir para Perfil" : {
+
+    },
+    "Item" : {
+
+    },
+    "Itens marcados como comprados na lista são contabilizados aqui. Deslize para remover do histórico." : {
+
+    },
+    "kcal queimadas" : {
+
+    },
+    "kg" : {
+
+    },
+    "Legal" : {
+
+    },
+    "Li e aceito os Termos de Uso e a Política de Privacidade" : {
+
+    },
+    "Limpar conversa" : {
+
+    },
+    "Lista de Compras" : {
+
+    },
+    "Lista Semanal" : {
+
+    },
+    "Livre" : {
+
+    },
+    "Mais comprados" : {
+
+    },
+    "Maratona (42,2 km)" : {
+
+    },
+    "Marcar como concluída" : {
+
+    },
+    "Marcar como não concluída" : {
+
+    },
+    "Masculino" : {
+
+    },
+    "MASCULINO" : {
+
+    },
+    "Medidas corporais" : {
+
+    },
+    "Medidas Corporais" : {
+
+    },
+    "Medidas salvas" : {
+
+    },
+    "Meditação" : {
+
+    },
+    "Meia (21,1 km)" : {
+
+    },
+    "Melhor marca anterior" : {
+
+    },
+    "Meta %@ km" : {
+
+    },
+    "Meta Calórica" : {
+
+    },
+    "Meta calórica final" : {
+
+    },
+    "Meta calórica: %lld kcal · sincronizado com Apple Watch" : {
+
+    },
+    "Meta de calorias" : {
+
+    },
+    "Meta kcal" : {
+
+    },
+    "Meta: %@" : {
+
+    },
+    "Meta: %@ km" : {
+
+    },
+    "Meta: %@ km · Ritmo %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Meta: %1$@ km · Ritmo %2$@"
+          }
+        }
+      }
+    },
+    "Meta: %lld kcal" : {
+
+    },
+    "Metabolismo Basal" : {
+
+    },
+    "Métrica" : {
+
+    },
+    "Minutos" : {
+
+    },
+    "Mobilidade" : {
+
+    },
+    "MOBILIDADE" : {
+
+    },
+    "Mobilidade ajuda a preparar articulações para agachamento, terra, supino e desenvolvimento." : {
+
+    },
+    "Modo" : {
+
+    },
+    "Modo da corrida" : {
+
+    },
+    "Modo perda de gordura: opções restritivas com baixo carboidrato e sem frituras." : {
+
+    },
+    "Montar Cardápio" : {
+
+    },
+    "Na meta" : {
+
+    },
+    "Não" : {
+
+    },
+    "Não foi possível carregar %@." : {
+
+    },
+    "Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas)." : {
+
+    },
+    "Não foi possível salvar" : {
+
+    },
+    "Não tomei" : {
+
+    },
+    "Não usou" : {
+
+    },
+    "Nenhum" : {
+
+    },
+    "Nenhum exercício nesta ficha. Selecione ao menos um grupo muscular." : {
+
+    },
+    "Nenhum item na lista" : {
+
+    },
+    "Nenhum plano gerado" : {
+
+    },
+    "Nenhum treino realizado ainda" : {
+
+    },
+    "Nenhuma atividade registrada nesta semana." : {
+
+    },
+    "Nenhuma medida variou entre as duas aferições." : {
+
+    },
+    "Nenhuma sessão de meditação nesta semana. Reserve alguns minutos para acalmar a mente." : {
+
+    },
+    "Neste treino" : {
+
+    },
+    "Nome  Completo" : {
+
+    },
+    "Nome completo: %@" : {
+
+    },
+    "Nome do item" : {
+
+    },
+    "Nome do treino" : {
+
+    },
+    "Notificação e alerta sonoro enviados.\nToque para continuar o treino." : {
+
+    },
+    "Notificações" : {
+
+    },
+    "Notificações de descanso" : {
+
+    },
+    "Nova Ficha" : {
+
+    },
+    "NOVO" : {
+
+    },
+    "Novo item" : {
+
+    },
+    "Novo recorde! −%lld min" : {
+
+    },
+    "Nutrição" : {
+
+    },
+    "Nutricionista não cadastrado" : {
+
+    },
+    "nutrition.mark_completed" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark as completed"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mark as not completed"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marcar como completada"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Marcar como no completada"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marquer comme terminée"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Marquer comme non terminée"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marcar como concluída"
+          }
+        }
+      }
+    },
+    "nutrition.mark_incomplete" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark as not completed"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marcar como no completada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marquer comme non terminée"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marcar como não concluída"
+          }
+        }
+      }
+    },
+    "nutrition.meal_completed" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminée"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Concluída"
+          }
+        }
+      }
+    },
+    "nutrition.send_report" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send report to nutritionist"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar informe al nutricionista"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer le rapport au nutritionniste"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar relatório ao nutricionista"
+          }
+        }
+      }
+    },
+    "O ícone do app na tela inicial usa a mesma cor." : {
+
+    },
+    "O que melhorar" : {
+
+    },
+    "O relatório de Nutrição é enviado apenas ao nutricionista. Treinos continuam indo só para o personal." : {
+
+    },
+    "O relatório de nutrição foi enviado com sucesso." : {
+
+    },
+    "O relatório de nutrição foi enviado para %@ com sucesso." : {
+
+    },
+    "O relatório foi enviado com sucesso." : {
+
+    },
+    "O relatório foi enviado para %@ com sucesso." : {
+
+    },
+    "Objetivo" : {
+
+    },
+    "Objetivo: %@" : {
+
+    },
+    "OK" : {
+
+    },
+    "OK vamos lá" : {
+
+    },
+    "Olá, %@!" : {
+
+    },
+    "Orientações" : {
+
+    },
+    "Ótimo! Menos cafeína ajuda no sono e na recuperação muscular." : {
+
+    },
+    "Ou escolha uma meta em quilômetros:" : {
+
+    },
+    "P:%lldg C:%lldg" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "P:%1$lldg C:%2$lldg"
+          }
+        }
+      }
+    },
+    "P:%lldg C:%lldg G:%lldg" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "P:%1$lldg C:%2$lldg G:%3$lldg"
+          }
+        }
+      }
+    },
+    "PARA MUSCULAÇÃO" : {
+
+    },
+    "Para: %@" : {
+
+    },
+    "Para: %@ · %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Para: %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "Parcial" : {
+
+    },
+    "Pausa" : {
+
+    },
+    "Pausa %lld segundos" : {
+
+    },
+    "Pendente" : {
+
+    },
+    "Perda estimada" : {
+
+    },
+    "Perfil" : {
+
+    },
+    "Performance Maratona" : {
+
+    },
+    "Personalizado" : {
+
+    },
+    "Peso, altura, idade e sexo foram salvos e sincronizados. A Nutrição usa esses dados para o cardápio." : {
+
+    },
+    "Pesquise no catálogo ou toque em + para criar um item personalizado e escolher a categoria." : {
+
+    },
+    "Plano para %@" : {
+
+    },
+    "Plano Semanal" : {
+
+    },
+    "pontos" : {
+
+    },
+    "Por que você está encerrando o treino antes de concluir todos os exercícios?" : {
+
+    },
+    "Possui nutricionista?" : {
+
+    },
+    "Possui personal?" : {
+
+    },
+    "Poxa… o treino ficou aberto por mais de 2h30. Eu encerrei por segurança — não se preocupe, estou aqui pra te ajudar no próximo." : {
+
+    },
+    "Pré-treino" : {
+
+    },
+    "Pré-treino hoje" : {
+
+    },
+    "Pré-treino: %@." : {
+
+    },
+    "profile.has_nutritionist" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do you have a nutritionist?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Tienes nutricionista?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avez-vous un nutritionniste ?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você possui nutricionista?"
+          }
+        }
+      }
+    },
+    "profile.has_personal_trainer" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do you have a personal trainer?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Tienes entrenador personal?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avez-vous un coach personnel ?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você possui personal trainer?"
+          }
+        }
+      }
+    },
+    "profile.nutritionist" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutritionist"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutricionista"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutritionniste"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutricionista"
+          }
+        }
+      }
+    },
+    "profile.nutritionist_email" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutritionist email"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Correo del nutricionista"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-mail du nutritionniste"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-mail do Nutricionista"
+          }
+        }
+      }
+    },
+    "profile.nutritionist_name" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutritionist name"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nombre del nutricionista"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nom du nutritionniste"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nome do Nutricionista"
+          }
+        }
+      }
+    },
+    "profile.personal_trainer" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personal Trainer"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entrenador personal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coach personnel"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personal Trainer"
+          }
+        }
+      }
+    },
+    "profile.trainer_email" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trainer email"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Correo del entrenador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-mail du coach"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-mail do Personal"
+          }
+        }
+      }
+    },
+    "profile.trainer_name" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trainer name"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nombre del entrenador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nom du coach"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nome do Personal"
+          }
+        }
+      }
+    },
+    "Projeções com este ritmo" : {
+
+    },
+    "Próximo relatório em %lld dia(s)" : {
+
+    },
+    "Pular Descanso" : {
+
+    },
+    "Quantas horas você dormiu?" : {
+
+    },
+    "Quantidade" : {
+
+    },
+    "Quantos energéticos você bebe durante o dia?" : {
+
+    },
+    "Quantos pré-treinos você tomou hoje?" : {
+
+    },
+    "Rec. %@" : {
+
+    },
+    "Recomendada" : {
+
+    },
+    "Recomendados" : {
+
+    },
+    "Redefinir senha" : {
+
+    },
+    "Refeições: %lld/%lld concluídas" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Refeições: %1$lld/%2$lld concluídas"
+          }
+        }
+      }
+    },
+    "Regenerar lista" : {
+
+    },
+    "Registrado ao iniciar treino" : {
+
+    },
+    "Registrar sono" : {
+
+    },
+    "Registre seu sono ao abrir o app ou ajuste o controle acima." : {
+
+    },
+    "Relatório de compras da semana" : {
+
+    },
+    "Relatório Semanal" : {
+
+    },
+    "Relatórios da aba Nutrição poderão ser enviados por e-mail" : {
+
+    },
+    "Relatórios de treino poderão ser enviados por e-mail" : {
+
+    },
+    "Remover da ficha" : {
+
+    },
+    "Repetições" : {
+
+    },
+    "Reps" : {
+
+    },
+    "Resetar" : {
+
+    },
+    "Responda antes de montar o cardápio." : {
+
+    },
+    "Responda sobre lactose e doces para montar seu cardápio." : {
+
+    },
+    "Respostas desta semana" : {
+
+    },
+    "restantes" : {
+
+    },
+    "Ritmo alvo" : {
+
+    },
+    "Ritmo alvo: %@" : {
+
+    },
+    "Ritmo de referência" : {
+
+    },
+    "Ritmo de referência: %@" : {
+
+    },
+    "Rotinas de mobilidade voltadas à musculação, com GIFs na execução" : {
+
+    },
+    "Sair" : {
+
+    },
+    "Sair da Conta" : {
+
+    },
+    "Sair da conta?" : {
+
+    },
+    "Salvar" : {
+
+    },
+    "Salvar dados" : {
+
+    },
+    "Salvar medidas" : {
+
+    },
+    "Salvar no Plano Semanal" : {
+
+    },
+    "Seção" : {
+
+    },
+    "Selecionada · toque no círculo para desmarcar a conclusão" : {
+
+    },
+    "Selecionada · toque no círculo para marcar como concluída" : {
+
+    },
+    "Selecione um ou mais grupos musculares. Os exercícios do catálogo são carregados automaticamente — remova os que não quiser." : {
+
+    },
+    "Sem Apple Watch · 0 kcal" : {
+
+    },
+    "SEM EQUIPAMENTOS" : {
+
+    },
+    "Sem meta" : {
+
+    },
+    "Sem meta definida — as calorias serão acompanhadas em tempo real pelo Apple Watch durante o treino." : {
+
+    },
+    "Sem minutos de meditação registrados nesta semana." : {
+
+    },
+    "Sem nutricionista cadastrado. A edição de nome e e-mail fica bloqueada." : {
+
+    },
+    "Sem personal cadastrado. A edição de nome e e-mail fica bloqueada." : {
+
+    },
+    "Semana anterior" : {
+
+    },
+    "Senha" : {
+
+    },
+    "Senha atual" : {
+
+    },
+    "Será necessário confirmar seu login com Google para concluir a exclusão." : {
+
+    },
+    "Série Completa" : {
+
+    },
+    "Séries" : {
+
+    },
+    "Seu apelido ou primeiro nome" : {
+
+    },
+    "Seus Dados" : {
+
+    },
+    "Sexo" : {
+
+    },
+    "Sim" : {
+
+    },
+    "Sim, excluir conta" : {
+
+    },
+    "Sim, tomei" : {
+
+    },
+    "Sincronização ativa" : {
+
+    },
+    "Sobre" : {
+
+    },
+    "Sono e Hidratação" : {
+
+    },
+    "Sua carga" : {
+
+    },
+    "Suporte" : {
+
+    },
+    "tab.assistant" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI Coach"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IAsistente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IAssistant"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IAssistente"
+          }
+        }
+      }
+    },
+    "tab.home" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicio"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accueil"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Início"
+          }
+        }
+      }
+    },
+    "tab.nutrition" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutrition"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutrición"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutrition"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutrição"
+          }
+        }
+      }
+    },
+    "tab.profile" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profile"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perfil"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perfil"
+          }
+        }
+      }
+    },
+    "tab.workouts" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Workouts"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entrenos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Séances"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Treinos"
+          }
+        }
+      }
+    },
+    "TDEE: %lld kcal" : {
+
+    },
+    "tempo" : {
+
+    },
+    "Tempo estimado" : {
+
+    },
+    "Tempo nos exercícios" : {
+
+    },
+    "Tempo por Exercício" : {
+
+    },
+    "TMB: %lld kcal" : {
+
+    },
+    "Toca para sincronizar com o Apple Watch" : {
+
+    },
+    "Todas as respostas" : {
+
+    },
+    "Todos os itens desta categoria já estão na sua lista." : {
+
+    },
+    "Tópicos da sessão" : {
+
+    },
+    "Tópicos praticados" : {
+
+    },
+    "Toque em + para incluir na lista" : {
+
+    },
+    "Toque na refeição para selecionar e marque como concluída quando comer." : {
+
+    },
+    "Toque para adicionar foto" : {
+
+    },
+    "Toque para alterar foto" : {
+
+    },
+    "Total de encerramentos antecipados: %lld vez(es)" : {
+
+    },
+    "Total histórico com pré-treino" : {
+
+    },
+    "Treine em Casa" : {
+
+    },
+    "TREINE EM CASA" : {
+
+    },
+    "Treino Concluído" : {
+
+    },
+    "Treino em andamento: %@" : {
+
+    },
+    "Treino Encerrado" : {
+
+    },
+    "Treino encerrado sem conclusão completa" : {
+
+    },
+    "Treino repetido" : {
+
+    },
+    "Treinos" : {
+
+    },
+    "Treinos com peso corporal — sem academia" : {
+
+    },
+    "Treinos Recentes" : {
+
+    },
+    "Última atualização: %@" : {
+
+    },
+    "Usado nas saudações, motivação e mensagens do app." : {
+
+    },
+    "Use + e − para ajustar a quantidade. O número aparece ao lado e entra na lista de compras." : {
+
+    },
+    "Use os resultados abaixo para adicionar à lista de compras." : {
+
+    },
+    "Usou pré-treino" : {
+
+    },
+    "Valor" : {
+
+    },
+    "Vamos lá!" : {
+
+    },
+    "Veja seu progresso e o que melhorar esta semana" : {
+
+    },
+    "Ver comparativo de %lld dia(s)" : {
+
+    },
+    "Vision" : {
+
+    },
+    "Vision AI" : {
+
+    },
+    "Você consome muito doce?" : {
+
+    },
+    "Você tolera lactose?" : {
+
+    },
+    "Você tomou pré-treino antes deste treino? %@." : {
+
+    },
+    "Volume semanal" : {
+
+    },
+    "vs meta diária" : {
+
+    },
+    "workout.female" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FEMALE"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FEMENINO"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FEMME"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FEMININO"
+          }
+        }
+      }
+    },
+    "workout.home_title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TRAIN AT HOME"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ENTRENA EN CASA"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À LA MAISON"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TREINE EM CASA"
+          }
+        }
+      }
+    },
+    "workout.male" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MALE"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MASCULINO"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HOMME"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MASCULINO"
+          }
+        }
+      }
+    },
+    "workout.mobility" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MOBILITY"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MOVILIDAD"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MOBILITÉ"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MOBILIDADE"
+          }
+        }
+      }
+    },
+    "workout.section.cardio" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cardio"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cardio"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cardio"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cardio"
+          }
+        }
+      }
+    },
+    "workout.section.home" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Train at Home"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entrena en Casa"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S'entraîner à la maison"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Treine em Casa"
+          }
+        }
+      }
+    },
+    "workout.section.meditation" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meditation"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meditación"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Méditation"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meditação"
+          }
+        }
+      }
+    },
+    "workout.section.strength" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strength"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Musculación"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Musculation"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Musculação"
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

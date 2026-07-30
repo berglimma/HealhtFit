@@ -71,7 +71,13 @@ struct HealthChatView: View {
                         }
                         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                         .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            dismissChatKeyboard()
+                        }
                     }
+                    .scrollDismissesKeyboard(.interactively)
                     .onChange(of: assistant.messages.count) { _, _ in
                         scrollToBottom(proxy)
                     }
@@ -98,14 +104,23 @@ struct HealthChatView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
+                        dismissChatKeyboard()
                         assistant.clear(context: context)
                     } label: {
                         Image(systemName: "arrow.counterclockwise")
                     }
                     .accessibilityLabel("Limpar conversa")
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Fechar") {
+                        dismissChatKeyboard()
+                    }
+                    .fontWeight(.semibold)
+                }
             }
             .onAppear {
+                dismissChatKeyboard()
                 bootstrapOrResumeCheckIn()
                 assistant.handleTabReturn()
                 assistant.checkCardioMeditationNudgeIfNeeded(
@@ -113,6 +128,9 @@ struct HealthChatView: View {
                     sessions: workoutStore.sessionHistory,
                     accountCreatedAt: authService.currentUser?.createdAt
                 )
+            }
+            .onDisappear {
+                dismissChatKeyboard()
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
@@ -191,13 +209,18 @@ struct HealthChatView: View {
         }
     }
 
+    private func dismissChatKeyboard() {
+        isInputFocused = false
+        KeyboardDismiss.hide()
+    }
+
     private var suggestionStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(suggestedReplies, id: \.self) { question in
                     Button {
                         draft = ""
-                        isInputFocused = false
+                        dismissChatKeyboard()
                         assistant.send(question, context: context, workoutStore: workoutStore)
                     } label: {
                         Text(question)
@@ -263,6 +286,10 @@ struct HealthChatView: View {
             )
                 .lineLimit(1...4)
                 .focused($isInputFocused)
+                .submitLabel(.send)
+                .onSubmit {
+                    sendDraftIfPossible()
+                }
                 .disabled(assistant.isTyping)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -271,10 +298,7 @@ struct HealthChatView: View {
                 .foregroundStyle(AppTheme.textPrimary)
 
             Button {
-                let text = draft
-                draft = ""
-                isInputFocused = false
-                assistant.send(text, context: context, workoutStore: workoutStore)
+                sendDraftIfPossible()
             } label: {
                 Image(systemName: "paperplane.fill")
                     .font(.title3)
@@ -289,6 +313,14 @@ struct HealthChatView: View {
         .padding(.vertical, 10)
         .background(AppTheme.cardBackground.opacity(0.6))
         .opacity(assistant.isTyping ? 0.85 : 1)
+    }
+
+    private func sendDraftIfPossible() {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !assistant.isTyping else { return }
+        draft = ""
+        dismissChatKeyboard()
+        assistant.send(text, context: context, workoutStore: workoutStore)
     }
 }
 

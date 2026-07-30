@@ -60,6 +60,8 @@ struct MainTabView: View {
             }
         }
         .onChange(of: selectedTab) { _, tab in
+            // Libera o teclado do IAssistente para as abas/tab bar responderem no iPhone.
+            KeyboardDismiss.hide()
             updateAssistantTabVisibility(for: tab)
         }
         .onChange(of: authService.currentUser?.id) { _, _ in

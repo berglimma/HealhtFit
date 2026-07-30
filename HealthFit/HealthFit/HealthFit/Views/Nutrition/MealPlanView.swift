@@ -25,6 +25,7 @@ struct MealPlanView: View {
     @State private var showEmailSentAlert = false
     @State private var showEmailFailedAlert = false
     @State private var emailWasSent = false
+    @State private var showMealPlanUpdatedAlert = false
 
     private var selectedGoal: FitnessGoal {
         authService.currentUser?.goal ?? .muscleGain
@@ -119,6 +120,11 @@ struct MealPlanView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("Configure uma conta de e-mail no iPhone ou cadastre o e-mail do nutricionista no Perfil.")
+            }
+            .alert("Cardápio atualizado", isPresented: $showMealPlanUpdatedAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Seu cardápio semanal foi atualizado com base nas suas preferências e metas.")
             }
             .onAppear {
                 syncFromProfile()
@@ -832,6 +838,7 @@ struct MealPlanView: View {
         authService.updateProfile(user)
         mealPlanService.generatePlan(for: user)
         ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
+        showMealPlanUpdatedAlert = true
     }
 
     private var mealReminderNotice: some View {

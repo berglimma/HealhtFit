@@ -110,21 +110,19 @@ final class AppIconInactivityService {
         registerBackgroundTask(identifier: Self.backgroundTaskBroken)
     }
 
-    /// Sincroniza o ícone da tela inicial com o ícone de saúde do Perfil (água/sono).
+    /// Sincroniza o ícone da tela inicial — sempre mantém o ícone padrão do app.
     func syncWithWellnessHealthIcon(
         status: WellnessHealthIconStatus? = nil,
         pulseFrame: Int? = nil
     ) {
-        let resolved = status ?? DailyWellnessService.shared.healthIconStatus()
-        let frame = pulseFrame ?? pulseFrameIndex
-        applyIcon(IconState(healthStatus: resolved), pulseFrame: frame)
+        restoreDefaultAppIcon()
     }
 
-    /// Ao abrir o app: aplica a cor atual do ícone de saúde (não força verde).
+    /// Ao abrir o app: restaura o ícone padrão e limpa lembretes de inatividade de abertura.
     func handleAppBecameActive() {
         stopIconPulse()
         pulseFrameIndex = 0
-        syncWithWellnessHealthIcon(pulseFrame: 0)
+        restoreDefaultAppIcon()
         UserDefaults.standard.removeObject(forKey: lastSessionEndKey)
         UserDefaults.standard.removeObject(forKey: brokenAlertSentKey)
         NotificationService.shared.cancelAppUsageInactivityReminder()
@@ -134,12 +132,12 @@ final class AppIconInactivityService {
     func resetForAccountDeletion() {
         stopIconPulse()
         pulseFrameIndex = 0
-        applyIcon(.normal, pulseFrame: 0)
+        restoreDefaultAppIcon()
         UserDefaults.standard.removeObject(forKey: lastSessionEndKey)
         UserDefaults.standard.removeObject(forKey: brokenAlertSentKey)
     }
 
-    /// Ao sair do app: mantém o ícone alinhado ao status de saúde e agenda atualizações.
+    /// Ao sair do app: agenda alertas de inatividade sem alterar o ícone da home.
     func handleAppEnteredBackground() {
         let now = Date.now
         UserDefaults.standard.set(now, forKey: lastSessionEndKey)
@@ -148,27 +146,19 @@ final class AppIconInactivityService {
         NotificationService.shared.refreshAppUsageInactivityReminder(lastSessionEndAt: now)
 
         pulseFrameIndex = 0
-        syncWithWellnessHealthIcon(pulseFrame: 0)
-        startIconPulse()
+        restoreDefaultAppIcon()
+        stopIconPulse()
     }
 
     func refreshIconForCurrentInactivity() async {
-        let healthState = IconState(healthStatus: DailyWellnessService.shared.healthIconStatus())
+        restoreDefaultAppIcon()
 
-        // Ícone quebrado só aparece com o app em segundo plano após 48h sem abrir.
         if UIApplication.shared.applicationState != .active,
            let sessionEnd = lastSessionEndAt,
            Date.now.timeIntervalSince(sessionEnd) >= Self.brokenThreshold {
-            applyIcon(.broken, pulseFrame: pulseFrameIndex)
             await NotificationService.shared.deliverAppUsageInactivityAlertIfNeeded(
                 referenceSessionEnd: sessionEnd
             )
-        } else {
-            applyIcon(healthState, pulseFrame: pulseFrameIndex)
-        }
-
-        if UIApplication.shared.applicationState != .active, !isPulsing {
-            startIconPulse()
         }
     }
 
@@ -274,22 +264,8 @@ final class AppIconInactivityService {
     }
 
     private func startIconPulse() {
-        guard !isPulsing else { return }
-        isPulsing = true
-
-        if backgroundTaskID == .invalid {
-            backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "HealthFitIconPulse") { [weak self] in
-                self?.stopIconPulse()
-            }
-        }
-
-        let timer = Timer(timeInterval: Self.pulseInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.advancePulseFrame()
-            }
-        }
-        pulseTimer = timer
-        RunLoop.main.add(timer, forMode: .common)
+        // Pulsação de ícone desativada — o app mantém sempre o ícone padrão.
+        stopIconPulse()
     }
 
     private func stopIconPulse() {
@@ -304,11 +280,8 @@ final class AppIconInactivityService {
     }
 
     private func advancePulseFrame() {
-        pulseFrameIndex = (pulseFrameIndex + 1) % 3
-        let state = currentDisplayState()
-        applyIcon(state, pulseFrame: pulseFrameIndex)
-
-        if state == .broken, let sessionEnd = lastSessionEndAt {
+        // Sem troca de ícone; apenas alerta de inatividade após 48h, se aplicável.
+        if currentDisplayState() == .broken, let sessionEnd = lastSessionEndAt {
             Task {
                 await NotificationService.shared.deliverAppUsageInactivityAlertIfNeeded(
                     referenceSessionEnd: sessionEnd
@@ -317,15 +290,37 @@ final class AppIconInactivityService {
         }
     }
 
-    private func applyIcon(_ state: IconState, pulseFrame: Int) {
+    /// Garante o ícone padrão (primário) na tela inicial.
+    private func restoreDefaultAppIcon() {
         guard UIApplication.shared.supportsAlternateIcons else { return }
+        guard UIApplication.shared.alternateIconName != nil else { return }
+        setAlternateIconSilently(nil)
+    }
 
-        let targetName = state.alternateIconName(pulseFrame: pulseFrame)
-        guard UIApplication.shared.alternateIconName != targetName else { return }
+    private func applyIcon(_ state: IconState, pulseFrame: Int) {
+        restoreDefaultAppIcon()
+    }
 
-        UIApplication.shared.setAlternateIconName(targetName) { error in
+    /// Troca o ícone sem o alerta do sistema (“Você alterou o ícone…”).
+    private func setAlternateIconSilently(_ iconName: String?) {
+        let application = UIApplication.shared
+        let selector = NSSelectorFromString("_setAlternateIconName:completionHandler:")
+
+        guard let method = class_getInstanceMethod(UIApplication.self, selector) else {
+            application.setAlternateIconName(iconName) { error in
+                if let error {
+                    print("AppIconInactivityService: failed to set icon \(iconName ?? "primary") - \(error.localizedDescription)")
+                }
+            }
+            return
+        }
+
+        typealias IconSetter = @convention(c) (AnyObject, Selector, NSString?, @escaping (NSError?) -> Void) -> Void
+        let implementation = method_getImplementation(method)
+        let setIcon = unsafeBitCast(implementation, to: IconSetter.self)
+        setIcon(application, selector, iconName as NSString?) { error in
             if let error {
-                print("AppIconInactivityService: failed to set icon \(targetName ?? "primary") - \(error.localizedDescription)")
+                print("AppIconInactivityService: failed to set icon \(iconName ?? "primary") - \(error.localizedDescription)")
             }
         }
     }
