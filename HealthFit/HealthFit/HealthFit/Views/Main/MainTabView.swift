@@ -3,16 +3,19 @@ import SwiftUI
 struct MainTabView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var wellnessService: DailyWellnessService
+    @EnvironmentObject var workoutStore: WorkoutStore
     @ObservedObject private var checkInService = PostWorkoutCheckInService.shared
     @ObservedObject private var dailyMorningService = DailyMorningCheckInService.shared
     @ObservedObject private var dailyEveningService = DailyEveningCheckInService.shared
     @ObservedObject private var profileReminder = ProfileDataReminderService.shared
     @State private var selectedTab = 0
     @State private var isShowingProfileDataPrompt = false
+    @State private var presentedActiveSheet: WorkoutSheet?
 
     private let assistantTabTag = 3
     private let nutritionTabTag = 2
     private let profileTabTag = 4
+    private let workoutsTabTag = 1
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -26,7 +29,7 @@ struct MainTabView: View {
                 .tabItem {
                     Label(L10n.Tab.workouts, systemImage: "dumbbell.fill")
                 }
-                .tag(1)
+                .tag(workoutsTabTag)
 
             MealPlanView()
                 .tabItem {
@@ -49,10 +52,35 @@ struct MainTabView: View {
         }
         .tint(AppTheme.accent)
         .tabViewStyle(.automatic)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+        if let session = workoutStore.activeSession, workoutStore.isActiveWorkoutMinimized {
+                ActiveWorkoutBanner(
+                    session: session,
+                    currentExerciseName: workoutStore.currentExercise?.name
+                ) {
+                    workoutStore.resumeActiveWorkout()
+                    syncActiveWorkoutPresentation()
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 4)
+            }
+        }
+        .fullScreenCover(item: $presentedActiveSheet, onDismiss: {
+            // Se o treino ainda está ativo, foi um minimizar (não o fim da sessão).
+            if workoutStore.activeSession != nil {
+                workoutStore.minimizeActiveWorkout()
+            }
+            syncActiveWorkoutPresentation()
+        }) { sheet in
+            ActiveWorkoutView(sheet: sheet) {
+                selectedTab = workoutsTabTag
+            }
+        }
         .onAppear {
             updateAssistantTabVisibility(for: selectedTab)
             checkInService.refreshAssistantBadge()
             profileReminder.evaluate(for: authService.currentUser)
+            syncActiveWorkoutPresentation()
             Task { @MainActor in
                 // Aguarda o check-in de sono (se houver) ter prioridade antes do pop-up de dados.
                 try? await Task.sleep(for: .milliseconds(700))
@@ -63,6 +91,12 @@ struct MainTabView: View {
             // Libera o teclado do IAssistente para as abas/tab bar responderem no iPhone.
             KeyboardDismiss.hide()
             updateAssistantTabVisibility(for: tab)
+        }
+        .onChange(of: workoutStore.activeSession?.id) { _, _ in
+            syncActiveWorkoutPresentation()
+        }
+        .onChange(of: workoutStore.isActiveWorkoutMinimized) { _, _ in
+            syncActiveWorkoutPresentation()
         }
         .onChange(of: authService.currentUser?.id) { _, _ in
             profileReminder.evaluate(for: authService.currentUser)
@@ -137,5 +171,15 @@ struct MainTabView: View {
 
     private func updateAssistantTabVisibility(for tab: Int) {
         checkInService.setAssistantTabActive(tab == assistantTabTag)
+    }
+
+    private func syncActiveWorkoutPresentation() {
+        if let sheet = workoutStore.activeStrengthSheet(),
+           workoutStore.activeSession != nil,
+           !workoutStore.isActiveWorkoutMinimized {
+            presentedActiveSheet = sheet
+        } else {
+            presentedActiveSheet = nil
+        }
     }
 }

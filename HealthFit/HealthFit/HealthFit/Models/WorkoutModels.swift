@@ -287,6 +287,7 @@ struct ExerciseSessionRecord: Identifiable, Codable, Hashable {
     var elapsedSeconds: Int
     var restSeconds: Int
     var isCompleted: Bool
+    var completedSets: Int
     var recommendedWeight: Double?
     var performedWeight: Double?
 
@@ -298,6 +299,7 @@ struct ExerciseSessionRecord: Identifiable, Codable, Hashable {
         elapsedSeconds: Int = 0,
         restSeconds: Int = 0,
         isCompleted: Bool = false,
+        completedSets: Int = 0,
         recommendedWeight: Double? = nil,
         performedWeight: Double? = nil
     ) {
@@ -306,8 +308,26 @@ struct ExerciseSessionRecord: Identifiable, Codable, Hashable {
         self.elapsedSeconds = elapsedSeconds
         self.restSeconds = restSeconds
         self.isCompleted = isCompleted
+        self.completedSets = max(0, completedSets)
         self.recommendedWeight = recommendedWeight
         self.performedWeight = performedWeight
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case exerciseId, exerciseName, elapsedSeconds, restSeconds, isCompleted
+        case completedSets, recommendedWeight, performedWeight
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        exerciseId = try container.decode(UUID.self, forKey: .exerciseId)
+        exerciseName = try container.decode(String.self, forKey: .exerciseName)
+        elapsedSeconds = try container.decodeIfPresent(Int.self, forKey: .elapsedSeconds) ?? 0
+        restSeconds = try container.decodeIfPresent(Int.self, forKey: .restSeconds) ?? 0
+        isCompleted = try container.decodeIfPresent(Bool.self, forKey: .isCompleted) ?? false
+        completedSets = try container.decodeIfPresent(Int.self, forKey: .completedSets) ?? 0
+        recommendedWeight = try container.decodeIfPresent(Double.self, forKey: .recommendedWeight)
+        performedWeight = try container.decodeIfPresent(Double.self, forKey: .performedWeight)
     }
 
     var weightComparisonLabel: String? {
@@ -475,6 +495,41 @@ enum DurationFormatting {
         let minutes = seconds / 60
         let secs = seconds % 60
         return String(format: "%02d:%02d", minutes, secs)
+    }
+}
+
+/// Contagem de séries no formato "1/1 de 3", "1/2 de 3", "3/3 de 3".
+enum SetProgressFormatting {
+    /// Série em andamento (1-based). Com todas concluídas, retorna o total.
+    static func currentSet(completed: Int, totalSets: Int) -> Int {
+        let total = max(totalSets, 1)
+        let done = min(max(completed, 0), total)
+        if done >= total { return total }
+        return done + 1
+    }
+
+    /// Ex.: total 3 → "1/1 de 3", "1/2 de 3", "3/3 de 3".
+    /// Total 4/5 segue o mesmo modelo (na última: "4/4 de 4", "5/5 de 5").
+    static func progressLabel(completed: Int, totalSets: Int) -> String {
+        let total = max(totalSets, 1)
+        let done = min(max(completed, 0), total)
+        if done >= total {
+            return "\(total)/\(total) de \(total)"
+        }
+        let current = done + 1
+        if done == 0 {
+            return "1/1 de \(total)"
+        }
+        if current == total {
+            return "\(total)/\(total) de \(total)"
+        }
+        return "\(done)/\(current) de \(total)"
+    }
+
+    static func isLastSet(completed: Int, totalSets: Int) -> Bool {
+        let total = max(totalSets, 1)
+        let done = min(max(completed, 0), total)
+        return done >= total - 1
     }
 }
 

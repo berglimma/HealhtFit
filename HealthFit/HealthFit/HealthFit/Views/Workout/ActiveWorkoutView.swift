@@ -11,7 +11,6 @@ struct ActiveWorkoutView: View {
 
     let sheet: WorkoutSheet
     var onReturnToWorkoutList: (() -> Void)? = nil
-    @State private var completedSets: [UUID: Int] = [:]
     @State private var finishedSession: WorkoutSession?
     @State private var workoutElapsedSeconds = 0
     @State private var isFinishing = false
@@ -27,6 +26,10 @@ struct ActiveWorkoutView: View {
 
     private var trimmedEarlyEndJustification: String {
         earlyEndJustification.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func setsDone(for exerciseId: UUID) -> Int {
+        workoutStore.completedSets(for: exerciseId)
     }
 
     var body: some View {
@@ -82,8 +85,9 @@ struct ActiveWorkoutView: View {
                         .allowsHitTesting(true)
                 }
 
-                if showWorkoutStartMotivation {
+                if showWorkoutStartMotivation && !workoutStore.hasShownStartMotivation {
                     WorkoutStartMotivationOverlay {
+                        workoutStore.markStartMotivationShown()
                         showWorkoutStartMotivation = false
                     }
                 }
@@ -94,6 +98,12 @@ struct ActiveWorkoutView: View {
             .numericKeyboardDismiss()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
+                    Button("Minimizar") {
+                        workoutStore.minimizeActiveWorkout()
+                    }
+                    .disabled(isFinishing)
+                }
+                ToolbarItem(placement: .primaryAction) {
                     Button("Encerrar") {
                         requestEarlyEnd()
                     }
@@ -118,7 +128,12 @@ struct ActiveWorkoutView: View {
             }
         }
         .onAppear {
-            timerService.resetSessionTracking()
+            if !workoutStore.hasBoundActiveWorkoutUI {
+                if !timerService.isRunning && !timerService.isAwaitingResumeAcknowledgment {
+                    timerService.resetSessionTracking()
+                }
+                workoutStore.markActiveWorkoutUIBound()
+            }
             timerService.onRestOvertime = { exerciseName in
                 watchConnectivity.sendRestOvertimeAlert(exerciseName: exerciseName)
             }
@@ -126,10 +141,18 @@ struct ActiveWorkoutView: View {
             syncWatchWorkoutState()
             updateWorkoutElapsed()
             syncLiveExerciseElapsed()
+            if workoutStore.hasShownStartMotivation {
+                showWorkoutStartMotivation = false
+            }
+            if timerService.isRunning || timerService.isAwaitingResumeAcknowledgment {
+                workoutStore.setExerciseTimerPaused(true)
+            }
+            syncLockScreenLiveActivity()
         }
         .onChange(of: workoutStore.currentExerciseIndex) { _, _ in
             prepareDemoForCurrentExercise(force: true)
             syncLiveExerciseElapsed()
+            syncLockScreenLiveActivity()
         }
         .onChange(of: workoutStore.currentExercise?.id) { _, _ in
             prepareDemoForCurrentExercise(force: true)
@@ -140,6 +163,15 @@ struct ActiveWorkoutView: View {
                 // watch notified in startRest
             } else {
                 watchConnectivity.sendRestTimerStop()
+            }
+            syncLockScreenLiveActivity()
+        }
+        .onChange(of: timerService.isAwaitingResumeAcknowledgment) { _, _ in
+            syncLockScreenLiveActivity()
+        }
+        .onChange(of: timerService.configuredRestSeconds) { _, _ in
+            if timerService.isRunning || timerService.isAwaitingResumeAcknowledgment {
+                syncLockScreenLiveActivity()
             }
         }
         .onReceive(workoutClock) { _ in
@@ -294,13 +326,27 @@ struct ActiveWorkoutView: View {
             }
 
             HStack(spacing: 24) {
-                VStack {
-                    Text("\(completedSets[exercise.id, default: 0])/\(exercise.sets)")
-                        .font(.title2.bold())
-                    Text("Séries")
+                let done = setsDone(for: exercise.id)
+                let total = max(exercise.sets, 1)
+                let current = SetProgressFormatting.currentSet(completed: done, totalSets: total)
+
+                VStack(spacing: 4) {
+                    Text(SetProgressFormatting.progressLabel(completed: done, totalSets: total))
+                        .font(.title3.bold())
+                        .monospacedDigit()
+                    Text(done >= total ? "Séries concluídas" : "Série \(current)")
                         .font(.caption)
                 }
-                VStack {
+
+                VStack(spacing: 4) {
+                    Text("\(total)")
+                        .font(.title2.bold())
+                        .monospacedDigit()
+                    Text("Total")
+                        .font(.caption)
+                }
+
+                VStack(spacing: 4) {
                     Text("\(exercise.reps)")
                         .font(.title2.bold())
                     Text("Reps")
@@ -318,17 +364,27 @@ struct ActiveWorkoutView: View {
                 Button {
                     completeSet(for: exercise)
                 } label: {
-                    Label("Série Completa", systemImage: "checkmark.circle.fill")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(AppTheme.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    let done = setsDone(for: exercise.id)
+                    let total = max(exercise.sets, 1)
+                    let isLast = SetProgressFormatting.isLastSet(completed: done, totalSets: total)
+                    Label(
+                        isLast ? "Última série · Finalizar" : "Série Completa",
+                        systemImage: isLast ? "flag.checkered" : "checkmark.circle.fill"
+                    )
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(AppTheme.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                .disabled(setsDone(for: exercise.id) >= max(exercise.sets, 1))
+                .opacity(setsDone(for: exercise.id) >= max(exercise.sets, 1) ? 0.5 : 1)
 
                 Button {
-                    startRest(for: exercise)
+                    // Pausa conclui a série atual e inicia o descanso.
+                    // Só finaliza o exercício se for a última série.
+                    completeSet(for: exercise)
                 } label: {
                     VStack(spacing: 2) {
                         Image(systemName: "timer")
@@ -341,7 +397,9 @@ struct ActiveWorkoutView: View {
                     .background(AppTheme.cardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .accessibilityLabel("Pausa \(timerService.configuredRestSeconds) segundos")
+                .disabled(setsDone(for: exercise.id) >= max(exercise.sets, 1))
+                .opacity(setsDone(for: exercise.id) >= max(exercise.sets, 1) ? 0.5 : 1)
+                .accessibilityLabel("Concluir série e pausar \(timerService.configuredRestSeconds) segundos")
             }
 
             Button {
@@ -425,6 +483,12 @@ struct ActiveWorkoutView: View {
 
     private var exerciseListContent: some View {
         LazyVStack(spacing: 8) {
+            Text("Toque em um exercício para treiná-lo agora (sem precisar seguir a ordem).")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+
             ForEach(Array(sheet.exercises.enumerated()), id: \.element.id) { index, exercise in
                 ExerciseTrackingRow(
                     exercise: exercise,
@@ -432,7 +496,10 @@ struct ActiveWorkoutView: View {
                     record: workoutStore.exerciseRecords.first(where: { $0.exerciseId == exercise.id }),
                     isCurrent: index == workoutStore.currentExerciseIndex,
                     isPaused: index == workoutStore.currentExerciseIndex && timerService.isRunning,
-                    completedSets: completedSets[exercise.id, default: 0],
+                    completedSets: setsDone(for: exercise.id),
+                    onSelect: {
+                        selectExercise(at: index)
+                    },
                     onMarkComplete: {
                         markExerciseComplete(exercise)
                     }
@@ -499,16 +566,19 @@ struct ActiveWorkoutView: View {
         timerService.stopTimer()
         watchConnectivity.sendRestTimerStop()
         watchConnectivity.stopWorkoutOnWatch()
+        WorkoutLiveActivitySync.end()
         finishedSession = session
     }
 
     private func completeSet(for exercise: Exercise) {
-        let current = completedSets[exercise.id, default: 0] + 1
-        completedSets[exercise.id] = current
+        let total = max(exercise.sets, 1)
+        let current = workoutStore.recordSetCompleted(exerciseId: exercise.id, totalSets: total)
 
-        if current >= exercise.sets {
-            startRest(for: exercise)
+        if current >= total {
+            // Última série (3/3, 4/4, 5/5…): finaliza o exercício.
             markExerciseComplete(exercise)
+            // Descanso opcional após a última série.
+            startRest(for: exercise)
         } else {
             startRest(for: exercise)
         }
@@ -519,9 +589,12 @@ struct ActiveWorkoutView: View {
         timerService.startRest(for: exercise.name, exerciseId: exercise.id)
         workoutStore.setExerciseTimerPaused(true)
         watchConnectivity.sendRestTimerStart(
-            seconds: timerService.configuredRestSeconds,
+            seconds: timerService.remainingSeconds > 0
+                ? timerService.remainingSeconds
+                : timerService.configuredRestSeconds,
             exerciseName: exercise.name
         )
+        syncLockScreenLiveActivity()
     }
 
     private func markExerciseComplete(_ exercise: Exercise) {
@@ -529,6 +602,24 @@ struct ActiveWorkoutView: View {
         workoutStore.markExerciseCompleted(at: index)
         prepareDemoForCurrentExercise(force: true)
         syncWatchWorkoutState()
+        syncLockScreenLiveActivity()
+    }
+
+    private func selectExercise(at index: Int) {
+        guard sheet.exercises.indices.contains(index) else { return }
+        guard workoutStore.selectExercise(at: index) else { return }
+        prepareDemoForCurrentExercise(force: true)
+        syncLiveExerciseElapsed()
+        syncWatchWorkoutState()
+        syncLockScreenLiveActivity()
+    }
+
+    private func syncLockScreenLiveActivity() {
+        WorkoutLiveActivitySync.push(
+            workoutStore: workoutStore,
+            timerService: timerService,
+            sheet: sheet
+        )
     }
 
     private func updateWorkoutElapsed() {
@@ -568,6 +659,7 @@ struct ActiveWorkoutView: View {
         watchConnectivity.sendRestTimerStop()
         watchConnectivity.stopWorkoutOnWatch()
         workoutStore.applyRestSeconds(from: timerService)
+        WorkoutLiveActivitySync.end()
 
         guard var session = workoutStore.activeSession else {
             dismiss()
@@ -665,6 +757,7 @@ struct ExerciseTrackingRow: View {
     let isCurrent: Bool
     let isPaused: Bool
     let completedSets: Int
+    var onSelect: (() -> Void)? = nil
     let onMarkComplete: () -> Void
 
     private var isCompleted: Bool {
@@ -681,9 +774,12 @@ struct ExerciseTrackingRow: View {
                 Text(exercise.name)
                     .font(.subheadline.weight(isCurrent ? .semibold : .regular))
                     .foregroundStyle(isCompleted || isCurrent ? AppTheme.textPrimary : AppTheme.textSecondary)
-                Text("\(completedSets)/\(exercise.sets) séries")
+                Text(SetProgressFormatting.progressLabel(completed: completedSets, totalSets: exercise.sets))
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
+                Text("Total \(max(exercise.sets, 1)) séries")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary.opacity(0.85))
                 if let weightLabel = record?.weightComparisonLabel {
                     Text(weightLabel)
                         .font(.caption2)
@@ -718,6 +814,13 @@ struct ExerciseTrackingRow: View {
         .padding(.vertical, 10)
         .background(isCurrent ? AppTheme.accent.opacity(0.08) : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !isCurrent else { return }
+            onSelect?()
+        }
+        .accessibilityAddTraits(isCurrent ? .isSelected : [])
+        .accessibilityHint(isCurrent ? "Exercício atual" : "Toque para treinar este exercício agora")
     }
 
     private var statusIcon: String {
@@ -825,6 +928,36 @@ struct RestTimerOverlay: View {
                         Text(timerService.formattedTime)
                             .font(.system(size: 32, weight: .bold, design: .monospaced))
                             .foregroundStyle(timerService.isOvertime ? .red : AppTheme.textPrimary)
+                    }
+                }
+
+                if !timerService.isAwaitingResumeAcknowledgment {
+                    VStack(spacing: 8) {
+                        Text("Tempo configurado: \(timerService.configuredRestSeconds)s")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+
+                        HStack(spacing: 20) {
+                            Button {
+                                timerService.adjustConfiguredRestSeconds(by: -15)
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .font(.title2)
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+                            .disabled(timerService.configuredRestSeconds <= 15)
+                            .accessibilityLabel("Diminuir pausa 15 segundos")
+
+                            Button {
+                                timerService.adjustConfiguredRestSeconds(by: 15)
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title2)
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+                            .disabled(timerService.configuredRestSeconds >= 300)
+                            .accessibilityLabel("Aumentar pausa 15 segundos")
+                        }
                     }
                 }
 

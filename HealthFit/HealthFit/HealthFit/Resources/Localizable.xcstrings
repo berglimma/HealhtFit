@@ -172,15 +172,8 @@
         }
       }
     },
-    "%lld/%lld séries" : {
-      "localizations" : {
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld/%2$lld séries"
-          }
-        }
-      }
+    "%lld/6 fotos (opcional)" : {
+
     },
     "%lld%%" : {
 
@@ -197,6 +190,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lldx%2$lld"
+          }
+        }
+      }
+    },
+    "%lldx%lld · %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lldx%2$lld · %3$@"
           }
         }
       }
@@ -282,6 +285,9 @@
     "Alerta OMS" : {
 
     },
+    "Antes × Depois" : {
+
+    },
     "Antes: %@" : {
 
     },
@@ -309,6 +315,9 @@
     "Aquecimento, quadril, ombros e pós-treino com demos" : {
 
     },
+    "As fotos são opcionais e privadas: só você pode ver ou acessar. O laudo funciona com as medidas corporais; se quiser, adicione até 6 fotos. Após 30 dias, compare novamente. Fotos antigas são excluídas; os PDFs das 4 últimas avaliações ficam só na sua conta." : {
+
+    },
     "As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal." : {
 
     },
@@ -334,6 +343,9 @@
 
     },
     "Atualizar Cardápio" : {
+
+    },
+    "Aumentar pausa 15 segundos" : {
 
     },
     "auth.accept_terms" : {
@@ -1032,6 +1044,9 @@
         }
       }
     },
+    "Aviso" : {
+
+    },
     "Bebidas" : {
 
     },
@@ -1084,6 +1099,9 @@
     "Cancelar" : {
 
     },
+    "Card pronto para Stories e status — WhatsApp ou Instagram." : {
+
+    },
     "Cardápio atualizado" : {
 
     },
@@ -1115,6 +1133,12 @@
 
     },
     "Começar exercício" : {
+
+    },
+    "Começar por" : {
+
+    },
+    "Começar treino" : {
 
     },
     "common.cancel" : {
@@ -1309,6 +1333,9 @@
     "Comparativo disponível após %lld dia(s), quando você atualizar as medidas." : {
 
     },
+    "Compartilhar conquista" : {
+
+    },
     "Complete Seus Dados no Perfil (peso, altura, idade e sexo) para montar o cardápio." : {
 
     },
@@ -1319,6 +1346,9 @@
 
     },
     "Concluir Exercício" : {
+
+    },
+    "Concluir série e pausar %lld segundos" : {
 
     },
     "Conectado" : {
@@ -1445,6 +1475,9 @@
     "Deseja mesmo excluir sua conta?" : {
 
     },
+    "Deseja salvar este PDF de medidas em Arquivos (ou compartilhar)? O arquivo fica só no seu dispositivo se você escolher Arquivos." : {
+
+    },
     "Desempenho Semanal" : {
 
     },
@@ -1461,6 +1494,12 @@
 
     },
     "Dia" : {
+
+    },
+    "Diminuir pausa 15 segundos" : {
+
+    },
+    "Disciplina · Evolução · Constância" : {
 
     },
     "Distância meta" : {
@@ -1541,6 +1580,9 @@
     "Entre em contato para dúvidas, sugestões ou problemas com o HealthFit." : {
 
     },
+    "Enviar" : {
+
+    },
     "Enviar e-mail" : {
 
     },
@@ -1560,6 +1602,9 @@
         }
       }
     },
+    "Escolha com qual exercício deseja começar. Você pode mudar a qualquer momento durante o treino." : {
+
+    },
     "Escolha em qual seção da lista o item deve aparecer." : {
 
     },
@@ -1576,6 +1621,9 @@
 
     },
     "Escolha uma opção para cada refeição do dia" : {
+
+    },
+    "Escolha WhatsApp ou Instagram na tela de compartilhar. O nome HealthFit já vai no card." : {
 
     },
     "Escolher outro" : {
@@ -1606,6 +1654,9 @@
     "Evolução calórica" : {
 
     },
+    "Evolução Corporal" : {
+
+    },
     "Evolução da meditação" : {
 
     },
@@ -1630,6 +1681,9 @@
     "Excluir treino?" : {
 
     },
+    "Exercício atual" : {
+
+    },
     "Exercício Atual" : {
 
     },
@@ -1643,6 +1697,9 @@
 
     },
     "Fechar" : {
+
+    },
+    "Fechar teclado" : {
 
     },
     "Feminino" : {
@@ -1670,6 +1727,18 @@
 
     },
     "Firebase não configurado. Substitua o GoogleService-Info.plist pelo arquivo do Firebase Console." : {
+
+    },
+    "Fotos (opcional e privado)" : {
+
+    },
+    "Fotos e comparativo (30 dias)" : {
+
+    },
+    "Fotos novas são opcionais. A comparação usa as medidas do Perfil; se houver fotos, o antes/depois fica só para você." : {
+
+    },
+    "Fotos opcionais e privadas — só você acessa." : {
 
     },
     "Full body, core, HIIT, pernas e superiores com demos" : {
@@ -1823,6 +1892,9 @@
     "Medidas Corporais" : {
 
     },
+    "Medidas que variaram" : {
+
+    },
     "Medidas salvas" : {
 
     },
@@ -1878,6 +1950,9 @@
     "Métrica" : {
 
     },
+    "Minimizar" : {
+
+    },
     "Minutos" : {
 
     },
@@ -1930,6 +2005,9 @@
 
     },
     "Nenhum item na lista" : {
+
+    },
+    "Nenhum outro usuário, personal ou nutrição consegue acessar estas imagens." : {
 
     },
     "Nenhum plano gerado" : {
@@ -2192,9 +2270,6 @@
     "Pausa" : {
 
     },
-    "Pausa %lld segundos" : {
-
-    },
     "Pendente" : {
 
     },
@@ -2234,6 +2309,9 @@
     "Possui personal?" : {
 
     },
+    "Postar no WhatsApp / Instagram" : {
+
+    },
     "Poxa… o treino ficou aberto por mais de 2h30. Eu encerrei por segurança — não se preocupe, estou aqui pra te ajudar no próximo." : {
 
     },
@@ -2244,6 +2322,9 @@
 
     },
     "Pré-treino: %@." : {
+
+    },
+    "Preparando card..." : {
 
     },
     "profile.has_nutritionist" : {
@@ -2545,6 +2626,9 @@
     "Relatórios de treino poderão ser enviados por e-mail" : {
 
     },
+    "Remover" : {
+
+    },
     "Remover da ficha" : {
 
     },
@@ -2567,6 +2651,15 @@
 
     },
     "restantes" : {
+
+    },
+    "Resultado" : {
+
+    },
+    "Resumo" : {
+
+    },
+    "Retomar treino em andamento" : {
 
     },
     "Ritmo alvo" : {
@@ -2593,16 +2686,46 @@
     "Sair da conta?" : {
 
     },
+    "Salvando e sincronizando…" : {
+
+    },
+    "Salvando…" : {
+
+    },
     "Salvar" : {
 
     },
+    "Salvar / compartilhar PDF" : {
+
+    },
+    "Salvar cópia no dispositivo?" : {
+
+    },
     "Salvar dados" : {
+
+    },
+    "Salvar em Arquivos" : {
+
+    },
+    "Salvar em Fotos ou Arquivos?" : {
+
+    },
+    "Salvar fotos + PDF em Arquivos" : {
+
+    },
+    "Salvar fotos na Galeria" : {
 
     },
     "Salvar medidas" : {
 
     },
     "Salvar no Plano Semanal" : {
+
+    },
+    "Salvar PDF em Arquivos" : {
+
+    },
+    "Salvar PDF?" : {
 
     },
     "Seção" : {
@@ -2650,10 +2773,13 @@
     "Será necessário confirmar seu login com Google para concluir a exclusão." : {
 
     },
+    "Série %lld" : {
+
+    },
     "Série Completa" : {
 
     },
-    "Séries" : {
+    "Séries concluídas" : {
 
     },
     "Seu apelido ou primeiro nome" : {
@@ -2684,6 +2810,9 @@
 
     },
     "Sono e Hidratação" : {
+
+    },
+    "Status" : {
 
     },
     "Sua carga" : {
@@ -2843,6 +2972,9 @@
     "tempo" : {
 
     },
+    "Tempo configurado: %llds" : {
+
+    },
     "Tempo estimado" : {
 
     },
@@ -2873,6 +3005,9 @@
     "Toque em + para incluir na lista" : {
 
     },
+    "Toque em um exercício para treiná-lo agora (sem precisar seguir a ordem)." : {
+
+    },
     "Toque na refeição para selecionar e marque como concluída quando comer." : {
 
     },
@@ -2880,6 +3015,15 @@
 
     },
     "Toque para alterar foto" : {
+
+    },
+    "Toque para treinar este exercício agora" : {
+
+    },
+    "Total" : {
+
+    },
+    "Total %lld séries" : {
 
     },
     "Total de encerramentos antecipados: %lld vez(es)" : {
@@ -2892,6 +3036,9 @@
 
     },
     "TREINE EM CASA" : {
+
+    },
+    "Treinei com HealthFit" : {
 
     },
     "Treino Concluído" : {
@@ -2919,6 +3066,12 @@
 
     },
     "Última atualização: %@" : {
+
+    },
+    "Última série · Finalizar" : {
+
+    },
+    "Últimas avaliações (PDF)" : {
 
     },
     "Usado nas saudações, motivação e mensagens do app." : {

@@ -7,6 +7,7 @@ struct RootView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var exerciseVideoRepository: ExerciseVideoRepository
+    @EnvironmentObject var timerService: RestTimerService
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var showWelcomeMotivation = false
@@ -81,10 +82,30 @@ struct RootView: View {
                         await healthKitManager.refreshFromHealthKit()
                     }
                 }
+                workoutStore.handleAppBecameActive()
+                timerService.handleAppBecameActive()
+                if workoutStore.activeSession != nil {
+                    WorkoutLiveActivitySync.push(
+                        workoutStore: workoutStore,
+                        timerService: timerService
+                    )
+                }
+                if let session = workoutStore.activeSession {
+                    NotificationService.shared.cancelActiveWorkoutBackgroundReminder(sessionId: session.id)
+                }
                 AppIconInactivityService.shared.handleAppBecameActive()
             case .background:
+                workoutStore.handleAppEnteredBackground()
+                timerService.handleAppEnteredBackground()
                 authService.flushProfileToCloudIfNeeded()
                 AppIconInactivityService.shared.handleAppEnteredBackground()
+                if let session = workoutStore.activeSession {
+                    NotificationService.shared.deliverActiveWorkoutBackgroundReminder(
+                        workoutTitle: session.workoutTitle,
+                        exerciseName: workoutStore.currentExercise?.name,
+                        sessionId: session.id
+                    )
+                }
             default:
                 break
             }

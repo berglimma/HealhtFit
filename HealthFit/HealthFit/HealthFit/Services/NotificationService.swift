@@ -398,6 +398,51 @@ final class NotificationService {
         )
     }
 
+    /// Avisa que o treino continua em andamento quando o app vai para segundo plano.
+    func deliverActiveWorkoutBackgroundReminder(
+        workoutTitle: String,
+        exerciseName: String?,
+        sessionId: UUID
+    ) {
+        let exercisePart: String
+        if let exerciseName, !exerciseName.isEmpty {
+            exercisePart = " Exercício atual: \(exerciseName)."
+        } else {
+            exercisePart = ""
+        }
+        deliverImmediately(
+            title: "Treino em andamento",
+            body: "\"\(workoutTitle)\" continua ativo.\(exercisePart) Volte ao HealthFit para registrar as séries.",
+            category: "WORKOUT_BACKGROUND",
+            identifier: "workout_background_\(sessionId.uuidString)",
+            immediate: true
+        )
+    }
+
+    func cancelActiveWorkoutBackgroundReminder(sessionId: UUID? = nil) {
+        if let sessionId {
+            UNUserNotificationCenter.current().removePendingNotificationRequests(
+                withIdentifiers: ["workout_background_\(sessionId.uuidString)"]
+            )
+            UNUserNotificationCenter.current().removeDeliveredNotifications(
+                withIdentifiers: ["workout_background_\(sessionId.uuidString)"]
+            )
+            return
+        }
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let ids = requests
+                .map(\.identifier)
+                .filter { $0.hasPrefix("workout_background_") }
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        }
+        UNUserNotificationCenter.current().getDeliveredNotifications { notifications in
+            let ids = notifications
+                .map(\.request.identifier)
+                .filter { $0.hasPrefix("workout_background_") }
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ids)
+        }
+    }
+
     func deliverCardioStartNotification(sessionTitle: String, athleteName: String) {
         deliverImmediately(
             title: "Cardio iniciado! 🏃",
@@ -502,41 +547,102 @@ final class NotificationService {
         }
     }
 
+    // MARK: - Evolução corporal
+
+    private static let bodyEvolutionReadyPrefix = "body_evolution_ready_"
+    private static let bodyEvolutionResultId = "body_evolution_result"
+
+    func scheduleBodyEvolutionReady(fireDate: Date, userId: String) {
+        cancelBodyEvolutionReadyReminder()
+        let identifier = Self.bodyEvolutionReadyPrefix + userId
+        let interval = fireDate.timeIntervalSince(.now)
+        let body = "Já passaram 30 dias do seu acompanhamento de evolução. Abra Evolução Corporal para comparar as medidas (fotos continuam opcionais e privadas)."
+
+        if interval <= 1 {
+            deliverImmediately(
+                title: "Evolução corporal",
+                body: body,
+                category: "BODY_EVOLUTION_READY",
+                identifier: identifier,
+                immediate: true
+            )
+            return
+        }
+
+        scheduleOnPhone(
+            title: "Evolução corporal",
+            body: body,
+            category: "BODY_EVOLUTION_READY",
+            identifier: identifier,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+        )
+    }
+
+    func cancelBodyEvolutionReadyReminder() {
+        let prefix = Self.bodyEvolutionReadyPrefix
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let ids = requests
+                .filter { $0.identifier.hasPrefix(prefix) }
+                .map(\.identifier)
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        }
+        UNUserNotificationCenter.current().getDeliveredNotifications { notifications in
+            let ids = notifications
+                .filter { $0.request.identifier.hasPrefix(prefix) }
+                .map(\.request.identifier)
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ids)
+        }
+    }
+
+    func deliverBodyEvolutionResult(summary: String) {
+        deliverImmediately(
+            title: "IAssistente · Evolução corporal",
+            body: summary,
+            category: "BODY_EVOLUTION_RESULT",
+            identifier: Self.bodyEvolutionResultId,
+            immediate: true
+        )
+    }
+
     func deliverRestOvertimeNotification(exerciseName: String) {
         deliverRestCompleteNotification(exerciseName: exerciseName)
     }
 
     func deliverRestCompleteNotification(exerciseName: String) {
-        deliverImmediately(
-            title: Self.restCompleteTitle,
-            body: Self.restCompleteBody(exerciseName: exerciseName),
-            category: "REST_COMPLETE",
-            identifier: "rest_complete_\(UUID().uuidString)",
-            exerciseName: exerciseName,
-            immediate: true
+        // Só notifica o iPhone aqui; o Watch já recebe restOvertime / restTimer.
+        let content = UNMutableNotificationContent()
+        content.title = Self.restCompleteTitle
+        content.body = Self.restCompleteBody(exerciseName: exerciseName)
+        content.sound = .default
+        content.categoryIdentifier = "REST_COMPLETE"
+        content.interruptionLevel = .timeSensitive
+
+        let request = UNNotificationRequest(
+            identifier: Self.restEndReminderIdentifier,
+            content: content,
+            trigger: nil
         )
+        UNUserNotificationCenter.current().add(request)
     }
 
+    /// Agenda lembrete exatamente para o fim da pausa (não notifica no início).
     func scheduleRestEndReminder(after seconds: TimeInterval, exerciseName: String) {
-        let title = Self.restCompleteTitle
-        let body = Self.restCompleteBody(exerciseName: exerciseName)
-        let identifier = "rest_reminder_\(UUID().uuidString)"
+        cancelRestReminders()
 
-        scheduleOnPhone(
-            title: title,
-            body: body,
-            category: "REST_COMPLETE",
-            identifier: identifier,
-            trigger: UNTimeIntervalNotificationTrigger(timeInterval: max(seconds, 1), repeats: false)
-        )
+        let delay = max(seconds, 1)
+        let content = UNMutableNotificationContent()
+        content.title = Self.restCompleteTitle
+        content.body = Self.restCompleteBody(exerciseName: exerciseName)
+        content.sound = .default
+        content.categoryIdentifier = "REST_COMPLETE"
+        content.interruptionLevel = .timeSensitive
 
-        WatchConnectivityManager.shared.deliverNotificationToWatch(
-            title: title,
-            body: body,
-            category: "REST_COMPLETE",
-            identifier: identifier,
-            exerciseName: exerciseName
+        let request = UNNotificationRequest(
+            identifier: Self.restEndReminderIdentifier,
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
         )
+        UNUserNotificationCenter.current().add(request)
     }
 
     func scheduleRestReminder(after seconds: TimeInterval, exerciseName: String) {
@@ -544,12 +650,30 @@ final class NotificationService {
     }
 
     func cancelRestReminders() {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest_reminder"])
+        let knownIds = [
+            Self.restEndReminderIdentifier,
+            "rest_reminder"
+        ]
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: knownIds)
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: knownIds)
+
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
-            let ids = requests.filter { $0.identifier.hasPrefix("rest_reminder") }.map(\.identifier)
+            let ids = requests
+                .map(\.identifier)
+                .filter { $0.hasPrefix("rest_reminder") || $0.hasPrefix("rest_complete_") }
+            guard !ids.isEmpty else { return }
             UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
         }
+        UNUserNotificationCenter.current().getDeliveredNotifications { notifications in
+            let ids = notifications
+                .map(\.request.identifier)
+                .filter { $0.hasPrefix("rest_reminder") || $0.hasPrefix("rest_complete_") }
+            guard !ids.isEmpty else { return }
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ids)
+        }
     }
+
+    private static let restEndReminderIdentifier = "rest_end_reminder"
 
     func scheduleWorkoutComplete(title: String) {
         deliverImmediately(

@@ -202,6 +202,7 @@ struct HealthChatView: View {
             assistant.restoreInterruptedDailyMorningCheckIn(context: context)
         } else {
             assistant.bootstrap(context: context)
+            assistant.deliverPendingBodyEvolutionAnnouncementIfNeeded()
         }
     }
 

@@ -30,6 +30,7 @@ struct HealthFitApp: App {
                 .environmentObject(weeklyReportService)
                 .environmentObject(wellnessService)
                 .environmentObject(exerciseVideoRepository)
+                .environmentObject(BodyEvolutionService.shared)
                 .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     _ = SocialSignInService.handleIncomingURL(url)

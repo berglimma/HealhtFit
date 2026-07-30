@@ -2,4 +2,5 @@
 "NSCameraUsageDescription" = "HealthFit usa la cámara para reconocer repeticiones y analizar tu postura durante los ejercicios.";
 "NSHealthShareUsageDescription" = "HealthFit necesita acceder a tus datos de salud para mostrar métricas de rendimiento y sincronizar entrenos.";
 "NSHealthUpdateUsageDescription" = "HealthFit guarda tus entrenos y calorías quemadas en la app Salud.";
-"NSPhotoLibraryUsageDescription" = "HealthFit necesita acceder a tus fotos para definir la imagen de perfil.";
+"NSPhotoLibraryUsageDescription" = "HealthFit necesita acceder a tus fotos para definir la imagen de perfil y guardar fotos de evolución corporal.";
+"NSPhotoLibraryAddUsageDescription" = "HealthFit guarda fotos de evolución corporal en tu galería cuando lo autorizas.";

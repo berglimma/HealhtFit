@@ -8,12 +8,13 @@ struct WorkoutDetailView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
     @State var sheet: WorkoutSheet
-    @State private var showActiveWorkout = false
     @State private var showVision = false
     @State private var showPreWorkoutPrompt = false
+    @State private var showStartingExercisePicker = false
+    @State private var pendingTookPreWorkout: Bool?
+    @State private var selectedStartingExerciseIndex = 0
     @State private var showEditWorkout = false
     @State private var showDeleteConfirmation = false
-    @State private var shouldPopToWorkoutList = false
     @State private var showRepeatedWorkoutAlert = false
     @State private var repeatedWorkoutSession: WorkoutSession?
 
@@ -95,16 +96,6 @@ struct WorkoutDetailView: View {
         } message: {
             Text(repeatedWorkoutAlertMessage)
         }
-        .fullScreenCover(isPresented: $showActiveWorkout, onDismiss: {
-            if shouldPopToWorkoutList {
-                shouldPopToWorkoutList = false
-                dismiss()
-            }
-        }) {
-            ActiveWorkoutView(sheet: sheet) {
-                shouldPopToWorkoutList = true
-            }
-        }
         .sheet(isPresented: $showVision) {
             VisionWorkoutView()
         }
@@ -114,14 +105,33 @@ struct WorkoutDetailView: View {
             titleVisibility: .visible
         ) {
             Button("Sim, tomei") {
-                beginWorkout(tookPreWorkout: true)
+                presentStartingExercisePicker(tookPreWorkout: true)
             }
             Button("Não tomei") {
-                beginWorkout(tookPreWorkout: false)
+                presentStartingExercisePicker(tookPreWorkout: false)
             }
             Button("Cancelar", role: .cancel) {}
         } message: {
             Text("Você tomou pré-treino antes deste treino? \(SupplementGuidance.preWorkoutCaffeineLimit.capitalized).")
+        }
+        .sheet(isPresented: $showStartingExercisePicker) {
+            StartingExercisePickerSheet(
+                exercises: sheet.exercises,
+                selectedIndex: $selectedStartingExerciseIndex,
+                onCancel: {
+                    showStartingExercisePicker = false
+                    pendingTookPreWorkout = nil
+                },
+                onStart: {
+                    let tookPreWorkout = pendingTookPreWorkout ?? false
+                    showStartingExercisePicker = false
+                    beginWorkout(
+                        tookPreWorkout: tookPreWorkout,
+                        startingExerciseIndex: selectedStartingExerciseIndex
+                    )
+                }
+            )
+            .presentationDetents([.medium, .large])
         }
     }
 
@@ -197,17 +207,35 @@ struct WorkoutDetailView: View {
         }
     }
 
-    private func beginWorkout(tookPreWorkout: Bool) {
-        workoutStore.startSession(for: sheet, tookPreWorkout: tookPreWorkout)
+    private func presentStartingExercisePicker(tookPreWorkout: Bool) {
+        pendingTookPreWorkout = tookPreWorkout
+        selectedStartingExerciseIndex = 0
+        if sheet.exercises.count <= 1 {
+            beginWorkout(tookPreWorkout: tookPreWorkout, startingExerciseIndex: 0)
+        } else {
+            showStartingExercisePicker = true
+        }
+    }
+
+    private func beginWorkout(tookPreWorkout: Bool, startingExerciseIndex: Int = 0) {
+        workoutStore.startSession(
+            for: sheet,
+            tookPreWorkout: tookPreWorkout,
+            startingExerciseIndex: startingExerciseIndex
+        )
         wellnessService.applyPreWorkoutFromWorkouts(allTrackedSessions)
-        let firstExercise = sheet.exercises.first?.name ?? ""
-        watchConnectivity.startWorkoutOnWatch(workoutName: sheet.title, exerciseName: firstExercise)
+        let startIndex = min(max(0, startingExerciseIndex), max(0, sheet.exercises.count - 1))
+        let exerciseName = sheet.exercises.indices.contains(startIndex)
+            ? sheet.exercises[startIndex].name
+            : (sheet.exercises.first?.name ?? "")
+        watchConnectivity.startWorkoutOnWatch(workoutName: sheet.title, exerciseName: exerciseName)
         let athleteName = authService.currentUser?.greetingName ?? "Atleta"
         NotificationService.shared.deliverWorkoutStartNotification(
             workoutTitle: sheet.title,
             athleteName: athleteName
         )
-        showActiveWorkout = true
+        pendingTookPreWorkout = nil
+        workoutStore.resumeActiveWorkout()
     }
 
     private var allTrackedSessions: [WorkoutSession] {
@@ -287,5 +315,70 @@ struct ExerciseRow: View {
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .tint(AppTheme.accent)
+    }
+}
+
+private struct StartingExercisePickerSheet: View {
+    let exercises: [Exercise]
+    @Binding var selectedIndex: Int
+    let onCancel: () -> Void
+    let onStart: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Text("Escolha com qual exercício deseja começar. Você pode mudar a qualquer momento durante o treino.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
+
+                List {
+                    ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
+                        Button {
+                            selectedIndex = index
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: selectedIndex == index ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(selectedIndex == index ? AppTheme.accent : AppTheme.textSecondary)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(exercise.name)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.textPrimary)
+                                    Text("\(exercise.sets)x\(exercise.reps) · \(exercise.muscleGroup.rawValue)")
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.textSecondary)
+                                }
+
+                                Spacer()
+
+                                Text("\(index + 1)")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .listStyle(.plain)
+
+                Button(action: onStart) {
+                    Label("Começar treino", systemImage: "play.fill")
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .padding()
+            }
+            .background(AppTheme.background)
+            .navigationTitle("Começar por")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar", action: onCancel)
+                }
+            }
+        }
     }
 }

@@ -42,6 +42,20 @@
 		B1000033 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000033 /* Assets.xcassets */; };
 		B1000034 /* HealthFitWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = F1000034 /* HealthFitWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B1000035 /* WorkoutSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000038 /* WorkoutSummaryView.swift */; };
+		B1000305 /* WorkoutShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000305 /* WorkoutShareCardView.swift */; };
+		B1000320 /* BodyEvolutionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000320 /* BodyEvolutionModels.swift */; };
+		B1000321 /* BodyEvolutionStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000321 /* BodyEvolutionStorageService.swift */; };
+		B1000322 /* BodyEvolutionFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000322 /* BodyEvolutionFirestoreService.swift */; };
+		B1000323 /* BodyMeasurementsPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000323 /* BodyMeasurementsPDFBuilder.swift */; };
+		B1000324 /* BodyEvolutionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000324 /* BodyEvolutionService.swift */; };
+		B1000325 /* BodyEvolutionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000325 /* BodyEvolutionView.swift */; };
+		B1000306 /* WorkoutLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000306 /* WorkoutLiveActivityAttributes.swift */; };
+		B1000307 /* WorkoutLiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000307 /* WorkoutLiveActivityController.swift */; };
+		B1000308 /* WorkoutLiveActivitySync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000308 /* WorkoutLiveActivitySync.swift */; };
+		B1000309 /* WorkoutLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000309 /* WorkoutLiveActivityWidget.swift */; };
+		B1000310 /* WorkoutLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000306 /* WorkoutLiveActivityAttributes.swift */; };
+		B1000311 /* HealthFitWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1000311 /* HealthFitWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+
 		B1000036 /* MotivationMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000039 /* MotivationMessages.swift */; };
 		B1000037 /* WorkoutReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000040 /* WorkoutReportBuilder.swift */; };
 		B1000039 /* MailComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000041 /* MailComposeView.swift */; };
@@ -160,6 +174,7 @@
 		B2000021 /* AssistantCardioMeditationNudgeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000030 /* AssistantCardioMeditationNudgeEngineTests.swift */; };
 		B2000022 /* WorkoutInactivityAutoEndTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000031 /* WorkoutInactivityAutoEndTests.swift */; };
 		B2000023 /* NutritionReportBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000032 /* NutritionReportBuilderTests.swift */; };
+		B2000024 /* BodyEvolutionModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000033 /* BodyEvolutionModelsTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -184,9 +199,27 @@
 			remoteGlobalIDString = T1000001;
 			remoteInfo = HealthFit;
 		};
+		C1000005 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = P1000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = T1000005;
+			remoteInfo = HealthFitWidgets;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		CP100002 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B1000311 /* HealthFitWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		CP100001 /* Embed Watch Content */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -239,6 +272,20 @@
 		F1000036 /* HealthFit.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HealthFit.entitlements; sourceTree = "<group>"; };
 		F1000037 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000038 /* WorkoutSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSummaryView.swift; sourceTree = "<group>"; };
+		F1000305 /* WorkoutShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutShareCardView.swift; sourceTree = "<group>"; };
+		F1000320 /* BodyEvolutionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionModels.swift; sourceTree = "<group>"; };
+		F1000321 /* BodyEvolutionStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionStorageService.swift; sourceTree = "<group>"; };
+		F1000322 /* BodyEvolutionFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionFirestoreService.swift; sourceTree = "<group>"; };
+		F1000323 /* BodyMeasurementsPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyMeasurementsPDFBuilder.swift; sourceTree = "<group>"; };
+		F1000324 /* BodyEvolutionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionService.swift; sourceTree = "<group>"; };
+		F1000325 /* BodyEvolutionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionView.swift; sourceTree = "<group>"; };
+		F1000306 /* WorkoutLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityAttributes.swift; sourceTree = "<group>"; };
+		F1000307 /* WorkoutLiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityController.swift; sourceTree = "<group>"; };
+		F1000308 /* WorkoutLiveActivitySync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivitySync.swift; sourceTree = "<group>"; };
+		F1000309 /* WorkoutLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityWidget.swift; sourceTree = "<group>"; };
+		F1000310 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F1000311 /* HealthFitWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HealthFitWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+
 		F1000039 /* MotivationMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotivationMessages.swift; sourceTree = "<group>"; };
 		F1000040 /* WorkoutReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutReportBuilder.swift; sourceTree = "<group>"; };
 		F1000041 /* MailComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailComposeView.swift; sourceTree = "<group>"; };
@@ -359,6 +406,7 @@
 		F2000030 /* AssistantCardioMeditationNudgeEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCardioMeditationNudgeEngineTests.swift; sourceTree = "<group>"; };
 		F2000031 /* WorkoutInactivityAutoEndTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutInactivityAutoEndTests.swift; sourceTree = "<group>"; };
 		F2000032 /* NutritionReportBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionReportBuilderTests.swift; sourceTree = "<group>"; };
+		F2000033 /* BodyEvolutionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionModelsTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -403,6 +451,7 @@
 			children = (
 				G1000002 /* HealthFit */,
 				G1000003 /* HealthFitWatch */,
+				G1000050 /* HealthFitWidgets */,
 				G2000001 /* HealthFitTests */,
 				G2000003 /* HealthFitUITests */,
 				G1000004 /* Products */,
@@ -450,6 +499,7 @@
 			children = (
 				F1000035 /* HealthFit.app */,
 				F1000034 /* HealthFitWatch.app */,
+				F1000311 /* HealthFitWidgets.appex */,
 				F2000001 /* HealthFitTests.xctest */,
 				F2000002 /* HealthFitUITests.xctest */,
 			);
@@ -460,6 +510,7 @@
 			isa = PBXGroup;
 			children = (
 				F1000002 /* UserProfile.swift */,
+				F1000320 /* BodyEvolutionModels.swift */,
 				F1000003 /* WorkoutModels.swift */,
 				F1000043 /* CardioModels.swift */,
 				F1000004 /* MealModels.swift */,
@@ -484,6 +535,9 @@
 				F1000008 /* MealPlanService.swift */,
 				F1000009 /* NotificationService.swift */,
 				F1000010 /* RestTimerService.swift */,
+				F1000306 /* WorkoutLiveActivityAttributes.swift */,
+				F1000307 /* WorkoutLiveActivityController.swift */,
+				F1000308 /* WorkoutLiveActivitySync.swift */,
 				F1000011 /* WatchConnectivityManager.swift */,
 				F1000012 /* VisionWorkoutService.swift */,
 				F1000039 /* MotivationMessages.swift */,
@@ -509,6 +563,8 @@
 				F1000127 /* PasswordPolicy.swift */,
 				F1000130 /* AssistantWorkoutBuilder.swift */,
 				F1000201 /* ProfileDataReminderService.swift */,
+				F1000323 /* BodyMeasurementsPDFBuilder.swift */,
+				F1000324 /* BodyEvolutionService.swift */,
 				F1000062 /* WelcomeMotivationService.swift */,
 				F1000064 /* MarathonReportBuilder.swift */,
 				F1000083 /* ExerciseVideoRepository.swift */,
@@ -580,6 +636,7 @@
 				F1000022 /* ActiveWorkoutView.swift */,
 				F1000023 /* CreateWorkoutView.swift */,
 				F1000038 /* WorkoutSummaryView.swift */,
+				F1000305 /* WorkoutShareCardView.swift */,
 				F1000044 /* CardioSetupView.swift */,
 				F1000045 /* ActiveCardioView.swift */,
 				F1000051 /* MeditationSetupView.swift */,
@@ -613,6 +670,7 @@
 			isa = PBXGroup;
 			children = (
 				F1000028 /* ProfileView.swift */,
+				F1000325 /* BodyEvolutionView.swift */,
 				F1000119 /* DeleteAccountSheet.swift */,
 			);
 			path = Profile;
@@ -652,6 +710,8 @@
 				F1000079 /* WorkoutFirestoreService.swift */,
 				F1000202 /* ProfileFirestoreService.swift */,
 				F1000204 /* DailyWellnessFirestoreService.swift */,
+				F1000321 /* BodyEvolutionStorageService.swift */,
+				F1000322 /* BodyEvolutionFirestoreService.swift */,
 				F1000082 /* ExerciseVideoFirestoreService.swift */,
 				F1000084 /* ExerciseVideoStorageService.swift */,
 			);
@@ -747,6 +807,7 @@
 				F2000022 /* PostWorkoutCheckInEngineTests.swift */,
 				F2000031 /* WorkoutInactivityAutoEndTests.swift */,
 				F2000032 /* NutritionReportBuilderTests.swift */,
+				F2000033 /* BodyEvolutionModelsTests.swift */,
 			);
 			path = HealthFitTests;
 			sourceTree = "<group>";
@@ -778,11 +839,13 @@
 				FW100001 /* Frameworks */,
 				R1000001 /* Resources */,
 				CP100001 /* Embed Watch Content */,
+				CP100002 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				D1000001 /* PBXTargetDependency */,
+				D1000005 /* PBXTargetDependency */,
 			);
 			name = HealthFit;
 			packageProductDependencies = (
@@ -849,6 +912,23 @@
 			productReference = F2000002 /* HealthFitUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		T1000005 /* HealthFitWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BC100005 /* Build configuration list for PBXNativeTarget "HealthFitWidgets" */;
+			buildPhases = (
+				S1000005 /* Sources */,
+				FW100005 /* Frameworks */,
+				R1000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HealthFitWidgets;
+			productName = HealthFitWidgets;
+			productReference = F1000311 /* HealthFitWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -872,6 +952,9 @@
 					T1000004 = {
 						CreatedOnToolsVersion = 15.0;
 						TestTargetID = T1000001;
+					};
+					T1000005 = {
+						CreatedOnToolsVersion = 15.0;
 					};
 				};
 			};
@@ -898,6 +981,7 @@
 			targets = (
 				T1000001 /* HealthFit */,
 				T1000002 /* HealthFitWatch */,
+				T1000005 /* HealthFitWidgets */,
 				T1000003 /* HealthFitTests */,
 				T1000004 /* HealthFitUITests */,
 			);
@@ -966,6 +1050,7 @@
 			files = (
 				B1000001 /* HealthFitApp.swift in Sources */,
 				B1000002 /* UserProfile.swift in Sources */,
+				B1000320 /* BodyEvolutionModels.swift in Sources */,
 				B1000003 /* WorkoutModels.swift in Sources */,
 				B1000041 /* CardioModels.swift in Sources */,
 				B1000004 /* MealModels.swift in Sources */,
@@ -975,6 +1060,9 @@
 				B1000008 /* MealPlanService.swift in Sources */,
 				B1000009 /* NotificationService.swift in Sources */,
 				B1000010 /* RestTimerService.swift in Sources */,
+				B1000306 /* WorkoutLiveActivityAttributes.swift in Sources */,
+				B1000307 /* WorkoutLiveActivityController.swift in Sources */,
+				B1000308 /* WorkoutLiveActivitySync.swift in Sources */,
 				B1000011 /* WatchConnectivityManager.swift in Sources */,
 				B1000012 /* VisionWorkoutService.swift in Sources */,
 				B1000013 /* AppTheme.swift in Sources */,
@@ -992,6 +1080,7 @@
 				B1000022 /* ActiveWorkoutView.swift in Sources */,
 				B1000023 /* CreateWorkoutView.swift in Sources */,
 				B1000035 /* WorkoutSummaryView.swift in Sources */,
+				B1000305 /* WorkoutShareCardView.swift in Sources */,
 				B1000042 /* CardioSetupView.swift in Sources */,
 				B1000043 /* ActiveCardioView.swift in Sources */,
 				B1000036 /* MotivationMessages.swift in Sources */,
@@ -1023,6 +1112,10 @@
 				B1000072 /* FirebaseAuthProvider.swift in Sources */,
 				B1000079 /* WorkoutFirestoreService.swift in Sources */,
 				B1000202 /* ProfileFirestoreService.swift in Sources */,
+				B1000321 /* BodyEvolutionStorageService.swift in Sources */,
+				B1000322 /* BodyEvolutionFirestoreService.swift in Sources */,
+				B1000323 /* BodyMeasurementsPDFBuilder.swift in Sources */,
+				B1000324 /* BodyEvolutionService.swift in Sources */,
 				B1000204 /* DailyWellnessFirestoreService.swift in Sources */,
 				B1000203 /* KeyboardDismiss.swift in Sources */,
 				B1000086 /* ExerciseVideoFirestoreService.swift in Sources */,
@@ -1061,6 +1154,7 @@
 				B1000026 /* MealPlanView.swift in Sources */,
 				B1000027 /* ShoppingListView.swift in Sources */,
 				B1000028 /* ProfileView.swift in Sources */,
+				B1000325 /* BodyEvolutionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1100,6 +1194,7 @@
 				B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */,
 				B2000022 /* WorkoutInactivityAutoEndTests.swift in Sources */,
 				B2000023 /* NutritionReportBuilderTests.swift in Sources */,
+				B2000024 /* BodyEvolutionModelsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1291,7 +1386,8 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para reconhecer repetições e analisar sua postura durante os exercícios.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit precisa acessar seus dados de saúde para exibir métricas de desempenho e sincronizar treinos.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil e salvar fotos de evolução corporal.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -1327,7 +1423,8 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para reconhecer repetições e analisar sua postura durante os exercícios.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit precisa acessar seus dados de saúde para exibir métricas de desempenho e sincronizar treinos.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil e salvar fotos de evolução corporal.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -1361,6 +1458,7 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit no Apple Watch salva treinos e calorias no app Saúde.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = luan.com.healthfit.app;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1369,7 +1467,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
+				SKIP_INSTALL = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
@@ -1393,6 +1491,7 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit no Apple Watch salva treinos e calorias no app Saúde.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = luan.com.healthfit.app;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1401,7 +1500,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
+				SKIP_INSTALL = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
@@ -1504,6 +1603,57 @@
 			};
 			name = Release;
 		};
+		XC100020 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A56XUZKJFJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = HealthFit;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		XC100021 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A56XUZKJFJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = HealthFit;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1548,6 +1698,15 @@
 			buildConfigurations = (
 				XC200009 /* Debug */,
 				XC200010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BC100005 /* Build configuration list for PBXNativeTarget "HealthFitWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				XC100020 /* Debug */,
+				XC100021 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

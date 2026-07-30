@@ -191,7 +191,7 @@ struct BodyMeasurements: Codable, Equatable {
     }
 }
 
-struct BodyMeasurementChange: Identifiable, Equatable {
+struct BodyMeasurementChange: Identifiable, Equatable, Codable {
     let label: String
     let previous: Double
     let current: Double

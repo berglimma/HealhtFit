@@ -7,6 +7,12 @@ final class WorkoutStore: ObservableObject {
     @Published var activeSession: WorkoutSession?
     @Published var sessionHistory: [WorkoutSession] = []
     @Published var currentExerciseIndex = 0
+    /// Quando true, a UI fullscreen do treino fica fechada e o usuário pode navegar no app.
+    @Published var isActiveWorkoutMinimized = false
+    /// Evita repetir a tela de motivação ao retomar o mesmo treino.
+    @Published private(set) var hasShownStartMotivation = false
+    /// Evita resetar o RestTimer ao reabrir a tela do treino minimizado.
+    @Published private(set) var hasBoundActiveWorkoutUI = false
     /// Mutações do cronômetro (1s) não publicam para não travar abas que observam o store.
     private(set) var exerciseRecords: [ExerciseSessionRecord] = []
     /// Tick leve para a tela de treino ativo atualizar o cronômetro.
@@ -21,11 +27,15 @@ final class WorkoutStore: ObservableObject {
     private let activeSessionKey = "healthfit_active_session"
     private let activeRecordsKey = "healthfit_active_exercise_records"
     private let activeExerciseIndexKey = "healthfit_active_exercise_index"
+    private let activeMinimizedKey = "healthfit_active_minimized"
+    private let activePausedKey = "healthfit_exercise_timer_paused"
+    private let exerciseLastProgressKey = "healthfit_exercise_last_progress_at"
     /// Após 2h30 sem finalizar, o treino é encerrado automaticamente.
     static let autoEndInactivityLimit: TimeInterval = 2.5 * 60 * 60
     static let autoEndJustification =
         "Encerrado automaticamente após 2h30 sem finalização (inatividade)."
     private var exerciseTimer: Timer?
+    private var exerciseLastProgressAt: Date?
     private var cloudUserId: String?
 
     func configureCloudSync(userId: String?) {
@@ -38,11 +48,15 @@ final class WorkoutStore: ObservableObject {
         exerciseRecords = []
         sessionHistory = []
         workoutSheets = []
+        isActiveWorkoutMinimized = false
+        hasShownStartMotivation = false
+        hasBoundActiveWorkoutUI = false
         cloudUserId = nil
         UserDefaults.standard.removeObject(forKey: storageKey)
         UserDefaults.standard.removeObject(forKey: historyKey)
         clearPersistedActiveSession()
         NotificationService.shared.cancelActiveWorkoutAutoEnd()
+        NotificationService.shared.cancelActiveWorkoutBackgroundReminder()
     }
 
     func loadCloudHistory(userId: String) async {
@@ -193,7 +207,11 @@ final class WorkoutStore: ObservableObject {
         return last
     }
 
-    func startSession(for sheet: WorkoutSheet, tookPreWorkout: Bool? = nil) {
+    func startSession(
+        for sheet: WorkoutSheet,
+        tookPreWorkout: Bool? = nil,
+        startingExerciseIndex: Int = 0
+    ) {
         let session = WorkoutSession(
             workoutSheetId: sheet.id,
             workoutTitle: sheet.title,
@@ -201,7 +219,13 @@ final class WorkoutStore: ObservableObject {
             tookPreWorkout: tookPreWorkout
         )
         activeSession = session
-        currentExerciseIndex = 0
+        let clampedStart: Int
+        if sheet.exercises.isEmpty {
+            clampedStart = 0
+        } else {
+            clampedStart = min(max(0, startingExerciseIndex), sheet.exercises.count - 1)
+        }
+        currentExerciseIndex = clampedStart
         replaceExerciseRecords(sheet.exercises.map {
             ExerciseSessionRecord(
                 exerciseId: $0.id,
@@ -211,9 +235,78 @@ final class WorkoutStore: ObservableObject {
             )
         })
         isExerciseTimerPaused = false
+        isActiveWorkoutMinimized = false
+        hasShownStartMotivation = false
+        hasBoundActiveWorkoutUI = false
+        exerciseLastProgressAt = Date()
         startExerciseTimer()
         persistActiveSession()
         scheduleAutoEnd(for: session)
+    }
+
+    func minimizeActiveWorkout() {
+        guard activeSession != nil else { return }
+        isActiveWorkoutMinimized = true
+        persistActiveSession()
+    }
+
+    func resumeActiveWorkout() {
+        guard activeSession != nil else { return }
+        isActiveWorkoutMinimized = false
+        persistActiveSession()
+    }
+
+    func markStartMotivationShown() {
+        hasShownStartMotivation = true
+    }
+
+    func markActiveWorkoutUIBound() {
+        hasBoundActiveWorkoutUI = true
+    }
+
+    func activeStrengthSheet() -> WorkoutSheet? {
+        guard let session = activeSession else { return nil }
+        return workoutSheets.first(where: { $0.id == session.workoutSheetId })
+    }
+
+    func completedSets(for exerciseId: UUID) -> Int {
+        exerciseRecords.first(where: { $0.exerciseId == exerciseId })?.completedSets ?? 0
+    }
+
+    @discardableResult
+    func recordSetCompleted(exerciseId: UUID, totalSets: Int) -> Int {
+        guard let index = exerciseRecords.firstIndex(where: { $0.exerciseId == exerciseId }) else {
+            return 0
+        }
+        let next = min(exerciseRecords[index].completedSets + 1, max(totalSets, 0))
+        mutateExerciseRecords { records in
+            records[index].completedSets = next
+        }
+        persistActiveSession()
+        return next
+    }
+
+    /// Troca o exercício atual sem exigir ordem sequencial.
+    @discardableResult
+    func selectExercise(at index: Int) -> Bool {
+        guard activeSession != nil,
+              exerciseRecords.indices.contains(index),
+              index != currentExerciseIndex else { return false }
+        catchUpExerciseElapsedFromWallClock()
+        currentExerciseIndex = index
+        if !isExerciseTimerPaused {
+            exerciseLastProgressAt = Date()
+        }
+        persistActiveSession()
+        return true
+    }
+
+    @discardableResult
+    func selectExercise(id: UUID) -> Bool {
+        guard let index = exerciseRecords.firstIndex(where: { $0.exerciseId == id }) else {
+            return false
+        }
+        return selectExercise(at: index)
     }
 
     func startCardioSession(config: CardioWorkoutConfig) {
@@ -269,16 +362,49 @@ final class WorkoutStore: ObservableObject {
 
         mutateExerciseRecords { records in
             records[idx].isCompleted = true
+            // Garante contagem cheia ao concluir o exercício manualmente.
+            if let sheet = activeStrengthSheet(),
+               let exercise = sheet.exercises.first(where: { $0.id == records[idx].exerciseId }) {
+                records[idx].completedSets = max(records[idx].completedSets, exercise.sets)
+            }
         }
         syncCompletedExerciseCount()
 
         if idx == currentExerciseIndex {
             advanceToNextIncomplete()
         }
+        persistActiveSession()
     }
 
     func setExerciseTimerPaused(_ paused: Bool) {
+        // Antes de pausar/retomar, consolida o tempo com o relógio do sistema.
+        catchUpExerciseElapsedFromWallClock()
         isExerciseTimerPaused = paused
+        if paused {
+            exerciseLastProgressAt = nil
+        } else if activeSession != nil {
+            exerciseLastProgressAt = Date()
+        }
+        persistActiveSession()
+    }
+
+    /// Recalcula cronômetros após voltar do segundo plano / reabrir o app.
+    func handleAppBecameActive() {
+        if activeSession == nil {
+            restorePersistedActiveSessionIfNeeded()
+        }
+        catchUpExerciseElapsedFromWallClock()
+        if let session = activeSession,
+           !WeeklyProgressAnalyzer.isCardioSession(session),
+           !WeeklyProgressAnalyzer.isMeditationSession(session) {
+            startExerciseTimer()
+        }
+        persistActiveSession()
+    }
+
+    func handleAppEnteredBackground() {
+        catchUpExerciseElapsedFromWallClock()
+        persistActiveSession()
     }
 
     func applyRestSeconds(from timerService: RestTimerService) {
@@ -296,24 +422,41 @@ final class WorkoutStore: ObservableObject {
 
     private func startExerciseTimer() {
         exerciseTimer?.invalidate()
-        exerciseTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+        if exerciseLastProgressAt == nil, !isExerciseTimerPaused {
+            exerciseLastProgressAt = Date()
+        }
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.tickCurrentExercise()
             }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        exerciseTimer = timer
     }
 
     private func tickCurrentExercise() {
         autoEndStaleActiveSessionIfNeeded()
+        catchUpExerciseElapsedFromWallClock()
+    }
+
+    private func catchUpExerciseElapsedFromWallClock() {
         guard activeSession != nil else { return }
         guard !isExerciseTimerPaused,
               currentExerciseIndex < exerciseRecords.count,
-              !exerciseRecords[currentExerciseIndex].isCompleted else { return }
-        exerciseRecords[currentExerciseIndex].elapsedSeconds += 1
-        exerciseElapsedTick.send(exerciseRecords[currentExerciseIndex].elapsedSeconds)
-        if exerciseRecords[currentExerciseIndex].elapsedSeconds % 30 == 0 {
-            persistActiveSession()
+              !exerciseRecords[currentExerciseIndex].isCompleted else {
+            exerciseLastProgressAt = isExerciseTimerPaused ? nil : exerciseLastProgressAt
+            return
         }
+
+        let now = Date()
+        let last = exerciseLastProgressAt ?? now
+        let delta = max(0, Int(now.timeIntervalSince(last)))
+        exerciseLastProgressAt = now
+        guard delta > 0 else { return }
+
+        exerciseRecords[currentExerciseIndex].elapsedSeconds += delta
+        exerciseElapsedTick.send(exerciseRecords[currentExerciseIndex].elapsedSeconds)
+        persistActiveSession()
     }
 
     /// Publica mudanças estruturais nos registros (não usar no tick de 1s).
@@ -390,8 +533,13 @@ final class WorkoutStore: ObservableObject {
         currentExerciseIndex = 0
         exerciseRecords = []
         isExerciseTimerPaused = false
+        isActiveWorkoutMinimized = false
+        hasShownStartMotivation = false
+        hasBoundActiveWorkoutUI = false
         clearPersistedActiveSession()
         saveHistory()
+        NotificationService.shared.cancelActiveWorkoutBackgroundReminder()
+        WorkoutLiveActivitySync.end()
 
         if let userId = cloudUserId {
             Task {
@@ -436,12 +584,23 @@ final class WorkoutStore: ObservableObject {
             UserDefaults.standard.set(recordsData, forKey: activeRecordsKey)
         }
         UserDefaults.standard.set(currentExerciseIndex, forKey: activeExerciseIndexKey)
+        UserDefaults.standard.set(isActiveWorkoutMinimized, forKey: activeMinimizedKey)
+        UserDefaults.standard.set(isExerciseTimerPaused, forKey: activePausedKey)
+        if let exerciseLastProgressAt {
+            UserDefaults.standard.set(exerciseLastProgressAt.timeIntervalSince1970, forKey: exerciseLastProgressKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: exerciseLastProgressKey)
+        }
     }
 
     private func clearPersistedActiveSession() {
         UserDefaults.standard.removeObject(forKey: activeSessionKey)
         UserDefaults.standard.removeObject(forKey: activeRecordsKey)
         UserDefaults.standard.removeObject(forKey: activeExerciseIndexKey)
+        UserDefaults.standard.removeObject(forKey: activeMinimizedKey)
+        UserDefaults.standard.removeObject(forKey: activePausedKey)
+        UserDefaults.standard.removeObject(forKey: exerciseLastProgressKey)
+        exerciseLastProgressAt = nil
     }
 
     private func restorePersistedActiveSessionIfNeeded() {
@@ -456,11 +615,27 @@ final class WorkoutStore: ObservableObject {
             exerciseRecords = records
         }
         currentExerciseIndex = UserDefaults.standard.integer(forKey: activeExerciseIndexKey)
-        isExerciseTimerPaused = false
+        // Sempre reabre o treino ao relançar o app (fechou sem querer).
+        isActiveWorkoutMinimized = false
+        isExerciseTimerPaused = UserDefaults.standard.bool(forKey: activePausedKey)
+        if isExerciseTimerPaused {
+            exerciseLastProgressAt = nil
+        } else if UserDefaults.standard.object(forKey: exerciseLastProgressKey) != nil {
+            let ts = UserDefaults.standard.double(forKey: exerciseLastProgressKey)
+            exerciseLastProgressAt = Date(timeIntervalSince1970: ts)
+        }
+        // Retoma UI do treino e evita resetar progresso/motivação.
+        hasShownStartMotivation = true
+        hasBoundActiveWorkoutUI = true
+
+        catchUpExerciseElapsedFromWallClock()
+
         if !WeeklyProgressAnalyzer.isCardioSession(session),
            !WeeklyProgressAnalyzer.isMeditationSession(session) {
             startExerciseTimer()
         }
+        scheduleAutoEnd(for: session)
+        persistActiveSession()
     }
 
     var lastCompletedWorkoutAt: Date? {

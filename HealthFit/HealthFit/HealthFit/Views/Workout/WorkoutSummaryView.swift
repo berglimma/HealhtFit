@@ -24,6 +24,20 @@ struct WorkoutSummaryView: View {
     @State private var showEmailSentAlert = false
     @State private var showEmailFailedAlert = false
     @State private var emailWasSent = false
+    @State private var shareImage: UIImage?
+    @State private var showShareSheet = false
+    @State private var shareItems: [Any] = []
+    @State private var isPreparingShare = false
+
+    private var athleteDisplayName: String {
+        authService.currentUser?.greetingName
+            ?? authService.currentUser?.name
+            ?? "Atleta"
+    }
+
+    private var shareMotivation: String {
+        WorkoutShareCardRenderer.motivationLine(for: session)
+    }
 
     private var isCardioSession: Bool {
         WorkoutReportBuilder.isCardioSession(session)
@@ -55,6 +69,7 @@ struct WorkoutSummaryView: View {
                     exerciseBreakdown
                     totalsSection
                     emailSection
+                    shareAchievementSection
                     finishButton
                 }
                 .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
@@ -63,6 +78,11 @@ struct WorkoutSummaryView: View {
             .background(AppTheme.background)
             .navigationTitle(session.endedEarly ? "Treino Encerrado" : "Treino Concluído")
             .navigationBarTitleDisplayMode(.inline)
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ActivityShareSheet(items: shareItems) {
+                showShareSheet = false
+            }
         }
         .sheet(item: $mailDraft, onDismiss: {
             presentAlertForPendingMailResult()
@@ -97,6 +117,77 @@ struct WorkoutSummaryView: View {
         } message: {
             Text("Configure uma conta de e-mail no iPhone ou cadastre o e-mail do personal no Perfil.")
         }
+    }
+
+    private var shareAchievementSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Compartilhar conquista", systemImage: "square.and.arrow.up")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            Text("Card pronto para Stories e status — WhatsApp ou Instagram.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            WorkoutShareCardView(
+                session: session,
+                athleteName: athleteDisplayName,
+                motivationLine: shareMotivation
+            )
+            .frame(maxWidth: .infinity)
+            .shadow(color: .black.opacity(0.35), radius: 18, y: 10)
+
+            Button {
+                prepareAndShareCard()
+            } label: {
+                HStack {
+                    if isPreparingShare {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Image(systemName: "paperplane.fill")
+                    }
+                    Text(isPreparingShare ? "Preparando card..." : "Postar no WhatsApp / Instagram")
+                        .font(.headline)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(AppTheme.gradientPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .disabled(isPreparingShare)
+
+            Text("Escolha WhatsApp ou Instagram na tela de compartilhar. O nome HealthFit já vai no card.")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    @MainActor
+    private func prepareAndShareCard() {
+        isPreparingShare = true
+        let image = WorkoutShareCardRenderer.renderImage(
+            session: session,
+            athleteName: athleteDisplayName,
+            motivationLine: shareMotivation
+        )
+        let caption = WorkoutShareCardRenderer.shareCaption(
+            session: session,
+            athleteName: athleteDisplayName
+        )
+        isPreparingShare = false
+
+        guard let image else { return }
+        shareImage = image
+        shareItems = [image, caption]
+        showShareSheet = true
     }
 
     @ViewBuilder

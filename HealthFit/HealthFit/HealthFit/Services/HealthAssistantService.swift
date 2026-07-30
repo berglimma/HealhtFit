@@ -58,6 +58,7 @@ enum HealthAssistantEngine {
         "Quais suplementos devo tomar?",
         "Para que serve a creatina?",
         "Whey protein faz mal?",
+        "Como está minha evolução corporal?",
     ]
 
     static func welcomeMessage(context: HealthAssistantContext) -> String {
@@ -82,7 +83,7 @@ enum HealthAssistantEngine {
             sections.append("")
         }
 
-        sections.append("Posso tirar dúvidas sobre dieta, IMC, biotipos (ecto/meso/endo), sono, treinos (academia ou em casa), cardio, meditação, macros, suplementação e consumo de álcool.")
+        sections.append("Posso tirar dúvidas sobre dieta, IMC, biotipos (ecto/meso/endo), sono, treinos (academia ou em casa), cardio, meditação, macros, suplementação, álcool e evolução corporal (fotos e medidas).")
         sections.append("")
         sections.append(healthSafetyDisclaimer)
         sections.append("")
@@ -351,7 +352,7 @@ enum HealthAssistantEngine {
         HealthAssistantTopic(keywords: $0.keywords, respond: $0.respond)
     }
 
-    private static let topics: [HealthAssistantTopic] = steroidTopics + supplementTopics + dietTopics + imcTopics + workoutTopics + biotypeTopics + generalTopics
+    private static let topics: [HealthAssistantTopic] = steroidTopics + supplementTopics + dietTopics + imcTopics + bodyEvolutionTopics + workoutTopics + biotypeTopics + generalTopics
 
     // MARK: - Esteróides anabolizantes (alerta de saúde)
 
@@ -969,6 +970,52 @@ enum HealthAssistantEngine {
                 • Déficit moderado se perder gordura
 
                 Bioimpedância, adipômetro ou DEXA dão medidas mais precisas que a balança comum.
+                """
+            }
+        ),
+    ]
+
+    // MARK: - Evolução corporal
+
+    private static let bodyEvolutionTopics: [HealthAssistantTopic] = [
+        HealthAssistantTopic(
+            keywords: [
+                "evolucao corporal", "evolução corporal", "fotos de evolucao", "fotos de evolução",
+                "comparar medidas", "comparativo de medidas", "progresso corporal", "antes e depois",
+                "lote de fotos", "pdf de medidas",
+            ],
+            respond: { ctx in
+                let measuresNote: String = {
+                    guard let user = ctx.user else {
+                        return "Cadastre-se e preencha as medidas no Perfil para um laudo completo."
+                    }
+                    if let comparison = user.latestMeasurementComparison,
+                       comparison.periodDays >= BodyMeasurements.comparisonIntervalDays {
+                        if comparison.changes.isEmpty {
+                            return "Suas medidas mais recentes não variaram de forma mensurável no período."
+                        }
+                        let lines = comparison.changes.prefix(5).map {
+                            "• \($0.label): \(BodyMeasurements.formatCm($0.previous)) → \(BodyMeasurements.formatCm($0.current)) (\(BodyMeasurements.formatDelta($0.delta)))"
+                        }
+                        return "Comparativo de medidas (\(comparison.periodDays) dias):\n" + lines.joined(separator: "\n")
+                    }
+                    if user.bodyMeasurements.hasAnyValue {
+                        return "Você já tem medidas salvas. Após 30 dias (e um novo lote de fotos), o app gera o comparativo automático."
+                    }
+                    return "Ainda não há medidas corporais salvas. Preencha em Perfil → Medidas Corporais."
+                }()
+
+                return """
+                Evolução Corporal no HealthFit:
+                • Fotos são opcionais (até 6 ângulos) e privadas — só você pode ver ou acessar.
+                • O laudo principal usa as medidas corporais do Perfil.
+                • Após 30 dias, registre uma nova avaliação (com ou sem fotos).
+                • Se houver fotos antigas, elas são excluídas após a comparação.
+                • Os PDFs das últimas 4 avaliações ficam salvos só na sua conta.
+
+                \(measuresNote)
+
+                Abra Perfil → Evolução Corporal para iniciar ou ver o histórico.
                 """
             }
         ),
@@ -1689,7 +1736,14 @@ final class HealthAssistantService: ObservableObject {
                 isUser: false
             )
         )
+        deliverPendingBodyEvolutionAnnouncementIfNeeded()
         lastUserInteractionAt = Date()
+    }
+
+    /// Entrega anúncio de evolução corporal gerado após uma comparação.
+    func deliverPendingBodyEvolutionAnnouncementIfNeeded() {
+        guard let message = BodyEvolutionService.shared.consumePendingAssistantMessage() else { return }
+        deliverAssistantMessage(message)
     }
 
     func bootstrap(userName: String?) {

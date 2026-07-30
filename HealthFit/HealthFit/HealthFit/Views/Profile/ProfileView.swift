@@ -8,6 +8,7 @@ struct ProfileView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var workoutStore: WorkoutStore
+    @EnvironmentObject var evolutionService: BodyEvolutionService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showLogoutAlert = false
     @State private var showDeleteAccountSheet = false
@@ -65,6 +66,19 @@ struct ProfileView: View {
                     Section("Medidas Corporais") {
                         bodyMeasurementsSection(for: user)
                     }
+                    Section("Evolução Corporal") {
+                        NavigationLink {
+                            BodyEvolutionView()
+                        } label: {
+                            Label("Fotos e comparativo (30 dias)", systemImage: "camera.viewfinder")
+                        }
+                        Text(evolutionService.meta.statusLabel)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                        Text("Fotos opcionais e privadas — só você acessa.")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
                     integrationsSection
                     restTimerSection
                     aboutSection
@@ -86,6 +100,9 @@ struct ProfileView: View {
                 syncPreWorkoutFromWorkouts()
                 syncBodyMeasurementFields()
                 syncBodyDataFields()
+                if let userId = authService.currentUser?.id {
+                    Task { await evolutionService.loadIfNeeded(userId: userId) }
+                }
             }
             .onChange(of: authService.currentUser) { _, _ in
                 syncTrainerFields()

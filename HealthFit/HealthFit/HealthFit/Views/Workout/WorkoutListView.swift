@@ -35,7 +35,12 @@ struct WorkoutListView: View {
                     sectionPicker
 
                     if let session = workoutStore.activeSession {
-                        ActiveWorkoutBanner(session: session)
+                        ActiveWorkoutBanner(
+                            session: session,
+                            currentExerciseName: workoutStore.currentExercise?.name
+                        ) {
+                            workoutStore.resumeActiveWorkout()
+                        }
                     }
 
                     switch selectedSection {
@@ -791,22 +796,42 @@ struct WorkoutSheetCard: View {
 
 struct ActiveWorkoutBanner: View {
     let session: WorkoutSession
+    var currentExerciseName: String? = nil
+    var onResume: (() -> Void)? = nil
 
     var body: some View {
-        HStack {
-            Circle()
-                .fill(.red)
-                .frame(width: 10, height: 10)
-            Text("Treino em andamento: \(session.workoutTitle)")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(AppTheme.textPrimary)
-            Spacer()
-            Text("\(session.completedExercises)/\(session.totalExercises)")
-                .font(.caption.bold())
-                .foregroundStyle(AppTheme.accent)
+        Button {
+            onResume?()
+        } label: {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(.red)
+                    .frame(width: 10, height: 10)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Treino em andamento: \(session.workoutTitle)")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(1)
+                    if let currentExerciseName, !currentExerciseName.isEmpty {
+                        Text(currentExerciseName)
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer()
+                Text("\(session.completedExercises)/\(session.totalExercises)")
+                    .font(.caption.bold())
+                    .foregroundStyle(AppTheme.accent)
+                Image(systemName: "arrow.up.right.circle.fill")
+                    .foregroundStyle(AppTheme.accent)
+            }
+            .padding()
+            .background(AppTheme.accent.opacity(0.18))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .padding()
-        .background(AppTheme.accent.opacity(0.15))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .buttonStyle(.plain)
+        .disabled(onResume == nil)
+        .accessibilityHint("Retomar treino em andamento")
     }
 }
