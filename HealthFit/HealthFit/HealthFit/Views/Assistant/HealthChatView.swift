@@ -73,16 +73,17 @@ struct HealthChatView: View {
                         .padding(.vertical, 12)
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())
-                        .onTapGesture {
-                            dismissChatKeyboard()
-                        }
                     }
-                    .scrollDismissesKeyboard(.interactively)
+                    .scrollDismissesKeyboard(.immediately)
+                    .onTapGesture {
+                        dismissChatKeyboard()
+                    }
                     .onChange(of: assistant.messages.count) { _, _ in
                         scrollToBottom(proxy)
                     }
                     .onChange(of: assistant.isTyping) { _, isTyping in
                         if isTyping {
+                            dismissChatKeyboard()
                             scrollToBottom(proxy)
                         }
                     }
@@ -102,7 +103,7 @@ struct HealthChatView: View {
             .background(AppTheme.background)
             .navigationTitle("Assistente")
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         dismissChatKeyboard()
                         assistant.clear(context: context)
@@ -112,15 +113,20 @@ struct HealthChatView: View {
                     .accessibilityLabel("Limpar conversa")
                 }
                 ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Fechar") {
+                    Button("Fechar teclado") {
                         dismissChatKeyboard()
                     }
                     .fontWeight(.semibold)
+                    Spacer()
+                    if canSendDraft {
+                        Button("Enviar") {
+                            sendDraftIfPossible()
+                        }
+                        .fontWeight(.semibold)
+                    }
                 }
             }
             .onAppear {
-                dismissChatKeyboard()
                 bootstrapOrResumeCheckIn()
                 assistant.handleTabReturn()
                 assistant.checkCardioMeditationNudgeIfNeeded(
@@ -214,6 +220,10 @@ struct HealthChatView: View {
         KeyboardDismiss.hide()
     }
 
+    private var canSendDraft: Bool {
+        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !assistant.isTyping
+    }
+
     private var suggestionStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -279,14 +289,10 @@ struct HealthChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 10) {
-            TextField(
-                inputPlaceholder,
-                text: $draft,
-                axis: .vertical
-            )
-                .lineLimit(1...4)
-                .focused($isInputFocused)
+            TextField(inputPlaceholder, text: $draft)
+                .textInputAutocapitalization(.sentences)
                 .submitLabel(.send)
+                .focused($isInputFocused)
                 .onSubmit {
                     sendDraftIfPossible()
                 }
@@ -297,6 +303,21 @@ struct HealthChatView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 .foregroundStyle(AppTheme.textPrimary)
 
+            if isInputFocused {
+                Button {
+                    dismissChatKeyboard()
+                } label: {
+                    Image(systemName: "keyboard.chevron.compact.down")
+                        .font(.title3)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .frame(width: 44, height: 44)
+                        .background(AppTheme.cardBackground)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Fechar teclado")
+            }
+
             Button {
                 sendDraftIfPossible()
             } label: {
@@ -304,10 +325,10 @@ struct HealthChatView: View {
                     .font(.title3)
                     .foregroundStyle(.white)
                     .frame(width: 44, height: 44)
-                    .background(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.textSecondary : AppTheme.accent)
+                    .background(canSendDraft ? AppTheme.accent : AppTheme.textSecondary)
                     .clipShape(Circle())
             }
-            .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || assistant.isTyping)
+            .disabled(!canSendDraft)
         }
         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
         .padding(.vertical, 10)
@@ -317,7 +338,10 @@ struct HealthChatView: View {
 
     private func sendDraftIfPossible() {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, !assistant.isTyping else { return }
+        guard !text.isEmpty, !assistant.isTyping else {
+            dismissChatKeyboard()
+            return
+        }
         draft = ""
         dismissChatKeyboard()
         assistant.send(text, context: context, workoutStore: workoutStore)

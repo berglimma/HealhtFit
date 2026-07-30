@@ -76,8 +76,9 @@ struct ProfileView: View {
             }
             .adaptiveContentWidth()
             .navigationTitle("Perfil")
-            .scrollDismissesKeyboard(.interactively)
+            .scrollDismissesKeyboard(.immediately)
             .numericKeyboardDismiss()
+            .dismissKeyboardOnTap()
             .onAppear {
                 syncTrainerFields()
                 syncDisplayNameField()
