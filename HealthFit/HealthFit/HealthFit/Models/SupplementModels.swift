@@ -38,6 +38,7 @@ struct SupplementCatalogItem: Identifiable, Hashable {
 
 enum SupplementCatalog {
     static let customId = "outro"
+    static let preWorkoutId = "pre_treino"
 
     static let items: [SupplementCatalogItem] = [
         SupplementCatalogItem(id: "whey", name: "Whey Protein", defaultQuantity: 30, defaultUnit: .grams),
@@ -47,7 +48,7 @@ enum SupplementCatalog {
         SupplementCatalogItem(id: "omega3", name: "Ômega-3", defaultQuantity: 1, defaultUnit: .capsules),
         SupplementCatalogItem(id: "vitamina_d", name: "Vitamina D", defaultQuantity: 1, defaultUnit: .capsules),
         SupplementCatalogItem(id: "cafeina", name: "Cafeína", defaultQuantity: 1, defaultUnit: .capsules),
-        SupplementCatalogItem(id: "pre_treino", name: "Pré-treino", defaultQuantity: 1, defaultUnit: .scoop),
+        SupplementCatalogItem(id: preWorkoutId, name: "Pré-treino", defaultQuantity: 1, defaultUnit: .scoop),
         SupplementCatalogItem(id: "glutamina", name: "Glutamina", defaultQuantity: 5, defaultUnit: .grams),
         SupplementCatalogItem(id: "colageno", name: "Colágeno", defaultQuantity: 10, defaultUnit: .grams),
         SupplementCatalogItem(id: customId, name: "Outro", defaultQuantity: 1, defaultUnit: .capsules, isCustom: true),
@@ -55,6 +56,18 @@ enum SupplementCatalog {
 
     static func item(id: String) -> SupplementCatalogItem? {
         items.first { $0.id == id }
+    }
+
+    /// Identifica Pré-treino pelo id do catálogo ou pelo nome (inclui "Outro" digitado).
+    static func isPreWorkout(catalogId: String, name: String) -> Bool {
+        if catalogId == preWorkoutId { return true }
+        let normalized = name
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+            .lowercased()
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+        let compact = normalized.replacingOccurrences(of: " ", with: "")
+        return compact.contains("pretreino")
     }
 }
 
@@ -91,5 +104,21 @@ struct SupplementIntakeEntry: Identifiable, Codable, Equatable, Hashable {
         }
         let unitLabel = (quantity == 1) ? unit.singularLabel : unit.label
         return "\(formatted) \(unitLabel)"
+    }
+
+    var isPreWorkout: Bool {
+        SupplementCatalog.isPreWorkout(catalogId: catalogId, name: name)
+    }
+
+    /// Contribuição deste registro para `DailyWellnessEntry.preWorkoutCount` (doses no Perfil).
+    /// Scoop/cápsulas: quantidade arredondada (≥ 1). g/ml: 1 dose por registro (massa ≠ dose).
+    var preWorkoutDoseContribution: Int {
+        guard isPreWorkout, quantity > 0 else { return 0 }
+        switch unit {
+        case .scoop, .capsules:
+            return max(1, Int(quantity.rounded()))
+        case .grams, .milliliters:
+            return 1
+        }
     }
 }

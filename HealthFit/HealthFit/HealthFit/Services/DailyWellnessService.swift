@@ -291,6 +291,10 @@ final class DailyWellnessService: ObservableObject {
         var entry = currentTodayEntry()
         entry.supplementIntakes.append(intake)
         entry.supplementsUpdatedAt = .now
+        let doses = intake.preWorkoutDoseContribution
+        if doses > 0 {
+            entry.preWorkoutCount = max(0, entry.preWorkoutCount + doses)
+        }
         todayEntry = entry
         save(entry)
         AssistantSupplementNudgeEngine.queueLoggedAcknowledgment(intake, athleteName: athleteName)
@@ -298,8 +302,15 @@ final class DailyWellnessService: ObservableObject {
 
     func removeSupplementIntake(id: UUID) {
         var entry = currentTodayEntry()
+        let removed = entry.supplementIntakes.first { $0.id == id }
         entry.supplementIntakes.removeAll { $0.id == id }
         entry.supplementsUpdatedAt = .now
+        if let removed {
+            let doses = removed.preWorkoutDoseContribution
+            if doses > 0 {
+                entry.preWorkoutCount = max(0, entry.preWorkoutCount - doses)
+            }
+        }
         todayEntry = entry
         save(entry)
     }
