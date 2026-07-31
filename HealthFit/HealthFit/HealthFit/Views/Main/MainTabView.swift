@@ -178,8 +178,12 @@ struct MainTabView: View {
            workoutStore.activeSession != nil,
            !workoutStore.isActiveWorkoutMinimized {
             presentedActiveSheet = sheet
-        } else {
+        } else if workoutStore.activeSession != nil, workoutStore.isActiveWorkoutMinimized {
+            // Minimizar: fecha o cover do treino ativo.
             presentedActiveSheet = nil
         }
+        // Se activeSession ficou nil (treino finalizado), NÃO limpar o cover aqui.
+        // ActiveWorkoutView precisa permanecer vivo para exibir WorkoutSummaryView
+        // (e-mail + card de compartilhar) e só então chamar dismiss().
     }
 }

@@ -135,10 +135,10 @@ struct ProfileView: View {
             } message: {
                 Text("As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal.")
             }
-            .alert("Dados salvos", isPresented: $showBodyDataSavedAlert) {
+            .alert("Dados e medidas salvos", isPresented: $showBodyDataSavedAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Peso, altura, idade e sexo foram salvos e sincronizados. A Nutrição usa esses dados para o cardápio.")
+                Text("Dados salvos e medidas salvas. Peso, altura, idade, sexo e circunferências foram sincronizados com o Firebase.")
             }
             .sheet(isPresented: $showMeasurementComparison) {
                 if let comparison = measurementComparison {
@@ -936,10 +936,58 @@ struct ProfileView: View {
         user.height = height
         user.age = age
         user.gender = selectedGender
+
+        // Também persiste as medidas preenchidas na mesma ação.
+        applyMeasurementFields(to: &user)
+
         authService.updateProfile(user)
         mealPlanService.regeneratePlanIfNeeded(for: user)
         ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
         showBodyDataSavedAlert = true
+    }
+
+    /// Aplica os campos de circunferência atuais ao perfil (sem alertas).
+    private func applyMeasurementFields(to user: inout UserProfile) {
+        let previousSnapshot = user.bodyMeasurements
+        let shouldGenerateComparison = BodyMeasurements.isEligibleForPeriodComparison(
+            previous: previousSnapshot
+        )
+
+        let measurements = BodyMeasurements(
+            neckCm: parseMeasurement(neckText),
+            shouldersCm: parseMeasurement(shouldersText),
+            chestCm: parseMeasurement(chestText),
+            rightArmCm: parseMeasurement(rightArmText),
+            leftArmCm: parseMeasurement(leftArmText),
+            waistCm: parseMeasurement(waistText),
+            abdomenCm: parseMeasurement(abdomenText),
+            hipCm: parseMeasurement(hipText),
+            rightThighCm: parseMeasurement(rightThighText),
+            leftThighCm: parseMeasurement(leftThighText),
+            rightCalfCm: parseMeasurement(rightCalfText),
+            leftCalfCm: parseMeasurement(leftCalfText),
+            measuredAt: .now
+        )
+
+        // Só atualiza measuredAt/medidas se houver algum valor ou já existia aferição.
+        guard measurements.hasAnyValue || previousSnapshot.hasAnyValue else { return }
+
+        if shouldGenerateComparison && previousSnapshot.hasAnyValue {
+            user.previousBodyMeasurements = previousSnapshot
+        }
+        user.bodyMeasurements = measurements
+
+        if shouldGenerateComparison,
+           let comparison = BodyMeasurementComparison.make(
+            previous: previousSnapshot,
+            current: measurements
+           ) {
+            measurementComparison = comparison
+            // O alerta de dados salvos tem prioridade; o comparativo pode ser aberto depois.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                showMeasurementComparison = true
+            }
+        }
     }
 
     private func syncBodyMeasurementFields() {
@@ -1048,36 +1096,16 @@ struct ProfileView: View {
             previous: previousSnapshot
         )
 
-        let measurements = BodyMeasurements(
-            neckCm: parseMeasurement(neckText),
-            shouldersCm: parseMeasurement(shouldersText),
-            chestCm: parseMeasurement(chestText),
-            rightArmCm: parseMeasurement(rightArmText),
-            leftArmCm: parseMeasurement(leftArmText),
-            waistCm: parseMeasurement(waistText),
-            abdomenCm: parseMeasurement(abdomenText),
-            hipCm: parseMeasurement(hipText),
-            rightThighCm: parseMeasurement(rightThighText),
-            leftThighCm: parseMeasurement(leftThighText),
-            rightCalfCm: parseMeasurement(rightCalfText),
-            leftCalfCm: parseMeasurement(leftCalfText),
-            measuredAt: .now
-        )
-
-        if shouldGenerateComparison && previousSnapshot.hasAnyValue {
-            user.previousBodyMeasurements = previousSnapshot
-        }
-        user.bodyMeasurements = measurements
+        applyMeasurementFields(to: &user)
         authService.updateProfile(user)
         ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
 
         if shouldGenerateComparison,
-           let comparison = BodyMeasurementComparison.make(
+           BodyMeasurementComparison.make(
             previous: previousSnapshot,
-            current: measurements
-           ) {
-            measurementComparison = comparison
-            showMeasurementComparison = true
+            current: user.bodyMeasurements
+           ) != nil {
+            // applyMeasurementFields já agenda o sheet do comparativo.
         } else {
             showMeasurementsSavedAlert = true
         }

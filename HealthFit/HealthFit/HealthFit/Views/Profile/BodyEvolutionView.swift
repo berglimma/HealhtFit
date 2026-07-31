@@ -1,13 +1,15 @@
+import ImageIO
 import Photos
 import PhotosUI
 import SwiftUI
+import UIKit
 
 struct BodyEvolutionView: View {
     @EnvironmentObject private var authService: AuthService
     @EnvironmentObject private var evolutionService: BodyEvolutionService
     @State private var draftImages: [BodyPhotoSlot: UIImage] = [:]
-    @State private var pickerSlot: BodyPhotoSlot?
-    @State private var pickerItem: PhotosPickerItem?
+    @State private var pickerItems: [BodyPhotoSlot: PhotosPickerItem] = [:]
+    @State private var loadingSlots: Set<BodyPhotoSlot> = []
     @State private var showResult: BodyEvolutionComparisonResult?
     @State private var infoMessage: String?
     @State private var sharePDFURL: URL?
@@ -28,26 +30,7 @@ struct BodyEvolutionView: View {
         .task {
             guard let userId = authService.currentUser?.id else { return }
             await evolutionService.loadIfNeeded(userId: userId)
-            hydrateDraftFromActiveSet(userId: userId)
-        }
-        .photosPicker(
-            isPresented: Binding(
-                get: { pickerSlot != nil },
-                set: { if !$0 { pickerSlot = nil } }
-            ),
-            selection: $pickerItem,
-            matching: .images,
-            photoLibrary: .shared()
-        )
-        .onChange(of: pickerItem) { _, item in
-            guard let item, let slot = pickerSlot else { return }
-            Task {
-                guard let data = try? await item.loadTransferable(type: Data.self),
-                      let image = UIImage(data: data) else { return }
-                draftImages[slot] = image
-                pickerItem = nil
-                pickerSlot = nil
-            }
+            await hydrateDraftFromActiveSet(userId: userId)
         }
         .sheet(item: $showResult) { result in
             BodyEvolutionResultView(
@@ -99,7 +82,7 @@ struct BodyEvolutionView: View {
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
 
-            Text("As fotos são opcionais e privadas: só você pode ver ou acessar. O laudo funciona com as medidas corporais; se quiser, adicione até 6 fotos. Após 30 dias, compare novamente. Fotos antigas são excluídas; os PDFs das 4 últimas avaliações ficam só na sua conta.")
+            Text("O laudo usa as medidas do Perfil. As fotos abaixo são opcionais e reforçam o antes/depois.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
 
@@ -120,18 +103,29 @@ struct BodyEvolutionView: View {
                 }
             }
             .padding(.vertical, 4)
+            // Evita o List medir/recalcular a grade a cada toque no picker.
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
         } header: {
             Text("Fotos (opcional e privado)")
         } footer: {
-            Text("Nenhum outro usuário, personal ou nutrição consegue acessar estas imagens.")
-                .font(.caption2)
+            Text(
+                """
+                Como adicionar: toque em cada ângulo (até 6). É opcional e privado — só você vê.
+                Fluxo: salve o lote inicial → aguarde 30 dias → adicione um novo lote e compare.
+                Depois da comparação, as fotos antigas são excluídas. Você pode salvar uma cópia em Fotos ou Arquivos. Os PDFs das 4 últimas avaliações ficam na sua conta.
+                """
+            )
+            .font(.caption)
+            .foregroundStyle(AppTheme.textSecondary)
         }
     }
 
     private func photoCell(_ slot: BodyPhotoSlot) -> some View {
-        Button {
-            pickerSlot = slot
-        } label: {
+        PhotosPicker(
+            selection: binding(for: slot),
+            matching: .images,
+            photoLibrary: .shared()
+        ) {
             VStack(spacing: 6) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
@@ -145,6 +139,8 @@ struct BodyEvolutionView: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .clipped()
                             .clipShape(RoundedRectangle(cornerRadius: 10))
+                    } else if loadingSlots.contains(slot) {
+                        ProgressView()
                     } else {
                         VStack(spacing: 6) {
                             Image(systemName: slot.systemImage)
@@ -166,8 +162,38 @@ struct BodyEvolutionView: View {
             if draftImages[slot] != nil {
                 Button("Remover", role: .destructive) {
                     draftImages[slot] = nil
+                    pickerItems[slot] = nil
                 }
             }
+        }
+    }
+
+    private func binding(for slot: BodyPhotoSlot) -> Binding<PhotosPickerItem?> {
+        Binding(
+            get: { pickerItems[slot] },
+            set: { newValue in
+                pickerItems[slot] = newValue
+                guard let newValue else { return }
+                Task { await loadPickedImage(newValue, for: slot) }
+            }
+        )
+    }
+
+    @MainActor
+    private func loadPickedImage(_ item: PhotosPickerItem, for slot: BodyPhotoSlot) async {
+        loadingSlots.insert(slot)
+        defer {
+            loadingSlots.remove(slot)
+            pickerItems[slot] = nil
+        }
+
+        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+        let image = await Task.detached(priority: .userInitiated) {
+            BodyEvolutionImageProcessing.downsampledImage(data: data, maxSide: 1200)
+        }.value
+
+        if let image {
+            draftImages[slot] = image
         }
     }
 
@@ -247,21 +273,28 @@ struct BodyEvolutionView: View {
 
     private var draftFilledCount: Int { draftImages.count }
 
-    private func hydrateDraftFromActiveSet(userId: String) {
+    private func hydrateDraftFromActiveSet(userId: String) async {
         switch evolutionService.cyclePhase {
         case .readyToCompare:
-            // Novo lote: rascunho começa vazio.
             draftImages = [:]
         case .empty:
             break
         case .waiting:
             guard let set = evolutionService.meta.activePhotoSet else { return }
-            var loaded: [BodyPhotoSlot: UIImage] = [:]
-            for entry in set.photos where entry.hasPhoto {
-                if let image = evolutionService.localImage(userId: userId, setId: set.id, slot: entry.slot) {
-                    loaded[entry.slot] = image
+            let slots = set.photos.filter(\.hasPhoto).map(\.slot)
+            let loaded: [BodyPhotoSlot: UIImage] = await Task.detached(priority: .utility) {
+                var result: [BodyPhotoSlot: UIImage] = [:]
+                for slot in slots {
+                    let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                        .appendingPathComponent("BodyEvolution/\(userId)/photos/\(set.id)/\(slot.rawValue).jpg")
+                    guard let data = try? Data(contentsOf: url),
+                          let image = BodyEvolutionImageProcessing.downsampledImage(data: data, maxSide: 600) else {
+                        continue
+                    }
+                    result[slot] = image
                 }
-            }
+                return result
+            }.value
             if !loaded.isEmpty {
                 draftImages = loaded
             }
@@ -623,4 +656,28 @@ private struct ShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+enum BodyEvolutionImageProcessing {
+    /// Decodifica e reduz a imagem sem carregar o bitmap full-resolution na UI.
+    static func downsampledImage(data: Data, maxSide: CGFloat) -> UIImage? {
+        let options: [CFString: Any] = [
+            kCGImageSourceShouldCache: false
+        ]
+        guard let source = CGImageSourceCreateWithData(data as CFData, options as CFDictionary) else {
+            return UIImage(data: data)
+        }
+
+        let downsampleOptions: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxSide
+        ]
+
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, downsampleOptions as CFDictionary) else {
+            return UIImage(data: data)
+        }
+        return UIImage(cgImage: cgImage)
+    }
 }

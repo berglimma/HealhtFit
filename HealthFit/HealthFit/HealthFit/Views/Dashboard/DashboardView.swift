@@ -8,6 +8,7 @@ struct DashboardView: View {
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var weeklyReportService: WeeklyReportService
     @EnvironmentObject var wellnessService: DailyWellnessService
+    @EnvironmentObject var shareCardStore: WorkoutShareCardStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var showWeeklyReport = false
@@ -25,6 +26,7 @@ struct DashboardView: View {
                 VStack(spacing: 20) {
                     headerSection
                     weeklyReportBanner
+                    lastShareCardSection
                     metricsRow
                     HealthChartsView()
                     watchSection
@@ -111,6 +113,73 @@ struct DashboardView: View {
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
         }
         .buttonStyle(.plain)
+    }
+
+    private var lastShareCardSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Último card de postagem")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            if let card = shareCardStore.lastCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.title3)
+                            .foregroundStyle(AppTheme.accent)
+                            .frame(width: 28)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(card.workoutTitle)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(AppTheme.textPrimary)
+                            Text(formattedShareCardDate(card.displayDate))
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+
+                        Spacer(minLength: 0)
+                    }
+
+                    if let preview = shareCardStore.previewImage {
+                        Image(uiImage: preview)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: .black.opacity(0.25), radius: 12, y: 6)
+                            .accessibilityLabel("Card de postagem de \(card.workoutTitle)")
+                    } else {
+                        WorkoutShareCardView(
+                            session: card.makeSession(),
+                            athleteName: card.athleteName,
+                            motivationLine: card.motivationLine
+                        )
+                        .scaleEffect(0.72)
+                        .frame(height: 324)
+                        .frame(maxWidth: .infinity)
+                        .allowsHitTesting(false)
+                    }
+                }
+                .padding()
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            } else {
+                Text("Nenhum card gerado ainda. Finalize um treino para criar o card de postagem.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
+                    .cardStyle()
+            }
+        }
+    }
+
+    private func formattedShareCardDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.dateFormat = "dd MMM yyyy · HH:mm"
+        return formatter.string(from: date)
     }
 
     private var headerSection: some View {

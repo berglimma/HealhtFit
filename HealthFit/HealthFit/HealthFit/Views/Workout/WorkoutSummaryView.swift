@@ -11,11 +11,12 @@ private struct TrainerMailDraft: Identifiable {
 struct WorkoutSummaryView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var workoutStore: WorkoutStore
+    @EnvironmentObject var shareCardStore: WorkoutShareCardStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     let session: WorkoutSession
     let onFinish: () -> Void
-    /// Chamado ao confirmar "E-mail enviado" — deve voltar à lista de treinos.
+    /// Chamado ao tocar em Fechar — tipicamente volta à lista de treinos.
     var onReturnToWorkoutList: (() -> Void)? = nil
 
     @State private var mailDraft: TrainerMailDraft?
@@ -28,6 +29,10 @@ struct WorkoutSummaryView: View {
     @State private var showShareSheet = false
     @State private var shareItems: [Any] = []
     @State private var isPreparingShare = false
+    @State private var didStartPostWorkoutFlow = false
+    @State private var scrollToShareToken = 0
+
+    private let shareCardAnchorID = "workoutShareCard"
 
     private var athleteDisplayName: String {
         authService.currentUser?.greetingName
@@ -49,35 +54,51 @@ struct WorkoutSummaryView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    summaryHeader
-                    if session.endedEarly {
-                        earlyEndSection
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 20) {
+                        summaryHeader
+                        if session.endedEarly {
+                            earlyEndSection
+                        }
+                        if let user = authService.currentUser,
+                           user.bodyMeasurements.hasAnyValue {
+                            bodyMeasurementsSection(user: user)
+                        }
+                        if session.targetCalories != nil {
+                            calorieGoalResultSection
+                        }
+                        if marathonReport != nil {
+                            marathonPerformanceSection
+                        }
+                        preWorkoutSection
+                        exerciseBreakdown
+                        totalsSection
+                        emailSection
+                        shareAchievementSection
+                            .id(shareCardAnchorID)
+                        finishButton
                     }
-                    if let user = authService.currentUser,
-                       user.bodyMeasurements.hasAnyValue {
-                        bodyMeasurementsSection(user: user)
-                    }
-                    if session.targetCalories != nil {
-                        calorieGoalResultSection
-                    }
-                    if marathonReport != nil {
-                        marathonPerformanceSection
-                    }
-                    preWorkoutSection
-                    exerciseBreakdown
-                    totalsSection
-                    emailSection
-                    shareAchievementSection
-                    finishButton
+                    .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                    .adaptiveContentWidth()
                 }
-                .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                .adaptiveContentWidth()
+                .background(AppTheme.background)
+                .navigationTitle(session.endedEarly ? "Treino Encerrado" : "Treino Concluído")
+                .navigationBarTitleDisplayMode(.inline)
+                .onChange(of: scrollToShareToken) { _, _ in
+                    withAnimation(.easeInOut(duration: 0.35)) {
+                        proxy.scrollTo(shareCardAnchorID, anchor: .center)
+                    }
+                }
             }
-            .background(AppTheme.background)
-            .navigationTitle(session.endedEarly ? "Treino Encerrado" : "Treino Concluído")
-            .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                shareCardStore.remember(
+                    session: session,
+                    athleteName: athleteDisplayName,
+                    motivationLine: shareMotivation
+                )
+                startPostWorkoutFlowIfNeeded()
+            }
         }
         .sheet(isPresented: $showShareSheet) {
             ActivityShareSheet(items: shareItems) {
@@ -98,24 +119,28 @@ struct WorkoutSummaryView: View {
         }
         .alert("E-mail enviado", isPresented: $showEmailSentAlert) {
             Button("OK") {
-                returnToWorkoutListAfterEmail()
+                focusShareCard()
             }
         } message: {
             if let user = authService.currentUser {
-                Text("O relatório foi enviado para \(user.personalTrainerName.isEmpty ? user.personalTrainerEmail : user.personalTrainerName) com sucesso.")
+                Text("Relatório enviado para \(user.personalTrainerName.isEmpty ? user.personalTrainerEmail : user.personalTrainerName). Agora você pode compartilhar o card da conquista.")
             } else {
-                Text("O relatório foi enviado com sucesso.")
+                Text("Relatório enviado com sucesso. Agora você pode compartilhar o card da conquista.")
             }
         }
         .alert("Falha no envio", isPresented: $showEmailFailedAlert) {
-            Button("OK", role: .cancel) {}
+            Button("OK") {
+                focusShareCard()
+            }
         } message: {
-            Text("Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas).")
+            Text("Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas). Você ainda pode compartilhar o card.")
         }
         .alert("E-mail indisponível", isPresented: $showMailUnavailableAlert) {
-            Button("OK", role: .cancel) {}
+            Button("OK") {
+                focusShareCard()
+            }
         } message: {
-            Text("Configure uma conta de e-mail no iPhone ou cadastre o e-mail do personal no Perfil.")
+            Text("Configure uma conta de e-mail no iPhone ou cadastre o e-mail do personal no Perfil. Você ainda pode compartilhar o card.")
         }
     }
 
@@ -186,6 +211,7 @@ struct WorkoutSummaryView: View {
 
         guard let image else { return }
         shareImage = image
+        shareCardStore.updatePreviewImage(image)
         shareItems = [image, caption]
         showShareSheet = true
     }
@@ -247,7 +273,12 @@ struct WorkoutSummaryView: View {
 
     private var finishButton: some View {
         Button {
-            onFinish()
+            // Fechar encerra o fluxo; se houver callback de lista, volta aos treinos.
+            if let onReturnToWorkoutList {
+                onReturnToWorkoutList()
+            } else {
+                onFinish()
+            }
         } label: {
             Text("Fechar")
                 .font(.headline)
@@ -265,8 +296,33 @@ struct WorkoutSummaryView: View {
         return "Enviar e-mail para o Personal"
     }
 
+    private func startPostWorkoutFlowIfNeeded() {
+        guard !didStartPostWorkoutFlow else { return }
+        didStartPostWorkoutFlow = true
+
+        // Ordem: e-mail ao personal (se configurado) → card de compartilhar → Fechar.
+        if let user = authService.currentUser, user.hasPersonalTrainer {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                guard mailDraft == nil, !emailWasSent else { return }
+                sendReportToTrainer(user: user)
+            }
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                focusShareCard()
+            }
+        }
+    }
+
+    private func focusShareCard() {
+        scrollToShareToken += 1
+    }
+
     private func presentAlertForPendingMailResult() {
-        guard let result = pendingMailResult else { return }
+        guard let result = pendingMailResult else {
+            // Sheet fechou sem resultado (ex.: swipe) — segue para o card.
+            focusShareCard()
+            return
+        }
         pendingMailResult = nil
 
         switch result {
@@ -280,17 +336,12 @@ struct WorkoutSummaryView: View {
                 showEmailFailedAlert = true
             }
         case .cancelled, .saved:
-            break
+            // Mesmo cancelando o e-mail, mostra o card de compartilhar.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                focusShareCard()
+            }
         @unknown default:
-            break
-        }
-    }
-
-    private func returnToWorkoutListAfterEmail() {
-        if let onReturnToWorkoutList {
-            onReturnToWorkoutList()
-        } else {
-            onFinish()
+            focusShareCard()
         }
     }
 
@@ -321,7 +372,12 @@ struct WorkoutSummaryView: View {
             body: body
         ) {
             UIApplication.shared.open(url) { accepted in
-                if !accepted {
+                if accepted {
+                    // mailto não confirma envio; segue para o card.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        focusShareCard()
+                    }
+                } else {
                     showMailUnavailableAlert = true
                 }
             }

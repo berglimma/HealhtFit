@@ -218,7 +218,7 @@ struct ActiveMeditationView: View {
             athleteName: authService.currentUser?.greetingName ?? "Atleta"
         )
 
-        workoutStore.endSession(persisting: session)
         finishedSession = session
+        workoutStore.endSession(persisting: session)
     }
 }

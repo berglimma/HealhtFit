@@ -315,9 +315,6 @@
     "Aquecimento, quadril, ombros e pós-treino com demos" : {
 
     },
-    "As fotos são opcionais e privadas: só você pode ver ou acessar. O laudo funciona com as medidas corporais; se quiser, adicione até 6 fotos. Após 30 dias, compare novamente. Fotos antigas são excluídas; os PDFs das 4 últimas avaliações ficam só na sua conta." : {
-
-    },
     "As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal." : {
 
     },
@@ -328,6 +325,9 @@
 
     },
     "Assistente digitando" : {
+
+    },
+    "Até 4 sessões concluídas recentemente" : {
 
     },
     "Atenção ao consumo de doces" : {
@@ -1099,6 +1099,9 @@
     "Cancelar" : {
 
     },
+    "Card de postagem de %@" : {
+
+    },
     "Card pronto para Stories e status — WhatsApp ou Instagram." : {
 
     },
@@ -1315,6 +1318,9 @@
         }
       }
     },
+    "Como adicionar: toque em cada ângulo (até 6). É opcional e privado — só você vê.\nFluxo: salve o lote inicial → aguarde 30 dias → adicione um novo lote e compare.\nDepois da comparação, as fotos antigas são excluídas. Você pode salvar uma cópia em Fotos ou Arquivos. Os PDFs das 4 últimas avaliações ficam na sua conta." : {
+
+    },
     "Como saber se você é %@" : {
 
     },
@@ -1363,7 +1369,7 @@
     "Configure uma conta de e-mail no iPhone ou cadastre o e-mail do nutricionista no Perfil." : {
 
     },
-    "Configure uma conta de e-mail no iPhone ou cadastre o e-mail do personal no Perfil." : {
+    "Configure uma conta de e-mail no iPhone ou cadastre o e-mail do personal no Perfil. Você ainda pode compartilhar o card." : {
 
     },
     "Confirmação" : {
@@ -1989,6 +1995,9 @@
     "Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas)." : {
 
     },
+    "Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas). Você ainda pode compartilhar o card." : {
+
+    },
     "Não foi possível salvar" : {
 
     },
@@ -2001,19 +2010,22 @@
     "Nenhum" : {
 
     },
+    "Nenhum card gerado ainda. Finalize um treino para criar o card de postagem." : {
+
+    },
     "Nenhum exercício nesta ficha. Selecione ao menos um grupo muscular." : {
 
     },
     "Nenhum item na lista" : {
 
     },
-    "Nenhum outro usuário, personal ou nutrição consegue acessar estas imagens." : {
-
-    },
     "Nenhum plano gerado" : {
 
     },
     "Nenhum treino realizado ainda" : {
+
+    },
+    "Nenhum treino realizado ainda." : {
 
     },
     "Nenhuma atividade registrada nesta semana." : {
@@ -2186,6 +2198,9 @@
     "O ícone do app na tela inicial usa a mesma cor." : {
 
     },
+    "O laudo usa as medidas do Perfil. As fotos abaixo são opcionais e reforçam o antes/depois." : {
+
+    },
     "O que melhorar" : {
 
     },
@@ -2196,12 +2211,6 @@
 
     },
     "O relatório de nutrição foi enviado para %@ com sucesso." : {
-
-    },
-    "O relatório foi enviado com sucesso." : {
-
-    },
-    "O relatório foi enviado para %@ com sucesso." : {
 
     },
     "Objetivo" : {
@@ -2615,6 +2624,12 @@
 
     },
     "Relatório de compras da semana" : {
+
+    },
+    "Relatório enviado com sucesso. Agora você pode compartilhar o card da conquista." : {
+
+    },
+    "Relatório enviado para %@. Agora você pode compartilhar o card da conquista." : {
 
     },
     "Relatório Semanal" : {
@@ -3072,6 +3087,12 @@
 
     },
     "Últimas avaliações (PDF)" : {
+
+    },
+    "Último card de postagem" : {
+
+    },
+    "Últimos treinos" : {
 
     },
     "Usado nas saudações, motivação e mensagens do app." : {

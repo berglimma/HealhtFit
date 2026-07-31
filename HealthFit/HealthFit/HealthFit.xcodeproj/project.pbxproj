@@ -66,6 +66,7 @@
 		B1000044 /* WeeklyProgressModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000046 /* WeeklyProgressModels.swift */; };
 		B1000045 /* WeeklyProgressAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000047 /* WeeklyProgressAnalyzer.swift */; };
 		B1000046 /* WeeklyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000048 /* WeeklyReportService.swift */; };
+		B1000330 /* WorkoutShareCardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000330 /* WorkoutShareCardStore.swift */; };
 		B1000047 /* WeeklyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000049 /* WeeklyReportView.swift */; };
 		B1000048 /* MeditationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000050 /* MeditationModels.swift */; };
 		B1000049 /* MeditationSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000051 /* MeditationSetupView.swift */; };
@@ -296,6 +297,7 @@
 		F1000046 /* WeeklyProgressModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressModels.swift; sourceTree = "<group>"; };
 		F1000047 /* WeeklyProgressAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressAnalyzer.swift; sourceTree = "<group>"; };
 		F1000048 /* WeeklyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportService.swift; sourceTree = "<group>"; };
+		F1000330 /* WorkoutShareCardStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutShareCardStore.swift; sourceTree = "<group>"; };
 		F1000049 /* WeeklyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportView.swift; sourceTree = "<group>"; };
 		F1000050 /* MeditationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationModels.swift; sourceTree = "<group>"; };
 		F1000051 /* MeditationSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationSetupView.swift; sourceTree = "<group>"; };
@@ -429,6 +431,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FW100005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FW200001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -494,6 +503,15 @@
 			path = HealthFitWatch;
 			sourceTree = "<group>";
 		};
+		G1000050 /* HealthFitWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				F1000309 /* WorkoutLiveActivityWidget.swift */,
+				F1000310 /* Info.plist */,
+			);
+			path = HealthFitWidgets;
+			sourceTree = "<group>";
+		};
 		G1000004 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -544,6 +562,7 @@
 				F1000040 /* WorkoutReportBuilder.swift */,
 				F1000047 /* WeeklyProgressAnalyzer.swift */,
 				F1000048 /* WeeklyReportService.swift */,
+				F1000330 /* WorkoutShareCardStore.swift */,
 				F1000054 /* DailyWellnessService.swift */,
 				F1000057 /* AppIconInactivityService.swift */,
 				F1000060 /* HealthAssistantService.swift */,
@@ -1041,6 +1060,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		R1000005 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -1088,6 +1114,7 @@
 				B1000044 /* WeeklyProgressModels.swift in Sources */,
 				B1000045 /* WeeklyProgressAnalyzer.swift in Sources */,
 				B1000046 /* WeeklyReportService.swift in Sources */,
+				B1000330 /* WorkoutShareCardStore.swift in Sources */,
 				B1000047 /* WeeklyReportView.swift in Sources */,
 				B1000048 /* MeditationModels.swift in Sources */,
 				B1000049 /* MeditationSetupView.swift in Sources */,
@@ -1206,6 +1233,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		S1000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1000309 /* WorkoutLiveActivityWidget.swift in Sources */,
+				B1000310 /* WorkoutLiveActivityAttributes.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1213,6 +1249,11 @@
 			isa = PBXTargetDependency;
 			target = T1000002 /* HealthFitWatch */;
 			targetProxy = C1000001 /* PBXContainerItemProxy */;
+		};
+		D1000005 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = T1000005 /* HealthFitWidgets */;
+			targetProxy = C1000005 /* PBXContainerItemProxy */;
 		};
 		D2000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1451,7 +1492,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
-				ENABLE_PREVIEWS = YES;
+				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = HealthFit;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit no Apple Watch lê passos, batimentos e calorias para sincronizar com o iPhone e o app Saúde.";
@@ -1467,7 +1509,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
-				SKIP_INSTALL = NO;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
@@ -1484,7 +1528,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
-				ENABLE_PREVIEWS = YES;
+				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = HealthFit;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit no Apple Watch lê passos, batimentos e calorias para sincronizar com o iPhone e o app Saúde.";
@@ -1500,7 +1545,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
-				SKIP_INSTALL = NO;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
@@ -1613,6 +1660,7 @@
 				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = HealthFit;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1638,6 +1686,7 @@
 				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = HealthFit;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

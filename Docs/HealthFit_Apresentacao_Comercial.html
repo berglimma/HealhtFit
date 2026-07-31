@@ -608,7 +608,7 @@
       transform: scale(1.02);
     }
     .slide.active .role-card .media img {
-      animation: roleKen 6s ease-in-out infinite alternate;
+      animation: none;
     }
     @keyframes roleKen {
       from { transform: scale(1.02) translateY(0); }
@@ -965,8 +965,8 @@
               <strong>Treinos</strong>
               <ul>
                 <li>Masculino, feminino, casa, mobilidade</li>
-                <li>Cardio, corrida e meditação</li>
-                <li>GIFs e cronômetro de descanso</li>
+                <li>Séries com progresso e pausa inteligente</li>
+                <li>Live Activity na tela de bloqueio</li>
               </ul>
             </article>
             <article class="card reveal reveal-d3">
@@ -980,17 +980,17 @@
             <article class="card reveal reveal-d4">
               <strong>IAssistente</strong>
               <ul>
-                <li>Check-ins manhã/noite</li>
-                <li>Pós-treino e motivação</li>
-                <li>Montagem de fichas</li>
+                <li>Check-ins manhã/noite e pós-treino</li>
+                <li>Avisos de evolução corporal</li>
+                <li>Montagem de fichas e motivação</li>
               </ul>
             </article>
             <article class="card reveal reveal-d5">
-              <strong>Profissionais</strong>
+              <strong>Evolução &amp; profissionais</strong>
               <ul>
-                <li>Personal recebe treino</li>
-                <li>Nutri recebe cardápio</li>
-                <li>Opt-in Sim/Não no Perfil</li>
+                <li>Fotos opcionais e privadas (30 dias)</li>
+                <li>PDF das 4 últimas avaliações</li>
+                <li>Personal e nutri por canal</li>
               </ul>
             </article>
           </div>
@@ -1019,6 +1019,57 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5b Novidades -->
+    <section class="slide" data-title="Novidades">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Novidades do produto</p>
+        <h2 class="reveal reveal-d1">Evolução corporal, tela de bloqueio e compartilhamento.</h2>
+        <p class="lead reveal reveal-d2">Funcionalidades recentes que reforçam acompanhamento, privacidade e presença no ecossistema Apple.</p>
+        <div class="grid-3" style="margin-top:1.25rem;">
+          <article class="card reveal reveal-d3">
+            <strong>Evolução Corporal</strong>
+            <ul>
+              <li>Medidas + fotos opcionais (até 6)</li>
+              <li>Comparativo a cada 30 dias</li>
+              <li>Fotos privadas — só o usuário acessa</li>
+              <li>PDF das 4 últimas avaliações</li>
+              <li>Salvar cópia em Fotos ou Arquivos</li>
+              <li>IAssistente notifica a evolução</li>
+            </ul>
+          </article>
+          <article class="card reveal reveal-d4">
+            <strong>Live Activity</strong>
+            <ul>
+              <li>Treino e pausa na tela de bloqueio</li>
+              <li>Cronômetros em tempo real</li>
+              <li>Continua mesmo com o app em segundo plano</li>
+              <li>Widget nativo HealthFit</li>
+            </ul>
+          </article>
+          <article class="card reveal reveal-d5">
+            <strong>Treino &amp; Watch</strong>
+            <ul>
+              <li>Pausa conclui a série (não o exercício)</li>
+              <li>Progresso claro: 1/3, 2/3, 3/3</li>
+              <li>Minimizar e retomar o treino</li>
+              <li>Card para WhatsApp / Instagram</li>
+              <li>App Watch instalável via iPhone</li>
+            </ul>
+          </article>
+        </div>
+        <div class="grid-2" style="margin-top:1rem;">
+          <article class="card reveal reveal-d6">
+            <strong>Privacidade</strong>
+            <p>Fotos de evolução ficam em caminho privado no Firebase Storage. Personal e nutricionista não acessam as imagens — só relatórios e PDFs que o atleta autoriza compartilhar.</p>
+          </article>
+          <article class="card reveal reveal-d6">
+            <strong>IAssistente</strong>
+            <p>Além dos check-ins diários, o assistente avisa quando completar 30 dias e resume o laudo de evolução após cada comparação.</p>
+          </article>
         </div>
       </div>
     </section>
@@ -1063,10 +1114,16 @@
               <td class="yes">Tudo no mesmo app</td>
             </tr>
             <tr>
-              <td>Watch + HealthKit + ícone dinâmico</td>
+              <td>Watch + HealthKit + Live Activity</td>
               <td class="partial">Variável</td>
               <td class="partial">Variável</td>
               <td class="yes">Nativo Apple</td>
+            </tr>
+            <tr>
+              <td>Evolução corporal (medidas + fotos privadas)</td>
+              <td class="no">Raro</td>
+              <td class="partial">Só medidas</td>
+              <td class="yes">Ciclo 30 dias + PDF</td>
             </tr>
             <tr>
               <td>Multilíngue App Store (BR/EN/ES/FR)</td>
@@ -1084,7 +1141,7 @@
       <div class="slide-inner">
         <p class="eyebrow reveal">Diferenciais proprietários</p>
         <h2 class="reveal reveal-d1">Nativo no ecossistema Apple.</h2>
-        <p class="lead reveal reveal-d2">A mesma experiência em iPhone, iPad e Apple Watch — treino, nutrição e acompanhamento onde o usuário estiver.</p>
+        <p class="lead reveal reveal-d2">A mesma experiência em iPhone, iPad e Apple Watch — com Live Activity no bloqueio e app do Watch instalável pelo iPhone.</p>
         <div class="device-grid">
           <article class="device-card iphone reveal reveal-d3">
             <div class="shot">
@@ -1092,7 +1149,7 @@
             </div>
             <div class="caption">
               <strong>iPhone</strong>
-              <p>Treino, cardápio e IAssistente no bolso.</p>
+              <p>Treino, evolução corporal, cardápio e IAssistente.</p>
             </div>
           </article>
           <article class="device-card ipad reveal reveal-d4">
@@ -1110,7 +1167,7 @@
             </div>
             <div class="caption">
               <strong>Apple Watch</strong>
-              <p>BPM, kcal e treino ao vivo no pulso.</p>
+              <p>BPM, kcal e treino ao vivo — instalação via iPhone.</p>
             </div>
           </article>
         </div>
@@ -1156,7 +1213,7 @@
           <article class="card reveal reveal-d6">
             <div class="stat">03</div>
             <h3>Evoluir com suporte</h3>
-            <p>IA + profissionais + relatório semanal.</p>
+            <p>Medidas, fotos privadas, IA, profissionais e relatório semanal.</p>
           </article>
         </div>
       </div>
@@ -1174,7 +1231,7 @@
             </div>
             <div class="body">
               <strong>Atleta</strong>
-              <p>Clareza do que treinar e comer, motivação diária e progresso visível.</p>
+              <p>Clareza do que treinar e comer, motivação diária, evolução corporal e progresso visível.</p>
             </div>
           </article>
           <article class="role-card reveal reveal-d3">
@@ -1210,7 +1267,8 @@
             <p class="lead reveal reveal-d2">Produto Apple-native, personalidade forte, ponte com profissionais e ficha multilíngue para App Store mundial.</p>
             <div class="pill-row reveal reveal-d3">
               <span class="pill">Treino inteligente</span>
-              <span class="pill">Nutrição prática</span>
+              <span class="pill">Evolução corporal</span>
+              <span class="pill">Live Activity</span>
               <span class="pill">IAssistente presente</span>
               <span class="pill">Personal &amp; Nutri</span>
               <span class="pill">4 idiomas</span>

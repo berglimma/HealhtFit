@@ -567,6 +567,7 @@ struct ActiveWorkoutView: View {
         watchConnectivity.sendRestTimerStop()
         watchConnectivity.stopWorkoutOnWatch()
         WorkoutLiveActivitySync.end()
+        // Mesma ordem do finishWorkout: resumo primeiro, para não perder o cover.
         finishedSession = session
     }
 
@@ -687,8 +688,10 @@ struct ActiveWorkoutView: View {
             athleteName: authService.currentUser?.greetingName ?? "Atleta"
         )
 
-        workoutStore.endSession(persisting: session)
+        // Define o resumo ANTES de limpar activeSession, para o fullScreenCover
+        // aparecer mesmo se o MainTabView reagir ao fim da sessão.
         finishedSession = session
+        workoutStore.endSession(persisting: session)
     }
 }
 

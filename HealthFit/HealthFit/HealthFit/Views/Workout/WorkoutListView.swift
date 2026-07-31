@@ -539,6 +539,7 @@ struct GenderWorkoutHubView: View {
 
     @State private var sheetToEdit: WorkoutSheet?
     @State private var sheetPendingDeletion: WorkoutSheet?
+    @State private var selectedRecentSession: WorkoutSession?
 
     private var title: String {
         gender == .female ? "Programa Feminino" : "Programa Masculino"
@@ -554,6 +555,14 @@ struct GenderWorkoutHubView: View {
 
     private var customSheets: [WorkoutSheet] {
         workoutStore.customWorkoutSheets(for: gender)
+    }
+
+    private var recentCompletedSessions: [WorkoutSession] {
+        Array(
+            workoutStore.sessionHistory
+                .filter { $0.endedAt != nil }
+                .prefix(4)
+        )
     }
 
     var body: some View {
@@ -573,6 +582,8 @@ struct GenderWorkoutHubView: View {
                     sheets: customSheets,
                     emptyMessage: "Nenhum personalizado ainda. Toque em + para criar."
                 )
+
+                recentWorkoutsSection
             }
             .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
             .adaptiveContentWidth()
@@ -592,6 +603,12 @@ struct GenderWorkoutHubView: View {
         }
         .sheet(item: $sheetToEdit) { sheet in
             CreateWorkoutView(editingSheet: sheet)
+        }
+        .sheet(item: $selectedRecentSession) { session in
+            WorkoutSummaryView(
+                session: session,
+                onFinish: { selectedRecentSession = nil }
+            )
         }
         .alert("Excluir treino?", isPresented: deletionAlertBinding) {
             Button("Excluir", role: .destructive) {
@@ -644,6 +661,40 @@ struct GenderWorkoutHubView: View {
                 }
             }
         )
+    }
+
+    private var recentWorkoutsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Últimos treinos")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("Até 4 sessões concluídas recentemente")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            if recentCompletedSessions.isEmpty {
+                Text("Nenhum treino realizado ainda.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(AppTheme.cardBackground.opacity(0.6))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(recentCompletedSessions) { session in
+                        Button {
+                            selectedRecentSession = session
+                        } label: {
+                            RecentWorkoutSessionCard(session: session)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
     }
 
     private func workoutGroupSection(
@@ -703,6 +754,57 @@ struct GenderWorkoutHubView: View {
                 }
             }
         }
+    }
+}
+
+struct RecentWorkoutSessionCard: View {
+    let session: WorkoutSession
+
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(AppTheme.accent.opacity(0.2))
+                    .frame(width: 50, height: 50)
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(AppTheme.accent)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(session.workoutTitle)
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .lineLimit(1)
+
+                Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                HStack(spacing: 12) {
+                    Label("\(Int(session.duration / 60)) min", systemImage: "clock")
+                    if session.caloriesBurned > 0 {
+                        Label("\(Int(session.caloriesBurned)) kcal", systemImage: "flame")
+                    }
+                    if session.totalExercises > 0 {
+                        Label(
+                            "\(session.completedExercises)/\(session.totalExercises)",
+                            systemImage: "list.bullet"
+                        )
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 }
 
