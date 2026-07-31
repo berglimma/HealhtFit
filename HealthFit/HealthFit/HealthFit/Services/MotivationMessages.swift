@@ -115,14 +115,8 @@ enum MotivationMessages {
     }
 
     static func dailyNotificationTitle(for date: Date = .now) -> String {
-        let weekday = Calendar.current.component(.weekday, from: date)
-        switch weekday {
-        case 5: return "#TBD — Hora de treinar! 💪"
-        case 6: return "#sextou — Treino + equilíbrio 🥂"
-        case 7: return "FDS — Movimente-se! 🌤️"
-        case 1: return "Domingo motivacional ✨"
-        default: return "Hora de treinar! 💪"
-        }
+        _ = date
+        return "Bom dia, HealthFit ☀️"
     }
 
     private static func pick(from messages: [String], on date: Date) -> String {

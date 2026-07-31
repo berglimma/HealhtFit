@@ -31,6 +31,13 @@ enum DailyEveningAssistantCheckInConfiguration {
     static let hour = 21
 }
 
+enum DailyMotivationConfiguration {
+    static let hour = 6
+    static let minute = 0
+    /// Janela pré-agendada (conteúdo rotativo; dispara localmente mesmo sem abrir o app).
+    static let scheduledDayCount = 14
+}
+
 /// Horários padrão das refeições do cardápio e disparo 5 min antes.
 enum MealReminderConfiguration {
     static let minutesBeforeMeal = 5
@@ -80,6 +87,7 @@ final class NotificationService {
     private let appUsageInactivityReminderIdentifier = "app_usage_inactivity_48h"
     private let waterReminderIdentifierPrefix = "water_reminder_"
     private let mealReminderIdentifierPrefix = "meal_reminder_"
+    private let dailyMotivationIdentifierPrefix = "daily_motivation_"
     private let dailyAssistantCheckInIdentifier = "daily_assistant_checkin_9am"
     private let dailyEveningAssistantCheckInIdentifier = "daily_assistant_checkin_9pm"
     private let healthIconYellowNotifiedDayKey = "healthfit_health_icon_yellow_notified_day"
@@ -98,16 +106,62 @@ final class NotificationService {
         set { UserDefaults.standard.set(newValue, forKey: mealRemindersEnabledKey) }
     }
 
+    private func mealReminderIdentifier(for mealType: MealType) -> String {
+        "\(mealReminderIdentifierPrefix)\(String(describing: mealType))"
+    }
+
+    private var knownMealReminderIdentifiers: [String] {
+        MealType.allCases.map(mealReminderIdentifier(for:))
+    }
+
+    private var knownDailyMotivationIdentifiers: [String] {
+        (0..<DailyMotivationConfiguration.scheduledDayCount).map { "\(dailyMotivationIdentifierPrefix)\($0)" }
+    }
+
     func requestAuthorization() {
         UNUserNotificationCenter.current().delegate = AppNotificationCenterDelegate.shared
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
-            Task { @MainActor in
-                self.refreshRecurringNotifications()
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            switch settings.authorizationStatus {
+            case .notDetermined:
+                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                    if let error {
+                        print("[HealthFit] Falha ao pedir autorização de notificação: \(error.localizedDescription)")
+                    }
+                    guard granted else {
+                        print("[HealthFit] Notificações negadas pelo usuário; lembretes não serão agendados.")
+                        return
+                    }
+                    Task { @MainActor in
+                        self.refreshRecurringNotifications()
+                    }
+                }
+            case .authorized, .provisional, .ephemeral:
+                Task { @MainActor in
+                    self.refreshRecurringNotifications()
+                }
+            case .denied:
+                print("[HealthFit] Notificações desativadas em Ajustes; reative para receber lembretes de refeição e motivação.")
+            @unknown default:
+                break
             }
         }
     }
 
     func refreshRecurringNotifications() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            guard settings.authorizationStatus == .authorized
+                    || settings.authorizationStatus == .provisional
+                    || settings.authorizationStatus == .ephemeral else {
+                print("[HealthFit] Sem permissão de notificação (\(settings.authorizationStatus.rawValue)); recorrentes não agendados.")
+                return
+            }
+            Task { @MainActor in
+                self.scheduleAuthorizedRecurringNotifications()
+            }
+        }
+    }
+
+    private func scheduleAuthorizedRecurringNotifications() {
         scheduleDailyMotivationNotifications()
         scheduleDailyAssistantCheckIn()
         scheduleDailyEveningAssistantCheckIn()
@@ -193,33 +247,38 @@ final class NotificationService {
         intervalHours: Int = WaterReminderConfiguration.intervalHours,
         minute: Int = 0
     ) {
-        cancelWaterReminders()
-
-        for hour in WaterReminderConfiguration.reminderHours(
+        let hours = WaterReminderConfiguration.reminderHours(
             startHour: startHour,
             endHour: endHour,
             intervalHours: intervalHours
-        ) {
-            var components = DateComponents()
-            components.hour = hour
-            components.minute = minute
+        )
+        let prefix = waterReminderIdentifierPrefix
+        // Cancela por prefixo e só então agenda — evita corrida que apagava os novos pedidos.
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let ids = requests
+                .filter { $0.identifier.hasPrefix(prefix) }
+                .map(\.identifier)
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
 
-            let title = "Hora de beber água! 💧"
-            let body = MotivationMessages.waterReminderMessage(forHour: hour)
-            let identifier = "\(waterReminderIdentifierPrefix)\(hour)"
+            Task { @MainActor in
+                for hour in hours {
+                    var components = DateComponents()
+                    components.hour = hour
+                    components.minute = minute
 
-            scheduleOnPhone(
-                title: title,
-                body: body,
-                category: "WATER_REMINDER",
-                identifier: identifier,
-                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-            )
+                    self.scheduleOnPhone(
+                        title: "Hora de beber água! 💧",
+                        body: MotivationMessages.waterReminderMessage(forHour: hour),
+                        category: "WATER_REMINDER",
+                        identifier: "\(prefix)\(hour)",
+                        trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+                    )
+                }
+            }
         }
     }
 
     func cancelWaterReminders() {
-        // Cancela por prefixo para limpar horários antigos (ex.: intervalo de 3h).
         let prefix = waterReminderIdentifierPrefix
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
             let ids = requests
@@ -230,6 +289,8 @@ final class NotificationService {
     }
 
     func scheduleMealReminders() {
+        // Remoção síncrona por IDs conhecidos — getPending+remove async apagava os alertas
+        // recém-agendados a cada refresh (ex.: app voltando ao foreground).
         cancelMealReminders()
 
         for mealType in MealType.allCases {
@@ -242,20 +303,16 @@ final class NotificationService {
                 title: "Refeição em 5 minutos 🍽️",
                 body: MotivationMessages.mealReminderMessage(for: mealType),
                 category: "MEAL_REMINDER",
-                identifier: "\(mealReminderIdentifierPrefix)\(String(describing: mealType))",
+                identifier: mealReminderIdentifier(for: mealType),
                 trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
             )
         }
     }
 
     func cancelMealReminders() {
-        let prefix = mealReminderIdentifierPrefix
-        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
-            let ids = requests
-                .filter { $0.identifier.hasPrefix(prefix) }
-                .map(\.identifier)
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
-        }
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: knownMealReminderIdentifiers
+        )
     }
 
     // MARK: - Health icon (yellow / red)
@@ -336,14 +393,17 @@ final class NotificationService {
         )
     }
 
-    func scheduleDailyMotivationNotifications(hour: Int = 8, minute: Int = 0) {
+    func scheduleDailyMotivationNotifications(
+        hour: Int = DailyMotivationConfiguration.hour,
+        minute: Int = DailyMotivationConfiguration.minute
+    ) {
         cancelDailyMotivationNotifications()
 
         let calendar = Calendar.current
         let startOfToday = calendar.startOfDay(for: .now)
         var watchEntries: [[String: Any]] = []
 
-        for dayOffset in 0..<14 {
+        for dayOffset in 0..<DailyMotivationConfiguration.scheduledDayCount {
             guard let day = calendar.date(byAdding: .day, value: dayOffset, to: startOfToday) else { continue }
 
             var components = calendar.dateComponents([.year, .month, .day], from: day)
@@ -354,7 +414,7 @@ final class NotificationService {
 
             let title = MotivationMessages.dailyNotificationTitle(for: day)
             let body = MotivationMessages.dailyMessage(for: day)
-            let identifier = "daily_motivation_\(dayOffset)"
+            let identifier = "\(dailyMotivationIdentifierPrefix)\(dayOffset)"
 
             scheduleOnPhone(
                 title: title,
@@ -380,13 +440,44 @@ final class NotificationService {
     }
 
     func cancelDailyMotivationNotifications() {
+        let knownIds = knownDailyMotivationIdentifiers
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: knownIds
+        )
+        // Limpa IDs legados (ex.: prefixo antigo sem underscore final) se existirem.
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
             let ids = requests
-                .filter { $0.identifier.hasPrefix("daily_motivation") }
+                .filter {
+                    $0.identifier.hasPrefix("daily_motivation")
+                        && !knownIds.contains($0.identifier)
+                }
                 .map(\.identifier)
+            guard !ids.isEmpty else { return }
             UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
         }
         WatchConnectivityManager.shared.cancelDailyMotivationOnWatch()
+    }
+
+    /// Alerta local quando o IAssistente entrega uma mensagem completa ao usuário.
+    func deliverAssistantMessageNotification(body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let maxLength = 160
+        let truncated: String
+        if trimmed.count <= maxLength {
+            truncated = trimmed
+        } else {
+            let index = trimmed.index(trimmed.startIndex, offsetBy: maxLength)
+            truncated = String(trimmed[..<index]).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
+        }
+
+        deliverImmediately(
+            title: "IAssistente",
+            body: truncated,
+            category: "ASSISTANT_MESSAGE",
+            identifier: "assistant_message_\(UUID().uuidString)"
+        )
     }
 
     func deliverWorkoutStartNotification(workoutTitle: String, athleteName: String) {
@@ -1047,7 +1138,11 @@ final class NotificationService {
         content.interruptionLevel = .timeSensitive
 
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error {
+                print("[HealthFit] Falha ao agendar notificação \(identifier): \(error.localizedDescription)")
+            }
+        }
     }
 }
 

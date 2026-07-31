@@ -46,6 +46,8 @@ struct RootView: View {
                         }
                         syncWorkoutCloudHistory()
                         await exerciseVideoRepository.bootstrapRemoteCatalog()
+                        // loadSavedData/generatePlan já sincronizam meal reminders;
+                        // refresh reforça motivação 06:00, água e check-ins.
                         NotificationService.shared.refreshRecurringNotifications()
                         refreshInactivityReminder()
                         _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
@@ -72,6 +74,9 @@ struct RootView: View {
                     wellnessService.configure(for: authService.currentUser)
                     syncWellnessCloudHistory()
                     wellnessService.checkInOnAppOpen()
+                    // Recarrega o cardápio antes de sincronizar lembretes — senão
+                    // weeklyPlan vazio no boot desligava mealRemindersEnabled por engano.
+                    mealPlanService.loadSavedData()
                     NotificationService.shared.refreshRecurringNotifications()
                     refreshInactivityReminder()
                     _ = workoutStore.autoEndStaleActiveSessionIfNeeded(

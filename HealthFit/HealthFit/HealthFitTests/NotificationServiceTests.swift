@@ -45,6 +45,12 @@ final class NotificationServiceTests: XCTestCase {
         XCTAssertEqual(supper.minute, 25)
     }
 
+    func testDailyMotivationSchedulesAtSixAM() {
+        XCTAssertEqual(DailyMotivationConfiguration.hour, 6)
+        XCTAssertEqual(DailyMotivationConfiguration.minute, 0)
+        XCTAssertEqual(DailyMotivationConfiguration.scheduledDayCount, 14)
+    }
+
     func testMealReminderMessageMentionsMealAndLeadTime() {
         let message = MotivationMessages.mealReminderMessage(for: .lunch)
         XCTAssertTrue(message.contains("Almoço"))
@@ -85,12 +91,10 @@ final class NotificationServiceTests: XCTestCase {
         calendar.timeZone = .current
         let thursday = calendar.date(from: DateComponents(year: 2026, month: 7, day: 30))!
         let friday = calendar.date(from: DateComponents(year: 2026, month: 7, day: 31))!
-        let saturday = calendar.date(from: DateComponents(year: 2026, month: 8, day: 1))!
-        let sunday = calendar.date(from: DateComponents(year: 2026, month: 8, day: 2))!
 
-        XCTAssertTrue(MotivationMessages.dailyNotificationTitle(for: thursday).contains("#TBD"))
-        XCTAssertTrue(MotivationMessages.dailyNotificationTitle(for: friday).contains("#sextou"))
-        XCTAssertTrue(MotivationMessages.dailyNotificationTitle(for: saturday).contains("FDS"))
-        XCTAssertTrue(MotivationMessages.dailyNotificationTitle(for: sunday).localizedCaseInsensitiveContains("Domingo"))
+        XCTAssertEqual(DailyMotivationConfiguration.hour, 6)
+        XCTAssertEqual(DailyMotivationConfiguration.minute, 0)
+        XCTAssertTrue(MotivationMessages.dailyNotificationTitle(for: thursday).contains("Bom dia, HealthFit"))
+        XCTAssertTrue(MotivationMessages.dailyNotificationTitle(for: friday).contains("Bom dia, HealthFit"))
     }
 }

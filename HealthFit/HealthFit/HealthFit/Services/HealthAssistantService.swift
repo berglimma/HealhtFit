@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 struct HealthChatMessage: Identifiable, Equatable {
     let id: UUID
@@ -1677,8 +1678,13 @@ final class HealthAssistantService: ObservableObject {
 
     private func deliverAssistantMessage(_ text: String) {
         messages.append(HealthChatMessage(text: text, isUser: false))
-        guard !PostWorkoutCheckInService.shared.isAssistantTabActive else { return }
+
+        let viewingAssistant = PostWorkoutCheckInService.shared.isAssistantTabActive
+            && UIApplication.shared.applicationState == .active
+        guard !viewingAssistant else { return }
+
         PostWorkoutCheckInService.shared.notifyAssistantMessagePending()
+        NotificationService.shared.deliverAssistantMessageNotification(body: text)
     }
 
     var isInPostWorkoutCheckIn: Bool {
