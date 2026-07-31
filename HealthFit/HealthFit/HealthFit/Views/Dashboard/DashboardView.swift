@@ -138,78 +138,85 @@ struct DashboardView: View {
     private var lastShareCardSection: some View {
         Group {
             if let card = shareCardStore.lastCard {
-                Button {
-                    if suppressShareCardTapAfterLongPress {
-                        suppressShareCardTapAfterLongPress = false
-                        return
-                    }
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
-                        isShareCardExpanded.toggle()
-                    }
-                } label: {
-                    VStack(alignment: .leading, spacing: isShareCardExpanded ? 16 : 0) {
-                        // Same rectangular language as `weeklyReportBanner` when collapsed.
-                        HStack(spacing: 14) {
-                            ZStack {
-                                Circle()
-                                    .fill(AppTheme.accent.opacity(0.2))
-                                    .frame(width: 48, height: 48)
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.title3)
-                                    .foregroundStyle(AppTheme.accent)
-                            }
+                VStack(alignment: .leading, spacing: 8) {
+                    Button {
+                        if suppressShareCardTapAfterLongPress {
+                            suppressShareCardTapAfterLongPress = false
+                            return
+                        }
+                        withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
+                            isShareCardExpanded.toggle()
+                        }
+                    } label: {
+                        VStack(alignment: .leading, spacing: isShareCardExpanded ? 16 : 0) {
+                            // Same rectangular language as `weeklyReportBanner` when collapsed.
+                            HStack(spacing: 14) {
+                                ZStack {
+                                    Circle()
+                                        .fill(AppTheme.accent.opacity(0.2))
+                                        .frame(width: 48, height: 48)
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.title3)
+                                        .foregroundStyle(AppTheme.accent)
+                                }
 
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Último card de postagem")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(AppTheme.textPrimary)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Último card de postagem")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.textPrimary)
 
-                                Text("\(card.workoutTitle) · \(formattedShareCardDate(card.displayDate))")
-                                    .font(.caption)
+                                    Text("\(card.workoutTitle) · \(formattedShareCardDate(card.displayDate))")
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.textSecondary)
+                                        .lineLimit(2)
+                                }
+
+                                Spacer(minLength: 0)
+
+                                Image(systemName: isShareCardExpanded ? "chevron.up" : "chevron.down")
+                                    .font(.caption.weight(.semibold))
                                     .foregroundStyle(AppTheme.textSecondary)
-                                    .lineLimit(2)
                             }
 
-                            Spacer(minLength: 0)
-
-                            Image(systemName: isShareCardExpanded ? "chevron.up" : "chevron.down")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(AppTheme.textSecondary)
+                            if isShareCardExpanded {
+                                shareCardPreview(for: card)
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
                         }
-
-                        if isShareCardExpanded {
-                            shareCardPreview(for: card)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(AppTheme.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+                        .contentShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(AppTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-                    .contentShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-                }
-                .buttonStyle(.plain)
-                // simultaneousGesture keeps short-tap snappy; onLongPressGesture alone would delay taps by 1s.
-                .simultaneousGesture(
-                    LongPressGesture(minimumDuration: 1)
-                        .onEnded { _ in
-                            suppressShareCardTapAfterLongPress = true
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            showFullscreenShareCard = true
-                        }
-                )
-                .accessibilityLabel("Card de postagem de \(card.workoutTitle)")
-                .accessibilityHint(
-                    isShareCardExpanded
-                        ? "Toque para recolher o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos."
-                        : "Toque para expandir o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos."
-                )
-                .accessibilityAction(named: "Abrir em tela cheia") {
-                    showFullscreenShareCard = true
-                }
-                .onChange(of: card.sessionId) { _, _ in
-                    isShareCardExpanded = false
-                    showFullscreenShareCard = false
+                    .buttonStyle(.plain)
+                    // simultaneousGesture keeps short-tap snappy; onLongPressGesture alone would delay taps by 1s.
+                    .simultaneousGesture(
+                        LongPressGesture(minimumDuration: 1)
+                            .onEnded { _ in
+                                suppressShareCardTapAfterLongPress = true
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                showFullscreenShareCard = true
+                            }
+                    )
+                    .accessibilityLabel("Card de postagem de \(card.workoutTitle)")
+                    .accessibilityHint(
+                        isShareCardExpanded
+                            ? "Toque para recolher o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos."
+                            : "Toque para expandir o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos."
+                    )
+                    .accessibilityAction(named: "Abrir em tela cheia") {
+                        showFullscreenShareCard = true
+                    }
+                    .onChange(of: card.sessionId) { _, _ in
+                        isShareCardExpanded = false
+                        showFullscreenShareCard = false
+                    }
+
+                    Text("Pressione firmemente por 1s para salvar o card em Fotos")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .padding(.horizontal, 4)
                 }
             } else {
                 HStack(spacing: 14) {

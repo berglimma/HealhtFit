@@ -855,22 +855,22 @@ struct ExerciseTrackingRow: View {
 struct WorkoutStartMotivationOverlay: View {
     let onContinue: () -> Void
 
-    private let cardMaxWidth: CGFloat = 270
-    private let cardMaxHeight: CGFloat = 210
+    private let cardMaxWidth: CGFloat = 310
+    private let cardMaxHeight: CGFloat = 240
 
     var body: some View {
         ZStack {
             Color.black.opacity(0.55)
                 .ignoresSafeArea()
 
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 Image(systemName: "figure.strengthtraining.traditional")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(AppTheme.accent)
                     .accessibilityHidden(true)
 
                 Text("Hora de treinar!")
-                    .font(.subheadline.bold())
+                    .font(.callout.bold())
                     .multilineTextAlignment(.center)
                     .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
@@ -882,7 +882,7 @@ struct WorkoutStartMotivationOverlay: View {
                         .foregroundStyle(AppTheme.textSecondary)
                         .frame(maxWidth: .infinity)
                 }
-                .frame(maxHeight: 68)
+                .frame(maxHeight: 80)
                 .scrollBounceBehavior(.basedOnSize)
                 .scrollIndicators(.hidden)
 
@@ -891,18 +891,18 @@ struct WorkoutStartMotivationOverlay: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
+                        .padding(.vertical, 10)
                         .background(AppTheme.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
             .frame(maxWidth: cardMaxWidth)
             .frame(maxHeight: cardMaxHeight)
             .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal, 48)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 40)
         }
     }
 }
