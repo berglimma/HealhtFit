@@ -1424,10 +1424,13 @@
     "Cronômetro pausado" : {
 
     },
+    "Dados e medidas salvos" : {
+
+    },
     "Dados físicos vêm do Perfil (peso, altura, idade e sexo)." : {
 
     },
-    "Dados salvos" : {
+    "Dados salvos e medidas salvas. Peso, altura, idade, sexo e circunferências foram sincronizados com o Firebase." : {
 
     },
     "Dashboard" : {
@@ -2292,9 +2295,6 @@
 
     },
     "Personalizado" : {
-
-    },
-    "Peso, altura, idade e sexo foram salvos e sincronizados. A Nutrição usa esses dados para o cardápio." : {
 
     },
     "Pesquise no catálogo ou toque em + para criar um item personalizado e escolher a categoria." : {

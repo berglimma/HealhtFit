@@ -8,7 +8,8 @@ struct BodyEvolutionView: View {
     @EnvironmentObject private var authService: AuthService
     @EnvironmentObject private var evolutionService: BodyEvolutionService
     @State private var draftImages: [BodyPhotoSlot: UIImage] = [:]
-    @State private var pickerItems: [BodyPhotoSlot: PhotosPickerItem] = [:]
+    @State private var activePickerSlot: BodyPhotoSlot?
+    @State private var showNativePhotoPicker = false
     @State private var loadingSlots: Set<BodyPhotoSlot> = []
     @State private var showResult: BodyEvolutionComparisonResult?
     @State private var infoMessage: String?
@@ -31,6 +32,12 @@ struct BodyEvolutionView: View {
             guard let userId = authService.currentUser?.id else { return }
             await evolutionService.loadIfNeeded(userId: userId)
             await hydrateDraftFromActiveSet(userId: userId)
+        }
+        .sheet(isPresented: $showNativePhotoPicker) {
+            BodyEvolutionPHPicker { image in
+                handlePickedImage(image)
+            }
+            .ignoresSafeArea()
         }
         .sheet(item: $showResult) { result in
             BodyEvolutionResultView(
@@ -97,13 +104,20 @@ struct BodyEvolutionView: View {
 
     private var photosSection: some View {
         Section {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                ForEach(BodyPhotoSlot.allCases) { slot in
-                    photoCell(slot)
+            // Grade fixa fora de LazyVGrid+PhotosPicker (que travava a abertura).
+            VStack(spacing: 12) {
+                ForEach(0..<2, id: \.self) { row in
+                    HStack(spacing: 12) {
+                        ForEach(0..<3, id: \.self) { col in
+                            let index = row * 3 + col
+                            if BodyPhotoSlot.allCases.indices.contains(index) {
+                                photoCell(BodyPhotoSlot.allCases[index])
+                            }
+                        }
+                    }
                 }
             }
             .padding(.vertical, 4)
-            // Evita o List medir/recalcular a grade a cada toque no picker.
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
         } header: {
             Text("Fotos (opcional e privado)")
@@ -121,11 +135,10 @@ struct BodyEvolutionView: View {
     }
 
     private func photoCell(_ slot: BodyPhotoSlot) -> some View {
-        PhotosPicker(
-            selection: binding(for: slot),
-            matching: .images,
-            photoLibrary: .shared()
-        ) {
+        Button {
+            activePickerSlot = slot
+            showNativePhotoPicker = true
+        } label: {
             VStack(spacing: 6) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
@@ -162,38 +175,25 @@ struct BodyEvolutionView: View {
             if draftImages[slot] != nil {
                 Button("Remover", role: .destructive) {
                     draftImages[slot] = nil
-                    pickerItems[slot] = nil
                 }
             }
         }
     }
 
-    private func binding(for slot: BodyPhotoSlot) -> Binding<PhotosPickerItem?> {
-        Binding(
-            get: { pickerItems[slot] },
-            set: { newValue in
-                pickerItems[slot] = newValue
-                guard let newValue else { return }
-                Task { await loadPickedImage(newValue, for: slot) }
-            }
-        )
-    }
-
     @MainActor
-    private func loadPickedImage(_ item: PhotosPickerItem, for slot: BodyPhotoSlot) async {
+    private func handlePickedImage(_ image: UIImage?) {
+        let slot = activePickerSlot
+        showNativePhotoPicker = false
+        activePickerSlot = nil
+        guard let slot, let image else { return }
+
         loadingSlots.insert(slot)
-        defer {
+        Task {
+            let reduced = await Task.detached(priority: .userInitiated) {
+                BodyEvolutionImageProcessing.downsampledImage(image: image, maxSide: 1200)
+            }.value
+            draftImages[slot] = reduced ?? image
             loadingSlots.remove(slot)
-            pickerItems[slot] = nil
-        }
-
-        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
-        let image = await Task.detached(priority: .userInitiated) {
-            BodyEvolutionImageProcessing.downsampledImage(data: data, maxSide: 1200)
-        }.value
-
-        if let image {
-            draftImages[slot] = image
         }
     }
 
@@ -679,5 +679,70 @@ enum BodyEvolutionImageProcessing {
             return UIImage(data: data)
         }
         return UIImage(cgImage: cgImage)
+    }
+
+    static func downsampledImage(image: UIImage, maxSide: CGFloat) -> UIImage? {
+        guard let data = image.jpegData(compressionQuality: 0.92)
+                ?? image.pngData() else {
+            return resized(image, maxSide: maxSide)
+        }
+        return downsampledImage(data: data, maxSide: maxSide) ?? resized(image, maxSide: maxSide)
+    }
+
+    private static func resized(_ image: UIImage, maxSide: CGFloat) -> UIImage {
+        let size = image.size
+        let longest = max(size.width, size.height)
+        guard longest > maxSide, longest > 0 else { return image }
+        let scale = maxSide / longest
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+    }
+}
+
+/// PHPicker nativo — abre rápido e evita travamentos do PhotosPicker dentro de List.
+private struct BodyEvolutionPHPicker: UIViewControllerRepresentable {
+    var onPick: (UIImage?) -> Void
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var configuration = PHPickerConfiguration(photoLibrary: .shared())
+        configuration.filter = .images
+        configuration.selectionLimit = 1
+        configuration.preferredAssetRepresentationMode = .compatible
+
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick)
+    }
+
+    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let onPick: (UIImage?) -> Void
+
+        init(onPick: @escaping (UIImage?) -> Void) {
+            self.onPick = onPick
+        }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            guard let provider = results.first?.itemProvider,
+                  provider.canLoadObject(ofClass: UIImage.self) else {
+                DispatchQueue.main.async { self.onPick(nil) }
+                return
+            }
+
+            provider.loadObject(ofClass: UIImage.self) { object, _ in
+                let image = object as? UIImage
+                DispatchQueue.main.async {
+                    self.onPick(image)
+                }
+            }
+        }
     }
 }
