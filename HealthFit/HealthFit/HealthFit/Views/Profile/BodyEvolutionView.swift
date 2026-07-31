@@ -1,6 +1,5 @@
 import ImageIO
 import Photos
-import PhotosUI
 import SwiftUI
 import UIKit
 
@@ -8,7 +7,9 @@ struct BodyEvolutionView: View {
     @EnvironmentObject private var authService: AuthService
     @EnvironmentObject private var evolutionService: BodyEvolutionService
     @State private var draftImages: [BodyPhotoSlot: UIImage] = [:]
-    @State private var activePickerSlot: BodyPhotoSlot?
+    @State private var photoSourceSlot: BodyPhotoSlot?
+    @State private var galleryPickerSlot: BodyPhotoSlot?
+    @State private var cameraPickerSlot: BodyPhotoSlot?
     @State private var loadingSlots: Set<BodyPhotoSlot> = []
     @State private var showResult: BodyEvolutionComparisonResult?
     @State private var infoMessage: String?
@@ -39,8 +40,38 @@ struct BodyEvolutionView: View {
             await evolutionService.loadIfNeeded(userId: userId)
             await hydrateDraftFromActiveSet(userId: userId)
         }
-        .sheet(item: $activePickerSlot) { slot in
-            BodyEvolutionPHPicker { image in
+        .confirmationDialog(
+            "Adicionar foto",
+            isPresented: Binding(
+                get: { photoSourceSlot != nil },
+                set: { if !$0 { photoSourceSlot = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if PhotoCaptureAvailability.isCameraAvailable {
+                Button("Câmera") {
+                    let slot = photoSourceSlot
+                    photoSourceSlot = nil
+                    DispatchQueue.main.async { cameraPickerSlot = slot }
+                }
+            }
+            Button("Galeria") {
+                let slot = photoSourceSlot
+                photoSourceSlot = nil
+                DispatchQueue.main.async { galleryPickerSlot = slot }
+            }
+            Button("Cancelar", role: .cancel) {
+                photoSourceSlot = nil
+            }
+        }
+        .sheet(item: $galleryPickerSlot) { slot in
+            LibraryImagePicker { image in
+                handlePickedImage(image, for: slot)
+            }
+            .ignoresSafeArea()
+        }
+        .sheet(item: $cameraPickerSlot) { slot in
+            CameraImagePicker { image in
                 handlePickedImage(image, for: slot)
             }
             .ignoresSafeArea()
@@ -148,7 +179,7 @@ struct BodyEvolutionView: View {
         VStack(spacing: 6) {
             ZStack(alignment: .topTrailing) {
                 Button {
-                    activePickerSlot = slot
+                    presentPhotoSource(for: slot)
                 } label: {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10)
@@ -203,9 +234,19 @@ struct BodyEvolutionView: View {
         .frame(maxWidth: .infinity)
     }
 
+    private func presentPhotoSource(for slot: BodyPhotoSlot) {
+        if PhotoCaptureAvailability.isCameraAvailable {
+            photoSourceSlot = slot
+        } else {
+            // Simulator / devices without camera: go straight to gallery.
+            galleryPickerSlot = slot
+        }
+    }
+
     @MainActor
     private func handlePickedImage(_ image: UIImage?, for slot: BodyPhotoSlot) {
-        activePickerSlot = nil
+        galleryPickerSlot = nil
+        cameraPickerSlot = nil
         guard let image else { return }
 
         loadingSlots.insert(slot)
@@ -794,48 +835,3 @@ enum BodyEvolutionImageProcessing {
     }
 }
 
-/// PHPicker nativo — abre rápido e evita travamentos do PhotosPicker dentro de List.
-private struct BodyEvolutionPHPicker: UIViewControllerRepresentable {
-    var onPick: (UIImage?) -> Void
-
-    func makeUIViewController(context: Context) -> PHPickerViewController {
-        var configuration = PHPickerConfiguration(photoLibrary: .shared())
-        configuration.filter = .images
-        configuration.selectionLimit = 1
-        configuration.preferredAssetRepresentationMode = .compatible
-
-        let picker = PHPickerViewController(configuration: configuration)
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onPick: onPick)
-    }
-
-    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        let onPick: (UIImage?) -> Void
-
-        init(onPick: @escaping (UIImage?) -> Void) {
-            self.onPick = onPick
-        }
-
-        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            guard let provider = results.first?.itemProvider,
-                  provider.canLoadObject(ofClass: UIImage.self) else {
-                DispatchQueue.main.async { self.onPick(nil) }
-                return
-            }
-
-            let onPick = self.onPick
-            provider.loadObject(ofClass: UIImage.self) { object, _ in
-                let image = object as? UIImage
-                DispatchQueue.main.async {
-                    onPick(image)
-                }
-            }
-        }
-    }
-}

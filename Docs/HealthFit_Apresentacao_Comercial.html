@@ -768,8 +768,243 @@
       50% { box-shadow: 0 0 52px rgba(61, 207, 142, 0.35); }
     }
 
+    /* ===== Share card mock (Stories / status) ===== */
+    .share-card-mock {
+      width: min(240px, 100%);
+      margin: 0 auto;
+      border-radius: 22px;
+      padding: 14px 14px 12px;
+      background:
+        radial-gradient(ellipse 90% 70% at 20% 0%, rgba(61, 207, 142, 0.35), transparent 55%),
+        linear-gradient(165deg, #14221c 0%, #0c1210 55%, #101a16 100%);
+      border: 1px solid rgba(61, 207, 142, 0.28);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+      display: grid;
+      gap: 8px;
+      text-align: center;
+    }
+    .share-card-mock .sc-brand {
+      font-family: "Bebas Neue", sans-serif;
+      letter-spacing: 0.14em;
+      font-size: 0.78rem;
+      color: var(--accent);
+    }
+    .share-card-mock .sc-badge {
+      display: inline-block;
+      margin: 0 auto;
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #0b0f0e;
+      background: var(--accent);
+      border-radius: 999px;
+      padding: 0.2rem 0.55rem;
+      font-weight: 700;
+    }
+    .share-card-mock .sc-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .share-card-mock .sc-motivation {
+      font-size: 0.72rem;
+      color: rgba(242, 245, 243, 0.82);
+      line-height: 1.35;
+    }
+    .share-card-mock .sc-workout {
+      font-size: 0.78rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .share-card-mock .sc-bars {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 5px;
+      height: 52px;
+      margin: 2px 0 4px;
+    }
+    .share-card-mock .sc-bars i {
+      display: block;
+      width: 10px;
+      border-radius: 4px 4px 2px 2px;
+      background: linear-gradient(180deg, var(--accent), rgba(61, 207, 142, 0.35));
+      transform-origin: bottom;
+      height: 20%;
+    }
+    .slide.active .share-card-mock .sc-bars i {
+      animation: barGrow 4.2s ease-in-out infinite;
+    }
+    .slide.active .share-card-mock .sc-bars i:nth-child(1) { animation-delay: 0s; }
+    .slide.active .share-card-mock .sc-bars i:nth-child(2) { animation-delay: 0.15s; }
+    .slide.active .share-card-mock .sc-bars i:nth-child(3) { animation-delay: 0.3s; }
+    .slide.active .share-card-mock .sc-bars i:nth-child(4) { animation-delay: 0.45s; }
+    .slide.active .share-card-mock .sc-bars i:nth-child(5) { animation-delay: 0.6s; }
+    .slide.active .share-card-mock .sc-bars i:nth-child(6) { animation-delay: 0.75s; }
+    @keyframes barGrow {
+      0%, 100% { height: 22%; opacity: 0.55; }
+      35% { height: var(--h, 70%); opacity: 1; }
+      70% { height: calc(var(--h, 70%) * 0.85); opacity: 0.9; }
+    }
+    .share-card-mock .sc-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+    .share-card-mock .sc-stats span {
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 5px 2px;
+      font-size: 0.62rem;
+      color: var(--muted);
+    }
+    .share-card-mock .sc-stats b {
+      display: block;
+      color: var(--text);
+      font-size: 0.78rem;
+    }
+    .share-card-mock .sc-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+    .share-card-mock .sc-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, #9be8c4, var(--accent) 55%, #1a6b45);
+      border: 2px solid rgba(242, 245, 243, 0.35);
+      flex: 0 0 auto;
+    }
+    .share-card-mock .sc-name {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-align: left;
+    }
+    .share-card-mock .sc-name b {
+      display: block;
+      color: var(--text);
+      font-size: 0.78rem;
+    }
+    .longpress-hint {
+      margin-top: 0.85rem;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .longpress-hint b { color: var(--accent); }
+    .slide.active .longpress-pulse {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-right: 6px;
+      vertical-align: middle;
+      animation: lpPulse 4.2s ease-in-out infinite;
+    }
+    @keyframes lpPulse {
+      0%, 55%, 100% { transform: scale(1); opacity: 0.45; box-shadow: 0 0 0 0 rgba(61, 207, 142, 0); }
+      20% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 0 8px rgba(61, 207, 142, 0.18); }
+      40% { transform: scale(1); opacity: 0.7; box-shadow: 0 0 0 0 rgba(61, 207, 142, 0); }
+    }
+
+    /* ===== Body evolution comparison mock ===== */
+    .evo-compare {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.65rem;
+      align-items: center;
+      margin-top: 0.5rem;
+    }
+    .evo-shot {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      text-align: center;
+    }
+    .evo-shot .frame {
+      aspect-ratio: 3 / 4;
+      background:
+        linear-gradient(160deg, rgba(61, 207, 142, 0.12), transparent 50%),
+        #0f1513;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+    .evo-shot .frame::before {
+      content: "";
+      width: 42%;
+      height: 62%;
+      border-radius: 40% 40% 28% 28%;
+      background: linear-gradient(180deg, rgba(154, 173, 164, 0.35), rgba(61, 207, 142, 0.22));
+      opacity: 0.85;
+    }
+    .evo-shot.after .frame::before {
+      background: linear-gradient(180deg, rgba(61, 207, 142, 0.55), rgba(232, 165, 75, 0.25));
+    }
+    .evo-shot .label {
+      padding: 0.45rem 0.5rem 0.55rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .evo-shot .label b {
+      display: block;
+      color: var(--text);
+      font-size: 0.85rem;
+      letter-spacing: 0;
+      text-transform: none;
+      margin-top: 2px;
+    }
+    .evo-arrow {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 1.4rem;
+      color: var(--accent);
+    }
+    .slide.active .evo-shot.after .frame {
+      animation: evoGlow 4.2s ease-in-out infinite;
+    }
+    @keyframes evoGlow {
+      0%, 100% { box-shadow: inset 0 0 0 0 rgba(61, 207, 142, 0); }
+      50% { box-shadow: inset 0 0 28px rgba(61, 207, 142, 0.18); }
+    }
+    .cycle-steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.55rem;
+      margin-top: 1rem;
+    }
+    .cycle-steps article {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.75rem 0.7rem;
+      text-align: center;
+    }
+    .cycle-steps .n {
+      font-family: "Bebas Neue", sans-serif;
+      color: var(--accent);
+      font-size: 1.35rem;
+      line-height: 1;
+      margin-bottom: 0.25rem;
+    }
+    .cycle-steps p {
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+
     @media (max-width: 860px) {
       .grid-2, .grid-3, .two-col, .device-grid { grid-template-columns: 1fr; }
+      .cycle-steps { grid-template-columns: 1fr 1fr; }
+      .evo-compare { grid-template-columns: 1fr; }
+      .evo-arrow { transform: rotate(90deg); justify-self: center; }
       table.compare { font-size: 0.82rem; }
       .stage { min-height: 280px; }
       .device-card.iphone .shot,
@@ -792,6 +1027,9 @@
       .slide.active .kcal-bar i,
       .slide.active .tabs-demo span,
       .slide.active .day-strip .hot,
+      .slide.active .share-card-mock .sc-bars i,
+      .slide.active .longpress-pulse,
+      .slide.active .evo-shot.after .frame,
       .pulse-heart .core,
       .pulse-heart::before,
       .pulse-heart::after,
@@ -803,6 +1041,12 @@
       .ring-progress { stroke-dashoffset: 78; }
       .meal-item, .bubble { opacity: 1; transform: none; }
       .kcal-bar i { width: 72%; }
+      .share-card-mock .sc-bars i:nth-child(1) { height: 35%; }
+      .share-card-mock .sc-bars i:nth-child(2) { height: 55%; }
+      .share-card-mock .sc-bars i:nth-child(3) { height: 70%; }
+      .share-card-mock .sc-bars i:nth-child(4) { height: 48%; }
+      .share-card-mock .sc-bars i:nth-child(5) { height: 82%; }
+      .share-card-mock .sc-bars i:nth-child(6) { height: 60%; }
     }
   </style>
 </head>
@@ -816,7 +1060,7 @@
           <div>
             <p class="eyebrow reveal">Apresentação comercial · 2026</p>
             <div class="brand-mark reveal reveal-d1">HEALTHFIT</div>
-            <p class="lead reveal reveal-d2">O personal trainer inteligente no bolso — treino, nutrição, motivação e acompanhamento profissional em um só app Apple.</p>
+            <p class="lead reveal reveal-d2">Um único app Apple para treinar, acompanhar medidas, comparar evolução com fotos, avaliar progresso e compartilhar conquistas — com personal e nutricionista no loop.</p>
             <div class="hero-meta reveal reveal-d3">
               <span>iOS 17+ · watchOS 10+</span>
               <span>pt-BR · EN · ES · FR</span>
@@ -872,7 +1116,7 @@
         <div class="grid-3" style="margin-top:1rem;">
           <article class="card reveal reveal-d4">
             <strong>Fragmentação</strong>
-            <p>Treino, dieta e motivação espalhados em apps diferentes.</p>
+            <p>Treino, dieta, fotos de evolução e posts espalhados em apps diferentes.</p>
           </article>
           <article class="card reveal reveal-d5">
             <strong>Genérico</strong>
@@ -880,7 +1124,7 @@
           </article>
           <article class="card reveal reveal-d6">
             <strong>Abandono</strong>
-            <p>Falta accountability e presença diária no hábito.</p>
+            <p>Falta motivação visível e accountability no dia a dia.</p>
           </article>
         </div>
       </div>
@@ -930,7 +1174,7 @@
       <div class="slide-inner">
         <p class="eyebrow reveal">Posicionamento</p>
         <h2 class="reveal reveal-d1">Não é mais um diário de treino.</h2>
-        <p class="lead reveal reveal-d2">É um ecossistema de performance pessoal: musculação, cardio, mobilidade, casa, meditação, cardápio, Apple Watch e assistente — com ponte para personal e nutricionista.</p>
+        <p class="lead reveal reveal-d2">É um único ecossistema de performance: musculação, cardio, mobilidade, casa, meditação, cardápio, medidas, evolução com fotos, cards de conquista, Apple Watch e IAssistente — com ponte para personal e nutricionista.</p>
         <div class="grid-2" style="margin-top:1.25rem;">
           <article class="media-card reveal reveal-d3">
             <div class="shot">
@@ -966,7 +1210,7 @@
               <ul>
                 <li>Masculino, feminino, casa, mobilidade</li>
                 <li>Séries com progresso e pausa inteligente</li>
-                <li>Live Activity na tela de bloqueio</li>
+                <li>Live Activity + Vision AI (câmera)</li>
               </ul>
             </article>
             <article class="card reveal reveal-d3">
@@ -978,19 +1222,19 @@
               </ul>
             </article>
             <article class="card reveal reveal-d4">
-              <strong>IAssistente</strong>
+              <strong>Evolução &amp; cards</strong>
               <ul>
-                <li>Check-ins manhã/noite e pós-treino</li>
-                <li>Avisos de evolução corporal</li>
-                <li>Montagem de fichas e motivação</li>
+                <li>Medidas + fotos privadas (30 dias)</li>
+                <li>Comparativo e PDF de avaliação</li>
+                <li>Cards de postagem com gráficos</li>
               </ul>
             </article>
             <article class="card reveal reveal-d5">
-              <strong>Evolução &amp; profissionais</strong>
+              <strong>IAssistente &amp; profissionais</strong>
               <ul>
-                <li>Fotos opcionais e privadas (30 dias)</li>
-                <li>PDF das 4 últimas avaliações</li>
-                <li>Personal e nutri por canal</li>
+                <li>Check-ins e motivação diária</li>
+                <li>Avisos de evolução corporal</li>
+                <li>Relatório de sessão ao personal</li>
               </ul>
             </article>
           </div>
@@ -1027,36 +1271,33 @@
     <section class="slide" data-title="Novidades">
       <div class="slide-inner">
         <p class="eyebrow reveal">Novidades do produto</p>
-        <h2 class="reveal reveal-d1">Evolução corporal, tela de bloqueio e compartilhamento.</h2>
-        <p class="lead reveal reveal-d2">Funcionalidades recentes que reforçam acompanhamento, privacidade e presença no ecossistema Apple.</p>
+        <h2 class="reveal reveal-d1">Cards, evolução com fotos e presença Apple.</h2>
+        <p class="lead reveal reveal-d2">Funcionalidades recentes que fecham o ciclo: treinar → medir → comparar → compartilhar — sem sair do HealthFit.</p>
         <div class="grid-3" style="margin-top:1.25rem;">
           <article class="card reveal reveal-d3">
-            <strong>Evolução Corporal</strong>
+            <strong>Cards de postagem</strong>
             <ul>
-              <li>Medidas + fotos opcionais (até 6)</li>
-              <li>Comparativo a cada 30 dias</li>
-              <li>Fotos privadas — só o usuário acessa</li>
-              <li>PDF das 4 últimas avaliações</li>
-              <li>Salvar cópia em Fotos ou Arquivos</li>
-              <li>IAssistente notifica a evolução</li>
+              <li>Stories / status após o treino</li>
+              <li>Motivação também no encerramento antecipado</li>
+              <li>Foto de perfil + gráficos no card</li>
+              <li>Último card na Home · salvar em Fotos</li>
             </ul>
           </article>
           <article class="card reveal reveal-d4">
-            <strong>Live Activity</strong>
+            <strong>Evolução Corporal</strong>
             <ul>
-              <li>Treino e pausa na tela de bloqueio</li>
-              <li>Cronômetros em tempo real</li>
-              <li>Continua mesmo com o app em segundo plano</li>
-              <li>Widget nativo HealthFit</li>
+              <li>Medidas + fotos opcionais (até 6)</li>
+              <li>Comparativo antes/depois a cada 30 dias</li>
+              <li>Fotos privadas — só o atleta acessa</li>
+              <li>PDF das 4 últimas avaliações</li>
             </ul>
           </article>
           <article class="card reveal reveal-d5">
-            <strong>Treino &amp; Watch</strong>
+            <strong>Live Activity &amp; Watch</strong>
             <ul>
-              <li>Pausa conclui a série (não o exercício)</li>
-              <li>Progresso claro: 1/3, 2/3, 3/3</li>
+              <li>Treino e pausa na tela de bloqueio</li>
+              <li>Progresso claro por série (1/3, 2/3…)</li>
               <li>Minimizar e retomar o treino</li>
-              <li>Card para WhatsApp / Instagram</li>
               <li>App Watch instalável via iPhone</li>
             </ul>
           </article>
@@ -1064,12 +1305,171 @@
         <div class="grid-2" style="margin-top:1rem;">
           <article class="card reveal reveal-d6">
             <strong>Privacidade</strong>
-            <p>Fotos de evolução ficam em caminho privado no Firebase Storage. Personal e nutricionista não acessam as imagens — só relatórios e PDFs que o atleta autoriza compartilhar.</p>
+            <p>Fotos de evolução ficam em caminho privado. Personal e nutricionista não acessam as imagens — só relatórios e PDFs que o atleta autoriza compartilhar.</p>
           </article>
           <article class="card reveal reveal-d6">
-            <strong>IAssistente</strong>
-            <p>Além dos check-ins diários, o assistente avisa quando completar 30 dias e resume o laudo de evolução após cada comparação.</p>
+            <strong>Continuidade</strong>
+            <p>Dashboard com último card, resumo semanal, IAssistente avisando o ciclo de 30 dias e relatório de sessão ao personal por e-mail.</p>
           </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5c Cards de postagem -->
+    <section class="slide" data-title="Cards">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Conquistas compartilháveis</p>
+        <h2 class="reveal reveal-d1">Cards de postagem após o treino.</h2>
+        <p class="lead reveal reveal-d2">Prova social pronta para Stories e status — com motivação mesmo quando o treino não foi até o fim.</p>
+        <div class="two-col" style="align-items:center;">
+          <div>
+            <div class="grid-2" style="margin-top:0;">
+              <article class="card reveal reveal-d3">
+                <strong>Stories &amp; status</strong>
+                <p>Card visual para WhatsApp e Instagram, com data, treino e métricas.</p>
+              </article>
+              <article class="card reveal reveal-d3">
+                <strong>Motivação real</strong>
+                <p>Encerramento antecipado ou por inatividade gera mensagem de incentivo — não de culpa.</p>
+              </article>
+              <article class="card reveal reveal-d4">
+                <strong>Identidade</strong>
+                <p>Foto de perfil no card (quando houver) e gráficos de progresso da sessão.</p>
+              </article>
+              <article class="card reveal reveal-d4">
+                <strong>Na Home</strong>
+                <p>Último card abaixo do resumo semanal: toque para expandir; pressione 1s para tela cheia e salvar em Fotos.</p>
+              </article>
+            </div>
+          </div>
+          <div class="stage reveal reveal-d3" style="min-height:auto;">
+            <div class="share-card-mock">
+              <div class="sc-brand">HEALTHFIT</div>
+              <span class="sc-badge">Conquista</span>
+              <div class="sc-title">Ana concluiu o treino</div>
+              <p class="sc-motivation">Mais um dia de compromisso com a sua melhor versão.</p>
+              <div class="sc-workout">Superior A · Academia</div>
+              <div class="sc-bars" aria-hidden="true">
+                <i style="--h:38%"></i>
+                <i style="--h:55%"></i>
+                <i style="--h:72%"></i>
+                <i style="--h:48%"></i>
+                <i style="--h:88%"></i>
+                <i style="--h:64%"></i>
+              </div>
+              <div class="sc-stats">
+                <span><b>48'</b>duração</span>
+                <span><b>12</b>séries</span>
+                <span><b>214</b>kcal</span>
+              </div>
+              <div class="sc-footer">
+                <div class="sc-avatar" aria-hidden="true"></div>
+                <div class="sc-name"><b>Ana Silva</b>30 Jul 2026 · 19:42</div>
+              </div>
+            </div>
+            <p class="longpress-hint reveal reveal-d5"><span class="longpress-pulse"></span>Pressione <b>1 segundo</b> → salvar em Fotos</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5d Evolução Corporal -->
+    <section class="slide" data-title="Evolução">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Acompanhamento visual</p>
+        <h2 class="reveal reveal-d1">Evolução Corporal com comparativo.</h2>
+        <p class="lead reveal reveal-d2">Medidas + fotos opcionais, ciclo de 30 dias, laudo em PDF e privacidade total das imagens.</p>
+        <div class="two-col">
+          <div class="reveal reveal-d3">
+            <div class="evo-compare">
+              <div class="evo-shot">
+                <div class="frame"></div>
+                <div class="label">Antes<b>Dia 0 · baseline</b></div>
+              </div>
+              <div class="evo-arrow" aria-hidden="true">→</div>
+              <div class="evo-shot after">
+                <div class="frame"></div>
+                <div class="label">Depois<b>Dia 30 · comparativo</b></div>
+              </div>
+            </div>
+            <div class="cycle-steps">
+              <article>
+                <div class="n">01</div>
+                <p>Registrar medidas e até 6 fotos</p>
+              </article>
+              <article>
+                <div class="n">02</div>
+                <p>Aguardar o ciclo de 30 dias</p>
+              </article>
+              <article>
+                <div class="n">03</div>
+                <p>Novo lote → comparativo lado a lado</p>
+              </article>
+              <article>
+                <div class="n">04</div>
+                <p>PDF da avaliação + aviso no IAssistente</p>
+              </article>
+            </div>
+          </div>
+          <div>
+            <article class="card reveal reveal-d4">
+              <strong>Privacidade primeiro</strong>
+              <p>As fotos são opcionais e privadas: só o atleta vê. Personal e nutricionista recebem relatórios — nunca o álbum de evolução.</p>
+            </article>
+            <article class="card reveal reveal-d5" style="margin-top:1rem;">
+              <strong>Laudo contínuo</strong>
+              <ul>
+                <li>Comparação visual antes/depois</li>
+                <li>Delta das medidas corporais</li>
+                <li>Histórico com as 4 últimas avaliações em PDF</li>
+                <li>Fotos antigas excluídas após o ciclo</li>
+                <li>Cópia opcional em Fotos ou Arquivos</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5e Um único app -->
+    <section class="slide" data-title="Um app">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Vantagem competitiva</p>
+        <h2 class="reveal reveal-d1">Um único app. Menos troca de ferramenta.</h2>
+        <p class="lead reveal reveal-d2">Treinar, medir, comparar evolução com fotos, avaliar progresso e compartilhar conquistas — tudo no HealthFit.</p>
+        <div class="grid-3" style="margin-top:1.25rem;">
+          <article class="card reveal reveal-d3">
+            <strong>Menos atrito</strong>
+            <p>Sem pular entre app de treino, álbum de fotos, planilha de medidas e Stories editor.</p>
+          </article>
+          <article class="card reveal reveal-d4">
+            <strong>Loop atleta + personal</strong>
+            <p>Sessão no Watch/iPhone, card na Home, relatório por e-mail ao personal — o profissional acompanha sem invadir a privacidade das fotos.</p>
+          </article>
+          <article class="card reveal reveal-d5">
+            <strong>Motivação que fica</strong>
+            <p>Cards mesmo em treino incompleto, IAssistente no dia a dia e prova social compartilhável.</p>
+          </article>
+        </div>
+        <div class="grid-2" style="margin-top:1rem;">
+          <article class="card reveal reveal-d6">
+            <strong>Privacidade da evolução</strong>
+            <p>Fotos de comparação ficam só com o atleta. O laudo em PDF é o que pode circular — sob controle do usuário.</p>
+          </article>
+          <article class="card reveal reveal-d6">
+            <strong>Continuidade no dashboard</strong>
+            <p>Resumo semanal + último card de postagem + ciclo de evolução: o progresso não some ao fechar o treino.</p>
+          </article>
+        </div>
+        <div class="pill-row reveal reveal-d6">
+          <span class="pill">Treinos</span>
+          <span class="pill">Medidas</span>
+          <span class="pill">Fotos &amp; comparativo</span>
+          <span class="pill">PDF de avaliação</span>
+          <span class="pill">Cards de conquista</span>
+          <span class="pill">Live Activity</span>
+          <span class="pill">Vision AI</span>
+          <span class="pill">Personal &amp; Nutri</span>
         </div>
       </div>
     </section>
@@ -1102,22 +1502,10 @@
               <td class="yes">Sim, por canal</td>
             </tr>
             <tr>
-              <td>Check-ins emocionais e pós-treino</td>
-              <td class="partial">Básico</td>
-              <td class="no">Quase nunca</td>
-              <td class="yes">IAssistente contínuo</td>
-            </tr>
-            <tr>
-              <td>Casa, academia, mobilidade, cardio, meditação</td>
-              <td class="partial">Fragmentado</td>
-              <td class="partial">Foco único</td>
-              <td class="yes">Tudo no mesmo app</td>
-            </tr>
-            <tr>
-              <td>Watch + HealthKit + Live Activity</td>
-              <td class="partial">Variável</td>
-              <td class="partial">Variável</td>
-              <td class="yes">Nativo Apple</td>
+              <td>Cards de postagem (Stories) + motivação</td>
+              <td class="partial">Compartilhar genérico</td>
+              <td class="partial">Só conclusão</td>
+              <td class="yes">Card + gráficos + Home</td>
             </tr>
             <tr>
               <td>Evolução corporal (medidas + fotos privadas)</td>
@@ -1126,10 +1514,22 @@
               <td class="yes">Ciclo 30 dias + PDF</td>
             </tr>
             <tr>
-              <td>Multilíngue App Store (BR/EN/ES/FR)</td>
-              <td class="partial">Nem sempre</td>
-              <td class="partial">Nem sempre</td>
-              <td class="yes">Pronto</td>
+              <td>Check-ins emocionais e pós-treino</td>
+              <td class="partial">Básico</td>
+              <td class="no">Quase nunca</td>
+              <td class="yes">IAssistente contínuo</td>
+            </tr>
+            <tr>
+              <td>Watch + HealthKit + Live Activity</td>
+              <td class="partial">Variável</td>
+              <td class="partial">Variável</td>
+              <td class="yes">Nativo Apple</td>
+            </tr>
+            <tr>
+              <td>Um app para treinar, medir, comparar e postar</td>
+              <td class="no">Fragmentado</td>
+              <td class="partial">Foco único</td>
+              <td class="yes">Tudo no mesmo app</td>
             </tr>
           </tbody>
         </table>
@@ -1149,7 +1549,7 @@
             </div>
             <div class="caption">
               <strong>iPhone</strong>
-              <p>Treino, evolução corporal, cardápio e IAssistente.</p>
+              <p>Treino, evolução, cards de conquista, cardápio e IAssistente.</p>
             </div>
           </article>
           <article class="device-card ipad reveal reveal-d4">
@@ -1213,7 +1613,7 @@
           <article class="card reveal reveal-d6">
             <div class="stat">03</div>
             <h3>Evoluir com suporte</h3>
-            <p>Medidas, fotos privadas, IA, profissionais e relatório semanal.</p>
+            <p>Medidas, fotos privadas, cards de conquista, IA, profissionais e relatório semanal.</p>
           </article>
         </div>
       </div>
@@ -1231,7 +1631,7 @@
             </div>
             <div class="body">
               <strong>Atleta</strong>
-              <p>Clareza do que treinar e comer, motivação diária, evolução corporal e progresso visível.</p>
+              <p>Treina, mede, compara fotos, avalia progresso e compartilha cards — motivação e privacidade no mesmo lugar.</p>
             </div>
           </article>
           <article class="role-card reveal reveal-d3">
@@ -1264,9 +1664,10 @@
           <div>
             <p class="eyebrow reveal">Próximo passo</p>
             <h1 class="reveal reveal-d1">HealthFit está pronto para o mundo.</h1>
-            <p class="lead reveal reveal-d2">Produto Apple-native, personalidade forte, ponte com profissionais e ficha multilíngue para App Store mundial.</p>
+            <p class="lead reveal reveal-d2">Um único app Apple-native: treino, evolução com fotos, cards de conquista, IAssistente e ponte com profissionais — ficha multilíngue para App Store mundial.</p>
             <div class="pill-row reveal reveal-d3">
-              <span class="pill">Treino inteligente</span>
+              <span class="pill">Um único app</span>
+              <span class="pill">Cards de postagem</span>
               <span class="pill">Evolução corporal</span>
               <span class="pill">Live Activity</span>
               <span class="pill">IAssistente presente</span>
@@ -1295,7 +1696,7 @@
   <div class="footer-bar">
     <button type="button" id="prev">← Anterior</button>
     <div class="progress" aria-hidden="true"><span id="bar"></span></div>
-    <span id="counter">1 / 10</span>
+    <span id="counter">1 / 14</span>
     <button type="button" id="next">Próximo →</button>
   </div>
 
@@ -1307,7 +1708,7 @@
     let bpmTimer;
 
     function restartAnimations(slide) {
-      slide.querySelectorAll(".ring-progress, .meal-item, .bubble, .toast, .kcal-bar i, .tabs-demo span, .day-strip .hot, .reveal").forEach((el) => {
+      slide.querySelectorAll(".ring-progress, .meal-item, .bubble, .toast, .kcal-bar i, .tabs-demo span, .day-strip .hot, .share-card-mock .sc-bars i, .longpress-pulse, .evo-shot.after .frame, .reveal").forEach((el) => {
         el.style.animation = "none";
         void el.offsetWidth;
         el.style.animation = "";

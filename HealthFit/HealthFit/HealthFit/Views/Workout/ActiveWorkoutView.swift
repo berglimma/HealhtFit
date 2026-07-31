@@ -274,6 +274,12 @@ struct ActiveWorkoutView: View {
                 .font(.title.bold())
                 .foregroundStyle(AppTheme.textPrimary)
 
+            if !exercise.notes.isEmpty {
+                Text(exercise.notes)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+            }
+
             ExerciseDemoGifView(
                 exercise: exercise,
                 preferredGender: sheet.resolvedProgramGender,
@@ -314,6 +320,12 @@ struct ActiveWorkoutView: View {
             Text(exercise.name)
                 .font(.title.bold())
                 .foregroundStyle(AppTheme.textPrimary)
+
+            if !exercise.notes.isEmpty {
+                Text(exercise.notes)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+            }
 
             ExerciseExecutionGuideView(
                 steps: exercise.executionGuide,

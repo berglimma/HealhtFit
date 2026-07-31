@@ -81,6 +81,16 @@
     "%lld exercícios" : {
 
     },
+    "%lld ficha%@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld ficha%2$@"
+          }
+        }
+      }
+    },
     "%lld fichas · peso corporal · demos em vídeo" : {
 
     },
@@ -270,6 +280,9 @@
     "Adicionar à lista" : {
 
     },
+    "Adicionar foto" : {
+
+    },
     "Adicionar item personalizado" : {
 
     },
@@ -295,6 +308,9 @@
 
     },
     "Antes: %@" : {
+
+    },
+    "Ao escolher uma ficha, ela entra nos seus treinos e o cardápio é alinhado ao foco." : {
 
     },
     "Ao iniciar um treino, sua resposta sobre pré-treino aparecerá aqui." : {
@@ -1099,6 +1115,9 @@
     "Calorias estimadas" : {
 
     },
+    "Câmera" : {
+
+    },
     "Câmera com Vision" : {
 
     },
@@ -1112,6 +1131,9 @@
 
     },
     "Card pronto para Stories e status — WhatsApp ou Instagram." : {
+
+    },
+    "Cardápio alinhado ao treino" : {
 
     },
     "Cardápio atualizado" : {
@@ -1747,6 +1769,9 @@
     "Firebase não configurado. Substitua o GoogleService-Info.plist pelo arquivo do Firebase Console." : {
 
     },
+    "Foto do perfil" : {
+
+    },
     "Fotos (opcional e privado)" : {
 
     },
@@ -1760,6 +1785,9 @@
 
     },
     "Full body, core, HIIT, pernas e superiores com demos" : {
+
+    },
+    "Galeria" : {
 
     },
     "Garrafas (%lld ml): %lld" : {
@@ -3153,6 +3181,9 @@
 
     },
     "Ver comparativo de %lld dia(s)" : {
+
+    },
+    "Ver treino" : {
 
     },
     "Vision" : {

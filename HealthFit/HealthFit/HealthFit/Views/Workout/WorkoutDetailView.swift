@@ -296,6 +296,11 @@ struct ExerciseRow: View {
                     Text(exercise.name)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.textPrimary)
+                    if !exercise.notes.isEmpty {
+                        Text(exercise.notes)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(AppTheme.accent)
+                    }
                     HStack(spacing: 8) {
                         Text("\(exercise.sets)x\(exercise.reps)")
                         Text("Rec. \(exercise.recommendedWeightLabel)")

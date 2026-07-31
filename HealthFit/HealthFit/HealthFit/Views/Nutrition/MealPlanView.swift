@@ -12,6 +12,7 @@ private struct NutritionistMailDraft: Identifiable {
 struct MealPlanView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var mealPlanService: MealPlanService
+    @EnvironmentObject var trainingNutritionSync: TrainingNutritionSyncService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selectedDay = 0
     @State private var selectedOption = 0
@@ -116,11 +117,50 @@ struct MealPlanView: View {
     private var mealPlanContent: some View {
         ScrollView {
             VStack(spacing: 8) {
+                if trainingNutritionSync.hasActiveTrainingFocus {
+                    trainingFocusBanner
+                        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                        .padding(.top, 8)
+                        .adaptiveContentWidth()
+                }
                 bodyMetricsSection
                 menuPreferencesSection
                 nutritionModeContent
             }
         }
+    }
+
+    private var trainingFocusBanner: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "dumbbell.fill")
+                .foregroundStyle(AppTheme.accent)
+                .frame(width: 36, height: 36)
+                .background(AppTheme.accent.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Cardápio alinhado ao treino")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text(trainingNutritionSync.displayFocusLabel)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(AppTheme.accent)
+                if let summary = trainingNutritionSync.adjustmentSummary {
+                    Text(summary)
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                if let title = trainingNutritionSync.activeWorkoutTitle {
+                    Text(title.replacingOccurrences(of: "Guiado — ", with: ""))
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
     @ViewBuilder

@@ -80,6 +80,24 @@ struct WorkoutListView: View {
             .navigationDestination(for: MeditationTopic.self) { topic in
                 MeditationSetupView(topic: topic)
             }
+            .navigationDestination(for: GuidedLevelRoute.self) { route in
+                GuidedWorkoutCategoryView(
+                    title: route.level.pluralTitle,
+                    subtitle: route.level.subtitle,
+                    accent: route.level.accentColor,
+                    templates: GuidedWorkoutCatalog.templates(for: route.level),
+                    gender: route.gender
+                )
+            }
+            .navigationDestination(for: GuidedFocusRoute.self) { route in
+                GuidedWorkoutCategoryView(
+                    title: route.focus.shortTitle,
+                    subtitle: route.focus.subtitle,
+                    accent: route.focus.accentColor,
+                    templates: GuidedWorkoutCatalog.templates(for: route.focus),
+                    gender: route.gender
+                )
+            }
             .sheet(isPresented: $showCreateWorkout) {
                 CreateWorkoutView(initialTargetGender: createTargetGender)
             }
@@ -569,6 +587,8 @@ struct GenderWorkoutHubView: View {
         ScrollView {
             VStack(spacing: 20) {
                 hubHeader
+
+                GuidedWorkoutSections(gender: gender)
 
                 workoutGroupSection(
                     title: "Recomendados",

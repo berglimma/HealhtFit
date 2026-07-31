@@ -79,7 +79,7 @@ final class WorkoutStore: ObservableObject {
     init() {
         loadData()
         if workoutSheets.isEmpty {
-            workoutSheets = Self.sampleWorkouts
+            workoutSheets = Self.sampleWorkouts + GuidedWorkoutCatalog.sheets(for: nil)
             saveData()
         } else {
             refreshSampleWorkoutsIfNeeded()
@@ -144,7 +144,38 @@ final class WorkoutStore: ObservableObject {
     }
 
     func canModify(_ sheet: WorkoutSheet) -> Bool {
-        sheet.isUserCreated || !Self.sampleWorkoutTitles.contains(sheet.title)
+        if GuidedWorkoutCatalog.allTitles.contains(sheet.title) { return false }
+        return sheet.isUserCreated || !Self.sampleWorkoutTitles.contains(sheet.title)
+    }
+
+    /// Garante que a ficha guiada existe no store (com cargas do programa) e a devolve.
+    @discardableResult
+    func ensureGuidedWorkoutSheet(_ template: GuidedWorkoutTemplate, gender: Gender) -> WorkoutSheet {
+        let sheet = template.makeSheet(targetGender: gender)
+        if let index = workoutSheets.firstIndex(where: { $0.title == sheet.title }) {
+            let existing = workoutSheets[index]
+            let refreshed = WorkoutSheet(
+                id: existing.id,
+                title: sheet.title,
+                description: sheet.description,
+                exercises: sheet.exercises,
+                assignedTo: existing.assignedTo,
+                createdAt: existing.createdAt,
+                isActive: existing.isActive,
+                isUserCreated: false,
+                targetGender: gender,
+                createdByAssistant: false
+            )
+            workoutSheets[index] = refreshed
+            saveData()
+            return refreshed
+        }
+        addWorkoutSheet(sheet)
+        return sheet
+    }
+
+    var guidedWorkoutSheets: [WorkoutSheet] {
+        workoutSheets.filter { GuidedWorkoutCatalog.allTitles.contains($0.title) }
     }
 
     func isStandardWorkout(_ sheet: WorkoutSheet) -> Bool {
@@ -722,9 +753,10 @@ final class WorkoutStore: ObservableObject {
         }
 
         workoutSheets = workoutSheets.map { sheet in
-            guard let sample = sampleByTitle[sheet.title], sheet.exercises.count < 10 else {
-                return sheet
-            }
+            guard let sample = sampleByTitle[sheet.title] else { return sheet }
+            let missingWarmup = !sheet.exercises.contains { $0.notes == GuidedWorkoutCatalog.warmupNote }
+            let outdated = sheet.exercises.count != sample.exercises.count || sheet.exercises.count < 10
+            guard missingWarmup || outdated else { return sheet }
             didUpdate = true
             return WorkoutSheet(
                 id: sheet.id,
@@ -739,10 +771,38 @@ final class WorkoutStore: ObservableObject {
             )
         }
 
-        let existingTitles = Set(workoutSheets.map(\.title))
+        var existingTitles = Set(workoutSheets.map(\.title))
         for sample in Self.sampleWorkouts where !existingTitles.contains(sample.title) {
             workoutSheets.append(sample)
+            existingTitles.insert(sample.title)
             didUpdate = true
+        }
+
+        for guided in GuidedWorkoutCatalog.all {
+            if let index = workoutSheets.firstIndex(where: { $0.title == guided.title }) {
+                let existing = workoutSheets[index]
+                let catalogSheet = guided.makeSheet(targetGender: existing.targetGender)
+                let missingWarmup = !existing.exercises.contains { $0.notes == GuidedWorkoutCatalog.warmupNote }
+                let outdated = existing.exercises.count != catalogSheet.exercises.count
+                guard missingWarmup || outdated else { continue }
+                workoutSheets[index] = WorkoutSheet(
+                    id: existing.id,
+                    title: catalogSheet.title,
+                    description: catalogSheet.description,
+                    exercises: catalogSheet.exercises,
+                    assignedTo: existing.assignedTo,
+                    createdAt: existing.createdAt,
+                    isActive: existing.isActive,
+                    isUserCreated: false,
+                    targetGender: existing.targetGender ?? catalogSheet.targetGender,
+                    createdByAssistant: false
+                )
+                didUpdate = true
+            } else {
+                workoutSheets.append(guided.makeSheet(targetGender: nil))
+                existingTitles.insert(guided.title)
+                didUpdate = true
+            }
         }
 
         if didUpdate {
@@ -824,7 +884,7 @@ final class WorkoutStore: ObservableObject {
         WorkoutSheet(
             title: "Masculino A — Peito e Tríceps",
             description: "Hipertrofia de peitoral e tríceps — perfil masculino",
-            exercises: [
+            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
                 Exercise(name: "Supino Reto", sets: 4, reps: 8, weight: 70, restSeconds: 90, muscleGroup: .chest),
                 Exercise(name: "Supino Inclinado", sets: 4, reps: 10, weight: 55, restSeconds: 90, muscleGroup: .chest),
                 Exercise(name: "Supino Declinado", sets: 3, reps: 10, weight: 60, restSeconds: 75, muscleGroup: .chest),
@@ -835,12 +895,13 @@ final class WorkoutStore: ObservableObject {
                 Exercise(name: "Tríceps Testa", sets: 3, reps: 10, weight: 25, restSeconds: 60, muscleGroup: .arms),
                 Exercise(name: "Tríceps Francês", sets: 3, reps: 12, weight: 16, restSeconds: 60, muscleGroup: .arms),
                 Exercise(name: "Mergulho no Banco", sets: 3, reps: 12, restSeconds: 60, muscleGroup: .arms)
-            ]
+            ], level: .intermediate, warmup: .upper, abs: .plankCrunch),
+            targetGender: .male
         ),
         WorkoutSheet(
             title: "Masculino B — Costas e Bíceps",
             description: "Largura dorsal e bíceps — perfil masculino",
-            exercises: [
+            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
                 Exercise(name: "Barra Fixa", sets: 4, reps: 8, restSeconds: 90, muscleGroup: .back),
                 Exercise(name: "Remada Curvada", sets: 4, reps: 8, weight: 60, restSeconds: 90, muscleGroup: .back),
                 Exercise(name: "Puxada Frontal", sets: 4, reps: 10, weight: 50, restSeconds: 75, muscleGroup: .back),
@@ -851,12 +912,13 @@ final class WorkoutStore: ObservableObject {
                 Exercise(name: "Rosca Martelo", sets: 3, reps: 10, weight: 14, restSeconds: 60, muscleGroup: .arms),
                 Exercise(name: "Rosca Scott", sets: 3, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .arms),
                 Exercise(name: "Rosca Concentrada", sets: 3, reps: 12, weight: 10, restSeconds: 45, muscleGroup: .arms)
-            ]
+            ], level: .intermediate, warmup: .upper, abs: .legsBicycle),
+            targetGender: .male
         ),
         WorkoutSheet(
             title: "Masculino C — Pernas",
             description: "Força e volume de membros inferiores — perfil masculino",
-            exercises: [
+            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
                 Exercise(name: "Agachamento Livre", sets: 4, reps: 8, weight: 90, restSeconds: 120, muscleGroup: .legs),
                 Exercise(name: "Leg Press 45°", sets: 4, reps: 10, weight: 180, restSeconds: 90, muscleGroup: .legs),
                 Exercise(name: "Hack Squat", sets: 3, reps: 10, weight: 120, restSeconds: 90, muscleGroup: .legs),
@@ -866,12 +928,13 @@ final class WorkoutStore: ObservableObject {
                 Exercise(name: "Afundo", sets: 3, reps: 10, weight: 24, restSeconds: 75, muscleGroup: .legs),
                 Exercise(name: "Panturrilha em Pé", sets: 4, reps: 15, weight: 90, restSeconds: 45, muscleGroup: .legs),
                 Exercise(name: "Panturrilha Sentado", sets: 4, reps: 15, weight: 55, restSeconds: 45, muscleGroup: .legs)
-            ]
+            ], level: .intermediate, warmup: .lower, abs: .plankOblique),
+            targetGender: .male
         ),
         WorkoutSheet(
             title: "Masculino D — Ombros e Trapézio",
             description: "Deltoides e trapézio para estrutura — perfil masculino",
-            exercises: [
+            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
                 Exercise(name: "Desenvolvimento Militar", sets: 4, reps: 8, weight: 45, restSeconds: 90, muscleGroup: .shoulders),
                 Exercise(name: "Desenvolvimento com Halteres", sets: 3, reps: 10, weight: 20, restSeconds: 75, muscleGroup: .shoulders),
                 Exercise(name: "Elevação Lateral", sets: 4, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .shoulders),
@@ -881,7 +944,8 @@ final class WorkoutStore: ObservableObject {
                 Exercise(name: "Encolhimento com Halteres", sets: 3, reps: 15, weight: 26, restSeconds: 60, muscleGroup: .back),
                 Exercise(name: "Face Pull", sets: 3, reps: 15, weight: 22, restSeconds: 60, muscleGroup: .back),
                 Exercise(name: "Crucifixo Inverso", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .shoulders)
-            ]
+            ], level: .intermediate, warmup: .upper, abs: .infraBicycle),
+            targetGender: .male
         )
     ]
 
@@ -890,7 +954,7 @@ final class WorkoutStore: ObservableObject {
         WorkoutSheet(
             title: "Feminino A — Glúteos e Posteriores",
             description: "Ativação e hipertrofia de glúteos e cadeia posterior — perfil feminino",
-            exercises: [
+            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
                 Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 4, reps: 12, weight: 40, restSeconds: 75, muscleGroup: .legs),
                 Exercise(name: "Agachamento Sumô", sets: 4, reps: 12, weight: 40, restSeconds: 90, muscleGroup: .legs),
                 Exercise(name: "Stiff", sets: 4, reps: 12, weight: 30, restSeconds: 75, muscleGroup: .legs),
@@ -899,28 +963,26 @@ final class WorkoutStore: ObservableObject {
                 Exercise(name: "Coice na Polia", sets: 3, reps: 15, weight: 15, restSeconds: 45, muscleGroup: .legs),
                 Exercise(name: "Mesa Flexora", sets: 3, reps: 12, weight: 25, restSeconds: 60, muscleGroup: .legs),
                 Exercise(name: "Panturrilha em Pé", sets: 3, reps: 15, weight: 40, restSeconds: 45, muscleGroup: .legs)
-            ]
+            ], level: .intermediate, warmup: .femaleMobility, abs: .plankCrunch),
+            targetGender: .female
         ),
         WorkoutSheet(
             title: "Feminino B — Pernas e Core",
             description: "Quadríceps, adutores e abdômen — perfil feminino",
-            exercises: [
+            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
                 Exercise(name: "Agachamento Livre", sets: 4, reps: 12, weight: 35, restSeconds: 90, muscleGroup: .legs),
                 Exercise(name: "Leg Press 45°", sets: 4, reps: 15, weight: 80, restSeconds: 75, muscleGroup: .legs),
                 Exercise(name: "Cadeira Extensora", sets: 4, reps: 15, weight: 30, restSeconds: 60, muscleGroup: .legs),
                 Exercise(name: "Cadeira Adutora", sets: 3, reps: 15, weight: 40, restSeconds: 45, muscleGroup: .legs),
                 Exercise(name: "Afundo", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .legs),
-                Exercise(name: "Panturrilha Sentado", sets: 3, reps: 20, weight: 30, restSeconds: 45, muscleGroup: .legs),
-                Exercise(name: "Prancha", sets: 3, reps: 40, restSeconds: 45, muscleGroup: .core),
-                Exercise(name: "Abdominal Infra", sets: 3, reps: 15, restSeconds: 45, muscleGroup: .core),
-                Exercise(name: "Abdominal Oblíquo", sets: 3, reps: 20, restSeconds: 45, muscleGroup: .core),
-                Exercise(name: "Elevação de Pernas", sets: 3, reps: 12, restSeconds: 45, muscleGroup: .core)
-            ]
+                Exercise(name: "Panturrilha Sentado", sets: 3, reps: 20, weight: 30, restSeconds: 45, muscleGroup: .legs)
+            ], level: .intermediate, warmup: .femaleMobility, abs: .infraBicycle),
+            targetGender: .female
         ),
         WorkoutSheet(
             title: "Feminino C — Costas e Postura",
             description: "Costas, ombros posteriores e braços leves — perfil feminino",
-            exercises: [
+            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
                 Exercise(name: "Puxada Frontal", sets: 4, reps: 12, weight: 30, restSeconds: 75, muscleGroup: .back),
                 Exercise(name: "Remada Unilateral", sets: 3, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .back),
                 Exercise(name: "Pulldown Triângulo", sets: 3, reps: 12, weight: 25, restSeconds: 60, muscleGroup: .back),
@@ -929,14 +991,14 @@ final class WorkoutStore: ObservableObject {
                 Exercise(name: "Crucifixo Inverso", sets: 3, reps: 15, weight: 6, restSeconds: 45, muscleGroup: .shoulders),
                 Exercise(name: "Elevação Lateral", sets: 3, reps: 15, weight: 6, restSeconds: 45, muscleGroup: .shoulders),
                 Exercise(name: "Rosca Direta", sets: 3, reps: 12, weight: 8, restSeconds: 45, muscleGroup: .arms),
-                Exercise(name: "Tríceps Pulley", sets: 3, reps: 12, weight: 15, restSeconds: 45, muscleGroup: .arms),
-                Exercise(name: "Prancha Lateral", sets: 3, reps: 30, restSeconds: 45, muscleGroup: .core)
-            ]
+                Exercise(name: "Tríceps Pulley", sets: 3, reps: 12, weight: 15, restSeconds: 45, muscleGroup: .arms)
+            ], level: .intermediate, warmup: .femaleMobility, abs: .plankOblique),
+            targetGender: .female
         ),
         WorkoutSheet(
             title: "Feminino D — Full Body e Ombros",
             description: "Corpo inteiro com ênfase em ombros e core — perfil feminino",
-            exercises: [
+            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
                 Exercise(name: "Agachamento Livre", sets: 3, reps: 12, weight: 30, restSeconds: 75, muscleGroup: .legs),
                 Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 3, reps: 12, weight: 35, restSeconds: 60, muscleGroup: .legs),
                 Exercise(name: "Puxada Frontal", sets: 3, reps: 12, weight: 25, restSeconds: 60, muscleGroup: .back),
@@ -944,10 +1006,9 @@ final class WorkoutStore: ObservableObject {
                 Exercise(name: "Elevação Lateral", sets: 3, reps: 15, weight: 5, restSeconds: 45, muscleGroup: .shoulders),
                 Exercise(name: "Flexão de Braços", sets: 3, reps: 10, restSeconds: 60, muscleGroup: .chest),
                 Exercise(name: "Remada Unilateral", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Kettlebell Swing", sets: 3, reps: 15, weight: 12, restSeconds: 60, muscleGroup: .fullBody),
-                Exercise(name: "Abdominal Crunch", sets: 3, reps: 20, restSeconds: 40, muscleGroup: .core),
-                Exercise(name: "Prancha", sets: 3, reps: 35, restSeconds: 40, muscleGroup: .core)
-            ]
+                Exercise(name: "Kettlebell Swing", sets: 3, reps: 15, weight: 12, restSeconds: 60, muscleGroup: .fullBody)
+            ], level: .intermediate, warmup: .femaleMobility, abs: .crunchBicycle),
+            targetGender: .female
         )
     ]
 

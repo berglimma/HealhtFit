@@ -579,6 +579,7 @@ final class AuthService: ObservableObject {
         workoutStore.clearAllLocalData()
         mealPlanService.clearAllLocalData()
         wellnessService.clearAllLocalData()
+        TrainingNutritionSyncService.shared.clear()
         WeeklyReportService.shared.reset()
         WorkoutShareCardStore.shared.reset()
         PostWorkoutCheckInService.shared.resetForAccountDeletion()

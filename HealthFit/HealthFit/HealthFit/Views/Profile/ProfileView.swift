@@ -1,6 +1,4 @@
 import SwiftUI
-import PhotosUI
-import Photos
 import UIKit
 
 struct ProfileView: View {
@@ -14,7 +12,9 @@ struct ProfileView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showLogoutAlert = false
     @State private var showDeleteAccountSheet = false
-    @State private var showProfilePhotoPicker = false
+    @State private var showPhotoSourceDialog = false
+    @State private var showProfileGalleryPicker = false
+    @State private var showProfileCameraPicker = false
     @State private var trainerName = ""
     @State private var trainerEmail = ""
     @State private var usesPersonalTrainer = false
@@ -125,9 +125,32 @@ struct ProfileView: View {
             .onChange(of: workoutStore.sessionHistory.count) { _, _ in
                 syncPreWorkoutFromWorkouts()
             }
-            .sheet(isPresented: $showProfilePhotoPicker) {
-                ProfilePHPicker { image in
-                    showProfilePhotoPicker = false
+            .confirmationDialog(
+                "Foto do perfil",
+                isPresented: $showPhotoSourceDialog,
+                titleVisibility: .visible
+            ) {
+                if PhotoCaptureAvailability.isCameraAvailable {
+                    Button("Câmera") {
+                        DispatchQueue.main.async { showProfileCameraPicker = true }
+                    }
+                }
+                Button("Galeria") {
+                    DispatchQueue.main.async { showProfileGalleryPicker = true }
+                }
+                Button("Cancelar", role: .cancel) {}
+            }
+            .sheet(isPresented: $showProfileGalleryPicker) {
+                LibraryImagePicker { image in
+                    showProfileGalleryPicker = false
+                    guard let image else { return }
+                    authService.updateProfileImage(image)
+                }
+                .ignoresSafeArea()
+            }
+            .sheet(isPresented: $showProfileCameraPicker) {
+                CameraImagePicker { image in
+                    showProfileCameraPicker = false
                     guard let image else { return }
                     authService.updateProfileImage(image)
                 }
@@ -190,9 +213,9 @@ struct ProfileView: View {
         let profileImage = authService.profileImage
         Section {
             HStack(spacing: 16) {
-                // Button + PHPicker sheet: PhotosPicker dentro de List costuma exigir long-press.
+                // Button + sheet: PhotosPicker dentro de List costuma exigir long-press.
                 Button {
-                    showProfilePhotoPicker = true
+                    presentProfilePhotoSource()
                 } label: {
                     ProfileAvatarView(
                         image: profileImage,
@@ -230,6 +253,15 @@ struct ProfileView: View {
                 }
             }
             .padding(.vertical, 8)
+        }
+    }
+
+    private func presentProfilePhotoSource() {
+        if PhotoCaptureAvailability.isCameraAvailable {
+            showPhotoSourceDialog = true
+        } else {
+            // Simulator / devices without camera: open gallery directly.
+            showProfileGalleryPicker = true
         }
     }
 
@@ -1267,50 +1299,5 @@ private struct ListSafeButtonStyle: PrimitiveButtonStyle {
             .highPriorityGesture(
                 TapGesture().onEnded { configuration.trigger() }
             )
-    }
-}
-
-private struct ProfilePHPicker: UIViewControllerRepresentable {
-    var onPick: (UIImage?) -> Void
-
-    func makeUIViewController(context: Context) -> PHPickerViewController {
-        var configuration = PHPickerConfiguration(photoLibrary: .shared())
-        configuration.filter = .images
-        configuration.selectionLimit = 1
-        configuration.preferredAssetRepresentationMode = .compatible
-
-        let picker = PHPickerViewController(configuration: configuration)
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onPick: onPick)
-    }
-
-    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        let onPick: (UIImage?) -> Void
-
-        init(onPick: @escaping (UIImage?) -> Void) {
-            self.onPick = onPick
-        }
-
-        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            guard let provider = results.first?.itemProvider,
-                  provider.canLoadObject(ofClass: UIImage.self) else {
-                DispatchQueue.main.async { self.onPick(nil) }
-                return
-            }
-
-            let onPick = self.onPick
-            provider.loadObject(ofClass: UIImage.self) { object, _ in
-                let image = object as? UIImage
-                DispatchQueue.main.async {
-                    onPick(image)
-                }
-            }
-        }
     }
 }

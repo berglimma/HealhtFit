@@ -32,6 +32,7 @@ struct HealthFitApp: App {
                 .environmentObject(wellnessService)
                 .environmentObject(shareCardStore)
                 .environmentObject(exerciseVideoRepository)
+                .environmentObject(TrainingNutritionSyncService.shared)
                 .environmentObject(BodyEvolutionService.shared)
                 .preferredColorScheme(.dark)
                 .onOpenURL { url in
