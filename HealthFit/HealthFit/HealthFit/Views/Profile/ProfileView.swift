@@ -1,5 +1,7 @@
 import SwiftUI
 import PhotosUI
+import Photos
+import UIKit
 
 struct ProfileView: View {
     @EnvironmentObject var authService: AuthService
@@ -12,7 +14,7 @@ struct ProfileView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showLogoutAlert = false
     @State private var showDeleteAccountSheet = false
-    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showProfilePhotoPicker = false
     @State private var trainerName = ""
     @State private var trainerEmail = ""
     @State private var usesPersonalTrainer = false
@@ -67,17 +69,22 @@ struct ProfileView: View {
                         bodyMeasurementsSection(for: user)
                     }
                     Section("Evolução Corporal") {
+                        // NavigationLink puro no List responde a toque simples; evita Button/wrapper.
                         NavigationLink {
                             BodyEvolutionView()
                         } label: {
-                            Label("Fotos e comparativo (30 dias)", systemImage: "camera.viewfinder")
+                            VStack(alignment: .leading, spacing: 4) {
+                                Label("Fotos e comparativo (30 dias)", systemImage: "camera.viewfinder")
+                                Text(evolutionService.meta.statusLabel)
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                                Text("Fotos opcionais e privadas — só você acessa.")
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                         }
-                        Text(evolutionService.meta.statusLabel)
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                        Text("Fotos opcionais e privadas — só você acessa.")
-                            .font(.caption2)
-                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     integrationsSection
                     restTimerSection
@@ -92,7 +99,8 @@ struct ProfileView: View {
             .navigationTitle("Perfil")
             .scrollDismissesKeyboard(.immediately)
             .numericKeyboardDismiss()
-            .dismissKeyboardOnTap()
+            // Não usa dismissKeyboardOnTap(): TapGesture no List compete com PhotosPicker/Buttons
+            // e força long-press. Teclado fecha via scroll + botão OK do numericKeyboardDismiss.
             .onAppear {
                 syncTrainerFields()
                 syncDisplayNameField()
@@ -116,13 +124,13 @@ struct ProfileView: View {
             .onChange(of: workoutStore.sessionHistory.count) { _, _ in
                 syncPreWorkoutFromWorkouts()
             }
-            .onChange(of: selectedPhotoItem) { _, item in
-                guard let item else { return }
-                Task {
-                    guard let data = try? await item.loadTransferable(type: Data.self),
-                          let image = UIImage(data: data) else { return }
+            .sheet(isPresented: $showProfilePhotoPicker) {
+                ProfilePHPicker { image in
+                    showProfilePhotoPicker = false
+                    guard let image else { return }
                     authService.updateProfileImage(image)
                 }
+                .ignoresSafeArea()
             }
             .alert("Sair da conta?", isPresented: $showLogoutAlert) {
                 Button("Cancelar", role: .cancel) {}
@@ -176,13 +184,17 @@ struct ProfileView: View {
         let profileImage = authService.profileImage
         Section {
             HStack(spacing: 16) {
-                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                // Button + PHPicker sheet: PhotosPicker dentro de List costuma exigir long-press.
+                Button {
+                    showProfilePhotoPicker = true
+                } label: {
                     ProfileAvatarView(
                         image: profileImage,
                         initial: String(user.greetingName.prefix(1).uppercased())
                     )
+                    .contentShape(Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(ListSafeButtonStyle())
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(user.shownName)
@@ -194,21 +206,21 @@ struct ProfileView: View {
                         .font(.caption2)
                         .foregroundStyle(AppTheme.accent)
                 }
-
-                Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 let healthStatus = wellnessService.healthIconStatus()
                 PulsingHeartIconView(size: 44, glowColor: healthStatus.glowColor)
 
                 if profileImage != nil {
                     Button {
-                        selectedPhotoItem = nil
                         authService.updateProfileImage(nil)
                     } label: {
                         Image(systemName: "trash")
                             .foregroundStyle(.red)
+                            .frame(width: 36, height: 36)
+                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(ListSafeButtonStyle())
                 }
             }
             .padding(.vertical, 8)
@@ -893,7 +905,9 @@ struct ProfileView: View {
         } label: {
             Label("Salvar dados", systemImage: "checkmark.circle.fill")
                 .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(ListSafeButtonStyle())
         .tint(AppTheme.accent)
         .disabled(!isBodyDataValid)
     }
@@ -1044,8 +1058,11 @@ struct ProfileView: View {
                     systemImage: "arrow.left.arrow.right"
                 )
                 .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(ListSafeButtonStyle())
         } else if let measuredAt = user.bodyMeasurements.measuredAt {
             let days = BodyMeasurements.daysBetween(measuredAt)
             let remaining = max(BodyMeasurements.comparisonIntervalDays - days, 0)
@@ -1074,7 +1091,9 @@ struct ProfileView: View {
         } label: {
             Label("Salvar medidas", systemImage: "checkmark.circle.fill")
                 .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(ListSafeButtonStyle())
         .tint(AppTheme.accent)
     }
 
@@ -1221,5 +1240,62 @@ private struct BodyMeasurementComparisonView: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+/// Evita o atraso/long-press típico de `Button` dentro de `List` (UITableView).
+private struct ListSafeButtonStyle: PrimitiveButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.65 : 1)
+            .highPriorityGesture(
+                TapGesture().onEnded { configuration.trigger() }
+            )
+    }
+}
+
+private struct ProfilePHPicker: UIViewControllerRepresentable {
+    var onPick: (UIImage?) -> Void
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var configuration = PHPickerConfiguration(photoLibrary: .shared())
+        configuration.filter = .images
+        configuration.selectionLimit = 1
+        configuration.preferredAssetRepresentationMode = .compatible
+
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick)
+    }
+
+    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let onPick: (UIImage?) -> Void
+
+        init(onPick: @escaping (UIImage?) -> Void) {
+            self.onPick = onPick
+        }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            guard let provider = results.first?.itemProvider,
+                  provider.canLoadObject(ofClass: UIImage.self) else {
+                DispatchQueue.main.async { self.onPick(nil) }
+                return
+            }
+
+            let onPick = self.onPick
+            provider.loadObject(ofClass: UIImage.self) { object, _ in
+                let image = object as? UIImage
+                DispatchQueue.main.async {
+                    onPick(image)
+                }
+            }
+        }
     }
 }

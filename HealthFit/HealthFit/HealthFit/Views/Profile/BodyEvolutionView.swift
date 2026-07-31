@@ -9,7 +9,6 @@ struct BodyEvolutionView: View {
     @EnvironmentObject private var evolutionService: BodyEvolutionService
     @State private var draftImages: [BodyPhotoSlot: UIImage] = [:]
     @State private var activePickerSlot: BodyPhotoSlot?
-    @State private var showNativePhotoPicker = false
     @State private var loadingSlots: Set<BodyPhotoSlot> = []
     @State private var showResult: BodyEvolutionComparisonResult?
     @State private var infoMessage: String?
@@ -18,14 +17,21 @@ struct BodyEvolutionView: View {
     @State private var pendingHistoryPDF: BodyEvolutionEvaluation?
 
     var body: some View {
-        List {
-            statusSection
-            photosSection
-            actionsSection
-            if !evolutionService.evaluations.isEmpty {
-                historySection
+        // ScrollView (não List): Buttons dentro de List exigem long-press no iOS.
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                statusSection
+                photosSection
+                actionsSection
+                if !evolutionService.evaluations.isEmpty {
+                    historySection
+                }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .background(AppTheme.background.ignoresSafeArea())
         .navigationTitle("Evolução Corporal")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -33,9 +39,9 @@ struct BodyEvolutionView: View {
             await evolutionService.loadIfNeeded(userId: userId)
             await hydrateDraftFromActiveSet(userId: userId)
         }
-        .sheet(isPresented: $showNativePhotoPicker) {
+        .sheet(item: $activePickerSlot) { slot in
             BodyEvolutionPHPicker { image in
-                handlePickedImage(image)
+                handlePickedImage(image, for: slot)
             }
             .ignoresSafeArea()
         }
@@ -84,7 +90,7 @@ struct BodyEvolutionView: View {
     }
 
     private var statusSection: some View {
-        Section("Status") {
+        evolutionCard(title: "Status") {
             Text(evolutionService.meta.statusLabel)
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
@@ -103,8 +109,12 @@ struct BodyEvolutionView: View {
     }
 
     private var photosSection: some View {
-        Section {
-            // Grade fixa fora de LazyVGrid+PhotosPicker (que travava a abertura).
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Fotos (opcional e privado)")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+                .textCase(.uppercase)
+
             VStack(spacing: 12) {
                 ForEach(0..<2, id: \.self) { row in
                     HStack(spacing: 12) {
@@ -117,11 +127,11 @@ struct BodyEvolutionView: View {
                     }
                 }
             }
-            .padding(.vertical, 4)
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-        } header: {
-            Text("Fotos (opcional e privado)")
-        } footer: {
+            .padding(12)
+            .frame(maxWidth: .infinity)
+            .background(AppTheme.cardBackground.opacity(0.55))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+
             Text(
                 """
                 Como adicionar: toque em cada ângulo (até 6). É opcional e privado — só você vê.
@@ -139,11 +149,10 @@ struct BodyEvolutionView: View {
             ZStack(alignment: .topTrailing) {
                 Button {
                     activePickerSlot = slot
-                    showNativePhotoPicker = true
                 } label: {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(AppTheme.cardBackground)
+                            .fill(AppTheme.background.opacity(0.85))
                             .aspectRatio(3 / 4, contentMode: .fit)
 
                         if let image = draftImages[slot] {
@@ -165,9 +174,10 @@ struct BodyEvolutionView: View {
                             .foregroundStyle(AppTheme.textSecondary)
                         }
                     }
+                    .frame(maxWidth: .infinity)
                     .contentShape(RoundedRectangle(cornerRadius: 10))
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
 
                 if draftImages[slot] != nil {
                     Button {
@@ -177,9 +187,10 @@ struct BodyEvolutionView: View {
                             .font(.title3)
                             .symbolRenderingMode(.palette)
                             .foregroundStyle(.white, .black.opacity(0.55))
+                            .padding(6)
+                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.borderless)
-                    .padding(6)
+                    .buttonStyle(.plain)
                     .accessibilityLabel("Remover foto")
                 }
             }
@@ -189,14 +200,13 @@ struct BodyEvolutionView: View {
                 .foregroundStyle(AppTheme.textPrimary)
                 .lineLimit(1)
         }
+        .frame(maxWidth: .infinity)
     }
 
     @MainActor
-    private func handlePickedImage(_ image: UIImage?) {
-        let slot = activePickerSlot
-        showNativePhotoPicker = false
+    private func handlePickedImage(_ image: UIImage?, for slot: BodyPhotoSlot) {
         activePickerSlot = nil
-        guard let slot, let image else { return }
+        guard let image else { return }
 
         loadingSlots.insert(slot)
         Task {
@@ -210,7 +220,7 @@ struct BodyEvolutionView: View {
 
     @ViewBuilder
     private var actionsSection: some View {
-        Section {
+        evolutionCard(title: "Ações") {
             switch evolutionService.cyclePhase {
             case .empty, .waiting:
                 Button {
@@ -223,7 +233,7 @@ struct BodyEvolutionView: View {
                         systemImage: "square.and.arrow.up"
                     )
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
                 .disabled(evolutionService.isSaving)
                 .opacity(evolutionService.isSaving ? 0.5 : 1)
 
@@ -236,7 +246,7 @@ struct BodyEvolutionView: View {
                         systemImage: "arrow.left.arrow.right.circle.fill"
                     )
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
                 .disabled(evolutionService.isSaving)
                 .opacity(evolutionService.isSaving ? 0.5 : 1)
 
@@ -252,7 +262,7 @@ struct BodyEvolutionView: View {
     }
 
     private var historySection: some View {
-        Section("Últimas avaliações (PDF)") {
+        evolutionCard(title: "Últimas avaliações (PDF)") {
             ForEach(evolutionService.evaluations) { evaluation in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(formatted(evaluation.createdAt))
@@ -267,10 +277,33 @@ struct BodyEvolutionView: View {
                     } label: {
                         Label("Salvar / compartilhar PDF", systemImage: "square.and.arrow.down")
                             .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                 }
                 .padding(.vertical, 4)
             }
+        }
+    }
+
+    private func evolutionCard<Content: View>(
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+                .textCase(.uppercase)
+
+            VStack(alignment: .leading, spacing: 10) {
+                content()
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppTheme.cardBackground.opacity(0.55))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
     }
 
@@ -796,10 +829,11 @@ private struct BodyEvolutionPHPicker: UIViewControllerRepresentable {
                 return
             }
 
+            let onPick = self.onPick
             provider.loadObject(ofClass: UIImage.self) { object, _ in
                 let image = object as? UIImage
                 DispatchQueue.main.async {
-                    self.onPick(image)
+                    onPick(image)
                 }
             }
         }

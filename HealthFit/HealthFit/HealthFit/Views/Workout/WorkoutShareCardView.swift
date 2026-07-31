@@ -106,22 +106,22 @@ struct WorkoutShareCardView: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color(red: 0.05, green: 0.08, blue: 0.07),
-                    Color(red: 0.08, green: 0.14, blue: 0.11),
-                    Color(red: 0.06, green: 0.10, blue: 0.09)
+                    Color(red: 0.03, green: 0.05, blue: 0.04),
+                    Color(red: 0.05, green: 0.10, blue: 0.08),
+                    Color(red: 0.04, green: 0.07, blue: 0.06)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
 
             Circle()
-                .fill(Color("AccentGreen").opacity(0.22))
+                .fill(Color("AccentGreen").opacity(0.16))
                 .frame(width: 260, height: 260)
                 .blur(radius: 50)
                 .offset(x: -90, y: -140)
 
             Circle()
-                .fill(Color("AccentOrange").opacity(0.18))
+                .fill(Color("AccentOrange").opacity(0.13))
                 .frame(width: 220, height: 220)
                 .blur(radius: 45)
                 .offset(x: 110, y: 160)

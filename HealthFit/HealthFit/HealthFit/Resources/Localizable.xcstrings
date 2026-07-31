@@ -2291,6 +2291,9 @@
     "Perfil" : {
 
     },
+    "PERFORMANCE" : {
+
+    },
     "Performance Maratona" : {
 
     },
@@ -2641,10 +2644,10 @@
     "Relatórios de treino poderão ser enviados por e-mail" : {
 
     },
-    "Remover" : {
+    "Remover da ficha" : {
 
     },
-    "Remover da ficha" : {
+    "Remover foto" : {
 
     },
     "Repetições" : {
@@ -2795,6 +2798,12 @@
 
     },
     "Séries concluídas" : {
+
+    },
+    "SÉRIES POR EXERCÍCIO" : {
+
+    },
+    "SESSÃO" : {
 
     },
     "Seu apelido ou primeiro nome" : {
@@ -3093,6 +3102,9 @@
 
     },
     "Últimos treinos" : {
+
+    },
+    "ÚLTIMOS TREINOS" : {
 
     },
     "Usado nas saudações, motivação e mensagens do app." : {
