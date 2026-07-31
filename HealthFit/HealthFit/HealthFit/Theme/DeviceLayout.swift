@@ -37,6 +37,11 @@ enum DeviceLayout {
     static var usesSplitWorkoutLayout: Bool {
         isPad
     }
+
+    /// Standard `UITabBar` content height (icons + labels), excluding the home indicator.
+    /// Used to lift floating chrome (e.g. minimized workout banner) above the tab bar when
+    /// overlays/insets are applied on `TabView` itself — which does not treat the tab bar as safe area.
+    static var mainTabBarContentHeight: CGFloat { 49 }
 }
 
 struct AdaptiveContentWidthModifier: ViewModifier {

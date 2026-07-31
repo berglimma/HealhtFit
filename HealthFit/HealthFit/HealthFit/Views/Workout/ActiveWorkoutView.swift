@@ -20,6 +20,9 @@ struct ActiveWorkoutView: View {
     @State private var performedWeightTextByExercise: [UUID: String] = [:]
     @State private var showEarlyEndSheet = false
     @State private var earlyEndJustification = ""
+    /// Set when confirming early end; finish runs in sheet `onDismiss` so the summary
+    /// fullScreenCover is not blocked by the justification sheet still dismissing.
+    @State private var pendingEarlyEndJustification: String?
     @State private var liveExerciseElapsedSeconds = 0
 
     private let workoutClock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -111,17 +114,22 @@ struct ActiveWorkoutView: View {
                     .disabled(isFinishing)
                 }
             }
-            .sheet(isPresented: $showEarlyEndSheet) {
+            .sheet(isPresented: $showEarlyEndSheet, onDismiss: {
+                if let reason = pendingEarlyEndJustification {
+                    pendingEarlyEndJustification = nil
+                    finishWorkout(endedEarly: true, justification: reason)
+                }
+            }) {
                 EarlyEndJustificationSheet(
                     justification: $earlyEndJustification,
                     onCancel: {
+                        pendingEarlyEndJustification = nil
                         showEarlyEndSheet = false
                         earlyEndJustification = ""
                     },
                     onConfirm: {
-                        let reason = trimmedEarlyEndJustification
+                        pendingEarlyEndJustification = trimmedEarlyEndJustification
                         showEarlyEndSheet = false
-                        finishWorkout(endedEarly: true, justification: reason)
                     }
                 )
                 .presentationDetents([.medium])
@@ -556,6 +564,7 @@ struct ActiveWorkoutView: View {
 
     private func requestEarlyEnd() {
         guard !isFinishing else { return }
+        pendingEarlyEndJustification = nil
         earlyEndJustification = ""
         showEarlyEndSheet = true
     }
@@ -847,39 +856,72 @@ struct WorkoutStartMotivationOverlay: View {
             Color.black.opacity(0.55)
                 .ignoresSafeArea()
 
-            VStack(spacing: 20) {
-                Image(systemName: "figure.strengthtraining.traditional")
-                    .font(.system(size: 52))
-                    .foregroundStyle(AppTheme.accent)
-                    .scaleEffect(iconPulse ? 1.08 : 1.0)
-                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: iconPulse)
-                    .onAppear { iconPulse = true }
+            GeometryReader { geo in
+                let horizontalInset: CGFloat = 24
+                let verticalInset: CGFloat = 20
+                let cardMaxWidth = min(400, geo.size.width - horizontalInset * 2)
+                let cardMaxHeight = max(280, geo.size.height - verticalInset * 2)
 
-                Text("Hora de treinar!")
-                    .font(.title2.bold())
-                    .foregroundStyle(AppTheme.textPrimary)
+                VStack {
+                    Spacer(minLength: 0)
 
-                Text(MotivationMessages.workoutStartFocusMessage)
-                    .font(.body)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    VStack(spacing: 16) {
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.system(size: 44))
+                            .foregroundStyle(AppTheme.accent)
+                            .scaleEffect(iconPulse ? 1.06 : 1.0)
+                            .frame(width: 56, height: 56)
+                            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: iconPulse)
+                            .onAppear { iconPulse = true }
+                            .accessibilityHidden(true)
 
-                Button(action: onContinue) {
-                    Label("Vamos lá!", systemImage: "play.fill")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(AppTheme.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        Text("Hora de treinar!")
+                            .font(.title2.bold())
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .minimumScaleFactor(0.85)
+                            .lineLimit(2)
+
+                        ViewThatFits(in: .vertical) {
+                            motivationMessage
+                            ScrollView {
+                                motivationMessage
+                            }
+                            .scrollBounceBehavior(.basedOnSize)
+                        }
+
+                        Button(action: onContinue) {
+                            Label("Vamos lá!", systemImage: "play.fill")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(AppTheme.accent)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
+                    .padding(24)
+                    .frame(width: cardMaxWidth)
+                    .frame(maxHeight: cardMaxHeight)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+
+                    Spacer(minLength: 0)
                 }
+                .padding(.horizontal, horizontalInset)
+                .padding(.vertical, verticalInset)
+                .frame(width: geo.size.width, height: geo.size.height)
             }
-            .padding(28)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .padding(.horizontal, 24)
         }
+    }
+
+    private var motivationMessage: some View {
+        Text(MotivationMessages.workoutStartFocusMessage)
+            .font(.body)
+            .multilineTextAlignment(.center)
+            .foregroundStyle(AppTheme.textSecondary)
+            .frame(maxWidth: .infinity)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 

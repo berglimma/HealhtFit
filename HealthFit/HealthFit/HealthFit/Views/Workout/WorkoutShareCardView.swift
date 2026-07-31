@@ -52,14 +52,16 @@ struct WorkoutShareCardView: View {
                     .minimumScaleFactor(0.85)
                     .padding(.horizontal, 24)
 
-                Text(motivationLine)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.82))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.9)
-                    .padding(.horizontal, 28)
-                    .padding(.top, 6)
+                if !motivationLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(motivationLine)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.85)
+                        .padding(.horizontal, 28)
+                        .padding(.top, 6)
+                }
 
                 Text(session.workoutTitle)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -504,7 +506,14 @@ enum WorkoutShareCardRenderer {
             return "O importante é mostrar up. O próximo você fecha com chave de ouro."
         }
         if session.endedEarly {
-            return "Cada sessão conta. Voltar amanhã já é vitória."
+            let lines = [
+                "Cada sessão conta. Voltar amanhã já é vitória.",
+                "Você apareceu hoje — isso já é progresso. O próximo fecha forte.",
+                "Treinar incompleto ainda é treinar. Constância > perfeição.",
+                "Parou antes, mas não desistiu de si. Orgulho merecido."
+            ]
+            let index = abs(session.id.hashValue) % lines.count
+            return lines[index]
         }
         let lines = [
             "Mais um dia de compromisso com a sua melhor versão.",

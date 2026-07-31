@@ -44,6 +44,7 @@ struct ProfileView: View {
     @State private var ageText = ""
     @State private var selectedGender: Gender = .male
     @State private var showBodyDataSavedAlert = false
+    @State private var showEmptyMeasurementsAlert = false
     @State private var bodyDataSaveError: String?
 
     var body: some View {
@@ -147,6 +148,11 @@ struct ProfileView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("Dados salvos e medidas salvas. Peso, altura, idade, sexo e circunferências foram sincronizados com o Firebase.")
+            }
+            .alert("Medidas necessárias", isPresented: $showEmptyMeasurementsAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Por favor, preencha as medidas para salvar.")
             }
             .sheet(isPresented: $showMeasurementComparison) {
                 if let comparison = measurementComparison {
@@ -939,12 +945,36 @@ struct ProfileView: View {
         previewProfile(from: user).dailyCalorieTarget
     }
 
+    private func currentFormMeasurements(measuredAt: Date = .now) -> BodyMeasurements {
+        BodyMeasurements(
+            neckCm: parseMeasurement(neckText),
+            shouldersCm: parseMeasurement(shouldersText),
+            chestCm: parseMeasurement(chestText),
+            rightArmCm: parseMeasurement(rightArmText),
+            leftArmCm: parseMeasurement(leftArmText),
+            waistCm: parseMeasurement(waistText),
+            abdomenCm: parseMeasurement(abdomenText),
+            hipCm: parseMeasurement(hipText),
+            rightThighCm: parseMeasurement(rightThighText),
+            leftThighCm: parseMeasurement(leftThighText),
+            rightCalfCm: parseMeasurement(rightCalfText),
+            leftCalfCm: parseMeasurement(leftCalfText),
+            measuredAt: measuredAt
+        )
+    }
+
     private func saveBodyData() {
         guard var user = authService.currentUser,
               let weight = Double(weightText.replacingOccurrences(of: ",", with: ".")),
               let height = Double(heightText.replacingOccurrences(of: ",", with: ".")),
               let age = Int(ageText),
               isBodyDataValid else { return }
+
+        let measurements = currentFormMeasurements()
+        guard measurements.hasAnyValue else {
+            showEmptyMeasurementsAlert = true
+            return
+        }
 
         user.weight = weight
         user.height = height
@@ -967,21 +997,7 @@ struct ProfileView: View {
             previous: previousSnapshot
         )
 
-        let measurements = BodyMeasurements(
-            neckCm: parseMeasurement(neckText),
-            shouldersCm: parseMeasurement(shouldersText),
-            chestCm: parseMeasurement(chestText),
-            rightArmCm: parseMeasurement(rightArmText),
-            leftArmCm: parseMeasurement(leftArmText),
-            waistCm: parseMeasurement(waistText),
-            abdomenCm: parseMeasurement(abdomenText),
-            hipCm: parseMeasurement(hipText),
-            rightThighCm: parseMeasurement(rightThighText),
-            leftThighCm: parseMeasurement(leftThighText),
-            rightCalfCm: parseMeasurement(rightCalfText),
-            leftCalfCm: parseMeasurement(leftCalfText),
-            measuredAt: .now
-        )
+        let measurements = currentFormMeasurements()
 
         // Só atualiza measuredAt/medidas se houver algum valor ou já existia aferição.
         guard measurements.hasAnyValue || previousSnapshot.hasAnyValue else { return }
@@ -1248,7 +1264,6 @@ private struct ListSafeButtonStyle: PrimitiveButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .contentShape(Rectangle())
-            .opacity(configuration.isPressed ? 0.65 : 1)
             .highPriorityGesture(
                 TapGesture().onEnded { configuration.trigger() }
             )

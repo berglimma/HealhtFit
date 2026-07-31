@@ -52,17 +52,28 @@ struct MainTabView: View {
         }
         .tint(AppTheme.accent)
         .tabViewStyle(.automatic)
+        // TabView ignores the tab bar when laying out chrome on itself, so a bare bottom
+        // inset covers the menu. Reserve a hit-through strip under the banner matching
+        // UITabBar content height so the card sits above the icons/labels.
         .safeAreaInset(edge: .bottom, spacing: 0) {
-        if let session = workoutStore.activeSession, workoutStore.isActiveWorkoutMinimized {
-                ActiveWorkoutBanner(
-                    session: session,
-                    currentExerciseName: workoutStore.currentExercise?.name
-                ) {
-                    workoutStore.resumeActiveWorkout()
-                    syncActiveWorkoutPresentation()
+            if let session = workoutStore.activeSession, workoutStore.isActiveWorkoutMinimized {
+                VStack(spacing: 0) {
+                    ActiveWorkoutBanner(
+                        session: session,
+                        currentExerciseName: workoutStore.currentExercise?.name
+                    ) {
+                        workoutStore.resumeActiveWorkout()
+                        syncActiveWorkoutPresentation()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.top, 4)
+                    .padding(.bottom, 8)
+
+                    Color.clear
+                        .frame(height: DeviceLayout.mainTabBarContentHeight)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
                 }
-                .padding(.horizontal, 12)
-                .padding(.bottom, 4)
             }
         }
         .fullScreenCover(item: $presentedActiveSheet, onDismiss: {

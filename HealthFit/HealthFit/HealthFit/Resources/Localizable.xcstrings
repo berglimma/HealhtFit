@@ -1901,6 +1901,9 @@
     "Medidas Corporais" : {
 
     },
+    "Medidas necessárias" : {
+
+    },
     "Medidas que variaram" : {
 
     },
@@ -2313,6 +2316,9 @@
 
     },
     "Por que você está encerrando o treino antes de concluir todos os exercícios?" : {
+
+    },
+    "Por favor, preencha as medidas para salvar." : {
 
     },
     "Possui nutricionista?" : {
@@ -2836,9 +2842,6 @@
     "Sono e Hidratação" : {
 
     },
-    "Status" : {
-
-    },
     "Sua carga" : {
 
     },
@@ -3093,9 +3096,6 @@
 
     },
     "Última série · Finalizar" : {
-
-    },
-    "Últimas avaliações (PDF)" : {
 
     },
     "Último card de postagem" : {

@@ -97,6 +97,12 @@ struct WorkoutSummaryView: View {
                     motivationLine: shareMotivation,
                     recentSessions: workoutStore.sessionHistory
                 )
+                // Early end: bring the share card into view (section is below email / totals).
+                if session.endedEarly {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        focusShareCard()
+                    }
+                }
             }
         }
         .sheet(isPresented: $showShareSheet) {
@@ -145,11 +151,18 @@ struct WorkoutSummaryView: View {
 
     private var shareAchievementSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Compartilhar conquista", systemImage: "square.and.arrow.up")
+            Label(
+                session.endedEarly ? "Compartilhar o que você fez hoje" : "Compartilhar conquista",
+                systemImage: "square.and.arrow.up"
+            )
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
 
-            Text("Card pronto para Stories e status — WhatsApp ou Instagram.")
+            Text(
+                session.endedEarly
+                    ? "Mesmo encerrando antes, você treinou — card pronto para Stories e status."
+                    : "Card pronto para Stories e status — WhatsApp ou Instagram."
+            )
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
 

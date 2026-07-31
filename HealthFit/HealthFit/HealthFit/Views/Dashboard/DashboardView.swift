@@ -15,6 +15,11 @@ struct DashboardView: View {
     @State private var isSyncingWatch = false
     @State private var watchSyncResult: WatchSyncResult?
     @State private var showWatchSyncAlert = false
+    @State private var isShareCardExpanded = false
+
+    /// Live `WorkoutShareCardView` is fixed 360×450; these scales fit the dashboard width.
+    private let shareCardExpandedScale: CGFloat = 0.72
+    private let shareCardCollapsedScale: CGFloat = 0.42
 
     private var healthStatus: WellnessHealthIconStatus {
         wellnessService.healthIconStatus()
@@ -122,48 +127,51 @@ struct DashboardView: View {
                 .foregroundStyle(AppTheme.textPrimary)
 
             if let card = shareCardStore.lastCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.title3)
-                            .foregroundStyle(AppTheme.accent)
-                            .frame(width: 28)
+                Button {
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
+                        isShareCardExpanded.toggle()
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.title3)
+                                .foregroundStyle(AppTheme.accent)
+                                .frame(width: 28)
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(card.workoutTitle)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(AppTheme.textPrimary)
-                            Text(formattedShareCardDate(card.displayDate))
-                                .font(.caption)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(card.workoutTitle)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                Text(formattedShareCardDate(card.displayDate))
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+
+                            Spacer(minLength: 0)
+
+                            Image(systemName: isShareCardExpanded ? "chevron.up" : "chevron.down")
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(AppTheme.textSecondary)
+                                .padding(.top, 4)
                         }
 
-                        Spacer(minLength: 0)
+                        shareCardPreview(for: card)
                     }
-
-                    if let preview = shareCardStore.previewImage {
-                        Image(uiImage: preview)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .shadow(color: .black.opacity(0.25), radius: 12, y: 6)
-                            .accessibilityLabel("Card de postagem de \(card.workoutTitle)")
-                    } else {
-                        WorkoutShareCardView(
-                            session: card.makeSession(),
-                            athleteName: card.athleteName,
-                            motivationLine: card.motivationLine
-                        )
-                        .scaleEffect(0.72)
-                        .frame(height: 324)
-                        .frame(maxWidth: .infinity)
-                        .allowsHitTesting(false)
-                    }
+                    .padding()
+                    .background(AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
                 }
-                .padding()
-                .background(AppTheme.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+                .buttonStyle(.plain)
+                .accessibilityLabel("Card de postagem de \(card.workoutTitle)")
+                .accessibilityHint(
+                    isShareCardExpanded
+                        ? "Toque para recolher o card"
+                        : "Toque para expandir o card"
+                )
+                .onChange(of: card.sessionId) { _, _ in
+                    isShareCardExpanded = false
+                }
             } else {
                 Text("Nenhum card gerado ainda. Finalize um treino para criar o card de postagem.")
                     .font(.subheadline)
@@ -172,6 +180,34 @@ struct DashboardView: View {
                     .padding(.vertical, 8)
                     .cardStyle()
             }
+        }
+    }
+
+    @ViewBuilder
+    private func shareCardPreview(for card: LastWorkoutShareCard) -> some View {
+        if let preview = shareCardStore.previewImage {
+            Image(uiImage: preview)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, isShareCardExpanded ? 0 : 48)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .shadow(
+                    color: .black.opacity(isShareCardExpanded ? 0.25 : 0.18),
+                    radius: isShareCardExpanded ? 12 : 8,
+                    y: isShareCardExpanded ? 6 : 4
+                )
+        } else {
+            let scale = isShareCardExpanded ? shareCardExpandedScale : shareCardCollapsedScale
+            WorkoutShareCardView(
+                session: card.makeSession(),
+                athleteName: card.athleteName,
+                motivationLine: card.motivationLine
+            )
+            .scaleEffect(scale)
+            .frame(height: 450 * scale)
+            .frame(maxWidth: .infinity)
+            .allowsHitTesting(false)
         }
     }
 
