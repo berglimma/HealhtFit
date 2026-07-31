@@ -9,11 +9,13 @@ struct DashboardView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var weeklyReportService: WeeklyReportService
+    @EnvironmentObject var monthlyReportService: MonthlyReportService
     @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var shareCardStore: WorkoutShareCardStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var showWeeklyReport = false
+    @State private var showMonthlyReport = false
     @State private var isSyncingWatch = false
     @State private var watchSyncResult: WatchSyncResult?
     @State private var showWatchSyncAlert = false
@@ -41,6 +43,7 @@ struct DashboardView: View {
                 VStack(spacing: 20) {
                     headerSection
                     weeklyReportBanner
+                    monthlyReportBanner
                     lastShareCardSection
                     metricsRow
                     HealthChartsView()
@@ -60,6 +63,9 @@ struct DashboardView: View {
             }
             .sheet(isPresented: $showWeeklyReport) {
                 WeeklyReportView()
+            }
+            .sheet(isPresented: $showMonthlyReport) {
+                MonthlyReportView()
             }
             .alert(
                 watchSyncResult?.title ?? "Apple Watch",
@@ -120,6 +126,64 @@ struct DashboardView: View {
                             .foregroundStyle(AppTheme.textSecondary)
                     } else {
                         Text("Acompanhe treinos, calorias e sugestões de melhoria")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            .padding()
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var monthlyReportBanner: some View {
+        Button {
+            showMonthlyReport = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(AppTheme.accentSecondary.opacity(0.2))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.title3)
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text("Relatório Mensal")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        if monthlyReportService.isReportAvailable {
+                            Text("NOVO")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(AppTheme.accent)
+                                .clipShape(Capsule())
+                        }
+                    }
+
+                    if monthlyReportService.isReportAvailable {
+                        Text("Sono, suplementos, medidas e plano de refeições")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    } else if monthlyReportService.daysUntilNextReport > 0 {
+                        Text("Próximo relatório em \(monthlyReportService.daysUntilNextReport) dia(s)")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    } else {
+                        Text("Histórico de 30 dias com gráficos de sono e suplementos")
                             .font(.caption)
                             .foregroundStyle(AppTheme.textSecondary)
                     }

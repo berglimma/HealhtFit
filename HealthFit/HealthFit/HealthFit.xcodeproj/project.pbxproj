@@ -73,6 +73,11 @@
 		B1000343 /* PhotoSourcePickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000343 /* PhotoSourcePickers.swift */; };
 		B1000344 /* SupplementModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000344 /* SupplementModels.swift */; };
 		B1000345 /* SupplementsLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000345 /* SupplementsLogView.swift */; };
+		B1000346 /* AssistantSupplementNudgeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000346 /* AssistantSupplementNudgeEngine.swift */; };
+		B1000347 /* MonthlyProgressModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000347 /* MonthlyProgressModels.swift */; };
+		B1000348 /* MonthlyProgressAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000348 /* MonthlyProgressAnalyzer.swift */; };
+		B1000349 /* MonthlyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000349 /* MonthlyReportService.swift */; };
+		B1000350 /* MonthlyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000350 /* MonthlyReportView.swift */; };
 		B1000047 /* WeeklyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000049 /* WeeklyReportView.swift */; };
 		B1000048 /* MeditationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000050 /* MeditationModels.swift */; };
 		B1000049 /* MeditationSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000051 /* MeditationSetupView.swift */; };
@@ -311,6 +316,11 @@
 		F1000343 /* PhotoSourcePickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSourcePickers.swift; sourceTree = "<group>"; };
 		F1000344 /* SupplementModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementModels.swift; sourceTree = "<group>"; };
 		F1000345 /* SupplementsLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementsLogView.swift; sourceTree = "<group>"; };
+		F1000346 /* AssistantSupplementNudgeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSupplementNudgeEngine.swift; sourceTree = "<group>"; };
+		F1000347 /* MonthlyProgressModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyProgressModels.swift; sourceTree = "<group>"; };
+		F1000348 /* MonthlyProgressAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyProgressAnalyzer.swift; sourceTree = "<group>"; };
+		F1000349 /* MonthlyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportService.swift; sourceTree = "<group>"; };
+		F1000350 /* MonthlyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportView.swift; sourceTree = "<group>"; };
 		F1000049 /* WeeklyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportView.swift; sourceTree = "<group>"; };
 		F1000050 /* MeditationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationModels.swift; sourceTree = "<group>"; };
 		F1000051 /* MeditationSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationSetupView.swift; sourceTree = "<group>"; };
@@ -552,6 +562,7 @@
 				F1000050 /* MeditationModels.swift */,
 				F1000053 /* DailyWellnessModels.swift */,
 				F1000344 /* SupplementModels.swift */,
+				F1000347 /* MonthlyProgressModels.swift */,
 				F1000056 /* ExerciseGuideCatalog.swift */,
 				F1000080 /* ExerciseVideoCatalog.swift */,
 				F1000101 /* ExerciseGifCatalog.swift */,
@@ -592,6 +603,9 @@
 				F1000115 /* SupplementationGuideEngine.swift */,
 				F1000116 /* AssistantInactivityFollowUpEngine.swift */,
 				F1000205 /* AssistantCardioMeditationNudgeEngine.swift */,
+				F1000346 /* AssistantSupplementNudgeEngine.swift */,
+				F1000348 /* MonthlyProgressAnalyzer.swift */,
+				F1000349 /* MonthlyReportService.swift */,
 				F1000120 /* UserDataCleaner.swift */,
 				F1000121 /* AccountDeletionError.swift */,
 				F1000123 /* ShoppingReportBuilder.swift */,
@@ -660,6 +674,7 @@
 				F1000018 /* DashboardView.swift */,
 				F1000019 /* HealthChartsView.swift */,
 				F1000049 /* WeeklyReportView.swift */,
+				F1000350 /* MonthlyReportView.swift */,
 			);
 			path = Dashboard;
 			sourceTree = "<group>";
@@ -1203,6 +1218,11 @@
 				B1000343 /* PhotoSourcePickers.swift in Sources */,
 				B1000344 /* SupplementModels.swift in Sources */,
 				B1000345 /* SupplementsLogView.swift in Sources */,
+				B1000346 /* AssistantSupplementNudgeEngine.swift in Sources */,
+				B1000347 /* MonthlyProgressModels.swift in Sources */,
+				B1000348 /* MonthlyProgressAnalyzer.swift in Sources */,
+				B1000349 /* MonthlyReportService.swift in Sources */,
+				B1000350 /* MonthlyReportView.swift in Sources */,
 				B1000024 /* CameraPreviewView.swift in Sources */,
 				B1000025 /* VisionWorkoutView.swift in Sources */,
 				B1000026 /* MealPlanView.swift in Sources */,

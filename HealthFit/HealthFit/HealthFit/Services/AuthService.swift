@@ -172,6 +172,7 @@ final class AuthService: ObservableObject {
         NotificationService.shared.cancelHealthIconRedReminder()
         NotificationService.shared.cancelDailyMotivationNotifications()
         NotificationService.shared.cancelWaterReminders()
+        NotificationService.shared.cancelSupplementReminders()
         NotificationService.shared.updateMealReminders(hasMealPlan: false)
 
         if FirebaseBootstrap.isConfigured {
@@ -572,6 +573,7 @@ final class AuthService: ObservableObject {
         NotificationService.shared.cancelHealthIconRedReminder()
         NotificationService.shared.cancelDailyMotivationNotifications()
         NotificationService.shared.cancelWaterReminders()
+        NotificationService.shared.cancelSupplementReminders()
         NotificationService.shared.updateMealReminders(hasMealPlan: false)
         NotificationService.shared.cancelDailyAssistantCheckIn()
         NotificationService.shared.cancelDailyEveningAssistantCheckIn()
@@ -581,6 +583,8 @@ final class AuthService: ObservableObject {
         wellnessService.clearAllLocalData()
         TrainingNutritionSyncService.shared.clear()
         WeeklyReportService.shared.reset()
+        MonthlyReportService.shared.reset()
+        AssistantSupplementNudgeEngine.reset()
         WorkoutShareCardStore.shared.reset()
         PostWorkoutCheckInService.shared.resetForAccountDeletion()
         DailyMorningCheckInService.shared.resetForAccountDeletion()

@@ -38,6 +38,38 @@ enum DailyMotivationConfiguration {
     static let scheduledDayCount = 14
 }
 
+/// Lembretes de registro de suplementação: a cada 3h das 06:00 até ≤ 23:30.
+enum SupplementReminderConfiguration {
+    static let intervalHours = 3
+    static let startHour = 6
+    static let startMinute = 0
+    /// Último horário permitido para um lembrete (inclusive).
+    static let latestAllowedMinutes = 23 * 60 + 30
+
+    /// Slots (hora, minuto): 06:00, 09:00, 12:00, 15:00, 18:00, 21:00
+    /// (o próximo intervalo cairia após 23:30 e é omitido).
+    static func reminderSlots(
+        startHour: Int = startHour,
+        startMinute: Int = startMinute,
+        intervalHours: Int = intervalHours,
+        latestAllowedMinutes: Int = latestAllowedMinutes
+    ) -> [(hour: Int, minute: Int)] {
+        guard intervalHours > 0 else { return [] }
+
+        var slots: [(hour: Int, minute: Int)] = []
+        var total = startHour * 60 + startMinute
+        while total <= latestAllowedMinutes {
+            slots.append((hour: total / 60, minute: total % 60))
+            total += intervalHours * 60
+        }
+        return slots
+    }
+
+    static func slotIdentifier(hour: Int, minute: Int) -> String {
+        String(format: "%02d_%02d", hour, minute)
+    }
+}
+
 /// Horários padrão das refeições do cardápio e disparo 5 min antes.
 enum MealReminderConfiguration {
     static let minutesBeforeMeal = 5
@@ -87,6 +119,7 @@ final class NotificationService {
     private let appUsageInactivityReminderIdentifier = "app_usage_inactivity_48h"
     private let waterReminderIdentifierPrefix = "water_reminder_"
     private let mealReminderIdentifierPrefix = "meal_reminder_"
+    private let supplementReminderIdentifierPrefix = "supplement_reminder_"
     private let dailyMotivationIdentifierPrefix = "daily_motivation_"
     private let dailyAssistantCheckInIdentifier = "daily_assistant_checkin_9am"
     private let dailyEveningAssistantCheckInIdentifier = "daily_assistant_checkin_9pm"
@@ -112,6 +145,16 @@ final class NotificationService {
 
     private var knownMealReminderIdentifiers: [String] {
         MealType.allCases.map(mealReminderIdentifier(for:))
+    }
+
+    private func supplementReminderIdentifier(hour: Int, minute: Int) -> String {
+        "\(supplementReminderIdentifierPrefix)\(SupplementReminderConfiguration.slotIdentifier(hour: hour, minute: minute))"
+    }
+
+    private var knownSupplementReminderIdentifiers: [String] {
+        SupplementReminderConfiguration.reminderSlots().map {
+            supplementReminderIdentifier(hour: $0.hour, minute: $0.minute)
+        }
     }
 
     private var knownDailyMotivationIdentifiers: [String] {
@@ -166,6 +209,7 @@ final class NotificationService {
         scheduleDailyAssistantCheckIn()
         scheduleDailyEveningAssistantCheckIn()
         scheduleWaterReminders()
+        scheduleSupplementReminders()
         if mealRemindersEnabled {
             scheduleMealReminders()
         } else {
@@ -312,6 +356,39 @@ final class NotificationService {
     func cancelMealReminders() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: knownMealReminderIdentifiers
+        )
+    }
+
+    /// Lembretes locais a cada 3h (06:00–21:00) para registrar suplementação.
+    func scheduleSupplementReminders() {
+        // Remoção síncrona por IDs conhecidos — evita corrida com getPending assíncrono no refresh.
+        cancelSupplementReminders()
+
+        let bodies = [
+            "Que suplemento você tomou? Registre em Nutrição → Suplementos.",
+            "Anote whey, creatina ou vitaminas para manter o histórico em dia.",
+            "Um registro rápido agora ajuda o IAssistente e o relatório mensal.",
+            "Hora de atualizar sua suplementação no HealthFit."
+        ]
+
+        for (index, slot) in SupplementReminderConfiguration.reminderSlots().enumerated() {
+            var components = DateComponents()
+            components.hour = slot.hour
+            components.minute = slot.minute
+
+            scheduleOnPhone(
+                title: "Hora de registrar seu suplemento 💊",
+                body: bodies[index % bodies.count],
+                category: "SUPPLEMENT_REMINDER",
+                identifier: supplementReminderIdentifier(hour: slot.hour, minute: slot.minute),
+                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+            )
+        }
+    }
+
+    func cancelSupplementReminders() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: knownSupplementReminderIdentifiers
         )
     }
 

@@ -130,6 +130,12 @@
     "%lld ml ingeridos hoje" : {
 
     },
+    "%lld no ideal (7–9 h)" : {
+
+    },
+    "%lld noite(s)" : {
+
+    },
     "%lld personalizados" : {
 
     },
@@ -142,6 +148,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld recomendados · %2$lld personalizados"
+          }
+        }
+      }
+    },
+    "%lld registro(s) em %lld dia(s)" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld registro(s) em %2$lld dia(s)"
           }
         }
       }
@@ -185,10 +201,23 @@
         }
       }
     },
+    "%lld/%lld refeições concluídas (%lld%%)" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld refeições concluídas (%3$lld%%)"
+          }
+        }
+      }
+    },
     "%lld/6 fotos (opcional)" : {
 
     },
     "%lld%%" : {
+
+    },
+    "%lld×" : {
 
     },
     "%llds descanso" : {
@@ -364,7 +393,13 @@
     "Ativas" : {
 
     },
+    "Atividade (minutos)" : {
+
+    },
     "Atividade diária" : {
+
+    },
+    "Atual" : {
 
     },
     "Atualizar Cardápio" : {
@@ -1154,6 +1189,9 @@
     "Carregando demonstração..." : {
 
     },
+    "Carregando histórico…" : {
+
+    },
     "Carregando..." : {
 
     },
@@ -1373,6 +1411,9 @@
     "Comparativo" : {
 
     },
+    "Comparativo (%lld dia(s))" : {
+
+    },
     "Comparativo de %lld dia(s)" : {
 
     },
@@ -1392,6 +1433,9 @@
 
     },
     "Comprado 1 vez" : {
+
+    },
+    "Concluídas" : {
 
     },
     "Concluir Exercício" : {
@@ -1497,6 +1541,9 @@
     "Defina quantas calorias pretende gastar neste cardio." : {
 
     },
+    "Delta" : {
+
+    },
     "Demonstração" : {
 
     },
@@ -1540,6 +1587,9 @@
 
     },
     "Destaques da semana" : {
+
+    },
+    "Destaques do mês" : {
 
     },
     "Detalhes do Cardio" : {
@@ -1839,7 +1889,16 @@
     "Hidratação" : {
 
     },
+    "Histórico de 30 dias com gráficos de sono e suplementos" : {
+
+    },
+    "Histórico recente" : {
+
+    },
     "Hora de treinar!" : {
+
+    },
+    "Horas" : {
 
     },
     "Horas de sono (hoje)" : {
@@ -1932,6 +1991,9 @@
     "Mais comprados" : {
 
     },
+    "Mais registrados" : {
+
+    },
     "Maratona (42,2 km)" : {
 
     },
@@ -1945,6 +2007,9 @@
 
     },
     "MASCULINO" : {
+
+    },
+    "Medida" : {
 
     },
     "Medidas corporais" : {
@@ -2071,6 +2136,9 @@
     "Nenhum card gerado ainda. Finalize um treino para criar o card de postagem." : {
 
     },
+    "Nenhum cardápio ativo. Gere seu plano em Nutrição." : {
+
+    },
     "Nenhum exercício nesta ficha. Selecione ao menos um grupo muscular." : {
 
     },
@@ -2080,7 +2148,13 @@
     "Nenhum plano gerado" : {
 
     },
+    "Nenhum registro de sono neste período. Registre em Sono e Hidratação." : {
+
+    },
     "Nenhum suplemento registrado hoje." : {
+
+    },
+    "Nenhum suplemento registrado. Use Nutrição → Suplementos." : {
 
     },
     "Nenhum treino realizado ainda" : {
@@ -2092,7 +2166,16 @@
     "Nenhuma atividade registrada nesta semana." : {
 
     },
+    "Nenhuma atividade registrada neste período." : {
+
+    },
+    "Nenhuma medida cadastrada. Atualize em Perfil → Medidas / Evolução Corporal." : {
+
+    },
     "Nenhuma medida variou entre as duas aferições." : {
+
+    },
+    "Nenhuma medida variou no período." : {
 
     },
     "Nenhuma sessão de meditação nesta semana. Reserve alguns minutos para acalmar a mente." : {
@@ -2365,6 +2448,9 @@
 
     },
     "Pesquise no catálogo ou toque em + para criar um item personalizado e escolher a categoria." : {
+
+    },
+    "Plano de refeições" : {
 
     },
     "Plano para %@" : {
@@ -2714,6 +2800,9 @@
     "Registre seu sono ao abrir o app ou ajuste o controle acima." : {
 
     },
+    "Registros" : {
+
+    },
     "Relatório de compras da semana" : {
 
     },
@@ -2721,6 +2810,9 @@
 
     },
     "Relatório enviado para %@. Agora você pode compartilhar o card da conquista." : {
+
+    },
+    "Relatório Mensal" : {
 
     },
     "Relatório Semanal" : {
@@ -2766,6 +2858,9 @@
 
     },
     "Resumo" : {
+
+    },
+    "Resumo dos últimos %lld dias" : {
 
     },
     "Retomar treino em andamento" : {
@@ -2927,7 +3022,13 @@
     "Sobre" : {
 
     },
+    "Sono" : {
+
+    },
     "Sono e Hidratação" : {
+
+    },
+    "Sono, suplementos, medidas e plano de refeições" : {
 
     },
     "Sua carga" : {

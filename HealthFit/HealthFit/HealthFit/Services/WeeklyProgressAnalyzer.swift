@@ -138,6 +138,11 @@ enum WeeklyProgressAnalyzer {
         return calendar.date(byAdding: DateComponents(day: 1, second: -1), to: start) ?? date
     }
 
+    /// Stats aggregation reused by the monthly progress report (same fields as weekly).
+    static func monthCompatibleStats(for sessions: [WorkoutSession], calendar: Calendar = .current) -> WeekStats {
+        stats(for: sessions, calendar: calendar)
+    }
+
     private static func stats(for sessions: [WorkoutSession], calendar: Calendar) -> WeekStats {
         guard !sessions.isEmpty else { return .empty }
 

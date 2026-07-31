@@ -10,6 +10,7 @@ struct HealthFitApp: App {
     @StateObject private var timerService = RestTimerService()
     @StateObject private var watchConnectivity = WatchConnectivityManager.shared
     @StateObject private var weeklyReportService = WeeklyReportService.shared
+    @StateObject private var monthlyReportService = MonthlyReportService.shared
     @StateObject private var wellnessService = DailyWellnessService.shared
     @StateObject private var shareCardStore = WorkoutShareCardStore.shared
     @StateObject private var exerciseVideoRepository = ExerciseVideoRepository.shared
@@ -29,6 +30,7 @@ struct HealthFitApp: App {
                 .environmentObject(timerService)
                 .environmentObject(watchConnectivity)
                 .environmentObject(weeklyReportService)
+                .environmentObject(monthlyReportService)
                 .environmentObject(wellnessService)
                 .environmentObject(shareCardStore)
                 .environmentObject(exerciseVideoRepository)

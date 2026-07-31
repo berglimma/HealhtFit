@@ -134,9 +134,19 @@ struct HealthChatView: View {
                     sessions: workoutStore.sessionHistory,
                     accountCreatedAt: authService.currentUser?.createdAt
                 )
+                assistant.checkSupplementNudgeIfNeeded(
+                    context: context,
+                    todayIntakes: wellnessService.todaySupplementIntakes
+                )
+                assistant.deliverPendingSupplementAcknowledgmentIfNeeded()
             }
             .onDisappear {
                 dismissChatKeyboard()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .healthFitSupplementLogged)) { notification in
+                if let message = notification.userInfo?["message"] as? String {
+                    assistant.deliverSupplementLoggedMessage(message)
+                }
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
@@ -149,6 +159,10 @@ struct HealthChatView: View {
                         context: context,
                         sessions: workoutStore.sessionHistory,
                         accountCreatedAt: authService.currentUser?.createdAt
+                    )
+                    assistant.checkSupplementNudgeIfNeeded(
+                        context: context,
+                        todayIntakes: wellnessService.todaySupplementIntakes
                     )
                 }
             }
@@ -173,6 +187,10 @@ struct HealthChatView: View {
                         context: context,
                         sessions: workoutStore.sessionHistory,
                         accountCreatedAt: authService.currentUser?.createdAt
+                    )
+                    assistant.checkSupplementNudgeIfNeeded(
+                        context: context,
+                        todayIntakes: wellnessService.todaySupplementIntakes
                     )
                 }
             }
@@ -203,6 +221,7 @@ struct HealthChatView: View {
         } else {
             assistant.bootstrap(context: context)
             assistant.deliverPendingBodyEvolutionAnnouncementIfNeeded()
+            assistant.deliverPendingSupplementAcknowledgmentIfNeeded()
         }
     }
 

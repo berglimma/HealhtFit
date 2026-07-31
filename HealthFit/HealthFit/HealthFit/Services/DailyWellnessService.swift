@@ -286,13 +286,14 @@ final class DailyWellnessService: ObservableObject {
         currentTodayEntry().supplementIntakes.sorted { $0.loggedAt > $1.loggedAt }
     }
 
-    func logSupplementIntake(_ intake: SupplementIntakeEntry) {
+    func logSupplementIntake(_ intake: SupplementIntakeEntry, athleteName: String = "Atleta") {
         guard !intake.name.isEmpty, intake.quantity > 0 else { return }
         var entry = currentTodayEntry()
         entry.supplementIntakes.append(intake)
         entry.supplementsUpdatedAt = .now
         todayEntry = entry
         save(entry)
+        AssistantSupplementNudgeEngine.queueLoggedAcknowledgment(intake, athleteName: athleteName)
     }
 
     func removeSupplementIntake(id: UUID) {

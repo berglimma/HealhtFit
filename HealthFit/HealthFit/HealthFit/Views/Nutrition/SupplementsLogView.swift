@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SupplementsLogView: View {
     @EnvironmentObject private var wellnessService: DailyWellnessService
+    @EnvironmentObject private var authService: AuthService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var selectedCatalogId: String = SupplementCatalog.items.first?.id ?? "whey"
@@ -236,7 +237,10 @@ struct SupplementsLogView: View {
             quantity: quantity,
             unit: selectedUnit
         )
-        wellnessService.logSupplementIntake(entry)
+        wellnessService.logSupplementIntake(
+            entry,
+            athleteName: authService.currentUser?.greetingName ?? "Atleta"
+        )
         if isCustomSelected {
             customName = ""
         }

@@ -1663,6 +1663,7 @@ final class HealthAssistantService: ObservableObject {
     private var lastUserMessageAt: Date?
     private var inactivityFollowUpDelivered = false
     private var cardioMeditationNudgeDelivered = false
+    private var supplementNudgeDelivered = false
     private var activePostWorkoutCheckIn: PendingPostWorkoutCheckIn?
     private var isDailyMorningCheckInActive = false
     private var isDailyEveningCheckInActive = false
@@ -1743,6 +1744,7 @@ final class HealthAssistantService: ObservableObject {
             )
         )
         deliverPendingBodyEvolutionAnnouncementIfNeeded()
+        deliverPendingSupplementAcknowledgmentIfNeeded()
         lastUserInteractionAt = Date()
     }
 
@@ -1750,6 +1752,23 @@ final class HealthAssistantService: ObservableObject {
     func deliverPendingBodyEvolutionAnnouncementIfNeeded() {
         guard let message = BodyEvolutionService.shared.consumePendingAssistantMessage() else { return }
         deliverAssistantMessage(message)
+    }
+
+    /// Entrega agradecimento após o usuário registrar um suplemento.
+    func deliverPendingSupplementAcknowledgmentIfNeeded() {
+        guard let message = AssistantSupplementNudgeEngine.consumePendingAcknowledgment() else { return }
+        if let last = messages.last, !last.isUser, last.text == message { return }
+        deliverAssistantMessage(message)
+    }
+
+    /// Reage imediatamente quando o usuário registra suplemento com o chat aberto.
+    func deliverSupplementLoggedMessage(_ text: String) {
+        guard !text.isEmpty else { return }
+        if let last = messages.last, !last.isUser, last.text == text { return }
+        // Consome o pending para não duplicar no próximo bootstrap.
+        _ = AssistantSupplementNudgeEngine.consumePendingAcknowledgment()
+        deliverAssistantMessage(text)
+        lastUserInteractionAt = Date()
     }
 
     func bootstrap(userName: String?) {
@@ -1777,6 +1796,7 @@ final class HealthAssistantService: ObservableObject {
         lastUserMessageAt = Date()
         inactivityFollowUpDelivered = false
         cardioMeditationNudgeDelivered = false
+        supplementNudgeDelivered = false
         replyTask?.cancel()
         messages.append(HealthChatMessage(text: trimmed, isUser: true))
 
@@ -2484,6 +2504,7 @@ final class HealthAssistantService: ObservableObject {
         lastUserMessageAt = nil
         inactivityFollowUpDelivered = false
         cardioMeditationNudgeDelivered = false
+        supplementNudgeDelivered = false
         resetWorkoutBuilderDraft()
 
         if let checkIn = PostWorkoutCheckInService.shared.dueCheckIn {
@@ -2621,6 +2642,33 @@ final class HealthAssistantService: ObservableObject {
             }
         }
         cardioMeditationNudgeDelivered = true
+        lastUserInteractionAt = Date()
+    }
+
+    func checkSupplementNudgeIfNeeded(
+        context: HealthAssistantContext,
+        todayIntakes: [SupplementIntakeEntry]
+    ) {
+        guard !isTyping else { return }
+        guard !isInGuidedCheckIn else { return }
+        guard !supplementNudgeDelivered else { return }
+
+        guard AssistantSupplementNudgeEngine.shouldDeliverDailyNudge(todayIntakes: todayIntakes) else {
+            supplementNudgeDelivered = true
+            return
+        }
+
+        let name = context.user?.greetingName ?? "Atleta"
+        let text = AssistantSupplementNudgeEngine.dailyNudgeMessage(athleteName: name)
+        if let last = messages.last, !last.isUser, last.text == text {
+            supplementNudgeDelivered = true
+            AssistantSupplementNudgeEngine.markDailyNudgeDelivered()
+            return
+        }
+
+        deliverAssistantMessage(text)
+        AssistantSupplementNudgeEngine.markDailyNudgeDelivered()
+        supplementNudgeDelivered = true
         lastUserInteractionAt = Date()
     }
 
