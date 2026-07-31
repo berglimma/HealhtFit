@@ -18,9 +18,7 @@ struct WorkoutLiveActivityWidget: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Label("HealthFit", systemImage: "heart.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.green)
+                    HealthFitBrandMark(font: .caption.weight(.semibold), foreground: .green)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     phaseBadge(context.state)
@@ -52,6 +50,7 @@ struct WorkoutLiveActivityWidget: Widget {
             } minimal: {
                 Image(systemName: context.state.phase == .rest ? "pause.circle.fill" : "heart.fill")
                     .foregroundStyle(context.state.phase == .rest ? .orange : .green)
+                    .symbolEffect(.pulse, options: .repeating, isActive: context.state.phase != .rest)
             }
         }
     }
@@ -75,6 +74,31 @@ struct WorkoutLiveActivityWidget: Widget {
     }
 }
 
+/// Brand heart + “HealthFit” kept on one non-wrapping line (lock screen + Dynamic Island).
+private struct HealthFitBrandMark: View {
+    var font: Font = .caption.weight(.bold)
+    var foreground: Color = .white.opacity(0.85)
+    var heartColor: Color = .green
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "heart.fill")
+                .foregroundStyle(heartColor)
+                .symbolEffect(.pulse, options: .repeating)
+
+            Text("HealthFit")
+                .font(font)
+                .foregroundStyle(foreground)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .layoutPriority(1)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("HealthFit")
+    }
+}
+
 private struct LockScreenWorkoutLiveActivityView: View {
     let state: WorkoutLiveActivityAttributes.ContentState
 
@@ -82,16 +106,15 @@ private struct LockScreenWorkoutLiveActivityView: View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Image(systemName: "heart.fill")
-                        .foregroundStyle(.green)
-                    Text("HealthFit")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.85))
+                    HealthFitBrandMark()
+
                     Text("·")
                         .foregroundStyle(.white.opacity(0.35))
+
                     Text(state.phase == .rest ? "Pausa" : "Exercício")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(state.phase == .rest ? .orange : .green)
+                        .lineLimit(1)
                 }
 
                 Text(state.exerciseName)
