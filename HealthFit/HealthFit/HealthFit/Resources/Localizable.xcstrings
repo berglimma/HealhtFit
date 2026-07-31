@@ -243,6 +243,12 @@
     "A senha deve conter:" : {
 
     },
+    "Abre a câmera com Vision AI" : {
+
+    },
+    "Abrir em tela cheia" : {
+
+    },
     "Acompanhe a queima em tempo real — dados do relógio quando conectado." : {
 
     },
@@ -1102,6 +1108,9 @@
     "Card de postagem de %@" : {
 
     },
+    "Card de postagem em tela cheia" : {
+
+    },
     "Card pronto para Stories e status — WhatsApp ou Instagram." : {
 
     },
@@ -1342,6 +1351,9 @@
     "Compartilhar conquista" : {
 
     },
+    "Compartilhar o que você fez hoje" : {
+
+    },
     "Complete Seus Dados no Perfil (peso, altura, idade e sexo) para montar o cardápio." : {
 
     },
@@ -1424,13 +1436,10 @@
     "Cronômetro pausado" : {
 
     },
-    "Dados e medidas salvos" : {
-
-    },
     "Dados físicos vêm do Perfil (peso, altura, idade e sexo)." : {
 
     },
-    "Dados salvos e medidas salvas. Peso, altura, idade, sexo e circunferências foram sincronizados com o Firebase." : {
+    "Dados salvos" : {
 
     },
     "Dashboard" : {
@@ -2303,6 +2312,9 @@
     "Personalizado" : {
 
     },
+    "Peso, altura, idade e sexo foram sincronizados com o Firebase." : {
+
+    },
     "Pesquise no catálogo ou toque em + para criar um item personalizado e escolher a categoria." : {
 
     },
@@ -2315,10 +2327,10 @@
     "pontos" : {
 
     },
-    "Por que você está encerrando o treino antes de concluir todos os exercícios?" : {
+    "Por favor, preencha as medidas para salvar." : {
 
     },
-    "Por favor, preencha as medidas para salvar." : {
+    "Por que você está encerrando o treino antes de concluir todos os exercícios?" : {
 
     },
     "Possui nutricionista?" : {
@@ -2731,6 +2743,9 @@
     "Salvar em Arquivos" : {
 
     },
+    "Salvar em Fotos" : {
+
+    },
     "Salvar em Fotos ou Arquivos?" : {
 
     },
@@ -3044,6 +3059,12 @@
     "Toque para alterar foto" : {
 
     },
+    "Toque para expandir o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos." : {
+
+    },
+    "Toque para recolher o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos." : {
+
+    },
     "Toque para treinar este exercício agora" : {
 
     },
@@ -3138,6 +3159,9 @@
 
     },
     "Você consome muito doce?" : {
+
+    },
+    "Você não concluiu o treino, mas cada sessão conta — card pronto para Stories e status." : {
 
     },
     "Você tolera lactose?" : {

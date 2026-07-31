@@ -144,10 +144,10 @@ struct ProfileView: View {
             } message: {
                 Text("As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal.")
             }
-            .alert("Dados e medidas salvos", isPresented: $showBodyDataSavedAlert) {
+            .alert("Dados salvos", isPresented: $showBodyDataSavedAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Dados salvos e medidas salvas. Peso, altura, idade, sexo e circunferências foram sincronizados com o Firebase.")
+                Text("Peso, altura, idade e sexo foram sincronizados com o Firebase.")
             }
             .alert("Medidas necessárias", isPresented: $showEmptyMeasurementsAlert) {
                 Button("OK", role: .cancel) {}
@@ -970,18 +970,12 @@ struct ProfileView: View {
               let age = Int(ageText),
               isBodyDataValid else { return }
 
-        let measurements = currentFormMeasurements()
-        guard measurements.hasAnyValue else {
-            showEmptyMeasurementsAlert = true
-            return
-        }
-
         user.weight = weight
         user.height = height
         user.age = age
         user.gender = selectedGender
 
-        // Também persiste as medidas preenchidas na mesma ação.
+        // Medidas corporais são opcionais aqui; se houver valores no formulário, persiste também.
         applyMeasurementFields(to: &user)
 
         authService.updateProfile(user)
@@ -1126,6 +1120,12 @@ struct ProfileView: View {
 
     private func saveBodyMeasurements() {
         guard var user = authService.currentUser else { return }
+
+        let measurements = currentFormMeasurements()
+        guard measurements.hasAnyValue else {
+            showEmptyMeasurementsAlert = true
+            return
+        }
 
         let previousSnapshot = user.bodyMeasurements
         let shouldGenerateComparison = BodyMeasurements.isEligibleForPeriodComparison(

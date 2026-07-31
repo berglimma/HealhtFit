@@ -160,7 +160,7 @@ struct WorkoutSummaryView: View {
 
             Text(
                 session.endedEarly
-                    ? "Mesmo encerrando antes, você treinou — card pronto para Stories e status."
+                    ? "Você não concluiu o treino, mas cada sessão conta — card pronto para Stories e status."
                     : "Card pronto para Stories e status — WhatsApp ou Instagram."
             )
                 .font(.caption)

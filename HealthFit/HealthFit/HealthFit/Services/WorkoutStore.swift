@@ -9,6 +9,8 @@ final class WorkoutStore: ObservableObject {
     @Published var currentExerciseIndex = 0
     /// Quando true, a UI fullscreen do treino fica fechada e o usuário pode navegar no app.
     @Published var isActiveWorkoutMinimized = false
+    /// Vision AI / câmera aberta — o banner minimizado some para não cobrir os controles.
+    @Published private(set) var isVisionCameraPresented = false
     /// Evita repetir a tela de motivação ao retomar o mesmo treino.
     @Published private(set) var hasShownStartMotivation = false
     /// Evita resetar o RestTimer ao reabrir a tela do treino minimizado.
@@ -49,6 +51,7 @@ final class WorkoutStore: ObservableObject {
         sessionHistory = []
         workoutSheets = []
         isActiveWorkoutMinimized = false
+        isVisionCameraPresented = false
         hasShownStartMotivation = false
         hasBoundActiveWorkoutUI = false
         cloudUserId = nil
@@ -254,6 +257,10 @@ final class WorkoutStore: ObservableObject {
         guard activeSession != nil else { return }
         isActiveWorkoutMinimized = false
         persistActiveSession()
+    }
+
+    func setVisionCameraPresented(_ presented: Bool) {
+        isVisionCameraPresented = presented
     }
 
     func markStartMotivationShown() {
@@ -534,6 +541,7 @@ final class WorkoutStore: ObservableObject {
         exerciseRecords = []
         isExerciseTimerPaused = false
         isActiveWorkoutMinimized = false
+        isVisionCameraPresented = false
         hasShownStartMotivation = false
         hasBoundActiveWorkoutUI = false
         clearPersistedActiveSession()

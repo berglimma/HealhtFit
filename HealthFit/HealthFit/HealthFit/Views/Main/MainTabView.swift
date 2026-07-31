@@ -56,7 +56,10 @@ struct MainTabView: View {
         // inset covers the menu. Reserve a hit-through strip under the banner matching
         // UITabBar content height so the card sits above the icons/labels.
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let session = workoutStore.activeSession, workoutStore.isActiveWorkoutMinimized {
+            // Hide while Vision AI is open so the floating card never covers camera controls.
+            if let session = workoutStore.activeSession,
+               workoutStore.isActiveWorkoutMinimized,
+               !workoutStore.isVisionCameraPresented {
                 VStack(spacing: 0) {
                     ActiveWorkoutBanner(
                         session: session,

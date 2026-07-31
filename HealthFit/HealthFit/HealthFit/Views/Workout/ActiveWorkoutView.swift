@@ -24,6 +24,7 @@ struct ActiveWorkoutView: View {
     /// fullScreenCover is not blocked by the justification sheet still dismissing.
     @State private var pendingEarlyEndJustification: String?
     @State private var liveExerciseElapsedSeconds = 0
+    @State private var showVision = false
 
     private let workoutClock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -133,6 +134,9 @@ struct ActiveWorkoutView: View {
                     }
                 )
                 .presentationDetents([.medium])
+            }
+            .fullScreenCover(isPresented: $showVision) {
+                VisionWorkoutView()
             }
         }
         .onAppear {
@@ -533,13 +537,14 @@ struct ActiveWorkoutView: View {
             .accessibilityHint("Encerra o treino antes de concluir todos os exercícios e pede uma justificativa")
 
             HStack(spacing: 16) {
-                NavigationLink {
-                    VisionWorkoutView()
+                Button {
+                    showVision = true
                 } label: {
                     Label("Vision", systemImage: "camera.fill")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(AppTheme.accent)
                 }
+                .accessibilityHint("Abre a câmera com Vision AI")
 
                 Spacer()
 
@@ -849,79 +854,56 @@ struct ExerciseTrackingRow: View {
 
 struct WorkoutStartMotivationOverlay: View {
     let onContinue: () -> Void
-    @State private var iconPulse = false
+
+    private let cardMaxWidth: CGFloat = 270
+    private let cardMaxHeight: CGFloat = 210
 
     var body: some View {
         ZStack {
             Color.black.opacity(0.55)
                 .ignoresSafeArea()
 
-            GeometryReader { geo in
-                let horizontalInset: CGFloat = 24
-                let verticalInset: CGFloat = 20
-                let cardMaxWidth = min(400, geo.size.width - horizontalInset * 2)
-                let cardMaxHeight = max(280, geo.size.height - verticalInset * 2)
+            VStack(spacing: 8) {
+                Image(systemName: "figure.strengthtraining.traditional")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(AppTheme.accent)
+                    .accessibilityHidden(true)
 
-                VStack {
-                    Spacer(minLength: 0)
+                Text("Hora de treinar!")
+                    .font(.subheadline.bold())
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .lineLimit(1)
 
-                    VStack(spacing: 16) {
-                        Image(systemName: "figure.strengthtraining.traditional")
-                            .font(.system(size: 44))
-                            .foregroundStyle(AppTheme.accent)
-                            .scaleEffect(iconPulse ? 1.06 : 1.0)
-                            .frame(width: 56, height: 56)
-                            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: iconPulse)
-                            .onAppear { iconPulse = true }
-                            .accessibilityHidden(true)
-
-                        Text("Hora de treinar!")
-                            .font(.title2.bold())
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .minimumScaleFactor(0.85)
-                            .lineLimit(2)
-
-                        ViewThatFits(in: .vertical) {
-                            motivationMessage
-                            ScrollView {
-                                motivationMessage
-                            }
-                            .scrollBounceBehavior(.basedOnSize)
-                        }
-
-                        Button(action: onContinue) {
-                            Label("Vamos lá!", systemImage: "play.fill")
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(AppTheme.accent)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                    }
-                    .padding(24)
-                    .frame(width: cardMaxWidth)
-                    .frame(maxHeight: cardMaxHeight)
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
-
-                    Spacer(minLength: 0)
+                ScrollView {
+                    Text(MotivationMessages.workoutStartFocusMessage)
+                        .font(.caption)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, horizontalInset)
-                .padding(.vertical, verticalInset)
-                .frame(width: geo.size.width, height: geo.size.height)
-            }
-        }
-    }
+                .frame(maxHeight: 68)
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
 
-    private var motivationMessage: some View {
-        Text(MotivationMessages.workoutStartFocusMessage)
-            .font(.body)
-            .multilineTextAlignment(.center)
-            .foregroundStyle(AppTheme.textSecondary)
-            .frame(maxWidth: .infinity)
-            .fixedSize(horizontal: false, vertical: true)
+                Button(action: onContinue) {
+                    Label("Vamos lá!", systemImage: "play.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(AppTheme.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: cardMaxWidth)
+            .frame(maxHeight: cardMaxHeight)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal, 48)
+        }
     }
 }
 

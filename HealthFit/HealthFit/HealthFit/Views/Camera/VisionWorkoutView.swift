@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct VisionWorkoutView: View {
+    @EnvironmentObject var workoutStore: WorkoutStore
     @StateObject private var visionService = VisionWorkoutService()
     @Environment(\.dismiss) private var dismiss
 
@@ -18,8 +19,10 @@ struct VisionWorkoutView: View {
                     postureBanner
                     Spacer()
                     repCounter
-                    controlsBar
                 }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                controlsBar
             }
             .navigationTitle("Vision AI")
             .navigationBarTitleDisplayMode(.inline)
@@ -31,8 +34,14 @@ struct VisionWorkoutView: View {
                     }
                 }
             }
-            .onAppear { visionService.startDetection() }
-            .onDisappear { visionService.stopDetection() }
+            .onAppear {
+                workoutStore.setVisionCameraPresented(true)
+                visionService.startDetection()
+            }
+            .onDisappear {
+                visionService.stopDetection()
+                workoutStore.setVisionCameraPresented(false)
+            }
         }
     }
 
@@ -71,6 +80,7 @@ struct VisionWorkoutView: View {
         .padding(32)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 24))
+        .padding(.bottom, 8)
     }
 
     private var controlsBar: some View {
@@ -102,7 +112,18 @@ struct VisionWorkoutView: View {
                     .clipShape(Circle())
             }
         }
-        .padding(.bottom, 40)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 12)
+        .padding(.bottom, 16)
+        .background(
+            LinearGradient(
+                colors: [.black.opacity(0.55), .black.opacity(0.15), .clear],
+                startPoint: .bottom,
+                endPoint: .top
+            )
+            .ignoresSafeArea(edges: .bottom)
+            .allowsHitTesting(false)
+        )
     }
 
     private var postureIcon: String {

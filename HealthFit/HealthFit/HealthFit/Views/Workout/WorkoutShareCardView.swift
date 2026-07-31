@@ -45,11 +45,11 @@ struct WorkoutShareCardView: View {
                     .padding(.bottom, 10)
 
                 Text(headline)
-                    .font(.system(size: 26, weight: .heavy, design: .rounded))
+                    .font(.system(size: session.endedEarly ? 22 : 26, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
+                    .lineLimit(session.endedEarly ? 3 : 2)
+                    .minimumScaleFactor(0.8)
                     .padding(.horizontal, 24)
 
                 if !motivationLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -92,8 +92,11 @@ struct WorkoutShareCardView: View {
     }
 
     private var headline: String {
-        if session.endedEarly && !session.autoEndedByInactivity {
-            return "\(displayName) treinou hoje"
+        if session.autoEndedByInactivity {
+            return "\(displayName) pausou o treino"
+        }
+        if session.endedEarly {
+            return "\(displayName) treinou, mas não concluiu"
         }
         if isMeditation {
             return "\(displayName) praticou mindfulness"
@@ -186,6 +189,9 @@ struct WorkoutShareCardView: View {
     }
 
     private var badgeIcon: String {
+        if session.endedEarly || session.autoEndedByInactivity {
+            return "flame.fill"
+        }
         if isMeditation { return "brain.head.profile" }
         if isCardio { return "figure.run" }
         return "trophy.fill"
@@ -494,6 +500,13 @@ enum WorkoutShareCardRenderer {
         let name = athleteName.trimmingCharacters(in: .whitespacesAndNewlines)
         let who = name.isEmpty ? "Hoje" : "\(name) hoje"
         let duration = DurationFormatting.format(seconds: Int(session.duration))
+        if session.endedEarly || session.autoEndedByInactivity {
+            return """
+            \(who) treinou (não concluiu): \(session.workoutTitle) · \(duration)
+            Cada sessão conta — HealthFit 💪
+            #HealthFit #Treino #Evolucao
+            """
+        }
         return """
         \(who) finalizou: \(session.workoutTitle) · \(duration)
         Treinei com HealthFit 💪
@@ -509,8 +522,9 @@ enum WorkoutShareCardRenderer {
             let lines = [
                 "Cada sessão conta. Voltar amanhã já é vitória.",
                 "Você apareceu hoje — isso já é progresso. O próximo fecha forte.",
-                "Treinar incompleto ainda é treinar. Constância > perfeição.",
-                "Parou antes, mas não desistiu de si. Orgulho merecido."
+                "Não concluiu, mas treinou. Constância > perfeição.",
+                "Parou antes, mas não desistiu de si. Orgulho merecido.",
+                "Mostrar up já muda o jogo. Na próxima você fecha o ciclo."
             ]
             let index = abs(session.id.hashValue) % lines.count
             return lines[index]

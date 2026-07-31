@@ -96,7 +96,7 @@ struct WorkoutDetailView: View {
         } message: {
             Text(repeatedWorkoutAlertMessage)
         }
-        .sheet(isPresented: $showVision) {
+        .fullScreenCover(isPresented: $showVision) {
             VisionWorkoutView()
         }
         .confirmationDialog(
