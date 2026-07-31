@@ -23,7 +23,7 @@ struct GuidedWorkoutSections: View {
                 title: "Séries por nível",
                 subtitle: "Escolha a intensidade e abra as fichas guiadas"
             ) {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                LazyVStack(spacing: 10) {
                     ForEach(WorkoutLevel.allCases) { level in
                         NavigationLink(value: GuidedLevelRoute(level: level, gender: gender)) {
                             GuidedCategoryCard(
@@ -31,7 +31,9 @@ struct GuidedWorkoutSections: View {
                                 subtitle: level.subtitle,
                                 icon: level.icon,
                                 accent: level.accentColor,
-                                count: GuidedWorkoutCatalog.templates(for: level).count
+                                count: GuidedWorkoutCatalog.templates(for: level).count,
+                                compact: true,
+                                elevated: true
                             )
                         }
                         .buttonStyle(.plain)
@@ -88,6 +90,8 @@ struct GuidedCategoryCard: View {
     let accent: Color
     var count: Int = 0
     var compact: Bool = false
+    /// Stronger elevation so level cards stand out vs focus cards.
+    var elevated: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -128,6 +132,11 @@ struct GuidedCategoryCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .shadow(
+            color: elevated ? .black.opacity(0.38) : .clear,
+            radius: elevated ? 14 : 0,
+            y: elevated ? 7 : 0
+        )
     }
 }
 

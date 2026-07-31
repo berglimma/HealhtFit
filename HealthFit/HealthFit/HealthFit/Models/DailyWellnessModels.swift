@@ -69,6 +69,10 @@ struct DailyWellnessEntry: Codable, Equatable {
     var waterIntakeMl: Int
     var energyDrinksCount: Int
     var preWorkoutCount: Int
+    /// Suplementos ingeridos neste dia.
+    var supplementIntakes: [SupplementIntakeEntry]
+    /// Última alteração na lista de suplementos (para merge na nuvem).
+    var supplementsUpdatedAt: Date?
     /// Última vez que o sono foi registrado neste dia.
     var sleepUpdatedAt: Date?
     /// Última vez que a água foi registrada neste dia.
@@ -81,6 +85,8 @@ struct DailyWellnessEntry: Codable, Equatable {
             waterIntakeMl: 0,
             energyDrinksCount: 0,
             preWorkoutCount: 0,
+            supplementIntakes: [],
+            supplementsUpdatedAt: nil,
             sleepUpdatedAt: nil,
             waterUpdatedAt: nil
         )
@@ -100,6 +106,8 @@ struct DailyWellnessEntry: Codable, Equatable {
         waterIntakeMl: Int = 0,
         energyDrinksCount: Int = 0,
         preWorkoutCount: Int = 0,
+        supplementIntakes: [SupplementIntakeEntry] = [],
+        supplementsUpdatedAt: Date? = nil,
         sleepUpdatedAt: Date? = nil,
         waterUpdatedAt: Date? = nil
     ) {
@@ -108,6 +116,8 @@ struct DailyWellnessEntry: Codable, Equatable {
         self.waterIntakeMl = waterIntakeMl
         self.energyDrinksCount = max(0, energyDrinksCount)
         self.preWorkoutCount = max(0, preWorkoutCount)
+        self.supplementIntakes = supplementIntakes
+        self.supplementsUpdatedAt = supplementsUpdatedAt
         self.sleepUpdatedAt = sleepUpdatedAt
         self.waterUpdatedAt = waterUpdatedAt
     }
@@ -119,6 +129,8 @@ struct DailyWellnessEntry: Codable, Equatable {
         waterIntakeMl = try container.decodeIfPresent(Int.self, forKey: .waterIntakeMl) ?? 0
         energyDrinksCount = max(0, try container.decodeIfPresent(Int.self, forKey: .energyDrinksCount) ?? 0)
         preWorkoutCount = max(0, try container.decodeIfPresent(Int.self, forKey: .preWorkoutCount) ?? 0)
+        supplementIntakes = try container.decodeIfPresent([SupplementIntakeEntry].self, forKey: .supplementIntakes) ?? []
+        supplementsUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .supplementsUpdatedAt)
         sleepUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .sleepUpdatedAt)
         waterUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .waterUpdatedAt)
     }
@@ -130,13 +142,15 @@ struct DailyWellnessEntry: Codable, Equatable {
         try container.encode(waterIntakeMl, forKey: .waterIntakeMl)
         try container.encode(energyDrinksCount, forKey: .energyDrinksCount)
         try container.encode(preWorkoutCount, forKey: .preWorkoutCount)
+        try container.encode(supplementIntakes, forKey: .supplementIntakes)
+        try container.encodeIfPresent(supplementsUpdatedAt, forKey: .supplementsUpdatedAt)
         try container.encodeIfPresent(sleepUpdatedAt, forKey: .sleepUpdatedAt)
         try container.encodeIfPresent(waterUpdatedAt, forKey: .waterUpdatedAt)
     }
 
     private enum CodingKeys: String, CodingKey {
         case dayKey, sleepHours, waterIntakeMl, energyDrinksCount, preWorkoutCount
-        case sleepUpdatedAt, waterUpdatedAt
+        case supplementIntakes, supplementsUpdatedAt, sleepUpdatedAt, waterUpdatedAt
     }
 }
 

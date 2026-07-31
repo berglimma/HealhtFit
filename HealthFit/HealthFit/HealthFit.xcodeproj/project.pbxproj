@@ -71,6 +71,8 @@
 		B1000341 /* TrainingNutritionSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000341 /* TrainingNutritionSyncService.swift */; };
 		B1000342 /* GuidedWorkoutViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000342 /* GuidedWorkoutViews.swift */; };
 		B1000343 /* PhotoSourcePickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000343 /* PhotoSourcePickers.swift */; };
+		B1000344 /* SupplementModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000344 /* SupplementModels.swift */; };
+		B1000345 /* SupplementsLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000345 /* SupplementsLogView.swift */; };
 		B1000047 /* WeeklyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000049 /* WeeklyReportView.swift */; };
 		B1000048 /* MeditationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000050 /* MeditationModels.swift */; };
 		B1000049 /* MeditationSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000051 /* MeditationSetupView.swift */; };
@@ -307,6 +309,8 @@
 		F1000341 /* TrainingNutritionSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingNutritionSyncService.swift; sourceTree = "<group>"; };
 		F1000342 /* GuidedWorkoutViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedWorkoutViews.swift; sourceTree = "<group>"; };
 		F1000343 /* PhotoSourcePickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSourcePickers.swift; sourceTree = "<group>"; };
+		F1000344 /* SupplementModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementModels.swift; sourceTree = "<group>"; };
+		F1000345 /* SupplementsLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementsLogView.swift; sourceTree = "<group>"; };
 		F1000049 /* WeeklyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportView.swift; sourceTree = "<group>"; };
 		F1000050 /* MeditationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationModels.swift; sourceTree = "<group>"; };
 		F1000051 /* MeditationSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationSetupView.swift; sourceTree = "<group>"; };
@@ -547,6 +551,7 @@
 				F1000046 /* WeeklyProgressModels.swift */,
 				F1000050 /* MeditationModels.swift */,
 				F1000053 /* DailyWellnessModels.swift */,
+				F1000344 /* SupplementModels.swift */,
 				F1000056 /* ExerciseGuideCatalog.swift */,
 				F1000080 /* ExerciseVideoCatalog.swift */,
 				F1000101 /* ExerciseGifCatalog.swift */,
@@ -694,6 +699,7 @@
 			children = (
 				F1000026 /* MealPlanView.swift */,
 				F1000027 /* ShoppingListView.swift */,
+				F1000345 /* SupplementsLogView.swift */,
 			);
 			path = Nutrition;
 			sourceTree = "<group>";
@@ -1195,6 +1201,8 @@
 				B1000078 /* SocialLoginButtonsView.swift in Sources */,
 				B1000039 /* MailComposeView.swift in Sources */,
 				B1000343 /* PhotoSourcePickers.swift in Sources */,
+				B1000344 /* SupplementModels.swift in Sources */,
+				B1000345 /* SupplementsLogView.swift in Sources */,
 				B1000024 /* CameraPreviewView.swift in Sources */,
 				B1000025 /* VisionWorkoutView.swift in Sources */,
 				B1000026 /* MealPlanView.swift in Sources */,

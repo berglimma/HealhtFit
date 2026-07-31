@@ -165,14 +165,17 @@ struct MealPlanView: View {
 
     @ViewBuilder
     private var nutritionModeContent: some View {
-        if mealPlanService.customMenuSelection.isReadyToBuild {
-            Picker("Modo", selection: $nutritionTab) {
-                Text("Plano Semanal").tag(0)
-                Text("Montar Cardápio").tag(1)
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+        Picker("Modo", selection: $nutritionTab) {
+            Text("Plano Semanal").tag(0)
+            Text("Montar Cardápio").tag(1)
+            Text("Suplementos").tag(2)
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
 
+        if nutritionTab == 2 {
+            SupplementsLogView()
+        } else if mealPlanService.customMenuSelection.isReadyToBuild {
             if nutritionTab == 0 {
                 weeklyPlanSection
             } else {

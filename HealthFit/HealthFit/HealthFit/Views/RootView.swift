@@ -56,6 +56,8 @@ struct RootView: View {
                     }
                     .sheet(isPresented: $wellnessService.showSleepCheckIn) {
                         DailyWellnessCheckInView()
+                            .environmentObject(authService)
+                            .environmentObject(wellnessService)
                     }
             }
         }

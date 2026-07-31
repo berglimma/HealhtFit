@@ -45,6 +45,7 @@ enum UserDataCleaner {
         UserDefaults.standard.removeObject(forKey: "healthfit_wellness_\(safeEmail)_today")
         UserDefaults.standard.removeObject(forKey: "healthfit_wellness_last_update_\(safeEmail)")
         UserDefaults.standard.removeObject(forKey: "healthfit_wellness_tracking_start_\(safeEmail)")
+        UserDefaults.standard.removeObject(forKey: "healthfit_wellness_morning_checkin_handled_\(safeEmail)")
     }
 
     private static func removeProfileImages(uid: String, email: String) {

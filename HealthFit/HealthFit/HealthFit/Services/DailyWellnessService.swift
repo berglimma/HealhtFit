@@ -51,6 +51,8 @@ final class DailyWellnessService: ObservableObject {
     private let storagePrefix = "healthfit_wellness"
     private let lastUpdatePrefix = "healthfit_wellness_last_update"
     private let trackingStartPrefix = "healthfit_wellness_tracking_start"
+    /// Dia em que o sheet matinal de sono/água já foi concluído ou dispensado (não reaparece no mesmo dia).
+    private let morningCheckInHandledPrefix = "healthfit_wellness_morning_checkin_handled"
 
     private init() {}
 
@@ -62,10 +64,7 @@ final class DailyWellnessService: ObservableObject {
             ensureTrackingStarted()
         }
         loadTodayEntry()
-        if user != nil, todayEntry.sleepHours == nil {
-            pendingSleepHours = 7
-            showSleepCheckIn = true
-        }
+        evaluateMorningCheckInPresentation()
         if user != nil {
             refreshHealthIconNotifications()
         }
@@ -104,12 +103,7 @@ final class DailyWellnessService: ObservableObject {
                 try await pushMetaToCloud()
             }
 
-            if todayEntry.sleepHours == nil {
-                pendingSleepHours = 7
-                showSleepCheckIn = true
-            } else {
-                showSleepCheckIn = false
-            }
+            evaluateMorningCheckInPresentation()
             refreshHealthIconNotifications()
         } catch {
             print("[HealthFit] Falha ao sincronizar wellness do Firebase: \(error.localizedDescription)")
@@ -121,6 +115,7 @@ final class DailyWellnessService: ObservableObject {
             UserDefaults.standard.removeObject(forKey: storageKey(email: userEmail))
             UserDefaults.standard.removeObject(forKey: lastUpdateKey(email: userEmail))
             UserDefaults.standard.removeObject(forKey: trackingStartKey(email: userEmail))
+            UserDefaults.standard.removeObject(forKey: morningCheckInHandledKey(email: userEmail))
         }
         userEmail = nil
         cloudUserId = nil
@@ -130,17 +125,29 @@ final class DailyWellnessService: ObservableObject {
         showSleepCheckIn = false
     }
 
+    /// Chamado no foreground após login: apresenta o check-in matinal no máximo 1× por dia.
     func checkInOnAppOpen() {
         loadTodayEntry()
-        guard userEmail != nil else { return }
-        if todayEntry.sleepHours == nil {
-            pendingSleepHours = 7
-            showSleepCheckIn = true
-        }
+        evaluateMorningCheckInPresentation()
     }
 
+    /// Sono ainda não registrado hoje (independente do sheet já ter sido dispensado).
     var needsSleepCheckIn: Bool {
         todayEntry.sleepHours == nil
+    }
+
+    /// Sheet matinal deve aparecer: usuário logado, sono pendente e ainda não tratado hoje.
+    var shouldPresentMorningCheckIn: Bool {
+        guard userEmail != nil else { return false }
+        if hasLoggedSleepToday { return false }
+        if isMorningCheckInHandledToday { return false }
+        return true
+    }
+
+    /// Dispensa o sheet sem registrar sono; não reaparece até o próximo dia.
+    func dismissMorningCheckIn() {
+        markMorningCheckInHandled()
+        showSleepCheckIn = false
     }
 
     var todaySleepHours: Double? {
@@ -236,7 +243,13 @@ final class DailyWellnessService: ObservableObject {
         todayEntry = entry
         save(entry)
         markWaterOrSleepUpdated()
-        showSleepCheckIn = false
+        markMorningCheckInHandled()
+        // Mantém o sheet aberto para feedback/água; a UI fecha com Continuar ou dismissMorningCheckIn.
+    }
+
+    /// Atualiza a meta de água enviada ao Firebase a partir do peso do perfil.
+    func refreshWaterGoal(from user: UserProfile?) {
+        waterGoalMl = user?.recommendedDailyWaterML
     }
 
     func updateWaterIntake(_ milliliters: Int) {
@@ -265,6 +278,27 @@ final class DailyWellnessService: ObservableObject {
     func updatePreWorkoutCount(_ count: Int) {
         var entry = currentTodayEntry()
         entry.preWorkoutCount = max(0, count)
+        todayEntry = entry
+        save(entry)
+    }
+
+    var todaySupplementIntakes: [SupplementIntakeEntry] {
+        currentTodayEntry().supplementIntakes.sorted { $0.loggedAt > $1.loggedAt }
+    }
+
+    func logSupplementIntake(_ intake: SupplementIntakeEntry) {
+        guard !intake.name.isEmpty, intake.quantity > 0 else { return }
+        var entry = currentTodayEntry()
+        entry.supplementIntakes.append(intake)
+        entry.supplementsUpdatedAt = .now
+        todayEntry = entry
+        save(entry)
+    }
+
+    func removeSupplementIntake(id: UUID) {
+        var entry = currentTodayEntry()
+        entry.supplementIntakes.removeAll { $0.id == id }
+        entry.supplementsUpdatedAt = .now
         todayEntry = entry
         save(entry)
     }
@@ -298,6 +332,43 @@ final class DailyWellnessService: ObservableObject {
             return "Excelente hidratação!"
         }
         return "Você precisa hidratar-se melhor."
+    }
+
+    private func evaluateMorningCheckInPresentation() {
+        guard userEmail != nil else {
+            showSleepCheckIn = false
+            return
+        }
+
+        if hasLoggedSleepToday {
+            markMorningCheckInHandled()
+            // Se o sheet já está aberto (feedback pós-registro), a UI fecha com Continuar.
+            return
+        }
+
+        guard shouldPresentMorningCheckIn else {
+            showSleepCheckIn = false
+            return
+        }
+
+        if !showSleepCheckIn {
+            pendingSleepHours = 7
+        }
+        showSleepCheckIn = true
+    }
+
+    private var isMorningCheckInHandledToday: Bool {
+        guard let userEmail else { return false }
+        let stored = UserDefaults.standard.string(forKey: morningCheckInHandledKey(email: userEmail))
+        return stored == DailyWellnessEntry.dayKey(for: .now)
+    }
+
+    private func markMorningCheckInHandled() {
+        guard let userEmail else { return }
+        UserDefaults.standard.set(
+            DailyWellnessEntry.dayKey(for: .now),
+            forKey: morningCheckInHandledKey(email: userEmail)
+        )
     }
 
     private func markWaterOrSleepUpdated(at date: Date = .now) {
@@ -426,6 +497,27 @@ final class DailyWellnessService: ObservableObject {
 
         merged.energyDrinksCount = max(local.energyDrinksCount, remote.energyDrinksCount)
         merged.preWorkoutCount = max(local.preWorkoutCount, remote.preWorkoutCount)
+
+        // Lista de suplementos: usa o lado com atualização mais recente (respeita remoções).
+        switch (local.supplementsUpdatedAt, remote.supplementsUpdatedAt) {
+        case let (l?, r?) where r > l:
+            merged.supplementIntakes = remote.supplementIntakes
+            merged.supplementsUpdatedAt = remote.supplementsUpdatedAt
+        case (nil, .some):
+            merged.supplementIntakes = remote.supplementIntakes
+            merged.supplementsUpdatedAt = remote.supplementsUpdatedAt
+        case (.some, nil):
+            merged.supplementIntakes = local.supplementIntakes
+            merged.supplementsUpdatedAt = local.supplementsUpdatedAt
+        default:
+            if remote.supplementIntakes.count > local.supplementIntakes.count {
+                merged.supplementIntakes = remote.supplementIntakes
+                merged.supplementsUpdatedAt = remote.supplementsUpdatedAt ?? local.supplementsUpdatedAt
+            } else {
+                merged.supplementIntakes = local.supplementIntakes
+                merged.supplementsUpdatedAt = local.supplementsUpdatedAt ?? remote.supplementsUpdatedAt
+            }
+        }
         return merged
     }
 
@@ -442,5 +534,10 @@ final class DailyWellnessService: ObservableObject {
     private func trackingStartKey(email: String) -> String {
         let safeEmail = email.lowercased().replacingOccurrences(of: "@", with: "_at_")
         return "\(trackingStartPrefix)_\(safeEmail)"
+    }
+
+    private func morningCheckInHandledKey(email: String) -> String {
+        let safeEmail = email.lowercased().replacingOccurrences(of: "@", with: "_at_")
+        return "\(morningCheckInHandledPrefix)_\(safeEmail)"
     }
 }

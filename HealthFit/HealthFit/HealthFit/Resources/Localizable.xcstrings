@@ -127,6 +127,9 @@
     "%lld ml ingeridos" : {
 
     },
+    "%lld ml ingeridos hoje" : {
+
+    },
     "%lld personalizados" : {
 
     },
@@ -1069,6 +1072,9 @@
     "Aviso" : {
 
     },
+    "Beber 1 copo agora" : {
+
+    },
     "Bebidas" : {
 
     },
@@ -1154,7 +1160,7 @@
     "Categoria" : {
 
     },
-    "Check-in diário" : {
+    "Check-in da manhã" : {
 
     },
     "cm" : {
@@ -1173,6 +1179,9 @@
 
     },
     "Começar treino" : {
+
+    },
+    "Comece o dia com um copo d'água" : {
 
     },
     "common.cancel" : {
@@ -1433,6 +1442,9 @@
     "Continuar mesmo assim" : {
 
     },
+    "Copo registrado (+ %lld ml)" : {
+
+    },
     "Copos (%lld ml): %lld" : {
       "localizations" : {
         "pt-BR" : {
@@ -1651,6 +1663,9 @@
     "Escolha o programa" : {
 
     },
+    "Escolha o suplemento" : {
+
+    },
     "Escolha pelo menos um grupo muscular." : {
 
     },
@@ -1821,7 +1836,7 @@
     "HealthKit" : {
 
     },
-    "Hidratação diária" : {
+    "Hidratação" : {
 
     },
     "Hora de treinar!" : {
@@ -2065,6 +2080,9 @@
     "Nenhum plano gerado" : {
 
     },
+    "Nenhum suplemento registrado hoje." : {
+
+    },
     "Nenhum treino realizado ainda" : {
 
     },
@@ -2090,6 +2108,9 @@
 
     },
     "Nome do item" : {
+
+    },
+    "Nome do suplemento" : {
 
     },
     "Nome do treino" : {
@@ -2629,10 +2650,16 @@
     "Pular Descanso" : {
 
     },
+    "Qtd" : {
+
+    },
     "Quantas horas você dormiu?" : {
 
     },
     "Quantidade" : {
+
+    },
+    "Quantidade ingerida" : {
 
     },
     "Quantos energéticos você bebe durante o dia?" : {
@@ -2648,6 +2675,9 @@
 
     },
     "Recomendados" : {
+
+    },
+    "Recomendamos beber %lld ml agora para despertar o metabolismo e iniciar a hidratação." : {
 
     },
     "Redefinir senha" : {
@@ -2669,7 +2699,16 @@
     "Registrado ao iniciar treino" : {
 
     },
+    "Registrados hoje" : {
+
+    },
+    "Registrar ingestão" : {
+
+    },
     "Registrar sono" : {
+
+    },
+    "Registre o que você ingeriu hoje. Os dados ficam salvos no dia atual." : {
 
     },
     "Registre seu sono ao abrir o app ou ajuste o controle acima." : {
@@ -2691,6 +2730,9 @@
 
     },
     "Relatórios de treino poderão ser enviados por e-mail" : {
+
+    },
+    "Remover %@" : {
 
     },
     "Remover da ficha" : {
@@ -2889,6 +2931,22 @@
 
     },
     "Sua carga" : {
+
+    },
+    "Sugestão: %@ %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sugestão: %1$@ %2$@"
+          }
+        }
+      }
+    },
+    "Suplementos" : {
+
+    },
+    "Suplementos de hoje" : {
 
     },
     "Suporte" : {

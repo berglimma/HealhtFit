@@ -6,6 +6,8 @@ struct DailyWellnessCheckInView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var sleepFeedback: SleepAssessment?
+    @State private var didLogWaterGlass = false
+    @State private var didRegisterSleepLocally = false
 
     private var user: UserProfile? {
         authService.currentUser
@@ -27,16 +29,25 @@ struct DailyWellnessCheckInView: View {
                 .padding()
             }
             .background(AppTheme.background)
-            .navigationTitle("Check-in diário")
+            .navigationTitle("Check-in da manhã")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Depois") {
-                        wellnessService.showSleepCheckIn = false
+                        wellnessService.dismissMorningCheckIn()
                         dismiss()
                     }
                     .foregroundStyle(AppTheme.textSecondary)
                 }
+            }
+            .onAppear {
+                wellnessService.refreshWaterGoal(from: authService.currentUser)
+            }
+            .onChange(of: wellnessService.todaySleepHours) { _, hours in
+                // Sono sincronizado de outro dispositivo/perfil enquanto o sheet pedia registro.
+                guard hours != nil, sleepFeedback == nil, !didRegisterSleepLocally else { return }
+                wellnessService.showSleepCheckIn = false
+                dismiss()
             }
         }
         .interactiveDismissDisabled()
@@ -98,11 +109,15 @@ struct DailyWellnessCheckInView: View {
 
     private func waterSection(for user: UserProfile) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Hidratação diária", systemImage: "drop.fill")
+            Label("Hidratação", systemImage: "drop.fill")
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Água recomendada")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(AppTheme.textPrimary)
+
                 Text("Com base no seu peso (\(String(format: "%.1f", user.weight)) kg), beba:")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.textSecondary)
@@ -114,6 +129,49 @@ struct DailyWellnessCheckInView: View {
                 Text("Equivale a cerca de \(user.recommendedWaterGlasses) copos de \(WaterServing.glassML) ml ou \(user.recommendedWaterBottles) garrafas de \(WaterServing.bottleML) ml.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
+
+                ProgressView(value: wellnessService.waterProgress(for: user))
+                    .tint(
+                        wellnessService.hasMetWaterGoal(for: user)
+                            ? AppTheme.accent
+                            : .blue
+                    )
+
+                Text("\(wellnessService.todayEntry.waterIntakeMl) ml ingeridos hoje")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                Divider()
+
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "cup.and.saucer.fill")
+                        .font(.title2)
+                        .foregroundStyle(.blue)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Comece o dia com um copo d'água")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Recomendamos beber \(WaterServing.glassML) ml agora para despertar o metabolismo e iniciar a hidratação.")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                Button {
+                    wellnessService.addWater(WaterServing.glassML)
+                    didLogWaterGlass = true
+                } label: {
+                    Label(
+                        didLogWaterGlass ? "Copo registrado (+ \(WaterServing.glassML) ml)" : "Beber 1 copo agora",
+                        systemImage: didLogWaterGlass ? "checkmark.circle.fill" : "drop.fill"
+                    )
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
+                .disabled(didLogWaterGlass)
             }
             .padding()
             .background(AppTheme.cardBackground)
@@ -133,8 +191,10 @@ struct DailyWellnessCheckInView: View {
                 .buttonStyle(PrimaryButtonStyle())
             } else {
                 Button {
+                    didRegisterSleepLocally = true
                     let hours = wellnessService.pendingSleepHours
                     wellnessService.logSleep(hours: hours)
+                    wellnessService.refreshWaterGoal(from: authService.currentUser)
                     sleepFeedback = SleepAssessment.evaluate(hours: hours)
                 } label: {
                     Label("Registrar sono", systemImage: "checkmark.circle.fill")

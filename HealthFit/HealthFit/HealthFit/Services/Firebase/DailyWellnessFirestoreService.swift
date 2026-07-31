@@ -41,6 +41,7 @@ enum DailyWellnessFirestoreService {
             "waterIntakeMl": entry.waterIntakeMl,
             "energyDrinksCount": entry.energyDrinksCount,
             "preWorkoutCount": entry.preWorkoutCount,
+            "supplementIntakeCount": entry.supplementIntakes.count,
             "updatedAt": Timestamp(date: .now),
         ]
         if let waterGoalMl, waterGoalMl > 0 {
