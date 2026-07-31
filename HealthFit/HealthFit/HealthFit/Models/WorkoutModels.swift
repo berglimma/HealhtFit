@@ -193,6 +193,55 @@ enum CustomWorkoutFocusGroup: String, CaseIterable, Codable, Identifiable, Hasha
     ]
 }
 
+/// Programa de musculação nos hubs Treinos → Masculino / Feminino / Mobilidade.
+enum MusculacaoProgram: Equatable {
+    case male
+    case female
+    case mobility
+
+    init(_ gender: Gender) {
+        switch gender {
+        case .male: self = .male
+        case .female: self = .female
+        }
+    }
+
+    /// Infere o programa a partir do título da sessão (histórico) e da ficha atual, se existir.
+    static func resolve(sheet: WorkoutSheet?, fallbackTitle: String) -> MusculacaoProgram? {
+        if isExcludedFromMusculacaoHubs(fallbackTitle) {
+            return nil
+        }
+        if let fromTitle = program(fromTitle: fallbackTitle) {
+            return fromTitle
+        }
+        if let gender = sheet?.resolvedProgramGender {
+            return MusculacaoProgram(gender)
+        }
+        if let sheetTitle = sheet?.title {
+            if isExcludedFromMusculacaoHubs(sheetTitle) {
+                return nil
+            }
+            return program(fromTitle: sheetTitle)
+        }
+        return nil
+    }
+
+    private static func isExcludedFromMusculacaoHubs(_ title: String) -> Bool {
+        let lower = title.lowercased()
+        return lower.hasPrefix("casa")
+            || lower.hasPrefix("cardio")
+            || lower.hasPrefix("medita")
+    }
+
+    private static func program(fromTitle title: String) -> MusculacaoProgram? {
+        let lower = title.lowercased()
+        if lower.hasPrefix("mobilidade") { return .mobility }
+        if lower.hasPrefix("masculino") { return .male }
+        if lower.hasPrefix("feminino") { return .female }
+        return nil
+    }
+}
+
 struct WorkoutSheet: Identifiable, Codable, Hashable {
     var id: UUID
     var title: String
@@ -266,6 +315,11 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
 
     var resolvedProgramGender: Gender? {
         targetGender ?? Self.inferredGender(from: title)
+    }
+
+    /// Hub de musculação desta ficha (nil = casa, cardio, meditação ou sem programa).
+    var musculacaoProgram: MusculacaoProgram? {
+        MusculacaoProgram.resolve(sheet: self, fallbackTitle: title)
     }
 
     private static func inferredGender(from title: String) -> Gender? {
@@ -487,6 +541,11 @@ struct WorkoutSession: Identifiable, Codable {
 
     var totalExerciseSeconds: Int {
         exerciseRecords.reduce(0) { $0 + $1.elapsedSeconds }
+    }
+
+    /// Programa de musculação desta sessão (usa a ficha quando disponível).
+    func musculacaoProgram(resolvingSheet sheet: WorkoutSheet?) -> MusculacaoProgram? {
+        MusculacaoProgram.resolve(sheet: sheet, fallbackTitle: workoutTitle)
     }
 }
 

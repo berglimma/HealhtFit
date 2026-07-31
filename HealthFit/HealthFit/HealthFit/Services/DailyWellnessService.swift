@@ -46,6 +46,8 @@ final class DailyWellnessService: ObservableObject {
 
     private var userEmail: String?
     private var cloudUserId: String?
+    /// Meta diária de água (ml), derivada do perfil; enviada ao Firebase junto com o dia.
+    private var waterGoalMl: Int?
     private let storagePrefix = "healthfit_wellness"
     private let lastUpdatePrefix = "healthfit_wellness_last_update"
     private let trackingStartPrefix = "healthfit_wellness_tracking_start"
@@ -55,6 +57,7 @@ final class DailyWellnessService: ObservableObject {
     func configure(for user: UserProfile?) {
         userEmail = user?.email
         cloudUserId = user?.id
+        waterGoalMl = user?.recommendedDailyWaterML
         if user != nil {
             ensureTrackingStarted()
         }
@@ -121,6 +124,7 @@ final class DailyWellnessService: ObservableObject {
         }
         userEmail = nil
         cloudUserId = nil
+        waterGoalMl = nil
         todayEntry = .empty()
         pendingSleepHours = 7
         showSleepCheckIn = false
@@ -373,7 +377,11 @@ final class DailyWellnessService: ObservableObject {
 
     private func pushEntryToCloud(_ entry: DailyWellnessEntry) async throws {
         guard let userId = cloudUserId else { return }
-        try await DailyWellnessFirestoreService.saveEntry(entry, userId: userId)
+        try await DailyWellnessFirestoreService.saveEntry(
+            entry,
+            userId: userId,
+            waterGoalMl: waterGoalMl
+        )
     }
 
     private func pushMetaToCloudSafely() async {

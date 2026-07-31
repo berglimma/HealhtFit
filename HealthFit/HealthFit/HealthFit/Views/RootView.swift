@@ -130,6 +130,7 @@ struct RootView: View {
                 showWelcomeMotivation = false
                 welcomeContext = nil
                 workoutStore.configureCloudSync(userId: nil)
+                wellnessService.configureCloudSync(userId: nil)
             }
         }
     }

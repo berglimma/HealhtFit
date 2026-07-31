@@ -227,6 +227,21 @@ final class WorkoutStore: ObservableObject {
     private static let homeSampleTitles = Set(homeSampleWorkouts.map(\.title))
     private static let mobilitySampleTitles = Set(mobilitySampleWorkouts.map(\.title))
 
+    func musculacaoProgram(for session: WorkoutSession) -> MusculacaoProgram? {
+        let sheet = workoutSheets.first { $0.id == session.workoutSheetId }
+        return session.musculacaoProgram(resolvingSheet: sheet)
+    }
+
+    /// Últimas sessões concluídas do programa (Masculino / Feminino / Mobilidade), até `limit`.
+    func recentCompletedSessions(for program: MusculacaoProgram, limit: Int = 4) -> [WorkoutSession] {
+        Array(
+            sessionHistory
+                .lazy
+                .filter { $0.endedAt != nil && self.musculacaoProgram(for: $0) == program }
+                .prefix(limit)
+        )
+    }
+
     /// Retorna a última sessão concluída desta ficha se foi há menos de `hours` horas.
     func recentSameWorkoutSession(
         as sheet: WorkoutSheet,

@@ -28,7 +28,7 @@ enum DailyWellnessFirestoreService {
         db.collection("users").document(userId).collection("wellnessMeta").document("state")
     }
 
-    static func saveEntry(_ entry: DailyWellnessEntry, userId: String) async throws {
+    static func saveEntry(_ entry: DailyWellnessEntry, userId: String, waterGoalMl: Int? = nil) async throws {
         guard isAvailable else { return }
 
         let payload = try encoder.encode(entry)
@@ -43,6 +43,9 @@ enum DailyWellnessFirestoreService {
             "preWorkoutCount": entry.preWorkoutCount,
             "updatedAt": Timestamp(date: .now),
         ]
+        if let waterGoalMl, waterGoalMl > 0 {
+            data["waterGoalMl"] = waterGoalMl
+        }
         if let sleepHours = entry.sleepHours {
             data["sleepHours"] = sleepHours
         } else {

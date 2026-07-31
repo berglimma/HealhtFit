@@ -415,8 +415,14 @@ struct MobilityWorkoutHubView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
+    @State private var selectedRecentSession: WorkoutSession?
+
     private var recommendedSheets: [WorkoutSheet] {
         workoutStore.mobilityStandardWorkoutSheets
+    }
+
+    private var recentCompletedSessions: [WorkoutSession] {
+        workoutStore.recentCompletedSessions(for: .mobility)
     }
 
     private let accent = Color(red: 0.45, green: 0.65, blue: 0.95)
@@ -445,6 +451,11 @@ struct MobilityWorkoutHubView: View {
                         }
                     }
                 }
+
+                RecentCompletedWorkoutsSection(
+                    sessions: recentCompletedSessions,
+                    selectedSession: $selectedRecentSession
+                )
             }
             .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
             .adaptiveContentWidth()
@@ -452,6 +463,12 @@ struct MobilityWorkoutHubView: View {
         .background(AppTheme.background)
         .navigationTitle("Mobilidade")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $selectedRecentSession) { session in
+            WorkoutSummaryView(
+                session: session,
+                onFinish: { selectedRecentSession = nil }
+            )
+        }
     }
 
     private var hubHeader: some View {
@@ -576,11 +593,7 @@ struct GenderWorkoutHubView: View {
     }
 
     private var recentCompletedSessions: [WorkoutSession] {
-        Array(
-            workoutStore.sessionHistory
-                .filter { $0.endedAt != nil }
-                .prefix(4)
-        )
+        workoutStore.recentCompletedSessions(for: MusculacaoProgram(gender))
     }
 
     var body: some View {
@@ -603,7 +616,10 @@ struct GenderWorkoutHubView: View {
                     emptyMessage: "Nenhum personalizado ainda. Toque em + para criar."
                 )
 
-                recentWorkoutsSection
+                RecentCompletedWorkoutsSection(
+                    sessions: recentCompletedSessions,
+                    selectedSession: $selectedRecentSession
+                )
             }
             .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
             .adaptiveContentWidth()
@@ -683,40 +699,6 @@ struct GenderWorkoutHubView: View {
         )
     }
 
-    private var recentWorkoutsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Últimos treinos")
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.textPrimary)
-                Text("Até 4 sessões concluídas recentemente")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-            }
-
-            if recentCompletedSessions.isEmpty {
-                Text("Nenhum treino realizado ainda.")
-                    .font(.subheadline)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(AppTheme.cardBackground.opacity(0.6))
-                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-            } else {
-                LazyVStack(spacing: 12) {
-                    ForEach(recentCompletedSessions) { session in
-                        Button {
-                            selectedRecentSession = session
-                        } label: {
-                            RecentWorkoutSessionCard(session: session)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-        }
-    }
-
     private func workoutGroupSection(
         title: String,
         subtitle: String,
@@ -771,6 +753,45 @@ struct GenderWorkoutHubView: View {
                     sheetPendingDeletion = sheet
                 } label: {
                     Label("Excluir", systemImage: "trash")
+                }
+            }
+        }
+    }
+}
+
+struct RecentCompletedWorkoutsSection: View {
+    let sessions: [WorkoutSession]
+    @Binding var selectedSession: WorkoutSession?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Últimos treinos")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("Até 4 sessões concluídas neste programa")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            if sessions.isEmpty {
+                Text("Nenhum treino realizado ainda.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(AppTheme.cardBackground.opacity(0.6))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(sessions) { session in
+                        Button {
+                            selectedSession = session
+                        } label: {
+                            RecentWorkoutSessionCard(session: session)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }

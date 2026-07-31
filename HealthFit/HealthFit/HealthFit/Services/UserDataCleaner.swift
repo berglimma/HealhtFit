@@ -43,6 +43,8 @@ enum UserDataCleaner {
         let normalized = email.lowercased()
         let safeEmail = normalized.replacingOccurrences(of: "@", with: "_at_")
         UserDefaults.standard.removeObject(forKey: "healthfit_wellness_\(safeEmail)_today")
+        UserDefaults.standard.removeObject(forKey: "healthfit_wellness_last_update_\(safeEmail)")
+        UserDefaults.standard.removeObject(forKey: "healthfit_wellness_tracking_start_\(safeEmail)")
     }
 
     private static func removeProfileImages(uid: String, email: String) {
