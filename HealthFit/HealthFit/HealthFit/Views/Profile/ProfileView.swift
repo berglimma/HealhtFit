@@ -581,8 +581,13 @@ struct ProfileView: View {
         .padding(.vertical, 4)
 
         VStack(alignment: .leading, spacing: 12) {
-            Text("Água recomendada")
-                .font(.subheadline.weight(.medium))
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Água recomendada")
+                    .font(.subheadline.weight(.medium))
+                Text(compactTodayDateLabel)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
 
             HStack {
                 Label(
@@ -653,6 +658,19 @@ struct ProfileView: View {
             .font(.caption.weight(.semibold))
         }
         .padding(.vertical, 4)
+    }
+
+    /// Compact `dd/MM` for today’s wellness day (updates when `todayEntry` rolls over).
+    private var compactTodayDateLabel: String {
+        let parser = DateFormatter()
+        parser.calendar = Calendar.current
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.dateFormat = "yyyy-MM-dd"
+        let date = parser.date(from: wellnessService.todayEntry.dayKey) ?? Date()
+        let display = DateFormatter()
+        display.locale = Locale(identifier: "pt_BR")
+        display.dateFormat = "dd/MM"
+        return display.string(from: date)
     }
 
     private func syncWellnessFields() {
