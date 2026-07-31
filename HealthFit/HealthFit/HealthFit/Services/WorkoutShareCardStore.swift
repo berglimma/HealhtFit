@@ -63,7 +63,8 @@ final class WorkoutShareCardStore: ObservableObject {
         session: WorkoutSession,
         athleteName: String,
         motivationLine: String,
-        recentSessions: [WorkoutSession] = []
+        recentSessions: [WorkoutSession] = [],
+        profileImage: UIImage? = nil
     ) {
         if lastCard?.sessionId == session.id, previewImage != nil {
             return
@@ -94,7 +95,8 @@ final class WorkoutShareCardStore: ObservableObject {
             session: session,
             athleteName: athleteName,
             motivationLine: motivationLine,
-            recentSessions: recentSessions
+            recentSessions: recentSessions,
+            profileImage: profileImage
         ) {
             previewImage = image
             saveImage(image)

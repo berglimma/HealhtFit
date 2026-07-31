@@ -8,6 +8,8 @@ struct WorkoutShareCardView: View {
     let motivationLine: String
     /// Sessões recentes (opcional) para sparkline de durações no card.
     var recentSessions: [WorkoutSession] = []
+    /// Foto de perfil do atleta — omitida por completo quando `nil` (sem placeholder).
+    var profileImage: UIImage? = nil
 
     private var displayName: String {
         let trimmed = athleteName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -35,76 +37,69 @@ struct WorkoutShareCardView: View {
         return formatter.string(from: session.endedAt ?? session.startedAt).uppercased()
     }
 
+    /// Stories-friendly width; height grows modestly when early-end copy needs room.
+    static let cardWidth: CGFloat = 360
+    static var standardCardHeight: CGFloat { 464 }
+    static var expandedTextCardHeight: CGFloat { 512 }
+
+    private var cardHeight: CGFloat {
+        needsExtraTextSpace ? Self.expandedTextCardHeight : Self.standardCardHeight
+    }
+
     var body: some View {
         ZStack {
             backgroundLayer
 
-            VStack(spacing: 0) {
+            VStack(spacing: needsExtraTextSpace ? 6 : 8) {
                 brandHeader
-                    .padding(.top, needsExtraTextSpace ? 16 : 22)
-                    .padding(.horizontal, 24)
-
-                Spacer(minLength: needsExtraTextSpace ? 4 : 8)
 
                 achievementBadge
-                    .padding(.bottom, needsExtraTextSpace ? 6 : 10)
 
                 Text(headline)
                     .font(.system(size: headlineFontSize, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
-                    .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
-                    .minimumScaleFactor(0.78)
-                    .padding(.horizontal, 22)
-                    .layoutPriority(2)
+                    .frame(maxWidth: .infinity)
+                    .layoutPriority(3)
 
                 if !motivationLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(motivationLine)
-                        .font(.system(size: needsExtraTextSpace ? 12 : 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: needsExtraTextSpace ? 11.5 : 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.9))
                         .multilineTextAlignment(.center)
-                        .lineLimit(nil)
                         .fixedSize(horizontal: false, vertical: true)
-                        .minimumScaleFactor(0.8)
-                        .padding(.horizontal, 24)
-                        .padding(.top, needsExtraTextSpace ? 4 : 6)
-                        .layoutPriority(2)
+                        .frame(maxWidth: .infinity)
+                        .layoutPriority(3)
                 }
 
                 Text(session.workoutTitle)
-                    .font(.system(size: needsExtraTextSpace ? 14 : 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: needsExtraTextSpace ? 13 : 15, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color("AccentGreen"))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-                    .padding(.horizontal, 24)
-                    .padding(.top, needsExtraTextSpace ? 6 : 8)
+                    .minimumScaleFactor(0.85)
+                    .layoutPriority(1)
 
                 summaryChartSection
-                    .padding(.top, needsExtraTextSpace ? 8 : 12)
-                    .padding(.horizontal, 22)
                     .layoutPriority(0)
 
                 statsRow
-                    .padding(.top, needsExtraTextSpace ? 8 : 12)
-                    .padding(.horizontal, 20)
                     .layoutPriority(0)
 
-                Spacer(minLength: needsExtraTextSpace ? 4 : 8)
-
                 footer
-                    .padding(.horizontal, 22)
-                    .padding(.bottom, needsExtraTextSpace ? 14 : 20)
             }
+            .padding(.horizontal, 20)
+            .padding(.top, needsExtraTextSpace ? 12 : 16)
+            .padding(.bottom, needsExtraTextSpace ? 10 : 14)
         }
-        .frame(width: 360, height: 450)
+        .frame(width: Self.cardWidth, height: cardHeight)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     private var headlineFontSize: CGFloat {
-        if needsExtraTextSpace { return 19 }
-        return 26
+        if needsExtraTextSpace { return 18 }
+        return 24
     }
 
     private var headline: String {
@@ -160,51 +155,70 @@ struct WorkoutShareCardView: View {
     }
 
     private var brandHeader: some View {
-        HStack {
+        HStack(spacing: 10) {
             HStack(spacing: 8) {
                 Image("BrandHeart")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 20, height: 20)
+                    .frame(width: 18, height: 18)
                 Text("HealthFit")
-                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .tracking(0.6)
             }
-            Spacer()
+            Spacer(minLength: 8)
             Text(formattedDate)
                 .font(.system(size: 9, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.55))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
     }
 
     private var achievementBadge: some View {
-        let outer: CGFloat = needsExtraTextSpace ? 52 : 64
-        let inner: CGFloat = needsExtraTextSpace ? 42 : 52
-        let iconSize: CGFloat = needsExtraTextSpace ? 20 : 24
+        let outer: CGFloat = needsExtraTextSpace ? 48 : 58
+        let inner: CGFloat = needsExtraTextSpace ? 38 : 46
+        let iconSize: CGFloat = needsExtraTextSpace ? 18 : 22
+        let photoSize: CGFloat = needsExtraTextSpace ? 40 : 48
 
-        return ZStack {
-            Circle()
-                .strokeBorder(
-                    AngularGradient(
-                        colors: [
-                            Color("AccentGreen"),
-                            Color("AccentOrange"),
-                            Color("AccentGreen")
-                        ],
-                        center: .center
-                    ),
-                    lineWidth: needsExtraTextSpace ? 2 : 2.5
-                )
-                .frame(width: outer, height: outer)
+        return HStack(spacing: profileImage == nil ? 0 : -8) {
+            ZStack {
+                Circle()
+                    .strokeBorder(
+                        AngularGradient(
+                            colors: [
+                                Color("AccentGreen"),
+                                Color("AccentOrange"),
+                                Color("AccentGreen")
+                            ],
+                            center: .center
+                        ),
+                        lineWidth: needsExtraTextSpace ? 2 : 2.5
+                    )
+                    .frame(width: outer, height: outer)
 
-            Circle()
-                .fill(.white.opacity(0.06))
-                .frame(width: inner, height: inner)
+                Circle()
+                    .fill(.white.opacity(0.06))
+                    .frame(width: inner, height: inner)
 
-            Image(systemName: badgeIcon)
-                .font(.system(size: iconSize, weight: .semibold))
-                .foregroundStyle(Color("AccentGreen"))
+                Image(systemName: badgeIcon)
+                    .font(.system(size: iconSize, weight: .semibold))
+                    .foregroundStyle(Color("AccentGreen"))
+            }
+            .zIndex(1)
+
+            if let profileImage {
+                Image(uiImage: profileImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: photoSize, height: photoSize)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .strokeBorder(Color("AccentGreen").opacity(0.9), lineWidth: 2)
+                    )
+                    .zIndex(0)
+            }
         }
     }
 
@@ -229,7 +243,7 @@ struct WorkoutShareCardView: View {
     @ViewBuilder
     private var summaryChartSection: some View {
         if showsSummaryChart {
-            VStack(alignment: .leading, spacing: needsExtraTextSpace ? 5 : 8) {
+            VStack(alignment: .leading, spacing: needsExtraTextSpace ? 4 : 7) {
                 if showsCardioChart {
                     cardioMeditationChart
                 } else if showsStrengthChart {
@@ -240,8 +254,8 @@ struct WorkoutShareCardView: View {
                     recentDurationSparkline
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, needsExtraTextSpace ? 7 : 10)
+            .padding(.horizontal, 10)
+            .padding(.vertical, needsExtraTextSpace ? 6 : 9)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(.white.opacity(0.06))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -253,15 +267,15 @@ struct WorkoutShareCardView: View {
     }
 
     private var chartBarMaxHeight: CGFloat {
-        needsExtraTextSpace ? 34 : 46
+        needsExtraTextSpace ? 28 : 42
     }
 
     private var chartRowHeight: CGFloat {
-        needsExtraTextSpace ? 48 : 62
+        needsExtraTextSpace ? 42 : 56
     }
 
     private var sparklineMaxHeight: CGFloat {
-        needsExtraTextSpace ? 16 : 22
+        needsExtraTextSpace ? 14 : 20
     }
 
     private var strengthBarItems: [(id: UUID, label: String, value: Double)] {
@@ -317,13 +331,13 @@ struct WorkoutShareCardView: View {
         let metrics = cardioMetricBars
         let maxValue = max(metrics.map(\.value).max() ?? 1, 1)
 
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: needsExtraTextSpace ? 4 : 6) {
             Text(isMeditation ? "SESSÃO" : "PERFORMANCE")
                 .font(.system(size: 8, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.45))
                 .tracking(0.6)
 
-            VStack(spacing: 5) {
+            VStack(spacing: needsExtraTextSpace ? 4 : 5) {
                 ForEach(metrics, id: \.label) { metric in
                     let ratio = max(0.08, min(1.0, metric.value / maxValue))
                     HStack(spacing: 8) {
@@ -470,19 +484,19 @@ struct WorkoutShareCardView: View {
     }
 
     private func shareStat(value: String, label: String) -> some View {
-        VStack(spacing: needsExtraTextSpace ? 2 : 4) {
+        VStack(spacing: needsExtraTextSpace ? 2 : 3) {
             Text(value)
-                .font(.system(size: needsExtraTextSpace ? 13 : 15, weight: .bold, design: .rounded))
+                .font(.system(size: needsExtraTextSpace ? 12 : 14, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
             Text(label)
-                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .font(.system(size: 7.5, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.5))
                 .tracking(0.8)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, needsExtraTextSpace ? 7 : 10)
+        .padding(.vertical, needsExtraTextSpace ? 6 : 9)
         .background(.white.opacity(0.07))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
@@ -492,17 +506,17 @@ struct WorkoutShareCardView: View {
     }
 
     private var footer: some View {
-        VStack(spacing: needsExtraTextSpace ? 2 : 4) {
+        VStack(spacing: needsExtraTextSpace ? 1 : 3) {
             Text("Treinei com HealthFit")
-                .font(.system(size: needsExtraTextSpace ? 11 : 12, weight: .semibold, design: .rounded))
+                .font(.system(size: needsExtraTextSpace ? 10 : 12, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.9))
 
             Text("Disciplina · Evolução · Constância")
-                .font(.system(size: needsExtraTextSpace ? 9 : 10, weight: .medium, design: .rounded))
+                .font(.system(size: needsExtraTextSpace ? 8 : 10, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.45))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, needsExtraTextSpace ? 7 : 10)
+        .padding(.vertical, needsExtraTextSpace ? 6 : 9)
         .background(.white.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
@@ -514,13 +528,15 @@ enum WorkoutShareCardRenderer {
         session: WorkoutSession,
         athleteName: String,
         motivationLine: String,
-        recentSessions: [WorkoutSession] = []
+        recentSessions: [WorkoutSession] = [],
+        profileImage: UIImage? = nil
     ) -> UIImage? {
         let card = WorkoutShareCardView(
             session: session,
             athleteName: athleteName,
             motivationLine: motivationLine,
-            recentSessions: recentSessions
+            recentSessions: recentSessions,
+            profileImage: profileImage
         )
         let renderer = ImageRenderer(content: card)
         renderer.scale = 3

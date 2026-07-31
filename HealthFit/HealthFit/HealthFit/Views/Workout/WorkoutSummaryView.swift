@@ -95,7 +95,8 @@ struct WorkoutSummaryView: View {
                     session: session,
                     athleteName: athleteDisplayName,
                     motivationLine: shareMotivation,
-                    recentSessions: workoutStore.sessionHistory
+                    recentSessions: workoutStore.sessionHistory,
+                    profileImage: authService.profileImage
                 )
                 // Early end: bring the share card into view (section is below email / totals).
                 if session.endedEarly {
@@ -170,7 +171,8 @@ struct WorkoutSummaryView: View {
                 session: session,
                 athleteName: athleteDisplayName,
                 motivationLine: shareMotivation,
-                recentSessions: workoutStore.sessionHistory
+                recentSessions: workoutStore.sessionHistory,
+                profileImage: authService.profileImage
             )
             .frame(maxWidth: .infinity)
             .shadow(color: .black.opacity(0.35), radius: 18, y: 10)
@@ -215,7 +217,8 @@ struct WorkoutSummaryView: View {
             session: session,
             athleteName: athleteDisplayName,
             motivationLine: shareMotivation,
-            recentSessions: workoutStore.sessionHistory
+            recentSessions: workoutStore.sessionHistory,
+            profileImage: authService.profileImage
         )
         let caption = WorkoutShareCardRenderer.shareCaption(
             session: session,

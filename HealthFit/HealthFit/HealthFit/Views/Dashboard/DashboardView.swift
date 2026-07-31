@@ -25,8 +25,11 @@ struct DashboardView: View {
     @State private var shareCardSaveAlertMessage = ""
     @State private var showShareCardSaveAlert = false
 
-    /// Live `WorkoutShareCardView` is fixed 360×450; this scale fits dashboard width when expanded.
+    /// Live `WorkoutShareCardView` is fixed ~360×464–512; this scale fits dashboard width when expanded.
     private let shareCardExpandedScale: CGFloat = 0.72
+    private var shareCardPreviewHeight: CGFloat {
+        WorkoutShareCardView.expandedTextCardHeight * shareCardExpandedScale
+    }
 
     private var healthStatus: WellnessHealthIconStatus {
         wellnessService.healthIconStatus()
@@ -285,10 +288,11 @@ struct DashboardView: View {
                         WorkoutShareCardView(
                             session: card.makeSession(),
                             athleteName: card.athleteName,
-                            motivationLine: card.motivationLine
+                            motivationLine: card.motivationLine,
+                            profileImage: authService.profileImage
                         )
                         .scaleEffect(shareCardExpandedScale)
-                        .frame(height: 450 * shareCardExpandedScale)
+                        .frame(height: shareCardPreviewHeight)
                         .allowsHitTesting(false)
                         .padding(.horizontal, 24)
                     }
@@ -339,10 +343,11 @@ struct DashboardView: View {
             WorkoutShareCardView(
                 session: card.makeSession(),
                 athleteName: card.athleteName,
-                motivationLine: card.motivationLine
+                motivationLine: card.motivationLine,
+                profileImage: authService.profileImage
             )
             .scaleEffect(shareCardExpandedScale)
-            .frame(height: 450 * shareCardExpandedScale)
+            .frame(height: shareCardPreviewHeight)
             .frame(maxWidth: .infinity)
             .allowsHitTesting(false)
         }
@@ -355,7 +360,8 @@ struct DashboardView: View {
         if let image = WorkoutShareCardRenderer.renderImage(
             session: card.makeSession(),
             athleteName: card.athleteName,
-            motivationLine: card.motivationLine
+            motivationLine: card.motivationLine,
+            profileImage: authService.profileImage
         ) {
             shareCardStore.updatePreviewImage(image)
         }
