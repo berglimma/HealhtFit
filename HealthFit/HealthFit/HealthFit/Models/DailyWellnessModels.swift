@@ -60,6 +60,7 @@ enum SleepAssessment: Equatable {
 enum WaterServing {
     static let glassML = 250
     static let bottleML = 500
+    /// Hard ceiling for daily water goal and logged intake (10 L).
     static let maxDailyIntakeML = 10_000
 }
 
@@ -155,9 +156,10 @@ struct DailyWellnessEntry: Codable, Equatable {
 }
 
 extension UserProfile {
-    /// Recomendação: 35 ml de água por kg de peso corporal por dia.
+    /// Recomendação: 35 ml de água por kg de peso corporal por dia (teto 10 L).
     var recommendedDailyWaterML: Int {
-        max(Int((weight * 35).rounded()), 1500)
+        let raw = max(Int((weight * 35).rounded()), 1500)
+        return min(raw, WaterServing.maxDailyIntakeML)
     }
 
     var recommendedDailyWaterLiters: Double {

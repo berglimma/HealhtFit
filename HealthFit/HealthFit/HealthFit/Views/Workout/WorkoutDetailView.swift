@@ -199,6 +199,8 @@ struct WorkoutDetailView: View {
     }
 
     private func requestStartWorkout() {
+        guard workoutStore.ensureCanStartNewSession() else { return }
+
         if let repeated = workoutStore.recentSameWorkoutSession(as: sheet) {
             repeatedWorkoutSession = repeated
             showRepeatedWorkoutAlert = true
@@ -218,11 +220,12 @@ struct WorkoutDetailView: View {
     }
 
     private func beginWorkout(tookPreWorkout: Bool, startingExerciseIndex: Int = 0) {
-        workoutStore.startSession(
+        guard workoutStore.startSession(
             for: sheet,
             tookPreWorkout: tookPreWorkout,
             startingExerciseIndex: startingExerciseIndex
-        )
+        ) else { return }
+
         wellnessService.applyPreWorkoutFromWorkouts(allTrackedSessions)
         let startIndex = min(max(0, startingExerciseIndex), max(0, sheet.exercises.count - 1))
         let exerciseName = sheet.exercises.indices.contains(startIndex)

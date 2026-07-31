@@ -125,7 +125,7 @@ struct MeditationSetupView: View {
 
     private var startButton: some View {
         Button {
-            workoutStore.startMeditationSession(config: config)
+            guard workoutStore.startMeditationSession(config: config) else { return }
             let firstPrompt = topic.prompts.first ?? ""
             watchConnectivity.startMeditationOnWatch(
                 workoutName: config.title,

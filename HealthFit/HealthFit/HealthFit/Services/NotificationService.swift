@@ -38,6 +38,15 @@ enum DailyMotivationConfiguration {
     static let scheduledDayCount = 14
 }
 
+/// Lembrete de treino às 18:00 com janela de Live Activity de 3h (até 21:00).
+enum EveningTrainingNudgeConfiguration {
+    static let hour = 18
+    static let minute = 0
+    static let countdownDuration: TimeInterval = 3 * 60 * 60
+    static let notificationIdentifier = "evening_training_nudge"
+    static let category = "EVENING_TRAINING_NUDGE"
+}
+
 /// Lembretes de registro de suplementação: a cada 3h das 06:00 até ≤ 23:30.
 enum SupplementReminderConfiguration {
     static let intervalHours = 3
@@ -123,6 +132,7 @@ final class NotificationService {
     private let dailyMotivationIdentifierPrefix = "daily_motivation_"
     private let dailyAssistantCheckInIdentifier = "daily_assistant_checkin_9am"
     private let dailyEveningAssistantCheckInIdentifier = "daily_assistant_checkin_9pm"
+    private let eveningTrainingNudgeIdentifier = EveningTrainingNudgeConfiguration.notificationIdentifier
     private let healthIconYellowNotifiedDayKey = "healthfit_health_icon_yellow_notified_day"
     private let healthIconRedNotifiedAnchorKey = "healthfit_health_icon_red_notified_anchor"
     private let healthIconRedReminderIdentifier = "health_icon_red_24h"
@@ -275,6 +285,51 @@ final class NotificationService {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: [dailyEveningAssistantCheckInIdentifier]
         )
+    }
+
+    // MARK: - Evening training nudge (18:00)
+
+    /// Agenda o alerta local que “acorda” o app / avisa na tela bloqueada às 18:00.
+    func scheduleEveningTrainingNudge(fireDate: Date, title: String, body: String) {
+        cancelEveningTrainingNudge()
+
+        let interval = fireDate.timeIntervalSinceNow
+        guard interval > 1 else { return }
+
+        scheduleOnPhone(
+            title: title,
+            body: body,
+            category: EveningTrainingNudgeConfiguration.category,
+            identifier: eveningTrainingNudgeIdentifier,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+        )
+    }
+
+    /// Entrega imediata (app em primeiro plano na janela 18:00–21:00).
+    func deliverEveningTrainingNudge(title: String, body: String) {
+        deliverImmediately(
+            title: title,
+            body: body,
+            category: EveningTrainingNudgeConfiguration.category,
+            identifier: "\(eveningTrainingNudgeIdentifier)_now_\(UUID().uuidString)",
+            immediate: true
+        )
+    }
+
+    func cancelEveningTrainingNudge() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [eveningTrainingNudgeIdentifier]
+        )
+        UNUserNotificationCenter.current().removeDeliveredNotifications(
+            withIdentifiers: [eveningTrainingNudgeIdentifier]
+        )
+        UNUserNotificationCenter.current().getDeliveredNotifications { notifications in
+            let ids = notifications
+                .filter { $0.request.identifier.hasPrefix(self.eveningTrainingNudgeIdentifier) }
+                .map(\.request.identifier)
+            guard !ids.isEmpty else { return }
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ids)
+        }
     }
 
     func setAppIconBadgeCount(_ count: Int) {
@@ -566,25 +621,33 @@ final class NotificationService {
         )
     }
 
-    /// Avisa que o treino continua em andamento quando o app vai para segundo plano.
-    func deliverActiveWorkoutBackgroundReminder(
-        workoutTitle: String,
-        exerciseName: String?,
-        sessionId: UUID
-    ) {
-        let exercisePart: String
-        if let exerciseName, !exerciseName.isEmpty {
-            exercisePart = " Exercício atual: \(exerciseName)."
+    /// Feedback imediato ao tentar iniciar outro treino enquanto já há sessão ativa.
+    /// Distinto do antigo lembrete de background “Treino em andamento” (desativado).
+    func deliverActiveWorkoutAlreadyInProgressNotification(activeWorkoutTitle: String) {
+        let title = activeWorkoutTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body: String
+        if title.isEmpty {
+            body = "Você tentou iniciar outro treino, mas já existe um em progresso. Continue ou finalize o treino atual."
         } else {
-            exercisePart = ""
+            body = "Você tentou iniciar outro treino, mas “\(title)” ainda está em progresso. Continue ou finalize o treino atual."
         }
         deliverImmediately(
-            title: "Treino em andamento",
-            body: "\"\(workoutTitle)\" continua ativo.\(exercisePart) Volte ao HealthFit para registrar as séries.",
-            category: "WORKOUT_BACKGROUND",
-            identifier: "workout_background_\(sessionId.uuidString)",
+            title: "Já existe um treino em andamento",
+            body: body,
+            category: "WORKOUT_ALREADY_ACTIVE",
+            identifier: "workout_already_active_\(UUID().uuidString)",
             immediate: true
         )
+    }
+
+    /// Desativado: não envia mais a notificação persistente “Treino em andamento”.
+    /// Mantido como no-op para não quebrar callers; use `cancelActiveWorkoutBackgroundReminder` para limpar entregues.
+    func deliverActiveWorkoutBackgroundReminder(
+        workoutTitle _: String,
+        exerciseName _: String?,
+        sessionId: UUID
+    ) {
+        cancelActiveWorkoutBackgroundReminder(sessionId: sessionId)
     }
 
     func cancelActiveWorkoutBackgroundReminder(sessionId: UUID? = nil) {
@@ -1232,6 +1295,25 @@ final class AppNotificationCenterDelegate: NSObject, UNUserNotificationCenterDel
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        if notification.request.content.categoryIdentifier == EveningTrainingNudgeConfiguration.category {
+            Task { @MainActor in
+                EveningTrainingNudgeService.handleNotificationWake()
+            }
+        }
         completionHandler([.banner, .list, .sound])
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        if response.notification.request.content.categoryIdentifier
+            == EveningTrainingNudgeConfiguration.category {
+            Task { @MainActor in
+                EveningTrainingNudgeService.handleNotificationWake()
+            }
+        }
+        completionHandler()
     }
 }

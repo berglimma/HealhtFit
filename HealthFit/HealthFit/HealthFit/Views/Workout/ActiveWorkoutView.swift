@@ -1001,11 +1001,6 @@ struct RestTimerOverlay: View {
                 }
 
                 if timerService.isAwaitingResumeAcknowledgment {
-                    Text("Notificação e alerta sonoro enviados.\nToque para continuar o treino.")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .multilineTextAlignment(.center)
-
                     Button {
                         timerService.acknowledgeRestAndResume()
                         watchConnectivity.sendRestTimerStop()

@@ -6,6 +6,7 @@ import WidgetKit
 struct HealthFitWidgetsBundle: WidgetBundle {
     var body: some Widget {
         WorkoutLiveActivityWidget()
+        EveningTrainingNudgeLiveActivityWidget()
     }
 }
 
@@ -148,6 +149,101 @@ private struct LockScreenWorkoutLiveActivityView: View {
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.65))
                 }
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+    }
+}
+
+// MARK: - Evening training nudge (18:00)
+
+struct EveningTrainingNudgeLiveActivityWidget: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: EveningTrainingNudgeAttributes.self) { context in
+            LockScreenEveningTrainingNudgeView(state: context.state)
+                .activityBackgroundTint(Color.black.opacity(0.85))
+                .activitySystemActionForegroundColor(.white)
+        } dynamicIsland: { context in
+            DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    HealthFitBrandMark(font: .caption.weight(.semibold), foreground: .green)
+                }
+                DynamicIslandExpandedRegion(.trailing) {
+                    Text(timerInterval: Date.now...max(context.state.countdownEndDate, Date.now.addingTimeInterval(1)),
+                         countsDown: true,
+                         showsHours: true)
+                        .font(.caption.monospacedDigit().weight(.bold))
+                        .foregroundStyle(.orange)
+                        .frame(maxWidth: 72)
+                        .minimumScaleFactor(0.6)
+                }
+                DynamicIslandExpandedRegion(.center) {
+                    Text(context.state.statusMessage)
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    Text(context.state.motivationalMessage)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+            } compactLeading: {
+                Image(systemName: "figure.strengthtraining.traditional")
+                    .foregroundStyle(.green)
+            } compactTrailing: {
+                Text(timerInterval: Date.now...max(context.state.countdownEndDate, Date.now.addingTimeInterval(1)),
+                     countsDown: true,
+                     showsHours: true)
+                    .font(.caption2.monospacedDigit().weight(.bold))
+                    .foregroundStyle(.orange)
+                    .frame(maxWidth: 56)
+                    .minimumScaleFactor(0.5)
+            } minimal: {
+                Image(systemName: "heart.fill")
+                    .foregroundStyle(.green)
+                    .symbolEffect(.pulse, options: .repeating)
+            }
+        }
+    }
+}
+
+private struct LockScreenEveningTrainingNudgeView: View {
+    let state: EveningTrainingNudgeAttributes.ContentState
+
+    var body: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                HealthFitBrandMark()
+
+                Text(state.statusMessage)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+
+                Text(state.motivationalMessage)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(3)
+            }
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(
+                    timerInterval: Date.now...max(state.countdownEndDate, Date.now.addingTimeInterval(1)),
+                    countsDown: true,
+                    showsHours: true
+                )
+                .font(.system(size: 28, weight: .bold, design: .monospaced))
+                .foregroundStyle(.orange)
+                .multilineTextAlignment(.trailing)
+
+                Text("restante")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.orange.opacity(0.8))
             }
         }
         .padding(.horizontal, 18)

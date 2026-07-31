@@ -14,10 +14,13 @@ struct HealthFitApp: App {
     @StateObject private var wellnessService = DailyWellnessService.shared
     @StateObject private var shareCardStore = WorkoutShareCardStore.shared
     @StateObject private var exerciseVideoRepository = ExerciseVideoRepository.shared
+    @ObservedObject private var languageStore = AppLanguageStore.shared
 
     init() {
         AppIconInactivityService.shared.registerBackgroundTasks()
         NotificationService.shared.requestAuthorization()
+        // Garante persistência do padrão pt-BR antes da primeira renderização.
+        _ = AppLanguageStore.shared
     }
 
     var body: some Scene {
@@ -36,6 +39,9 @@ struct HealthFitApp: App {
                 .environmentObject(exerciseVideoRepository)
                 .environmentObject(TrainingNutritionSyncService.shared)
                 .environmentObject(BodyEvolutionService.shared)
+                .environmentObject(languageStore)
+                .environment(\.locale, languageStore.locale)
+                .id(languageStore.language.rawValue)
                 .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     _ = SocialSignInService.handleIncomingURL(url)

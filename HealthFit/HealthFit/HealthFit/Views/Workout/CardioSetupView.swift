@@ -376,7 +376,7 @@ struct CardioSetupView: View {
 
     private var startButton: some View {
         Button {
-            workoutStore.startCardioSession(config: config)
+            guard workoutStore.startCardioSession(config: config) else { return }
             watchConnectivity.startCardioOnWatch(
                 workoutName: config.title,
                 targetSeconds: config.targetDurationSeconds,

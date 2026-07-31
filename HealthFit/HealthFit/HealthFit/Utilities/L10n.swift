@@ -3,79 +3,85 @@ import Foundation
 /// Chaves de localização (pt-BR, en, es, fr).
 enum L10n {
     static func tr(_ key: String) -> String {
-        String(localized: String.LocalizationValue(key))
+        let code = UserDefaults.standard.string(forKey: AppLanguage.storageKey)
+        let language = AppLanguage.resolved(fromStoredCode: code)
+        return String(localized: String.LocalizationValue(key), locale: language.locale)
     }
 
     enum Tab {
-        static let home = tr("tab.home")
-        static let workouts = tr("tab.workouts")
-        static let nutrition = tr("tab.nutrition")
-        static let assistant = tr("tab.assistant")
-        static let profile = tr("tab.profile")
+        static var home: String { tr("tab.home") }
+        static var workouts: String { tr("tab.workouts") }
+        static var nutrition: String { tr("tab.nutrition") }
+        static var assistant: String { tr("tab.assistant") }
+        static var profile: String { tr("tab.profile") }
     }
 
     enum Auth {
-        static let appTagline = tr("auth.app_tagline")
-        static let email = tr("auth.email")
-        static let emailPlaceholder = tr("auth.email_placeholder")
-        static let password = tr("auth.password")
-        static let passwordPlaceholder = tr("auth.password_placeholder")
-        static let forgotPassword = tr("auth.forgot_password")
-        static let signIn = tr("auth.sign_in")
-        static let createAccount = tr("auth.create_account")
-        static let createAccountSubtitle = tr("auth.create_account_subtitle")
-        static let registerTitle = tr("auth.register_title")
-        static let registerSubtitle = tr("auth.register_subtitle")
-        static let fullName = tr("auth.full_name")
-        static let confirmPassword = tr("auth.confirm_password")
-        static let biotype = tr("auth.biotype")
-        static let goal = tr("auth.goal")
-        static let acceptTerms = tr("auth.accept_terms")
-        static let register = tr("auth.register")
-        static let continueGoogle = tr("auth.continue_google")
-        static let continueApple = tr("auth.continue_apple")
-        static let or = tr("auth.or")
-        static let resetTitle = tr("auth.reset_title")
-        static let resetSubtitle = tr("auth.reset_subtitle")
-        static let resetSend = tr("auth.reset_send")
-        static let close = tr("auth.close")
+        static var appTagline: String { tr("auth.app_tagline") }
+        static var email: String { tr("auth.email") }
+        static var emailPlaceholder: String { tr("auth.email_placeholder") }
+        static var password: String { tr("auth.password") }
+        static var passwordPlaceholder: String { tr("auth.password_placeholder") }
+        static var forgotPassword: String { tr("auth.forgot_password") }
+        static var signIn: String { tr("auth.sign_in") }
+        static var createAccount: String { tr("auth.create_account") }
+        static var createAccountSubtitle: String { tr("auth.create_account_subtitle") }
+        static var registerTitle: String { tr("auth.register_title") }
+        static var registerSubtitle: String { tr("auth.register_subtitle") }
+        static var fullName: String { tr("auth.full_name") }
+        static var confirmPassword: String { tr("auth.confirm_password") }
+        static var biotype: String { tr("auth.biotype") }
+        static var goal: String { tr("auth.goal") }
+        static var acceptTerms: String { tr("auth.accept_terms") }
+        static var register: String { tr("auth.register") }
+        static var continueGoogle: String { tr("auth.continue_google") }
+        static var continueApple: String { tr("auth.continue_apple") }
+        static var or: String { tr("auth.or") }
+        static var resetTitle: String { tr("auth.reset_title") }
+        static var resetSubtitle: String { tr("auth.reset_subtitle") }
+        static var resetSend: String { tr("auth.reset_send") }
+        static var close: String { tr("auth.close") }
     }
 
     enum Common {
-        static let yes = tr("common.yes")
-        static let no = tr("common.no")
-        static let cancel = tr("common.cancel")
-        static let save = tr("common.save")
-        static let ok = tr("common.ok")
-        static let loading = tr("common.loading")
+        static var yes: String { tr("common.yes") }
+        static var no: String { tr("common.no") }
+        static var cancel: String { tr("common.cancel") }
+        static var save: String { tr("common.save") }
+        static var ok: String { tr("common.ok") }
+        static var loading: String { tr("common.loading") }
     }
 
     enum Profile {
-        static let personalTrainer = tr("profile.personal_trainer")
-        static let hasPersonalTrainer = tr("profile.has_personal_trainer")
-        static let nutritionist = tr("profile.nutritionist")
-        static let hasNutritionist = tr("profile.has_nutritionist")
-        static let trainerName = tr("profile.trainer_name")
-        static let trainerEmail = tr("profile.trainer_email")
-        static let nutritionistName = tr("profile.nutritionist_name")
-        static let nutritionistEmail = tr("profile.nutritionist_email")
+        static var personalTrainer: String { tr("profile.personal_trainer") }
+        static var hasPersonalTrainer: String { tr("profile.has_personal_trainer") }
+        static var nutritionist: String { tr("profile.nutritionist") }
+        static var hasNutritionist: String { tr("profile.has_nutritionist") }
+        static var trainerName: String { tr("profile.trainer_name") }
+        static var trainerEmail: String { tr("profile.trainer_email") }
+        static var nutritionistName: String { tr("profile.nutritionist_name") }
+        static var nutritionistEmail: String { tr("profile.nutritionist_email") }
+    }
+
+    enum Settings {
+        static var language: String { tr("settings.language") }
     }
 
     enum Workout {
-        static let strength = tr("workout.section.strength")
-        static let home = tr("workout.section.home")
-        static let cardio = tr("workout.section.cardio")
-        static let meditation = tr("workout.section.meditation")
-        static let mobility = tr("workout.mobility")
-        static let homeTitle = tr("workout.home_title")
-        static let male = tr("workout.male")
-        static let female = tr("workout.female")
+        static var strength: String { tr("workout.section.strength") }
+        static var home: String { tr("workout.section.home") }
+        static var cardio: String { tr("workout.section.cardio") }
+        static var meditation: String { tr("workout.section.meditation") }
+        static var mobility: String { tr("workout.mobility") }
+        static var homeTitle: String { tr("workout.home_title") }
+        static var male: String { tr("workout.male") }
+        static var female: String { tr("workout.female") }
     }
 
     enum Nutrition {
-        static let sendReport = tr("nutrition.send_report")
-        static let mealCompleted = tr("nutrition.meal_completed")
-        static let markCompleted = tr("nutrition.mark_completed")
-        static let markIncomplete = tr("nutrition.mark_incomplete")
+        static var sendReport: String { tr("nutrition.send_report") }
+        static var mealCompleted: String { tr("nutrition.meal_completed") }
+        static var markCompleted: String { tr("nutrition.mark_completed") }
+        static var markIncomplete: String { tr("nutrition.mark_incomplete") }
     }
 }

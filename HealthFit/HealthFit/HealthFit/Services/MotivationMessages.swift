@@ -119,6 +119,30 @@ enum MotivationMessages {
         return "Bom dia, HealthFit ☀️"
     }
 
+    /// Motivação do lembrete das 18:00 — uma frase por dia da semana (Domingo…Sábado).
+    static func eveningTrainingNudgeMessage(for date: Date = .now) -> String {
+        let weekday = Calendar.current.component(.weekday, from: date)
+        // 1 = domingo … 7 = sábado
+        switch weekday {
+        case 1:
+            return "Domingo ainda dá tempo: um treino leve fecha a semana com orgulho."
+        case 2:
+            return "Segunda pede ação. Não deixe o dia acabar sem treinar!"
+        case 3:
+            return "Terça é ritmo: mantenha a sequência e fortaleça o hábito."
+        case 4:
+            return "Quarta no meio do caminho — um treino agora muda o restante da semana."
+        case 5:
+            return "Quinta de virada: treine com presença e chegue forte no fim de semana."
+        case 6:
+            return "Sextou com disciplina: treine antes de celebrar o fim de semana."
+        case 7:
+            return "Sábado em movimento: um treino curto já faz o FDS valer a pena."
+        default:
+            return "Ainda dá tempo de treinar hoje. Seu corpo agradece!"
+        }
+    }
+
     private static func pick(from messages: [String], on date: Date) -> String {
         guard !messages.isEmpty else { return daily[0] }
         let day = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 1

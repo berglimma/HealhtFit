@@ -54,6 +54,12 @@
 		B1000308 /* WorkoutLiveActivitySync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000308 /* WorkoutLiveActivitySync.swift */; };
 		B1000309 /* WorkoutLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000309 /* WorkoutLiveActivityWidget.swift */; };
 		B1000310 /* WorkoutLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000306 /* WorkoutLiveActivityAttributes.swift */; };
+		B1000400 /* EveningTrainingNudgeAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000400 /* EveningTrainingNudgeAttributes.swift */; };
+		B1000401 /* EveningTrainingNudgeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000401 /* EveningTrainingNudgeController.swift */; };
+		B1000402 /* EveningTrainingNudgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000402 /* EveningTrainingNudgeService.swift */; };
+		B1000403 /* EveningTrainingNudgeAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000400 /* EveningTrainingNudgeAttributes.swift */; };
+		B1000410 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000410 /* AppLanguage.swift */; };
+		B1000411 /* LanguagePickerControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000411 /* LanguagePickerControl.swift */; };
 		B1000311 /* HealthFitWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1000311 /* HealthFitWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 
 		B1000036 /* MotivationMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000039 /* MotivationMessages.swift */; };
@@ -174,6 +180,8 @@
 		B2000009 /* ShoppingCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000018 /* ShoppingCatalogTests.swift */; };
 		B2000010 /* HealthFitUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000020 /* HealthFitUITests.swift */; };
 		B2000011 /* NotificationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000019 /* NotificationServiceTests.swift */; };
+		B2000040 /* EveningTrainingNudgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000040 /* EveningTrainingNudgeTests.swift */; };
+		B2000041 /* AppLanguageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000041 /* AppLanguageTests.swift */; };
 		B2000012 /* ExerciseVideoCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000021 /* ExerciseVideoCatalogTests.swift */; };
 		B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000022 /* PostWorkoutCheckInEngineTests.swift */; };
 		B2000014 /* ExerciseGifCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000023 /* ExerciseGifCatalogTests.swift */; };
@@ -296,6 +304,11 @@
 		F1000307 /* WorkoutLiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityController.swift; sourceTree = "<group>"; };
 		F1000308 /* WorkoutLiveActivitySync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivitySync.swift; sourceTree = "<group>"; };
 		F1000309 /* WorkoutLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityWidget.swift; sourceTree = "<group>"; };
+		F1000400 /* EveningTrainingNudgeAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeAttributes.swift; sourceTree = "<group>"; };
+		F1000401 /* EveningTrainingNudgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeController.swift; sourceTree = "<group>"; };
+		F1000402 /* EveningTrainingNudgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeService.swift; sourceTree = "<group>"; };
+		F1000410 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
+		F1000411 /* LanguagePickerControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguagePickerControl.swift; sourceTree = "<group>"; };
 		F1000310 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000311 /* HealthFitWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HealthFitWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 
@@ -418,6 +431,8 @@
 		F2000017 /* SleepAssessmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepAssessmentTests.swift; sourceTree = "<group>"; };
 		F2000018 /* ShoppingCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingCatalogTests.swift; sourceTree = "<group>"; };
 		F2000019 /* NotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationServiceTests.swift; sourceTree = "<group>"; };
+		F2000040 /* EveningTrainingNudgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeTests.swift; sourceTree = "<group>"; };
+		F2000041 /* AppLanguageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguageTests.swift; sourceTree = "<group>"; };
 		F2000020 /* HealthFitUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitUITests.swift; sourceTree = "<group>"; };
 		F2000021 /* ExerciseVideoCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseVideoCatalogTests.swift; sourceTree = "<group>"; };
 		F2000022 /* PostWorkoutCheckInEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostWorkoutCheckInEngineTests.swift; sourceTree = "<group>"; };
@@ -584,6 +599,9 @@
 				F1000306 /* WorkoutLiveActivityAttributes.swift */,
 				F1000307 /* WorkoutLiveActivityController.swift */,
 				F1000308 /* WorkoutLiveActivitySync.swift */,
+				F1000400 /* EveningTrainingNudgeAttributes.swift */,
+				F1000401 /* EveningTrainingNudgeController.swift */,
+				F1000402 /* EveningTrainingNudgeService.swift */,
 				F1000011 /* WatchConnectivityManager.swift */,
 				F1000012 /* VisionWorkoutService.swift */,
 				F1000039 /* MotivationMessages.swift */,
@@ -740,6 +758,7 @@
 				F1000118 /* LegalLinksView.swift */,
 				F1000126 /* LegalDocumentView.swift */,
 				F1000343 /* PhotoSourcePickers.swift */,
+				F1000411 /* LanguagePickerControl.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -824,6 +843,7 @@
 			isa = PBXGroup;
 			children = (
 				F1000140 /* L10n.swift */,
+				F1000410 /* AppLanguage.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -849,6 +869,8 @@
 				F2000017 /* SleepAssessmentTests.swift */,
 				F2000018 /* ShoppingCatalogTests.swift */,
 				F2000019 /* NotificationServiceTests.swift */,
+				F2000040 /* EveningTrainingNudgeTests.swift */,
+				F2000041 /* AppLanguageTests.swift */,
 				F2000021 /* ExerciseVideoCatalogTests.swift */,
 				F2000023 /* ExerciseGifCatalogTests.swift */,
 				F2000024 /* CustomWorkoutFocusGroupTests.swift */,
@@ -1125,6 +1147,9 @@
 				B1000306 /* WorkoutLiveActivityAttributes.swift in Sources */,
 				B1000307 /* WorkoutLiveActivityController.swift in Sources */,
 				B1000308 /* WorkoutLiveActivitySync.swift in Sources */,
+				B1000400 /* EveningTrainingNudgeAttributes.swift in Sources */,
+				B1000401 /* EveningTrainingNudgeController.swift in Sources */,
+				B1000402 /* EveningTrainingNudgeService.swift in Sources */,
 				B1000011 /* WatchConnectivityManager.swift in Sources */,
 				B1000012 /* VisionWorkoutService.swift in Sources */,
 				B1000013 /* AppTheme.swift in Sources */,
@@ -1208,6 +1233,8 @@
 				B1000123 /* ShoppingReportBuilder.swift in Sources */,
 				B1000131 /* NutritionReportBuilder.swift in Sources */,
 				B1000140 /* L10n.swift in Sources */,
+				B1000410 /* AppLanguage.swift in Sources */,
+				B1000411 /* LanguagePickerControl.swift in Sources */,
 				B1000087 /* ExerciseVideoRepository.swift in Sources */,
 				B1000073 /* ForgotPasswordView.swift in Sources */,
 				B1000075 /* GoogleServiceInfo.swift in Sources */,
@@ -1256,6 +1283,8 @@
 				B2000008 /* SleepAssessmentTests.swift in Sources */,
 				B2000009 /* ShoppingCatalogTests.swift in Sources */,
 				B2000011 /* NotificationServiceTests.swift in Sources */,
+				B2000040 /* EveningTrainingNudgeTests.swift in Sources */,
+				B2000041 /* AppLanguageTests.swift in Sources */,
 				B2000012 /* ExerciseVideoCatalogTests.swift in Sources */,
 				B2000014 /* ExerciseGifCatalogTests.swift in Sources */,
 				B2000015 /* CustomWorkoutFocusGroupTests.swift in Sources */,
@@ -1287,6 +1316,7 @@
 			files = (
 				B1000309 /* WorkoutLiveActivityWidget.swift in Sources */,
 				B1000310 /* WorkoutLiveActivityAttributes.swift in Sources */,
+				B1000403 /* EveningTrainingNudgeAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -9,6 +9,8 @@ final class WorkoutStore: ObservableObject {
     @Published var currentExerciseIndex = 0
     /// Quando true, a UI fullscreen do treino fica fechada e o usuário pode navegar no app.
     @Published var isActiveWorkoutMinimized = false
+    /// Alert ao tentar iniciar outro treino enquanto já há sessão ativa.
+    @Published var showActiveWorkoutConflictAlert = false
     /// Vision AI / câmera aberta — o banner minimizado some para não cobrir os controles.
     @Published private(set) var isVisionCameraPresented = false
     /// Evita repetir a tela de motivação ao retomar o mesmo treino.
@@ -51,6 +53,7 @@ final class WorkoutStore: ObservableObject {
         sessionHistory = []
         workoutSheets = []
         isActiveWorkoutMinimized = false
+        showActiveWorkoutConflictAlert = false
         isVisionCameraPresented = false
         hasShownStartMotivation = false
         hasBoundActiveWorkoutUI = false
@@ -60,6 +63,33 @@ final class WorkoutStore: ObservableObject {
         clearPersistedActiveSession()
         NotificationService.shared.cancelActiveWorkoutAutoEnd()
         NotificationService.shared.cancelActiveWorkoutBackgroundReminder()
+        EveningTrainingNudgeService.cancelAll()
+    }
+
+    static let activeWorkoutConflictAlertTitle = "Já existe um treino em andamento"
+
+    var activeWorkoutConflictAlertMessage: String {
+        guard let title = activeSession?.workoutTitle, !title.isEmpty else {
+            return "Finalize ou continue o treino atual antes de iniciar outro."
+        }
+        return "“\(title)” ainda está em progresso. Finalize ou continue esse treino antes de iniciar outro."
+    }
+
+    /// Bloqueia início de nova sessão se já houver treino ativo (alert + notificação local).
+    @discardableResult
+    func ensureCanStartNewSession() -> Bool {
+        guard activeSession == nil else {
+            presentActiveWorkoutConflictFeedback()
+            return false
+        }
+        return true
+    }
+
+    private func presentActiveWorkoutConflictFeedback() {
+        showActiveWorkoutConflictAlert = true
+        NotificationService.shared.deliverActiveWorkoutAlreadyInProgressNotification(
+            activeWorkoutTitle: activeSession?.workoutTitle ?? "Treino"
+        )
     }
 
     func loadCloudHistory(userId: String) async {
@@ -256,11 +286,14 @@ final class WorkoutStore: ObservableObject {
         return last
     }
 
+    @discardableResult
     func startSession(
         for sheet: WorkoutSheet,
         tookPreWorkout: Bool? = nil,
         startingExerciseIndex: Int = 0
-    ) {
+    ) -> Bool {
+        guard ensureCanStartNewSession() else { return false }
+
         let session = WorkoutSession(
             workoutSheetId: sheet.id,
             workoutTitle: sheet.title,
@@ -291,6 +324,7 @@ final class WorkoutStore: ObservableObject {
         startExerciseTimer()
         persistActiveSession()
         scheduleAutoEnd(for: session)
+        return true
     }
 
     func minimizeActiveWorkout() {
@@ -362,7 +396,10 @@ final class WorkoutStore: ObservableObject {
         return selectExercise(at: index)
     }
 
-    func startCardioSession(config: CardioWorkoutConfig) {
+    @discardableResult
+    func startCardioSession(config: CardioWorkoutConfig) -> Bool {
+        guard ensureCanStartNewSession() else { return false }
+
         stopExerciseTimer()
         let session = WorkoutSession(
             workoutSheetId: config.exercise.id,
@@ -383,9 +420,13 @@ final class WorkoutStore: ObservableObject {
         isExerciseTimerPaused = false
         persistActiveSession()
         scheduleAutoEnd(for: session)
+        return true
     }
 
-    func startMeditationSession(config: MeditationWorkoutConfig) {
+    @discardableResult
+    func startMeditationSession(config: MeditationWorkoutConfig) -> Bool {
+        guard ensureCanStartNewSession() else { return false }
+
         stopExerciseTimer()
         let session = WorkoutSession(
             workoutSheetId: config.topic.id,
@@ -403,6 +444,7 @@ final class WorkoutStore: ObservableObject {
         isExerciseTimerPaused = false
         persistActiveSession()
         scheduleAutoEnd(for: session)
+        return true
     }
 
     func completeExercise() {
@@ -612,6 +654,7 @@ final class WorkoutStore: ObservableObject {
             } else if WeeklyProgressAnalyzer.isMeditationSession(session) {
                 NotificationService.shared.recordMeditationCompleted(at: endedAt)
             }
+            EveningTrainingNudgeService.handleWorkoutCompleted()
         }
 
         PostWorkoutCheckInService.shared.scheduleCheckIn(for: session)

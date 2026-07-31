@@ -14,6 +14,13 @@ struct LoginView: View {
                 AppTheme.background.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
+                    HStack {
+                        Spacer()
+                        LanguagePickerControl(style: .compactMenu)
+                    }
+                    .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                    .padding(.top, 12)
+
                     Spacer()
 
                     VStack(spacing: 12) {
@@ -241,4 +248,5 @@ struct HealthFitTextFieldStyle: TextFieldStyle {
 #Preview {
     LoginView()
         .environmentObject(AuthService())
+        .environmentObject(AppLanguageStore.shared)
 }

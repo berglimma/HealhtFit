@@ -93,6 +93,7 @@ struct ProfileView: View {
                     Section("Legal") {
                         LegalLinksView(style: .list, showsSupportLink: true)
                     }
+                    languageSection
                     accountActionsSection
                 }
             }
@@ -502,6 +503,12 @@ struct ProfileView: View {
             Text(AppInfo.developerCredit)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    private var languageSection: some View {
+        Section(L10n.Settings.language) {
+            LanguagePickerControl(style: .listRow)
         }
     }
 

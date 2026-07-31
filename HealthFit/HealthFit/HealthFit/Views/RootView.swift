@@ -50,6 +50,7 @@ struct RootView: View {
                         // refresh reforça motivação 06:00, água e check-ins.
                         NotificationService.shared.refreshRecurringNotifications()
                         refreshInactivityReminder()
+                        EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
                         _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
                             athleteName: authService.currentUser?.greetingName ?? "Atleta"
                         )
@@ -81,6 +82,7 @@ struct RootView: View {
                     mealPlanService.loadSavedData()
                     NotificationService.shared.refreshRecurringNotifications()
                     refreshInactivityReminder()
+                    EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
                     _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
                         athleteName: authService.currentUser?.greetingName ?? "Atleta"
                     )
@@ -106,13 +108,6 @@ struct RootView: View {
                 timerService.handleAppEnteredBackground()
                 authService.flushProfileToCloudIfNeeded()
                 AppIconInactivityService.shared.handleAppEnteredBackground()
-                if let session = workoutStore.activeSession {
-                    NotificationService.shared.deliverActiveWorkoutBackgroundReminder(
-                        workoutTitle: session.workoutTitle,
-                        exerciseName: workoutStore.currentExercise?.name,
-                        sessionId: session.id
-                    )
-                }
             default:
                 break
             }
@@ -160,6 +155,7 @@ struct RootView: View {
         workoutStore.configureCloudSync(userId: userId)
         Task {
             await workoutStore.loadCloudHistory(userId: userId)
+            EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
         }
     }
 

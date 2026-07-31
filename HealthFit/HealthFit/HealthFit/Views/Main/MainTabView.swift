@@ -149,6 +149,18 @@ struct MainTabView: View {
         } message: {
             Text(profileReminder.activePrompt?.message ?? "")
         }
+        .alert(
+            WorkoutStore.activeWorkoutConflictAlertTitle,
+            isPresented: $workoutStore.showActiveWorkoutConflictAlert
+        ) {
+            Button("Continuar treino") {
+                workoutStore.resumeActiveWorkout()
+                syncActiveWorkoutPresentation()
+            }
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(workoutStore.activeWorkoutConflictAlertMessage)
+        }
         .task {
             while !Task.isCancelled {
                 checkInService.refreshAssistantBadge()

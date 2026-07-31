@@ -95,7 +95,7 @@ enum ExerciseGifCatalog {
         .legs: "glutes/barbell-full-squat.gif",
         .shoulders: "delts/dumbbell-lateral-raise.gif",
         .arms: "biceps/barbell-curl.gif",
-        .core: "abs/crunch.gif",
+        .core: "abs/crunch-floor.gif",
         .fullBody: "glutes/barbell-deadlift.gif",
     ]
 
@@ -123,7 +123,8 @@ enum ExerciseGifCatalog {
         (["desenvolvimento", "elevacao", "elevação", "arnold"], "delts/dumbbell-lateral-raise.gif"),
         (["encolhimento"], "traps/barbell-shrug.gif"),
         (["face pull"], "delts/cable-standing-rear-delt-row-with-rope.gif"),
-        (["abdominal", "prancha", "mountain", "russian", "bicicleta"], "abs/crunch.gif"),
+        (["bicicleta", "bicycle", "air bike"], "abs/air-bike.gif"),
+        (["abdominal", "prancha", "mountain", "russian"], "abs/crunch-floor.gif"),
         (["polichinelo", "jumping jack", "jack jump"], "cardio/jack-jump-male.gif"),
         (["ponte de gluteos", "ponte de glúteos", "glute bridge"], "glutes/low-glute-bridge-on-floor.gif"),
         (["superman", "hiperextensao", "hiperextensão"], "spine/hyperextension.gif"),
@@ -247,6 +248,7 @@ enum ExerciseGifCatalog {
         "Desenvolvimento na Máquina": "delts/lever-shoulder-press.gif",
         "Crucifixo Inverso no Cabo": "delts/cable-rear-delt-row-with-rope.gif",
         "Prancha": "abs/front-plank-with-twist.gif",
+        "Abdominal Bicicleta": "abs/air-bike.gif",
         "Abdominal Crunch": "abs/band-bicycle-crunch.gif",
         "Abdominal Infra": "abs/assisted-lying-leg-raise-with-lateral-throw-down.gif",
         "Abdominal Oblíquo": "abs/russian-twist.gif",

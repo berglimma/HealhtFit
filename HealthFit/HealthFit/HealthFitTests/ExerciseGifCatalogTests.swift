@@ -29,6 +29,14 @@ final class ExerciseGifCatalogTests: XCTestCase {
         XCTAssertEqual(url?.lastPathComponent, "peito.gif")
     }
 
+    func testAbdominalBicicletaMapsToAirBikeGif() {
+        let path = ExerciseGifCatalog.filePath(
+            forExerciseName: "Abdominal Bicicleta",
+            muscleGroup: .core
+        )
+        XCTAssertEqual(path, "abs/air-bike.gif")
+    }
+
     func testAllCatalogExercisesHaveGifMapping() {
         for (name, _) in ExerciseVideoCatalog.bundledVideos() {
             let group = inferredGroup(for: name)

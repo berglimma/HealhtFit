@@ -43,6 +43,9 @@ final class WorkoutLiveActivityController {
             return
         }
 
+        // Lembrete noturno cede lugar ao treino ativo (só na criação da LA).
+        EveningTrainingNudgeService.handleActiveWorkoutStarted()
+
         let attributes = WorkoutLiveActivityAttributes(sessionId: session.id.uuidString)
         do {
             activity = try Activity.request(
