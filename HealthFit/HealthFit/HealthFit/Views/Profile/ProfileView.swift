@@ -1045,6 +1045,7 @@ struct ProfileView: View {
                 )
                 .font(.subheadline.weight(.semibold))
             }
+            .buttonStyle(.borderless)
         } else if let measuredAt = user.bodyMeasurements.measuredAt {
             let days = BodyMeasurements.daysBetween(measuredAt)
             let remaining = max(BodyMeasurements.comparisonIntervalDays - days, 0)

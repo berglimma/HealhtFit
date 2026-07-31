@@ -29,7 +29,6 @@ struct WorkoutSummaryView: View {
     @State private var showShareSheet = false
     @State private var shareItems: [Any] = []
     @State private var isPreparingShare = false
-    @State private var didStartPostWorkoutFlow = false
     @State private var scrollToShareToken = 0
 
     private let shareCardAnchorID = "workoutShareCard"
@@ -95,9 +94,9 @@ struct WorkoutSummaryView: View {
                 shareCardStore.remember(
                     session: session,
                     athleteName: athleteDisplayName,
-                    motivationLine: shareMotivation
+                    motivationLine: shareMotivation,
+                    recentSessions: workoutStore.sessionHistory
                 )
-                startPostWorkoutFlowIfNeeded()
             }
         }
         .sheet(isPresented: $showShareSheet) {
@@ -157,7 +156,8 @@ struct WorkoutSummaryView: View {
             WorkoutShareCardView(
                 session: session,
                 athleteName: athleteDisplayName,
-                motivationLine: shareMotivation
+                motivationLine: shareMotivation,
+                recentSessions: workoutStore.sessionHistory
             )
             .frame(maxWidth: .infinity)
             .shadow(color: .black.opacity(0.35), radius: 18, y: 10)
@@ -201,7 +201,8 @@ struct WorkoutSummaryView: View {
         let image = WorkoutShareCardRenderer.renderImage(
             session: session,
             athleteName: athleteDisplayName,
-            motivationLine: shareMotivation
+            motivationLine: shareMotivation,
+            recentSessions: workoutStore.sessionHistory
         )
         let caption = WorkoutShareCardRenderer.shareCaption(
             session: session,
@@ -294,23 +295,6 @@ struct WorkoutSummaryView: View {
         if emailWasSent { return "E-mail enviado" }
         if mailDraft != nil { return "Abrindo e-mail..." }
         return "Enviar e-mail para o Personal"
-    }
-
-    private func startPostWorkoutFlowIfNeeded() {
-        guard !didStartPostWorkoutFlow else { return }
-        didStartPostWorkoutFlow = true
-
-        // Ordem: e-mail ao personal (se configurado) → card de compartilhar → Fechar.
-        if let user = authService.currentUser, user.hasPersonalTrainer {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-                guard mailDraft == nil, !emailWasSent else { return }
-                sendReportToTrainer(user: user)
-            }
-        } else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                focusShareCard()
-            }
-        }
     }
 
     private func focusShareCard() {

@@ -62,7 +62,8 @@ final class WorkoutShareCardStore: ObservableObject {
     func remember(
         session: WorkoutSession,
         athleteName: String,
-        motivationLine: String
+        motivationLine: String,
+        recentSessions: [WorkoutSession] = []
     ) {
         if lastCard?.sessionId == session.id, previewImage != nil {
             return
@@ -92,7 +93,8 @@ final class WorkoutShareCardStore: ObservableObject {
         if let image = WorkoutShareCardRenderer.renderImage(
             session: session,
             athleteName: athleteName,
-            motivationLine: motivationLine
+            motivationLine: motivationLine,
+            recentSessions: recentSessions
         ) {
             previewImage = image
             saveImage(image)

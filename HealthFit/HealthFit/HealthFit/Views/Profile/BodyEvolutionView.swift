@@ -135,48 +135,59 @@ struct BodyEvolutionView: View {
     }
 
     private func photoCell(_ slot: BodyPhotoSlot) -> some View {
-        Button {
-            activePickerSlot = slot
-            showNativePhotoPicker = true
-        } label: {
-            VStack(spacing: 6) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(AppTheme.cardBackground)
-                        .aspectRatio(3 / 4, contentMode: .fit)
+        VStack(spacing: 6) {
+            ZStack(alignment: .topTrailing) {
+                Button {
+                    activePickerSlot = slot
+                    showNativePhotoPicker = true
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(AppTheme.cardBackground)
+                            .aspectRatio(3 / 4, contentMode: .fit)
 
-                    if let image = draftImages[slot] {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                    } else if loadingSlots.contains(slot) {
-                        ProgressView()
-                    } else {
-                        VStack(spacing: 6) {
-                            Image(systemName: slot.systemImage)
-                                .font(.title3)
-                            Text("Adicionar")
-                                .font(.caption2)
+                        if let image = draftImages[slot] {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .clipped()
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        } else if loadingSlots.contains(slot) {
+                            ProgressView()
+                        } else {
+                            VStack(spacing: 6) {
+                                Image(systemName: slot.systemImage)
+                                    .font(.title3)
+                                Text("Adicionar")
+                                    .font(.caption2)
+                            }
+                            .foregroundStyle(AppTheme.textSecondary)
                         }
-                        .foregroundStyle(AppTheme.textSecondary)
                     }
+                    .contentShape(RoundedRectangle(cornerRadius: 10))
                 }
-                Text(slot.title)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .lineLimit(1)
-            }
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            if draftImages[slot] != nil {
-                Button("Remover", role: .destructive) {
-                    draftImages[slot] = nil
+                .buttonStyle(.borderless)
+
+                if draftImages[slot] != nil {
+                    Button {
+                        draftImages[slot] = nil
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, .black.opacity(0.55))
+                    }
+                    .buttonStyle(.borderless)
+                    .padding(6)
+                    .accessibilityLabel("Remover foto")
                 }
             }
+
+            Text(slot.title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+                .lineLimit(1)
         }
     }
 
@@ -212,6 +223,7 @@ struct BodyEvolutionView: View {
                         systemImage: "square.and.arrow.up"
                     )
                 }
+                .buttonStyle(.borderless)
                 .disabled(evolutionService.isSaving)
                 .opacity(evolutionService.isSaving ? 0.5 : 1)
 
@@ -224,6 +236,7 @@ struct BodyEvolutionView: View {
                         systemImage: "arrow.left.arrow.right.circle.fill"
                     )
                 }
+                .buttonStyle(.borderless)
                 .disabled(evolutionService.isSaving)
                 .opacity(evolutionService.isSaving ? 0.5 : 1)
 
@@ -372,6 +385,7 @@ private struct BodyEvolutionResultView: View {
     @State private var showShareSheet = false
     @State private var statusMessage: String?
     @State private var isSaving = false
+    @State private var previewImage: UIImage?
 
     private var hasPhotos: Bool {
         !result.previousImages.isEmpty || !result.currentImages.isEmpty
@@ -477,6 +491,16 @@ private struct BodyEvolutionResultView: View {
             .sheet(isPresented: $showShareSheet) {
                 ShareSheet(items: shareItems)
             }
+            .fullScreenCover(isPresented: Binding(
+                get: { previewImage != nil },
+                set: { if !$0 { previewImage = nil } }
+            )) {
+                if let previewImage {
+                    BodyEvolutionPhotoPreview(image: previewImage) {
+                        self.previewImage = nil
+                    }
+                }
+            }
         }
     }
 
@@ -535,23 +559,31 @@ private struct BodyEvolutionResultView: View {
 
     private func photoThumb(_ image: UIImage?, caption: String) -> some View {
         VStack(spacing: 4) {
-            Group {
-                if let image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    Color.gray.opacity(0.25)
-                        .overlay {
-                            Image(systemName: "photo")
-                                .foregroundStyle(AppTheme.textSecondary)
-                        }
+            Button {
+                guard let image else { return }
+                previewImage = image
+            } label: {
+                Group {
+                    if let image {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Color.gray.opacity(0.25)
+                            .overlay {
+                                Image(systemName: "photo")
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+                    }
                 }
+                .frame(maxWidth: .infinity)
+                .frame(height: 160)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .contentShape(RoundedRectangle(cornerRadius: 10))
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 160)
-            .clipped()
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .buttonStyle(.plain)
+            .disabled(image == nil)
 
             Text(caption)
                 .font(.caption2)
@@ -646,6 +678,33 @@ private struct BodyEvolutionResultView: View {
 
 extension BodyEvolutionComparisonResult: Identifiable {
     var id: String { evaluation.id }
+}
+
+private struct BodyEvolutionPhotoPreview: View {
+    let image: UIImage
+    let onClose: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+                .padding()
+                .onTapGesture(perform: onClose)
+        }
+        .overlay(alignment: .topTrailing) {
+            Button(action: onClose) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .white.opacity(0.35))
+                    .padding()
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Fechar")
+        }
+    }
 }
 
 private struct ShareSheet: UIViewControllerRepresentable {
