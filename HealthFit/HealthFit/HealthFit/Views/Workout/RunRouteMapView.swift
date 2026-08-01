@@ -1,13 +1,15 @@
 import MapKit
 import SwiftUI
 
-/// Mapa MapKit com polyline da rota e marcador de início (corrida ativa ou resumo).
+/// Mapa MapKit com polyline colorida por desempenho e marcador de início.
 struct RunRouteMapView: View {
     let routePoints: [RouteCoordinate]
     var userCoordinate: CLLocationCoordinate2D?
     var followUser: Bool = true
     var showsUserLocation: Bool = true
     var height: CGFloat = 220
+    /// Ritmo (corrida) ou velocidade (bike) — mais rápido = verde.
+    var performanceMetric: RoutePerformanceMetric = .pace
 
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
 
@@ -19,11 +21,15 @@ struct RunRouteMapView: View {
         coordinates.first
     }
 
+    private var performanceSegments: [RoutePerformanceSegment] {
+        RoutePerformanceColoring.segments(from: routePoints, metric: performanceMetric)
+    }
+
     var body: some View {
         Map(position: $cameraPosition) {
-            if coordinates.count >= 2 {
-                MapPolyline(coordinates: coordinates)
-                    .stroke(AppTheme.accent, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+            ForEach(performanceSegments) { segment in
+                MapPolyline(coordinates: segment.coordinates)
+                    .stroke(segment.color, style: StrokeStyle(lineWidth: 4.5, lineCap: .round, lineJoin: .round))
             }
 
             if let start = startCoordinate {

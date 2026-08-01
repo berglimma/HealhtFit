@@ -33,6 +33,13 @@ final class PostWorkoutCheckInEngineTests: XCTestCase {
         XCTAssertFalse(PostWorkoutCheckInEngine.isFeelingReply("Qual é meu IMC?"))
         XCTAssertFalse(PostWorkoutCheckInEngine.isFeelingReply("Quanto de proteína comer?"))
         XCTAssertFalse(PostWorkoutCheckInEngine.isFeelingReply("Posso beber álcool?"))
+        XCTAssertFalse(PostWorkoutCheckInEngine.isFeelingReply("Como melhorar meu sono"))
+        XCTAssertFalse(PostWorkoutCheckInEngine.isFeelingReply("O que é ectomorfo"))
+        XCTAssertFalse(PostWorkoutCheckInEngine.isFeelingReply("Quando posso treinar peito de novo"))
+        XCTAssertTrue(PostWorkoutCheckInEngine.looksLikeOffTopicQuestion("Como melhorar meu sono"))
+        XCTAssertTrue(PostWorkoutCheckInEngine.looksLikeOffTopicQuestion("Por que creatina é útil"))
+        XCTAssertTrue(PostWorkoutCheckInEngine.isFeelingReply("Estou bem?"))
+        XCTAssertFalse(PostWorkoutCheckInEngine.isFeelingReply("Estou bem, qual meu IMC?"))
     }
 
     func testReminderMentionsWorkoutTitle() {
@@ -41,6 +48,7 @@ final class PostWorkoutCheckInEngineTests: XCTestCase {
         let reminder = PostWorkoutCheckInEngine.reminderToAnswerFeeling(checkIn: checkIn)
         XCTAssertTrue(reminder.contains("Feminino A"))
         XCTAssertTrue(reminder.localizedCaseInsensitiveContains("se sentindo"))
+        XCTAssertTrue(reminder.hasPrefix("Quando puder, me responde também:"))
     }
 
     func testOpeningMessageMentionsWorkoutTitle() {

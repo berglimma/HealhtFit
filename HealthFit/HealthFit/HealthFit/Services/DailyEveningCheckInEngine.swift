@@ -130,7 +130,6 @@ enum DailyEveningCheckInEngine {
     static func isDayFeelingReply(_ text: String) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
-        if PostWorkoutCheckInEngine.looksLikeOffTopicQuestion(trimmed) { return false }
 
         let normalized = trimmed
             .lowercased()
@@ -149,14 +148,24 @@ enum DailyEveningCheckInEngine {
             "otimo", "bem", "dificil", "cansativ", "desanim", "treinei", "nao treinei",
             "faltei", "produtivo", "ruim", "pesado", "me sinto", "estou", "foi "
         ]
-        if signals.contains(where: { normalized.contains($0) }) { return true }
+        let hasFeelingSignal = signals.contains(where: { normalized.contains($0) })
+
+        if PostWorkoutCheckInEngine.looksLikeOffTopicQuestion(trimmed) {
+            let shortFeelingWithQuestionMark = hasFeelingSignal
+                && trimmed.count <= 40
+                && !PostWorkoutCheckInEngine.hasStandaloneQuestionContent(normalized)
+            if !shortFeelingWithQuestionMark, trimmed.contains("?") || !hasFeelingSignal {
+                return false
+            }
+        }
+
+        if hasFeelingSignal { return true }
         return trimmed.count <= 48
     }
 
     static func isRestReadinessReply(_ text: String) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
-        if PostWorkoutCheckInEngine.looksLikeOffTopicQuestion(trimmed) { return false }
 
         let normalized = trimmed
             .lowercased()
@@ -175,22 +184,31 @@ enum DailyEveningCheckInEngine {
             "pronto", "sono", "dormir", "agitado", "dor", "ansios", "cansado",
             "descans", "inquiet", "me sinto", "estou"
         ]
-        if signals.contains(where: { normalized.contains($0) }) { return true }
+        let hasFeelingSignal = signals.contains(where: { normalized.contains($0) })
+
+        if PostWorkoutCheckInEngine.looksLikeOffTopicQuestion(trimmed) {
+            let shortFeelingWithQuestionMark = hasFeelingSignal
+                && trimmed.count <= 40
+                && !PostWorkoutCheckInEngine.hasStandaloneQuestionContent(normalized)
+            if !shortFeelingWithQuestionMark, trimmed.contains("?") || !hasFeelingSignal {
+                return false
+            }
+        }
+
+        if hasFeelingSignal { return true }
         return trimmed.count <= 48
     }
 
     static func reminderToAnswerDayFeeling() -> String {
-        """
-        E, voltando ao check-in da noite: como foi seu dia além dos treinos — humor, energia e sensações?
-        Pode responder com sinceridade (ou usar uma das sugestões).
-        """
+        PostWorkoutCheckInEngine.pendingQuestionReminder(
+            "como foi seu dia além dos treinos — humor, energia e sensações?"
+        )
     }
 
     static func reminderToAnswerRestReadiness() -> String {
-        """
-        E, voltando à pergunta: como está seu corpo e mente agora para descansar?
-        Pode responder com sinceridade (ou usar uma das sugestões).
-        """
+        PostWorkoutCheckInEngine.pendingQuestionReminder(
+            "como está seu corpo e mente agora para descansar?"
+        )
     }
 
     static func classifyRestReadiness(_ text: String) -> DailyEveningRestReadiness {

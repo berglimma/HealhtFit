@@ -100,12 +100,18 @@ struct ExerciseDemoGifView: View {
             reloadGIF()
         }
         .onChange(of: loadState) { _, newState in
-            guard newState == .failed,
-                  let primary = primaryURL,
-                  let fallback = fallbackURL,
-                  activeURL == primary else { return }
-            activeURL = fallback
-            loadState = .loading
+            if newState == .failed,
+               let primary = primaryURL,
+               let fallback = fallbackURL,
+               activeURL == primary {
+                activeURL = fallback
+                loadState = .loading
+                return
+            }
+            // Demo quebrada: não segure o cronômetro do exercício para sempre.
+            if newState == .failed, autoAdvanceAfterOneLoop {
+                onDemoFinished?()
+            }
         }
     }
 

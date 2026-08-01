@@ -1888,8 +1888,11 @@ final class HealthAssistantService: ObservableObject {
         switch workoutBuilderPhase {
         case .askingGender:
             guard let gender = AssistantWorkoutBuilder.parseGender(from: text) else {
-                deliverDelayedWorkoutBuilderMessage(
-                    "Não entendi o perfil. Responda **Masculino** ou **Feminino**."
+                divertOrRepromptWorkoutBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: "deseja treino **Masculino** ou **Feminino**?",
+                    fallback: "Não entendi o perfil. Responda **Masculino** ou **Feminino**."
                 )
                 return
             }
@@ -1904,8 +1907,11 @@ final class HealthAssistantService: ObservableObject {
 
         case .askingHomeOnly:
             guard let homeOnly = AssistantWorkoutBuilder.parseHomeOnly(from: text) else {
-                deliverDelayedWorkoutBuilderMessage(
-                    "Prefere treinar só em casa ou na academia? Responda **Sim, só em casa** ou **Não, na academia**."
+                divertOrRepromptWorkoutBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: "você prefere treinar **só em casa** ou **na academia**?",
+                    fallback: "Prefere treinar só em casa ou na academia? Responda **Sim, só em casa** ou **Não, na academia**."
                 )
                 return
             }
@@ -1921,8 +1927,11 @@ final class HealthAssistantService: ObservableObject {
 
         case .askingAlreadyTrains:
             guard let alreadyTrains = AssistantWorkoutBuilder.parseAlreadyTrains(from: text) else {
-                deliverDelayedWorkoutBuilderMessage(
-                    "Me diga se você já treina: **Sim, já treino** ou **Não, ainda não**."
+                divertOrRepromptWorkoutBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: "você **já treina** atualmente?",
+                    fallback: "Me diga se você já treina: **Sim, já treino** ou **Não, ainda não**."
                 )
                 return
             }
@@ -1951,11 +1960,17 @@ final class HealthAssistantService: ObservableObject {
 
         case .askingFirstTimeGym:
             guard let isFirstTime = AssistantWorkoutBuilder.parseFirstTimeAtGym(from: text) else {
+                let pending = draftWorkoutLocation == .homeOnly
+                    ? "é a sua **primeira vez** com treinos estruturados em casa?"
+                    : "é a sua **primeira vez na academia**?"
                 let hint = draftWorkoutLocation == .homeOnly
                     ? "É a primeira vez treinando em casa?"
                     : "É a primeira vez na academia?"
-                deliverDelayedWorkoutBuilderMessage(
-                    "\(hint) Responda **Sim, primeira vez** ou **Não, já treinei antes**."
+                divertOrRepromptWorkoutBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: pending,
+                    fallback: "\(hint) Responda **Sim, primeira vez** ou **Não, já treinei antes**."
                 )
                 return
             }
@@ -1982,8 +1997,11 @@ final class HealthAssistantService: ObservableObject {
 
         case .askingExperienceLevel:
             guard let level = AssistantTrainingExperience.parseLevel(from: text) else {
-                deliverDelayedWorkoutBuilderMessage(
-                    "Escolha o nível: **Iniciante**, **Intermediário** ou **Avançado**."
+                divertOrRepromptWorkoutBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: "qual o seu nível hoje — **Iniciante**, **Intermediário** ou **Avançado**?",
+                    fallback: "Escolha o nível: **Iniciante**, **Intermediário** ou **Avançado**."
                 )
                 return
             }
@@ -2000,8 +2018,11 @@ final class HealthAssistantService: ObservableObject {
 
         case .askingFocus:
             guard let focus = AssistantWorkoutGoalFocus.parse(from: text) else {
-                deliverDelayedWorkoutBuilderMessage(
-                    "Escolha um foco: **Ganho de massa**, **Resistência** ou **Perda de gordura**."
+                divertOrRepromptWorkoutBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: "qual o foco do treino — **Ganho de massa**, **Resistência** ou **Perda de gordura**?",
+                    fallback: "Escolha um foco: **Ganho de massa**, **Resistência** ou **Perda de gordura**."
                 )
                 return
             }
@@ -2043,8 +2064,11 @@ final class HealthAssistantService: ObservableObject {
             }
 
             guard AssistantWorkoutBuilder.isAffirmative(text) else {
-                deliverDelayedWorkoutBuilderMessage(
-                    "Para continuar, responda **Sim, autorizo** ou **Não, cancelar**."
+                divertOrRepromptWorkoutBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: "posso gerar a ficha? Responda **Sim, autorizo** ou **Não, cancelar**.",
+                    fallback: "Para continuar, responda **Sim, autorizo** ou **Não, cancelar**."
                 )
                 return
             }
@@ -2092,6 +2116,34 @@ final class HealthAssistantService: ObservableObject {
 
         case .none:
             break
+        }
+    }
+
+    /// Se a mensagem parece pergunta nova, responde primeiro e lembra a pergunta pendente do fluxo.
+    private func divertOrRepromptWorkoutBuilder(
+        _ text: String,
+        context: HealthAssistantContext,
+        pendingQuestion: String,
+        fallback: String
+    ) {
+        guard PostWorkoutCheckInEngine.looksLikeOffTopicQuestion(text) else {
+            deliverDelayedWorkoutBuilderMessage(fallback)
+            return
+        }
+
+        isTyping = true
+        replyTask?.cancel()
+        replyTask = Task {
+            do {
+                try await Task.sleep(for: Self.replyDelay)
+                guard !Task.isCancelled else { return }
+                let answer = HealthAssistantEngine.answer(for: text, context: context)
+                let reminder = PostWorkoutCheckInEngine.pendingQuestionReminder(pendingQuestion)
+                deliverAssistantMessage("\(answer)\n\n\(reminder)")
+                isTyping = false
+            } catch {
+                isTyping = false
+            }
         }
     }
 

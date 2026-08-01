@@ -1186,9 +1186,6 @@
     "Cardápio atualizado" : {
 
     },
-    "Cardio" : {
-
-    },
     "Carga recomendada" : {
 
     },
@@ -1508,9 +1505,6 @@
         }
       }
     },
-    "Corrida" : {
-
-    },
     "Corrida livre — encerre quando quiser · Ritmo ref. %@" : {
 
     },
@@ -1584,6 +1578,9 @@
 
     },
     "Deseja salvar este PDF de medidas em Arquivos (ou compartilhar)? O arquivo fica só no seu dispositivo se você escolher Arquivos." : {
+
+    },
+    "Desempenho" : {
 
     },
     "Desempenho Semanal" : {
@@ -1846,6 +1843,9 @@
     "Finalizar Meditação" : {
 
     },
+    "Finalizar Pedal" : {
+
+    },
     "Firebase não configurado. Substitua o GoogleService-Info.plist pelo arquivo do Firebase Console." : {
 
     },
@@ -1958,6 +1958,9 @@
     "Iniciar Meditação" : {
 
     },
+    "Iniciar Pedal" : {
+
+    },
     "Iniciar Treino" : {
 
     },
@@ -2009,6 +2012,9 @@
     "Mais comprados" : {
 
     },
+    "Mais rápido" : {
+
+    },
     "Mais registrados" : {
 
     },
@@ -2052,6 +2058,9 @@
 
     },
     "Melhor marca anterior" : {
+
+    },
+    "Melhor ritmo" : {
 
     },
     "Meta %@ km" : {
@@ -2397,6 +2406,9 @@
 
     },
     "Ou escolha uma meta em quilômetros:" : {
+
+    },
+    "Outdoor com GPS" : {
 
     },
     "P:%lldg C:%lldg" : {
@@ -2893,7 +2905,13 @@
     "Ritmo de referência: %@" : {
 
     },
+    "ROTA" : {
+
+    },
     "Rota da corrida" : {
+
+    },
+    "Rota do pedal" : {
 
     },
     "Rotinas de mobilidade voltadas à musculação, com GIFs na execução" : {

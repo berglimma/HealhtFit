@@ -17,6 +17,11 @@ enum KeyboardDismiss {
             for: nil
         )
     }
+
+    /// Publisher for system keyboard hide — use to clear FocusState / custom insets.
+    static var willHidePublisher: NotificationCenter.Publisher {
+        NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)
+    }
 }
 
 private struct NumericKeyboardDismissModifier: ViewModifier {

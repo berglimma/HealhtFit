@@ -40,7 +40,10 @@ final class WorkoutStore: ObservableObject {
         "Encerrado automaticamente após 2h30 sem finalização (inatividade)."
     private var exerciseTimer: Timer?
     private var exerciseLastProgressAt: Date?
+    private var lastActivePersistAt: Date?
     private var cloudUserId: String?
+    /// Persistência no tick do cronômetro (evita JSON+UserDefaults a cada 1s travando a UI).
+    private static let activePersistMinInterval: TimeInterval = 15
 
     func configureCloudSync(userId: String?) {
         cloudUserId = userId
@@ -64,6 +67,7 @@ final class WorkoutStore: ObservableObject {
         NotificationService.shared.cancelActiveWorkoutAutoEnd()
         NotificationService.shared.cancelActiveWorkoutBackgroundReminder()
         EveningTrainingNudgeService.cancelAll()
+        WorkoutLiveActivitySync.end()
     }
 
     static let activeWorkoutConflictAlertTitle = "Já existe um treino em andamento"
@@ -324,6 +328,7 @@ final class WorkoutStore: ObservableObject {
         startExerciseTimer()
         persistActiveSession()
         scheduleAutoEnd(for: session)
+        EveningTrainingNudgeService.handleActiveWorkoutStarted()
         return true
     }
 
@@ -420,6 +425,7 @@ final class WorkoutStore: ObservableObject {
         isExerciseTimerPaused = false
         persistActiveSession()
         scheduleAutoEnd(for: session)
+        EveningTrainingNudgeService.handleActiveWorkoutStarted()
         return true
     }
 
@@ -444,6 +450,7 @@ final class WorkoutStore: ObservableObject {
         isExerciseTimerPaused = false
         persistActiveSession()
         scheduleAutoEnd(for: session)
+        EveningTrainingNudgeService.handleActiveWorkoutStarted()
         return true
     }
 
@@ -498,7 +505,7 @@ final class WorkoutStore: ObservableObject {
     }
 
     func handleAppEnteredBackground() {
-        catchUpExerciseElapsedFromWallClock()
+        catchUpExerciseElapsedFromWallClock(persist: true)
         persistActiveSession()
     }
 
@@ -513,6 +520,24 @@ final class WorkoutStore: ObservableObject {
 
     var allExercisesCompleted: Bool {
         !exerciseRecords.isEmpty && exerciseRecords.allSatisfy(\.isCompleted)
+    }
+
+    /// Tempo vivo do exercício atual (relógio do sistema) — seguro para TimelineView.
+    func liveExerciseElapsedSeconds(at date: Date = Date()) -> Int {
+        guard currentExerciseIndex < exerciseRecords.count else { return 0 }
+        let recorded = exerciseRecords[currentExerciseIndex].elapsedSeconds
+        guard !isExerciseTimerPaused,
+              !exerciseRecords[currentExerciseIndex].isCompleted,
+              let last = exerciseLastProgressAt else {
+            return recorded
+        }
+        return recorded + max(0, Int(date.timeIntervalSince(last)))
+    }
+
+    /// Duração total do treino ativo desde `startedAt`.
+    func liveWorkoutElapsedSeconds(at date: Date = Date()) -> Int {
+        guard let startedAt = activeSession?.startedAt else { return 0 }
+        return max(0, Int(date.timeIntervalSince(startedAt)))
     }
 
     private func startExerciseTimer() {
@@ -531,10 +556,12 @@ final class WorkoutStore: ObservableObject {
 
     private func tickCurrentExercise() {
         autoEndStaleActiveSessionIfNeeded()
-        catchUpExerciseElapsedFromWallClock()
+        catchUpExerciseElapsedFromWallClock(persist: false)
+        exerciseElapsedTick.send(liveExerciseElapsedSeconds())
+        persistActiveSessionIfNeeded(force: false)
     }
 
-    private func catchUpExerciseElapsedFromWallClock() {
+    private func catchUpExerciseElapsedFromWallClock(persist: Bool = true) {
         guard activeSession != nil else { return }
         guard !isExerciseTimerPaused,
               currentExerciseIndex < exerciseRecords.count,
@@ -551,6 +578,17 @@ final class WorkoutStore: ObservableObject {
 
         exerciseRecords[currentExerciseIndex].elapsedSeconds += delta
         exerciseElapsedTick.send(exerciseRecords[currentExerciseIndex].elapsedSeconds)
+        if persist {
+            persistActiveSession()
+        }
+    }
+
+    private func persistActiveSessionIfNeeded(force: Bool) {
+        let now = Date()
+        if !force, let last = lastActivePersistAt,
+           now.timeIntervalSince(last) < Self.activePersistMinInterval {
+            return
+        }
         persistActiveSession()
     }
 
@@ -688,6 +726,7 @@ final class WorkoutStore: ObservableObject {
         } else {
             UserDefaults.standard.removeObject(forKey: exerciseLastProgressKey)
         }
+        lastActivePersistAt = Date()
     }
 
     private func clearPersistedActiveSession() {
@@ -698,6 +737,7 @@ final class WorkoutStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: activePausedKey)
         UserDefaults.standard.removeObject(forKey: exerciseLastProgressKey)
         exerciseLastProgressAt = nil
+        lastActivePersistAt = nil
     }
 
     private func restorePersistedActiveSessionIfNeeded() {
@@ -733,6 +773,7 @@ final class WorkoutStore: ObservableObject {
         }
         scheduleAutoEnd(for: session)
         persistActiveSession()
+        EveningTrainingNudgeService.handleActiveWorkoutStarted()
     }
 
     var lastCompletedWorkoutAt: Date? {

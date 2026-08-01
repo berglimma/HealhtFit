@@ -50,10 +50,14 @@ struct RootView: View {
                         // refresh reforça motivação 06:00, água e check-ins.
                         NotificationService.shared.refreshRecurringNotifications()
                         refreshInactivityReminder()
-                        EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
                         _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
                             athleteName: authService.currentUser?.greetingName ?? "Atleta"
                         )
+                        WorkoutLiveActivitySync.reconcile(
+                            workoutStore: workoutStore,
+                            timerService: timerService
+                        )
+                        EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
                     }
                     .sheet(isPresented: $wellnessService.showSleepCheckIn) {
                         DailyWellnessCheckInView()
@@ -72,6 +76,8 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
+                // Clear any residual keyboard avoidance that can leave bottom chrome mid-screen.
+                KeyboardDismiss.hide()
                 if authService.isAuthenticated {
                     prepareWelcomeIfAuthenticated(trigger: .returnFromBackground)
                     wellnessService.configure(for: authService.currentUser)
@@ -82,32 +88,35 @@ struct RootView: View {
                     mealPlanService.loadSavedData()
                     NotificationService.shared.refreshRecurringNotifications()
                     refreshInactivityReminder()
-                    EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
                     _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
                         athleteName: authService.currentUser?.greetingName ?? "Atleta"
                     )
+                    workoutStore.handleAppBecameActive()
+                    timerService.handleAppBecameActive()
+                    WorkoutLiveActivitySync.reconcile(
+                        workoutStore: workoutStore,
+                        timerService: timerService
+                    )
+                    EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
+                    if let session = workoutStore.activeSession {
+                        NotificationService.shared.cancelActiveWorkoutBackgroundReminder(sessionId: session.id)
+                    }
+                    AppIconInactivityService.shared.handleAppBecameActive()
                     Task {
                         await exerciseVideoRepository.bootstrapRemoteCatalog()
                         await healthKitManager.refreshFromHealthKit()
                     }
+                } else {
+                    WorkoutLiveActivitySync.end()
                 }
-                workoutStore.handleAppBecameActive()
-                timerService.handleAppBecameActive()
-                if workoutStore.activeSession != nil {
-                    WorkoutLiveActivitySync.push(
-                        workoutStore: workoutStore,
-                        timerService: timerService
-                    )
+            case .inactive, .background:
+                KeyboardDismiss.hide()
+                if phase == .background {
+                    workoutStore.handleAppEnteredBackground()
+                    timerService.handleAppEnteredBackground()
+                    authService.flushProfileToCloudIfNeeded()
+                    AppIconInactivityService.shared.handleAppEnteredBackground()
                 }
-                if let session = workoutStore.activeSession {
-                    NotificationService.shared.cancelActiveWorkoutBackgroundReminder(sessionId: session.id)
-                }
-                AppIconInactivityService.shared.handleAppBecameActive()
-            case .background:
-                workoutStore.handleAppEnteredBackground()
-                timerService.handleAppEnteredBackground()
-                authService.flushProfileToCloudIfNeeded()
-                AppIconInactivityService.shared.handleAppEnteredBackground()
             default:
                 break
             }
@@ -128,6 +137,8 @@ struct RootView: View {
                 welcomeContext = nil
                 workoutStore.configureCloudSync(userId: nil)
                 wellnessService.configureCloudSync(userId: nil)
+                WorkoutLiveActivitySync.end()
+                EveningTrainingNudgeService.cancelAll()
             }
         }
     }

@@ -73,9 +73,12 @@ struct WorkoutSummaryView: View {
                         if !session.routePoints.isEmpty {
                             runRouteSection
                         }
-                        preWorkoutSection
-                        exerciseBreakdown
-                        totalsSection
+                        // Musculação-only: pré-treino, breakdown por exercício e totais de força.
+                        if !isCardioSession {
+                            preWorkoutSection
+                            exerciseBreakdown
+                            totalsSection
+                        }
                         emailSection
                         shareAchievementSection
                             .id(shareCardAnchorID)
@@ -705,7 +708,7 @@ struct WorkoutSummaryView: View {
             HStack {
                 Image(systemName: "map.fill")
                     .foregroundStyle(AppTheme.accent)
-                Text("Rota da corrida")
+                Text(session.isOutdoorCyclingSession ? "Rota do pedal" : "Rota da corrida")
                     .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
@@ -721,8 +724,15 @@ struct WorkoutSummaryView: View {
                 userCoordinate: session.routePoints.last?.coordinate,
                 followUser: false,
                 showsUserLocation: false,
-                height: 220
+                height: 220,
+                performanceMetric: session.routePerformanceMetric
             )
+
+            if session.routePoints.count >= 2 {
+                Text(RoutePerformanceColoring.legendText)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
 
             if let distance = session.completedDistanceKm {
                 Text(String(format: "%.2f km percorridos · %d pontos GPS", distance, session.routePoints.count))

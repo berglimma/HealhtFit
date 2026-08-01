@@ -152,6 +152,9 @@ enum EveningTrainingNudgeService {
             UserDefaults.standard.set(dayKey, forKey: shownDayKey)
         }
 
+        // Nunca iniciar nudge se já houver Live Activity de treino (órfã ou ativa).
+        guard !WorkoutLiveActivityController.shared.hasActiveLiveActivity else { return }
+
         if !EveningTrainingNudgeController.shared.isActive {
             EveningTrainingNudgeController.shared.start(
                 dayKey: dayKey,

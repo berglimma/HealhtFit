@@ -21,12 +21,18 @@ struct ActiveCardioView: View {
     @State private var didCelebrateCalorieGoal = false
     @State private var lastProgressMilestone = -1
 
+    /// Side-effects; display uses wall clock from session start.
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var isRunningSession: Bool { config.isRunningSession }
+    private var isOutdoorGPS: Bool { config.isOutdoorGPSCardio }
+    private var isOutdoorCycling: Bool { config.isOutdoorCyclingSession }
+    private var trackingModality: OutdoorCardioModality {
+        isOutdoorCycling ? .cycling : .running
+    }
 
     private var completedDistanceKm: Double {
-        if isRunningSession, let gpsKm = runTracker.gpsDistanceKmIfAvailable {
+        if isOutdoorGPS, let gpsKm = runTracker.gpsDistanceKmIfAvailable {
             if config.isDistanceRun {
                 return min(gpsKm, config.targetDistanceKm)
             }
@@ -35,14 +41,17 @@ struct ActiveCardioView: View {
         if config.isDistanceRun {
             return min(config.estimatedDistanceKm(elapsedSeconds: elapsedSeconds), config.targetDistanceKm)
         }
+        if isOutdoorCycling {
+            return 0
+        }
         return config.estimatedDistanceKm(elapsedSeconds: elapsedSeconds)
     }
 
-    /// Watch quando disponível; na Corrida, estima por MET × peso × tempo.
+    /// Watch quando disponível; no outdoor, estima por MET × peso × tempo.
     private var liveCalories: Double {
         let watch = max(0, watchConnectivity.watchCalories)
         if watch > 0 { return watch }
-        if isRunningSession {
+        if isOutdoorGPS {
             let weight = authService.currentUser?.weight ?? 70
             let estimated = RunTrackingMath.estimatedCalories(
                 weightKg: weight,
@@ -50,7 +59,8 @@ struct ActiveCardioView: View {
                 activityState: runTracker.activityState,
                 speedMetersPerSecond: runTracker.currentSpeedMetersPerSecond > 0
                     ? runTracker.currentSpeedMetersPerSecond
-                    : nil
+                    : nil,
+                modality: trackingModality
             )
             let paceBased = config.estimatedCalories(for: elapsedSeconds)
             return max(estimated, paceBased * 0.85)
@@ -80,7 +90,7 @@ struct ActiveCardioView: View {
         if config.hasCalorieGoal {
             return calorieProgressClamped
         }
-        if config.isFreeRun {
+        if config.isFreeRun || isOutdoorCycling {
             return 0
         }
         if config.isDistanceRun, config.targetDistanceKm > 0 {
@@ -94,6 +104,12 @@ struct ActiveCardioView: View {
         config.isDistanceRun || config.isFreeRun
     }
 
+    private var navigationTitleText: String {
+        if showsRunningUI { return "Corrida" }
+        if isOutdoorCycling { return config.exercise.name }
+        return "Cardio"
+    }
+
     private var progressRingColor: Color {
         if hasExceededCalorieGoal { return .orange }
         if config.hasCalorieGoal { return AppTheme.accentSecondary }
@@ -101,7 +117,7 @@ struct ActiveCardioView: View {
     }
 
     private var currentPaceSecondsPerKm: Int {
-        if isRunningSession, completedDistanceKm > 0.05 {
+        if isOutdoorGPS, completedDistanceKm > 0.05 {
             return config.paceSecondsPerKm(
                 elapsedSeconds: elapsedSeconds,
                 distanceKm: completedDistanceKm
@@ -116,6 +132,10 @@ struct ActiveCardioView: View {
         )
     }
 
+    private var liveSpeedKmh: Double {
+        max(0, runTracker.currentSpeedMetersPerSecond * 3.6)
+    }
+
     private var liveSteps: Int {
         if runTracker.stepCount > 0 { return runTracker.stepCount }
         return RunTrackingMath.estimatedSteps(distanceKm: completedDistanceKm)
@@ -128,13 +148,13 @@ struct ActiveCardioView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        if isRunningSession {
+                        if isOutdoorGPS {
                             runMapSection
                             activityStateBanner
                             liveTimerBanner
                         }
                         intensityBadge
-                        if !isRunningSession {
+                        if !isOutdoorGPS {
                             exerciseInfo
                         }
                         progressRing
@@ -145,7 +165,7 @@ struct ActiveCardioView: View {
                             progressBanner(message: progressMessage)
                         }
                         metricsRow
-                        if isRunningSession {
+                        if isOutdoorGPS {
                             runExtraMetricsRow
                         }
                         endButton
@@ -154,7 +174,7 @@ struct ActiveCardioView: View {
                     .adaptiveContentWidth()
                 }
             }
-            .navigationTitle(showsRunningUI ? "Corrida" : "Cardio")
+            .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -166,7 +186,7 @@ struct ActiveCardioView: View {
             }
         }
         .onReceive(clock) { _ in
-            elapsedSeconds += 1
+            elapsedSeconds = wallClockElapsedSeconds()
             syncWithWatch()
             updateCalorieMotivation()
             syncWatchData()
@@ -182,10 +202,11 @@ struct ActiveCardioView: View {
             finishedSession = ended
         }
         .onAppear {
+            elapsedSeconds = wallClockElapsedSeconds()
             syncWithWatch()
-            if isRunningSession {
-                runTracker.prepareForRun()
-                runTracker.start()
+            if isOutdoorGPS {
+                runTracker.prepareForSession(modality: trackingModality)
+                runTracker.start(modality: trackingModality)
             }
         }
         .onDisappear {
@@ -231,14 +252,38 @@ struct ActiveCardioView: View {
                     userCoordinate: runTracker.currentLocation?.coordinate,
                     followUser: true,
                     showsUserLocation: true,
-                    height: 240
+                    height: 240,
+                    performanceMetric: config.routePerformanceMetric
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
                         .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
                 )
+                if runTracker.routePoints.count >= 2 {
+                    performanceLegend
+                }
             }
         }
+    }
+
+    private var performanceLegend: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(RoutePerformanceColoring.color(for: .optimal))
+                .frame(width: 7, height: 7)
+            Circle()
+                .fill(RoutePerformanceColoring.color(for: .intermediate))
+                .frame(width: 7, height: 7)
+            Circle()
+                .fill(RoutePerformanceColoring.color(for: .below))
+                .frame(width: 7, height: 7)
+            Text(RoutePerformanceColoring.legendText)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+        }
+        .padding(.horizontal, 4)
     }
 
     private var activityStateBanner: some View {
@@ -263,8 +308,8 @@ struct ActiveCardioView: View {
 
     private var activityStateColor: Color {
         switch runTracker.activityState {
-        case .running: return AppTheme.accent
-        case .walking: return AppTheme.accentSecondary
+        case .running, .hardCycling: return AppTheme.accent
+        case .walking, .lightCycling, .moving: return AppTheme.accentSecondary
         case .stationary: return .gray
         case .unknown: return AppTheme.textSecondary
         }
@@ -272,10 +317,12 @@ struct ActiveCardioView: View {
 
     private var liveTimerBanner: some View {
         VStack(spacing: 4) {
-            Text(DurationFormatting.formatElapsedClock(seconds: elapsedSeconds))
-                .font(.system(size: 44, weight: .bold, design: .monospaced))
-                .foregroundStyle(AppTheme.textPrimary)
-                .contentTransition(.numericText())
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                Text(DurationFormatting.formatElapsedClock(seconds: wallClockElapsedSeconds(at: context.date)))
+                    .font(.system(size: 44, weight: .bold, design: .monospaced))
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .contentTransition(.numericText())
+            }
             Text("Tempo em tempo real")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
@@ -380,7 +427,7 @@ struct ActiveCardioView: View {
                     Text("\(Int(calorieProgressClamped * 100))%")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(AppTheme.accentSecondary)
-                } else if config.isFreeRun || config.isDistanceRun {
+                } else if config.isFreeRun || config.isDistanceRun || isOutdoorCycling {
                     Text(String(format: "%.2f km", completedDistanceKm))
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(AppTheme.textPrimary)
@@ -393,7 +440,7 @@ struct ActiveCardioView: View {
                             .font(.caption)
                             .foregroundStyle(AppTheme.textSecondary)
                     }
-                    if !isRunningSession {
+                    if !isOutdoorGPS {
                         Text(DurationFormatting.formatElapsedClock(seconds: elapsedSeconds))
                             .font(.caption.weight(.semibold).monospaced())
                             .foregroundStyle(AppTheme.accent)
@@ -421,7 +468,7 @@ struct ActiveCardioView: View {
                     Label("Apple Watch", systemImage: "applewatch")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(AppTheme.accent)
-                } else if isRunningSession {
+                } else if isOutdoorGPS {
                     Label("Estimativa ao vivo", systemImage: "flame")
                         .font(.caption2)
                         .foregroundStyle(AppTheme.textSecondary)
@@ -466,7 +513,7 @@ struct ActiveCardioView: View {
                 ProgressView(value: min(liveCalories / max(config.estimatedCalories(for: max(config.targetDurationSeconds, 1)), 1), 1.0))
                     .tint(AppTheme.accentSecondary)
                 Text(
-                    isRunningSession
+                    isOutdoorGPS
                         ? "Calorias ao vivo via Watch ou estimativa MET × peso × tempo."
                         : "Acompanhe a queima em tempo real — dados do relógio quando conectado."
                 )
@@ -532,11 +579,18 @@ struct ActiveCardioView: View {
                 label: "kcal",
                 color: hasExceededCalorieGoal ? .orange : AppTheme.accentSecondary
             )
-            if config.isDistanceRun || isRunningSession {
+            if config.isDistanceRun || (isOutdoorGPS && !isOutdoorCycling) {
                 CardioMetricTile(
                     icon: "speedometer",
                     value: PaceFormatting.format(secondsPerKm: currentPaceSecondsPerKm).replacingOccurrences(of: " /km", with: ""),
                     label: "Ritmo",
+                    color: config.intensity.color
+                )
+            } else if isOutdoorCycling {
+                CardioMetricTile(
+                    icon: "speedometer",
+                    value: String(format: "%.1f", liveSpeedKmh),
+                    label: "km/h",
                     color: config.intensity.color
                 )
             } else if config.hasCalorieGoal {
@@ -559,12 +613,21 @@ struct ActiveCardioView: View {
 
     private var runExtraMetricsRow: some View {
         HStack(spacing: 12) {
-            CardioMetricTile(
-                icon: "figure.walk",
-                value: "\(liveSteps)",
-                label: "Passos",
-                color: AppTheme.accent
-            )
+            if isOutdoorCycling {
+                CardioMetricTile(
+                    icon: "bicycle",
+                    value: String(format: "%.1f", liveSpeedKmh),
+                    label: "km/h",
+                    color: AppTheme.accent
+                )
+            } else {
+                CardioMetricTile(
+                    icon: "figure.walk",
+                    value: "\(liveSteps)",
+                    label: "Passos",
+                    color: AppTheme.accent
+                )
+            }
             CardioMetricTile(
                 icon: "map.fill",
                 value: String(format: "%.2f", completedDistanceKm),
@@ -585,11 +648,20 @@ struct ActiveCardioView: View {
             finishCardio()
         } label: {
             Label(
-                showsRunningUI ? "Finalizar Corrida" : "Finalizar Cardio",
+                showsRunningUI
+                    ? "Finalizar Corrida"
+                    : (isOutdoorCycling ? "Finalizar Pedal" : "Finalizar Cardio"),
                 systemImage: "flag.checkered"
             )
         }
         .buttonStyle(PrimaryButtonStyle())
+    }
+
+    private func wallClockElapsedSeconds(at date: Date = Date()) -> Int {
+        guard let startedAt = workoutStore.activeSession?.startedAt else {
+            return max(0, elapsedSeconds)
+        }
+        return max(0, Int(date.timeIntervalSince(startedAt)))
     }
 
     private func syncWithWatch() {
@@ -663,7 +735,7 @@ struct ActiveCardioView: View {
             if config.hasCalorieGoal, let target = config.targetCalories {
                 return liveCalories >= Double(target) * 0.98
             }
-            if config.isFreeRun {
+            if config.isFreeRun || isOutdoorCycling {
                 return elapsedSeconds >= 60
             }
             if config.isDistanceRun {
@@ -674,13 +746,17 @@ struct ActiveCardioView: View {
 
         session.endedAt = .now
         session.caloriesBurned = liveCalories
-        session.completedDistanceKm = (config.isDistanceRun || config.isFreeRun) ? distanceKm : nil
-        session.averagePaceSecondsPerKm = (config.isDistanceRun || config.isFreeRun) ? pace : nil
+        session.completedDistanceKm = (config.isDistanceRun || config.isFreeRun || isOutdoorGPS) ? distanceKm : nil
+        session.averagePaceSecondsPerKm = (config.isDistanceRun || config.isFreeRun || (isOutdoorGPS && !isOutdoorCycling))
+            ? pace
+            : nil
         session.cardioIntensityLabel = config.intensity.rawValue
         session.targetCalories = config.targetCalories
-        if isRunningSession {
+        if isOutdoorGPS {
             session.routePoints = runTracker.routePoints
-            session.stepCount = liveSteps
+            if isRunningSession {
+                session.stepCount = liveSteps
+            }
         }
         session.exerciseRecords = [
             ExerciseSessionRecord(
@@ -707,8 +783,10 @@ struct ActiveCardioView: View {
         }
 
         let hkActivity: HKWorkoutActivityType = {
-            if config.isRunningSession { return .running }
-            return config.isDistanceRun ? .running : .walking
+            if config.isOutdoorCyclingSession { return .cycling }
+            if config.isRunningSession || config.isDistanceRun { return .running }
+            if config.exercise.isStationaryBike { return .cycling }
+            return .walking
         }()
 
         Task {

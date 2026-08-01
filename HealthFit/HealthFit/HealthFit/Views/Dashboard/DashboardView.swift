@@ -27,10 +27,10 @@ struct DashboardView: View {
     @State private var shareCardSaveAlertMessage = ""
     @State private var showShareCardSaveAlert = false
 
-    /// Live `WorkoutShareCardView` is fixed ~360×464–512; this scale fits dashboard width when expanded.
+    /// Live `WorkoutShareCardView` is fixed ~360×464–568; this scale fits dashboard width when expanded.
     private let shareCardExpandedScale: CGFloat = 0.72
     private var shareCardPreviewHeight: CGFloat {
-        WorkoutShareCardView.expandedTextCardHeight * shareCardExpandedScale
+        WorkoutShareCardView.maxPreviewCardHeight * shareCardExpandedScale
     }
 
     private var healthStatus: WellnessHealthIconStatus {

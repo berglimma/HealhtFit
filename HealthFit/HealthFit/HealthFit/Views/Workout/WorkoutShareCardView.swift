@@ -25,6 +25,10 @@ struct WorkoutShareCardView: View {
         return title.hasPrefix("meditação") || title.hasPrefix("meditacao")
     }
 
+    private var isRunning: Bool {
+        session.isOutdoorGPSCardio
+    }
+
     /// Early-end / inactivity headlines + motivation are longer and need room to wrap.
     private var needsExtraTextSpace: Bool {
         session.endedEarly || session.autoEndedByInactivity
@@ -41,60 +45,257 @@ struct WorkoutShareCardView: View {
     static let cardWidth: CGFloat = 360
     static var standardCardHeight: CGFloat { 464 }
     static var expandedTextCardHeight: CGFloat { 512 }
+    static var runningCardHeight: CGFloat { 540 }
+    static var runningExpandedCardHeight: CGFloat { 568 }
+    /// Extra height when the athlete photo sits below the date.
+    static var runningCardHeightWithPhoto: CGFloat { 588 }
+    static var runningExpandedCardHeightWithPhoto: CGFloat { 616 }
+
+    /// Altura máxima usada no preview do dashboard (cobre corrida + early-end + foto).
+    static var maxPreviewCardHeight: CGFloat { runningExpandedCardHeightWithPhoto }
 
     private var cardHeight: CGFloat {
-        needsExtraTextSpace ? Self.expandedTextCardHeight : Self.standardCardHeight
+        if isRunning {
+            let hasPhoto = profileImage != nil
+            if needsExtraTextSpace {
+                return hasPhoto ? Self.runningExpandedCardHeightWithPhoto : Self.runningExpandedCardHeight
+            }
+            return hasPhoto ? Self.runningCardHeightWithPhoto : Self.runningCardHeight
+        }
+        return needsExtraTextSpace ? Self.expandedTextCardHeight : Self.standardCardHeight
     }
 
     var body: some View {
         ZStack {
             backgroundLayer
 
-            VStack(spacing: needsExtraTextSpace ? 6 : 8) {
-                brandHeader
+            if isRunning {
+                runningCardContent
+            } else {
+                standardCardContent
+            }
+        }
+        .frame(width: Self.cardWidth, height: cardHeight)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+    }
 
-                achievementBadge
+    // MARK: - Standard (força / cardio genérico / meditação)
 
-                Text(headline)
-                    .font(.system(size: headlineFontSize, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
+    private var standardCardContent: some View {
+        VStack(spacing: needsExtraTextSpace ? 6 : 8) {
+            brandHeader
+
+            achievementBadge
+
+            Text(headline)
+                .font(.system(size: headlineFontSize, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
+                .layoutPriority(3)
+
+            if !motivationLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(motivationLine)
+                    .font(.system(size: needsExtraTextSpace ? 11.5 : 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.9))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity)
                     .layoutPriority(3)
-
-                if !motivationLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(motivationLine)
-                        .font(.system(size: needsExtraTextSpace ? 11.5 : 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity)
-                        .layoutPriority(3)
-                }
-
-                Text(session.workoutTitle)
-                    .font(.system(size: needsExtraTextSpace ? 13 : 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color("AccentGreen"))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
-                    .layoutPriority(1)
-
-                summaryChartSection
-                    .layoutPriority(0)
-
-                statsRow
-                    .layoutPriority(0)
-
-                footer
             }
-            .padding(.horizontal, 20)
-            .padding(.top, needsExtraTextSpace ? 12 : 16)
-            .padding(.bottom, needsExtraTextSpace ? 10 : 14)
+
+            Text(session.workoutTitle)
+                .font(.system(size: needsExtraTextSpace ? 13 : 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color("AccentGreen"))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .layoutPriority(1)
+
+            summaryChartSection
+                .layoutPriority(0)
+
+            statsRow
+                .layoutPriority(0)
+
+            footer
         }
-        .frame(width: Self.cardWidth, height: cardHeight)
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .padding(.horizontal, 20)
+        .padding(.top, needsExtraTextSpace ? 12 : 16)
+        .padding(.bottom, needsExtraTextSpace ? 10 : 14)
+    }
+
+    // MARK: - Corrida / pedal outdoor (mapa + troféu dourado + métricas)
+
+    private var runningCardContent: some View {
+        VStack(spacing: needsExtraTextSpace ? 5 : 7) {
+            runningBrandHeader
+
+            runningTrophyBadge
+
+            Text(runningHeadline)
+                .font(.system(size: needsExtraTextSpace ? 17 : 22, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
+                .layoutPriority(3)
+
+            if !motivationLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(motivationLine)
+                    .font(.system(size: needsExtraTextSpace ? 10.5 : 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.88))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(needsExtraTextSpace ? 3 : 2)
+                    .minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
+            }
+
+            Text(session.workoutTitle)
+                .font(.system(size: needsExtraTextSpace ? 12 : 13.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color("AccentGreen"))
+                .multilineTextAlignment(.center)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            ShareCardRouteMapView(
+                routePoints: session.routePoints,
+                distanceKm: session.displayDistanceKm,
+                performanceMetric: session.routePerformanceMetric
+            )
+            .frame(height: needsExtraTextSpace ? 118 : 138)
+            .layoutPriority(2)
+
+            runningStatsGrid
+                .layoutPriority(1)
+
+            footer
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, needsExtraTextSpace ? 10 : 14)
+        .padding(.bottom, needsExtraTextSpace ? 8 : 12)
+    }
+
+    /// Logo + data; foto de perfil só quando existe, alinhada abaixo da data.
+    private var runningBrandHeader: some View {
+        let photoSize: CGFloat = needsExtraTextSpace ? 36 : 44
+
+        return VStack(alignment: .trailing, spacing: 8) {
+            brandHeader
+
+            if let profileImage {
+                Image(uiImage: profileImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: photoSize, height: photoSize)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .strokeBorder(Color.yellow.opacity(0.85), lineWidth: 2)
+                    )
+            }
+        }
+    }
+
+    private var runningHeadline: String {
+        let verb: String = {
+            if session.isOutdoorCyclingSession { return "pedalou" }
+            return "correu"
+        }()
+        if session.autoEndedByInactivity {
+            return "\(displayName) pausou \(session.isOutdoorCyclingSession ? "o pedal" : "a corrida")"
+        }
+        if session.endedEarly {
+            return "\(displayName) \(verb), mas não concluiu"
+        }
+        return "\(displayName) fechou \(session.isOutdoorCyclingSession ? "o pedal" : "a corrida")"
+    }
+
+    private var runningTrophyBadge: some View {
+        let trophySize: CGFloat = needsExtraTextSpace ? 26 : 32
+
+        return ZStack {
+            Circle()
+                .fill(Color(red: 1.0, green: 0.85, blue: 0.2).opacity(0.55))
+                .frame(width: 72, height: 72)
+                .blur(radius: 16)
+
+            Circle()
+                .fill(Color.orange.opacity(0.4))
+                .frame(width: 48, height: 48)
+                .blur(radius: 10)
+
+            Image(systemName: "trophy.fill")
+                .font(.system(size: trophySize, weight: .semibold))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 1.0, green: 0.95, blue: 0.55),
+                            Color(red: 1.0, green: 0.78, blue: 0.15),
+                            Color(red: 0.95, green: 0.55, blue: 0.05)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .shadow(color: Color.yellow.opacity(0.95), radius: 10, y: 0)
+                .shadow(color: Color.orange.opacity(0.7), radius: 4, y: 1)
+        }
+        .frame(width: 64, height: 64)
+    }
+
+    private var runningStatsGrid: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 6) {
+                shareStat(value: runningBPMValue, label: "BPM")
+                shareStat(value: runningKcalValue, label: "KCAL")
+                shareStat(value: runningPaceValue, label: "RITMO")
+            }
+            HStack(spacing: 6) {
+                shareStat(value: runningStepsValue, label: "PASSOS")
+                shareStat(value: runningKmValue, label: "KM")
+                shareStat(value: runningTempoValue, label: "TEMPO")
+            }
+        }
+    }
+
+    private var runningBPMValue: String {
+        session.averageHeartRate > 0
+            ? String(format: "%.0f", session.averageHeartRate)
+            : "—"
+    }
+
+    private var runningKcalValue: String {
+        session.caloriesBurned > 0
+            ? "\(Int(session.caloriesBurned.rounded()))"
+            : "—"
+    }
+
+    private var runningPaceValue: String {
+        guard let pace = session.displayPaceSecondsPerKm else { return "—" }
+        let minutes = pace / 60
+        let seconds = pace % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    private var runningStepsValue: String {
+        guard let steps = session.stepCount, steps > 0 else { return "—" }
+        if steps >= 10_000 {
+            return String(format: "%.1fk", Double(steps) / 1_000.0)
+        }
+        return "\(steps)"
+    }
+
+    private var runningKmValue: String {
+        let km = session.displayDistanceKm
+        guard km > 0 else { return "—" }
+        return String(format: km >= 10 ? "%.1f" : "%.2f", km)
+    }
+
+    private var runningTempoValue: String {
+        DurationFormatting.format(seconds: Int(session.duration))
     }
 
     private var headlineFontSize: CGFloat {
@@ -131,13 +332,21 @@ struct WorkoutShareCardView: View {
             )
 
             Circle()
-                .fill(Color("AccentGreen").opacity(0.16))
+                .fill(
+                    isRunning
+                        ? Color.yellow.opacity(0.12)
+                        : Color("AccentGreen").opacity(0.16)
+                )
                 .frame(width: 260, height: 260)
                 .blur(radius: 50)
                 .offset(x: -90, y: -140)
 
             Circle()
-                .fill(Color("AccentOrange").opacity(0.13))
+                .fill(
+                    isRunning
+                        ? Color.orange.opacity(0.14)
+                        : Color("AccentOrange").opacity(0.13)
+                )
                 .frame(width: 220, height: 220)
                 .blur(radius: 45)
                 .offset(x: 110, y: 160)
@@ -486,21 +695,21 @@ struct WorkoutShareCardView: View {
     private func shareStat(value: String, label: String) -> some View {
         VStack(spacing: needsExtraTextSpace ? 2 : 3) {
             Text(value)
-                .font(.system(size: needsExtraTextSpace ? 12 : 14, weight: .bold, design: .rounded))
+                .font(.system(size: needsExtraTextSpace ? 11 : 13, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.65)
                 .lineLimit(1)
             Text(label)
-                .font(.system(size: 7.5, weight: .bold, design: .rounded))
+                .font(.system(size: 7, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.5))
-                .tracking(0.8)
+                .tracking(0.7)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, needsExtraTextSpace ? 6 : 9)
+        .padding(.vertical, needsExtraTextSpace ? 5 : 8)
         .background(.white.opacity(0.07))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(.white.opacity(0.08), lineWidth: 1)
         )
     }
@@ -519,6 +728,167 @@ struct WorkoutShareCardView: View {
         .padding(.vertical, needsExtraTextSpace ? 6 : 9)
         .background(.white.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+// MARK: - Mini mapa desenhado (ImageRenderer-safe — sem MapKit)
+
+/// Fundo escuro estilo mapa + polyline colorida por desempenho. Sem MapKit (flaky no ImageRenderer).
+struct ShareCardRouteMapView: View {
+    let routePoints: [RouteCoordinate]
+    var distanceKm: Double = 0
+    var performanceMetric: RoutePerformanceMetric = .pace
+
+    private var hasRoute: Bool { routePoints.count >= 2 }
+
+    var body: some View {
+        GeometryReader { geo in
+            let size = geo.size
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.06, green: 0.09, blue: 0.10),
+                                Color(red: 0.04, green: 0.07, blue: 0.08),
+                                Color(red: 0.05, green: 0.08, blue: 0.07)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                mapGrid(in: size)
+
+                if hasRoute {
+                    routeLayer(in: size)
+                } else {
+                    placeholderContent
+                }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(.white.opacity(0.10), lineWidth: 1)
+        )
+    }
+
+    private func mapGrid(in _: CGSize) -> some View {
+        Canvas { context, canvasSize in
+            let hStep = canvasSize.width / 6
+            let vStep = canvasSize.height / 4
+            var path = Path()
+            for i in 1..<6 {
+                let x = CGFloat(i) * hStep
+                path.move(to: CGPoint(x: x, y: 0))
+                path.addLine(to: CGPoint(x: x, y: canvasSize.height))
+            }
+            for i in 1..<4 {
+                let y = CGFloat(i) * vStep
+                path.move(to: CGPoint(x: 0, y: y))
+                path.addLine(to: CGPoint(x: canvasSize.width, y: y))
+            }
+            context.stroke(path, with: .color(.white.opacity(0.06)), lineWidth: 1)
+
+            // “Vias” diagonais sutis
+            var roads = Path()
+            roads.move(to: CGPoint(x: 0, y: canvasSize.height * 0.35))
+            roads.addLine(to: CGPoint(x: canvasSize.width, y: canvasSize.height * 0.55))
+            roads.move(to: CGPoint(x: canvasSize.width * 0.2, y: 0))
+            roads.addLine(to: CGPoint(x: canvasSize.width * 0.75, y: canvasSize.height))
+            context.stroke(roads, with: .color(.white.opacity(0.05)), lineWidth: 2)
+        }
+    }
+
+    private func routeLayer(in size: CGSize) -> some View {
+        let projected = projectedPoints(in: size, padding: 18)
+        let segments = RoutePerformanceColoring.segments(from: routePoints, metric: performanceMetric)
+        return ZStack {
+            if projected.count >= 2 {
+                // Segmentos coloridos por desempenho (verde = melhor, vermelho = pior).
+                ForEach(Array(segments.enumerated()), id: \.offset) { index, segment in
+                    if index + 1 < projected.count {
+                        Path { path in
+                            path.move(to: projected[index])
+                            path.addLine(to: projected[index + 1])
+                        }
+                        .stroke(
+                            segment.color,
+                            style: StrokeStyle(lineWidth: 3.5, lineCap: .round, lineJoin: .round)
+                        )
+                    }
+                }
+
+                Circle()
+                    .fill(Color("AccentGreen"))
+                    .frame(width: 9, height: 9)
+                    .overlay(Circle().strokeBorder(.white, lineWidth: 1.5))
+                    .position(projected[0])
+
+                Circle()
+                    .fill(segments.last?.color ?? Color("AccentOrange"))
+                    .frame(width: 9, height: 9)
+                    .overlay(Circle().strokeBorder(.white, lineWidth: 1.5))
+                    .position(projected[projected.count - 1])
+            }
+        }
+    }
+
+    private var placeholderContent: some View {
+        VStack(spacing: 6) {
+            Image(systemName: "map")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.35))
+            Text("ROTA")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.45))
+                .tracking(1.2)
+            if distanceKm > 0 {
+                Text(String(format: "%.2f km", distanceKm))
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("AccentGreen").opacity(0.9))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func projectedPoints(in size: CGSize, padding: CGFloat) -> [CGPoint] {
+        let coords = routePoints
+        guard let first = coords.first else { return [] }
+
+        var minLat = first.latitude
+        var maxLat = first.latitude
+        var minLon = first.longitude
+        var maxLon = first.longitude
+        for point in coords.dropFirst() {
+            minLat = min(minLat, point.latitude)
+            maxLat = max(maxLat, point.latitude)
+            minLon = min(minLon, point.longitude)
+            maxLon = max(maxLon, point.longitude)
+        }
+
+        let latSpan = max(maxLat - minLat, 0.00015)
+        let lonSpan = max(maxLon - minLon, 0.00015)
+        let drawWidth = max(size.width - padding * 2, 1)
+        let drawHeight = max(size.height - padding * 2, 1)
+
+        // Mantém proporção geográfica (lon × cos(lat)).
+        let midLat = (minLat + maxLat) / 2
+        let lonScale = cos(midLat * .pi / 180)
+        let aspectLon = lonSpan * max(lonScale, 0.2)
+        let fitScale = min(drawWidth / aspectLon, drawHeight / latSpan)
+        let usedWidth = aspectLon * fitScale
+        let usedHeight = latSpan * fitScale
+        let originX = padding + (drawWidth - usedWidth) / 2
+        let originY = padding + (drawHeight - usedHeight) / 2
+
+        return coords.map { point in
+            let x = originX + CGFloat((point.longitude - minLon) / lonSpan) * usedWidth
+            // Latitude cresce para cima; Y cresce para baixo.
+            let y = originY + CGFloat((maxLat - point.latitude) / latSpan) * usedHeight
+            return CGPoint(x: x, y: y)
+        }
     }
 }
 
@@ -548,6 +918,24 @@ enum WorkoutShareCardRenderer {
         let name = athleteName.trimmingCharacters(in: .whitespacesAndNewlines)
         let who = name.isEmpty ? "Hoje" : "\(name) hoje"
         let duration = DurationFormatting.format(seconds: Int(session.duration))
+        if session.isOutdoorGPSCardio {
+            let km = session.displayDistanceKm
+            let kmPart = km > 0 ? String(format: " · %.2f km", km) : ""
+            let isBike = session.isOutdoorCyclingSession
+            let tag = isBike ? "#Ciclismo" : "#Corrida"
+            if session.endedEarly || session.autoEndedByInactivity {
+                return """
+                \(who) \(isBike ? "pedalou" : "correu") (não concluiu): \(session.workoutTitle) · \(duration)\(kmPart)
+                Cada sessão conta — HealthFit 💪
+                #HealthFit \(tag) #Treino
+                """
+            }
+            return """
+            \(who) finalizou \(isBike ? "o pedal" : "a corrida"): \(session.workoutTitle) · \(duration)\(kmPart)
+            Treinei com HealthFit 💪
+            #HealthFit \(tag) #Treino
+            """
+        }
         if session.endedEarly || session.autoEndedByInactivity {
             return """
             \(who) treinou (não concluiu): \(session.workoutTitle) · \(duration)
@@ -574,6 +962,28 @@ enum WorkoutShareCardRenderer {
                 "Parou antes, mas não desistiu de si. Orgulho merecido.",
                 "Mostrar up já muda o jogo. Na próxima você fecha o ciclo."
             ]
+            let index = abs(session.id.hashValue) % lines.count
+            return lines[index]
+        }
+        if session.isOutdoorGPSCardio {
+            let lines: [String] = {
+                if session.isOutdoorCyclingSession {
+                    return [
+                        "Quilômetros no pedal. Ritmo firme, mente leve.",
+                        "Cada pedalada conta. Estrada e evolução.",
+                        "Você saiu e pedalou. Orgulho merecido.",
+                        "A ciclovia responde a quem aparece.",
+                        "Constância nas rodas, evolução no corpo."
+                    ]
+                }
+                return [
+                    "Quilômetros que viram disciplina.",
+                    "Cada passo conta. Ritmo firme, mente leve.",
+                    "Você saiu e correu. Orgulho merecido.",
+                    "A estrada responde a quem aparece.",
+                    "Constância no asfalto, evolução no corpo."
+                ]
+            }()
             let index = abs(session.id.hashValue) % lines.count
             return lines[index]
         }

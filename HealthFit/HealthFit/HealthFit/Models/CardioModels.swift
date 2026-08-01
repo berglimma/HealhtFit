@@ -7,6 +7,9 @@ enum RunningDistance: Int, CaseIterable, Identifiable, Codable, Hashable {
     case fifteen = 15
     case twenty = 20
     case twentyFive = 25
+    case thirty = 30
+    case thirtyFive = 35
+    case forty = 40
 
     var id: Int { rawValue }
 
@@ -21,6 +24,9 @@ enum RunningDistance: Int, CaseIterable, Identifiable, Codable, Hashable {
         case .fifteen: return "15.circle.fill"
         case .twenty: return "20.circle.fill"
         case .twentyFive: return "25.circle.fill"
+        case .thirty: return "30.circle.fill"
+        case .thirtyFive: return "35.circle.fill"
+        case .forty: return "40.circle.fill"
         }
     }
 
@@ -31,6 +37,9 @@ enum RunningDistance: Int, CaseIterable, Identifiable, Codable, Hashable {
         case .fifteen: return "Volume intermediário para maratona"
         case .twenty: return "Longão de preparação"
         case .twentyFive: return "Simulação de fase avançada"
+        case .thirty: return "Longão avançado de resistência"
+        case .thirtyFive: return "Volume próximo à maratona"
+        case .forty: return "Simulação quase completa"
         }
     }
 }
@@ -117,14 +126,39 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         self.caloriesPerMinute = caloriesPerMinute
     }
 
+    /// Corrida com metas de distância (livre / 5–40 km).
     var supportsDistanceGoals: Bool {
         name == "Corrida"
     }
 
+    /// Cardio outdoor com mapa GPS (Corrida e bikes ao ar livre).
+    var supportsOutdoorGPS: Bool {
+        Self.outdoorGPSNames.contains(name)
+    }
+
+    /// Mountain bike ou bicicleta pedal (não ergométrica).
+    var isOutdoorCycling: Bool {
+        Self.outdoorCyclingNames.contains(name)
+    }
+
+    var isStationaryBike: Bool {
+        name == "Bicicleta ergométrica"
+    }
+
+    private static let outdoorGPSNames: Set<String> = [
+        "Corrida", "Bicicleta pedal", "Mountain bike"
+    ]
+
+    private static let outdoorCyclingNames: Set<String> = [
+        "Bicicleta pedal", "Mountain bike"
+    ]
+
     static let catalog: [CardioExercise] = [
         CardioExercise(name: "Corrida", description: "Corrida contínua em esteira ou ao ar livre", icon: "figure.run", caloriesPerMinute: 10),
         CardioExercise(name: "Caminhada Rápida", description: "Caminhada acelerada com inclinação moderada", icon: "figure.walk", caloriesPerMinute: 6),
-        CardioExercise(name: "Bicicleta", description: "Bike ergométrica ou ciclismo", icon: "bicycle", caloriesPerMinute: 9),
+        CardioExercise(name: "Mountain bike", description: "Mountain bike em trilha ou terreno irregular", icon: "bicycle", caloriesPerMinute: 10),
+        CardioExercise(name: "Bicicleta pedal", description: "Ciclismo outdoor em rua ou ciclovia", icon: "figure.outdoor.cycle", caloriesPerMinute: 9),
+        CardioExercise(name: "Bicicleta ergométrica", description: "Bike estacionária indoor, sem GPS", icon: "figure.indoor.cycle", caloriesPerMinute: 8),
         CardioExercise(name: "Elíptico", description: "Movimento fluido de corpo inteiro", icon: "figure.step.training", caloriesPerMinute: 8),
         CardioExercise(name: "Pular Corda", description: "Saltos contínuos com corda", icon: "figure.jumprope", caloriesPerMinute: 12),
         CardioExercise(name: "Escada", description: "Simulador de escadas ou degraus", icon: "figure.stair.stepper", caloriesPerMinute: 11),
@@ -159,8 +193,14 @@ struct CardioWorkoutConfig: Hashable {
 
     var isDistanceRun: Bool { runningDistance != nil && !isFreeRun }
 
-    /// Sessão de Corrida (mapa GPS, passos e estado de movimento).
+    /// Sessão de Corrida (metas de distância / corrida livre).
     var isRunningSession: Bool { exercise.supportsDistanceGoals }
+
+    /// Corrida ou bike outdoor — mapa GPS, rota e métricas de movimento.
+    var isOutdoorGPSCardio: Bool { exercise.supportsOutdoorGPS }
+
+    /// Mountain bike / Bicicleta pedal (velocidade em vez de ritmo).
+    var isOutdoorCyclingSession: Bool { exercise.isOutdoorCycling }
 
     var hasCalorieGoal: Bool {
         guard let targetCalories else { return false }
@@ -175,6 +215,11 @@ struct CardioWorkoutConfig: Hashable {
             return "Cardio — Corrida \(distance.label)"
         }
         return "Cardio — \(exercise.name)"
+    }
+
+    /// Métrica de desempenho da rota: ritmo (corrida) ou velocidade (bike).
+    var routePerformanceMetric: RoutePerformanceMetric {
+        isOutdoorCyclingSession ? .speed : .pace
     }
 
     var targetDistanceKm: Double {

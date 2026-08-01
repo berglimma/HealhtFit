@@ -37,6 +37,54 @@ final class ExerciseGifCatalogTests: XCTestCase {
         XCTAssertEqual(path, "abs/air-bike.gif")
     }
 
+    func testPolichineloMapsToStarJumpGif() {
+        let path = ExerciseGifCatalog.filePath(
+            forExerciseName: "Polichinelo",
+            muscleGroup: .fullBody
+        )
+        XCTAssertEqual(path, "cardio/star-jump-male.gif")
+    }
+
+    func testJumpingJackKeywordMapsToStarJumpGif() {
+        let path = ExerciseGifCatalog.filePath(
+            forExerciseName: "Jumping Jacks",
+            muscleGroup: .fullBody
+        )
+        XCTAssertEqual(path, "cardio/star-jump-male.gif")
+    }
+
+    func testPulldownTrianguloMapsToVBarGif() {
+        let path = ExerciseGifCatalog.filePath(
+            forExerciseName: "Pulldown Triângulo",
+            muscleGroup: .back
+        )
+        XCTAssertEqual(path, "lats/cable-lateral-pulldown-with-v-bar.gif")
+    }
+
+    func testPulldownTrianguloKeywordMapsToVBarGif() {
+        let path = ExerciseGifCatalog.filePath(
+            forExerciseName: "Puxada Triângulo na Polia",
+            muscleGroup: .back
+        )
+        XCTAssertEqual(path, "lats/cable-lateral-pulldown-with-v-bar.gif")
+    }
+
+    func testCirculosDeBracosMapsToRoundArmGif() {
+        let path = ExerciseGifCatalog.filePath(
+            forExerciseName: "Círculos de Braços",
+            muscleGroup: .shoulders
+        )
+        XCTAssertEqual(path, "delts/weighted-round-arm.gif")
+    }
+
+    func testArmCircleKeywordMapsToRoundArmGif() {
+        let path = ExerciseGifCatalog.filePath(
+            forExerciseName: "Arm Circles Warmup",
+            muscleGroup: .shoulders
+        )
+        XCTAssertEqual(path, "delts/weighted-round-arm.gif")
+    }
+
     func testAllCatalogExercisesHaveGifMapping() {
         for (name, _) in ExerciseVideoCatalog.bundledVideos() {
             let group = inferredGroup(for: name)

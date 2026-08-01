@@ -1,6 +1,5 @@
 import Foundation
 import ActivityKit
-import UIKit
 
 @MainActor
 final class WorkoutLiveActivityController {
@@ -12,6 +11,11 @@ final class WorkoutLiveActivityController {
 
     var isSupported: Bool {
         ActivityAuthorizationInfo().areActivitiesEnabled
+    }
+
+    /// True if this process tracks an activity or the system still has any workout LA.
+    var hasActiveLiveActivity: Bool {
+        activity != nil || !Activity<WorkoutLiveActivityAttributes>.activities.isEmpty
     }
 
     func startOrUpdate(
@@ -34,6 +38,13 @@ final class WorkoutLiveActivityController {
             workoutTitle: session.workoutTitle
         )
 
+        // Never let the evening nudge share the lock screen with a workout LA.
+        if EveningTrainingNudgeController.shared.isActive {
+            EveningTrainingNudgeService.handleActiveWorkoutStarted()
+        }
+
+        adoptOrCullExistingActivities()
+
         if let activity {
             Task {
                 await activity.update(
@@ -43,8 +54,11 @@ final class WorkoutLiveActivityController {
             return
         }
 
-        // Lembrete noturno cede lugar ao treino ativo (só na criação da LA).
+        // Creating the only workout LA — clear nudge fully (cancel + reschedule).
         EveningTrainingNudgeService.handleActiveWorkoutStarted()
+
+        // Belt-and-suspenders: never request while any workout LA remains.
+        endAllActivities()
 
         let attributes = WorkoutLiveActivityAttributes(sessionId: session.id.uuidString)
         do {
@@ -58,18 +72,66 @@ final class WorkoutLiveActivityController {
         }
     }
 
+    /// Ends every workout Live Activity (tracked + system orphans). Safe when `activity` is nil.
     func end() {
-        guard let activity else { return }
-        let finalState = activity.content.state
-        Task {
-            await activity.end(
-                ActivityContent(state: finalState, staleDate: nil),
-                dismissalPolicy: .immediate
-            )
+        endAllActivities()
+    }
+
+    /// App launch / foreground: drop orphans when idle; keep a single LA when a session is active.
+    func reconcile(hasActiveSession: Bool) {
+        guard isSupported else {
+            activity = nil
+            return
+        }
+
+        if !hasActiveSession {
+            endAllActivities()
+            return
+        }
+
+        adoptOrCullExistingActivities()
+    }
+
+    // MARK: - Private
+
+    /// Prefer one existing system activity over creating another (e.g. after process restart).
+    private func adoptOrCullExistingActivities() {
+        let existing = Activity<WorkoutLiveActivityAttributes>.activities
+
+        if let tracked = activity {
+            if existing.contains(where: { $0.id == tracked.id }) {
+                for orphan in existing where orphan.id != tracked.id {
+                    Task {
+                        await orphan.end(nil, dismissalPolicy: .immediate)
+                    }
+                }
+                return
+            }
+            // Tracked activity was dismissed or expired — drop the stale reference.
+            activity = nil
+        }
+
+        guard let first = existing.first else { return }
+        activity = first
+        for orphan in existing.dropFirst() {
+            Task {
+                await orphan.end(nil, dismissalPolicy: .immediate)
+            }
+        }
+    }
+
+    private func endAllActivities() {
+        if let activity {
+            let finalState = activity.content.state
+            Task {
+                await activity.end(
+                    ActivityContent(state: finalState, staleDate: nil),
+                    dismissalPolicy: .immediate
+                )
+            }
         }
         self.activity = nil
 
-        // Encerra qualquer atividade residual do app.
         for orphan in Activity<WorkoutLiveActivityAttributes>.activities {
             Task {
                 await orphan.end(nil, dismissalPolicy: .immediate)

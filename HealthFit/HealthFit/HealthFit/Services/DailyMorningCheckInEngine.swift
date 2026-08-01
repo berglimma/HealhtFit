@@ -96,9 +96,6 @@ enum DailyMorningCheckInEngine {
     static func isFeelingReply(_ text: String) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
-        if PostWorkoutCheckInEngine.looksLikeOffTopicQuestion(trimmed) {
-            return false
-        }
 
         let normalized = trimmed
             .lowercased()
@@ -117,17 +114,27 @@ enum DailyMorningCheckInEngine {
             "otimo", "bem", "cansado", "estress", "motiv", "desanim", "preguica",
             "tranquilo", "ansied", "energia", "me sinto", "estou", "to ", "tô "
         ]
-        if feelingSignals.contains(where: { normalized.contains($0) }) {
+        let hasFeelingSignal = feelingSignals.contains(where: { normalized.contains($0) })
+
+        if PostWorkoutCheckInEngine.looksLikeOffTopicQuestion(trimmed) {
+            let shortFeelingWithQuestionMark = hasFeelingSignal
+                && trimmed.count <= 40
+                && !PostWorkoutCheckInEngine.hasStandaloneQuestionContent(normalized)
+            if !shortFeelingWithQuestionMark, trimmed.contains("?") || !hasFeelingSignal {
+                return false
+            }
+        }
+
+        if hasFeelingSignal {
             return true
         }
         return trimmed.count <= 48
     }
 
     static func reminderToAnswerFeeling() -> String {
-        """
-        E, voltando ao check-in: como você está se sentindo agora — energia, humor e disposição?
-        Pode responder com sinceridade (ou usar uma das sugestões).
-        """
+        PostWorkoutCheckInEngine.pendingQuestionReminder(
+            "como você está se sentindo agora — energia, humor e disposição?"
+        )
     }
 
     static func responseSequence(

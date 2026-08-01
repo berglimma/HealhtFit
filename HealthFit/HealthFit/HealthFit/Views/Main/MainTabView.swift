@@ -4,6 +4,7 @@ struct MainTabView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var workoutStore: WorkoutStore
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var checkInService = PostWorkoutCheckInService.shared
     @ObservedObject private var dailyMorningService = DailyMorningCheckInService.shared
     @ObservedObject private var dailyEveningService = DailyEveningCheckInService.shared
@@ -16,6 +17,12 @@ struct MainTabView: View {
     private let nutritionTabTag = 2
     private let profileTabTag = 4
     private let workoutsTabTag = 1
+
+    private var showsMinimizedWorkoutBanner: Bool {
+        workoutStore.activeSession != nil
+            && workoutStore.isActiveWorkoutMinimized
+            && !workoutStore.isVisionCameraPresented
+    }
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -52,14 +59,10 @@ struct MainTabView: View {
         }
         .tint(AppTheme.accent)
         .tabViewStyle(.automatic)
-        // TabView ignores the tab bar when laying out chrome on itself, so a bare bottom
-        // inset covers the menu. Reserve a hit-through strip under the banner matching
-        // UITabBar content height so the card sits above the icons/labels.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            // Hide while Vision AI is open so the floating card never covers camera controls.
-            if let session = workoutStore.activeSession,
-               workoutStore.isActiveWorkoutMinimized,
-               !workoutStore.isVisionCameraPresented {
+        // Overlay (not safeAreaInset) so keyboard avoidance on TabView cannot leave the
+        // minimized banner / bottom chrome stuck mid-screen after dismiss or resume.
+        .overlay(alignment: .bottom) {
+            if showsMinimizedWorkoutBanner, let session = workoutStore.activeSession {
                 VStack(spacing: 0) {
                     ActiveWorkoutBanner(
                         session: session,
@@ -72,11 +75,13 @@ struct MainTabView: View {
                     .padding(.top, 4)
                     .padding(.bottom, 8)
 
+                    // TabView does not treat the tab bar as safe area for chrome on itself.
                     Color.clear
                         .frame(height: DeviceLayout.mainTabBarContentHeight)
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 }
+                .ignoresSafeArea(.keyboard)
             }
         }
         .fullScreenCover(item: $presentedActiveSheet, onDismiss: {
@@ -91,6 +96,7 @@ struct MainTabView: View {
             }
         }
         .onAppear {
+            KeyboardDismiss.hide()
             updateAssistantTabVisibility(for: selectedTab)
             checkInService.refreshAssistantBadge()
             profileReminder.evaluate(for: authService.currentUser)
@@ -99,6 +105,11 @@ struct MainTabView: View {
                 // Aguarda o check-in de sono (se houver) ter prioridade antes do pop-up de dados.
                 try? await Task.sleep(for: .milliseconds(700))
                 presentProfilePromptIfNeeded()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active || phase == .background || phase == .inactive {
+                KeyboardDismiss.hide()
             }
         }
         .onChange(of: selectedTab) { _, tab in

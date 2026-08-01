@@ -175,6 +175,7 @@ final class AuthService: ObservableObject {
         NotificationService.shared.cancelSupplementReminders()
         NotificationService.shared.updateMealReminders(hasMealPlan: false)
         EveningTrainingNudgeService.cancelAll()
+        WorkoutLiveActivitySync.end()
 
         if FirebaseBootstrap.isConfigured {
             try? FirebaseAuthProvider.signOut()
@@ -579,6 +580,7 @@ final class AuthService: ObservableObject {
         NotificationService.shared.cancelDailyAssistantCheckIn()
         NotificationService.shared.cancelDailyEveningAssistantCheckIn()
         EveningTrainingNudgeService.cancelAll()
+        WorkoutLiveActivitySync.end()
 
         workoutStore.clearAllLocalData()
         mealPlanService.clearAllLocalData()

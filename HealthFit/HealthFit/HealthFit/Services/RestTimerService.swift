@@ -153,15 +153,29 @@ final class RestTimerService: ObservableObject {
     }
 
     var progress: Double {
+        progress(at: Date())
+    }
+
+    func progress(at date: Date) -> Double {
         guard activeRestDurationSeconds > 0 else { return 0 }
-        return 1.0 - (Double(remainingSeconds) / Double(activeRestDurationSeconds))
+        let remaining: Int
+        if let endsAt = restEndsAt {
+            remaining = max(0, Int(ceil(endsAt.timeIntervalSince(date))))
+        } else {
+            remaining = remainingSeconds
+        }
+        return 1.0 - (Double(remaining) / Double(activeRestDurationSeconds))
     }
 
     var isOvertime: Bool {
+        isOvertime(at: Date())
+    }
+
+    func isOvertime(at date: Date) -> Bool {
         guard let endsAt = restEndsAt else {
             return remainingSeconds == 0 && isRunning
         }
-        return Date() > endsAt && (isRunning || isAwaitingResumeAcknowledgment)
+        return date > endsAt && (isRunning || isAwaitingResumeAcknowledgment)
     }
 
     var isRestComplete: Bool {
@@ -169,10 +183,14 @@ final class RestTimerService: ObservableObject {
     }
 
     var formattedTime: String {
-        if isOvertime {
+        formattedTime(at: Date())
+    }
+
+    func formattedTime(at date: Date) -> String {
+        if isOvertime(at: date) {
             let overtime: Int
             if let endsAt = restEndsAt {
-                overtime = max(0, Int(Date().timeIntervalSince(endsAt)))
+                overtime = max(0, Int(date.timeIntervalSince(endsAt)))
             } else {
                 overtime = 0
             }
@@ -180,8 +198,14 @@ final class RestTimerService: ObservableObject {
             let seconds = overtime % 60
             return String(format: "+%02d:%02d", minutes, seconds)
         }
-        let minutes = remainingSeconds / 60
-        let seconds = remainingSeconds % 60
+        let remaining: Int
+        if let endsAt = restEndsAt {
+            remaining = max(0, Int(ceil(endsAt.timeIntervalSince(date))))
+        } else {
+            remaining = remainingSeconds
+        }
+        let minutes = remaining / 60
+        let seconds = remaining % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
@@ -275,7 +299,7 @@ final class RestTimerService: ObservableObject {
 
     private func startReminderSoundLoop() {
         stopReminderSoundLoop()
-        reminderSoundTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 3, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, self.isAwaitingResumeAcknowledgment else {
                     self?.stopReminderSoundLoop()
@@ -284,6 +308,8 @@ final class RestTimerService: ObservableObject {
                 self.playRestCompleteSound()
             }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        reminderSoundTimer = timer
     }
 
     private func stopReminderSoundLoop() {

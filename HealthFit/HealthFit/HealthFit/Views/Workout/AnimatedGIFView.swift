@@ -22,8 +22,11 @@ struct AnimatedGIFView: UIViewRepresentable {
 
         if context.coordinator.loadedTaskId == taskId, let image = context.coordinator.loadedImage {
             container.setImage(image)
-            context.coordinator.scheduleLoopCompletion(
+            // Não reagenda a cada refresh do SwiftUI (ex.: cronômetro 1s) —
+            // isso cancelava o auto-advance da demo indefinidamente.
+            context.coordinator.scheduleLoopCompletionIfNeeded(
                 for: image,
+                taskId: taskId,
                 loops: loopsBeforeCompletion,
                 handler: onAnimationLoopFinished
             )
@@ -36,6 +39,7 @@ struct AnimatedGIFView: UIViewRepresentable {
         guard context.coordinator.currentTaskId != taskId else { return }
 
         context.coordinator.loadTask?.cancel()
+        context.coordinator.cancelLoopCompletion()
         context.coordinator.currentTaskId = taskId
         context.coordinator.loadedTaskId = nil
         context.coordinator.loadedImage = nil
@@ -54,8 +58,9 @@ struct AnimatedGIFView: UIViewRepresentable {
                     context.coordinator.loadedTaskId = taskId
                     context.coordinator.loadedImage = image
                     container.setImage(image)
-                    context.coordinator.scheduleLoopCompletion(
+                    context.coordinator.scheduleLoopCompletionIfNeeded(
                         for: image,
+                        taskId: taskId,
                         loops: loopsBeforeCompletion,
                         handler: onAnimationLoopFinished
                     )
@@ -81,19 +86,29 @@ struct AnimatedGIFView: UIViewRepresentable {
         var loadedTaskId: String?
         var loadedImage: UIImage?
         private var loopWorkItem: DispatchWorkItem?
+        private var scheduledLoopTaskId: String?
 
         deinit {
             loadTask?.cancel()
             loopWorkItem?.cancel()
         }
 
-        func scheduleLoopCompletion(
+        func cancelLoopCompletion() {
+            loopWorkItem?.cancel()
+            loopWorkItem = nil
+            scheduledLoopTaskId = nil
+        }
+
+        func scheduleLoopCompletionIfNeeded(
             for image: UIImage?,
+            taskId: String,
             loops: Int,
             handler: (() -> Void)?
         ) {
-            loopWorkItem?.cancel()
             guard let handler, loops > 0 else { return }
+            guard scheduledLoopTaskId != taskId else { return }
+
+            cancelLoopCompletion()
 
             let duration: TimeInterval
             if let images = image?.images, images.count > 1 {
@@ -102,7 +117,11 @@ struct AnimatedGIFView: UIViewRepresentable {
                 duration = 2.5
             }
 
-            let work = DispatchWorkItem { handler() }
+            scheduledLoopTaskId = taskId
+            let work = DispatchWorkItem { [weak self] in
+                self?.scheduledLoopTaskId = nil
+                handler()
+            }
             loopWorkItem = work
             DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: work)
         }

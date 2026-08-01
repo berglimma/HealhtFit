@@ -132,11 +132,11 @@
 		<string>location</string>
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>HealthFit usa sua localização durante a Corrida para mostrar o mapa e a rota em tempo real.</string>
+	<string>HealthFit usa sua localização durante Corrida e ciclismo outdoor para mostrar o mapa e a rota em tempo real.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>HealthFit continua registrando a rota da Corrida com a tela bloqueada ou em segundo plano, como um app de corrida.</string>
+	<string>HealthFit continua registrando a rota de Corrida e bike outdoor com a tela bloqueada ou em segundo plano.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.</string>
+	<string>HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando, correndo ou pedalando e contar passos.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

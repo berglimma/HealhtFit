@@ -2,6 +2,20 @@ import Foundation
 
 @MainActor
 enum WorkoutLiveActivitySync {
+    /// App launch / become active: dismiss orphan workout LAs, or keep a single one in sync.
+    static func reconcile(
+        workoutStore: WorkoutStore,
+        timerService: RestTimerService,
+        sheet: WorkoutSheet? = nil
+    ) {
+        if workoutStore.activeSession == nil {
+            WorkoutLiveActivityController.shared.end()
+            return
+        }
+        WorkoutLiveActivityController.shared.reconcile(hasActiveSession: true)
+        push(workoutStore: workoutStore, timerService: timerService, sheet: sheet)
+    }
+
     static func push(
         workoutStore: WorkoutStore,
         timerService: RestTimerService,

@@ -61,6 +61,16 @@ final class DailyEveningCheckInEngineTests: XCTestCase {
         XCTAssertTrue(closing.last?.contains("Boa noite") == true)
     }
 
+    func testDetectsOffTopicQuestionVersusDayFeeling() {
+        XCTAssertTrue(DailyEveningCheckInEngine.isDayFeelingReply("Foi um dia ótimo"))
+        XCTAssertFalse(DailyEveningCheckInEngine.isDayFeelingReply("Qual é meu IMC?"))
+        XCTAssertFalse(DailyEveningCheckInEngine.isDayFeelingReply("Como montar um cardápio"))
+        XCTAssertTrue(
+            DailyEveningCheckInEngine.reminderToAnswerDayFeeling()
+                .hasPrefix("Quando puder, me responde também:")
+        )
+    }
+
     func testCompletedSessionsTodayFiltersByDate() {
         let today = Date()
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!

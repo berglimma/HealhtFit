@@ -25,8 +25,9 @@ struct ActiveWorkoutView: View {
     @State private var pendingEarlyEndJustification: String?
     @State private var liveExerciseElapsedSeconds = 0
     @State private var showVision = false
-
+    /// Side-effects only (watch sync / auto-end). Display clocks use TimelineView + wall clock.
     private let workoutClock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private let watchSyncClock = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
 
     private var trimmedEarlyEndJustification: String {
         earlyEndJustification.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -187,7 +188,9 @@ struct ActiveWorkoutView: View {
             }
         }
         .onReceive(workoutClock) { _ in
+            // Mantém estado leve alinhado ao relógio (TimelineView já redesenha o HH:MM:SS).
             updateWorkoutElapsed()
+            liveExerciseElapsedSeconds = workoutStore.liveExerciseElapsedSeconds()
             if let ended = workoutStore.autoEndStaleActiveSessionIfNeeded(
                 athleteName: authService.currentUser?.greetingName ?? "Atleta"
             ) {
@@ -200,7 +203,7 @@ struct ActiveWorkoutView: View {
         .onReceive(workoutStore.exerciseElapsedTick) { seconds in
             liveExerciseElapsedSeconds = seconds
         }
-        .onReceive(Timer.publish(every: 3, on: .main, in: .common).autoconnect()) { _ in
+        .onReceive(watchSyncClock) { _ in
             syncWatchData()
         }
         .onChange(of: workoutStore.allExercisesCompleted) { _, allDone in
@@ -241,8 +244,11 @@ struct ActiveWorkoutView: View {
                 Label("\(Int(watchConnectivity.watchCalories)) kcal", systemImage: "flame.fill")
                     .foregroundStyle(AppTheme.accentSecondary)
                 Spacer()
-                Label(DurationFormatting.format(seconds: workoutElapsedSeconds), systemImage: "clock.fill")
-                    .foregroundStyle(AppTheme.accent)
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    let seconds = workoutStore.liveWorkoutElapsedSeconds(at: context.date)
+                    Label(DurationFormatting.format(seconds: seconds), systemImage: "clock.fill")
+                        .foregroundStyle(AppTheme.accent)
+                }
             }
             .font(.caption.weight(.medium))
             .padding(.horizontal)
@@ -338,9 +344,14 @@ struct ActiveWorkoutView: View {
                 Image(systemName: timerService.isRunning ? "pause.circle.fill" : "stopwatch.fill")
                     .foregroundStyle(timerService.isRunning ? .orange : AppTheme.accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(DurationFormatting.format(seconds: liveExerciseElapsedSeconds))
-                        .font(.system(size: 28, weight: .bold, design: .monospaced))
-                        .foregroundStyle(timerService.isRunning ? .orange : AppTheme.accent)
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        let seconds = timerService.isRunning
+                            ? liveExerciseElapsedSeconds
+                            : workoutStore.liveExerciseElapsedSeconds(at: context.date)
+                        Text(DurationFormatting.format(seconds: seconds))
+                            .font(.system(size: 28, weight: .bold, design: .monospaced))
+                            .foregroundStyle(timerService.isRunning ? .orange : AppTheme.accent)
+                    }
                     if timerService.isRunning {
                         Text("Cronômetro pausado")
                             .font(.caption2)
@@ -650,13 +661,10 @@ struct ActiveWorkoutView: View {
     }
 
     private func updateWorkoutElapsed() {
-        guard let startedAt = workoutStore.activeSession?.startedAt else { return }
-        workoutElapsedSeconds = max(0, Int(Date.now.timeIntervalSince(startedAt)))
+        workoutElapsedSeconds = workoutStore.liveWorkoutElapsedSeconds()
 
         let exerciseName = workoutStore.currentExercise?.name ?? ""
-        let exerciseElapsed = workoutStore.exerciseRecords
-            .first(where: { $0.exerciseId == workoutStore.currentExercise?.id })?
-            .elapsedSeconds ?? 0
+        let exerciseElapsed = workoutStore.liveExerciseElapsedSeconds()
 
         watchConnectivity.syncWorkoutProgress(
             workoutElapsedSeconds: workoutElapsedSeconds,
@@ -666,9 +674,7 @@ struct ActiveWorkoutView: View {
     }
 
     private func syncLiveExerciseElapsed() {
-        liveExerciseElapsedSeconds = workoutStore.exerciseRecords
-            .first(where: { $0.exerciseId == workoutStore.currentExercise?.id })?
-            .elapsedSeconds ?? 0
+        liveExerciseElapsedSeconds = workoutStore.liveExerciseElapsedSeconds()
     }
 
     private func syncWatchData() {
@@ -942,17 +948,24 @@ struct RestTimerOverlay: View {
                     Circle()
                         .stroke(Color.white.opacity(0.1), lineWidth: 8)
                         .frame(width: 120, height: 120)
-                    Circle()
-                        .trim(from: 0, to: timerService.isAwaitingResumeAcknowledgment ? 1 : timerService.progress)
-                        .stroke(
-                            timerService.isAwaitingResumeAcknowledgment || timerService.isOvertime
-                                ? Color.red
-                                : AppTheme.accent,
-                            style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                        )
-                        .frame(width: 120, height: 120)
-                        .rotationEffect(.degrees(-90))
-                        .animation(.linear(duration: 1), value: timerService.progress)
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Circle()
+                            .trim(
+                                from: 0,
+                                to: timerService.isAwaitingResumeAcknowledgment
+                                    ? 1
+                                    : timerService.progress(at: context.date)
+                            )
+                            .stroke(
+                                timerService.isAwaitingResumeAcknowledgment
+                                    || timerService.isOvertime(at: context.date)
+                                    ? Color.red
+                                    : AppTheme.accent,
+                                style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                            )
+                            .frame(width: 120, height: 120)
+                            .rotationEffect(.degrees(-90))
+                    }
 
                     if timerService.isAwaitingResumeAcknowledgment {
                         VStack(spacing: 4) {
@@ -964,9 +977,11 @@ struct RestTimerOverlay: View {
                                 .foregroundStyle(.red)
                         }
                     } else {
-                        Text(timerService.formattedTime)
-                            .font(.system(size: 32, weight: .bold, design: .monospaced))
-                            .foregroundStyle(timerService.isOvertime ? .red : AppTheme.textPrimary)
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            Text(timerService.formattedTime(at: context.date))
+                                .font(.system(size: 32, weight: .bold, design: .monospaced))
+                                .foregroundStyle(timerService.isOvertime(at: context.date) ? .red : AppTheme.textPrimary)
+                        }
                     }
                 }
 

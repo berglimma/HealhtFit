@@ -19,8 +19,106 @@ struct LastWorkoutShareCard: Codable, Equatable {
     var endedEarly: Bool
     var autoEndedByInactivity: Bool
     var savedAt: Date
+    /// Campos de corrida (opcionais — cards antigos sem esses keys).
+    var completedDistanceKm: Double?
+    var averagePaceSecondsPerKm: Int?
+    var stepCount: Int?
+    var routePoints: [RouteCoordinate]
 
     var displayDate: Date { endedAt }
+
+    init(
+        sessionId: UUID,
+        workoutSheetId: UUID,
+        workoutTitle: String,
+        startedAt: Date,
+        endedAt: Date,
+        athleteName: String,
+        motivationLine: String,
+        caloriesBurned: Double,
+        completedExercises: Int,
+        totalExercises: Int,
+        averageHeartRate: Double,
+        endedEarly: Bool,
+        autoEndedByInactivity: Bool,
+        savedAt: Date,
+        completedDistanceKm: Double? = nil,
+        averagePaceSecondsPerKm: Int? = nil,
+        stepCount: Int? = nil,
+        routePoints: [RouteCoordinate] = []
+    ) {
+        self.sessionId = sessionId
+        self.workoutSheetId = workoutSheetId
+        self.workoutTitle = workoutTitle
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.athleteName = athleteName
+        self.motivationLine = motivationLine
+        self.caloriesBurned = caloriesBurned
+        self.completedExercises = completedExercises
+        self.totalExercises = totalExercises
+        self.averageHeartRate = averageHeartRate
+        self.endedEarly = endedEarly
+        self.autoEndedByInactivity = autoEndedByInactivity
+        self.savedAt = savedAt
+        self.completedDistanceKm = completedDistanceKm
+        self.averagePaceSecondsPerKm = averagePaceSecondsPerKm
+        self.stepCount = stepCount
+        self.routePoints = routePoints
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try container.decode(UUID.self, forKey: .sessionId)
+        workoutSheetId = try container.decode(UUID.self, forKey: .workoutSheetId)
+        workoutTitle = try container.decode(String.self, forKey: .workoutTitle)
+        startedAt = try container.decode(Date.self, forKey: .startedAt)
+        endedAt = try container.decode(Date.self, forKey: .endedAt)
+        athleteName = try container.decode(String.self, forKey: .athleteName)
+        motivationLine = try container.decode(String.self, forKey: .motivationLine)
+        caloriesBurned = try container.decode(Double.self, forKey: .caloriesBurned)
+        completedExercises = try container.decode(Int.self, forKey: .completedExercises)
+        totalExercises = try container.decode(Int.self, forKey: .totalExercises)
+        averageHeartRate = try container.decode(Double.self, forKey: .averageHeartRate)
+        endedEarly = try container.decode(Bool.self, forKey: .endedEarly)
+        autoEndedByInactivity = try container.decode(Bool.self, forKey: .autoEndedByInactivity)
+        savedAt = try container.decode(Date.self, forKey: .savedAt)
+        completedDistanceKm = try container.decodeIfPresent(Double.self, forKey: .completedDistanceKm)
+        averagePaceSecondsPerKm = try container.decodeIfPresent(Int.self, forKey: .averagePaceSecondsPerKm)
+        stepCount = try container.decodeIfPresent(Int.self, forKey: .stepCount)
+        routePoints = try container.decodeIfPresent([RouteCoordinate].self, forKey: .routePoints) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(sessionId, forKey: .sessionId)
+        try container.encode(workoutSheetId, forKey: .workoutSheetId)
+        try container.encode(workoutTitle, forKey: .workoutTitle)
+        try container.encode(startedAt, forKey: .startedAt)
+        try container.encode(endedAt, forKey: .endedAt)
+        try container.encode(athleteName, forKey: .athleteName)
+        try container.encode(motivationLine, forKey: .motivationLine)
+        try container.encode(caloriesBurned, forKey: .caloriesBurned)
+        try container.encode(completedExercises, forKey: .completedExercises)
+        try container.encode(totalExercises, forKey: .totalExercises)
+        try container.encode(averageHeartRate, forKey: .averageHeartRate)
+        try container.encode(endedEarly, forKey: .endedEarly)
+        try container.encode(autoEndedByInactivity, forKey: .autoEndedByInactivity)
+        try container.encode(savedAt, forKey: .savedAt)
+        try container.encodeIfPresent(completedDistanceKm, forKey: .completedDistanceKm)
+        try container.encodeIfPresent(averagePaceSecondsPerKm, forKey: .averagePaceSecondsPerKm)
+        try container.encodeIfPresent(stepCount, forKey: .stepCount)
+        if !routePoints.isEmpty {
+            try container.encode(routePoints, forKey: .routePoints)
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case sessionId, workoutSheetId, workoutTitle, startedAt, endedAt
+        case athleteName, motivationLine, caloriesBurned, completedExercises, totalExercises
+        case averageHeartRate, endedEarly, autoEndedByInactivity, savedAt
+        case completedDistanceKm, averagePaceSecondsPerKm, stepCount, routePoints
+    }
 
     func makeSession() -> WorkoutSession {
         var session = WorkoutSession(
@@ -32,6 +130,10 @@ struct LastWorkoutShareCard: Codable, Equatable {
             caloriesBurned: caloriesBurned,
             completedExercises: completedExercises,
             totalExercises: totalExercises,
+            completedDistanceKm: completedDistanceKm,
+            averagePaceSecondsPerKm: averagePaceSecondsPerKm,
+            routePoints: routePoints,
+            stepCount: stepCount,
             endedEarly: endedEarly,
             autoEndedByInactivity: autoEndedByInactivity
         )
@@ -85,7 +187,11 @@ final class WorkoutShareCardStore: ObservableObject {
             averageHeartRate: session.averageHeartRate,
             endedEarly: session.endedEarly,
             autoEndedByInactivity: session.autoEndedByInactivity,
-            savedAt: .now
+            savedAt: .now,
+            completedDistanceKm: session.completedDistanceKm,
+            averagePaceSecondsPerKm: session.averagePaceSecondsPerKm,
+            stepCount: session.stepCount,
+            routePoints: session.routePoints
         )
 
         lastCard = payload

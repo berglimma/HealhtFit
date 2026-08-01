@@ -62,7 +62,7 @@ struct ActiveMeditationView: View {
             }
         }
         .onReceive(clock) { _ in
-            elapsedSeconds += 1
+            elapsedSeconds = wallClockElapsedSeconds()
             watchConnectivity.syncMeditationProgress(
                 elapsedSeconds: elapsedSeconds,
                 targetSeconds: config.targetDurationSeconds,
@@ -82,6 +82,7 @@ struct ActiveMeditationView: View {
             finishedSession = ended
         }
         .onAppear {
+            elapsedSeconds = wallClockElapsedSeconds()
             watchConnectivity.syncMeditationProgress(
                 elapsedSeconds: elapsedSeconds,
                 targetSeconds: config.targetDurationSeconds,
@@ -136,9 +137,11 @@ struct ActiveMeditationView: View {
                 .animation(.linear(duration: 1), value: progress)
 
             VStack(spacing: 4) {
-                Text(DurationFormatting.format(seconds: remainingSeconds))
-                    .font(.system(size: 40, weight: .bold, design: .monospaced))
-                    .foregroundStyle(AppTheme.textPrimary)
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    Text(DurationFormatting.format(seconds: max(config.targetDurationSeconds - wallClockElapsedSeconds(at: context.date), 0)))
+                        .font(.system(size: 40, weight: .bold, design: .monospaced))
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
                 Text("restantes")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
@@ -177,6 +180,13 @@ struct ActiveMeditationView: View {
     private var shouldAutoEndByInactivity: Bool {
         guard let startedAt = workoutStore.activeSession?.startedAt, !isFinishing else { return false }
         return Date.now.timeIntervalSince(startedAt) >= WorkoutStore.autoEndInactivityLimit
+    }
+
+    private func wallClockElapsedSeconds(at date: Date = Date()) -> Int {
+        guard let startedAt = workoutStore.activeSession?.startedAt else {
+            return max(0, elapsedSeconds)
+        }
+        return max(0, Int(date.timeIntervalSince(startedAt)))
     }
 
     private func finishMeditation(autoEndedByInactivity: Bool = false) {

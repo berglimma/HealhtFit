@@ -1523,8 +1523,8 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil e salvar fotos de evolução corporal.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante a Corrida para mostrar o mapa e a rota em tempo real.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota da Corrida com a tela bloqueada ou em segundo plano, como um app de corrida.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida e ciclismo outdoor para mostrar o mapa e a rota em tempo real.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida e bike outdoor com a tela bloqueada ou em segundo plano.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -1563,8 +1563,8 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil e salvar fotos de evolução corporal.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante a Corrida para mostrar o mapa e a rota em tempo real.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota da Corrida com a tela bloqueada ou em segundo plano, como um app de corrida.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida e ciclismo outdoor para mostrar o mapa e a rota em tempo real.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida e bike outdoor com a tela bloqueada ou em segundo plano.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

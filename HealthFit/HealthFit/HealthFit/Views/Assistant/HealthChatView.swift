@@ -55,50 +55,42 @@ struct HealthChatView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            ForEach(assistant.messages) { message in
-                                ChatBubble(message: message)
-                                    .id(message.id)
-                            }
-
-                            if assistant.isTyping {
-                                TypingIndicatorBubble()
-                                    .id("typing-indicator")
-                            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(assistant.messages) { message in
+                            ChatBubble(message: message)
+                                .id(message.id)
                         }
-                        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
+
+                        if assistant.isTyping {
+                            TypingIndicatorBubble()
+                                .id("typing-indicator")
+                        }
                     }
-                    .scrollDismissesKeyboard(.immediately)
-                    .onTapGesture {
+                    .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .scrollDismissesKeyboard(.immediately)
+                .onTapGesture {
+                    dismissChatKeyboard()
+                }
+                .onChange(of: assistant.messages.count) { _, _ in
+                    scrollToBottom(proxy)
+                }
+                .onChange(of: assistant.isTyping) { _, isTyping in
+                    if isTyping {
                         dismissChatKeyboard()
-                    }
-                    .onChange(of: assistant.messages.count) { _, _ in
                         scrollToBottom(proxy)
                     }
-                    .onChange(of: assistant.isTyping) { _, isTyping in
-                        if isTyping {
-                            dismissChatKeyboard()
-                            scrollToBottom(proxy)
-                        }
-                    }
                 }
-
-                suggestionStrip
-
-                Text(HealthAssistantEngine.healthSafetyDisclaimer)
-                    .font(.caption2)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                    .padding(.bottom, 6)
-
-                inputBar
+            }
+            // Pin composer to the bottom so it never scrolls with messages and stays
+            // anchored when keyboard / scene phase leaves residual safe-area insets.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                composerChrome
             }
             .background(AppTheme.background)
             .navigationTitle("Assistente")
@@ -148,8 +140,15 @@ struct HealthChatView: View {
                     assistant.deliverSupplementLoggedMessage(message)
                 }
             }
+            .onReceive(KeyboardDismiss.willHidePublisher) { _ in
+                // Ensure FocusState clears when system dismisses the keyboard (background, alerts).
+                if isInputFocused {
+                    isInputFocused = false
+                }
+            }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
+                    dismissChatKeyboard()
                     assistant.refreshGuidedCheckInsIfNeeded(context: context)
                     assistant.checkInactivityFollowUpIfNeeded(
                         context: context,
@@ -164,6 +163,8 @@ struct HealthChatView: View {
                         context: context,
                         todayIntakes: wellnessService.todaySupplementIntakes
                     )
+                } else if phase == .background || phase == .inactive {
+                    dismissChatKeyboard()
                 }
             }
             .onChange(of: checkInService.pendingCheckIn?.phase) { _, _ in
@@ -242,6 +243,22 @@ struct HealthChatView: View {
 
     private var canSendDraft: Bool {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !assistant.isTyping
+    }
+
+    private var composerChrome: some View {
+        VStack(spacing: 0) {
+            suggestionStrip
+
+            Text(HealthAssistantEngine.healthSafetyDisclaimer)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                .padding(.bottom, 6)
+
+            inputBar
+        }
+        .background(AppTheme.background)
     }
 
     private var suggestionStrip: some View {

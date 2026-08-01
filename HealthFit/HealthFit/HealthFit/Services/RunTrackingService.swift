@@ -3,7 +3,7 @@ import CoreLocation
 import CoreMotion
 import Foundation
 
-/// Rastreia GPS, passos e estado de movimento durante uma corrida (estilo Strava).
+/// Rastreia GPS, passos e estado de movimento durante cardio outdoor (corrida ou bike).
 @MainActor
 final class RunTrackingService: NSObject, ObservableObject {
     @Published private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
@@ -16,6 +16,9 @@ final class RunTrackingService: NSObject, ObservableObject {
     @Published private(set) var stepCount: Int = 0
     @Published private(set) var isPedometerAvailable: Bool = false
     @Published private(set) var isTracking = false
+
+    /// Corrida ou ciclismo — afeta classificação de movimento e pedômetro.
+    private(set) var modality: OutdoorCardioModality = .running
 
     private let locationManager = CLLocationManager()
     private let pedometer = CMPedometer()
@@ -45,12 +48,21 @@ final class RunTrackingService: NSObject, ObservableObject {
         motionActivityAvailable = CMMotionActivityManager.isActivityAvailable()
     }
 
-    func prepareForRun() {
+    func prepareForSession(modality: OutdoorCardioModality = .running) {
+        self.modality = modality
         locationDeniedMessage = nil
         requestLocationPermissionIfNeeded()
     }
 
-    func start() {
+    /// Compatível com chamadas antigas de Corrida.
+    func prepareForRun() {
+        prepareForSession(modality: .running)
+    }
+
+    func start(modality: OutdoorCardioModality? = nil) {
+        if let modality {
+            self.modality = modality
+        }
         guard !isTracking else { return }
         locationDeniedMessage = nil
         sessionStartDate = .now
@@ -63,9 +75,14 @@ final class RunTrackingService: NSObject, ObservableObject {
         usesPedometerSteps = false
         isTracking = true
 
+        locationManager.activityType = self.modality == .cycling ? .fitness : .fitness
         requestLocationPermissionIfNeeded()
         startLocationUpdatesIfAuthorized()
-        startPedometer()
+        if self.modality == .running {
+            startPedometer()
+        } else {
+            isPedometerAvailable = false
+        }
         startMotionActivityUpdates()
     }
 
@@ -78,7 +95,7 @@ final class RunTrackingService: NSObject, ObservableObject {
         if motionActivityAvailable {
             motionActivityManager.stopActivityUpdates()
         }
-        if !usesPedometerSteps {
+        if modality == .running, !usesPedometerSteps {
             stepCount = max(stepCount, RunTrackingMath.estimatedSteps(distanceKm: distanceKm))
         }
     }
@@ -99,13 +116,16 @@ final class RunTrackingService: NSObject, ObservableObject {
             // Escalona para Always para continuar a rota com a tela bloqueada.
             locationManager.requestAlwaysAuthorization()
         case .denied, .restricted:
-            locationDeniedMessage = "Localização negada. Ative em Ajustes → HealthFit → Localização para ver o mapa da corrida."
+            locationDeniedMessage = Self.deniedMessage
         case .authorizedAlways:
             break
         @unknown default:
             break
         }
     }
+
+    private static let deniedMessage =
+        "Localização negada. Ative em Ajustes → HealthFit → Localização para ver o mapa do treino outdoor."
 
     private func startLocationUpdatesIfAuthorized() {
         let status = locationManager.authorizationStatus
@@ -144,16 +164,34 @@ final class RunTrackingService: NSObject, ObservableObject {
 
     private func applyMotionActivity(_ activity: CMMotionActivity) {
         let next: RunningActivityState
-        if activity.running {
-            next = .running
-        } else if activity.walking {
-            next = .walking
-        } else if activity.stationary {
-            next = .stationary
-        } else if activity.automotive || activity.cycling {
-            next = .stationary
-        } else {
-            return
+        switch modality {
+        case .cycling:
+            if activity.cycling {
+                next = currentSpeedMetersPerSecond >= 4.5 ? .hardCycling : .lightCycling
+            } else if activity.stationary {
+                next = .stationary
+            } else if activity.automotive {
+                // Em bike, automotive às vezes é falso positivo — usa GPS.
+                return
+            } else if activity.walking || activity.running {
+                next = .moving
+            } else {
+                return
+            }
+        case .running:
+            if activity.running {
+                next = .running
+            } else if activity.walking {
+                next = .walking
+            } else if activity.stationary {
+                next = .stationary
+            } else if activity.automotive {
+                next = .stationary
+            } else if activity.cycling {
+                next = .moving
+            } else {
+                return
+            }
         }
         // Confiança baixa: não sobrescreve classificação por GPS recente.
         if activity.confidence == .low, currentSpeedMetersPerSecond > 0.3 {
@@ -169,8 +207,10 @@ final class RunTrackingService: NSObject, ObservableObject {
             let delta = location.distance(from: last)
             let dt = location.timestamp.timeIntervalSince(last.timestamp)
             if dt <= 0 { return }
-            // Rejeita saltos absurdos (> ~8 m/s médios com gap curto, típico de glitch).
-            if delta > 80, dt < 5 { return }
+            // Rejeita saltos absurdos (bike pode ser mais rápida que corrida).
+            let maxJumpSpeed = modality == .cycling ? 20.0 : 8.0
+            if delta > maxJumpSpeed * max(dt, 1), dt < 5 { return }
+            if delta > 120, dt < 5 { return }
             if delta >= 1 {
                 distanceMeters += delta
             }
@@ -182,11 +222,16 @@ final class RunTrackingService: NSObject, ObservableObject {
             currentSpeedMetersPerSecond = location.speed
             // GPS como fallback / reforço quando CoreMotion não classifica.
             if !motionActivityAvailable || activityState == .unknown {
-                activityState = RunTrackingMath.activityState(fromSpeedMetersPerSecond: location.speed)
-            } else if activityState == .stationary || activityState == .walking || activityState == .running {
-                // Suaviza: se GPS discorda fortemente, atualiza.
-                let gpsState = RunTrackingMath.activityState(fromSpeedMetersPerSecond: location.speed)
-                if gpsState != activityState, abs(location.speed - impliedSpeed(for: activityState)) > 1.2 {
+                activityState = RunTrackingMath.activityState(
+                    fromSpeedMetersPerSecond: location.speed,
+                    modality: modality
+                )
+            } else {
+                let gpsState = RunTrackingMath.activityState(
+                    fromSpeedMetersPerSecond: location.speed,
+                    modality: modality
+                )
+                if gpsState != activityState, abs(location.speed - impliedSpeed(for: activityState)) > 1.5 {
                     activityState = gpsState
                 }
             }
@@ -198,11 +243,12 @@ final class RunTrackingService: NSObject, ObservableObject {
         if let last = routePoints.last {
             let moved = CLLocation(latitude: last.latitude, longitude: last.longitude)
                 .distance(from: location)
-            if moved < 2 { return }
+            let minMove = modality == .cycling ? 3.0 : 2.0
+            if moved < minMove { return }
         }
         routePoints.append(point)
 
-        if !usesPedometerSteps {
+        if modality == .running, !usesPedometerSteps {
             stepCount = RunTrackingMath.estimatedSteps(distanceKm: distanceKm)
         }
     }
@@ -212,6 +258,9 @@ final class RunTrackingService: NSObject, ObservableObject {
         case .stationary, .unknown: return 0
         case .walking: return 1.4
         case .running: return 3.0
+        case .lightCycling: return 3.5
+        case .hardCycling: return 6.5
+        case .moving: return 2.5
         }
     }
 }
@@ -231,7 +280,7 @@ extension RunTrackingService: CLLocationManagerDelegate {
                     startLocationUpdatesIfAuthorized()
                 }
             case .denied, .restricted:
-                locationDeniedMessage = "Localização negada. Ative em Ajustes → HealthFit → Localização para ver o mapa da corrida."
+                locationDeniedMessage = Self.deniedMessage
             case .notDetermined:
                 break
             @unknown default:
@@ -251,7 +300,7 @@ extension RunTrackingService: CLLocationManagerDelegate {
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         Task { @MainActor in
             if authorizationStatus == .denied || authorizationStatus == .restricted {
-                locationDeniedMessage = "Localização negada. Ative em Ajustes → HealthFit → Localização para ver o mapa da corrida."
+                locationDeniedMessage = Self.deniedMessage
             }
             #if DEBUG
             print("RunTrackingService location error: \(error.localizedDescription)")

@@ -143,10 +143,6 @@ enum PostWorkoutCheckInEngine {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
 
-        if looksLikeOffTopicQuestion(trimmed) {
-            return false
-        }
-
         let normalized = trimmed
             .lowercased()
             .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
@@ -166,7 +162,19 @@ enum PostWorkoutCheckInEngine {
             "forte", "top", "incrivel", "ok", "neutro", "pesado", "rigidez", "machuc",
             "fadiga", "acabado", "morto", "me sinto", "estou", "to ", "tô "
         ]
-        if feelingSignals.contains(where: { normalized.contains($0) }) {
+        let hasFeelingSignal = feelingSignals.contains(where: { normalized.contains($0) })
+
+        // Nova pergunta tem prioridade — exceto resposta curta de sentimento com "?" no final.
+        if looksLikeOffTopicQuestion(trimmed) {
+            let shortFeelingWithQuestionMark = hasFeelingSignal
+                && trimmed.count <= 40
+                && !hasStandaloneQuestionContent(normalized)
+            if !shortFeelingWithQuestionMark, trimmed.contains("?") || !hasFeelingSignal {
+                return false
+            }
+        }
+
+        if hasFeelingSignal {
             return true
         }
 
@@ -174,31 +182,68 @@ enum PostWorkoutCheckInEngine {
         return trimmed.count <= 48
     }
 
+    /// Conteúdo interrogativo além de um "?" solto (ex.: "Estou bem, qual meu IMC?").
+    static func hasStandaloneQuestionContent(_ normalized: String) -> Bool {
+        let markers = [
+            "como ", "qual ", "quais ", "quanto", "quanta", "quando ", "onde ",
+            "por que", "porque", "o que ", "posso ", "devo ", "sera que",
+            "me explica", "me diga", "me fala", "quero saber",
+            "meu imc", "proteina", "creatina", "suplemento", "cardapio", "biotipo",
+            "alcool", "cerveja", "calorias", "montar treino"
+        ]
+        return markers.contains(where: { normalized.contains($0) })
+    }
+
+    /// Detecta pergunta nova / fora do tema esperado (em vez de responder o check-in).
     static func looksLikeOffTopicQuestion(_ text: String) -> Bool {
-        let normalized = text
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+
+        let normalized = trimmed
             .lowercased()
             .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
 
-        if text.contains("?") {
+        if trimmed.contains("?") {
             return true
         }
 
+        let questionPrefixes = [
+            "como ", "qual ", "quais ", "quanto ", "quanta ", "quando ", "onde ",
+            "por que ", "porque ", "o que ", "posso ", "devo ", "sera que "
+        ]
+        if questionPrefixes.contains(where: { normalized.hasPrefix($0) }) {
+            let nonQuestionPrefixes = [
+                "como sempre", "como de costume", "como eu", "como vc", "como voce"
+            ]
+            if !nonQuestionPrefixes.contains(where: { normalized.hasPrefix($0) }) {
+                return true
+            }
+        }
+
         let questionSignals = [
-            "o que e", "o que sao", "qual e", "quais ", "quanto", "quando", "onde ",
-            "por que", "porque", "como faco", "como treinar", "como montar", "como dormir",
-            "posso ", "devo ", "me explica", "me diga", "quero saber", "montar treino",
-            "criar ficha", "gerar treino", "meu imc", " imc", "proteina", "creatina",
-            "whey", "suplemento", "cardapio", "biotipo", "ectomorfo", "mesomorfo",
-            "endomorfo", "alcool", "cerveja", "deficit", "calorias", "series", "repeticoes"
+            "o que e", "o que sao", "qual e", "quais ", "quanto", "quando ", "onde ",
+            "por que", "porque",
+            "como faco", "como treinar", "como montar", "como dormir", "como melhorar",
+            "como fazer", "como ganhar", "como perder", "como beber", "como tomar",
+            "como fica", "como funciona", "como usar", "como calcular",
+            "posso ", "devo ", "me explica", "me diga", "me fala", "quero saber",
+            "montar treino", "criar ficha", "gerar treino",
+            "meu imc", " imc", "proteina", "creatina", "whey", "suplemento",
+            "cardapio", "biotipo", "ectomorfo", "mesomorfo", "endomorfo",
+            "alcool", "cerveja", "deficit", "calorias", "series", "repeticoes"
         ]
         return questionSignals.contains(where: { normalized.contains($0) })
     }
 
+    /// Lembrete educado de pergunta pendente (uma vez por turno desviado).
+    static func pendingQuestionReminder(_ pendingQuestion: String) -> String {
+        "Quando puder, me responde também: \(pendingQuestion)"
+    }
+
     static func reminderToAnswerFeeling(checkIn: PendingPostWorkoutCheckIn) -> String {
-        """
-        E, voltando ao check-in do treino: ainda quero saber como você está se sentindo agora depois de "\(checkIn.workoutTitle)" — corpo, energia e disposição.
-        Pode responder com sinceridade (ou usar uma das sugestões).
-        """
+        pendingQuestionReminder(
+            "como você está se sentindo agora depois de \"\(checkIn.workoutTitle)\" — corpo, energia e disposição?"
+        )
     }
 
     static func responseSequence(

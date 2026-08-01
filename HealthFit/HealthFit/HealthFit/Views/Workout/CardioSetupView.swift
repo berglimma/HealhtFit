@@ -332,6 +332,21 @@ struct CardioSetupView: View {
                         .font(.headline)
                         .foregroundStyle(AppTheme.accentSecondary)
                 }
+            } else if config.isOutdoorCyclingSession {
+                HStack {
+                    Label("Modo", systemImage: "bicycle")
+                    Spacer()
+                    Text("Outdoor com GPS")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accent)
+                }
+                HStack {
+                    Label("Duração sugerida", systemImage: "clock.fill")
+                    Spacer()
+                    Text("\(selectedIntensity.durationMinutes) min")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accent)
+                }
             } else {
                 HStack {
                     Label("Duração sugerida", systemImage: "clock.fill")
@@ -341,7 +356,7 @@ struct CardioSetupView: View {
                         .foregroundStyle(AppTheme.accent)
                 }
             }
-            if config.isFreeRun || config.isDistanceRun {
+            if config.isFreeRun || config.isDistanceRun || config.isOutdoorCyclingSession {
                 HStack {
                     Label("Calorias (referência)", systemImage: "flame.fill")
                     Spacer()
@@ -391,7 +406,11 @@ struct CardioSetupView: View {
             showActiveCardio = true
         } label: {
             Label(
-                config.isDistanceRun || config.isFreeRun ? "Iniciar Corrida" : "Iniciar Cardio",
+                {
+                    if config.isDistanceRun || config.isFreeRun { return "Iniciar Corrida" }
+                    if config.isOutdoorCyclingSession { return "Iniciar Pedal" }
+                    return "Iniciar Cardio"
+                }(),
                 systemImage: "play.fill"
             )
         }
@@ -417,9 +436,15 @@ struct CardioExerciseCard: View {
                 Text(exercise.name)
                     .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
-                Text(exercise.supportsDistanceGoals
-                     ? "\(exercise.description) · livre ou 5–25 km"
-                     : exercise.description)
+                Text({
+                    if exercise.supportsDistanceGoals {
+                        return "\(exercise.description) · livre ou 5–40 km"
+                    }
+                    if exercise.supportsOutdoorGPS {
+                        return "\(exercise.description) · mapa GPS"
+                    }
+                    return exercise.description
+                }())
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
                     .lineLimit(2)

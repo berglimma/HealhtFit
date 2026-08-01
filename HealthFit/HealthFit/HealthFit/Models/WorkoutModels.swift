@@ -550,6 +550,59 @@ struct WorkoutSession: Identifiable, Codable {
         return heartRateSamples.map(\.bpm).reduce(0, +) / Double(heartRateSamples.count)
     }
 
+    /// Corrida (título ou heurística legado).
+    var isRunningSession: Bool {
+        let title = workoutTitle.lowercased()
+        if title.contains("corrida") { return true }
+        // Rota GPS sem título de bike/outdoor genérico ainda conta como corrida legado.
+        if !routePoints.isEmpty && !isOutdoorCyclingSession {
+            return true
+        }
+        if stepCount != nil, completedDistanceKm != nil || targetDistanceKm != nil {
+            return true
+        }
+        return false
+    }
+
+    /// Sessão com mapa GPS outdoor (Corrida, Bicicleta pedal, Mountain bike).
+    var isOutdoorGPSCardio: Bool {
+        if isRunningSession { return true }
+        if isOutdoorCyclingSession { return true }
+        if !routePoints.isEmpty { return true }
+        return false
+    }
+
+    /// Mountain bike / Bicicleta pedal pelo título.
+    var isOutdoorCyclingSession: Bool {
+        let title = workoutTitle.lowercased()
+        return title.contains("mountain bike")
+            || title.contains("bicicleta pedal")
+            || title.contains("bike outdoor")
+    }
+
+    /// Métrica para colorir a rota no mapa / card.
+    var routePerformanceMetric: RoutePerformanceMetric {
+        isOutdoorCyclingSession ? .speed : .pace
+    }
+
+    /// Distância exibida: GPS concluída, senão soma da polyline, senão meta.
+    var displayDistanceKm: Double {
+        if let completed = completedDistanceKm, completed > 0 {
+            return completed
+        }
+        let fromRoute = RunTrackingMath.distanceKm(from: routePoints)
+        if fromRoute > 0 { return fromRoute }
+        return targetDistanceKm ?? 0
+    }
+
+    /// Ritmo em s/km: gravado ou duração ÷ distância.
+    var displayPaceSecondsPerKm: Int? {
+        if let pace = averagePaceSecondsPerKm, pace > 0 { return pace }
+        let km = displayDistanceKm
+        guard km > 0.05 else { return nil }
+        return max(1, Int((duration / km).rounded()))
+    }
+
     var totalRestSeconds: Int {
         exerciseRecords.reduce(0) { $0 + $1.restSeconds }
     }

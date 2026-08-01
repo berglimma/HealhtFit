@@ -28,7 +28,7 @@ final class EveningTrainingNudgeController {
         guard endDate > .now else { return }
 
         // Não competir com treino ativo na tela bloqueada.
-        guard Activity<WorkoutLiveActivityAttributes>.activities.isEmpty else { return }
+        guard !WorkoutLiveActivityController.shared.hasActiveLiveActivity else { return }
 
         endImmediate()
 
@@ -69,8 +69,8 @@ final class EveningTrainingNudgeController {
                     dismissalPolicy: .immediate
                 )
             }
-            self.activity = nil
         }
+        self.activity = nil
 
         for orphan in Activity<EveningTrainingNudgeAttributes>.activities {
             Task {
