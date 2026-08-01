@@ -59,6 +59,10 @@
 		B1000402 /* EveningTrainingNudgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000402 /* EveningTrainingNudgeService.swift */; };
 		B1000403 /* EveningTrainingNudgeAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000400 /* EveningTrainingNudgeAttributes.swift */; };
 		B1000410 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000410 /* AppLanguage.swift */; };
+		B1000420 /* RunTrackingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000420 /* RunTrackingModels.swift */; };
+		B1000421 /* RunTrackingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000421 /* RunTrackingService.swift */; };
+		B1000422 /* RunRouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000422 /* RunRouteMapView.swift */; };
+		B2000042 /* RunTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000042 /* RunTrackingTests.swift */; };
 		B1000411 /* LanguagePickerControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000411 /* LanguagePickerControl.swift */; };
 		B1000311 /* HealthFitWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1000311 /* HealthFitWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 
@@ -308,6 +312,10 @@
 		F1000401 /* EveningTrainingNudgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeController.swift; sourceTree = "<group>"; };
 		F1000402 /* EveningTrainingNudgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeService.swift; sourceTree = "<group>"; };
 		F1000410 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
+		F1000420 /* RunTrackingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingModels.swift; sourceTree = "<group>"; };
+		F1000421 /* RunTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingService.swift; sourceTree = "<group>"; };
+		F1000422 /* RunRouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunRouteMapView.swift; sourceTree = "<group>"; };
+		F2000042 /* RunTrackingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingTests.swift; sourceTree = "<group>"; };
 		F1000411 /* LanguagePickerControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguagePickerControl.swift; sourceTree = "<group>"; };
 		F1000310 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000311 /* HealthFitWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HealthFitWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -571,6 +579,7 @@
 				F1000003 /* WorkoutModels.swift */,
 				F1000340 /* GuidedWorkoutCatalog.swift */,
 				F1000043 /* CardioModels.swift */,
+				F1000420 /* RunTrackingModels.swift */,
 				F1000004 /* MealModels.swift */,
 				F1000059 /* MealCatalog.swift */,
 				F1000046 /* WeeklyProgressModels.swift */,
@@ -602,6 +611,7 @@
 				F1000400 /* EveningTrainingNudgeAttributes.swift */,
 				F1000401 /* EveningTrainingNudgeController.swift */,
 				F1000402 /* EveningTrainingNudgeService.swift */,
+				F1000421 /* RunTrackingService.swift */,
 				F1000011 /* WatchConnectivityManager.swift */,
 				F1000012 /* VisionWorkoutService.swift */,
 				F1000039 /* MotivationMessages.swift */,
@@ -709,6 +719,7 @@
 				F1000305 /* WorkoutShareCardView.swift */,
 				F1000044 /* CardioSetupView.swift */,
 				F1000045 /* ActiveCardioView.swift */,
+				F1000422 /* RunRouteMapView.swift */,
 				F1000051 /* MeditationSetupView.swift */,
 				F1000052 /* ActiveMeditationView.swift */,
 				F1000081 /* ExerciseDemoVideoView.swift */,
@@ -871,6 +882,7 @@
 				F2000019 /* NotificationServiceTests.swift */,
 				F2000040 /* EveningTrainingNudgeTests.swift */,
 				F2000041 /* AppLanguageTests.swift */,
+				F2000042 /* RunTrackingTests.swift */,
 				F2000021 /* ExerciseVideoCatalogTests.swift */,
 				F2000023 /* ExerciseGifCatalogTests.swift */,
 				F2000024 /* CustomWorkoutFocusGroupTests.swift */,
@@ -1234,6 +1246,9 @@
 				B1000131 /* NutritionReportBuilder.swift in Sources */,
 				B1000140 /* L10n.swift in Sources */,
 				B1000410 /* AppLanguage.swift in Sources */,
+				B1000420 /* RunTrackingModels.swift in Sources */,
+				B1000421 /* RunTrackingService.swift in Sources */,
+				B1000422 /* RunRouteMapView.swift in Sources */,
 				B1000411 /* LanguagePickerControl.swift in Sources */,
 				B1000087 /* ExerciseVideoRepository.swift in Sources */,
 				B1000073 /* ForgotPasswordView.swift in Sources */,
@@ -1285,6 +1300,7 @@
 				B2000011 /* NotificationServiceTests.swift in Sources */,
 				B2000040 /* EveningTrainingNudgeTests.swift in Sources */,
 				B2000041 /* AppLanguageTests.swift in Sources */,
+				B2000042 /* RunTrackingTests.swift in Sources */,
 				B2000012 /* ExerciseVideoCatalogTests.swift in Sources */,
 				B2000014 /* ExerciseGifCatalogTests.swift in Sources */,
 				B2000015 /* CustomWorkoutFocusGroupTests.swift in Sources */,
@@ -1507,6 +1523,9 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil e salvar fotos de evolução corporal.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante a Corrida para mostrar o mapa e a rota em tempo real.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota da Corrida com a tela bloqueada ou em segundo plano, como um app de corrida.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -1544,6 +1563,9 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil e salvar fotos de evolução corporal.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante a Corrida para mostrar o mapa e a rota em tempo real.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota da Corrida com a tela bloqueada ou em segundo plano, como um app de corrida.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;

@@ -1,0 +1,121 @@
+import MapKit
+import SwiftUI
+
+/// Mapa MapKit com polyline da rota e marcador de início (corrida ativa ou resumo).
+struct RunRouteMapView: View {
+    let routePoints: [RouteCoordinate]
+    var userCoordinate: CLLocationCoordinate2D?
+    var followUser: Bool = true
+    var showsUserLocation: Bool = true
+    var height: CGFloat = 220
+
+    @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
+
+    private var coordinates: [CLLocationCoordinate2D] {
+        routePoints.map(\.coordinate)
+    }
+
+    private var startCoordinate: CLLocationCoordinate2D? {
+        coordinates.first
+    }
+
+    var body: some View {
+        Map(position: $cameraPosition) {
+            if coordinates.count >= 2 {
+                MapPolyline(coordinates: coordinates)
+                    .stroke(AppTheme.accent, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+            }
+
+            if let start = startCoordinate {
+                Annotation("Início", coordinate: start) {
+                    ZStack {
+                        Circle()
+                            .fill(AppTheme.accent)
+                            .frame(width: 16, height: 16)
+                        Circle()
+                            .stroke(Color.white, lineWidth: 2)
+                            .frame(width: 16, height: 16)
+                    }
+                }
+            }
+
+            if showsUserLocation {
+                UserAnnotation()
+            }
+        }
+        .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
+        .mapControls {
+            MapCompass()
+            MapUserLocationButton()
+        }
+        .frame(height: height)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .onAppear {
+            updateCamera(animated: false)
+        }
+        .onChange(of: routePoints.count) { _, _ in
+            updateCamera(animated: true)
+        }
+        .onChange(of: userCoordinate?.latitude) { _, _ in
+            guard followUser else { return }
+            updateCamera(animated: true)
+        }
+    }
+
+    private func updateCamera(animated: Bool) {
+        if followUser, let user = userCoordinate {
+            let region = MKCoordinateRegion(
+                center: user,
+                span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
+            )
+            withAnimation(animated ? .easeInOut(duration: 0.35) : nil) {
+                cameraPosition = .region(region)
+            }
+            return
+        }
+
+        guard let region = fittingRegion() else { return }
+        withAnimation(animated ? .easeInOut(duration: 0.35) : nil) {
+            cameraPosition = .region(region)
+        }
+    }
+
+    private func fittingRegion() -> MKCoordinateRegion? {
+        let coords = coordinates
+        guard let first = coords.first else {
+            if let user = userCoordinate {
+                return MKCoordinateRegion(
+                    center: user,
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                )
+            }
+            return nil
+        }
+        guard coords.count > 1 else {
+            return MKCoordinateRegion(
+                center: first,
+                span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
+            )
+        }
+
+        var minLat = first.latitude
+        var maxLat = first.latitude
+        var minLon = first.longitude
+        var maxLon = first.longitude
+        for c in coords.dropFirst() {
+            minLat = min(minLat, c.latitude)
+            maxLat = max(maxLat, c.latitude)
+            minLon = min(minLon, c.longitude)
+            maxLon = max(maxLon, c.longitude)
+        }
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLon + maxLon) / 2
+        )
+        let span = MKCoordinateSpan(
+            latitudeDelta: max((maxLat - minLat) * 1.6, 0.006),
+            longitudeDelta: max((maxLon - minLon) * 1.6, 0.006)
+        )
+        return MKCoordinateRegion(center: center, span: span)
+    }
+}

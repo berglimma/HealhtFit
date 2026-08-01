@@ -159,6 +159,9 @@ struct CardioWorkoutConfig: Hashable {
 
     var isDistanceRun: Bool { runningDistance != nil && !isFreeRun }
 
+    /// Sessão de Corrida (mapa GPS, passos e estado de movimento).
+    var isRunningSession: Bool { exercise.supportsDistanceGoals }
+
     var hasCalorieGoal: Bool {
         guard let targetCalories else { return false }
         return targetCalories > 0

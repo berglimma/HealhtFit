@@ -136,6 +136,9 @@
     "%lld noite(s)" : {
 
     },
+    "%lld passos" : {
+
+    },
     "%lld personalizados" : {
 
     },
@@ -1150,6 +1153,9 @@
     "Calorias (referência)" : {
 
     },
+    "Calorias ao vivo via Watch ou estimativa MET × peso × tempo." : {
+
+    },
     "Calorias em tempo real via Apple Watch" : {
 
     },
@@ -1486,6 +1492,9 @@
     "Continuar mesmo assim" : {
 
     },
+    "Continuar treino" : {
+
+    },
     "Copo registrado (+ %lld ml)" : {
 
     },
@@ -1746,6 +1755,12 @@
     "Esta ação é permanente. Sua conta, treinos na nuvem, perfil e dados locais serão removidos." : {
 
     },
+    "Estimado" : {
+
+    },
+    "Estimativa ao vivo" : {
+
+    },
     "Etapa %lld de %lld" : {
       "localizations" : {
         "pt-BR" : {
@@ -1872,6 +1887,9 @@
 
     },
     "Gerar Cardápio" : {
+
+    },
+    "GPS" : {
 
     },
     "Grupos Musculares" : {
@@ -2197,9 +2215,6 @@
 
     },
     "Nome do treino" : {
-
-    },
-    "Notificação e alerta sonoro enviados.\nToque para continuar o treino." : {
 
     },
     "Notificações" : {
@@ -2878,6 +2893,9 @@
     "Ritmo de referência: %@" : {
 
     },
+    "Rota da corrida" : {
+
+    },
     "Rotinas de mobilidade voltadas à musculação, com GIFs na execução" : {
 
     },
@@ -2995,6 +3013,35 @@
     "SESSÃO" : {
 
     },
+    "settings.language" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Language"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idioma"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langue"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idioma"
+          }
+        }
+      }
+    },
     "Seu apelido ou primeiro nome" : {
 
     },
@@ -3052,35 +3099,6 @@
     },
     "Suporte" : {
 
-    },
-    "settings.language" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Language"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Idioma"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Langue"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Idioma"
-          }
-        }
-      }
     },
     "tab.assistant" : {
       "extractionState" : "stale",
@@ -3234,6 +3252,9 @@
 
     },
     "Tempo configurado: %llds" : {
+
+    },
+    "Tempo em tempo real" : {
 
     },
     "Tempo estimado" : {

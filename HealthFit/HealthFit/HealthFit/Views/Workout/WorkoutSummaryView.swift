@@ -70,6 +70,9 @@ struct WorkoutSummaryView: View {
                         if marathonReport != nil {
                             marathonPerformanceSection
                         }
+                        if !session.routePoints.isEmpty {
+                            runRouteSection
+                        }
                         preWorkoutSection
                         exerciseBreakdown
                         totalsSection
@@ -694,6 +697,42 @@ struct WorkoutSummaryView: View {
             .background(AppTheme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
         }
+    }
+
+    @ViewBuilder
+    private var runRouteSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "map.fill")
+                    .foregroundStyle(AppTheme.accent)
+                Text("Rota da corrida")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                if let steps = session.stepCount {
+                    Label("\(steps) passos", systemImage: "figure.walk")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+
+            RunRouteMapView(
+                routePoints: session.routePoints,
+                userCoordinate: session.routePoints.last?.coordinate,
+                followUser: false,
+                showsUserLocation: false,
+                height: 220
+            )
+
+            if let distance = session.completedDistanceKm {
+                Text(String(format: "%.2f km percorridos · %d pontos GPS", distance, session.routePoints.count))
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
     @ViewBuilder

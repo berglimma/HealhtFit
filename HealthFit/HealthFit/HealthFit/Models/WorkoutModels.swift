@@ -423,6 +423,10 @@ struct WorkoutSession: Identifiable, Codable {
     var averagePaceSecondsPerKm: Int?
     var cardioIntensityLabel: String?
     var targetCalories: Int?
+    /// Pontos GPS da rota (corrida ao ar livre).
+    var routePoints: [RouteCoordinate]
+    /// Passos contados durante a sessão de corrida.
+    var stepCount: Int?
     /// Encerrado antes de concluir todos os exercícios.
     var endedEarly: Bool
     /// Motivo informado pelo aluno ao encerrar antecipadamente.
@@ -447,6 +451,8 @@ struct WorkoutSession: Identifiable, Codable {
         averagePaceSecondsPerKm: Int? = nil,
         cardioIntensityLabel: String? = nil,
         targetCalories: Int? = nil,
+        routePoints: [RouteCoordinate] = [],
+        stepCount: Int? = nil,
         endedEarly: Bool = false,
         earlyEndJustification: String? = nil,
         autoEndedByInactivity: Bool = false
@@ -467,6 +473,8 @@ struct WorkoutSession: Identifiable, Codable {
         self.averagePaceSecondsPerKm = averagePaceSecondsPerKm
         self.cardioIntensityLabel = cardioIntensityLabel
         self.targetCalories = targetCalories
+        self.routePoints = routePoints
+        self.stepCount = stepCount
         self.endedEarly = endedEarly
         self.earlyEndJustification = earlyEndJustification
         self.autoEndedByInactivity = autoEndedByInactivity
@@ -490,6 +498,8 @@ struct WorkoutSession: Identifiable, Codable {
         averagePaceSecondsPerKm = try container.decodeIfPresent(Int.self, forKey: .averagePaceSecondsPerKm)
         cardioIntensityLabel = try container.decodeIfPresent(String.self, forKey: .cardioIntensityLabel)
         targetCalories = try container.decodeIfPresent(Int.self, forKey: .targetCalories)
+        routePoints = try container.decodeIfPresent([RouteCoordinate].self, forKey: .routePoints) ?? []
+        stepCount = try container.decodeIfPresent(Int.self, forKey: .stepCount)
         endedEarly = try container.decodeIfPresent(Bool.self, forKey: .endedEarly) ?? false
         earlyEndJustification = try container.decodeIfPresent(String.self, forKey: .earlyEndJustification)
         autoEndedByInactivity = try container.decodeIfPresent(Bool.self, forKey: .autoEndedByInactivity) ?? false
@@ -513,6 +523,10 @@ struct WorkoutSession: Identifiable, Codable {
         try container.encodeIfPresent(averagePaceSecondsPerKm, forKey: .averagePaceSecondsPerKm)
         try container.encodeIfPresent(cardioIntensityLabel, forKey: .cardioIntensityLabel)
         try container.encodeIfPresent(targetCalories, forKey: .targetCalories)
+        if !routePoints.isEmpty {
+            try container.encode(routePoints, forKey: .routePoints)
+        }
+        try container.encodeIfPresent(stepCount, forKey: .stepCount)
         try container.encode(endedEarly, forKey: .endedEarly)
         try container.encodeIfPresent(earlyEndJustification, forKey: .earlyEndJustification)
         try container.encode(autoEndedByInactivity, forKey: .autoEndedByInactivity)
@@ -523,7 +537,8 @@ struct WorkoutSession: Identifiable, Codable {
         case heartRateSamples, caloriesBurned, completedExercises, totalExercises
         case exerciseRecords, tookPreWorkout
         case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel
-        case targetCalories, endedEarly, earlyEndJustification, autoEndedByInactivity
+        case targetCalories, routePoints, stepCount
+        case endedEarly, earlyEndJustification, autoEndedByInactivity
     }
 
     var duration: TimeInterval {
@@ -551,9 +566,22 @@ struct WorkoutSession: Identifiable, Codable {
 
 enum DurationFormatting {
     static func format(seconds: Int) -> String {
-        let minutes = seconds / 60
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
         let secs = seconds % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, secs)
+        }
         return String(format: "%02d:%02d", minutes, secs)
+    }
+
+    /// Relógio em tempo real H:MM:SS (sempre com horas).
+    static func formatElapsedClock(seconds: Int) -> String {
+        let safe = max(0, seconds)
+        let hours = safe / 3600
+        let minutes = (safe % 3600) / 60
+        let secs = safe % 60
+        return String(format: "%d:%02d:%02d", hours, minutes, secs)
     }
 }
 
