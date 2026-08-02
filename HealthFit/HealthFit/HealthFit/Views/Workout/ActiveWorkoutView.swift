@@ -105,6 +105,9 @@ struct ActiveWorkoutView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Minimizar") {
                         workoutStore.minimizeActiveWorkout()
+                        // Dismiss the cover from inside so MainTabView's item binding clears
+                        // even if the minimized onChange races with presentation sync.
+                        dismiss()
                     }
                     .disabled(isFinishing)
                 }

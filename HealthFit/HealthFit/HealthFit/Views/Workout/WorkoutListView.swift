@@ -34,14 +34,7 @@ struct WorkoutListView: View {
                 VStack(spacing: 16) {
                     sectionPicker
 
-                    if let session = workoutStore.activeSession {
-                        ActiveWorkoutBanner(
-                            session: session,
-                            currentExerciseName: workoutStore.currentExercise?.name
-                        ) {
-                            workoutStore.resumeActiveWorkout()
-                        }
-                    }
+                    // Global minimized banner lives on MainTabView; avoid a duplicate card here.
 
                     switch selectedSection {
                     case .strength:
@@ -970,8 +963,10 @@ struct ActiveWorkoutBanner: View {
                     .foregroundStyle(AppTheme.accent)
             }
             .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(AppTheme.accent.opacity(0.18))
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            .contentShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .disabled(onResume == nil)

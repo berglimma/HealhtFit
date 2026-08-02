@@ -25,71 +25,78 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            DashboardView()
-                .tabItem {
-                    Label(L10n.Tab.home, systemImage: "house.fill")
-                }
-                .tag(0)
+        // ZStack (not TabView.safeAreaInset) keeps the minimized card above tab content
+        // without participating in keyboard avoidance, and keeps banner hits as a sibling
+        // layer so taps resume/end reliably without stealing tab-bar hits (clear spacer).
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                DashboardView()
+                    .tabItem {
+                        Label(L10n.Tab.home, systemImage: "house.fill")
+                    }
+                    .tag(0)
 
-            WorkoutListView()
-                .tabItem {
-                    Label(L10n.Tab.workouts, systemImage: "dumbbell.fill")
-                }
-                .tag(workoutsTabTag)
+                WorkoutListView()
+                    .tabItem {
+                        Label(L10n.Tab.workouts, systemImage: "dumbbell.fill")
+                    }
+                    .tag(workoutsTabTag)
 
-            MealPlanView()
-                .tabItem {
-                    Label(L10n.Tab.nutrition, systemImage: "fork.knife")
-                }
-                .tag(nutritionTabTag)
+                MealPlanView()
+                    .tabItem {
+                        Label(L10n.Tab.nutrition, systemImage: "fork.knife")
+                    }
+                    .tag(nutritionTabTag)
 
-            HealthChatView()
-                .tabItem {
-                    Label(L10n.Tab.assistant, systemImage: "bubble.left.and.bubble.right.fill")
-                }
-                .tag(assistantTabTag)
-                .badge(checkInService.assistantTabBadgeCount)
+                HealthChatView()
+                    .tabItem {
+                        Label(L10n.Tab.assistant, systemImage: "bubble.left.and.bubble.right.fill")
+                    }
+                    .tag(assistantTabTag)
+                    .badge(checkInService.assistantTabBadgeCount)
 
-            ProfileView()
-                .tabItem {
-                    Label(L10n.Tab.profile, systemImage: "person.fill")
-                }
-                .tag(profileTabTag)
-        }
-        .tint(AppTheme.accent)
-        .tabViewStyle(.automatic)
-        // Overlay (not safeAreaInset) so keyboard avoidance on TabView cannot leave the
-        // minimized banner / bottom chrome stuck mid-screen after dismiss or resume.
-        .overlay(alignment: .bottom) {
+                ProfileView()
+                    .tabItem {
+                        Label(L10n.Tab.profile, systemImage: "person.fill")
+                    }
+                    .tag(profileTabTag)
+            }
+            .tint(AppTheme.accent)
+            .tabViewStyle(.automatic)
+
             if showsMinimizedWorkoutBanner, let session = workoutStore.activeSession {
                 VStack(spacing: 0) {
                     ActiveWorkoutBanner(
                         session: session,
                         currentExerciseName: workoutStore.currentExercise?.name
                     ) {
-                        workoutStore.resumeActiveWorkout()
-                        syncActiveWorkoutPresentation()
+                        resumeMinimizedWorkout()
                     }
                     .padding(.horizontal, 12)
                     .padding(.top, 4)
                     .padding(.bottom, 8)
 
-                    // TabView does not treat the tab bar as safe area for chrome on itself.
+                    // Hit-through strip so UITabBar icons/labels still receive taps.
                     Color.clear
                         .frame(height: DeviceLayout.mainTabBarContentHeight)
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 }
+                .frame(maxWidth: .infinity, alignment: .bottom)
                 .ignoresSafeArea(.keyboard)
+                .zIndex(1)
             }
         }
         .fullScreenCover(item: $presentedActiveSheet, onDismiss: {
-            // Se o treino ainda está ativo, foi um minimizar (não o fim da sessão).
-            if workoutStore.activeSession != nil {
-                workoutStore.minimizeActiveWorkout()
+            // Cover finished dismissing. Only force-minimize when the session is still
+            // active AND we have not already resumed (presentedActiveSheet non-nil) —
+            // otherwise a late onDismiss after tapping the banner re-minimizes the workout.
+            if workoutStore.activeSession != nil, presentedActiveSheet == nil {
+                if !workoutStore.isActiveWorkoutMinimized {
+                    workoutStore.minimizeActiveWorkout()
+                }
+                syncActiveWorkoutPresentation()
             }
-            syncActiveWorkoutPresentation()
         }) { sheet in
             ActiveWorkoutView(sheet: sheet) {
                 selectedTab = workoutsTabTag
@@ -165,8 +172,7 @@ struct MainTabView: View {
             isPresented: $workoutStore.showActiveWorkoutConflictAlert
         ) {
             Button("Continuar treino") {
-                workoutStore.resumeActiveWorkout()
-                syncActiveWorkoutPresentation()
+                resumeMinimizedWorkout()
             }
             Button("OK", role: .cancel) {}
         } message: {
@@ -210,11 +216,33 @@ struct MainTabView: View {
         checkInService.setAssistantTabActive(tab == assistantTabTag)
     }
 
+    private func resumeMinimizedWorkout() {
+        // If the cover is already up (e.g. conflict alert while training), only clear the flag.
+        let needsRepresent = presentedActiveSheet == nil || workoutStore.isActiveWorkoutMinimized
+        workoutStore.resumeActiveWorkout()
+        guard needsRepresent else { return }
+
+        // Same WorkoutSheet id after a fullScreenCover dismiss often fails to re-present
+        // if set in the same turn as onDismiss. Clear, then present on the next tick so
+        // ActiveWorkoutView (with Encerrar) opens again.
+        presentedActiveSheet = nil
+        Task { @MainActor in
+            await Task.yield()
+            syncActiveWorkoutPresentation()
+            if presentedActiveSheet == nil {
+                try? await Task.sleep(for: .milliseconds(100))
+                syncActiveWorkoutPresentation()
+            }
+        }
+    }
+
     private func syncActiveWorkoutPresentation() {
         if let sheet = workoutStore.activeStrengthSheet(),
            workoutStore.activeSession != nil,
            !workoutStore.isActiveWorkoutMinimized {
-            presentedActiveSheet = sheet
+            if presentedActiveSheet?.id != sheet.id {
+                presentedActiveSheet = sheet
+            }
         } else if workoutStore.activeSession != nil, workoutStore.isActiveWorkoutMinimized {
             // Minimizar: fecha o cover do treino ativo.
             presentedActiveSheet = nil
