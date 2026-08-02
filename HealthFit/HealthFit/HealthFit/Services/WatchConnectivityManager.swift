@@ -62,11 +62,22 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
 
     private override init() {
         super.init()
+        // Defer WCSession.activate until after first paint (see ensureSessionActivated).
         if WCSession.isSupported() {
             session = WCSession.default
             session?.delegate = self
-            session?.activate()
         }
+    }
+
+    /// Activates WatchConnectivity after the UI is interactive (cold launch).
+    func ensureSessionActivated() {
+        guard WCSession.isSupported() else { return }
+        if session == nil {
+            session = WCSession.default
+            session?.delegate = self
+        }
+        guard let session, session.activationState != .activated else { return }
+        session.activate()
     }
 
     /// Tenta reativar a sessão e confirmar sincronismo ao vivo com o Apple Watch.
@@ -75,6 +86,8 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             isWatchConnected = false
             return .notSupported
         }
+
+        ensureSessionActivated()
 
         guard let session else {
             isWatchConnected = false

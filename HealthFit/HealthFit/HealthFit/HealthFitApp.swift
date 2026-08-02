@@ -17,8 +17,8 @@ struct HealthFitApp: App {
     @ObservedObject private var languageStore = AppLanguageStore.shared
 
     init() {
+        // BGTask registration must stay early; notifications / Watch activate after first frame.
         AppIconInactivityService.shared.registerBackgroundTasks()
-        NotificationService.shared.requestAuthorization()
         // Garante persistência do padrão pt-BR antes da primeira renderização.
         _ = AppLanguageStore.shared
     }
@@ -45,6 +45,12 @@ struct HealthFitApp: App {
                 .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     _ = SocialSignInService.handleIncomingURL(url)
+                }
+                .task(priority: .utility) {
+                    await Task.yield()
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    NotificationService.shared.requestAuthorization()
+                    watchConnectivity.ensureSessionActivated()
                 }
         }
     }

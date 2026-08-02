@@ -37,27 +37,7 @@ struct RootView: View {
             } else {
                 MainTabView()
                     .task {
-                        wellnessService.configure(for: authService.currentUser)
-                        syncWellnessCloudHistory()
-                        await healthKitManager.requestAuthorization()
-                        mealPlanService.loadSavedData()
-                        if mealPlanService.weeklyPlan.isEmpty, let user = authService.currentUser {
-                            mealPlanService.generatePlan(for: user)
-                        }
-                        syncWorkoutCloudHistory()
-                        await exerciseVideoRepository.bootstrapRemoteCatalog()
-                        // loadSavedData/generatePlan já sincronizam meal reminders;
-                        // refresh reforça motivação 06:00, água e check-ins.
-                        NotificationService.shared.refreshRecurringNotifications()
-                        refreshInactivityReminder()
-                        _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
-                            athleteName: authService.currentUser?.greetingName ?? "Atleta"
-                        )
-                        WorkoutLiveActivitySync.reconcile(
-                            workoutStore: workoutStore,
-                            timerService: timerService
-                        )
-                        EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
+                        await runPostLoginStartupPipeline()
                     }
                     .sheet(isPresented: $wellnessService.showSleepCheckIn) {
                         DailyWellnessCheckInView()
@@ -71,7 +51,11 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.25), value: didCompleteWelcomeForSession)
         .onAppear {
             prepareWelcomeIfAuthenticated(trigger: .coldStart)
-            AppIconInactivityService.shared.handleAppBecameActive()
+            // Icon sync is cheap but not needed before first paint.
+            Task { @MainActor in
+                await Task.yield()
+                AppIconInactivityService.shared.handleAppBecameActive()
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -80,32 +64,7 @@ struct RootView: View {
                 KeyboardDismiss.hide()
                 if authService.isAuthenticated {
                     prepareWelcomeIfAuthenticated(trigger: .returnFromBackground)
-                    wellnessService.configure(for: authService.currentUser)
-                    syncWellnessCloudHistory()
-                    wellnessService.checkInOnAppOpen()
-                    // Recarrega o cardápio antes de sincronizar lembretes — senão
-                    // weeklyPlan vazio no boot desligava mealRemindersEnabled por engano.
-                    mealPlanService.loadSavedData()
-                    NotificationService.shared.refreshRecurringNotifications()
-                    refreshInactivityReminder()
-                    _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
-                        athleteName: authService.currentUser?.greetingName ?? "Atleta"
-                    )
-                    workoutStore.handleAppBecameActive()
-                    timerService.handleAppBecameActive()
-                    WorkoutLiveActivitySync.reconcile(
-                        workoutStore: workoutStore,
-                        timerService: timerService
-                    )
-                    EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
-                    if let session = workoutStore.activeSession {
-                        NotificationService.shared.cancelActiveWorkoutBackgroundReminder(sessionId: session.id)
-                    }
-                    AppIconInactivityService.shared.handleAppBecameActive()
-                    Task {
-                        await exerciseVideoRepository.bootstrapRemoteCatalog()
-                        await healthKitManager.refreshFromHealthKit()
-                    }
+                    Task { await runForegroundRefreshPipeline() }
                 } else {
                     WorkoutLiveActivitySync.end()
                 }
@@ -128,9 +87,13 @@ struct RootView: View {
                 welcomeContext = nil
                 prepareWelcomeIfAuthenticated(trigger: .login)
                 wellnessService.configure(for: authService.currentUser)
-                syncWellnessCloudHistory()
-                syncWorkoutCloudHistory()
-                Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
+                // Cloud + GIF catalog after UI settles (MainTab `.task` also covers post-welcome).
+                Task {
+                    await Task.yield()
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    syncWellnessCloudHistory()
+                    syncWorkoutCloudHistory()
+                }
             } else {
                 didCompleteWelcomeForSession = false
                 showWelcomeMotivation = false
@@ -155,6 +118,76 @@ struct RootView: View {
                     .tint(AppTheme.accent)
             }
         }
+    }
+
+    /// Phased startup: keep first tab interactive, then local data, then cloud / GIF / notifications.
+    private func runPostLoginStartupPipeline() async {
+        // Phase 1 — local UI state
+        wellnessService.configure(for: authService.currentUser)
+        _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
+            athleteName: authService.currentUser?.greetingName ?? "Atleta"
+        )
+        WorkoutLiveActivitySync.reconcile(
+            workoutStore: workoutStore,
+            timerService: timerService
+        )
+
+        await Task.yield()
+
+        // Phase 2 — meal plan + light reminders
+        mealPlanService.loadSavedData()
+        if mealPlanService.weeklyPlan.isEmpty, let user = authService.currentUser {
+            mealPlanService.generatePlan(for: user)
+        }
+        refreshInactivityReminder()
+        EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
+
+        await Task.yield()
+        try? await Task.sleep(nanoseconds: 300_000_000)
+
+        // Phase 3 — HealthKit + Firebase history (non-blocking for first paint)
+        syncWellnessCloudHistory()
+        syncWorkoutCloudHistory()
+        await healthKitManager.requestAuthorization()
+
+        try? await Task.sleep(nanoseconds: 500_000_000)
+
+        // Phase 4 — notification bulk schedule + exercise video/GIF Firebase catalog
+        NotificationService.shared.refreshRecurringNotifications()
+        await exerciseVideoRepository.bootstrapRemoteCatalog()
+    }
+
+    /// Foreground return: stagger the same heavy work that used to run synchronously in onChange.
+    private func runForegroundRefreshPipeline() async {
+        wellnessService.configure(for: authService.currentUser)
+        wellnessService.checkInOnAppOpen()
+        _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
+            athleteName: authService.currentUser?.greetingName ?? "Atleta"
+        )
+        workoutStore.handleAppBecameActive()
+        timerService.handleAppBecameActive()
+        WorkoutLiveActivitySync.reconcile(
+            workoutStore: workoutStore,
+            timerService: timerService
+        )
+        if let session = workoutStore.activeSession {
+            NotificationService.shared.cancelActiveWorkoutBackgroundReminder(sessionId: session.id)
+        }
+        AppIconInactivityService.shared.handleAppBecameActive()
+
+        await Task.yield()
+
+        mealPlanService.loadSavedData()
+        refreshInactivityReminder()
+        EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
+        syncWellnessCloudHistory()
+
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        NotificationService.shared.refreshRecurringNotifications()
+
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        await exerciseVideoRepository.bootstrapRemoteCatalog()
+        await healthKitManager.refreshFromHealthKit()
     }
 
     private func syncWorkoutCloudHistory() {

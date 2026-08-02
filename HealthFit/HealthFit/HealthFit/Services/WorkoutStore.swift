@@ -115,15 +115,27 @@ final class WorkoutStore: ObservableObject {
     }
 
     init() {
+        // Keep init cheap so the first frame (login / splash) can paint.
+        // Heavy sample/guided catalog work runs after a yield — see performDeferredCatalogBootstrap().
         loadData()
+        restorePersistedActiveSessionIfNeeded()
+        Task { await performDeferredCatalogBootstrap() }
+    }
+
+    /// Seeds sample workouts / refreshes catalog off the first paint. Guided sheets stay lazy
+    /// via `ensureGuidedWorkoutSheet` when the user opens a program.
+    private func performDeferredCatalogBootstrap() async {
+        await Task.yield()
+        try? await Task.sleep(nanoseconds: 150_000_000)
+
         if workoutSheets.isEmpty {
-            workoutSheets = Self.sampleWorkouts + GuidedWorkoutCatalog.sheets(for: nil)
+            // First install: only standard sample programs (not the full guided catalog).
+            workoutSheets = Self.sampleWorkouts
             saveData()
         } else {
             refreshSampleWorkoutsIfNeeded()
         }
-        restorePersistedActiveSessionIfNeeded()
-        autoEndStaleActiveSessionIfNeeded()
+        _ = autoEndStaleActiveSessionIfNeeded()
     }
 
     /// Verifica se o treino ativo ultrapassou 2h30 e encerra automaticamente.
@@ -916,31 +928,30 @@ final class WorkoutStore: ObservableObject {
             didUpdate = true
         }
 
+        // Only refresh guided sheets already materialised in the store.
+        // Missing guided programs are created lazily via `ensureGuidedWorkoutSheet`.
         for guided in GuidedWorkoutCatalog.all {
-            if let index = workoutSheets.firstIndex(where: { $0.title == guided.title }) {
-                let existing = workoutSheets[index]
-                let catalogSheet = guided.makeSheet(targetGender: existing.targetGender)
-                let missingWarmup = !existing.exercises.contains { $0.notes == GuidedWorkoutCatalog.warmupNote }
-                let outdated = existing.exercises.count != catalogSheet.exercises.count
-                guard missingWarmup || outdated else { continue }
-                workoutSheets[index] = WorkoutSheet(
-                    id: existing.id,
-                    title: catalogSheet.title,
-                    description: catalogSheet.description,
-                    exercises: catalogSheet.exercises,
-                    assignedTo: existing.assignedTo,
-                    createdAt: existing.createdAt,
-                    isActive: existing.isActive,
-                    isUserCreated: false,
-                    targetGender: existing.targetGender ?? catalogSheet.targetGender,
-                    createdByAssistant: false
-                )
-                didUpdate = true
-            } else {
-                workoutSheets.append(guided.makeSheet(targetGender: nil))
-                existingTitles.insert(guided.title)
-                didUpdate = true
+            guard let index = workoutSheets.firstIndex(where: { $0.title == guided.title }) else {
+                continue
             }
+            let existing = workoutSheets[index]
+            let catalogSheet = guided.makeSheet(targetGender: existing.targetGender)
+            let missingWarmup = !existing.exercises.contains { $0.notes == GuidedWorkoutCatalog.warmupNote }
+            let outdated = existing.exercises.count != catalogSheet.exercises.count
+            guard missingWarmup || outdated else { continue }
+            workoutSheets[index] = WorkoutSheet(
+                id: existing.id,
+                title: catalogSheet.title,
+                description: catalogSheet.description,
+                exercises: catalogSheet.exercises,
+                assignedTo: existing.assignedTo,
+                createdAt: existing.createdAt,
+                isActive: existing.isActive,
+                isUserCreated: false,
+                targetGender: existing.targetGender ?? catalogSheet.targetGender,
+                createdByAssistant: false
+            )
+            didUpdate = true
         }
 
         if didUpdate {

@@ -13,15 +13,24 @@ final class ExerciseVideoRepository: ObservableObject {
     private var muscleGroupFallbacks: [MuscleGroup: ExerciseDemoVideo] = [:]
     private var playbackURLs: [String: URL] = [:]
     private var hasLoadedRemoteCatalog = false
+    private var didApplyLocalCatalog = false
 
     private init() {
-        applyLocalCatalog()
+        // Local catalog is applied lazily on first lookup / remote bootstrap.
     }
 
     func bootstrapRemoteCatalog() async {
-        guard ExerciseVideoFirestoreService.isAvailable else { return }
+        guard ExerciseVideoFirestoreService.isAvailable else {
+            ensureLocalCatalogLoaded()
+            return
+        }
         guard !isSyncing else { return }
 
+        // Prefer a responsive first tab; Firebase GIF/video sync can wait.
+        await Task.yield()
+        try? await Task.sleep(nanoseconds: 600_000_000)
+
+        ensureLocalCatalogLoaded()
         isSyncing = true
         defer { isSyncing = false }
 
@@ -73,10 +82,13 @@ final class ExerciseVideoRepository: ObservableObject {
         videosByName = merged
         keywordRules = ExerciseVideoCatalog.bundledKeywordRules()
         muscleGroupFallbacks = ExerciseVideoCatalog.bundledMuscleGroupFallbacks()
+        didApplyLocalCatalog = true
         hasLoadedRemoteCatalog = !records.isEmpty
     }
 
     func video(for exercise: Exercise) -> ExerciseDemoVideo? {
+        ensureLocalCatalogLoaded()
+
         if let exact = videosByName[exercise.name] {
             return exact
         }
@@ -126,9 +138,15 @@ final class ExerciseVideoRepository: ObservableObject {
         }
     }
 
+    private func ensureLocalCatalogLoaded() {
+        guard !didApplyLocalCatalog else { return }
+        applyLocalCatalog()
+    }
+
     private func applyLocalCatalog() {
         videosByName = ExerciseVideoCatalog.bundledVideos()
         keywordRules = ExerciseVideoCatalog.bundledKeywordRules()
         muscleGroupFallbacks = ExerciseVideoCatalog.bundledMuscleGroupFallbacks()
+        didApplyLocalCatalog = true
     }
 }

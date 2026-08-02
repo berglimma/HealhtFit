@@ -185,11 +185,16 @@ final class NotificationService {
                         return
                     }
                     Task { @MainActor in
+                        // Defer bulk scheduling so first launch permission prompt does not freeze UI.
+                        await Task.yield()
+                        try? await Task.sleep(nanoseconds: 400_000_000)
                         self.refreshRecurringNotifications()
                     }
                 }
             case .authorized, .provisional, .ephemeral:
                 Task { @MainActor in
+                    await Task.yield()
+                    try? await Task.sleep(nanoseconds: 400_000_000)
                     self.refreshRecurringNotifications()
                 }
             case .denied:
