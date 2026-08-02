@@ -934,42 +934,53 @@ struct ActiveWorkoutBanner: View {
     let session: WorkoutSession
     var currentExerciseName: String? = nil
     var onResume: (() -> Void)? = nil
+    var onEnd: (() -> Void)? = nil
 
     var body: some View {
-        Button {
-            onResume?()
-        } label: {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(.red)
-                    .frame(width: 10, height: 10)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Treino em andamento: \(session.workoutTitle)")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(AppTheme.textPrimary)
-                        .lineLimit(1)
-                    if let currentExerciseName, !currentExerciseName.isEmpty {
-                        Text(currentExerciseName)
-                            .font(.caption2)
-                            .foregroundStyle(AppTheme.textSecondary)
+        HStack(spacing: 8) {
+            Button {
+                onResume?()
+            } label: {
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(.red)
+                        .frame(width: 10, height: 10)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Treino em andamento: \(session.workoutTitle)")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(AppTheme.textPrimary)
                             .lineLimit(1)
+                        if let currentExerciseName, !currentExerciseName.isEmpty {
+                            Text(currentExerciseName)
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.textSecondary)
+                                .lineLimit(1)
+                        }
                     }
+                    Spacer()
+                    Text("\(session.completedExercises)/\(session.totalExercises)")
+                        .font(.caption.bold())
+                        .foregroundStyle(AppTheme.accent)
+                    Image(systemName: "arrow.up.right.circle.fill")
+                        .foregroundStyle(AppTheme.accent)
                 }
-                Spacer()
-                Text("\(session.completedExercises)/\(session.totalExercises)")
-                    .font(.caption.bold())
-                    .foregroundStyle(AppTheme.accent)
-                Image(systemName: "arrow.up.right.circle.fill")
-                    .foregroundStyle(AppTheme.accent)
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppTheme.accent.opacity(0.18))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .contentShape(RoundedRectangle(cornerRadius: 12))
+            .buttonStyle(.plain)
+            .disabled(onResume == nil)
+            .accessibilityHint("Retomar treino em andamento")
+
+            if let onEnd {
+                Button("Encerrar", action: onEnd)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.red)
+                    .padding(.trailing, 14)
+                    .accessibilityHint("Encerrar treino em andamento")
+            }
         }
-        .buttonStyle(.plain)
-        .disabled(onResume == nil)
-        .accessibilityHint("Retomar treino em andamento")
+        .background(AppTheme.accent.opacity(0.18))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }

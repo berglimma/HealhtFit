@@ -11,6 +11,10 @@ struct ActiveCardioView: View {
 
     let config: CardioWorkoutConfig
     var onReturnToWorkoutList: (() -> Void)? = nil
+    /// When hosted as a persistent overlay (MainTabView), close the host instead of `dismiss()`.
+    var onHostClose: (() -> Void)? = nil
+    /// Incremented by conflict alert / banner to finish without re-presenting the UI.
+    var openFinishTick: Int = 0
 
     @StateObject private var runTracker = RunTrackingService()
     @State private var elapsedSeconds = 0
@@ -20,6 +24,7 @@ struct ActiveCardioView: View {
     @State private var progressMessage: String?
     @State private var didCelebrateCalorieGoal = false
     @State private var lastProgressMilestone = -1
+    @State private var lastHandledFinishTick = 0
 
     /// Side-effects; display uses wall clock from session start.
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -178,10 +183,18 @@ struct ActiveCardioView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
+                    Button("Minimizar") {
+                        // Only flip the flag — MainTabView keeps this view mounted and hides it.
+                        workoutStore.minimizeActiveWorkout()
+                    }
+                    .disabled(isFinishing)
+                }
+                ToolbarItem(placement: .primaryAction) {
                     Button("Encerrar") {
                         finishCardio()
                     }
                     .foregroundStyle(.red)
+                    .disabled(isFinishing)
                 }
             }
         }
@@ -197,6 +210,9 @@ struct ActiveCardioView: View {
         .onReceive(workoutStore.sessionAutoEnded) { ended in
             guard finishedSession == nil, !isFinishing else { return }
             isFinishing = true
+            if workoutStore.isActiveWorkoutMinimized {
+                workoutStore.resumeActiveWorkout()
+            }
             runTracker.stop()
             watchConnectivity.stopWorkoutOnWatch()
             finishedSession = ended
@@ -208,28 +224,48 @@ struct ActiveCardioView: View {
                 runTracker.prepareForSession(modality: trackingModality)
                 runTracker.start(modality: trackingModality)
             }
+            handleExternalFinishTickIfNeeded()
         }
         .onDisappear {
-            if finishedSession == nil {
-                runTracker.stop()
-            }
+            // Hosted minimize keeps this view mounted; only stop if the session is gone.
+            guard finishedSession == nil else { return }
+            if workoutStore.activeSession != nil { return }
+            runTracker.stop()
+        }
+        .onChange(of: openFinishTick) { _, tick in
+            guard tick > 0 else { return }
+            handleExternalFinishTickIfNeeded()
         }
         .fullScreenCover(item: $finishedSession) { session in
             WorkoutSummaryView(
                 session: session,
                 onFinish: {
                     finishedSession = nil
-                    dismiss()
+                    closeHostedWorkout()
                 },
                 onReturnToWorkoutList: {
                     onReturnToWorkoutList?()
                     finishedSession = nil
                     DispatchQueue.main.async {
-                        dismiss()
+                        closeHostedWorkout()
                     }
                 }
             )
         }
+    }
+
+    private func closeHostedWorkout() {
+        if let onHostClose {
+            onHostClose()
+        } else {
+            dismiss()
+        }
+    }
+
+    private func handleExternalFinishTickIfNeeded() {
+        guard openFinishTick > lastHandledFinishTick, !isFinishing else { return }
+        lastHandledFinishTick = openFinishTick
+        finishCardio()
     }
 
     private var runMapSection: some View {
@@ -655,6 +691,7 @@ struct ActiveCardioView: View {
             )
         }
         .buttonStyle(PrimaryButtonStyle())
+        .disabled(isFinishing)
     }
 
     private func wallClockElapsedSeconds(at date: Date = Date()) -> Int {
@@ -714,6 +751,11 @@ struct ActiveCardioView: View {
         guard !isFinishing else { return }
         isFinishing = true
 
+        // Summary must be visible even if the user had minimized the workout.
+        if workoutStore.isActiveWorkoutMinimized {
+            workoutStore.resumeActiveWorkout()
+        }
+
         runTracker.stop()
         watchConnectivity.stopWorkoutOnWatch()
 
@@ -723,7 +765,7 @@ struct ActiveCardioView: View {
                last.autoEndedByInactivity {
                 finishedSession = last
             } else if finishedSession == nil {
-                dismiss()
+                closeHostedWorkout()
             }
             return
         }

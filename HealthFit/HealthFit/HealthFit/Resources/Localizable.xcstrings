@@ -1489,9 +1489,6 @@
     "Continuar mesmo assim" : {
 
     },
-    "Continuar treino" : {
-
-    },
     "Copo registrado (+ %lld ml)" : {
 
     },
@@ -1659,6 +1656,9 @@
 
     },
     "Encerrar antecipadamente" : {
+
+    },
+    "Encerrar treino em andamento" : {
 
     },
     "Encerrar treino sem concluir" : {

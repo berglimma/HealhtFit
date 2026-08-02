@@ -11,7 +11,15 @@ struct MainTabView: View {
     @ObservedObject private var profileReminder = ProfileDataReminderService.shared
     @State private var selectedTab = 0
     @State private var isShowingProfileDataPrompt = false
-    @State private var presentedActiveSheet: WorkoutSheet?
+    /// Keeps ActiveWorkoutView mounted for the whole strength session (and summary).
+    /// Minimize only hides it — never dismiss/re-present a fullScreenCover.
+    @State private var hostedActiveSheet: WorkoutSheet?
+    /// Same Option A hosting for cardio/bike (keeps GPS map + tracker alive when minimized).
+    @State private var hostedCardioConfig: CardioWorkoutConfig?
+    /// Bumped to open the early-end sheet after resuming from the banner / conflict alert.
+    @State private var openEarlyEndTick = 0
+    /// Bumped to finish the hosted cardio session (summary + share card).
+    @State private var requestCardioFinishTick = 0
 
     private let assistantTabTag = 3
     private let nutritionTabTag = 2
@@ -24,10 +32,14 @@ struct MainTabView: View {
             && !workoutStore.isVisionCameraPresented
     }
 
+    private var canEndFromMinimizedBanner: Bool {
+        hostedActiveSheet != nil || hostedCardioConfig != nil
+    }
+
     var body: some View {
-        // ZStack (not TabView.safeAreaInset) keeps the minimized card above tab content
-        // without participating in keyboard avoidance, and keeps banner hits as a sibling
-        // layer so taps resume/end reliably without stealing tab-bar hits (clear spacer).
+        // ZStack keeps the minimized card above tab content without keyboard avoidance,
+        // and hosts the active strength/cardio workout as a persistent overlay (not fullScreenCover)
+        // so minimize/resume never races SwiftUI presentation identity.
         ZStack(alignment: .bottom) {
             TabView(selection: $selectedTab) {
                 DashboardView()
@@ -68,10 +80,14 @@ struct MainTabView: View {
                 VStack(spacing: 0) {
                     ActiveWorkoutBanner(
                         session: session,
-                        currentExerciseName: workoutStore.currentExercise?.name
-                    ) {
-                        resumeMinimizedWorkout()
-                    }
+                        currentExerciseName: workoutStore.currentExercise?.name,
+                        onResume: {
+                            resumeMinimizedWorkout()
+                        },
+                        onEnd: canEndFromMinimizedBanner
+                            ? { endMinimizedWorkoutFromBanner() }
+                            : nil
+                    )
                     .padding(.horizontal, 12)
                     .padding(.top, 4)
                     .padding(.bottom, 8)
@@ -84,22 +100,41 @@ struct MainTabView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .bottom)
                 .ignoresSafeArea(.keyboard)
-                .zIndex(1)
+                .zIndex(2)
             }
-        }
-        .fullScreenCover(item: $presentedActiveSheet, onDismiss: {
-            // Cover finished dismissing. Only force-minimize when the session is still
-            // active AND we have not already resumed (presentedActiveSheet non-nil) —
-            // otherwise a late onDismiss after tapping the banner re-minimizes the workout.
-            if workoutStore.activeSession != nil, presentedActiveSheet == nil {
-                if !workoutStore.isActiveWorkoutMinimized {
-                    workoutStore.minimizeActiveWorkout()
-                }
-                syncActiveWorkoutPresentation()
+
+            if let sheet = hostedActiveSheet {
+                ActiveWorkoutView(
+                    sheet: sheet,
+                    onReturnToWorkoutList: {
+                        selectedTab = workoutsTabTag
+                    },
+                    onHostClose: {
+                        hostedActiveSheet = nil
+                    },
+                    openEarlyEndTick: openEarlyEndTick
+                )
+                .opacity(workoutStore.isActiveWorkoutMinimized ? 0 : 1)
+                .allowsHitTesting(!workoutStore.isActiveWorkoutMinimized)
+                .accessibilityHidden(workoutStore.isActiveWorkoutMinimized)
+                .zIndex(workoutStore.isActiveWorkoutMinimized ? 0 : 3)
             }
-        }) { sheet in
-            ActiveWorkoutView(sheet: sheet) {
-                selectedTab = workoutsTabTag
+
+            if let config = hostedCardioConfig {
+                ActiveCardioView(
+                    config: config,
+                    onReturnToWorkoutList: {
+                        selectedTab = workoutsTabTag
+                    },
+                    onHostClose: {
+                        hostedCardioConfig = nil
+                    },
+                    openFinishTick: requestCardioFinishTick
+                )
+                .opacity(workoutStore.isActiveWorkoutMinimized ? 0 : 1)
+                .allowsHitTesting(!workoutStore.isActiveWorkoutMinimized)
+                .accessibilityHidden(workoutStore.isActiveWorkoutMinimized)
+                .zIndex(workoutStore.isActiveWorkoutMinimized ? 0 : 3)
             }
         }
         .onAppear {
@@ -107,7 +142,7 @@ struct MainTabView: View {
             updateAssistantTabVisibility(for: selectedTab)
             checkInService.refreshAssistantBadge()
             profileReminder.evaluate(for: authService.currentUser)
-            syncActiveWorkoutPresentation()
+            syncActiveWorkoutHosting()
             Task { @MainActor in
                 // Aguarda o check-in de sono (se houver) ter prioridade antes do pop-up de dados.
                 try? await Task.sleep(for: .milliseconds(700))
@@ -125,10 +160,13 @@ struct MainTabView: View {
             updateAssistantTabVisibility(for: tab)
         }
         .onChange(of: workoutStore.activeSession?.id) { _, _ in
-            syncActiveWorkoutPresentation()
+            syncActiveWorkoutHosting()
         }
         .onChange(of: workoutStore.isActiveWorkoutMinimized) { _, _ in
-            syncActiveWorkoutPresentation()
+            syncActiveWorkoutHosting()
+        }
+        .onChange(of: workoutStore.activeCardioConfig?.title) { _, _ in
+            syncActiveWorkoutHosting()
         }
         .onChange(of: authService.currentUser?.id) { _, _ in
             profileReminder.evaluate(for: authService.currentUser)
@@ -171,10 +209,13 @@ struct MainTabView: View {
             WorkoutStore.activeWorkoutConflictAlertTitle,
             isPresented: $workoutStore.showActiveWorkoutConflictAlert
         ) {
-            Button("Continuar treino") {
+            Button("Encerrar") {
+                endActiveWorkoutFromConflictAlert()
+            }
+            Button("Continuar") {
                 resumeMinimizedWorkout()
             }
-            Button("OK", role: .cancel) {}
+            Button("Sair", role: .cancel) {}
         } message: {
             Text(workoutStore.activeWorkoutConflictAlertMessage)
         }
@@ -217,38 +258,67 @@ struct MainTabView: View {
     }
 
     private func resumeMinimizedWorkout() {
-        // If the cover is already up (e.g. conflict alert while training), only clear the flag.
-        let needsRepresent = presentedActiveSheet == nil || workoutStore.isActiveWorkoutMinimized
         workoutStore.resumeActiveWorkout()
-        guard needsRepresent else { return }
+        syncActiveWorkoutHosting()
+    }
 
-        // Same WorkoutSheet id after a fullScreenCover dismiss often fails to re-present
-        // if set in the same turn as onDismiss. Clear, then present on the next tick so
-        // ActiveWorkoutView (with Encerrar) opens again.
-        presentedActiveSheet = nil
+    private func endMinimizedWorkoutFromBanner() {
+        workoutStore.resumeActiveWorkout()
+        syncActiveWorkoutHosting()
+        requestFinishOnHostedWorkout()
+    }
+
+    private func endActiveWorkoutFromConflictAlert() {
+        workoutStore.resumeActiveWorkout()
+        syncActiveWorkoutHosting()
+        // Allow the host to mount before triggering finish (stuck / relaunched cardio).
         Task { @MainActor in
-            await Task.yield()
-            syncActiveWorkoutPresentation()
-            if presentedActiveSheet == nil {
-                try? await Task.sleep(for: .milliseconds(100))
-                syncActiveWorkoutPresentation()
+            try? await Task.sleep(for: .milliseconds(80))
+            syncActiveWorkoutHosting()
+            requestFinishOnHostedWorkout()
+        }
+    }
+
+    private func requestFinishOnHostedWorkout() {
+        if hostedCardioConfig != nil {
+            requestCardioFinishTick += 1
+        } else if hostedActiveSheet != nil {
+            openEarlyEndTick += 1
+        } else if let config = workoutStore.resolvedActiveCardioConfig() {
+            // Last-resort remount for stuck cardio, then finish.
+            hostedCardioConfig = config
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(80))
+                requestCardioFinishTick += 1
             }
         }
     }
 
-    private func syncActiveWorkoutPresentation() {
-        if let sheet = workoutStore.activeStrengthSheet(),
-           workoutStore.activeSession != nil,
-           !workoutStore.isActiveWorkoutMinimized {
-            if presentedActiveSheet?.id != sheet.id {
-                presentedActiveSheet = sheet
-            }
-        } else if workoutStore.activeSession != nil, workoutStore.isActiveWorkoutMinimized {
-            // Minimizar: fecha o cover do treino ativo.
-            presentedActiveSheet = nil
+    private func syncActiveWorkoutHosting() {
+        guard workoutStore.activeSession != nil else {
+            // Session cleared after finish: keep hosting until the active view closes
+            // itself (summary → onHostClose). Do not tear down here.
+            return
         }
-        // Se activeSession ficou nil (treino finalizado), NÃO limpar o cover aqui.
-        // ActiveWorkoutView precisa permanecer vivo para exibir WorkoutSummaryView
-        // (e-mail + card de compartilhar) e só então chamar dismiss().
+
+        if let sheet = workoutStore.activeStrengthSheet() {
+            if hostedCardioConfig != nil {
+                hostedCardioConfig = nil
+            }
+            if hostedActiveSheet?.id != sheet.id {
+                hostedActiveSheet = sheet
+            }
+            return
+        }
+
+        if let config = workoutStore.resolvedActiveCardioConfig() {
+            if hostedActiveSheet != nil {
+                hostedActiveSheet = nil
+            }
+            if hostedCardioConfig != config {
+                hostedCardioConfig = config
+            }
+            return
+        }
     }
 }

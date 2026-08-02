@@ -11,6 +11,10 @@ struct ActiveWorkoutView: View {
 
     let sheet: WorkoutSheet
     var onReturnToWorkoutList: (() -> Void)? = nil
+    /// When hosted as a persistent overlay (MainTabView), close the host instead of `dismiss()`.
+    var onHostClose: (() -> Void)? = nil
+    /// Incremented by the minimized banner to open Encerrar without re-presenting the UI.
+    var openEarlyEndTick: Int = 0
     @State private var finishedSession: WorkoutSession?
     @State private var workoutElapsedSeconds = 0
     @State private var isFinishing = false
@@ -104,10 +108,9 @@ struct ActiveWorkoutView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Minimizar") {
+                        // Only flip the flag — MainTabView keeps this view mounted and hides it.
+                        // Dismiss/re-present via fullScreenCover is inherently flaky for resume.
                         workoutStore.minimizeActiveWorkout()
-                        // Dismiss the cover from inside so MainTabView's item binding clears
-                        // even if the minimized onChange races with presentation sync.
-                        dismiss()
                     }
                     .disabled(isFinishing)
                 }
@@ -219,16 +222,28 @@ struct ActiveWorkoutView: View {
                 session: session,
                 onFinish: {
                     finishedSession = nil
-                    dismiss()
+                    closeHostedWorkout()
                 },
                 onReturnToWorkoutList: {
                     onReturnToWorkoutList?()
                     finishedSession = nil
                     DispatchQueue.main.async {
-                        dismiss()
+                        closeHostedWorkout()
                     }
                 }
             )
+        }
+        .onChange(of: openEarlyEndTick) { _, tick in
+            guard tick > 0, !isFinishing else { return }
+            requestEarlyEnd()
+        }
+    }
+
+    private func closeHostedWorkout() {
+        if let onHostClose {
+            onHostClose()
+        } else {
+            dismiss()
         }
     }
 
@@ -603,11 +618,14 @@ struct ActiveWorkoutView: View {
     private func presentAutoEndedSession(_ session: WorkoutSession) {
         guard finishedSession == nil else { return }
         isFinishing = true
+        if workoutStore.isActiveWorkoutMinimized {
+            workoutStore.resumeActiveWorkout()
+        }
         timerService.stopTimer()
         watchConnectivity.sendRestTimerStop()
         watchConnectivity.stopWorkoutOnWatch()
         WorkoutLiveActivitySync.end()
-        // Mesma ordem do finishWorkout: resumo primeiro, para não perder o cover.
+        // Mesma ordem do finishWorkout: resumo primeiro, para não perder o host.
         finishedSession = session
     }
 
@@ -698,8 +716,13 @@ struct ActiveWorkoutView: View {
         WorkoutLiveActivitySync.end()
 
         guard var session = workoutStore.activeSession else {
-            dismiss()
+            closeHostedWorkout()
             return
+        }
+
+        // Summary covers must be visible even if the user had minimized the workout.
+        if workoutStore.isActiveWorkoutMinimized {
+            workoutStore.resumeActiveWorkout()
         }
 
         session.endedAt = .now

@@ -11,6 +11,8 @@ final class WorkoutStore: ObservableObject {
     @Published var isActiveWorkoutMinimized = false
     /// Alert ao tentar iniciar outro treino enquanto já há sessão ativa.
     @Published var showActiveWorkoutConflictAlert = false
+    /// Config da sessão de cardio ativa (persistida para retomar mapa / Encerrar).
+    @Published private(set) var activeCardioConfig: CardioWorkoutConfig?
     /// Vision AI / câmera aberta — o banner minimizado some para não cobrir os controles.
     @Published private(set) var isVisionCameraPresented = false
     /// Evita repetir a tela de motivação ao retomar o mesmo treino.
@@ -34,6 +36,7 @@ final class WorkoutStore: ObservableObject {
     private let activeMinimizedKey = "healthfit_active_minimized"
     private let activePausedKey = "healthfit_exercise_timer_paused"
     private let exerciseLastProgressKey = "healthfit_exercise_last_progress_at"
+    private let activeCardioConfigKey = "healthfit_active_cardio_config"
     /// Após 2h30 sem finalizar, o treino é encerrado automaticamente.
     static let autoEndInactivityLimit: TimeInterval = 2.5 * 60 * 60
     static let autoEndJustification =
@@ -57,6 +60,7 @@ final class WorkoutStore: ObservableObject {
         workoutSheets = []
         isActiveWorkoutMinimized = false
         showActiveWorkoutConflictAlert = false
+        activeCardioConfig = nil
         isVisionCameraPresented = false
         hasShownStartMotivation = false
         hasBoundActiveWorkoutUI = false
@@ -305,6 +309,7 @@ final class WorkoutStore: ObservableObject {
             tookPreWorkout: tookPreWorkout
         )
         activeSession = session
+        activeCardioConfig = nil
         let clampedStart: Int
         if sheet.exercises.isEmpty {
             clampedStart = 0
@@ -358,7 +363,19 @@ final class WorkoutStore: ObservableObject {
 
     func activeStrengthSheet() -> WorkoutSheet? {
         guard let session = activeSession else { return nil }
+        guard !WeeklyProgressAnalyzer.isCardioSession(session),
+              !WeeklyProgressAnalyzer.isMeditationSession(session) else { return nil }
         return workoutSheets.first(where: { $0.id == session.workoutSheetId })
+    }
+
+    /// Config de cardio ativa (persistida) ou reconstruída da sessão.
+    func resolvedActiveCardioConfig() -> CardioWorkoutConfig? {
+        guard let session = activeSession,
+              WeeklyProgressAnalyzer.isCardioSession(session) else { return nil }
+        if let activeCardioConfig { return activeCardioConfig }
+        let rebuilt = CardioWorkoutConfig.reconstruct(from: session)
+        activeCardioConfig = rebuilt
+        return rebuilt
     }
 
     func completedSets(for exerciseId: UUID) -> Int {
@@ -415,6 +432,7 @@ final class WorkoutStore: ObservableObject {
             targetCalories: config.targetCalories
         )
         activeSession = session
+        activeCardioConfig = config
         currentExerciseIndex = 0
         replaceExerciseRecords([
             ExerciseSessionRecord(
@@ -423,6 +441,9 @@ final class WorkoutStore: ObservableObject {
             )
         ])
         isExerciseTimerPaused = false
+        isActiveWorkoutMinimized = false
+        hasShownStartMotivation = false
+        hasBoundActiveWorkoutUI = false
         persistActiveSession()
         scheduleAutoEnd(for: session)
         EveningTrainingNudgeService.handleActiveWorkoutStarted()
@@ -440,6 +461,7 @@ final class WorkoutStore: ObservableObject {
             totalExercises: 1
         )
         activeSession = session
+        activeCardioConfig = nil
         currentExerciseIndex = 0
         replaceExerciseRecords([
             ExerciseSessionRecord(
@@ -448,6 +470,7 @@ final class WorkoutStore: ObservableObject {
             )
         ])
         isExerciseTimerPaused = false
+        isActiveWorkoutMinimized = false
         persistActiveSession()
         scheduleAutoEnd(for: session)
         EveningTrainingNudgeService.handleActiveWorkoutStarted()
@@ -663,6 +686,7 @@ final class WorkoutStore: ObservableObject {
             sessionHistory = Array(sessionHistory.prefix(WorkoutFirestoreService.maxStoredSessions))
         }
         activeSession = nil
+        activeCardioConfig = nil
         currentExerciseIndex = 0
         exerciseRecords = []
         isExerciseTimerPaused = false
@@ -726,6 +750,12 @@ final class WorkoutStore: ObservableObject {
         } else {
             UserDefaults.standard.removeObject(forKey: exerciseLastProgressKey)
         }
+        if let activeCardioConfig,
+           let cardioData = try? JSONEncoder().encode(activeCardioConfig) {
+            UserDefaults.standard.set(cardioData, forKey: activeCardioConfigKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: activeCardioConfigKey)
+        }
         lastActivePersistAt = Date()
     }
 
@@ -736,6 +766,7 @@ final class WorkoutStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: activeMinimizedKey)
         UserDefaults.standard.removeObject(forKey: activePausedKey)
         UserDefaults.standard.removeObject(forKey: exerciseLastProgressKey)
+        UserDefaults.standard.removeObject(forKey: activeCardioConfigKey)
         exerciseLastProgressAt = nil
         lastActivePersistAt = nil
     }
@@ -750,6 +781,14 @@ final class WorkoutStore: ObservableObject {
         if let recordsData = UserDefaults.standard.data(forKey: activeRecordsKey),
            let records = try? JSONDecoder().decode([ExerciseSessionRecord].self, from: recordsData) {
             exerciseRecords = records
+        }
+        if let cardioData = UserDefaults.standard.data(forKey: activeCardioConfigKey),
+           let config = try? JSONDecoder().decode(CardioWorkoutConfig.self, from: cardioData) {
+            activeCardioConfig = config
+        } else if WeeklyProgressAnalyzer.isCardioSession(session) {
+            activeCardioConfig = CardioWorkoutConfig.reconstruct(from: session)
+        } else {
+            activeCardioConfig = nil
         }
         currentExerciseIndex = UserDefaults.standard.integer(forKey: activeExerciseIndexKey)
         // Sempre reabre o treino ao relançar o app (fechou sem querer).

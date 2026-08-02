@@ -170,7 +170,7 @@ struct CardioExercise: Identifiable, Hashable, Codable {
     ]
 }
 
-struct CardioWorkoutConfig: Hashable {
+struct CardioWorkoutConfig: Hashable, Codable {
     let exercise: CardioExercise
     let intensity: CardioIntensity
     let runningDistance: RunningDistance?
@@ -189,6 +189,62 @@ struct CardioWorkoutConfig: Hashable {
         self.runningDistance = runningDistance
         self.targetCalories = targetCalories
         self.isFreeRun = isFreeRun
+    }
+
+    /// Rebuilds a usable config from a persisted active session (app relaunch / stuck session).
+    static func reconstruct(from session: WorkoutSession?) -> CardioWorkoutConfig? {
+        guard let session, WeeklyProgressAnalyzer.isCardioSession(session) else { return nil }
+
+        let title = session.workoutTitle
+        let lower = title.lowercased()
+        let isFreeRun = lower.contains("livre")
+
+        let exerciseName: String = {
+            if lower.contains("corrida") { return "Corrida" }
+            if lower.contains("mountain bike") { return "Mountain bike" }
+            if lower.contains("bicicleta pedal") { return "Bicicleta pedal" }
+            if lower.contains("bicicleta ergométrica") || lower.contains("bicicleta ergometrica") {
+                return "Bicicleta ergométrica"
+            }
+            if let afterDash = title.components(separatedBy: " — ").dropFirst().first?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+               !afterDash.isEmpty {
+                // "Corrida 5 km" / "Corrida livre" / exercise name
+                if afterDash.lowercased().hasPrefix("corrida") { return "Corrida" }
+                let withoutDistance = afterDash
+                    .replacingOccurrences(of: #"\s+\d+\s*km"#, with: "", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                return withoutDistance.isEmpty ? afterDash : withoutDistance
+            }
+            return "Corrida"
+        }()
+
+        let exercise = CardioExercise.catalog.first(where: { $0.name == exerciseName })
+            ?? CardioExercise.catalog.first(where: { $0.name == "Corrida" })
+            ?? CardioExercise(
+                id: session.workoutSheetId,
+                name: exerciseName,
+                description: "",
+                icon: "figure.run",
+                caloriesPerMinute: 10
+            )
+
+        let intensity = CardioIntensity(rawValue: session.cardioIntensityLabel ?? "") ?? .medium
+        let runningDistance: RunningDistance? = {
+            guard exercise.supportsDistanceGoals, !isFreeRun else { return nil }
+            if let km = session.targetDistanceKm, let match = RunningDistance(rawValue: Int(km.rounded())) {
+                return match
+            }
+            return nil
+        }()
+
+        return CardioWorkoutConfig(
+            exercise: exercise,
+            intensity: intensity,
+            runningDistance: runningDistance,
+            targetCalories: session.targetCalories,
+            isFreeRun: isFreeRun || (exercise.supportsDistanceGoals && runningDistance == nil && session.targetDistanceKm == nil)
+        )
     }
 
     var isDistanceRun: Bool { runningDistance != nil && !isFreeRun }

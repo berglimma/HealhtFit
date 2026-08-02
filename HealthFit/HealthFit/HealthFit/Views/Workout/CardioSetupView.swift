@@ -12,8 +12,6 @@ struct CardioSetupView: View {
     @State private var runningMode: RunningSetupMode = .distance(.five)
     @State private var useCalorieGoal = false
     @State private var selectedCalorieGoal = 300
-    @State private var showActiveCardio = false
-    @State private var shouldPopToWorkoutList = false
     @Environment(\.dismiss) private var dismiss
 
     private static let caloriePresets = [100, 150, 200, 250, 300, 350, 400, 500, 600, 800]
@@ -61,16 +59,6 @@ struct CardioSetupView: View {
         .background(AppTheme.background)
         .navigationTitle(exercise.name)
         .navigationBarTitleDisplayMode(.large)
-        .fullScreenCover(isPresented: $showActiveCardio, onDismiss: {
-            if shouldPopToWorkoutList {
-                shouldPopToWorkoutList = false
-                dismiss()
-            }
-        }) {
-            ActiveCardioView(config: config) {
-                shouldPopToWorkoutList = true
-            }
-        }
     }
 
     private var headerSection: some View {
@@ -403,7 +391,9 @@ struct CardioSetupView: View {
                 sessionTitle: config.title,
                 athleteName: athleteName
             )
-            showActiveCardio = true
+            // MainTabView hosts ActiveCardioView for the whole session (minimize-safe).
+            workoutStore.resumeActiveWorkout()
+            dismiss()
         } label: {
             Label(
                 {
