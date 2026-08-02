@@ -14,14 +14,7 @@ struct LoginView: View {
                 AppTheme.background.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    HStack {
-                        Spacer()
-                        LanguagePickerControl(style: .compactMenu)
-                    }
-                    .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                    .padding(.top, 12)
-
-                    Spacer()
+                    Spacer(minLength: DeviceLayout.isPad ? 56 : 40)
 
                     VStack(spacing: 12) {
                         PulsingHeartIconView(size: DeviceLayout.isPad ? 88 : 72)
@@ -34,10 +27,17 @@ struct LoginView: View {
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.textSecondary)
                     }
+                    .padding(.top, DeviceLayout.isPad ? 48 : 36)
                     .padding(.bottom, 48)
 
                     VStack(spacing: 16) {
                         SocialLoginButtonsView(style: .iconCards)
+
+                        HStack {
+                            Spacer()
+                            LanguagePickerControl(style: .compactMenu)
+                            Spacer()
+                        }
 
                         VStack(alignment: .leading, spacing: 6) {
                             Text(L10n.Auth.email)
