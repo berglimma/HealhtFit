@@ -28,6 +28,9 @@ struct HealthChatView: View {
         let todayWorkouts = DailyEveningCheckInEngine.completedSessionsToday(
             from: workoutStore.sessionHistory
         )
+        let mealAdherence = AssistantImprovementAnalysisEngine.mealAdherence(
+            from: mealPlanService.weeklyPlan
+        )
 
         return HealthAssistantContext(
             user: user,
@@ -36,6 +39,7 @@ struct HealthChatView: View {
             weeklyWorkoutCount: weeklyReport.currentWeek.workoutCount,
             hoursSinceLastWorkout: hoursSinceLastWorkout,
             todayWorkoutSessions: todayWorkouts,
+            recentWorkoutSessions: workoutStore.sessionHistory,
             dailyCalorieTarget: mealPlanService.dailyCalorieTarget > 0
                 ? mealPlanService.dailyCalorieTarget
                 : (user?.dailyCalorieTarget ?? 0),
@@ -49,7 +53,13 @@ struct HealthChatView: View {
                 ? mealPlanService.caloricDeficit
                 : (user?.caloricDeficit ?? 0),
             sweetConsumption: mealPlanService.customMenuSelection.sweetConsumption,
-            lactoseTolerance: mealPlanService.customMenuSelection.lactoseTolerance
+            lactoseTolerance: mealPlanService.customMenuSelection.lactoseTolerance,
+            hasMealPlan: mealAdherence.hasPlan,
+            todayMealsCompleted: mealAdherence.todayCompleted,
+            todayMealsTotal: mealAdherence.todayTotal,
+            weekMealsCompleted: mealAdherence.weekCompleted,
+            weekMealsTotal: mealAdherence.weekTotal,
+            supplementsLoggedToday: wellnessService.todaySupplementIntakes.count
         )
     }
 
@@ -69,7 +79,8 @@ struct HealthChatView: View {
                         }
                     }
                     .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                    .padding(.vertical, 12)
+                    .padding(.top, 12)
+                    .padding(.bottom, 16)
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                 }
@@ -91,6 +102,8 @@ struct HealthChatView: View {
             // anchored when keyboard / scene phase leaves residual safe-area insets.
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 composerChrome
+                    // Composer must sit above scroll content / typing dots.
+                    .zIndex(1)
             }
             .background(AppTheme.background)
             .navigationTitle("Assistente")
@@ -247,6 +260,9 @@ struct HealthChatView: View {
 
     private var composerChrome: some View {
         VStack(spacing: 0) {
+            Divider()
+                .opacity(0.35)
+
             suggestionStrip
 
             Text(HealthAssistantEngine.healthSafetyDisclaimer)
@@ -258,7 +274,8 @@ struct HealthChatView: View {
 
             inputBar
         }
-        .background(AppTheme.background)
+        // Opaque so scrolling typing dots never bleed through the input region.
+        .background(AppTheme.background.ignoresSafeArea(edges: .bottom))
     }
 
     private var suggestionStrip: some View {
@@ -386,24 +403,20 @@ struct HealthChatView: View {
 }
 
 private struct TypingIndicatorBubble: View {
-    var body: some View {
-        HStack {
-            HStack(spacing: 8) {
-                Image(systemName: "ellipsis.message.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(AppTheme.accent)
-                    .modifier(RepeatingPulseSymbolEffect())
+    private let dotSize: CGFloat = 8
 
-                HStack(spacing: 4) {
-                    ForEach(0..<3, id: \.self) { index in
-                        TypingDot(delay: Double(index) * 0.2)
-                    }
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            HStack(spacing: 5) {
+                ForEach(0..<3, id: \.self) { index in
+                    TypingDot(size: dotSize, delay: Double(index) * 0.16)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
             .background(AppTheme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .clipShape(ChatBubbleChrome.shape(isUser: false))
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel("Assistente digitando")
 
             Spacer(minLength: 48)
@@ -412,16 +425,19 @@ private struct TypingIndicatorBubble: View {
 }
 
 private struct TypingDot: View {
+    let size: CGFloat
     let delay: Double
     @State private var isAnimating = false
 
     var body: some View {
         Circle()
             .fill(AppTheme.textSecondary)
-            .frame(width: 7, height: 7)
-            .offset(y: isAnimating ? -4 : 2)
+            .frame(width: size, height: size)
+            // Scale + opacity only — no vertical offset, so dots never leave the bubble.
+            .scaleEffect(isAnimating ? 1.0 : 0.55)
+            .opacity(isAnimating ? 1.0 : 0.35)
             .animation(
-                .easeInOut(duration: 0.45)
+                .easeInOut(duration: 0.42)
                     .repeatForever(autoreverses: true)
                     .delay(delay),
                 value: isAnimating
@@ -430,11 +446,23 @@ private struct TypingDot: View {
     }
 }
 
+private enum ChatBubbleChrome {
+    static func shape(isUser: Bool) -> UnevenRoundedRectangle {
+        UnevenRoundedRectangle(
+            topLeadingRadius: 16,
+            bottomLeadingRadius: isUser ? 16 : 6,
+            bottomTrailingRadius: isUser ? 6 : 16,
+            topTrailingRadius: 16,
+            style: .continuous
+        )
+    }
+}
+
 private struct ChatBubble: View {
     let message: HealthChatMessage
 
     var body: some View {
-        HStack {
+        HStack(alignment: .top, spacing: 0) {
             if message.isUser { Spacer(minLength: 48) }
 
             VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
@@ -442,6 +470,7 @@ private struct ChatBubble: View {
                     .font(.subheadline)
                     .foregroundStyle(message.isUser ? .white : AppTheme.textPrimary)
                     .multilineTextAlignment(message.isUser ? .trailing : .leading)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(message.timestamp, format: .dateTime.hour().minute())
                     .font(.caption2)
@@ -450,7 +479,8 @@ private struct ChatBubble: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(message.isUser ? AppTheme.accent : AppTheme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .clipShape(ChatBubbleChrome.shape(isUser: message.isUser))
+            .layoutPriority(1)
 
             if !message.isUser { Spacer(minLength: 48) }
         }

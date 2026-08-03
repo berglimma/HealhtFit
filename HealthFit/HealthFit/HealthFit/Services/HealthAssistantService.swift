@@ -22,12 +22,21 @@ struct HealthAssistantContext {
     let weeklyWorkoutCount: Int
     let hoursSinceLastWorkout: Double?
     let todayWorkoutSessions: [WorkoutSession]
+    /// Histórico recente de sessões (`WorkoutStore.sessionHistory`) para análise de progresso.
+    let recentWorkoutSessions: [WorkoutSession]
     let dailyCalorieTarget: Int
     let basalMetabolicRate: Int
     let estimatedTDEE: Int
     let caloricDeficit: Int
     let sweetConsumption: SweetConsumptionLevel
     let lactoseTolerance: LactoseTolerance?
+    /// Há cardápio semanal gerado no app.
+    let hasMealPlan: Bool
+    let todayMealsCompleted: Int
+    let todayMealsTotal: Int
+    let weekMealsCompleted: Int
+    let weekMealsTotal: Int
+    let supplementsLoggedToday: Int
 }
 
 enum HealthAssistantEngine {
@@ -60,6 +69,7 @@ enum HealthAssistantEngine {
         "Para que serve a creatina?",
         "Whey protein faz mal?",
         "Como está minha evolução corporal?",
+        "O que preciso melhorar?",
     ]
 
     static func welcomeMessage(context: HealthAssistantContext) -> String {
@@ -174,16 +184,27 @@ enum HealthAssistantEngine {
             weeklyWorkoutCount: 0,
             hoursSinceLastWorkout: nil,
             todayWorkoutSessions: [],
+            recentWorkoutSessions: [],
             dailyCalorieTarget: 0,
             basalMetabolicRate: 0,
             estimatedTDEE: 0,
             caloricDeficit: 0,
             sweetConsumption: .moderate,
-            lactoseTolerance: nil
+            lactoseTolerance: nil,
+            hasMealPlan: false,
+            todayMealsCompleted: 0,
+            todayMealsTotal: 0,
+            weekMealsCompleted: 0,
+            weekMealsTotal: 0,
+            supplementsLoggedToday: 0
         ))
     }
 
     static func answer(for question: String, context: HealthAssistantContext) -> String {
+        if AssistantImprovementAnalysisEngine.matches(question) {
+            return AssistantImprovementAnalysisEngine.answer(context: context)
+        }
+
         let normalized = normalize(question)
         let scores = topics.map { topic -> (HealthAssistantTopic, Int) in
             let score = topic.keywords.reduce(0) { partial, keyword in
@@ -1673,8 +1694,10 @@ final class HealthAssistantService: ObservableObject {
     private var draftWorkoutLocation: AssistantTrainingLocation?
     private var draftWorkoutExperience: AssistantTrainingExperience?
     private var draftWorkoutFocus: AssistantWorkoutGoalFocus?
-    private static let replyDelay: Duration = .seconds(3)
-    private static let workoutBuilderReplyDelay: Duration = .seconds(1)
+    /// Minimum time the typing bubble stays visible before showing an assistant reply.
+    /// `nonisolated` so default args / static helpers can read it under Swift 6 concurrency.
+    nonisolated private static let replyDelay: Duration = .seconds(3)
+    nonisolated private static let workoutBuilderReplyDelay: Duration = .seconds(1)
     private static let idleReturnThreshold: TimeInterval = 180
 
     private func deliverAssistantMessage(_ text: String) {
@@ -1686,6 +1709,40 @@ final class HealthAssistantService: ObservableObject {
 
         PostWorkoutCheckInService.shared.notifyAssistantMessagePending()
         NotificationService.shared.deliverAssistantMessageNotification(body: text)
+    }
+
+    /// Keeps typing on for at least `minDuration` from `startedAt`, then delivers.
+    /// If work overruns the budget, delivers as soon as ready (still at least min duration only when work is faster).
+    private func deliverAfterMinimumTyping(
+        minDuration: Duration = replyDelay,
+        buildMessage: @escaping () -> String,
+        afterDeliver: (() -> Void)? = nil
+    ) {
+        isTyping = true
+        replyTask?.cancel()
+        let startedAt = ContinuousClock.now
+        replyTask = Task {
+            do {
+                let text = buildMessage()
+                try await Self.waitForMinimumTyping(startedAt: startedAt, minDuration: minDuration)
+                guard !Task.isCancelled else { return }
+                deliverAssistantMessage(text)
+                afterDeliver?()
+                isTyping = false
+            } catch {
+                isTyping = false
+            }
+        }
+    }
+
+    private static func waitForMinimumTyping(
+        startedAt: ContinuousClock.Instant,
+        minDuration: Duration = replyDelay
+    ) async throws {
+        let remaining = minDuration - (ContinuousClock.now - startedAt)
+        if remaining > .zero {
+            try await Task.sleep(for: remaining)
+        }
     }
 
     var isInPostWorkoutCheckIn: Bool {
@@ -1779,12 +1836,19 @@ final class HealthAssistantService: ObservableObject {
             weeklyWorkoutCount: 0,
             hoursSinceLastWorkout: nil,
             todayWorkoutSessions: [],
+            recentWorkoutSessions: [],
             dailyCalorieTarget: 0,
             basalMetabolicRate: 0,
             estimatedTDEE: 0,
             caloricDeficit: 0,
             sweetConsumption: .moderate,
-            lactoseTolerance: nil
+            lactoseTolerance: nil,
+            hasMealPlan: false,
+            todayMealsCompleted: 0,
+            todayMealsTotal: 0,
+            weekMealsCompleted: 0,
+            weekMealsTotal: 0,
+            supplementsLoggedToday: 0
         ))
     }
 
@@ -1825,17 +1889,8 @@ final class HealthAssistantService: ObservableObject {
             return
         }
 
-        isTyping = true
-        replyTask = Task {
-            do {
-                try await Task.sleep(for: Self.replyDelay)
-                guard !Task.isCancelled else { return }
-                let answer = HealthAssistantEngine.answer(for: trimmed, context: context)
-                deliverAssistantMessage(answer)
-                isTyping = false
-            } catch {
-                isTyping = false
-            }
+        deliverAfterMinimumTyping {
+            HealthAssistantEngine.answer(for: trimmed, context: context)
         }
     }
 
@@ -2131,35 +2186,15 @@ final class HealthAssistantService: ObservableObject {
             return
         }
 
-        isTyping = true
-        replyTask?.cancel()
-        replyTask = Task {
-            do {
-                try await Task.sleep(for: Self.replyDelay)
-                guard !Task.isCancelled else { return }
-                let answer = HealthAssistantEngine.answer(for: text, context: context)
-                let reminder = PostWorkoutCheckInEngine.pendingQuestionReminder(pendingQuestion)
-                deliverAssistantMessage("\(answer)\n\n\(reminder)")
-                isTyping = false
-            } catch {
-                isTyping = false
-            }
+        deliverAfterMinimumTyping {
+            let answer = HealthAssistantEngine.answer(for: text, context: context)
+            let reminder = PostWorkoutCheckInEngine.pendingQuestionReminder(pendingQuestion)
+            return "\(answer)\n\n\(reminder)"
         }
     }
 
     private func deliverDelayedWorkoutBuilderMessage(_ text: String) {
-        isTyping = true
-        replyTask?.cancel()
-        replyTask = Task {
-            do {
-                try await Task.sleep(for: Self.workoutBuilderReplyDelay)
-                guard !Task.isCancelled else { return }
-                deliverAssistantMessage(text)
-                isTyping = false
-            } catch {
-                isTyping = false
-            }
-        }
+        deliverAfterMinimumTyping(minDuration: Self.workoutBuilderReplyDelay) { text }
     }
 
     func refreshGuidedCheckInsIfNeeded(context: HealthAssistantContext) {
@@ -2771,12 +2806,19 @@ final class HealthAssistantService: ObservableObject {
             weeklyWorkoutCount: 0,
             hoursSinceLastWorkout: nil,
             todayWorkoutSessions: [],
+            recentWorkoutSessions: [],
             dailyCalorieTarget: 0,
             basalMetabolicRate: 0,
             estimatedTDEE: 0,
             caloricDeficit: 0,
             sweetConsumption: .moderate,
-            lactoseTolerance: nil
+            lactoseTolerance: nil,
+            hasMealPlan: false,
+            todayMealsCompleted: 0,
+            todayMealsTotal: 0,
+            weekMealsCompleted: 0,
+            weekMealsTotal: 0,
+            supplementsLoggedToday: 0
         ))
     }
 }

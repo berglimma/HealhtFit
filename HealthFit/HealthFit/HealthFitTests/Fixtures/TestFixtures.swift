@@ -31,20 +31,41 @@ enum TestFixtures {
         )
     }
 
-    static func assistantContext(user: UserProfile? = userProfile()) -> HealthAssistantContext {
+    static func assistantContext(
+        user: UserProfile? = userProfile(),
+        waterIntakeMl: Int = 1200,
+        sleepHours: Double? = 6.5,
+        weeklyWorkoutCount: Int = 2,
+        hoursSinceLastWorkout: Double? = 30,
+        todayWorkoutSessions: [WorkoutSession] = [],
+        recentWorkoutSessions: [WorkoutSession] = [],
+        hasMealPlan: Bool = false,
+        todayMealsCompleted: Int = 0,
+        todayMealsTotal: Int = 0,
+        weekMealsCompleted: Int = 0,
+        weekMealsTotal: Int = 0,
+        supplementsLoggedToday: Int = 0
+    ) -> HealthAssistantContext {
         HealthAssistantContext(
             user: user,
-            waterIntakeMl: 1200,
-            sleepHours: 6.5,
-            weeklyWorkoutCount: 2,
-            hoursSinceLastWorkout: 30,
-            todayWorkoutSessions: [],
+            waterIntakeMl: waterIntakeMl,
+            sleepHours: sleepHours,
+            weeklyWorkoutCount: weeklyWorkoutCount,
+            hoursSinceLastWorkout: hoursSinceLastWorkout,
+            todayWorkoutSessions: todayWorkoutSessions,
+            recentWorkoutSessions: recentWorkoutSessions,
             dailyCalorieTarget: user?.dailyCalorieTarget ?? 2500,
             basalMetabolicRate: user?.basalMetabolicRate ?? 1700,
             estimatedTDEE: user?.estimatedTDEE ?? 2600,
             caloricDeficit: user?.caloricDeficit ?? 400,
             sweetConsumption: .moderate,
-            lactoseTolerance: .tolerant
+            lactoseTolerance: .tolerant,
+            hasMealPlan: hasMealPlan,
+            todayMealsCompleted: todayMealsCompleted,
+            todayMealsTotal: todayMealsTotal,
+            weekMealsCompleted: weekMealsCompleted,
+            weekMealsTotal: weekMealsTotal,
+            supplementsLoggedToday: supplementsLoggedToday
         )
     }
 

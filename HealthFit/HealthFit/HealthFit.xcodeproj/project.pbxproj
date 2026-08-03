@@ -88,6 +88,8 @@
 		B1000348 /* MonthlyProgressAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000348 /* MonthlyProgressAnalyzer.swift */; };
 		B1000349 /* MonthlyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000349 /* MonthlyReportService.swift */; };
 		B1000350 /* MonthlyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000350 /* MonthlyReportView.swift */; };
+		B1000351 /* AssistantImprovementAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000351 /* AssistantImprovementAnalysisEngine.swift */; };
+		B2000026 /* AssistantImprovementAnalysisEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000035 /* AssistantImprovementAnalysisEngineTests.swift */; };
 		B1000047 /* WeeklyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000049 /* WeeklyReportView.swift */; };
 		B1000048 /* MeditationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000050 /* MeditationModels.swift */; };
 		B1000049 /* MeditationSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000051 /* MeditationSetupView.swift */; };
@@ -342,6 +344,8 @@
 		F1000348 /* MonthlyProgressAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyProgressAnalyzer.swift; sourceTree = "<group>"; };
 		F1000349 /* MonthlyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportService.swift; sourceTree = "<group>"; };
 		F1000350 /* MonthlyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportView.swift; sourceTree = "<group>"; };
+		F1000351 /* AssistantImprovementAnalysisEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantImprovementAnalysisEngine.swift; sourceTree = "<group>"; };
+		F2000035 /* AssistantImprovementAnalysisEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantImprovementAnalysisEngineTests.swift; sourceTree = "<group>"; };
 		F1000049 /* WeeklyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportView.swift; sourceTree = "<group>"; };
 		F1000050 /* MeditationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationModels.swift; sourceTree = "<group>"; };
 		F1000051 /* MeditationSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationSetupView.swift; sourceTree = "<group>"; };
@@ -632,6 +636,7 @@
 				F1000116 /* AssistantInactivityFollowUpEngine.swift */,
 				F1000205 /* AssistantCardioMeditationNudgeEngine.swift */,
 				F1000346 /* AssistantSupplementNudgeEngine.swift */,
+				F1000351 /* AssistantImprovementAnalysisEngine.swift */,
 				F1000348 /* MonthlyProgressAnalyzer.swift */,
 				F1000349 /* MonthlyReportService.swift */,
 				F1000120 /* UserDataCleaner.swift */,
@@ -897,6 +902,7 @@
 				F2000032 /* NutritionReportBuilderTests.swift */,
 				F2000033 /* BodyEvolutionModelsTests.swift */,
 				F2000034 /* MusculacaoProgramTests.swift */,
+				F2000035 /* AssistantImprovementAnalysisEngineTests.swift */,
 			);
 			path = HealthFitTests;
 			sourceTree = "<group>";
@@ -1231,6 +1237,7 @@
 				B1000114 /* DailyEveningCheckInService.swift in Sources */,
 				B1000115 /* SupplementationGuideEngine.swift in Sources */,
 				B1000116 /* AssistantInactivityFollowUpEngine.swift in Sources */,
+				B1000351 /* AssistantImprovementAnalysisEngine.swift in Sources */,
 				B1000205 /* AssistantCardioMeditationNudgeEngine.swift in Sources */,
 				B1000117 /* AppLegalConfiguration.swift in Sources */,
 				B1000118 /* LegalLinksView.swift in Sources */,
@@ -1315,6 +1322,7 @@
 				B2000023 /* NutritionReportBuilderTests.swift in Sources */,
 				B2000024 /* BodyEvolutionModelsTests.swift in Sources */,
 				B2000025 /* MusculacaoProgramTests.swift in Sources */,
+				B2000026 /* AssistantImprovementAnalysisEngineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

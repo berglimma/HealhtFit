@@ -93,12 +93,19 @@ private extension HealthAssistantContext {
             weeklyWorkoutCount: weeklyWorkoutCount,
             hoursSinceLastWorkout: hoursSinceLastWorkout,
             todayWorkoutSessions: sessions,
+            recentWorkoutSessions: recentWorkoutSessions,
             dailyCalorieTarget: dailyCalorieTarget,
             basalMetabolicRate: basalMetabolicRate,
             estimatedTDEE: estimatedTDEE,
             caloricDeficit: caloricDeficit,
             sweetConsumption: sweetConsumption,
-            lactoseTolerance: lactoseTolerance
+            lactoseTolerance: lactoseTolerance,
+            hasMealPlan: hasMealPlan,
+            todayMealsCompleted: todayMealsCompleted,
+            todayMealsTotal: todayMealsTotal,
+            weekMealsCompleted: weekMealsCompleted,
+            weekMealsTotal: weekMealsTotal,
+            supplementsLoggedToday: supplementsLoggedToday
         )
     }
 }
