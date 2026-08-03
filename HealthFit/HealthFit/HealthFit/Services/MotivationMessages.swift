@@ -1,6 +1,87 @@
 import Foundation
 
+/// Day-period buckets using the **device local** clock (A.M. / P.M. in the user’s timezone).
+///
+/// Hours are wall-clock local on a 24h scale (`Calendar.current` / `TimeZone.current` by default).
+/// Never use a fixed country offset (e.g. Brazil-only) when classifying.
+///
+/// | Window | Local time | Greeting tone |
+/// |--------|------------|---------------|
+/// | Morning (A.M. earlier) | 05:00–11:59 | Bom dia |
+/// | Afternoon (late A.M. / early P.M.) | 12:00–17:59 | Boa tarde |
+/// | Early evening (P.M.) | 18:00–19:59 | Boa noite (suave) |
+/// | Night rest (P.M. after 20:00 → early A.M.) | 20:00–04:59 | Bom descanso |
+enum DayPartWindow: Equatable {
+    case morning
+    case afternoon
+    case evening
+    case rest
+}
+
 enum MotivationMessages {
+    // MARK: - Day-part greetings (timezone-aware)
+
+    /// Calendar locked to the device local timezone for day-part math.
+    static var localCalendar: Calendar {
+        var calendar = Calendar.current
+        calendar.timeZone = .current
+        return calendar
+    }
+
+    static func dayPartWindow(for date: Date = .now, calendar: Calendar = localCalendar) -> DayPartWindow {
+        let hour = calendar.component(.hour, from: date)
+        switch hour {
+        case 5..<12: return .morning      // 05:00–11:59 local
+        case 12..<18: return .afternoon  // 12:00–17:59 local
+        case 18..<20: return .evening    // 18:00–19:59 local
+        default: return .rest            // 20:00–04:59 local
+        }
+    }
+
+    /// Saudação curta por janela local: "Bom dia", "Boa tarde", "Boa noite" ou descanso após 20h.
+    /// Copy remains Portuguese (app default); day/night logic always follows device local time.
+    static func dayPartGreeting(for date: Date = .now, calendar: Calendar = localCalendar) -> String {
+        switch dayPartWindow(for: date, calendar: calendar) {
+        case .morning: return "Bom dia"
+        case .afternoon: return "Boa tarde"
+        case .evening: return "Boa noite"
+        case .rest: return restGreeting(for: date, calendar: calendar)
+        }
+    }
+
+    /// Variações em PT de desejo de bom descanso (20:00–04:59 local).
+    static func restGreeting(for date: Date = .now, calendar: Calendar = localCalendar) -> String {
+        let options = [
+            "Bom descanso",
+            "Descanse bem",
+            "Boa noite de descanso"
+        ]
+        let day = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
+        return options[(day - 1) % options.count]
+    }
+
+    /// Ex.: "Bom dia, Ana!" / "Bom descanso, Ana!" / "Bom descanso!"
+    static func namedGreeting(name: String?, date: Date = .now, calendar: Calendar = localCalendar) -> String {
+        let greeting = dayPartGreeting(for: date, calendar: calendar)
+        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if trimmed.isEmpty {
+            return "\(greeting)!"
+        }
+        return "\(greeting), \(trimmed)!"
+    }
+
+    static func dayPartNoun(for date: Date = .now, calendar: Calendar = localCalendar) -> String {
+        switch dayPartWindow(for: date, calendar: calendar) {
+        case .morning: return "pela manhã"
+        case .afternoon: return "à tarde"
+        case .evening, .rest: return "à noite"
+        }
+    }
+
+    static func isRestWindow(for date: Date = .now, calendar: Calendar = localCalendar) -> Bool {
+        dayPartWindow(for: date, calendar: calendar) == .rest
+    }
+
     static let daily: [String] = [
         "Hoje é dia de evoluir! Cada treino te aproxima do seu objetivo. 💪",
         "Disciplina vence motivação. Apareça hoje e faça acontecer!",
@@ -97,31 +178,32 @@ enum MotivationMessages {
         "A jornada começa agora. Força, foco e determinação!"
     ]
 
-    static func dailyMessage(for date: Date = .now) -> String {
-        let weekday = Calendar.current.component(.weekday, from: date)
-        // 1 = domingo … 7 = sábado
+    static func dailyMessage(for date: Date = .now, calendar: Calendar = localCalendar) -> String {
+        let weekday = calendar.component(.weekday, from: date)
+        // 1 = domingo … 7 = sábado (local weekday)
         switch weekday {
         case 5: // quinta
-            return pick(from: thursdayMotivation, on: date)
+            return pick(from: thursdayMotivation, on: date, calendar: calendar)
         case 6: // sexta
-            return pick(from: fridayMotivation, on: date)
+            return pick(from: fridayMotivation, on: date, calendar: calendar)
         case 7: // sábado
-            return pick(from: saturdayMotivation, on: date)
+            return pick(from: saturdayMotivation, on: date, calendar: calendar)
         case 1: // domingo
-            return pick(from: sundayMotivation, on: date)
+            return pick(from: sundayMotivation, on: date, calendar: calendar)
         default: // segunda a quarta
-            return pick(from: weekdayWorkoutMotivation, on: date)
+            return pick(from: weekdayWorkoutMotivation, on: date, calendar: calendar)
         }
     }
 
+    /// Morning motivation push (scheduled ~06:00 local) always uses “Bom dia”.
     static func dailyNotificationTitle(for date: Date = .now) -> String {
         _ = date
         return "Bom dia, HealthFit ☀️"
     }
 
-    /// Motivação do lembrete das 18:00 — uma frase por dia da semana (Domingo…Sábado).
-    static func eveningTrainingNudgeMessage(for date: Date = .now) -> String {
-        let weekday = Calendar.current.component(.weekday, from: date)
+    /// Motivação do lembrete das 18:00 local — uma frase por dia da semana (Domingo…Sábado).
+    static func eveningTrainingNudgeMessage(for date: Date = .now, calendar: Calendar = localCalendar) -> String {
+        let weekday = calendar.component(.weekday, from: date)
         // 1 = domingo … 7 = sábado
         switch weekday {
         case 1:
@@ -143,9 +225,9 @@ enum MotivationMessages {
         }
     }
 
-    private static func pick(from messages: [String], on date: Date) -> String {
+    private static func pick(from messages: [String], on date: Date, calendar: Calendar = localCalendar) -> String {
         guard !messages.isEmpty else { return daily[0] }
-        let day = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 1
+        let day = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
         return messages[(day - 1) % messages.count]
     }
 

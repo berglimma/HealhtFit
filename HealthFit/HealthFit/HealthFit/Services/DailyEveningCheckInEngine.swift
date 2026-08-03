@@ -54,13 +54,14 @@ enum DailyEveningCheckInEngine {
         DailyWellnessEntry.dayKey(for: date)
     }
 
-    static func isCheckInWindowOpen(now: Date = .now) -> Bool {
-        Calendar.current.component(.hour, from: now) >= checkInHour
+    /// Janela do check-in noturno em **hora local do dispositivo** (≥ 21:00 local).
+    static func isCheckInWindowOpen(now: Date = .now, calendar: Calendar = MotivationMessages.localCalendar) -> Bool {
+        calendar.component(.hour, from: now) >= checkInHour
     }
 
-    /// Horário atual do dispositivo, ex.: "21h", "21h45".
-    static func formattedClockTime(now: Date = .now) -> String {
-        DailyMorningCheckInEngine.formattedClockTime(now: now)
+    /// Horário atual do dispositivo, ex.: "21h", "21h45" (local 24h wall clock).
+    static func formattedClockTime(now: Date = .now, calendar: Calendar = MotivationMessages.localCalendar) -> String {
+        DailyMorningCheckInEngine.formattedClockTime(now: now, calendar: calendar)
     }
 
     static func completedSessionsToday(from sessions: [WorkoutSession], on date: Date = .now) -> [WorkoutSession] {
@@ -393,30 +394,31 @@ enum DailyEveningCheckInEngine {
     private static func goodNightFarewell(
         for readiness: DailyEveningRestReadiness,
         hadWorkout: Bool,
-        name: String
+        name: String,
+        now: Date = .now
     ) -> String {
+        // Check-in noturno é ≥ 21h — saudação de descanso; se rodado mais cedo, mantém o corte de 20h.
+        let restSalute = MotivationMessages.isRestWindow(for: now)
+            ? MotivationMessages.restGreeting(for: now)
+            : MotivationMessages.dayPartGreeting(for: now)
+
         switch readiness {
         case .readyToSleep, .peaceful:
             if hadWorkout {
-                return "Boa noite, \(name)! Você merece esse descanso depois do que fez hoje. Durma bem — estou aqui no IAssistente quando precisar. 🌙💤"
+                return "\(restSalute), \(name)! Você merece esse descanso depois do que fez hoje. Durma bem — hidrate levemente e desacelere. Estou no IAssistente se precisar. 🌙💤"
             }
-            return "Boa noite, \(name)! Descanse profundamente e recarregue. Te vejo no próximo check-in! 🌙"
+            return "\(restSalute), \(name)! Descanse profundamente e recarregue. Te vejo no próximo check-in! 🌙"
         case .restless, .anxious:
-            return "Vai com calma, \(name). Feche os olhos quando puder — cada respiração te aproxima do sono. Boa noite! 🌙"
+            return "Vai com calma, \(name). Feche os olhos quando puder — cada respiração te aproxima do sono. Descanse bem! 🌙"
         case .sore:
-            return "Recupere bem, \(name). Seu corpo trabalhou — agora deixe o sono fazer o resto. Boa noite! 💤"
+            return "Recupere bem, \(name). Seu corpo trabalhou — agora deixe o sono fazer o resto. Bom descanso! 💤"
         case .neutral:
-            return "Boa noite, \(name)! Que seu descanso seja reparador. Estou na aba IAssistente quando quiser conversar. 🌙"
+            return "\(restSalute), \(name)! Que seu descanso seja reparador. Estou na aba IAssistente quando quiser conversar. 🌙"
         }
     }
 
     private static func dayPartGreeting(for date: Date) -> String {
-        let hour = Calendar.current.component(.hour, from: date)
-        switch hour {
-        case 5..<12: return "Bom dia"
-        case 12..<18: return "Boa tarde"
-        default: return "Boa noite"
-        }
+        MotivationMessages.dayPartGreeting(for: date)
     }
 
     private static func matches(_ text: String, any keywords: [String]) -> Bool {

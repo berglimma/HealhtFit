@@ -171,6 +171,17 @@ final class NotificationService {
         (0..<DailyMotivationConfiguration.scheduledDayCount).map { "\(dailyMotivationIdentifierPrefix)\($0)" }
     }
 
+    private func localTimeComponents(hour: Int, minute: Int) -> DateComponents {
+        var components = DateComponents()
+        // UNCalendarNotificationTrigger uses the device local zone when timeZone
+        // is nil; set both explicitly so wall-clock hours work worldwide.
+        components.calendar = Calendar.current
+        components.timeZone = .current
+        components.hour = hour
+        components.minute = minute
+        return components
+    }
+
     func requestAuthorization() {
         UNUserNotificationCenter.current().delegate = AppNotificationCenterDelegate.shared
         UNUserNotificationCenter.current().getNotificationSettings { settings in
@@ -248,9 +259,8 @@ final class NotificationService {
     ) {
         cancelDailyAssistantCheckIn()
 
-        var components = DateComponents()
-        components.hour = hour
-        components.minute = minute
+        // Hours are wall-clock in the device local timezone (not UTC / not Brazil-only).
+        let components = localTimeComponents(hour: hour, minute: minute)
 
         scheduleOnPhone(
             title: "Como você está se sentindo? ☀️",
@@ -273,13 +283,12 @@ final class NotificationService {
     ) {
         cancelDailyEveningAssistantCheckIn()
 
-        var components = DateComponents()
-        components.hour = hour
-        components.minute = minute
+        // ≥ 21:00 local — rest-oriented body (bom descanso).
+        let components = localTimeComponents(hour: hour, minute: minute)
 
         scheduleOnPhone(
             title: "Como foi seu dia? 🌙",
-            body: "Boa noite! O assistente quer saber como foi seu dia e te ajudar a descansar bem.",
+            body: "Bom descanso! O assistente quer saber como foi seu dia e te ajudar a preparar o sono.",
             category: "DAILY_EVENING_ASSISTANT_CHECKIN",
             identifier: dailyEveningAssistantCheckInIdentifier,
             trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
@@ -366,9 +375,7 @@ final class NotificationService {
 
             Task { @MainActor in
                 for hour in hours {
-                    var components = DateComponents()
-                    components.hour = hour
-                    components.minute = minute
+                    let components = self.localTimeComponents(hour: hour, minute: minute)
 
                     self.scheduleOnPhone(
                         title: "Hora de beber água! 💧",
@@ -399,9 +406,7 @@ final class NotificationService {
 
         for mealType in MealType.allCases {
             let clock = MealReminderConfiguration.reminderClock(for: mealType)
-            var components = DateComponents()
-            components.hour = clock.hour
-            components.minute = clock.minute
+            let components = localTimeComponents(hour: clock.hour, minute: clock.minute)
 
             scheduleOnPhone(
                 title: "Refeição em 5 minutos 🍽️",
@@ -432,9 +437,7 @@ final class NotificationService {
         ]
 
         for (index, slot) in SupplementReminderConfiguration.reminderSlots().enumerated() {
-            var components = DateComponents()
-            components.hour = slot.hour
-            components.minute = slot.minute
+            let components = localTimeComponents(hour: slot.hour, minute: slot.minute)
 
             scheduleOnPhone(
                 title: "Hora de registrar seu suplemento 💊",
@@ -544,6 +547,8 @@ final class NotificationService {
             guard let day = calendar.date(byAdding: .day, value: dayOffset, to: startOfToday) else { continue }
 
             var components = calendar.dateComponents([.year, .month, .day], from: day)
+            components.calendar = calendar
+            components.timeZone = .current
             components.hour = hour
             components.minute = minute
 

@@ -73,7 +73,7 @@ enum HealthAssistantEngine {
     ]
 
     static func welcomeMessage(context: HealthAssistantContext) -> String {
-        let greeting = context.user.map { "Olá, \($0.greetingName)!" } ?? "Olá!"
+        let greeting = MotivationMessages.namedGreeting(name: context.user?.greetingName)
         var sections = ["\(greeting) Sou o assistente HealthFit.", ""]
 
         let summary = buildWelcomeAlerts(context)

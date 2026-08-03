@@ -486,7 +486,7 @@ struct DashboardView: View {
     private var headerSection: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Olá, \(authService.currentUser?.greetingName ?? "Atleta")!")
+                Text(MotivationMessages.namedGreeting(name: authService.currentUser?.greetingName ?? "Atleta"))
                     .font(.title2.bold())
                     .foregroundStyle(AppTheme.textPrimary)
                 Text(dashboardHealthSubtitle)
@@ -504,9 +504,12 @@ struct DashboardView: View {
     }
 
     private var dashboardHealthSubtitle: String {
+        let restWindow = MotivationMessages.isRestWindow()
         switch healthStatus {
         case .green:
-            return "Pronto para treinar hoje?"
+            return restWindow
+                ? "Hora de desacelerar e preparar um bom descanso."
+                : "Pronto para treinar hoje?"
         case .yellow:
             return "Atualize água e sono para manter o ícone verde."
         case .red:

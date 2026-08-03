@@ -33,19 +33,20 @@ enum DailyMorningCheckInEngine {
 
     static func todayKey(for date: Date = .now) -> String {
         let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.calendar = MotivationMessages.localCalendar
+        formatter.timeZone = .current
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
     }
 
-    static func isCheckInWindowOpen(now: Date = .now) -> Bool {
-        Calendar.current.component(.hour, from: now) >= checkInHour
+    /// Janela do check-in matinal em **hora local do dispositivo**.
+    static func isCheckInWindowOpen(now: Date = .now, calendar: Calendar = MotivationMessages.localCalendar) -> Bool {
+        calendar.component(.hour, from: now) >= checkInHour
     }
 
-    /// Horário atual do dispositivo, ex.: "9h", "14h30".
-    static func formattedClockTime(now: Date = .now) -> String {
-        let calendar = Calendar.current
+    /// Horário atual do dispositivo, ex.: "9h", "14h30" (local 24h wall clock).
+    static func formattedClockTime(now: Date = .now, calendar: Calendar = MotivationMessages.localCalendar) -> String {
         let hour = calendar.component(.hour, from: now)
         let minute = calendar.component(.minute, from: now)
         if minute == 0 {
@@ -150,21 +151,11 @@ enum DailyMorningCheckInEngine {
     }
 
     private static func dayPartGreeting(for date: Date) -> String {
-        let hour = Calendar.current.component(.hour, from: date)
-        switch hour {
-        case 5..<12: return "Bom dia"
-        case 12..<18: return "Boa tarde"
-        default: return "Boa noite"
-        }
+        MotivationMessages.dayPartGreeting(for: date)
     }
 
     private static func dayPartNoun(for date: Date) -> String {
-        let hour = Calendar.current.component(.hour, from: date)
-        switch hour {
-        case 5..<12: return "pela manhã"
-        case 12..<18: return "à tarde"
-        default: return "à noite"
-        }
+        MotivationMessages.dayPartNoun(for: date)
     }
 
     private static func acknowledgment(for feeling: DailyMorningFeeling, name: String, now: Date = .now) -> String {
