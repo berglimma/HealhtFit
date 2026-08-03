@@ -131,7 +131,7 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         name == "Corrida"
     }
 
-    /// Cardio outdoor com mapa GPS (Corrida e bikes ao ar livre).
+    /// Cardio outdoor com mapa GPS (Corrida, caminhada e bikes ao ar livre).
     var supportsOutdoorGPS: Bool {
         Self.outdoorGPSNames.contains(name)
     }
@@ -141,12 +141,21 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         Self.outdoorCyclingNames.contains(name)
     }
 
+    /// Caminhada outdoor (mapa GPS + passos, sem metas de distância de corrida).
+    var isOutdoorWalking: Bool {
+        Self.outdoorWalkingNames.contains(name)
+    }
+
     var isStationaryBike: Bool {
         name == "Bicicleta ergométrica"
     }
 
     private static let outdoorGPSNames: Set<String> = [
-        "Corrida", "Bicicleta pedal", "Mountain bike"
+        "Corrida", "Caminhada Rápida", "Caminhada", "Bicicleta pedal", "Mountain bike"
+    ]
+
+    private static let outdoorWalkingNames: Set<String> = [
+        "Caminhada Rápida", "Caminhada"
     ]
 
     private static let outdoorCyclingNames: Set<String> = [
@@ -155,7 +164,7 @@ struct CardioExercise: Identifiable, Hashable, Codable {
 
     static let catalog: [CardioExercise] = [
         CardioExercise(name: "Corrida", description: "Corrida contínua em esteira ou ao ar livre", icon: "figure.run", caloriesPerMinute: 10),
-        CardioExercise(name: "Caminhada Rápida", description: "Caminhada acelerada com inclinação moderada", icon: "figure.walk", caloriesPerMinute: 6),
+        CardioExercise(name: "Caminhada Rápida", description: "Caminhada outdoor com mapa GPS, ritmo e passos", icon: "figure.walk", caloriesPerMinute: 6),
         CardioExercise(name: "Mountain bike", description: "Mountain bike em trilha ou terreno irregular", icon: "bicycle", caloriesPerMinute: 10),
         CardioExercise(name: "Bicicleta pedal", description: "Ciclismo outdoor em rua ou ciclovia", icon: "figure.outdoor.cycle", caloriesPerMinute: 9),
         CardioExercise(name: "Bicicleta ergométrica", description: "Bike estacionária indoor, sem GPS", icon: "figure.indoor.cycle", caloriesPerMinute: 8),
@@ -201,6 +210,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
 
         let exerciseName: String = {
             if lower.contains("corrida") { return "Corrida" }
+            if lower.contains("caminhada") || lower.contains("walk") { return "Caminhada Rápida" }
             if lower.contains("mountain bike") { return "Mountain bike" }
             if lower.contains("bicicleta pedal") { return "Bicicleta pedal" }
             if lower.contains("bicicleta ergométrica") || lower.contains("bicicleta ergometrica") {
@@ -211,6 +221,10 @@ struct CardioWorkoutConfig: Hashable, Codable {
                !afterDash.isEmpty {
                 // "Corrida 5 km" / "Corrida livre" / exercise name
                 if afterDash.lowercased().hasPrefix("corrida") { return "Corrida" }
+                if afterDash.lowercased().hasPrefix("caminhada")
+                    || afterDash.lowercased().hasPrefix("walk") {
+                    return "Caminhada Rápida"
+                }
                 let withoutDistance = afterDash
                     .replacingOccurrences(of: #"\s+\d+\s*km"#, with: "", options: .regularExpression)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -252,11 +266,21 @@ struct CardioWorkoutConfig: Hashable, Codable {
     /// Sessão de Corrida (metas de distância / corrida livre).
     var isRunningSession: Bool { exercise.supportsDistanceGoals }
 
-    /// Corrida ou bike outdoor — mapa GPS, rota e métricas de movimento.
+    /// Corrida, caminhada ou bike outdoor — mapa GPS, rota e métricas de movimento.
     var isOutdoorGPSCardio: Bool { exercise.supportsOutdoorGPS }
 
     /// Mountain bike / Bicicleta pedal (velocidade em vez de ritmo).
     var isOutdoorCyclingSession: Bool { exercise.isOutdoorCycling }
+
+    /// Caminhada outdoor (mapa + passos + ritmo; sem metas 5–40 km de corrida).
+    var isOutdoorWalkingSession: Bool { exercise.isOutdoorWalking }
+
+    /// Modalidade do `RunTrackingService` (passos ligados em corrida e caminhada).
+    var outdoorTrackingModality: OutdoorCardioModality {
+        if isOutdoorCyclingSession { return .cycling }
+        if isOutdoorWalkingSession { return .walking }
+        return .running
+    }
 
     var hasCalorieGoal: Bool {
         guard let targetCalories else { return false }
@@ -273,7 +297,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
         return "Cardio — \(exercise.name)"
     }
 
-    /// Métrica de desempenho da rota: ritmo (corrida) ou velocidade (bike).
+    /// Métrica de desempenho da rota: ritmo (corrida/caminhada) ou velocidade (bike).
     var routePerformanceMetric: RoutePerformanceMetric {
         isOutdoorCyclingSession ? .speed : .pace
     }

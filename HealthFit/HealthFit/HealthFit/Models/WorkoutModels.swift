@@ -552,10 +552,11 @@ struct WorkoutSession: Identifiable, Codable {
 
     /// Corrida (título ou heurística legado).
     var isRunningSession: Bool {
+        if isOutdoorWalkingSession || isOutdoorCyclingSession { return false }
         let title = workoutTitle.lowercased()
         if title.contains("corrida") { return true }
-        // Rota GPS sem título de bike/outdoor genérico ainda conta como corrida legado.
-        if !routePoints.isEmpty && !isOutdoorCyclingSession {
+        // Rota GPS sem título de bike/caminhada ainda conta como corrida legado.
+        if !routePoints.isEmpty {
             return true
         }
         if stepCount != nil, completedDistanceKm != nil || targetDistanceKm != nil {
@@ -564,11 +565,22 @@ struct WorkoutSession: Identifiable, Codable {
         return false
     }
 
-    /// Sessão com mapa GPS outdoor (Corrida, Bicicleta pedal, Mountain bike).
+    /// Sessão com mapa GPS outdoor (Corrida, caminhada, Bicicleta pedal, Mountain bike).
     var isOutdoorGPSCardio: Bool {
         if isRunningSession { return true }
+        if isOutdoorWalkingSession { return true }
         if isOutdoorCyclingSession { return true }
         if !routePoints.isEmpty { return true }
+        return false
+    }
+
+    /// Caminhada outdoor pelo título (Caminhada, Caminhada Rápida, Walking…; não "Farmer's Walk").
+    var isOutdoorWalkingSession: Bool {
+        let title = workoutTitle.lowercased()
+        if title.contains("caminhada") { return true }
+        if title.contains("walking") { return true }
+        // "Walk" só em contexto de cardio (evita exercícios como Farmer's Walk).
+        if title.contains("walk"), title.contains("cardio") { return true }
         return false
     }
 

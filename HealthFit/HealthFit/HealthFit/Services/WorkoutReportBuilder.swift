@@ -32,10 +32,21 @@ enum WorkoutReportBuilder {
         return "Relatório de \(kind) — \(athleteName) — \(session.workoutTitle)"
     }
 
+    /// Há polyline GPS suficiente para gerar mapa (caminhada, corrida, bikes outdoor).
+    static func hasRouteMapForEmail(_ session: WorkoutSession) -> Bool {
+        session.routePoints.count >= 2
+    }
+
+    /// Sessão outdoor GPS elegível a mapa no e-mail (mesmo sem pontos ainda gravados).
+    static func isOutdoorRouteEmailCandidate(_ session: WorkoutSession) -> Bool {
+        session.isOutdoorGPSCardio || hasRouteMapForEmail(session)
+    }
+
     static func emailBody(
         session: WorkoutSession,
         athlete: UserProfile,
-        allSessions: [WorkoutSession] = []
+        allSessions: [WorkoutSession] = [],
+        routeMapAttachmentIncluded: Bool = false
     ) -> String {
         let dateFormatter = DateFormatter()
         dateFormatter.locale = Locale(identifier: "pt_BR")
@@ -51,6 +62,11 @@ enum WorkoutReportBuilder {
             "Data: \(dateFormatter.string(from: session.startedAt))",
             "Duração total: \(DurationFormatting.format(seconds: Int(session.duration)))"
         ]
+
+        lines.append(contentsOf: outdoorGPSEmailLines(
+            session: session,
+            routeMapAttachmentIncluded: routeMapAttachmentIncluded
+        ))
 
         lines.append(contentsOf: athleteProfileReportLines(athlete: athlete, dateFormatter: dateFormatter))
 
@@ -121,6 +137,66 @@ enum WorkoutReportBuilder {
         lines.append("")
         lines.append("Enviado pelo app HealthFit")
         return lines.joined(separator: "\n")
+    }
+
+    /// Corpo HTML para `MFMailCompose` (preserva quebras de linha do texto).
+    static func emailHTMLBody(
+        session: WorkoutSession,
+        athlete: UserProfile,
+        allSessions: [WorkoutSession] = [],
+        routeMapAttachmentIncluded: Bool = false
+    ) -> String {
+        let plain = emailBody(
+            session: session,
+            athlete: athlete,
+            allSessions: allSessions,
+            routeMapAttachmentIncluded: routeMapAttachmentIncluded
+        )
+        return htmlDocument(fromPlainText: plain)
+    }
+
+    /// Distância, ritmo/velocidade e nota sobre o mapa (anexo ou fallback in-app).
+    static func outdoorGPSEmailLines(
+        session: WorkoutSession,
+        routeMapAttachmentIncluded: Bool
+    ) -> [String] {
+        guard isOutdoorRouteEmailCandidate(session) else { return [] }
+
+        var lines: [String] = []
+        let distanceKm = session.displayDistanceKm
+        if distanceKm > 0 {
+            lines.append(String(format: "Distância: %.2f km", distanceKm))
+        }
+
+        if session.isOutdoorCyclingSession, distanceKm > 0.05, session.duration > 0 {
+            let kmh = distanceKm / (session.duration / 3600.0)
+            lines.append(String(format: "Velocidade média: %.1f km/h", kmh))
+        } else if let pace = session.displayPaceSecondsPerKm, pace > 0 {
+            lines.append("Ritmo médio: \(PaceFormatting.format(secondsPerKm: pace))")
+        }
+
+        if routeMapAttachmentIncluded {
+            lines.append("Mapa do percurso em anexo (rota-treino.png).")
+            lines.append("Legenda: \(RoutePerformanceColoring.legendText).")
+        } else if hasRouteMapForEmail(session) {
+            // mailto: não suporta anexos — avisa que o mapa está no app.
+            lines.append("Mapa do percurso: disponível no app HealthFit (e-mail sem suporte a anexos).")
+        }
+
+        return lines
+    }
+
+    private static func htmlDocument(fromPlainText plain: String) -> String {
+        let escaped = plain
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+            .replacingOccurrences(of: "\n", with: "<br>\n")
+        return """
+        <html><body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;line-height:1.45;color:#111;">
+        \(escaped)
+        </body></html>
+        """
     }
 
     static func preWorkoutEntries(from sessions: [WorkoutSession]) -> [PreWorkoutSessionEntry] {

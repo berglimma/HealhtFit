@@ -32,8 +32,9 @@ struct ActiveCardioView: View {
     private var isRunningSession: Bool { config.isRunningSession }
     private var isOutdoorGPS: Bool { config.isOutdoorGPSCardio }
     private var isOutdoorCycling: Bool { config.isOutdoorCyclingSession }
+    private var isOutdoorWalking: Bool { config.isOutdoorWalkingSession }
     private var trackingModality: OutdoorCardioModality {
-        isOutdoorCycling ? .cycling : .running
+        config.outdoorTrackingModality
     }
 
     private var completedDistanceKm: Double {
@@ -111,7 +112,7 @@ struct ActiveCardioView: View {
 
     private var navigationTitleText: String {
         if showsRunningUI { return "Corrida" }
-        if isOutdoorCycling { return config.exercise.name }
+        if isOutdoorCycling || isOutdoorWalking { return config.exercise.name }
         return "Cardio"
     }
 
@@ -684,9 +685,12 @@ struct ActiveCardioView: View {
             finishCardio()
         } label: {
             Label(
-                showsRunningUI
-                    ? "Finalizar Corrida"
-                    : (isOutdoorCycling ? "Finalizar Pedal" : "Finalizar Cardio"),
+                {
+                    if showsRunningUI { return "Finalizar Corrida" }
+                    if isOutdoorCycling { return "Finalizar Pedal" }
+                    if isOutdoorWalking { return "Finalizar Caminhada" }
+                    return "Finalizar Cardio"
+                }(),
                 systemImage: "flag.checkered"
             )
         }
@@ -796,7 +800,8 @@ struct ActiveCardioView: View {
         session.targetCalories = config.targetCalories
         if isOutdoorGPS {
             session.routePoints = runTracker.routePoints
-            if isRunningSession {
+            // Passos na corrida e na caminhada (pedômetro / estimativa).
+            if isRunningSession || isOutdoorWalking || trackingModality.usesFootTracking {
                 session.stepCount = liveSteps
             }
         }
@@ -827,6 +832,7 @@ struct ActiveCardioView: View {
         let hkActivity: HKWorkoutActivityType = {
             if config.isOutdoorCyclingSession { return .cycling }
             if config.isRunningSession || config.isDistanceRun { return .running }
+            if config.isOutdoorWalkingSession { return .walking }
             if config.exercise.isStationaryBike { return .cycling }
             return .walking
         }()

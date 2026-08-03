@@ -5,10 +5,19 @@ import SwiftUI
 /// Modalidade de tracking outdoor (classificação de movimento e calorias).
 enum OutdoorCardioModality: String, Codable, CaseIterable {
     case running
+    case walking
     case cycling
+
+    /// Corrida e caminhada usam pedômetro e estados Parado / Caminhando / Correndo.
+    var usesFootTracking: Bool {
+        switch self {
+        case .running, .walking: return true
+        case .cycling: return false
+        }
+    }
 }
 
-/// Estado de atividade durante cardio outdoor (corrida ou bike).
+/// Estado de atividade durante cardio outdoor (corrida, caminhada ou bike).
 enum RunningActivityState: String, Codable, CaseIterable, Identifiable {
     case stationary = "Parado"
     case walking = "Caminhando"
@@ -98,7 +107,8 @@ enum RunTrackingMath {
         modality: OutdoorCardioModality
     ) -> RunningActivityState {
         switch modality {
-        case .running:
+        case .running, .walking:
+            // Corrida e caminhada: Parado / Caminhando / Correndo.
             if speed < 0.5 { return .stationary }
             if speed < 2.0 { return .walking }
             return .running
@@ -140,6 +150,14 @@ enum RunTrackingMath {
                     return 2.5 + (speed / 2.0) * 1.5
                 }
                 return min(14.0, 6.0 + speed * 1.5)
+            case .walking:
+                // Foco em caminhada: MET mais baixo que corrida no mesmo range.
+                if speed < 0.5 { return 1.3 }
+                if speed < 1.8 {
+                    return 2.0 + (speed / 1.8) * 1.8
+                }
+                // Trote ocasional durante caminhada.
+                return min(10.0, 4.5 + speed * 1.2)
             case .cycling:
                 if speed < 0.8 { return 1.5 }
                 // ~4 MET a 3 m/s (~11 km/h); ~10 MET a 8 m/s (~29 km/h)

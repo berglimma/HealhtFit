@@ -25,6 +25,24 @@ final class RunTrackingTests: XCTestCase {
         )
     }
 
+    func testWalkingSpeedClassification() {
+        XCTAssertEqual(
+            RunTrackingMath.activityState(fromSpeedMetersPerSecond: 0.2, modality: .walking),
+            .stationary
+        )
+        XCTAssertEqual(
+            RunTrackingMath.activityState(fromSpeedMetersPerSecond: 1.2, modality: .walking),
+            .walking
+        )
+        XCTAssertEqual(
+            RunTrackingMath.activityState(fromSpeedMetersPerSecond: 2.5, modality: .walking),
+            .running
+        )
+        XCTAssertTrue(OutdoorCardioModality.walking.usesFootTracking)
+        XCTAssertTrue(OutdoorCardioModality.running.usesFootTracking)
+        XCTAssertFalse(OutdoorCardioModality.cycling.usesFootTracking)
+    }
+
     func testEstimatedStepsFromDistance() {
         XCTAssertEqual(RunTrackingMath.estimatedSteps(distanceKm: 0), 0)
         XCTAssertEqual(RunTrackingMath.estimatedSteps(distanceKm: 1), 1_312)
@@ -95,6 +113,16 @@ final class RunTrackingTests: XCTestCase {
         XCTAssertTrue(mtbConfig.isOutdoorGPSCardio)
         XCTAssertTrue(mtbConfig.isOutdoorCyclingSession)
 
+        let walk = CardioExercise.catalog.first { $0.name == "Caminhada Rápida" }!
+        let walkConfig = CardioWorkoutConfig(exercise: walk, intensity: .medium)
+        XCTAssertFalse(walkConfig.isRunningSession)
+        XCTAssertTrue(walkConfig.isOutdoorGPSCardio)
+        XCTAssertTrue(walkConfig.isOutdoorWalkingSession)
+        XCTAssertFalse(walkConfig.isOutdoorCyclingSession)
+        XCTAssertEqual(walkConfig.outdoorTrackingModality, .walking)
+        XCTAssertTrue(walk.supportsOutdoorGPS)
+        XCTAssertFalse(walk.supportsDistanceGoals)
+
         let ergo = CardioExercise.catalog.first { $0.name == "Bicicleta ergométrica" }!
         let ergoConfig = CardioWorkoutConfig(exercise: ergo, intensity: .medium)
         XCTAssertFalse(ergoConfig.isRunningSession)
@@ -131,6 +159,16 @@ final class RunTrackingTests: XCTestCase {
         XCTAssertFalse(bike.isRunningSession)
         XCTAssertTrue(bike.isOutdoorCyclingSession)
         XCTAssertTrue(bike.isOutdoorGPSCardio)
+
+        let walk = WorkoutSession(
+            workoutSheetId: UUID(),
+            workoutTitle: "Cardio — Caminhada Rápida",
+            totalExercises: 1
+        )
+        XCTAssertFalse(walk.isRunningSession)
+        XCTAssertTrue(walk.isOutdoorWalkingSession)
+        XCTAssertTrue(walk.isOutdoorGPSCardio)
+        XCTAssertEqual(walk.routePerformanceMetric, .pace)
 
         let ergo = WorkoutSession(
             workoutSheetId: UUID(),

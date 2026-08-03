@@ -3,7 +3,7 @@ import CoreLocation
 import CoreMotion
 import Foundation
 
-/// Rastreia GPS, passos e estado de movimento durante cardio outdoor (corrida ou bike).
+/// Rastreia GPS, passos e estado de movimento durante cardio outdoor (corrida, caminhada ou bike).
 @MainActor
 final class RunTrackingService: NSObject, ObservableObject {
     @Published private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
@@ -17,7 +17,7 @@ final class RunTrackingService: NSObject, ObservableObject {
     @Published private(set) var isPedometerAvailable: Bool = false
     @Published private(set) var isTracking = false
 
-    /// Corrida ou ciclismo — afeta classificação de movimento e pedômetro.
+    /// Corrida, caminhada ou ciclismo — afeta classificação de movimento e pedômetro.
     private(set) var modality: OutdoorCardioModality = .running
 
     private let locationManager = CLLocationManager()
@@ -75,10 +75,10 @@ final class RunTrackingService: NSObject, ObservableObject {
         usesPedometerSteps = false
         isTracking = true
 
-        locationManager.activityType = self.modality == .cycling ? .fitness : .fitness
+        locationManager.activityType = .fitness
         requestLocationPermissionIfNeeded()
         startLocationUpdatesIfAuthorized()
-        if self.modality == .running {
+        if self.modality.usesFootTracking {
             startPedometer()
         } else {
             isPedometerAvailable = false
@@ -95,7 +95,7 @@ final class RunTrackingService: NSObject, ObservableObject {
         if motionActivityAvailable {
             motionActivityManager.stopActivityUpdates()
         }
-        if modality == .running, !usesPedometerSteps {
+        if modality.usesFootTracking, !usesPedometerSteps {
             stepCount = max(stepCount, RunTrackingMath.estimatedSteps(distanceKm: distanceKm))
         }
     }
@@ -178,7 +178,8 @@ final class RunTrackingService: NSObject, ObservableObject {
             } else {
                 return
             }
-        case .running:
+        case .running, .walking:
+            // Parado / Caminhando / Correndo — igual para corrida e caminhada.
             if activity.running {
                 next = .running
             } else if activity.walking {
@@ -248,7 +249,7 @@ final class RunTrackingService: NSObject, ObservableObject {
         }
         routePoints.append(point)
 
-        if modality == .running, !usesPedometerSteps {
+        if modality.usesFootTracking, !usesPedometerSteps {
             stepCount = RunTrackingMath.estimatedSteps(distanceKm: distanceKm)
         }
     }

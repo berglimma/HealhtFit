@@ -199,18 +199,26 @@ struct WorkoutShareCardView: View {
         }
     }
 
+    private var outdoorSessionNoun: String {
+        if session.isOutdoorCyclingSession { return "o pedal" }
+        if session.isOutdoorWalkingSession { return "a caminhada" }
+        return "a corrida"
+    }
+
+    private var outdoorSessionVerb: String {
+        if session.isOutdoorCyclingSession { return "pedalou" }
+        if session.isOutdoorWalkingSession { return "caminhou" }
+        return "correu"
+    }
+
     private var runningHeadline: String {
-        let verb: String = {
-            if session.isOutdoorCyclingSession { return "pedalou" }
-            return "correu"
-        }()
         if session.autoEndedByInactivity {
-            return "\(displayName) pausou \(session.isOutdoorCyclingSession ? "o pedal" : "a corrida")"
+            return "\(displayName) pausou \(outdoorSessionNoun)"
         }
         if session.endedEarly {
-            return "\(displayName) \(verb), mas não concluiu"
+            return "\(displayName) \(outdoorSessionVerb), mas não concluiu"
         }
-        return "\(displayName) fechou \(session.isOutdoorCyclingSession ? "o pedal" : "a corrida")"
+        return "\(displayName) fechou \(outdoorSessionNoun)"
     }
 
     private var runningTrophyBadge: some View {
@@ -892,6 +900,47 @@ struct ShareCardRouteMapView: View {
     }
 }
 
+/// Renderiza o mapa do percurso (polyline colorida) para e-mail / anexos — sem MapKit.
+enum WorkoutRouteMapRenderer {
+    static let emailAttachmentFileName = "rota-treino.png"
+    static let emailAttachmentMimeType = "image/png"
+
+    @MainActor
+    static func renderImage(
+        session: WorkoutSession,
+        width: CGFloat = 900,
+        height: CGFloat = 560
+    ) -> UIImage? {
+        guard session.routePoints.count >= 2 else { return nil }
+        let map = ShareCardRouteMapView(
+            routePoints: session.routePoints,
+            distanceKm: session.displayDistanceKm,
+            performanceMetric: session.routePerformanceMetric
+        )
+        .frame(width: width, height: height)
+
+        let renderer = ImageRenderer(content: map)
+        renderer.scale = 2
+        renderer.isOpaque = true
+        return renderer.uiImage
+    }
+
+    @MainActor
+    static func pngData(for session: WorkoutSession) -> Data? {
+        renderImage(session: session)?.pngData()
+    }
+
+    @MainActor
+    static func mailAttachment(for session: WorkoutSession) -> MailAttachment? {
+        guard let data = pngData(for: session) else { return nil }
+        return MailAttachment(
+            data: data,
+            mimeType: emailAttachmentMimeType,
+            fileName: emailAttachmentFileName
+        )
+    }
+}
+
 enum WorkoutShareCardRenderer {
     @MainActor
     static func renderImage(
@@ -922,16 +971,19 @@ enum WorkoutShareCardRenderer {
             let km = session.displayDistanceKm
             let kmPart = km > 0 ? String(format: " · %.2f km", km) : ""
             let isBike = session.isOutdoorCyclingSession
-            let tag = isBike ? "#Ciclismo" : "#Corrida"
+            let isWalk = session.isOutdoorWalkingSession
+            let tag = isBike ? "#Ciclismo" : (isWalk ? "#Caminhada" : "#Corrida")
+            let verb = isBike ? "pedalou" : (isWalk ? "caminhou" : "correu")
+            let noun = isBike ? "o pedal" : (isWalk ? "a caminhada" : "a corrida")
             if session.endedEarly || session.autoEndedByInactivity {
                 return """
-                \(who) \(isBike ? "pedalou" : "correu") (não concluiu): \(session.workoutTitle) · \(duration)\(kmPart)
+                \(who) \(verb) (não concluiu): \(session.workoutTitle) · \(duration)\(kmPart)
                 Cada sessão conta — HealthFit 💪
                 #HealthFit \(tag) #Treino
                 """
             }
             return """
-            \(who) finalizou \(isBike ? "o pedal" : "a corrida"): \(session.workoutTitle) · \(duration)\(kmPart)
+            \(who) finalizou \(noun): \(session.workoutTitle) · \(duration)\(kmPart)
             Treinei com HealthFit 💪
             #HealthFit \(tag) #Treino
             """
@@ -974,6 +1026,15 @@ enum WorkoutShareCardRenderer {
                         "Você saiu e pedalou. Orgulho merecido.",
                         "A ciclovia responde a quem aparece.",
                         "Constância nas rodas, evolução no corpo."
+                    ]
+                }
+                if session.isOutdoorWalkingSession {
+                    return [
+                        "Cada passo conta. Ritmo firme, mente leve.",
+                        "Você saiu e caminhou. Orgulho merecido.",
+                        "Quilômetros de caminhada viram disciplina.",
+                        "A estrada responde a quem aparece.",
+                        "Constância no asfalto, evolução no corpo."
                     ]
                 }
                 return [

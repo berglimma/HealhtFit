@@ -1,10 +1,20 @@
 import SwiftUI
 import MessageUI
 
+/// Anexo opcional para `MFMailComposeViewController` (ex.: mapa da rota).
+struct MailAttachment: Equatable {
+    let data: Data
+    let mimeType: String
+    let fileName: String
+}
+
 struct MailComposeView: UIViewControllerRepresentable {
     let recipients: [String]
     let subject: String
     let body: String
+    /// Quando `true`, `body` é HTML (preferível com anexos de imagem).
+    var isHTML: Bool = false
+    var attachments: [MailAttachment] = []
     var onFinish: (MFMailComposeResult) -> Void = { _ in }
 
     static var canSendMail: Bool {
@@ -36,6 +46,8 @@ struct MailComposeView: UIViewControllerRepresentable {
             .filter { !$0.isEmpty }
         controller.subject = subject
         controller.body = body
+        controller.isHTML = isHTML
+        controller.attachments = attachments
         controller.onFinish = onFinish
         return controller
     }
@@ -47,6 +59,8 @@ final class MailComposeHostingController: UIViewController, MFMailComposeViewCon
     var recipients: [String] = []
     var subject = ""
     var body = ""
+    var isHTML = false
+    var attachments: [MailAttachment] = []
     var onFinish: ((MFMailComposeResult) -> Void)?
 
     private var didPresentMail = false
@@ -74,7 +88,14 @@ final class MailComposeHostingController: UIViewController, MFMailComposeViewCon
         composer.mailComposeDelegate = self
         composer.setToRecipients(recipients)
         composer.setSubject(subject)
-        composer.setMessageBody(body, isHTML: false)
+        composer.setMessageBody(body, isHTML: isHTML)
+        for attachment in attachments {
+            composer.addAttachmentData(
+                attachment.data,
+                mimeType: attachment.mimeType,
+                fileName: attachment.fileName
+            )
+        }
         present(composer, animated: true)
     }
 

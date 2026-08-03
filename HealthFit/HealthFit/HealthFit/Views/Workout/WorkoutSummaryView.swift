@@ -6,6 +6,8 @@ private struct TrainerMailDraft: Identifiable {
     let recipients: [String]
     let subject: String
     let body: String
+    var isHTML: Bool = false
+    var attachments: [MailAttachment] = []
 }
 
 struct WorkoutSummaryView: View {
@@ -123,7 +125,9 @@ struct WorkoutSummaryView: View {
             MailComposeView(
                 recipients: draft.recipients,
                 subject: draft.subject,
-                body: draft.body
+                body: draft.body,
+                isHTML: draft.isHTML,
+                attachments: draft.attachments
             ) { result in
                 pendingMailResult = result
                 mailDraft = nil
@@ -351,6 +355,7 @@ struct WorkoutSummaryView: View {
         }
     }
 
+    @MainActor
     private func sendReportToTrainer(user: UserProfile) {
         let recipient = user.personalTrainerEmail.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !recipient.isEmpty else {
@@ -359,36 +364,53 @@ struct WorkoutSummaryView: View {
         }
 
         let subject = WorkoutReportBuilder.emailSubject(session: session, athleteName: user.name)
-        let body = WorkoutReportBuilder.emailBody(
-            session: session,
-            athlete: user,
-            allSessions: workoutStore.sessionHistory
-        )
+        // MFMailCompose aceita anexos; mailto: não — mapa só no compositor nativo.
+        let mapAttachment = MailComposeView.canSendMail
+            ? WorkoutRouteMapRenderer.mailAttachment(for: session)
+            : nil
+        let mapIncluded = mapAttachment != nil
 
         if MailComposeView.canSendMail {
+            let htmlBody = WorkoutReportBuilder.emailHTMLBody(
+                session: session,
+                athlete: user,
+                allSessions: workoutStore.sessionHistory,
+                routeMapAttachmentIncluded: mapIncluded
+            )
             pendingMailResult = nil
             mailDraft = TrainerMailDraft(
                 recipients: [recipient],
                 subject: subject,
-                body: body
+                body: htmlBody,
+                isHTML: true,
+                attachments: mapAttachment.map { [$0] } ?? []
             )
-        } else if let url = MailComposeView.mailtoURL(
-            recipients: [recipient],
-            subject: subject,
-            body: body
-        ) {
-            UIApplication.shared.open(url) { accepted in
-                if accepted {
-                    // mailto não confirma envio; segue para o card.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                        focusShareCard()
-                    }
-                } else {
-                    showMailUnavailableAlert = true
-                }
-            }
         } else {
-            showMailUnavailableAlert = true
+            // Fallback mailto: corpo em texto sem anexo; avisa que o mapa está no app.
+            let plainBody = WorkoutReportBuilder.emailBody(
+                session: session,
+                athlete: user,
+                allSessions: workoutStore.sessionHistory,
+                routeMapAttachmentIncluded: false
+            )
+            if let url = MailComposeView.mailtoURL(
+                recipients: [recipient],
+                subject: subject,
+                body: plainBody
+            ) {
+                UIApplication.shared.open(url) { accepted in
+                    if accepted {
+                        // mailto não confirma envio; segue para o card.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            focusShareCard()
+                        }
+                    } else {
+                        showMailUnavailableAlert = true
+                    }
+                }
+            } else {
+                showMailUnavailableAlert = true
+            }
         }
     }
 
@@ -708,7 +730,11 @@ struct WorkoutSummaryView: View {
             HStack {
                 Image(systemName: "map.fill")
                     .foregroundStyle(AppTheme.accent)
-                Text(session.isOutdoorCyclingSession ? "Rota do pedal" : "Rota da corrida")
+                Text({
+                    if session.isOutdoorCyclingSession { return "Rota do pedal" }
+                    if session.isOutdoorWalkingSession { return "Rota da caminhada" }
+                    return "Rota da corrida"
+                }())
                     .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
                 Spacer()

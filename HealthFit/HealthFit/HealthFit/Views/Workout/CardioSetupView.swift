@@ -399,6 +399,7 @@ struct CardioSetupView: View {
                 {
                     if config.isDistanceRun || config.isFreeRun { return "Iniciar Corrida" }
                     if config.isOutdoorCyclingSession { return "Iniciar Pedal" }
+                    if config.isOutdoorWalkingSession { return "Iniciar Caminhada" }
                     return "Iniciar Cardio"
                 }(),
                 systemImage: "play.fill"
