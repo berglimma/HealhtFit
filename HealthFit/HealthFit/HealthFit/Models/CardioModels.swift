@@ -151,11 +151,12 @@ struct CardioExercise: Identifiable, Hashable, Codable {
     }
 
     private static let outdoorGPSNames: Set<String> = [
-        "Corrida", "Caminhada Rápida", "Caminhada", "Bicicleta pedal", "Mountain bike"
+        "Corrida", "Caminhada", "Caminhada Rápida", "Bicicleta pedal", "Mountain bike"
     ]
 
+    /// Inclui o nome legado "Caminhada Rápida" para sessões / reconstrução antigas.
     private static let outdoorWalkingNames: Set<String> = [
-        "Caminhada Rápida", "Caminhada"
+        "Caminhada", "Caminhada Rápida"
     ]
 
     private static let outdoorCyclingNames: Set<String> = [
@@ -164,7 +165,7 @@ struct CardioExercise: Identifiable, Hashable, Codable {
 
     static let catalog: [CardioExercise] = [
         CardioExercise(name: "Corrida", description: "Corrida contínua em esteira ou ao ar livre", icon: "figure.run", caloriesPerMinute: 10),
-        CardioExercise(name: "Caminhada Rápida", description: "Caminhada outdoor com mapa GPS, ritmo e passos", icon: "figure.walk", caloriesPerMinute: 6),
+        CardioExercise(name: "Caminhada", description: "Caminhada outdoor com mapa GPS, ritmo e passos", icon: "figure.walk", caloriesPerMinute: 6),
         CardioExercise(name: "Mountain bike", description: "Mountain bike em trilha ou terreno irregular", icon: "bicycle", caloriesPerMinute: 10),
         CardioExercise(name: "Bicicleta pedal", description: "Ciclismo outdoor em rua ou ciclovia", icon: "figure.outdoor.cycle", caloriesPerMinute: 9),
         CardioExercise(name: "Bicicleta ergométrica", description: "Bike estacionária indoor, sem GPS", icon: "figure.indoor.cycle", caloriesPerMinute: 8),
@@ -210,7 +211,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
 
         let exerciseName: String = {
             if lower.contains("corrida") { return "Corrida" }
-            if lower.contains("caminhada") || lower.contains("walk") { return "Caminhada Rápida" }
+            // Histórico: "Caminhada Rápida", "Caminhada", walking…
+            if lower.contains("caminhada") || lower.contains("walk") { return "Caminhada" }
             if lower.contains("mountain bike") { return "Mountain bike" }
             if lower.contains("bicicleta pedal") { return "Bicicleta pedal" }
             if lower.contains("bicicleta ergométrica") || lower.contains("bicicleta ergometrica") {
@@ -223,7 +225,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
                 if afterDash.lowercased().hasPrefix("corrida") { return "Corrida" }
                 if afterDash.lowercased().hasPrefix("caminhada")
                     || afterDash.lowercased().hasPrefix("walk") {
-                    return "Caminhada Rápida"
+                    return "Caminhada"
                 }
                 let withoutDistance = afterDash
                     .replacingOccurrences(of: #"\s+\d+\s*km"#, with: "", options: .regularExpression)

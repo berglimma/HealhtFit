@@ -152,10 +152,10 @@ enum WorkoutReportBuilder {
             allSessions: allSessions,
             routeMapAttachmentIncluded: routeMapAttachmentIncluded
         )
-        return htmlDocument(fromPlainText: plain)
+        return htmlDocument(fromPlainText: plain, emphasizeMetricsSection: isOutdoorRouteEmailCandidate(session))
     }
 
-    /// Distância, ritmo/velocidade e nota sobre o mapa (anexo ou fallback in-app).
+    /// Nota do mapa + métricas iguais à tela final / card de partilha (abaixo do mapa).
     static func outdoorGPSEmailLines(
         session: WorkoutSession,
         routeMapAttachmentIncluded: Bool
@@ -163,17 +163,6 @@ enum WorkoutReportBuilder {
         guard isOutdoorRouteEmailCandidate(session) else { return [] }
 
         var lines: [String] = []
-        let distanceKm = session.displayDistanceKm
-        if distanceKm > 0 {
-            lines.append(String(format: "Distância: %.2f km", distanceKm))
-        }
-
-        if session.isOutdoorCyclingSession, distanceKm > 0.05, session.duration > 0 {
-            let kmh = distanceKm / (session.duration / 3600.0)
-            lines.append(String(format: "Velocidade média: %.1f km/h", kmh))
-        } else if let pace = session.displayPaceSecondsPerKm, pace > 0 {
-            lines.append("Ritmo médio: \(PaceFormatting.format(secondsPerKm: pace))")
-        }
 
         if routeMapAttachmentIncluded {
             lines.append("Mapa do percurso em anexo (rota-treino.png).")
@@ -183,18 +172,141 @@ enum WorkoutReportBuilder {
             lines.append("Mapa do percurso: disponível no app HealthFit (e-mail sem suporte a anexos).")
         }
 
+        lines.append(contentsOf: outdoorGPSSessionStatLines(session: session))
         return lines
     }
 
-    private static func htmlDocument(fromPlainText plain: String) -> String {
+    /// Estatísticas legíveis no corpo do e-mail (espelha resumo outdoor / share card).
+    static func outdoorGPSSessionStatLines(session: WorkoutSession) -> [String] {
+        guard isOutdoorRouteEmailCandidate(session) else { return [] }
+
+        var lines: [String] = [
+            "",
+            "Métricas da sessão:"
+        ]
+
+        let burned = Int(session.caloriesBurned.rounded())
+        if let target = session.targetCalories, target > 0 {
+            let percent = min(100, Int((Double(burned) / Double(target) * 100).rounded()))
+            let reached = burned >= Int(Double(target) * 0.98)
+            lines.append("Evolução calórica: \(burned) / \(target) kcal (\(percent)%)\(reached ? " · meta atingida" : "")")
+        } else if burned > 0 {
+            lines.append("Evolução calórica: \(burned) kcal")
+        }
+
+        if session.averageHeartRate > 0 {
+            lines.append(String(format: "BPM: %.0f", session.averageHeartRate))
+        } else {
+            lines.append("BPM: —")
+        }
+
+        lines.append(burned > 0 ? "Kcal: \(burned)" : "Kcal: —")
+
+        let distanceKm = session.displayDistanceKm
+        if session.isOutdoorCyclingSession {
+            if distanceKm > 0.05, session.duration > 0 {
+                let kmh = distanceKm / (session.duration / 3600.0)
+                lines.append(String(format: "Ritmo: %.1f km/h", kmh))
+            } else {
+                lines.append("Ritmo: —")
+            }
+        } else if let pace = session.displayPaceSecondsPerKm, pace > 0 {
+            lines.append("Ritmo: \(PaceFormatting.format(secondsPerKm: pace))")
+        } else {
+            lines.append("Ritmo: —")
+        }
+
+        if let steps = session.stepCount, steps > 0 {
+            lines.append("Passos: \(steps)")
+        } else {
+            lines.append("Passos: —")
+        }
+
+        if distanceKm > 0 {
+            lines.append(String(format: "Km: %.2f", distanceKm))
+        } else {
+            lines.append("Km: —")
+        }
+
+        lines.append("Tempo: \(DurationFormatting.format(seconds: Int(session.duration)))")
+
+        return lines
+    }
+
+    private static func htmlDocument(fromPlainText plain: String, emphasizeMetricsSection: Bool = false) -> String {
         let escaped = plain
             .replacingOccurrences(of: "&", with: "&amp;")
             .replacingOccurrences(of: "<", with: "&lt;")
             .replacingOccurrences(of: ">", with: "&gt;")
-            .replacingOccurrences(of: "\n", with: "<br>\n")
+
+        let bodyHTML: String
+        if emphasizeMetricsSection, let range = escaped.range(of: "Métricas da sessão:") {
+            let before = String(escaped[..<range.lowerBound])
+                .replacingOccurrences(of: "\n", with: "<br>\n")
+            let afterRaw = String(escaped[range.lowerBound...])
+            let afterLines = afterRaw.components(separatedBy: "\n")
+            var metricsItems: [String] = []
+            var tailLines: [String] = []
+            var pastMetrics = false
+            for (index, line) in afterLines.enumerated() {
+                if index == 0 {
+                    continue // header "Métricas da sessão:"
+                }
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if !pastMetrics {
+                    if trimmed.isEmpty {
+                        pastMetrics = true
+                        continue
+                    }
+                    // Fim do bloco de métricas quando volta o texto genérico do relatório.
+                    if trimmed.hasPrefix("Perfil do atleta:")
+                        || trimmed.hasPrefix("Tipo:")
+                        || trimmed.hasPrefix("Atividade:")
+                        || trimmed.hasPrefix("Exercícios")
+                        || trimmed.hasPrefix("Tempo nos")
+                        || trimmed.hasPrefix("Detalhes")
+                        || trimmed.hasPrefix("Detalhamento")
+                        || trimmed.hasPrefix("Encerramento")
+                        || trimmed.hasPrefix("Calorias:")
+                        || trimmed.hasPrefix("Meta calórica")
+                        || trimmed.hasPrefix("FC média")
+                        || trimmed.hasPrefix("Pré-treino")
+                        || trimmed.hasPrefix("Enviado pelo") {
+                        pastMetrics = true
+                        tailLines.append(line)
+                        continue
+                    }
+                    metricsItems.append(trimmed)
+                } else {
+                    tailLines.append(line)
+                }
+            }
+            let metricsHTML = metricsItems.map { item in
+                let parts = item.split(separator: ":", maxSplits: 1).map(String.init)
+                if parts.count == 2 {
+                    return "<li><strong>\(parts[0].trimmingCharacters(in: .whitespaces)):</strong> \(parts[1].trimmingCharacters(in: .whitespaces))</li>"
+                }
+                return "<li>\(item)</li>"
+            }.joined(separator: "\n")
+            let tail = tailLines.joined(separator: "\n")
+                .replacingOccurrences(of: "\n", with: "<br>\n")
+            bodyHTML = """
+            \(before)
+            <div style="margin:16px 0;padding:12px 14px;border:1px solid #ddd;border-radius:10px;background:#f7f7f8;">
+            <p style="margin:0 0 8px;font-weight:600;">Métricas da sessão</p>
+            <ul style="margin:0;padding-left:18px;">
+            \(metricsHTML)
+            </ul>
+            </div>
+            \(tail)
+            """
+        } else {
+            bodyHTML = escaped.replacingOccurrences(of: "\n", with: "<br>\n")
+        }
+
         return """
         <html><body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;line-height:1.45;color:#111;">
-        \(escaped)
+        \(bodyHTML)
         </body></html>
         """
     }

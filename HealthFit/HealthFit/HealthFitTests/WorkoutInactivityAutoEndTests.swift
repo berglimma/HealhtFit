@@ -39,10 +39,14 @@ final class WorkoutInactivityAutoEndTests: XCTestCase {
             workoutTitle: "Cardio — Corrida livre",
             startedAt: Date(timeIntervalSince1970: 0),
             endedAt: Date(timeIntervalSince1970: 1800),
+            caloriesBurned: 420,
             totalExercises: 1,
             completedDistanceKm: 5.0,
-            averagePaceSecondsPerKm: 360
+            averagePaceSecondsPerKm: 360,
+            targetCalories: 400,
+            stepCount: 5200
         )
+        session.heartRateSamples = [HeartRateSample(bpm: 148)]
         session.routePoints = [
             RouteCoordinate(latitude: -23.55, longitude: -46.63, timestamp: Date(timeIntervalSince1970: 0)),
             RouteCoordinate(latitude: -23.551, longitude: -46.631, timestamp: Date(timeIntervalSince1970: 60)),
@@ -56,10 +60,18 @@ final class WorkoutInactivityAutoEndTests: XCTestCase {
             athlete: TestFixtures.userProfile(name: "Berg"),
             routeMapAttachmentIncluded: true
         )
-        XCTAssertTrue(withMap.contains("Distância: 5.00 km"))
-        XCTAssertTrue(withMap.contains("Ritmo médio:"))
-        XCTAssertTrue(withMap.contains("Mapa do percurso em anexo"))
+        // Mapa primeiro, métricas abaixo do mapa.
+        let mapIdx = withMap.range(of: "Mapa do percurso em anexo")!.lowerBound
+        let metricsIdx = withMap.range(of: "Métricas da sessão:")!.lowerBound
+        XCTAssertTrue(mapIdx < metricsIdx)
         XCTAssertTrue(withMap.contains("rota-treino.png"))
+        XCTAssertTrue(withMap.contains("Evolução calórica: 420 / 400 kcal"))
+        XCTAssertTrue(withMap.contains("BPM: 148"))
+        XCTAssertTrue(withMap.contains("Kcal: 420"))
+        XCTAssertTrue(withMap.contains("Ritmo:"))
+        XCTAssertTrue(withMap.contains("Passos: 5200"))
+        XCTAssertTrue(withMap.contains("Km: 5.00"))
+        XCTAssertTrue(withMap.contains("Tempo:"))
 
         let withoutMap = WorkoutReportBuilder.emailBody(
             session: session,
@@ -68,6 +80,7 @@ final class WorkoutInactivityAutoEndTests: XCTestCase {
         )
         XCTAssertTrue(withoutMap.contains("disponível no app HealthFit"))
         XCTAssertFalse(withoutMap.contains("em anexo"))
+        XCTAssertTrue(withoutMap.contains("Métricas da sessão:"))
 
         let html = WorkoutReportBuilder.emailHTMLBody(
             session: session,
@@ -76,6 +89,13 @@ final class WorkoutInactivityAutoEndTests: XCTestCase {
         )
         XCTAssertTrue(html.contains("<html>"))
         XCTAssertTrue(html.contains("Mapa do percurso em anexo"))
+        XCTAssertTrue(html.contains("Métricas da sessão"))
+        XCTAssertTrue(html.contains("<strong>BPM:</strong>"))
+        XCTAssertTrue(html.contains("<strong>Kcal:</strong>"))
+        XCTAssertTrue(html.contains("<strong>Ritmo:</strong>"))
+        XCTAssertTrue(html.contains("<strong>Passos:</strong>"))
+        XCTAssertTrue(html.contains("<strong>Km:</strong>"))
+        XCTAssertTrue(html.contains("<strong>Tempo:</strong>"))
     }
 
     func testEmailReportOutdoorWalkingAndCyclingLines() {
@@ -84,9 +104,11 @@ final class WorkoutInactivityAutoEndTests: XCTestCase {
             workoutTitle: "Cardio — Caminhada",
             startedAt: Date(timeIntervalSince1970: 0),
             endedAt: Date(timeIntervalSince1970: 2400),
+            caloriesBurned: 180,
             totalExercises: 1,
             completedDistanceKm: 3.2,
-            averagePaceSecondsPerKm: 500
+            averagePaceSecondsPerKm: 500,
+            stepCount: 4100
         )
         walk.routePoints = [
             RouteCoordinate(latitude: -23.55, longitude: -46.63),
@@ -100,14 +122,17 @@ final class WorkoutInactivityAutoEndTests: XCTestCase {
             athlete: TestFixtures.userProfile(name: "Ana"),
             routeMapAttachmentIncluded: true
         )
-        XCTAssertTrue(walkBody.contains("Distância: 3.20 km"))
         XCTAssertTrue(walkBody.contains("Mapa do percurso em anexo"))
+        XCTAssertTrue(walkBody.contains("Km: 3.20"))
+        XCTAssertTrue(walkBody.contains("Passos: 4100"))
+        XCTAssertTrue(walkBody.contains("Ritmo:"))
 
         var bike = WorkoutSession(
             workoutSheetId: UUID(),
             workoutTitle: "Cardio — Mountain bike",
             startedAt: Date(timeIntervalSince1970: 0),
             endedAt: Date(timeIntervalSince1970: 3600),
+            caloriesBurned: 650,
             totalExercises: 1,
             completedDistanceKm: 20.0
         )
@@ -117,8 +142,10 @@ final class WorkoutInactivityAutoEndTests: XCTestCase {
             athlete: TestFixtures.userProfile(name: "Ana"),
             routeMapAttachmentIncluded: true
         )
-        XCTAssertTrue(bikeBody.contains("Velocidade média:"))
+        XCTAssertTrue(bikeBody.contains("Ritmo:"))
+        XCTAssertTrue(bikeBody.contains("km/h"))
         XCTAssertTrue(bikeBody.contains("Mapa do percurso em anexo"))
+        XCTAssertTrue(bikeBody.contains("Km: 20.00"))
     }
 
     func testStrengthEmailDoesNotIncludeRouteMapLines() {

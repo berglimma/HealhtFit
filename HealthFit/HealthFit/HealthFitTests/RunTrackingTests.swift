@@ -113,7 +113,7 @@ final class RunTrackingTests: XCTestCase {
         XCTAssertTrue(mtbConfig.isOutdoorGPSCardio)
         XCTAssertTrue(mtbConfig.isOutdoorCyclingSession)
 
-        let walk = CardioExercise.catalog.first { $0.name == "Caminhada Rápida" }!
+        let walk = CardioExercise.catalog.first { $0.name == "Caminhada" }!
         let walkConfig = CardioWorkoutConfig(exercise: walk, intensity: .medium)
         XCTAssertFalse(walkConfig.isRunningSession)
         XCTAssertTrue(walkConfig.isOutdoorGPSCardio)
@@ -162,13 +162,22 @@ final class RunTrackingTests: XCTestCase {
 
         let walk = WorkoutSession(
             workoutSheetId: UUID(),
-            workoutTitle: "Cardio — Caminhada Rápida",
+            workoutTitle: "Cardio — Caminhada",
             totalExercises: 1
         )
         XCTAssertFalse(walk.isRunningSession)
         XCTAssertTrue(walk.isOutdoorWalkingSession)
         XCTAssertTrue(walk.isOutdoorGPSCardio)
         XCTAssertEqual(walk.routePerformanceMetric, .pace)
+
+        // Histórico legado ainda reconhece "caminhada rápida".
+        let legacyWalk = WorkoutSession(
+            workoutSheetId: UUID(),
+            workoutTitle: "Cardio — Caminhada Rápida",
+            totalExercises: 1
+        )
+        XCTAssertTrue(legacyWalk.isOutdoorWalkingSession)
+        XCTAssertTrue(legacyWalk.isOutdoorGPSCardio)
 
         let ergo = WorkoutSession(
             workoutSheetId: UUID(),
