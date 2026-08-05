@@ -9,6 +9,7 @@ struct ProfileView: View {
     @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var evolutionService: BodyEvolutionService
+    @EnvironmentObject var subscriptions: SubscriptionService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showLogoutAlert = false
     @State private var showDeleteAccountSheet = false
@@ -52,6 +53,7 @@ struct ProfileView: View {
             List {
                 if let user = authService.currentUser {
                     profileHeaderSection(for: user)
+                    subscriptionPlanSection
                     displayNameSection(for: user)
                     biotypeSection(for: user)
                     personalTrainerSection
@@ -205,6 +207,31 @@ struct ProfileView: View {
                     requiresPassword: authService.usesPasswordProvider,
                     requiresAppleReauthentication: authService.usesAppleProvider
                 )
+            }
+        }
+    }
+
+    private var subscriptionPlanSection: some View {
+        Section("Assinatura") {
+            NavigationLink {
+                SubscriptionPlanView()
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "crown.fill")
+                        .foregroundStyle(AppTheme.accentSecondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Meu plano")
+                        Text(subscriptions.currentTier.displayName)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    Spacer()
+                    if subscriptions.currentTier == .free {
+                        Text(subscriptions.currentTier.referencePriceBRL)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                }
             }
         }
     }

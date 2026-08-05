@@ -1,0 +1,220 @@
+{
+  "identifier" : "1A2B3C4D",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "0000000000",
+    "_developerTeamID" : "A56XUZKJFJ",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "pt_BR",
+    "_storefront" : "BRA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21500000",
+      "localizations" : [
+        {
+          "description" : "Planos mensais do HealthFit",
+          "displayName" : "HealthFit Plans",
+          "locale" : "pt_BR"
+        },
+        {
+          "description" : "HealthFit monthly plans",
+          "displayName" : "HealthFit Plans",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "HealthFit Plans",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.90",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6500000001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Treinos no iPhone e Watch",
+              "displayName" : "Básico",
+              "locale" : "pt_BR"
+            },
+            {
+              "description" : "Workouts on iPhone and Watch",
+              "displayName" : "Basic",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "healthfit.plan.basic.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Basic Monthly",
+          "subscriptionGroupID" : "21500000",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "12.90",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6500000002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Treino + cardápio e metas calóricas",
+              "displayName" : "Fit",
+              "locale" : "pt_BR"
+            },
+            {
+              "description" : "Training + meal plan",
+              "displayName" : "Fit",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "healthfit.plan.fit.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Fit Monthly",
+          "subscriptionGroupID" : "21500000",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "19.90",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "6500000003",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "IA e análises de evolução",
+              "displayName" : "IA Plus",
+              "locale" : "pt_BR"
+            },
+            {
+              "description" : "AI assistant and advanced analytics",
+              "displayName" : "AI Plus",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "healthfit.plan.ai.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "AI Plus Monthly",
+          "subscriptionGroupID" : "21500000",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "24.90",
+          "familyShareable" : false,
+          "groupNumber" : 4,
+          "internalID" : "6500000004",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Tudo liberado no HealthFit",
+              "displayName" : "Completo",
+              "locale" : "pt_BR"
+            },
+            {
+              "description" : "Full access to HealthFit",
+              "displayName" : "Complete",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "healthfit.plan.complete.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Complete Monthly",
+          "subscriptionGroupID" : "21500000",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

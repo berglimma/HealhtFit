@@ -40,6 +40,7 @@ struct HealthFitApp: App {
                 .environmentObject(TrainingNutritionSyncService.shared)
                 .environmentObject(BodyEvolutionService.shared)
                 .environmentObject(languageStore)
+                .environmentObject(SubscriptionService.shared)
                 .environment(\.locale, languageStore.locale)
                 .id(languageStore.language.rawValue)
                 .preferredColorScheme(.dark)

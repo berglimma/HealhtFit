@@ -79,6 +79,10 @@
 		B1000503 /* BikeMaintenanceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000503 /* BikeMaintenanceService.swift */; };
 		B1000504 /* RoadHazardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000504 /* RoadHazardService.swift */; };
 		B1000505 /* BikeLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000505 /* BikeLogbookView.swift */; };
+		B1000600 /* SubscriptionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000600 /* SubscriptionModels.swift */; };
+		B1000601 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000601 /* SubscriptionService.swift */; };
+		B1000602 /* SubscriptionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000602 /* SubscriptionViews.swift */; };
+		B1000603 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = F1000603 /* Products.storekit */; };
 		B1000044 /* WeeklyProgressModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000046 /* WeeklyProgressModels.swift */; };
 		B1000045 /* WeeklyProgressAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000047 /* WeeklyProgressAnalyzer.swift */; };
 		B1000046 /* WeeklyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000048 /* WeeklyReportService.swift */; };
@@ -185,6 +189,7 @@
 		B2000002 /* UserProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000011 /* UserProfileTests.swift */; };
 		B2000003 /* MarathonReportBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000012 /* MarathonReportBuilderTests.swift */; };
 		B2000004 /* CardioWorkoutConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000013 /* CardioWorkoutConfigTests.swift */; };
+		B2000040 /* SubscriptionModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000040 /* SubscriptionModelsTests.swift */; };
 		B2000005 /* PaceFormattingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000014 /* PaceFormattingTests.swift */; };
 		B2000006 /* HealthAssistantEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000015 /* HealthAssistantEngineTests.swift */; };
 		B2000007 /* WeeklyProgressAnalyzerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000016 /* WeeklyProgressAnalyzerTests.swift */; };
@@ -343,6 +348,10 @@
 		F1000503 /* BikeMaintenanceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BikeMaintenanceService.swift; sourceTree = "<group>"; };
 		F1000504 /* RoadHazardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadHazardService.swift; sourceTree = "<group>"; };
 		F1000505 /* BikeLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BikeLogbookView.swift; sourceTree = "<group>"; };
+		F1000600 /* SubscriptionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionModels.swift; sourceTree = "<group>"; };
+		F1000601 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
+		F1000602 /* SubscriptionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionViews.swift; sourceTree = "<group>"; };
+		F1000603 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 		F1000046 /* WeeklyProgressModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressModels.swift; sourceTree = "<group>"; };
 		F1000047 /* WeeklyProgressAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressAnalyzer.swift; sourceTree = "<group>"; };
 		F1000048 /* WeeklyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportService.swift; sourceTree = "<group>"; };
@@ -451,6 +460,7 @@
 		F2000011 /* UserProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileTests.swift; sourceTree = "<group>"; };
 		F2000012 /* MarathonReportBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarathonReportBuilderTests.swift; sourceTree = "<group>"; };
 		F2000013 /* CardioWorkoutConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardioWorkoutConfigTests.swift; sourceTree = "<group>"; };
+		F2000040 /* SubscriptionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionModelsTests.swift; sourceTree = "<group>"; };
 		F2000014 /* PaceFormattingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceFormattingTests.swift; sourceTree = "<group>"; };
 		F2000015 /* HealthAssistantEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthAssistantEngineTests.swift; sourceTree = "<group>"; };
 		F2000016 /* WeeklyProgressAnalyzerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressAnalyzerTests.swift; sourceTree = "<group>"; };
@@ -600,6 +610,7 @@
 				F1000340 /* GuidedWorkoutCatalog.swift */,
 				F1000043 /* CardioModels.swift */,
 				F1000502 /* BikeModels.swift */,
+				F1000600 /* SubscriptionModels.swift */,
 				F1000420 /* RunTrackingModels.swift */,
 				F1000004 /* MealModels.swift */,
 				F1000059 /* MealCatalog.swift */,
@@ -641,6 +652,7 @@
 				F1000500 /* SwimmingMetricsAnalyzer.swift */,
 				F1000503 /* BikeMaintenanceService.swift */,
 				F1000504 /* RoadHazardService.swift */,
+				F1000601 /* SubscriptionService.swift */,
 				F1000048 /* WeeklyReportService.swift */,
 				F1000330 /* WorkoutShareCardStore.swift */,
 				F1000054 /* DailyWellnessService.swift */,
@@ -696,9 +708,18 @@
 				G1000014 /* Nutrition */,
 				G1000017 /* Assistant */,
 				G1000015 /* Profile */,
+				G1000060 /* Subscription */,
 				G1000016 /* Shared */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		G1000060 /* Subscription */ = {
+			isa = PBXGroup;
+			children = (
+				F1000602 /* SubscriptionViews.swift */,
+			);
+			path = Subscription;
 			sourceTree = "<group>";
 		};
 		G1000009 /* Auth */ = {
@@ -864,6 +885,7 @@
 			isa = PBXGroup;
 			children = (
 				F1000117 /* AppLegalConfiguration.swift */,
+				F1000603 /* Products.storekit */,
 			);
 			path = Configuration;
 			sourceTree = "<group>";
@@ -901,6 +923,7 @@
 				F2000011 /* UserProfileTests.swift */,
 				F2000012 /* MarathonReportBuilderTests.swift */,
 				F2000013 /* CardioWorkoutConfigTests.swift */,
+				F2000040 /* SubscriptionModelsTests.swift */,
 				F2000014 /* PaceFormattingTests.swift */,
 				F2000015 /* HealthAssistantEngineTests.swift */,
 				F2000016 /* WeeklyProgressAnalyzerTests.swift */,
@@ -1053,8 +1076,8 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 2650;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					T1000001 = {
 						CreatedOnToolsVersion = 15.0;
@@ -1133,6 +1156,7 @@
 				B1000124 /* privacy-policy.html in Resources */,
 				B1000125 /* terms-of-use.html in Resources */,
 				B1000141 /* Localizable.xcstrings in Resources */,
+				B1000603 /* Products.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1178,9 +1202,11 @@
 				B1000003 /* WorkoutModels.swift in Sources */,
 				B1000041 /* CardioModels.swift in Sources */,
 				B1000502 /* BikeModels.swift in Sources */,
+				B1000600 /* SubscriptionModels.swift in Sources */,
 				B1000500 /* SwimmingMetricsAnalyzer.swift in Sources */,
 				B1000503 /* BikeMaintenanceService.swift in Sources */,
 				B1000504 /* RoadHazardService.swift in Sources */,
+				B1000601 /* SubscriptionService.swift in Sources */,
 				B1000004 /* MealModels.swift in Sources */,
 				B1000005 /* AuthService.swift in Sources */,
 				B1000006 /* HealthKitManager.swift in Sources */,
@@ -1216,6 +1242,7 @@
 				B1000043 /* ActiveCardioView.swift in Sources */,
 				B1000501 /* SwimmingLogbookView.swift in Sources */,
 				B1000505 /* BikeLogbookView.swift in Sources */,
+				B1000602 /* SubscriptionViews.swift in Sources */,
 				B1000036 /* MotivationMessages.swift in Sources */,
 				B1000037 /* WorkoutReportBuilder.swift in Sources */,
 				B1000044 /* WeeklyProgressModels.swift in Sources */,
@@ -1327,6 +1354,7 @@
 				B2000002 /* UserProfileTests.swift in Sources */,
 				B2000003 /* MarathonReportBuilderTests.swift in Sources */,
 				B2000004 /* CardioWorkoutConfigTests.swift in Sources */,
+				B2000040 /* SubscriptionModelsTests.swift in Sources */,
 				B2000005 /* PaceFormattingTests.swift in Sources */,
 				B2000006 /* HealthAssistantEngineTests.swift in Sources */,
 				B2000007 /* WeeklyProgressAnalyzerTests.swift in Sources */,
@@ -1447,6 +1475,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1514,6 +1543,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1574,6 +1604,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1614,6 +1646,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1651,6 +1685,8 @@
 				SUPPORTED_PLATFORMS = "watchos watchsimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				WATCHOS_DEPLOYMENT_TARGET = 10.0;
@@ -1689,6 +1725,8 @@
 				SUPPORTED_PLATFORMS = "watchos watchsimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				VALIDATE_PRODUCT = YES;
@@ -1714,6 +1752,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HealthFit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HealthFit";
@@ -1738,6 +1778,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HealthFit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HealthFit";
@@ -1761,6 +1803,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = HealthFit;
@@ -1784,6 +1828,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = HealthFit;
@@ -1811,6 +1857,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1837,6 +1885,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;

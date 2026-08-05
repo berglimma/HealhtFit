@@ -50,3 +50,4 @@ AppStore/screenshots/fr-FR/iphone-6.7/
 - [ ] App Privacy + exclusão de conta
 - [ ] Testar idioma do sistema em inglês/espanhol/francês no simulador
 - [ ] `GoogleService-Info.plist` no build de release
+- [ ] Assinaturas: ver [subscriptions.md](./subscriptions.md)
