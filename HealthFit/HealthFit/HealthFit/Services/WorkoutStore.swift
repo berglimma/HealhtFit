@@ -116,26 +116,70 @@ final class WorkoutStore: ObservableObject {
 
     init() {
         // Keep init cheap so the first frame (login / splash) can paint.
-        // Heavy sample/guided catalog work runs after a yield — see performDeferredCatalogBootstrap().
-        loadData()
+        // History/sheets decode runs after a yield so cold install/login isn't blocked.
+        Task { await bootstrapPersistedState() }
+    }
+
+    /// Loads UserDefaults history + sheets, then seeds sample catalog if needed.
+    private func bootstrapPersistedState() async {
+        await Task.yield()
+
+        let storageKey = self.storageKey
+        let historyKey = self.historyKey
+        let sampleTitles = Self.sampleWorkoutTitles
+
+        let decoded = await Task.detached(priority: .userInitiated) { () -> (sheets: [WorkoutSheet]?, history: [WorkoutSession]?) in
+            var sheets: [WorkoutSheet]?
+            var history: [WorkoutSession]?
+            if let data = UserDefaults.standard.data(forKey: storageKey),
+               let parsed = try? JSONDecoder().decode([WorkoutSheet].self, from: data) {
+                sheets = parsed.map { sheet in
+                    var updated = sheet
+                    if !updated.isUserCreated, !sampleTitles.contains(updated.title) {
+                        updated.isUserCreated = true
+                    }
+                    return updated
+                }
+            }
+            if let data = UserDefaults.standard.data(forKey: historyKey),
+               let parsed = try? JSONDecoder().decode([WorkoutSession].self, from: data) {
+                history = Array(parsed.prefix(WorkoutFirestoreService.maxStoredSessions))
+            }
+            return (sheets, history)
+        }.value
+
+        if let sheets = decoded.sheets {
+            workoutSheets = sheets
+        }
+        if let history = decoded.history {
+            sessionHistory = history
+            if let latest = history.compactMap({ $0.endedAt ?? $0.startedAt }).max() {
+                NotificationService.shared.migrateLastWorkoutDateIfNeeded(latest)
+            }
+        }
+
         restorePersistedActiveSessionIfNeeded()
-        Task { await performDeferredCatalogBootstrap() }
+        await performDeferredCatalogBootstrap()
     }
 
     /// Seeds sample workouts / refreshes catalog off the first paint. Guided sheets stay lazy
     /// via `ensureGuidedWorkoutSheet` when the user opens a program.
     private func performDeferredCatalogBootstrap() async {
         await Task.yield()
-        try? await Task.sleep(nanoseconds: 150_000_000)
+        try? await Task.sleep(nanoseconds: 250_000_000)
 
         if workoutSheets.isEmpty {
             // First install: only standard sample programs (not the full guided catalog).
+            // Building sampleWorkouts is expensive — keep after first frames.
             workoutSheets = Self.sampleWorkouts
             saveData()
+            _ = autoEndStaleActiveSessionIfNeeded()
         } else {
+            // Returning users: sample merge can wait — don't hitch first tab switches.
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
             refreshSampleWorkoutsIfNeeded()
+            _ = autoEndStaleActiveSessionIfNeeded()
         }
-        _ = autoEndStaleActiveSessionIfNeeded()
     }
 
     /// Verifica se o treino ativo ultrapassou 2h30 e encerra automaticamente.
@@ -271,11 +315,54 @@ final class WorkoutStore: ObservableObject {
         workoutSheets.filter { !isStandardWorkout($0) }
     }
 
-    private static let sampleWorkoutTitles = Set(sampleWorkouts.map(\.title))
-    private static let maleSampleTitles = Set(maleSampleWorkouts.map(\.title))
-    private static let femaleSampleTitles = Set(femaleSampleWorkouts.map(\.title))
-    private static let homeSampleTitles = Set(homeSampleWorkouts.map(\.title))
-    private static let mobilitySampleTitles = Set(mobilitySampleWorkouts.map(\.title))
+    private static let sampleWorkoutTitles: Set<String> = [
+        "Masculino A — Peito e Tríceps",
+        "Masculino B — Costas e Bíceps",
+        "Masculino C — Pernas",
+        "Masculino D — Ombros e Trapézio",
+        "Feminino A — Glúteos e Posteriores",
+        "Feminino B — Pernas e Core",
+        "Feminino C — Costas e Postura",
+        "Feminino D — Full Body e Ombros",
+        "Casa A — Full Body",
+        "Casa B — Core e Abdômen",
+        "Casa C — HIIT Em Casa",
+        "Casa D — Pernas e Glúteos",
+        "Casa E — Superiores",
+        "Casa F — Mobilidade e Postura",
+        "Mobilidade A — Aquecimento Geral",
+        "Mobilidade B — Ombros e Peito",
+        "Mobilidade C — Quadril e Posterior",
+        "Mobilidade D — Torácica e Escápulas",
+        "Mobilidade E — Pós-treino",
+    ]
+    private static let maleSampleTitles: Set<String> = [
+        "Masculino A — Peito e Tríceps",
+        "Masculino B — Costas e Bíceps",
+        "Masculino C — Pernas",
+        "Masculino D — Ombros e Trapézio",
+    ]
+    private static let femaleSampleTitles: Set<String> = [
+        "Feminino A — Glúteos e Posteriores",
+        "Feminino B — Pernas e Core",
+        "Feminino C — Costas e Postura",
+        "Feminino D — Full Body e Ombros",
+    ]
+    private static let homeSampleTitles: Set<String> = [
+        "Casa A — Full Body",
+        "Casa B — Core e Abdômen",
+        "Casa C — HIIT Em Casa",
+        "Casa D — Pernas e Glúteos",
+        "Casa E — Superiores",
+        "Casa F — Mobilidade e Postura",
+    ]
+    private static let mobilitySampleTitles: Set<String> = [
+        "Mobilidade A — Aquecimento Geral",
+        "Mobilidade B — Ombros e Peito",
+        "Mobilidade C — Quadril e Posterior",
+        "Mobilidade D — Torácica e Escápulas",
+        "Mobilidade E — Pós-treino",
+    ]
 
     func musculacaoProgram(for session: WorkoutSession) -> MusculacaoProgram? {
         let sheet = workoutSheets.first { $0.id == session.workoutSheetId }
@@ -741,6 +828,8 @@ final class WorkoutStore: ObservableObject {
                 NotificationService.shared.recordMeditationCompleted(at: endedAt)
             }
             EveningTrainingNudgeService.handleWorkoutCompleted()
+            // Espelha o treino no Calendário do sistema (EventKit).
+            WorkoutCalendarService.registerCompletedSession(session)
         }
 
         PostWorkoutCheckInService.shared.scheduleCheckIn(for: session)
@@ -872,26 +961,6 @@ final class WorkoutStore: ObservableObject {
     private func saveData() {
         if let data = try? JSONEncoder().encode(workoutSheets) {
             UserDefaults.standard.set(data, forKey: storageKey)
-        }
-    }
-
-    private func loadData() {
-        if let data = UserDefaults.standard.data(forKey: storageKey),
-           let sheets = try? JSONDecoder().decode([WorkoutSheet].self, from: data) {
-            workoutSheets = sheets.map { sheet in
-                var updated = sheet
-                if !updated.isUserCreated, !Self.sampleWorkoutTitles.contains(updated.title) {
-                    updated.isUserCreated = true
-                }
-                return updated
-            }
-        }
-        if let data = UserDefaults.standard.data(forKey: historyKey),
-           let history = try? JSONDecoder().decode([WorkoutSession].self, from: data) {
-            sessionHistory = Array(history.prefix(WorkoutFirestoreService.maxStoredSessions))
-            if let latest = history.compactMap({ $0.endedAt ?? $0.startedAt }).max() {
-                NotificationService.shared.migrateLastWorkoutDateIfNeeded(latest)
-            }
         }
     }
 

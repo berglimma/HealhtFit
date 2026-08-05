@@ -14,6 +14,9 @@ struct RunRouteMapView: View {
     var jumpEvents: [SurfJumpEvent] = []
     /// Exibe controle Mapa 2D / 3D (surf e kitesurf).
     var allows3DMode: Bool = false
+    /// SPOT / ponto de partida quando ainda não há rota GPS.
+    var spotCoordinate: CLLocationCoordinate2D? = nil
+    var spotTitle: String? = nil
 
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var is3DEnabled = false
@@ -23,7 +26,7 @@ struct RunRouteMapView: View {
     }
 
     private var startCoordinate: CLLocationCoordinate2D? {
-        coordinates.first
+        coordinates.first ?? spotCoordinate
     }
 
     private var performanceSegments: [RoutePerformanceSegment] {
@@ -33,7 +36,7 @@ struct RunRouteMapView: View {
     private var mapCenter: CLLocationCoordinate2D? {
         if followUser, let user = userCoordinate { return user }
         if let region = fittingRegion() { return region.center }
-        return userCoordinate ?? startCoordinate
+        return userCoordinate ?? startCoordinate ?? spotCoordinate
     }
 
     var body: some View {
@@ -56,7 +59,7 @@ struct RunRouteMapView: View {
                         )
                 }
 
-                if let start = startCoordinate {
+                if let start = coordinates.first {
                     Annotation("Início", coordinate: start) {
                         ZStack {
                             Circle()
@@ -65,6 +68,26 @@ struct RunRouteMapView: View {
                             Circle()
                                 .stroke(Color.white, lineWidth: 2)
                                 .frame(width: 16, height: 16)
+                        }
+                    }
+                }
+
+                if let spot = spotCoordinate {
+                    Annotation(spotTitle?.isEmpty == false ? (spotTitle ?? "SPOT") : "SPOT", coordinate: spot) {
+                        VStack(spacing: 2) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(.cyan)
+                                .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
+                            if let spotTitle, !spotTitle.isEmpty {
+                                Text(spotTitle)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.black.opacity(0.55))
+                                    .clipShape(Capsule())
+                            }
                         }
                     }
                 }
@@ -105,6 +128,9 @@ struct RunRouteMapView: View {
                 updateCamera(animated: true)
             }
             .onChange(of: jumpEvents.count) { _, _ in
+                updateCamera(animated: true)
+            }
+            .onChange(of: spotCoordinate?.latitude) { _, _ in
                 updateCamera(animated: true)
             }
         }
@@ -199,6 +225,9 @@ struct RunRouteMapView: View {
                 coords.append(c)
             }
         }
+        if let spot = spotCoordinate {
+            coords.append(spot)
+        }
 
         guard let first = coords.first else {
             if let user = userCoordinate {
@@ -212,7 +241,7 @@ struct RunRouteMapView: View {
         guard coords.count > 1 else {
             return MKCoordinateRegion(
                 center: first,
-                span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
+                span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)
             )
         }
 

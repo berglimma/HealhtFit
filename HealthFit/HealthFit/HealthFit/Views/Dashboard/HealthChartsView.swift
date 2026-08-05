@@ -7,6 +7,9 @@ struct HealthChartsView: View {
     @EnvironmentObject var authService: AuthService
 
     @State private var selectedMetric: ChartMetric = .workout
+    /// Memoized by session count + goal so body/chart rebuilds don't re-scan history.
+    @State private var cachedWeeklyReport: WeeklyProgressReport?
+    @State private var weeklyReportCacheKey: String = ""
 
     enum ChartMetric: String, CaseIterable {
         case workout = "Treino (min)"
@@ -17,7 +20,8 @@ struct HealthChartsView: View {
     }
 
     private var weeklyReport: WeeklyProgressReport {
-        WeeklyProgressAnalyzer.buildReport(
+        if let cachedWeeklyReport { return cachedWeeklyReport }
+        return WeeklyProgressAnalyzer.buildReport(
             sessions: workoutStore.sessionHistory,
             goal: authService.currentUser?.goal ?? .maintenance
         )
@@ -77,10 +81,29 @@ struct HealthChartsView: View {
                 }
             }
             .frame(height: 200)
+            .drawingGroup()
 
             summaryRow
         }
         .cardStyle()
+        .onAppear(perform: refreshWeeklyReportIfNeeded)
+        .onChange(of: workoutStore.sessionHistory.count) { _, _ in
+            refreshWeeklyReportIfNeeded()
+        }
+        .onChange(of: authService.currentUser?.goal) { _, _ in
+            refreshWeeklyReportIfNeeded()
+        }
+    }
+
+    private func refreshWeeklyReportIfNeeded() {
+        let goal = authService.currentUser?.goal ?? .maintenance
+        let key = "\(workoutStore.sessionHistory.count)|\(goal.rawValue)|\(workoutStore.sessionHistory.first?.id.uuidString ?? "")"
+        guard key != weeklyReportCacheKey else { return }
+        weeklyReportCacheKey = key
+        cachedWeeklyReport = WeeklyProgressAnalyzer.buildReport(
+            sessions: workoutStore.sessionHistory,
+            goal: goal
+        )
     }
 
     private var meditationEvolutionBanner: some View {
@@ -243,7 +266,8 @@ struct HealthChartsView: View {
 }
 
 private struct WeeklyChartPoint: Identifiable {
-    let id = UUID()
+    /// Stable identity — never use UUID() (forces Chart rewrite every body pass).
+    var id: TimeInterval { date.timeIntervalSinceReferenceDate }
     let date: Date
     let value: Double
 }

@@ -26,6 +26,8 @@ struct DashboardView: View {
     @State private var shareCardSaveAlertTitle = ""
     @State private var shareCardSaveAlertMessage = ""
     @State private var showShareCardSaveAlert = false
+    /// Charts / HealthKit refresh after first layout — avoids hitching the home paint.
+    @State private var showHealthCharts = false
 
     /// Live `WorkoutShareCardView` is fixed ~360×464–568; this scale fits dashboard width when expanded.
     private let shareCardExpandedScale: CGFloat = 0.72
@@ -46,7 +48,11 @@ struct DashboardView: View {
                     monthlyReportBanner
                     lastShareCardSection
                     metricsRow
-                    HealthChartsView()
+                    if showHealthCharts {
+                        HealthChartsView()
+                    } else {
+                        Color.clear.frame(height: 280)
+                    }
                     watchSection
                     recentWorkoutsSection
                 }
@@ -56,6 +62,10 @@ struct DashboardView: View {
             .background(AppTheme.background)
             .navigationTitle("Dashboard")
             .task {
+                try? await Task.sleep(nanoseconds: 350_000_000)
+                showHealthCharts = true
+                // Let charts mount before HealthKit batch updates @Published metrics.
+                try? await Task.sleep(nanoseconds: 250_000_000)
                 await healthKitManager.refreshFromHealthKit()
             }
             .refreshable {
@@ -468,19 +478,8 @@ struct DashboardView: View {
         isSavingShareCard = true
         defer { isSavingShareCard = false }
 
-        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
-        guard status == .authorized || status == .limited else {
-            presentShareCardSaveAlert(
-                title: "Permissão necessária",
-                message: "Permissão negada para salvar em Fotos. Ative em Ajustes → HealthFit → Fotos."
-            )
-            return
-        }
-
         do {
-            try await PHPhotoLibrary.shared().performChanges {
-                PHAssetChangeRequest.creationRequestForAsset(from: image)
-            }
+            try await PhotoLibrarySaver.saveImage(image)
             presentShareCardSaveAlert(
                 title: "Salvo em Fotos",
                 message: "O card de postagem foi salvo na sua galeria."

@@ -42,16 +42,18 @@ struct HealthFitApp: App {
                 .environmentObject(languageStore)
                 .environmentObject(SubscriptionService.shared)
                 .environment(\.locale, languageStore.locale)
-                .id(languageStore.language.rawValue)
+                // Avoid `.id(language)` — full view remount freezes tab navigation on language bind.
                 .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     _ = SocialSignInService.handleIncomingURL(url)
                 }
                 .task(priority: .utility) {
                     await Task.yield()
-                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    try? await Task.sleep(nanoseconds: 800_000_000)
                     NotificationService.shared.requestAuthorization()
                     watchConnectivity.ensureSessionActivated()
+                    // StoreKit products only after first UI frames — not during install/login paint.
+                    await SubscriptionService.shared.refreshIfNeeded()
                 }
         }
     }

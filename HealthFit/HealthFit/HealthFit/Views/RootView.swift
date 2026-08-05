@@ -46,9 +46,8 @@ struct RootView: View {
                     }
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: authService.isRestoringSession)
-        .animation(.easeInOut(duration: 0.25), value: showWelcomeMotivation)
-        .animation(.easeInOut(duration: 0.25), value: didCompleteWelcomeForSession)
+        // No implicit .animation on auth/welcome flags — they animate layout of heavy MainTab
+        // and make the first tab switch feel frozen on device.
         .onAppear {
             prepareWelcomeIfAuthenticated(trigger: .coldStart)
             // Icon sync is cheap but not needed before first paint.
@@ -122,7 +121,7 @@ struct RootView: View {
 
     /// Phased startup: keep first tab interactive, then local data, then cloud / GIF / notifications.
     private func runPostLoginStartupPipeline() async {
-        // Phase 1 — local UI state
+        // Phase 1 — local UI state only (MainTab can paint)
         wellnessService.configure(for: authService.currentUser)
         _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
             athleteName: authService.currentUser?.greetingName ?? "Atleta"
@@ -133,8 +132,9 @@ struct RootView: View {
         )
 
         await Task.yield()
+        try? await Task.sleep(nanoseconds: 450_000_000)
 
-        // Phase 2 — meal plan + light reminders
+        // Phase 2 — meal plan + light reminders (decode can hitch main; after first interaction window)
         mealPlanService.loadSavedData()
         if mealPlanService.weeklyPlan.isEmpty, let user = authService.currentUser {
             mealPlanService.generatePlan(for: user)
@@ -143,17 +143,23 @@ struct RootView: View {
         EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
 
         await Task.yield()
-        try? await Task.sleep(nanoseconds: 300_000_000)
-
-        // Phase 3 — HealthKit + Firebase history (non-blocking for first paint)
-        syncWellnessCloudHistory()
-        syncWorkoutCloudHistory()
-        await healthKitManager.requestAuthorization()
-
         try? await Task.sleep(nanoseconds: 500_000_000)
 
-        // Phase 4 — notification bulk schedule + exercise video/GIF Firebase catalog
+        // Phase 3 — cloud history (does not block UI)
+        syncWellnessCloudHistory()
+        syncWorkoutCloudHistory()
+
+        try? await Task.sleep(nanoseconds: 400_000_000)
+
+        // Phase 4 — HealthKit + notifications (after tabs are interactive)
+        await healthKitManager.requestAuthorization()
         NotificationService.shared.refreshRecurringNotifications()
+        // Espelha treinos de hoje no Calendário (uma vez por sessão; pede permissão se necessário).
+        WorkoutCalendarService.syncTodaysCompletedSessions(workoutStore.sessionHistory)
+
+        try? await Task.sleep(nanoseconds: 700_000_000)
+
+        // Phase 5 — exercise video/GIF Firebase catalog last
         await exerciseVideoRepository.bootstrapRemoteCatalog()
     }
 

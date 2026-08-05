@@ -73,7 +73,7 @@ enum HealthAssistantEngine {
         "O que preciso melhorar?",
     ]
 
-    @MainActor static func welcomeMessage(context: HealthAssistantContext) -> String {
+    static func welcomeMessage(context: HealthAssistantContext) -> String {
         let greeting = MotivationMessages.namedGreeting(name: context.user?.greetingName)
         var sections = ["\(greeting) Sou o assistente HealthFit.", ""]
 
@@ -111,7 +111,7 @@ enum HealthAssistantEngine {
         let hasWorkoutIssue: Bool
     }
 
-    @MainActor private static func buildWelcomeAlerts(_ context: HealthAssistantContext) -> WelcomeAlertSummary {
+    private static func buildWelcomeAlerts(_ context: HealthAssistantContext) -> WelcomeAlertSummary {
         var alerts: [String] = []
         var hasSleepIssue = false
         var hasWaterIssue = false
@@ -171,7 +171,7 @@ enum HealthAssistantEngine {
 
         if let tideWelcome = AssistantTideAlertEngine.welcomeAlertIfNeeded(
             sessions: context.recentWorkoutSessions,
-            snapshot: OpenMeteoWindService.shared.lastSuccessfulSnapshot
+            snapshot: nil
         ) {
             alerts.append(tideWelcome)
         }
@@ -184,7 +184,7 @@ enum HealthAssistantEngine {
         )
     }
 
-    @MainActor static func welcomeMessage(for name: String?) -> String {
+    static func welcomeMessage(for name: String?) -> String {
         welcomeMessage(context: HealthAssistantContext(
             user: name.map { UserProfile(name: $0, email: "") },
             waterIntakeMl: 0,

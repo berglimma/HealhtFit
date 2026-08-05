@@ -1,5 +1,4 @@
 import ImageIO
-import Photos
 import SwiftUI
 import UIKit
 
@@ -254,7 +253,8 @@ struct BodyEvolutionView: View {
             let reduced = await Task.detached(priority: .userInitiated) {
                 BodyEvolutionImageProcessing.downsampledImage(image: image, maxSide: 1200)
             }.value
-            draftImages[slot] = reduced ?? image
+            let finalImage = reduced ?? image
+            draftImages[slot] = finalImage
             loadingSlots.remove(slot)
         }
     }
@@ -689,18 +689,8 @@ private struct BodyEvolutionResultView: View {
         isSaving = true
         defer { isSaving = false }
 
-        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
-        guard status == .authorized || status == .limited else {
-            statusMessage = "Permissão negada para salvar na Galeria. Ative em Ajustes → HealthFit → Fotos."
-            return
-        }
-
         do {
-            try await PHPhotoLibrary.shared().performChanges {
-                for image in images {
-                    PHAssetChangeRequest.creationRequestForAsset(from: image)
-                }
-            }
+            try await PhotoLibrarySaver.saveImages(images)
             statusMessage = "\(images.count) foto(s) salvas na Galeria."
         } catch {
             statusMessage = "Não foi possível salvar na Galeria: \(error.localizedDescription)"

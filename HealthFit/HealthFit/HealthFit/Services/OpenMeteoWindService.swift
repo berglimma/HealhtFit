@@ -311,8 +311,8 @@ final class OpenMeteoWindService {
     private var cacheKey: String?
     private var cacheSnapshot: Snapshot?
     private let lastKnownDefaultsKey = "openMeteo.lastKnownLocation"
-    /// Último snapshot bem-sucedido (para IAssistente / alertas de maré).
-    private(set) var lastSuccessfulSnapshot: Snapshot?
+    /// Último snapshot bem-sucedido (IAssistente / alertas). `nonisolated(unsafe)` para leitura fora do main actor.
+    nonisolated(unsafe) private(set) var lastSuccessfulSnapshot: Snapshot?
 
     private init() {}
 

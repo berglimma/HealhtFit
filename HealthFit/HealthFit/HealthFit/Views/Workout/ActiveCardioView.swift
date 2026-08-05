@@ -43,6 +43,7 @@ struct ActiveCardioView: View {
     @State private var showReportHazardSheet = false
     @State private var alertedHazardIds = Set<UUID>()
     @State private var lastHazardCheckAt: Date = .distantPast
+    @State private var clockTickCount = 0
 
     /// Side-effects; display uses wall clock from session start minus pauses.
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -270,28 +271,37 @@ struct ActiveCardioView: View {
             }
         }
         .onReceive(clock) { _ in
+            clockTickCount += 1
             if !isPaused {
                 elapsedSeconds = activeElapsedSeconds()
             }
-            syncWithWatch()
-            if !isPaused {
-                updateCalorieMotivation()
-                if isOutdoorCycling {
-                    evaluateNearbyHazards()
+
+            let minimized = workoutStore.isActiveWorkoutMinimized
+            // When minimized (opacity 0 but still mounted), run heavy UI/Watch work less often.
+            let runHeavyWork = !minimized || clockTickCount % 5 == 0
+
+            if runHeavyWork {
+                syncWithWatch()
+                if !isPaused {
+                    updateCalorieMotivation()
+                    if isOutdoorCycling {
+                        evaluateNearbyHazards()
+                    }
+                    if isWaterSport {
+                        pollWatchWaterSportEvents()
+                        watchConnectivity.syncWaterSportJumpSummary(
+                            jumpCount: jumpMetrics.jumpCount,
+                            maxHeightMeters: jumpMetrics.maxJumpHeightMeters,
+                            liveAccelG: jumpMetrics.liveAccelerationG
+                        )
+                    }
+                    if isSwimming {
+                        applyAutomaticSwimLapsFromWatch()
+                    }
                 }
-                if isWaterSport {
-                    pollWatchWaterSportEvents()
-                    watchConnectivity.syncWaterSportJumpSummary(
-                        jumpCount: jumpMetrics.jumpCount,
-                        maxHeightMeters: jumpMetrics.maxJumpHeightMeters,
-                        liveAccelG: jumpMetrics.liveAccelerationG
-                    )
-                }
-                if isSwimming {
-                    applyAutomaticSwimLapsFromWatch()
-                }
+                syncWatchData()
             }
-            syncWatchData()
+
             if shouldAutoEndByInactivity {
                 finishCardio(autoEndedByInactivity: true)
             }
@@ -427,13 +437,16 @@ struct ActiveCardioView: View {
             } else {
                 RunRouteMapView(
                     routePoints: runTracker.routePoints,
-                    userCoordinate: runTracker.currentLocation?.coordinate,
+                    userCoordinate: runTracker.currentLocation?.coordinate
+                        ?? config.waterSportSetup?.spot.coordinate,
                     followUser: true,
                     showsUserLocation: true,
                     height: isWaterSport ? 280 : 240,
                     performanceMetric: config.routePerformanceMetric,
                     jumpEvents: isWaterSport ? jumpMetrics.jumps : [],
-                    allows3DMode: isWaterSport
+                    allows3DMode: isWaterSport,
+                    spotCoordinate: isWaterSport ? config.waterSportSetup?.spot.coordinate : nil,
+                    spotTitle: isWaterSport ? config.waterSportSetup?.spot.name : nil
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
@@ -441,6 +454,10 @@ struct ActiveCardioView: View {
                 )
                 if runTracker.routePoints.count >= 2 {
                     performanceLegend
+                } else if isWaterSport, let name = config.waterSportSetup?.spot.name, !name.isEmpty {
+                    Text("SPOT: \(name) · aguardando pontos GPS da sessão")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 if isWaterSport, !jumpMetrics.jumps.isEmpty {
                     Text("\(jumpMetrics.jumps.count) ponto(s) de salto no mapa")

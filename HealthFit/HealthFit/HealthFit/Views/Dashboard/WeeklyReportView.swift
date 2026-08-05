@@ -8,11 +8,21 @@ struct WeeklyReportView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
 
+    @State private var pdfURL: URL?
+    @State private var showPDFShare = false
+    @State private var pdfFailed = false
+
     private var report: WeeklyProgressReport {
         weeklyReportService.buildReport(
             sessions: workoutStore.sessionHistory,
             goal: authService.currentUser?.goal ?? .maintenance
         )
+    }
+
+    private var athleteName: String {
+        authService.currentUser?.greetingName
+            ?? authService.currentUser?.name
+            ?? "Atleta"
     }
 
     var body: some View {
@@ -31,6 +41,18 @@ struct WeeklyReportView: View {
                         highlightsSection
                     }
                     improvementsSection
+
+                    Button {
+                        exportPDF()
+                    } label: {
+                        Label("Gerar PDF do relatório", systemImage: "doc.richtext")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(AppTheme.accent)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
                 }
                 .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                 .adaptiveContentWidth()
@@ -49,7 +71,26 @@ struct WeeklyReportView: View {
             .onAppear {
                 weeklyReportService.markReportViewed()
             }
+            .sheet(isPresented: $showPDFShare) {
+                if let pdfURL {
+                    ActivityShareSheet(items: [pdfURL]) {
+                        showPDFShare = false
+                    }
+                }
+            }
+            .alert("Não foi possível gerar o PDF", isPresented: $pdfFailed) {
+                Button("OK", role: .cancel) {}
+            }
         }
+    }
+
+    private func exportPDF() {
+        guard let url = WeeklyReportPDFBuilder.makePDF(report: report, athleteName: athleteName) else {
+            pdfFailed = true
+            return
+        }
+        pdfURL = url
+        showPDFShare = true
     }
 
     private var scoreSection: some View {

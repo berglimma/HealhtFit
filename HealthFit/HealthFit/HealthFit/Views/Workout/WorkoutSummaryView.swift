@@ -1,5 +1,6 @@
 import SwiftUI
 import MessageUI
+import CoreLocation
 
 private struct TrainerMailDraft: Identifiable {
     let id = UUID()
@@ -42,6 +43,14 @@ struct WorkoutSummaryView: View {
     @State private var showMediaVideoCameraPicker = false
     @State private var isPreparingMediaShare = false
     @State private var mediaLoadFailed = false
+    @State private var pendingGalleryImage: UIImage?
+    @State private var showSavePhotoToGalleryPrompt = false
+    @State private var gallerySaveAlertTitle = ""
+    @State private var gallerySaveAlertMessage = ""
+    @State private var showGallerySaveAlert = false
+    @State private var reportPDFURL: URL?
+    @State private var showReportPDFShare = false
+    @State private var pdfExportFailed = false
 
     private let shareCardAnchorID = "workoutShareCard"
 
@@ -67,6 +76,16 @@ struct WorkoutSummaryView: View {
         SurfKiteReportBuilder.build(session: session, allSessions: workoutStore.sessionHistory)
     }
 
+    private var waterSpotCoordinate: CLLocationCoordinate2D? {
+        session.waterSport?.spot?.coordinate
+    }
+
+    private var shouldShowRouteMap: Bool {
+        !session.routePoints.isEmpty
+            || session.waterSport?.jumps.contains(where: { $0.coordinate != nil }) == true
+            || waterSpotCoordinate != nil
+    }
+
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
@@ -89,7 +108,7 @@ struct WorkoutSummaryView: View {
                         if let surfKiteReport {
                             surfKitePerformanceSection(report: surfKiteReport)
                         }
-                        if !session.routePoints.isEmpty {
+                        if shouldShowRouteMap {
                             runRouteSection
                         }
                         // Musculação-only: pré-treino, breakdown por exercício e totais de força.
@@ -167,6 +186,7 @@ struct WorkoutSummaryView: View {
                 showMediaGalleryPicker = false
                 guard let image else { return }
                 resultMedia = .photo(image)
+                offerSavePhotoToGallery(image)
             }
             .ignoresSafeArea()
         }
@@ -175,6 +195,7 @@ struct WorkoutSummaryView: View {
                 showMediaCameraPicker = false
                 guard let image else { return }
                 resultMedia = .photo(image)
+                offerSavePhotoToGallery(image)
             }
             .ignoresSafeArea()
         }
@@ -204,6 +225,31 @@ struct WorkoutSummaryView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Tente outra foto ou vídeo da galeria.")
+        }
+        .alert("Salvar na Galeria?", isPresented: $showSavePhotoToGalleryPrompt) {
+            Button("Salvar em Fotos") {
+                Task { await savePendingPhotoToGallery() }
+            }
+            Button("Agora não", role: .cancel) {
+                pendingGalleryImage = nil
+            }
+        } message: {
+            Text("Deseja guardar uma cópia desta foto na Galeria do iPhone?")
+        }
+        .alert(gallerySaveAlertTitle, isPresented: $showGallerySaveAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(gallerySaveAlertMessage)
+        }
+        .alert("Não foi possível gerar o PDF", isPresented: $pdfExportFailed) {
+            Button("OK", role: .cancel) {}
+        }
+        .sheet(isPresented: $showReportPDFShare) {
+            if let reportPDFURL {
+                ActivityShareSheet(items: [reportPDFURL]) {
+                    showReportPDFShare = false
+                }
+            }
         }
         .sheet(item: $mailDraft, onDismiss: {
             presentAlertForPendingMailResult()
@@ -294,6 +340,18 @@ struct WorkoutSummaryView: View {
             }
             .disabled(isPreparingShare)
 
+            Button {
+                Task { await saveShareCardToGallery() }
+            } label: {
+                Label("Salvar card na Galeria", systemImage: "square.and.arrow.down")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(.bordered)
+            .tint(AppTheme.accent)
+            .disabled(isPreparingShare)
+
             Text("Escolha WhatsApp ou Instagram na tela de compartilhar. O nome HealthFit já vai no card.")
                 .font(.caption2)
                 .foregroundStyle(AppTheme.textSecondary)
@@ -360,6 +418,21 @@ struct WorkoutSummaryView: View {
                     .background(AppTheme.gradientPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                .disabled(isPreparingMediaShare)
+
+                Button {
+                    Task { await saveResultMediaToGallery() }
+                } label: {
+                    Label(
+                        resultMedia.isVideo ? "Salvar capa na Galeria" : "Salvar foto na Galeria",
+                        systemImage: "square.and.arrow.down"
+                    )
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.bordered)
+                .tint(AppTheme.accent)
                 .disabled(isPreparingMediaShare)
 
                 if resultMedia.isVideo {
@@ -535,6 +608,103 @@ struct WorkoutSummaryView: View {
         showShareSheet = true
     }
 
+    private func offerSavePhotoToGallery(_ image: UIImage) {
+        pendingGalleryImage = image
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            showSavePhotoToGalleryPrompt = true
+        }
+    }
+
+    private func savePendingPhotoToGallery() async {
+        guard let image = pendingGalleryImage else { return }
+        pendingGalleryImage = nil
+        do {
+            try await PhotoLibrarySaver.saveImage(image)
+            gallerySaveAlertTitle = "Salvo em Fotos"
+            gallerySaveAlertMessage = "A foto foi salva na sua Galeria."
+        } catch {
+            gallerySaveAlertTitle = "Não foi possível salvar"
+            gallerySaveAlertMessage = error.localizedDescription
+        }
+        showGallerySaveAlert = true
+    }
+
+    @MainActor
+    private func saveShareCardToGallery() async {
+        isPreparingShare = true
+        defer { isPreparingShare = false }
+        let image = shareImage ?? WorkoutShareCardRenderer.renderImage(
+            session: session,
+            athleteName: athleteDisplayName,
+            motivationLine: shareMotivation,
+            recentSessions: workoutStore.sessionHistory,
+            profileImage: authService.profileImage
+        )
+        guard let image else {
+            gallerySaveAlertTitle = "Não foi possível salvar"
+            gallerySaveAlertMessage = "A imagem do card não está disponível."
+            showGallerySaveAlert = true
+            return
+        }
+        shareImage = image
+        shareCardStore.updatePreviewImage(image)
+        do {
+            try await PhotoLibrarySaver.saveImage(image)
+            gallerySaveAlertTitle = "Salvo em Fotos"
+            gallerySaveAlertMessage = "O card de postagem foi salvo na sua Galeria."
+        } catch {
+            gallerySaveAlertTitle = "Não foi possível salvar"
+            gallerySaveAlertMessage = error.localizedDescription
+        }
+        showGallerySaveAlert = true
+    }
+
+    @MainActor
+    private func saveResultMediaToGallery() async {
+        guard let resultMedia else { return }
+        isPreparingMediaShare = true
+        defer { isPreparingMediaShare = false }
+        let composed = WorkoutResultMediaOverlayRenderer.renderComposedImage(
+            image: resultMedia.previewImage,
+            session: session,
+            isCardioSession: isCardioSession || session.isOutdoorGPSCardio,
+            showVideoBadge: resultMedia.isVideo
+        )
+        guard let composed else {
+            gallerySaveAlertTitle = "Não foi possível salvar"
+            gallerySaveAlertMessage = "A mídia com dados do treino não está disponível."
+            showGallerySaveAlert = true
+            return
+        }
+        do {
+            try await PhotoLibrarySaver.saveImage(composed)
+            gallerySaveAlertTitle = "Salvo em Fotos"
+            gallerySaveAlertMessage = "A mídia do treino foi salva na sua Galeria."
+        } catch {
+            gallerySaveAlertTitle = "Não foi possível salvar"
+            gallerySaveAlertMessage = error.localizedDescription
+        }
+        showGallerySaveAlert = true
+    }
+
+    @MainActor
+    private func exportWorkoutPDF() {
+        guard let athlete = authService.currentUser else {
+            pdfExportFailed = true
+            return
+        }
+        guard let url = WorkoutSessionPDFBuilder.makePDF(
+            session: session,
+            athlete: athlete,
+            allSessions: workoutStore.sessionHistory
+        ) else {
+            pdfExportFailed = true
+            return
+        }
+        reportPDFURL = url
+        showReportPDFShare = true
+    }
+
     @ViewBuilder
     private var emailSection: some View {
         VStack(spacing: 12) {
@@ -586,6 +756,18 @@ struct WorkoutSummaryView: View {
                 .frame(maxWidth: .infinity)
                 .background(AppTheme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            Button {
+                exportWorkoutPDF()
+            } label: {
+                Label("Gerar PDF do relatório", systemImage: "doc.richtext")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
     }
@@ -1174,17 +1356,25 @@ struct WorkoutSummaryView: View {
 
             RunRouteMapView(
                 routePoints: session.routePoints,
-                userCoordinate: session.routePoints.last?.coordinate,
+                userCoordinate: session.routePoints.last?.coordinate ?? waterSpotCoordinate,
                 followUser: false,
                 showsUserLocation: false,
                 height: session.isWaterSportSession ? 260 : 220,
                 performanceMetric: session.routePerformanceMetric,
                 jumpEvents: session.waterSport?.jumps ?? [],
-                allows3DMode: session.isWaterSportSession
+                allows3DMode: session.isWaterSportSession,
+                spotCoordinate: waterSpotCoordinate,
+                spotTitle: session.waterSport?.spot?.name
             )
 
             if session.routePoints.count >= 2 {
                 Text(RoutePerformanceColoring.legendText)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            } else if session.isWaterSportSession, session.routePoints.isEmpty {
+                Text(waterSpotCoordinate != nil
+                     ? "Mapa do SPOT de partida · sem rota GPS completa nesta sessão."
+                     : "Sem pontos GPS registrados nesta sessão.")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
             }

@@ -93,6 +93,7 @@
 		B1000708 /* TransparentOceanWavesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000708 /* TransparentOceanWavesView.swift */; };
 		B1000709 /* TideWindFavorability.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000709 /* TideWindFavorability.swift */; };
 		B1000710 /* AssistantTideAlertEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000710 /* AssistantTideAlertEngine.swift */; };
+		B1000712 /* TransparentWindLinesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000712 /* TransparentWindLinesView.swift */; };
 		B1000600 /* SubscriptionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000600 /* SubscriptionModels.swift */; };
 		B1000601 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000601 /* SubscriptionService.swift */; };
 		B1000602 /* SubscriptionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000602 /* SubscriptionViews.swift */; };
@@ -105,6 +106,9 @@
 		B1000341 /* TrainingNutritionSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000341 /* TrainingNutritionSyncService.swift */; };
 		B1000342 /* GuidedWorkoutViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000342 /* GuidedWorkoutViews.swift */; };
 		B1000343 /* PhotoSourcePickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000343 /* PhotoSourcePickers.swift */; };
+		B100034A /* PhotoLibrarySaver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034A /* PhotoLibrarySaver.swift */; };
+		B100034C /* WorkoutCalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034C /* WorkoutCalendarService.swift */; };
+		B100034B /* WorkoutSessionPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034B /* WorkoutSessionPDFBuilder.swift */; };
 		B1000344 /* SupplementModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000344 /* SupplementModels.swift */; };
 		B1000345 /* SupplementsLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000345 /* SupplementsLogView.swift */; };
 		B1000346 /* AssistantSupplementNudgeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000346 /* AssistantSupplementNudgeEngine.swift */; };
@@ -375,6 +379,7 @@
 		F1000708 /* TransparentOceanWavesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparentOceanWavesView.swift; sourceTree = "<group>"; };
 		F1000709 /* TideWindFavorability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TideWindFavorability.swift; sourceTree = "<group>"; };
 		F1000710 /* AssistantTideAlertEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantTideAlertEngine.swift; sourceTree = "<group>"; };
+		F1000712 /* TransparentWindLinesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparentWindLinesView.swift; sourceTree = "<group>"; };
 		F1000600 /* SubscriptionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionModels.swift; sourceTree = "<group>"; };
 		F1000601 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
 		F1000602 /* SubscriptionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionViews.swift; sourceTree = "<group>"; };
@@ -387,6 +392,9 @@
 		F1000341 /* TrainingNutritionSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingNutritionSyncService.swift; sourceTree = "<group>"; };
 		F1000342 /* GuidedWorkoutViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedWorkoutViews.swift; sourceTree = "<group>"; };
 		F1000343 /* PhotoSourcePickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSourcePickers.swift; sourceTree = "<group>"; };
+		F100034A /* PhotoLibrarySaver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibrarySaver.swift; sourceTree = "<group>"; };
+		F100034C /* WorkoutCalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCalendarService.swift; sourceTree = "<group>"; };
+		F100034B /* WorkoutSessionPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSessionPDFBuilder.swift; sourceTree = "<group>"; };
 		F1000344 /* SupplementModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementModels.swift; sourceTree = "<group>"; };
 		F1000345 /* SupplementsLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementsLogView.swift; sourceTree = "<group>"; };
 		F1000346 /* AssistantSupplementNudgeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSupplementNudgeEngine.swift; sourceTree = "<group>"; };
@@ -663,6 +671,8 @@
 				G1000070 /* Firebase */,
 				F1000006 /* HealthKitManager.swift */,
 				F1000007 /* WorkoutStore.swift */,
+				F100034C /* WorkoutCalendarService.swift */,
+				F100034A /* PhotoLibrarySaver.swift */,
 				F1000008 /* MealPlanService.swift */,
 				F1000341 /* TrainingNutritionSyncService.swift */,
 				F1000009 /* NotificationService.swift */,
@@ -684,6 +694,7 @@
 				F1000504 /* RoadHazardService.swift */,
 				F1000701 /* JumpMetricsService.swift */,
 				F1000702 /* SurfKiteReportBuilder.swift */,
+				F100034B /* WorkoutSessionPDFBuilder.swift */,
 				F1000706 /* OpenMeteoWindService.swift */,
 				F1000710 /* AssistantTideAlertEngine.swift */,
 				F1000601 /* SubscriptionService.swift */,
@@ -857,6 +868,7 @@
 				F1000343 /* PhotoSourcePickers.swift */,
 				F1000412 /* LanguagePickerControl.swift */,
 				F1000708 /* TransparentOceanWavesView.swift */,
+				F1000712 /* TransparentWindLinesView.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -1294,9 +1306,13 @@
 				B1000703 /* SurfKiteLogbookView.swift in Sources */,
 				B1000707 /* WaterWindConditionsView.swift in Sources */,
 				B1000708 /* TransparentOceanWavesView.swift in Sources */,
+				B1000712 /* TransparentWindLinesView.swift in Sources */,
 				B1000602 /* SubscriptionViews.swift in Sources */,
 				B1000036 /* MotivationMessages.swift in Sources */,
 				B1000037 /* WorkoutReportBuilder.swift in Sources */,
+				B100034B /* WorkoutSessionPDFBuilder.swift in Sources */,
+				B100034A /* PhotoLibrarySaver.swift in Sources */,
+				B100034C /* WorkoutCalendarService.swift in Sources */,
 				B1000044 /* WeeklyProgressModels.swift in Sources */,
 				B1000045 /* WeeklyProgressAnalyzer.swift in Sources */,
 				B1000046 /* WeeklyReportService.swift in Sources */,
@@ -1644,9 +1660,12 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal e anexar foto ou vídeo ao compartilhar o resultado do treino.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida e ciclismo outdoor para mostrar o mapa e a rota em tempo real.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida e bike outdoor com a tela bloqueada ou em segundo plano.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mostrar o mapa e a rota em tempo real.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
+				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "HealthFit adiciona ao Calendário os treinos concluídos no dia.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -1687,9 +1706,12 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal e anexar foto ou vídeo ao compartilhar o resultado do treino.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida e ciclismo outdoor para mostrar o mapa e a rota em tempo real.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida e bike outdoor com a tela bloqueada ou em segundo plano.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mostrar o mapa e a rota em tempo real.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
+				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "HealthFit adiciona ao Calendário os treinos concluídos no dia.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;

@@ -10,6 +10,8 @@ struct MainTabView: View {
     @ObservedObject private var dailyEveningService = DailyEveningCheckInService.shared
     @ObservedObject private var profileReminder = ProfileDataReminderService.shared
     @State private var selectedTab = 0
+    /// Only mount heavy tab roots after first visit — TabView otherwise builds all 5 eagerly.
+    @State private var loadedTabs: Set<Int> = [0]
     @State private var isShowingProfileDataPrompt = false
     /// Keeps ActiveWorkoutView mounted for the whole strength session (and summary).
     /// Minimize only hides it — never dismiss/re-present a fullScreenCover.
@@ -21,10 +23,22 @@ struct MainTabView: View {
     /// Bumped to finish the hosted cardio session (summary + share card).
     @State private var requestCardioFinishTick = 0
 
+    private let homeTabTag = 0
     private let assistantTabTag = 3
     private let nutritionTabTag = 2
     private let profileTabTag = 4
     private let workoutsTabTag = 1
+
+    /// Ensures the tab's root view is created in the same update as selection (no empty flash).
+    private var tabSelection: Binding<Int> {
+        Binding(
+            get: { selectedTab },
+            set: { newValue in
+                loadedTabs.insert(newValue)
+                selectedTab = newValue
+            }
+        )
+    }
 
     private var showsMinimizedWorkoutBanner: Bool {
         workoutStore.activeSession != nil
@@ -41,37 +55,47 @@ struct MainTabView: View {
         // and hosts the active strength/cardio workout as a persistent overlay (not fullScreenCover)
         // so minimize/resume never races SwiftUI presentation identity.
         ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                DashboardView()
-                    .tabItem {
-                        Label(L10n.Tab.home, systemImage: "house.fill")
-                    }
-                    .tag(0)
+            TabView(selection: tabSelection) {
+                lazyTab(homeTabTag) {
+                    DashboardView()
+                }
+                .tabItem {
+                    Label(L10n.Tab.home, systemImage: "house.fill")
+                }
+                .tag(homeTabTag)
 
-                WorkoutListView()
-                    .tabItem {
-                        Label(L10n.Tab.workouts, systemImage: "dumbbell.fill")
-                    }
-                    .tag(workoutsTabTag)
+                lazyTab(workoutsTabTag) {
+                    WorkoutListView()
+                }
+                .tabItem {
+                    Label(L10n.Tab.workouts, systemImage: "dumbbell.fill")
+                }
+                .tag(workoutsTabTag)
 
-                MealPlanView()
-                    .tabItem {
-                        Label(L10n.Tab.nutrition, systemImage: "fork.knife")
-                    }
-                    .tag(nutritionTabTag)
+                lazyTab(nutritionTabTag) {
+                    MealPlanView()
+                }
+                .tabItem {
+                    Label(L10n.Tab.nutrition, systemImage: "fork.knife")
+                }
+                .tag(nutritionTabTag)
 
-                HealthChatView()
-                    .tabItem {
-                        Label(L10n.Tab.assistant, systemImage: "bubble.left.and.bubble.right.fill")
-                    }
-                    .tag(assistantTabTag)
-                    .badge(checkInService.assistantTabBadgeCount)
+                lazyTab(assistantTabTag) {
+                    HealthChatView()
+                }
+                .tabItem {
+                    Label(L10n.Tab.assistant, systemImage: "bubble.left.and.bubble.right.fill")
+                }
+                .tag(assistantTabTag)
+                .badge(checkInService.assistantTabBadgeCount)
 
-                ProfileView()
-                    .tabItem {
-                        Label(L10n.Tab.profile, systemImage: "person.fill")
-                    }
-                    .tag(profileTabTag)
+                lazyTab(profileTabTag) {
+                    ProfileView()
+                }
+                .tabItem {
+                    Label(L10n.Tab.profile, systemImage: "person.fill")
+                }
+                .tag(profileTabTag)
             }
             .tint(AppTheme.accent)
             .tabViewStyle(.automatic)
@@ -157,6 +181,7 @@ struct MainTabView: View {
         .onChange(of: selectedTab) { _, tab in
             // Libera o teclado do IAssistente para as abas/tab bar responderem no iPhone.
             KeyboardDismiss.hide()
+            loadedTabs.insert(tab)
             updateAssistantTabVisibility(for: tab)
         }
         .onChange(of: workoutStore.activeSession?.id) { _, _ in
@@ -219,10 +244,24 @@ struct MainTabView: View {
         } message: {
             Text(workoutStore.activeWorkoutConflictAlertMessage)
         }
-        .task {
+        .task(id: selectedTab) {
+            guard selectedTab == assistantTabTag else { return }
             while !Task.isCancelled {
                 checkInService.refreshAssistantBadge()
-                try? await Task.sleep(for: .seconds(30))
+                try? await Task.sleep(for: .seconds(45))
+            }
+        }
+    }
+
+    /// Placeholder until the tab is first selected — keeps Profile/Chat/Nutrição off first paint.
+    @ViewBuilder
+    private func lazyTab<Content: View>(_ tag: Int, @ViewBuilder content: () -> Content) -> some View {
+        Group {
+            if loadedTabs.contains(tag) {
+                content()
+            } else {
+                AppTheme.background
+                    .ignoresSafeArea()
             }
         }
     }
@@ -249,6 +288,7 @@ struct MainTabView: View {
         // Garante a troca de aba após o alert fechar (evita o tab ficar preso).
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(150))
+            loadedTabs.insert(tab)
             selectedTab = tab
         }
     }

@@ -341,7 +341,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         } else {
             self.age = age
         }
-        self.countryCode = countryCode.isEmpty ? CountryOption.defaultCode() : countryCode.uppercased()
+        self.countryCode = CountryOption.resolvedCode(countryCode)
         self.caloricDeficit = caloricDeficit
         self.bodyMeasurements = bodyMeasurements
         self.previousBodyMeasurements = previousBodyMeasurements
@@ -380,7 +380,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .uppercased()
         if let rawCountry, !rawCountry.isEmpty {
-            countryCode = rawCountry
+            countryCode = CountryOption.resolvedCode(rawCountry)
         } else {
             countryCode = CountryOption.defaultCode()
         }

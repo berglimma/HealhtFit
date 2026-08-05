@@ -23,6 +23,13 @@ final class JumpMetricsService: ObservableObject {
     private var isInAir = false
     private var sampleCounter = 0
     private let sampleEvery = 4 // ~ reduz frequência de persistência
+    /// Internal latest G for jump detection (not every sample publishes to UI).
+    private var latestAccelerationG: Double = 1
+    private var lastPublishedLiveG: Double = 1
+    private var lastLiveGPublishAt: Date = .distantPast
+    private var latestRelativeAltitude: Double = 0
+    private var lastPublishedAltitude: Double = 0
+    private var lastAltitudePublishAt: Date = .distantPast
 
     private var locationProvider: (() -> CLLocation?)?
 
@@ -39,6 +46,12 @@ final class JumpMetricsService: ObservableObject {
         possibleTakeoffAltitude = nil
         isInAir = false
         sampleCounter = 0
+        latestAccelerationG = 1
+        lastPublishedLiveG = 1
+        lastLiveGPublishAt = .distantPast
+        latestRelativeAltitude = 0
+        lastPublishedAltitude = 0
+        lastAltitudePublishAt = .distantPast
         sessionStart = .now
         isRunning = true
         lastStatusMessage = "Sensores de salto ativos"
@@ -63,7 +76,8 @@ final class JumpMetricsService: ObservableObject {
                     if this.baselineAltitude == nil {
                         this.baselineAltitude = alt
                     }
-                    this.relativeAltitudeMeters = alt - (this.baselineAltitude ?? 0)
+                    let relative = alt - (this.baselineAltitude ?? 0)
+                    this.publishAltitudeIfNeeded(relative)
                     this.evaluateAltitudeJump()
                 }
             }
@@ -117,10 +131,11 @@ final class JumpMetricsService: ObservableObject {
     }
 
     func ingestWatchAcceleration(_ g: Double) {
-        liveAccelerationG = g
+        latestAccelerationG = max(0.1, g)
+        publishLiveAccelerationIfNeeded(latestAccelerationG)
         sampleCounter += 1
         if sampleCounter % sampleEvery == 0 {
-            accelerationSamples.append(SurfAccelSample(accelerationG: g, source: .appleWatch))
+            accelerationSamples.append(SurfAccelSample(accelerationG: latestAccelerationG, source: .appleWatch))
             trimSamples()
         }
     }
@@ -138,11 +153,12 @@ final class JumpMetricsService: ObservableObject {
         let u = data.userAcceleration
         let mag = sqrt(u.x * u.x + u.y * u.y + u.z * u.z)
         // userAcceleration is in g; total ~ magnitude of user
-        liveAccelerationG = max(0.1, mag)
+        latestAccelerationG = max(0.1, mag)
+        publishLiveAccelerationIfNeeded(latestAccelerationG)
         sampleCounter += 1
         if sampleCounter % sampleEvery == 0 {
             accelerationSamples.append(
-                SurfAccelSample(accelerationG: liveAccelerationG, source: .iphone)
+                SurfAccelSample(accelerationG: latestAccelerationG, source: .iphone)
             )
             trimSamples()
         }
@@ -150,18 +166,18 @@ final class JumpMetricsService: ObservableObject {
         // Detecção simples: pico de aceleração + altitude relativa
         if mag > 2.8, !isInAir {
             isInAir = true
-            possibleTakeoffAltitude = relativeAltitudeMeters
+            possibleTakeoffAltitude = latestRelativeAltitude
             possibleTakeoffTime = .now
         } else if isInAir, mag < 0.6 {
             if let takeoff = possibleTakeoffAltitude, let t0 = possibleTakeoffTime {
-                let height = max(0, relativeAltitudeMeters - takeoff)
+                let height = max(0, latestRelativeAltitude - takeoff)
                 let air = Date().timeIntervalSince(t0)
                 if height >= 0.4 || air >= 0.35 {
                     let loc = locationProvider?()
                     jumps.append(
                         SurfJumpEvent(
                             heightMeters: max(height, estimatedHeightFromAirtime(air)),
-                            peakAccelerationG: liveAccelerationG,
+                            peakAccelerationG: latestAccelerationG,
                             airtimeSeconds: air,
                             latitude: loc?.coordinate.latitude,
                             longitude: loc?.coordinate.longitude,
@@ -176,13 +192,33 @@ final class JumpMetricsService: ObservableObject {
         }
     }
 
+    /// UI at ~5 Hz (or on meaningful change) so ActiveCardioView does not redraw at 20 Hz.
+    private func publishLiveAccelerationIfNeeded(_ g: Double) {
+        let now = Date()
+        let delta = abs(g - lastPublishedLiveG)
+        guard delta >= 0.08 || now.timeIntervalSince(lastLiveGPublishAt) >= 0.2 else { return }
+        liveAccelerationG = g
+        lastPublishedLiveG = g
+        lastLiveGPublishAt = now
+    }
+
+    private func publishAltitudeIfNeeded(_ relative: Double) {
+        latestRelativeAltitude = relative
+        let now = Date()
+        let delta = abs(relative - lastPublishedAltitude)
+        guard delta >= 0.05 || now.timeIntervalSince(lastAltitudePublishAt) >= 0.25 else { return }
+        relativeAltitudeMeters = relative
+        lastPublishedAltitude = relative
+        lastAltitudePublishAt = now
+    }
+
     private func evaluateAltitudeJump() {
         // Altitude-only refinement handled with motion path above.
     }
 
     private func estimatedLiveHeight() -> Double {
         // Ordem de grandeza: altitude relativa positiva ou proxy airtime
-        max(0.5, relativeAltitudeMeters * 0.85)
+        max(0.5, latestRelativeAltitude * 0.85)
     }
 
     private func estimatedHeightFromAirtime(_ air: TimeInterval) -> Double {

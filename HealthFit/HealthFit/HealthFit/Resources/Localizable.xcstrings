@@ -1337,6 +1337,9 @@
     "Carregando histórico…" : {
 
     },
+    "Carregando seu perfil…" : {
+
+    },
     "Carregando..." : {
 
     },
@@ -1758,6 +1761,9 @@
     "Descrição" : {
 
     },
+    "Deseja guardar uma cópia desta foto na Galeria do iPhone?" : {
+
+    },
     "Deseja mesmo excluir sua conta?" : {
 
     },
@@ -2149,6 +2155,9 @@
     "Gerar Cardápio" : {
 
     },
+    "Gerar PDF do relatório" : {
+
+    },
     "Gerenciar assinatura" : {
 
     },
@@ -2210,6 +2219,9 @@
 
     },
     "Idade: %lld anos" : {
+
+    },
+    "Idade: %lld anos · necessário entre 14 e 100" : {
 
     },
     "Identidade confirmada" : {
@@ -2348,6 +2360,9 @@
 
     },
     "Mapa" : {
+
+    },
+    "Mapa do SPOT de partida · sem rota GPS completa nesta sessão." : {
 
     },
     "Maratona (42,2 km)" : {
@@ -2528,6 +2543,9 @@
     "Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas). Você ainda pode compartilhar o card." : {
 
     },
+    "Não foi possível gerar o PDF" : {
+
+    },
     "Não foi possível salvar" : {
 
     },
@@ -2535,6 +2553,9 @@
 
     },
     "Não usou" : {
+
+    },
+    "Nascimento" : {
 
     },
     "Nenhum" : {
@@ -3467,6 +3488,12 @@
     "Salvar / compartilhar PDF" : {
 
     },
+    "Salvar capa na Galeria" : {
+
+    },
+    "Salvar card na Galeria" : {
+
+    },
     "Salvar cópia no dispositivo?" : {
 
     },
@@ -3482,6 +3509,9 @@
     "Salvar em Fotos ou Arquivos?" : {
 
     },
+    "Salvar foto na Galeria" : {
+
+    },
     "Salvar fotos + PDF em Arquivos" : {
 
     },
@@ -3489,6 +3519,9 @@
 
     },
     "Salvar medidas" : {
+
+    },
+    "Salvar na Galeria?" : {
 
     },
     "Salvar no Plano Semanal" : {
@@ -3533,6 +3566,9 @@
     "Sem personal cadastrado. A edição de nome e e-mail fica bloqueada." : {
 
     },
+    "Sem pontos GPS registrados nesta sessão." : {
+
+    },
     "Semana anterior" : {
 
     },
@@ -3558,6 +3594,9 @@
 
     },
     "SESSÃO" : {
+
+    },
+    "Sessão não disponível. Faça login novamente." : {
 
     },
     "settings.language" : {
@@ -3644,6 +3683,9 @@
 
     },
     "SPOT: %@" : {
+
+    },
+    "SPOT: %@ · aguardando pontos GPS da sessão" : {
 
     },
     "Sua carga" : {

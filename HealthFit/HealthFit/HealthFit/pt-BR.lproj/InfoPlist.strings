@@ -5,3 +5,6 @@
 "NSHealthUpdateUsageDescription" = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
 "NSPhotoLibraryUsageDescription" = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal e anexar foto ou vídeo ao compartilhar o resultado do treino.";
 "NSPhotoLibraryAddUsageDescription" = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
+"NSCalendarsFullAccessUsageDescription" = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
+"NSCalendarsUsageDescription" = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
+"NSCalendarsWriteOnlyAccessUsageDescription" = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";

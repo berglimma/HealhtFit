@@ -257,6 +257,10 @@ struct SurfKiteLogbookView: View {
             kitesurfOnly: isKite
         )
         let report = SurfKiteReportBuilder.build(session: session, allSessions: peers)
+        let hasMap = !session.routePoints.isEmpty
+            || w?.spot?.coordinate != nil
+            || (w?.jumps.contains(where: { $0.coordinate != nil }) == true)
+
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: isKite
@@ -296,6 +300,21 @@ struct SurfKiteLogbookView: View {
                 Text(String(format: "Recorde na sessão (+%.2f m)", delta))
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(.green)
+            }
+
+            if hasMap {
+                RunRouteMapView(
+                    routePoints: session.routePoints,
+                    userCoordinate: session.routePoints.last?.coordinate ?? w?.spot?.coordinate,
+                    followUser: false,
+                    showsUserLocation: false,
+                    height: 180,
+                    performanceMetric: .speed,
+                    jumpEvents: w?.jumps ?? [],
+                    allows3DMode: true,
+                    spotCoordinate: w?.spot?.coordinate,
+                    spotTitle: w?.spot?.name
+                )
             }
         }
         .padding()

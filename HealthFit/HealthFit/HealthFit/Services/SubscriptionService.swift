@@ -28,9 +28,11 @@ final class SubscriptionService: ObservableObject {
 
     private var transactionListener: Task<Void, Never>?
 
+    private var didStartRefresh = false
+
     private init() {
+        // Listener only — product fetch runs after first frames via `refreshIfNeeded()`.
         transactionListener = listenForTransactions()
-        Task { await refresh() }
     }
 
     deinit {
@@ -38,6 +40,13 @@ final class SubscriptionService: ObservableObject {
     }
 
     // MARK: - API pública
+
+    /// Carrega produtos/entitlements uma vez, adiado do cold-start.
+    func refreshIfNeeded() async {
+        guard !didStartRefresh else { return }
+        didStartRefresh = true
+        await refresh()
+    }
 
     func canAccess(_ feature: AppFeature) -> Bool {
         FeatureGate.canAccess(feature, tier: currentTier)
@@ -56,6 +65,7 @@ final class SubscriptionService: ObservableObject {
     }
 
     func refresh() async {
+        didStartRefresh = true
         isLoading = true
         lastErrorMessage = nil
         defer { isLoading = false }
@@ -66,6 +76,7 @@ final class SubscriptionService: ObservableObject {
     }
 
     func purchase(tier: PlanTier) async -> Bool {
+        await refreshIfNeeded()
         guard let product = product(for: tier) else {
             lastErrorMessage = "Plano indisponível no momento. Verifique a conexão ou tente mais tarde."
             return false
@@ -103,6 +114,7 @@ final class SubscriptionService: ObservableObject {
     }
 
     func restore() async {
+        await refreshIfNeeded()
         isLoading = true
         lastErrorMessage = nil
         defer { isLoading = false }

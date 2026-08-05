@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Seletor de idioma reutilizável (login compacto + perfil em lista).
 struct LanguagePickerControl: View {
-    @EnvironmentObject private var languageStore: AppLanguageStore
+    @ObservedObject private var languageStore = AppLanguageStore.shared
     var style: Style = .compactMenu
 
     enum Style {

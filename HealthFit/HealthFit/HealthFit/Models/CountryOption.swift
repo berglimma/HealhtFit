@@ -78,10 +78,21 @@ struct CountryOption: Identifiable, Hashable {
         return catalog.first { $0.code.caseInsensitiveCompare(code) == .orderedSame }
     }
 
+    /// Sempre devolve um código presente no `catalog` (evita crash do `Picker` no Perfil).
+    static func resolvedCode(_ code: String?, fallback: String = "BR") -> String {
+        if let match = option(for: code) {
+            return match.code
+        }
+        if let fallbackMatch = option(for: fallback) {
+            return fallbackMatch.code
+        }
+        return catalog.first?.code ?? "BR"
+    }
+
     static func defaultCode(from locale: Locale = .current) -> String {
         if let region = locale.region?.identifier, region.count == 2 {
-            return region.uppercased()
+            return resolvedCode(region.uppercased())
         }
-        return "BR"
+        return resolvedCode("BR")
     }
 }

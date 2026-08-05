@@ -29,8 +29,8 @@ struct CardioSetupView: View {
     @State private var useCurrentLocationAsSpot = true
     @State private var windSpeedKmh: Double = 18
     @State private var windDirectionDegrees: Double = 90
-    @State private var tideLabel = "Enchente"
-    @State private var tideHeightMeters: Double = 1.2
+    @State private var tideLabel = "Não informado"
+    @State private var tideHeightMeters: Double = 0
     @Environment(\.dismiss) private var dismiss
     @StateObject private var spotLocator = SpotLocationHelper()
     @State private var showWindConditions = false

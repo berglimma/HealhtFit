@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Hero card compartilhado — mesmo layout dos programas de musculação
 /// (altura 180, imagem full-bleed, gradiente e texto em baixo à esquerda).
@@ -79,14 +78,18 @@ struct WorkoutProgramHeroCard: View {
                 .stroke(resolvedAccent.opacity(0.45), lineWidth: 1)
         )
         .contentShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        // Flatten compositing cost of stacked gradients + photo covers in long lists.
+        .compositingGroup()
     }
 
     @ViewBuilder
     private var coverLayer: some View {
-        if let imageName, UIImage(named: imageName) != nil {
+        if let imageName {
             Image(imageName)
                 .resizable()
                 .scaledToFill()
+                // Hint decoder toward list card size (~2x for @3x max).
+                .frame(maxWidth: .infinity, maxHeight: 180)
         } else {
             ModalityCoverArt(
                 systemImage: systemImage,
@@ -110,7 +113,7 @@ struct ModalityCoverArt: View {
             let iconSize = min(symbolSize, max(22, size * 0.42))
 
             ZStack {
-                if let imageName, UIImage(named: imageName) != nil {
+                if let imageName {
                     Image(imageName)
                         .resizable()
                         .scaledToFill()

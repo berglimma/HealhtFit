@@ -143,6 +143,10 @@ struct HealthChatView: View {
                     context: context,
                     todayIntakes: wellnessService.todaySupplementIntakes
                 )
+                assistant.checkTideAlertIfNeeded(
+                    context: context,
+                    sessions: workoutStore.sessionHistory
+                )
                 assistant.deliverPendingSupplementAcknowledgmentIfNeeded()
             }
             .onDisappear {
@@ -176,6 +180,10 @@ struct HealthChatView: View {
                         context: context,
                         todayIntakes: wellnessService.todaySupplementIntakes
                     )
+                    assistant.checkTideAlertIfNeeded(
+                        context: context,
+                        sessions: workoutStore.sessionHistory
+                    )
                 } else if phase == .background || phase == .inactive {
                     dismissChatKeyboard()
                 }
@@ -205,6 +213,10 @@ struct HealthChatView: View {
                     assistant.checkSupplementNudgeIfNeeded(
                         context: context,
                         todayIntakes: wellnessService.todaySupplementIntakes
+                    )
+                    assistant.checkTideAlertIfNeeded(
+                        context: context,
+                        sessions: workoutStore.sessionHistory
                     )
                 }
             }

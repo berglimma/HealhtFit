@@ -24,6 +24,16 @@ struct RegisterView: View {
             && UserProfile.isValidDateOfBirth(dateOfBirth)
             && acceptedTerms
     }
+
+    private var dateOfBirthRange: ClosedRange<Date> {
+        let calendar = Calendar.current
+        let now = Date()
+        let min = calendar.date(byAdding: .year, value: -100, to: now)
+            ?? now.addingTimeInterval(-100 * 365.25 * 24 * 3600)
+        let max = calendar.date(byAdding: .year, value: -14, to: now)
+            ?? now.addingTimeInterval(-14 * 365.25 * 24 * 3600)
+        return min <= max ? min...max : max...min
+    }
     
     var body: some View {
         ZStack {
@@ -101,7 +111,7 @@ struct RegisterView: View {
                         DatePicker(
                             "Data de nascimento",
                             selection: $dateOfBirth,
-                            in: ...Calendar.current.date(byAdding: .year, value: -14, to: .now)!,
+                            in: dateOfBirthRange,
                             displayedComponents: .date
                         )
                         .datePickerStyle(.compact)

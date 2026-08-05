@@ -5,8 +5,13 @@ struct PulsingHeartIconView: View {
     var glowColor: Color = AppTheme.accent
 
     @State private var isPulsing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     private var containerSize: CGFloat { size * 1.34 }
+    private var shouldAnimate: Bool {
+        !reduceMotion && scenePhase == .active
+    }
 
     var body: some View {
         ZStack(alignment: .center) {
@@ -16,13 +21,12 @@ struct PulsingHeartIconView: View {
             Image("BrandHeart")
                 .resizable()
                 .renderingMode(.original)
-                .interpolation(.high)
                 .scaledToFit()
                 .frame(width: size * 0.9, height: size * 0.9)
-                .scaleEffect(isPulsing ? 1.06 : 0.96)
+                .scaleEffect(isPulsing && shouldAnimate ? 1.06 : 1.0)
                 .shadow(
-                    color: glowColor.opacity(isPulsing ? 0.55 : 0.22),
-                    radius: isPulsing ? size * 0.14 : size * 0.06
+                    color: glowColor.opacity(isPulsing && shouldAnimate ? 0.45 : 0.22),
+                    radius: isPulsing && shouldAnimate ? size * 0.12 : size * 0.06
                 )
                 .allowsHitTesting(false)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -30,8 +34,18 @@ struct PulsingHeartIconView: View {
         .frame(width: containerSize, height: containerSize, alignment: .center)
         .background(Color.clear)
         .onAppear {
-            withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) {
+            guard shouldAnimate else { return }
+            withAnimation(.easeInOut(duration: 1.05).repeatForever(autoreverses: true)) {
                 isPulsing = true
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active {
+                isPulsing = false
+            } else if shouldAnimate {
+                withAnimation(.easeInOut(duration: 1.05).repeatForever(autoreverses: true)) {
+                    isPulsing = true
+                }
             }
         }
     }
@@ -39,15 +53,14 @@ struct PulsingHeartIconView: View {
     private var pulseGlow: some View {
         ZStack(alignment: .center) {
             Circle()
-                .fill(glowColor.opacity(isPulsing ? 0.34 : 0.14))
+                .fill(glowColor.opacity(isPulsing && shouldAnimate ? 0.28 : 0.12))
                 .frame(width: size * 1.22, height: size * 1.22)
-                .scaleEffect(isPulsing ? 1.1 : 0.9)
-                .blur(radius: size * 0.07)
+                .scaleEffect(isPulsing && shouldAnimate ? 1.08 : 0.95)
 
             Circle()
-                .stroke(glowColor.opacity(isPulsing ? 0.6 : 0.28), lineWidth: max(2, size * 0.035))
+                .stroke(glowColor.opacity(isPulsing && shouldAnimate ? 0.5 : 0.22), lineWidth: max(2, size * 0.035))
                 .frame(width: size * 1.08, height: size * 1.08)
-                .scaleEffect(isPulsing ? 1.06 : 0.94)
+                .scaleEffect(isPulsing && shouldAnimate ? 1.04 : 0.96)
         }
         .frame(width: size * 1.22, height: size * 1.22, alignment: .center)
     }

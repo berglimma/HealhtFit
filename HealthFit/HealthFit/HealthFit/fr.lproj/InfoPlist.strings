@@ -5,3 +5,6 @@
 "NSHealthUpdateUsageDescription" = "HealthFit enregistre vos séances et calories brûlées dans l'app Santé.";
 "NSPhotoLibraryUsageDescription" = "HealthFit a besoin d'accéder à vos photos pour définir l'image de profil, enregistrer des photos d'évolution corporelle et joindre une photo ou une vidéo lors du partage du résultat d'entraînement.";
 "NSPhotoLibraryAddUsageDescription" = "HealthFit enregistre les photos d'évolution corporelle dans votre galerie lorsque vous l'autorisez.";
+"NSCalendarsFullAccessUsageDescription" = "HealthFit ajoute les séances terminées au Calendrier pour suivre l’historique d’entraînement.";
+"NSCalendarsUsageDescription" = "HealthFit ajoute les séances terminées au Calendrier pour suivre l’historique d’entraînement.";
+"NSCalendarsWriteOnlyAccessUsageDescription" = "HealthFit ajoute les séances terminées au Calendrier pour suivre l’historique d’entraînement.";

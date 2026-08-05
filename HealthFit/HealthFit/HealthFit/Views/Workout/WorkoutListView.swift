@@ -31,7 +31,7 @@ struct WorkoutListView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                LazyVStack(spacing: 16) {
                     sectionPicker
 
                     // Global minimized banner lives on MainTabView; avoid a duplicate card here.

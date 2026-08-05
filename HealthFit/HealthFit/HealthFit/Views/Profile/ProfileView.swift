@@ -51,14 +51,87 @@ struct ProfileView: View {
     @State private var showBodyDataSavedAlert = false
     @State private var showEmptyMeasurementsAlert = false
     @State private var bodyDataSaveError: String?
+    @State private var showSaveFailedAlert = false
+    /// Phase 2 of profile content (heavy forms). First paint stays lean to avoid jetsam / UIDatePicker crashes.
+    @State private var showSecondarySections = false
+    @State private var showDateOfBirthSheet = false
 
     var body: some View {
         NavigationStack {
-            List {
-                if let user = authService.currentUser {
-                    profileHeaderSection(for: user)
-                    subscriptionPlanSection
-                    displayNameSection(for: user)
+            profileList
+                .adaptiveContentWidth()
+                .navigationTitle("Perfil")
+                .scrollDismissesKeyboard(.immediately)
+                // No keyboard toolbar on this List — avoids TabView+List toolbar race that can abort the process.
+                .task { await handleProfileAppear() }
+                .onChange(of: authService.currentUser) { _, _ in
+                    syncTrainerFields()
+                    syncDisplayNameField()
+                    syncBodyMeasurementFields()
+                    syncBodyDataFields()
+                }
+                .onChange(of: wellnessService.todayEntry) { _, _ in
+                    syncWellnessFields()
+                }
+                .onChange(of: measurementsSaveError) { _, error in
+                    if error != nil { showSaveFailedAlert = true }
+                }
+                .onChange(of: bodyDataSaveError) { _, error in
+                    if error != nil { showSaveFailedAlert = true }
+                }
+                .sheet(isPresented: $showDateOfBirthSheet) {
+                    dateOfBirthPickerSheet
+                }
+                .profilePhotoPickers(
+                    showPhotoSourceDialog: $showPhotoSourceDialog,
+                    showBackgroundSourceDialog: $showBackgroundSourceDialog,
+                    showProfileGalleryPicker: $showProfileGalleryPicker,
+                    showProfileCameraPicker: $showProfileCameraPicker,
+                    showBackgroundGalleryPicker: $showBackgroundGalleryPicker,
+                    showBackgroundCameraPicker: $showBackgroundCameraPicker,
+                    hasBackgroundImage: authService.profileBackgroundImage != nil,
+                    onProfileImage: { image in
+                        authService.updateProfileImage(image)
+                    },
+                    onBackgroundImage: { image in
+                        authService.updateProfileBackgroundImage(image)
+                    },
+                    onRemoveBackground: {
+                        authService.updateProfileBackgroundImage(nil)
+                    }
+                )
+                .profileAlertsAndSheets(
+                    showLogoutAlert: $showLogoutAlert,
+                    showMeasurementsSavedAlert: $showMeasurementsSavedAlert,
+                    showBodyDataSavedAlert: $showBodyDataSavedAlert,
+                    showEmptyMeasurementsAlert: $showEmptyMeasurementsAlert,
+                    showSaveFailedAlert: $showSaveFailedAlert,
+                    measurementsSaveError: measurementsSaveError,
+                    bodyDataSaveError: bodyDataSaveError,
+                    showMeasurementComparison: $showMeasurementComparison,
+                    measurementComparison: measurementComparison,
+                    showDeleteAccountSheet: $showDeleteAccountSheet,
+                    usesPasswordProvider: authService.usesPasswordProvider,
+                    usesAppleProvider: authService.usesAppleProvider,
+                    onLogout: { authService.logout() },
+                    onClearSaveErrors: {
+                        measurementsSaveError = nil
+                        bodyDataSaveError = nil
+                    }
+                )
+        }
+    }
+
+    @ViewBuilder
+    private var profileList: some View {
+        List {
+            if let user = authService.currentUser {
+                // Phase 1 — always light / safe
+                profileHeaderSection(for: user)
+                subscriptionPlanSection
+                displayNameSection(for: user)
+
+                if showSecondarySections {
                     biotypeSection(for: user)
                     personalTrainerSection
                     nutritionistSection
@@ -75,179 +148,144 @@ struct ProfileView: View {
                     Section("Medidas Corporais") {
                         bodyMeasurementsSection(for: user)
                     }
-                    Section("Evolução Corporal") {
-                        // NavigationLink puro no List responde a toque simples; evita Button/wrapper.
-                        NavigationLink {
-                            BodyEvolutionView()
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Label("Fotos e comparativo (30 dias)", systemImage: "camera.viewfinder")
-                                Text(evolutionService.meta.statusLabel)
-                                    .font(.caption)
-                                    .foregroundStyle(AppTheme.textSecondary)
-                                Text("Fotos opcionais e privadas — só você acessa.")
-                                    .font(.caption2)
-                                    .foregroundStyle(AppTheme.textSecondary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                        }
-                    }
+                    bodyEvolutionSection
                     integrationsSection
                     restTimerSection
                     aboutSection
                     Section("Legal") {
                         LegalLinksView(style: .list, showsSupportLink: true)
                     }
-                    languageSection
-                    accountActionsSection
-                }
-            }
-            .adaptiveContentWidth()
-            .navigationTitle("Perfil")
-            .scrollDismissesKeyboard(.immediately)
-            .numericKeyboardDismiss()
-            // Não usa dismissKeyboardOnTap(): TapGesture no List compete com PhotosPicker/Buttons
-            // e força long-press. Teclado fecha via scroll + botão OK do numericKeyboardDismiss.
-            .onAppear {
-                syncTrainerFields()
-                syncDisplayNameField()
-                syncWellnessFields()
-                syncPreWorkoutFromWorkouts()
-                syncBodyMeasurementFields()
-                syncBodyDataFields()
-                if let userId = authService.currentUser?.id {
-                    Task { await evolutionService.loadIfNeeded(userId: userId) }
-                }
-            }
-            .onChange(of: authService.currentUser) { _, _ in
-                syncTrainerFields()
-                syncDisplayNameField()
-                syncBodyMeasurementFields()
-                syncBodyDataFields()
-            }
-            .onChange(of: wellnessService.todayEntry) { _, _ in
-                syncWellnessFields()
-            }
-            .onChange(of: workoutStore.sessionHistory.count) { _, _ in
-                syncPreWorkoutFromWorkouts()
-            }
-            .confirmationDialog(
-                "Foto do perfil",
-                isPresented: $showPhotoSourceDialog,
-                titleVisibility: .visible
-            ) {
-                if PhotoCaptureAvailability.isCameraAvailable {
-                    Button("Câmera") {
-                        DispatchQueue.main.async { showProfileCameraPicker = true }
+                } else {
+                    Section {
+                        HStack {
+                            ProgressView()
+                                .tint(AppTheme.accent)
+                            Text("Carregando seu perfil…")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
                     }
                 }
-                Button("Galeria") {
-                    DispatchQueue.main.async { showProfileGalleryPicker = true }
-                }
-                Button("Cancelar", role: .cancel) {}
-            }
-            .confirmationDialog(
-                "Foto de fundo",
-                isPresented: $showBackgroundSourceDialog,
-                titleVisibility: .visible
-            ) {
-                if PhotoCaptureAvailability.isCameraAvailable {
-                    Button("Câmera") {
-                        DispatchQueue.main.async { showBackgroundCameraPicker = true }
-                    }
-                }
-                Button("Galeria") {
-                    DispatchQueue.main.async { showBackgroundGalleryPicker = true }
-                }
-                if authService.profileBackgroundImage != nil {
-                    Button("Remover fundo", role: .destructive) {
-                        authService.updateProfileBackgroundImage(nil)
-                    }
-                }
-                Button("Cancelar", role: .cancel) {}
-            }
-            .sheet(isPresented: $showProfileGalleryPicker) {
-                LibraryImagePicker { image in
-                    showProfileGalleryPicker = false
-                    guard let image else { return }
-                    authService.updateProfileImage(image)
-                }
-                .ignoresSafeArea()
-            }
-            .sheet(isPresented: $showProfileCameraPicker) {
-                CameraImagePicker { image in
-                    showProfileCameraPicker = false
-                    guard let image else { return }
-                    authService.updateProfileImage(image)
-                }
-                .ignoresSafeArea()
-            }
-            .sheet(isPresented: $showBackgroundGalleryPicker) {
-                LibraryImagePicker { image in
-                    showBackgroundGalleryPicker = false
-                    guard let image else { return }
-                    authService.updateProfileBackgroundImage(image)
-                }
-                .ignoresSafeArea()
-            }
-            .sheet(isPresented: $showBackgroundCameraPicker) {
-                CameraImagePicker { image in
-                    showBackgroundCameraPicker = false
-                    guard let image else { return }
-                    authService.updateProfileBackgroundImage(image)
-                }
-                .ignoresSafeArea()
-            }
-            .alert("Sair da conta?", isPresented: $showLogoutAlert) {
-                Button("Cancelar", role: .cancel) {}
-                Button("Sair", role: .destructive) {
-                    authService.logout()
+
+                // Always last: language + leave / delete account
+                languageSection
+                accountActionsSection
+            } else {
+                Section {
+                    Text("Sessão não disponível. Faça login novamente.")
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
-            .alert("Medidas salvas", isPresented: $showMeasurementsSavedAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal.")
-            }
-            .alert("Dados salvos", isPresented: $showBodyDataSavedAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("Peso, altura, data de nascimento e sexo foram sincronizados com o Firebase.")
-            }
-            .alert("Medidas necessárias", isPresented: $showEmptyMeasurementsAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("Por favor, preencha as medidas para salvar.")
-            }
-            .sheet(isPresented: $showMeasurementComparison) {
-                if let comparison = measurementComparison {
-                    BodyMeasurementComparisonView(comparison: comparison)
-                }
-            }
-            .alert(
-                "Não foi possível salvar",
-                isPresented: Binding(
-                    get: { measurementsSaveError != nil || bodyDataSaveError != nil },
-                    set: { if !$0 {
-                        measurementsSaveError = nil
-                        bodyDataSaveError = nil
-                    } }
+        }
+    }
+
+    private var dateOfBirthPickerSheet: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                DatePicker(
+                    "Data de nascimento",
+                    selection: safeDateOfBirthBinding,
+                    in: Self.safeDateOfBirthRange,
+                    displayedComponents: .date
                 )
-            ) {
-                Button("OK", role: .cancel) {
-                    measurementsSaveError = nil
-                    bodyDataSaveError = nil
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                .padding()
+
+                Text("Idade: \(UserProfile.age(from: dateOfBirth)) anos · necessário entre 14 e 100")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                Spacer()
+            }
+            .background(AppTheme.background.ignoresSafeArea())
+            .navigationTitle("Nascimento")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") {
+                        dateOfBirth = Self.clampedDate(dateOfBirth)
+                        showDateOfBirthSheet = false
+                    }
                 }
-            } message: {
-                Text(measurementsSaveError ?? bodyDataSaveError ?? "")
             }
-            .sheet(isPresented: $showDeleteAccountSheet) {
-                DeleteAccountSheet(
-                    requiresPassword: authService.usesPasswordProvider,
-                    requiresAppleReauthentication: authService.usesAppleProvider
-                )
+        }
+        .presentationDetents([.medium, .large])
+        .onAppear {
+            dateOfBirth = Self.clampedDate(dateOfBirth)
+        }
+    }
+
+    /// Clamped two-way binding so UIDatePicker never receives out-of-range values.
+    private var safeDateOfBirthBinding: Binding<Date> {
+        Binding(
+            get: { Self.clampedDate(dateOfBirth) },
+            set: { dateOfBirth = Self.clampedDate($0) }
+        )
+    }
+
+    private var safeCountryCodeBinding: Binding<String> {
+        Binding(
+            get: { CountryOption.resolvedCode(selectedCountryCode) },
+            set: { selectedCountryCode = CountryOption.resolvedCode($0) }
+        )
+    }
+
+    private static var safeDateOfBirthRange: ClosedRange<Date> {
+        let minDate = minimumDateOfBirth()
+        let maxDate = maximumDateOfBirth()
+        return minDate <= maxDate ? minDate...maxDate : maxDate...minDate
+    }
+
+    private static func clampedDate(_ date: Date, now: Date = .now) -> Date {
+        let range = {
+            let minDate = minimumDateOfBirth(now: now)
+            let maxDate = maximumDateOfBirth(now: now)
+            return minDate <= maxDate ? minDate...maxDate : maxDate...minDate
+        }()
+        return min(max(date, range.lowerBound), range.upperBound)
+    }
+
+    private var bodyEvolutionSection: some View {
+        Section("Evolução Corporal") {
+            NavigationLink {
+                BodyEvolutionView()
+            } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Fotos e comparativo (30 dias)", systemImage: "camera.viewfinder")
+                    Text(evolutionService.meta.statusLabel)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Text("Fotos opcionais e privadas — só você acessa.")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
+        }
+    }
+
+    @MainActor
+    private func handleProfileAppear() async {
+        // Sync lightweight fields first (header / name) before any heavy List sections mount.
+        syncTrainerFields()
+        syncDisplayNameField()
+        syncBodyDataFields()
+
+        await Task.yield()
+        try? await Task.sleep(nanoseconds: 80_000_000)
+
+        syncWellnessFields()
+        syncBodyMeasurementFields()
+        showSecondarySections = true
+
+        await Task.yield()
+        try? await Task.sleep(nanoseconds: 120_000_000)
+
+        syncPreWorkoutFromWorkouts()
+        if let userId = authService.currentUser?.id {
+            await evolutionService.loadIfNeeded(userId: userId)
         }
     }
 
@@ -363,8 +401,13 @@ struct ProfileView: View {
                     .padding(.top, 8)
 
                     let healthStatus = wellnessService.healthIconStatus()
-                    PulsingHeartIconView(size: 40, glowColor: healthStatus.glowColor)
-                        .padding(.top, 8)
+                    PulsingHeartIconView(
+                        size: 36,
+                        glowColor: healthStatus.glowColor
+                    )
+                    .accessibilityLabel(healthStatus.title)
+                    .accessibilityValue(wellnessService.healthIconDetailMessage())
+                    .padding(.top, 8)
 
                     if profileImage != nil {
                         Button {
@@ -1062,13 +1105,33 @@ struct ProfileView: View {
         guard let user = authService.currentUser else { return }
         weightText = String(format: "%.1f", user.weight)
         heightText = String(format: "%.0f", user.height)
-        if let dob = user.dateOfBirth {
-            dateOfBirth = dob
-        } else {
-            dateOfBirth = Calendar.current.date(byAdding: .year, value: -user.age, to: .now) ?? dateOfBirth
-        }
-        selectedCountryCode = user.countryCode
+        dateOfBirth = Self.clampedDateOfBirth(from: user)
+        selectedCountryCode = CountryOption.resolvedCode(user.countryCode)
         selectedGender = user.gender
+    }
+
+    /// Youngest allowed birth date (must be ≥ 14 years old) — aligned with `UserProfile.isValidDateOfBirth`.
+    private static func maximumDateOfBirth(now: Date = .now) -> Date {
+        Calendar.current.date(byAdding: .year, value: -14, to: now)
+            ?? now.addingTimeInterval(-14 * 365.25 * 24 * 3600)
+    }
+
+    /// Oldest allowed birth date (≤ 100 years) — same bounds as validation.
+    private static func minimumDateOfBirth(now: Date = .now) -> Date {
+        Calendar.current.date(byAdding: .year, value: -100, to: now)
+            ?? now.addingTimeInterval(-100 * 365.25 * 24 * 3600)
+    }
+
+    private static func clampedDateOfBirth(from user: UserProfile, now: Date = .now) -> Date {
+        let raw: Date = {
+            if let dob = user.dateOfBirth {
+                return dob
+            }
+            let safeAge = min(max(user.age, 14), 100)
+            return Calendar.current.date(byAdding: .year, value: -safeAge, to: now)
+                ?? maximumDateOfBirth(now: now)
+        }()
+        return clampedDate(raw, now: now)
     }
 
     private var isBodyDataValid: Bool {
@@ -1094,27 +1157,35 @@ struct ProfileView: View {
         MetricField(label: "Peso", unit: "kg", text: $weightText)
         MetricField(label: "Altura", unit: "cm", text: $heightText)
 
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Data de nascimento *")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            DatePicker(
-                "Data de nascimento",
-                selection: $dateOfBirth,
-                in: ...Calendar.current.date(byAdding: .year, value: -14, to: .now)!,
-                displayedComponents: .date
-            )
-            .labelsHidden()
-            Text("Idade: \(UserProfile.age(from: dateOfBirth)) anos")
-                .font(.caption2)
-                .foregroundStyle(AppTheme.textSecondary)
+        // DatePicker outside the List (sheet) — in-row UIDatePicker has crashed SwiftUI when DOB was out of range.
+        Button {
+            dateOfBirth = Self.clampedDate(dateOfBirth)
+            showDateOfBirthSheet = true
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Data de nascimento *")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(dateOfBirth.formatted(date: .long, time: .omitted))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Text("Idade: \(UserProfile.age(from: dateOfBirth)) anos")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                Spacer()
+                Image(systemName: "calendar")
+                    .foregroundStyle(AppTheme.accent)
+            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(ListSafeButtonStyle())
 
         VStack(alignment: .leading, spacing: 6) {
             Text("País")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Picker("País", selection: $selectedCountryCode) {
+            Picker("País", selection: safeCountryCodeBinding) {
                 ForEach(CountryOption.catalog) { country in
                     Text("\(country.flagEmoji)  \(country.name)").tag(country.code)
                 }
@@ -1159,7 +1230,7 @@ struct ProfileView: View {
             preview.height = height
         }
         preview.applyDateOfBirth(dateOfBirth)
-        preview.countryCode = selectedCountryCode
+        preview.countryCode = CountryOption.resolvedCode(selectedCountryCode)
         preview.gender = selectedGender
         return preview
     }
@@ -1208,7 +1279,7 @@ struct ProfileView: View {
         user.weight = weight
         user.height = height
         user.applyDateOfBirth(dateOfBirth)
-        user.countryCode = selectedCountryCode
+        user.countryCode = CountryOption.resolvedCode(selectedCountryCode)
         user.gender = selectedGender
 
         // Medidas corporais são opcionais aqui; se houver valores no formulário, persiste também.
@@ -1509,6 +1580,145 @@ private struct BodyMeasurementComparisonView: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+
+// MARK: - Profile presentation helpers (keep ProfileView.body type-checkable)
+
+private extension View {
+    func profilePhotoPickers(
+        showPhotoSourceDialog: Binding<Bool>,
+        showBackgroundSourceDialog: Binding<Bool>,
+        showProfileGalleryPicker: Binding<Bool>,
+        showProfileCameraPicker: Binding<Bool>,
+        showBackgroundGalleryPicker: Binding<Bool>,
+        showBackgroundCameraPicker: Binding<Bool>,
+        hasBackgroundImage: Bool,
+        onProfileImage: @escaping (UIImage) -> Void,
+        onBackgroundImage: @escaping (UIImage) -> Void,
+        onRemoveBackground: @escaping () -> Void
+    ) -> some View {
+        self
+            .confirmationDialog(
+                "Foto do perfil",
+                isPresented: showPhotoSourceDialog,
+                titleVisibility: .visible
+            ) {
+                if PhotoCaptureAvailability.isCameraAvailable {
+                    Button("Câmera") {
+                        DispatchQueue.main.async { showProfileCameraPicker.wrappedValue = true }
+                    }
+                }
+                Button("Galeria") {
+                    DispatchQueue.main.async { showProfileGalleryPicker.wrappedValue = true }
+                }
+                Button("Cancelar", role: .cancel) {}
+            }
+            .confirmationDialog(
+                "Foto de fundo",
+                isPresented: showBackgroundSourceDialog,
+                titleVisibility: .visible
+            ) {
+                if PhotoCaptureAvailability.isCameraAvailable {
+                    Button("Câmera") {
+                        DispatchQueue.main.async { showBackgroundCameraPicker.wrappedValue = true }
+                    }
+                }
+                Button("Galeria") {
+                    DispatchQueue.main.async { showBackgroundGalleryPicker.wrappedValue = true }
+                }
+                if hasBackgroundImage {
+                    Button("Remover fundo", role: .destructive, action: onRemoveBackground)
+                }
+                Button("Cancelar", role: .cancel) {}
+            }
+            .sheet(isPresented: showProfileGalleryPicker) {
+                LibraryImagePicker { image in
+                    showProfileGalleryPicker.wrappedValue = false
+                    guard let image else { return }
+                    onProfileImage(image)
+                }
+                .ignoresSafeArea()
+            }
+            .sheet(isPresented: showProfileCameraPicker) {
+                CameraImagePicker { image in
+                    showProfileCameraPicker.wrappedValue = false
+                    guard let image else { return }
+                    onProfileImage(image)
+                }
+                .ignoresSafeArea()
+            }
+            .sheet(isPresented: showBackgroundGalleryPicker) {
+                LibraryImagePicker { image in
+                    showBackgroundGalleryPicker.wrappedValue = false
+                    guard let image else { return }
+                    onBackgroundImage(image)
+                }
+                .ignoresSafeArea()
+            }
+            .sheet(isPresented: showBackgroundCameraPicker) {
+                CameraImagePicker { image in
+                    showBackgroundCameraPicker.wrappedValue = false
+                    guard let image else { return }
+                    onBackgroundImage(image)
+                }
+                .ignoresSafeArea()
+            }
+    }
+
+    func profileAlertsAndSheets(
+        showLogoutAlert: Binding<Bool>,
+        showMeasurementsSavedAlert: Binding<Bool>,
+        showBodyDataSavedAlert: Binding<Bool>,
+        showEmptyMeasurementsAlert: Binding<Bool>,
+        showSaveFailedAlert: Binding<Bool>,
+        measurementsSaveError: String?,
+        bodyDataSaveError: String?,
+        showMeasurementComparison: Binding<Bool>,
+        measurementComparison: BodyMeasurementComparison?,
+        showDeleteAccountSheet: Binding<Bool>,
+        usesPasswordProvider: Bool,
+        usesAppleProvider: Bool,
+        onLogout: @escaping () -> Void,
+        onClearSaveErrors: @escaping () -> Void
+    ) -> some View {
+        self
+            .alert("Sair da conta?", isPresented: showLogoutAlert) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Sair", role: .destructive, action: onLogout)
+            }
+            .alert("Medidas salvas", isPresented: showMeasurementsSavedAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal.")
+            }
+            .alert("Dados salvos", isPresented: showBodyDataSavedAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Peso, altura, data de nascimento e sexo foram sincronizados com o Firebase.")
+            }
+            .alert("Medidas necessárias", isPresented: showEmptyMeasurementsAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Por favor, preencha as medidas para salvar.")
+            }
+            .sheet(isPresented: showMeasurementComparison) {
+                if let comparison = measurementComparison {
+                    BodyMeasurementComparisonView(comparison: comparison)
+                }
+            }
+            .alert("Não foi possível salvar", isPresented: showSaveFailedAlert) {
+                Button("OK", role: .cancel, action: onClearSaveErrors)
+            } message: {
+                Text(measurementsSaveError ?? bodyDataSaveError ?? "")
+            }
+            .sheet(isPresented: showDeleteAccountSheet) {
+                DeleteAccountSheet(
+                    requiresPassword: usesPasswordProvider,
+                    requiresAppleReauthentication: usesAppleProvider
+                )
+            }
     }
 }
 
