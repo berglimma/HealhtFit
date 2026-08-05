@@ -218,14 +218,37 @@ struct DashboardView: View {
                         VStack(alignment: .leading, spacing: isShareCardExpanded ? 16 : 0) {
                             // Same rectangular language as `weeklyReportBanner` when collapsed.
                             HStack(spacing: 14) {
+                                let modalityIcon = WorkoutShareCardView.modalitySystemImage(for: card.makeSession())
                                 ZStack {
-                                    Circle()
-                                        .fill(AppTheme.accent.opacity(0.2))
-                                        .frame(width: 48, height: 48)
-                                    Image(systemName: "square.and.arrow.up")
-                                        .font(.title3)
-                                        .foregroundStyle(AppTheme.accent)
+                                    // Foto do atleta (mantém) + badge com ícone da modalidade.
+                                    if let profileImage = authService.profileImage {
+                                        Image(uiImage: profileImage)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 48, height: 48)
+                                            .clipShape(Circle())
+                                            .overlay(
+                                                Circle()
+                                                    .strokeBorder(AppTheme.accent.opacity(0.85), lineWidth: 1.5)
+                                            )
+
+                                        Image(systemName: modalityIcon)
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundStyle(AppTheme.accent)
+                                            .frame(width: 22, height: 22)
+                                            .background(Circle().fill(AppTheme.cardBackground))
+                                            .overlay(Circle().strokeBorder(AppTheme.accent.opacity(0.5), lineWidth: 1))
+                                            .offset(x: 16, y: 16)
+                                    } else {
+                                        Circle()
+                                            .fill(AppTheme.accent.opacity(0.2))
+                                            .frame(width: 48, height: 48)
+                                        Image(systemName: modalityIcon)
+                                            .font(.title3)
+                                            .foregroundStyle(AppTheme.accent)
+                                    }
                                 }
+                                .frame(width: 48, height: 48)
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Último card de postagem")

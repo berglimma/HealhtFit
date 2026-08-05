@@ -126,13 +126,14 @@ struct WorkoutShareCardView: View {
         .padding(.bottom, needsExtraTextSpace ? 10 : 14)
     }
 
-    // MARK: - Corrida / pedal outdoor (mapa + troféu dourado + métricas)
+    // MARK: - Corrida / pedal outdoor (mapa + ícone da modalidade + métricas)
 
     private var runningCardContent: some View {
         VStack(spacing: needsExtraTextSpace ? 5 : 7) {
-            runningBrandHeader
+            brandHeader
 
-            runningTrophyBadge
+            // Ícone da modalidade + foto do atleta (mantém a foto do card padrão).
+            achievementBadge
 
             Text(runningHeadline)
                 .font(.system(size: needsExtraTextSpace ? 17 : 22, weight: .heavy, design: .rounded))
@@ -178,27 +179,6 @@ struct WorkoutShareCardView: View {
         .padding(.bottom, needsExtraTextSpace ? 8 : 12)
     }
 
-    /// Logo + data; foto de perfil só quando existe, alinhada abaixo da data.
-    private var runningBrandHeader: some View {
-        let photoSize: CGFloat = needsExtraTextSpace ? 36 : 44
-
-        return VStack(alignment: .trailing, spacing: 8) {
-            brandHeader
-
-            if let profileImage {
-                Image(uiImage: profileImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: photoSize, height: photoSize)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .strokeBorder(Color.yellow.opacity(0.85), lineWidth: 2)
-                    )
-            }
-        }
-    }
-
     private var outdoorSessionNoun: String {
         if session.isOutdoorCyclingSession { return "o pedal" }
         if session.isOutdoorWalkingSession { return "a caminhada" }
@@ -219,39 +199,6 @@ struct WorkoutShareCardView: View {
             return "\(displayName) \(outdoorSessionVerb), mas não concluiu"
         }
         return "\(displayName) fechou \(outdoorSessionNoun)"
-    }
-
-    private var runningTrophyBadge: some View {
-        let trophySize: CGFloat = needsExtraTextSpace ? 26 : 32
-
-        return ZStack {
-            Circle()
-                .fill(Color(red: 1.0, green: 0.85, blue: 0.2).opacity(0.55))
-                .frame(width: 72, height: 72)
-                .blur(radius: 16)
-
-            Circle()
-                .fill(Color.orange.opacity(0.4))
-                .frame(width: 48, height: 48)
-                .blur(radius: 10)
-
-            Image(systemName: "trophy.fill")
-                .font(.system(size: trophySize, weight: .semibold))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 1.0, green: 0.95, blue: 0.55),
-                            Color(red: 1.0, green: 0.78, blue: 0.15),
-                            Color(red: 0.95, green: 0.55, blue: 0.05)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .shadow(color: Color.yellow.opacity(0.95), radius: 10, y: 0)
-                .shadow(color: Color.orange.opacity(0.7), radius: 4, y: 1)
-        }
-        .frame(width: 64, height: 64)
     }
 
     private var runningStatsGrid: some View {
@@ -410,6 +357,7 @@ struct WorkoutShareCardView: View {
         let inner: CGFloat = needsExtraTextSpace ? 38 : 46
         let iconSize: CGFloat = needsExtraTextSpace ? 18 : 22
         let photoSize: CGFloat = needsExtraTextSpace ? 40 : 48
+        let accent = modalityAccentColor
 
         return HStack(spacing: profileImage == nil ? 0 : -8) {
             ZStack {
@@ -417,9 +365,9 @@ struct WorkoutShareCardView: View {
                     .strokeBorder(
                         AngularGradient(
                             colors: [
-                                Color("AccentGreen"),
+                                accent,
                                 Color("AccentOrange"),
-                                Color("AccentGreen")
+                                accent
                             ],
                             center: .center
                         ),
@@ -433,7 +381,8 @@ struct WorkoutShareCardView: View {
 
                 Image(systemName: badgeIcon)
                     .font(.system(size: iconSize, weight: .semibold))
-                    .foregroundStyle(Color("AccentGreen"))
+                    .foregroundStyle(accent)
+                    .symbolRenderingMode(.hierarchical)
             }
             .zIndex(1)
 
@@ -445,20 +394,78 @@ struct WorkoutShareCardView: View {
                     .clipShape(Circle())
                     .overlay(
                         Circle()
-                            .strokeBorder(Color("AccentGreen").opacity(0.9), lineWidth: 2)
+                            .strokeBorder(accent.opacity(0.9), lineWidth: 2)
                     )
                     .zIndex(0)
             }
         }
     }
 
+    /// SF Symbol da modalidade do treino (cardio catálogo, outdoor, meditação ou força).
     private var badgeIcon: String {
         if session.endedEarly || session.autoEndedByInactivity {
             return "flame.fill"
         }
-        if isMeditation { return "brain.head.profile" }
-        if isCardio { return "figure.run" }
-        return "trophy.fill"
+        return Self.modalitySystemImage(for: session)
+    }
+
+    private var modalityAccentColor: Color {
+        if session.endedEarly || session.autoEndedByInactivity {
+            return Color("AccentOrange")
+        }
+        if isMeditation {
+            return Color.purple.opacity(0.9)
+        }
+        if session.isOutdoorCyclingSession {
+            return Color(red: 1.0, green: 0.78, blue: 0.15)
+        }
+        if isRunning || isCardio {
+            return Color("AccentOrange")
+        }
+        return Color("AccentGreen")
+    }
+
+    /// Ícone por modalidade — usa catálogo de cardio quando o título bate.
+    static func modalitySystemImage(for session: WorkoutSession) -> String {
+        let title = session.workoutTitle
+        let lower = title.lowercased()
+
+        if WeeklyProgressAnalyzer.isMeditationSession(session)
+            || lower.hasPrefix("meditação")
+            || lower.hasPrefix("meditacao") {
+            return "brain.head.profile"
+        }
+
+        if session.isOutdoorCyclingSession
+            || lower.contains("mountain bike")
+            || lower.contains("bicicleta pedal")
+            || lower.contains("bike outdoor") {
+            return "bicycle"
+        }
+
+        if session.isOutdoorWalkingSession
+            || lower.contains("caminhada")
+            || lower.contains("walking") {
+            return "figure.walk"
+        }
+
+        if session.isRunningSession || lower.contains("corrida") {
+            return "figure.run"
+        }
+
+        // Cardio indoor/outdoor: casa com o ícone do exercício no catálogo (nome mais longo primeiro).
+        if let catalogMatch = CardioExercise.catalog
+            .sorted(by: { $0.name.count > $1.name.count })
+            .first(where: { lower.contains($0.name.lowercased()) }) {
+            return catalogMatch.icon
+        }
+
+        if lower.hasPrefix("cardio") {
+            return "figure.mixed.cardio"
+        }
+
+        // Musculação / ficha
+        return "dumbbell.fill"
     }
 
     // MARK: - Summary chart (pure SwiftUI shapes — ImageRenderer-safe)
