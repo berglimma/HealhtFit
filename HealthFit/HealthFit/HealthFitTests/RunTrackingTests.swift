@@ -305,6 +305,7 @@ final class RunTrackingTests: XCTestCase {
         XCTAssertEqual(RoutePerformanceBand.intermediate.performanceScore, 0.5)
         XCTAssertEqual(RoutePerformanceBand.optimal.performanceScore, 1)
         XCTAssertEqual(RoutePerformanceBand.stopped.performanceScore, -1)
+        XCTAssertEqual(RoutePerformanceBand.paused.performanceScore, -2)
         XCTAssertNotEqual(
             RoutePerformanceColoring.color(for: .optimal),
             RoutePerformanceColoring.color(for: .below)
@@ -317,6 +318,79 @@ final class RunTrackingTests: XCTestCase {
             RoutePerformanceColoring.color(for: .stopped),
             RoutePerformanceColoring.color(for: .below)
         )
+        XCTAssertNotEqual(
+            RoutePerformanceColoring.color(for: .paused),
+            RoutePerformanceColoring.color(for: .stopped)
+        )
+        XCTAssertNotEqual(
+            RoutePerformanceColoring.color(for: .paused),
+            RoutePerformanceColoring.color(for: .below)
+        )
+    }
+
+    func testRoutePerformancePausedSegmentsAreBlue() {
+        let active = RouteCoordinate(
+            latitude: -23.55,
+            longitude: -46.63,
+            timestamp: Date(timeIntervalSince1970: 0),
+            speedMetersPerSecond: 3.0,
+            isPaused: false
+        )
+        let pausing = RouteCoordinate(
+            latitude: -23.5502,
+            longitude: -46.6302,
+            timestamp: Date(timeIntervalSince1970: 10),
+            speedMetersPerSecond: 0.5,
+            isPaused: true
+        )
+        let stillPaused = RouteCoordinate(
+            latitude: -23.5504,
+            longitude: -46.6304,
+            timestamp: Date(timeIntervalSince1970: 20),
+            speedMetersPerSecond: 0.2,
+            isPaused: true
+        )
+        let resume = RouteCoordinate(
+            latitude: -23.5508,
+            longitude: -46.6308,
+            timestamp: Date(timeIntervalSince1970: 30),
+            speedMetersPerSecond: 3.2,
+            isPaused: false
+        )
+        let segments = RoutePerformanceColoring.segments(
+            from: [active, pausing, stillPaused, resume],
+            metric: .pace
+        )
+        XCTAssertEqual(segments.count, 3)
+        // Qualquer extremo em pausa → segmento azul.
+        XCTAssertEqual(segments[0].band, .paused)
+        XCTAssertEqual(segments[1].band, .paused)
+        XCTAssertEqual(segments[2].band, .paused)
+        XCTAssertEqual(segments[0].performanceScore, RoutePerformanceBand.paused.performanceScore)
+    }
+
+    func testRouteCoordinatePersistsPausedFlag() throws {
+        let point = RouteCoordinate(
+            latitude: -23.55,
+            longitude: -46.63,
+            isPaused: true
+        )
+        let data = try JSONEncoder().encode([point])
+        let decoded = try JSONDecoder().decode([RouteCoordinate].self, from: data)
+        XCTAssertTrue(decoded[0].isPaused)
+    }
+
+    func testWorkoutSessionPersistsPausedDuration() throws {
+        var session = WorkoutSession(
+            workoutSheetId: UUID(),
+            workoutTitle: "Cardio — Bike",
+            totalExercises: 1,
+            pausedDurationSeconds: 125
+        )
+        let data = try JSONEncoder().encode(session)
+        let decoded = try JSONDecoder().decode(WorkoutSession.self, from: data)
+        XCTAssertEqual(decoded.pausedDurationSeconds, 125)
+        XCTAssertEqual(decoded.activeDurationSeconds, max(0, Int(decoded.duration) - 125))
     }
 
     func testCatalogIncludesBikeModalities() {

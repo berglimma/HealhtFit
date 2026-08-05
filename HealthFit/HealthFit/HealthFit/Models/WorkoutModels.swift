@@ -427,6 +427,8 @@ struct WorkoutSession: Identifiable, Codable {
     var routePoints: [RouteCoordinate]
     /// Passos contados durante a sessão de corrida.
     var stepCount: Int?
+    /// Segundos totais de pausa durante cardio (bike, caminhada, outdoor, indoor).
+    var pausedDurationSeconds: Int
     /// Encerrado antes de concluir todos os exercícios.
     var endedEarly: Bool
     /// Motivo informado pelo aluno ao encerrar antecipadamente.
@@ -453,6 +455,7 @@ struct WorkoutSession: Identifiable, Codable {
         targetCalories: Int? = nil,
         routePoints: [RouteCoordinate] = [],
         stepCount: Int? = nil,
+        pausedDurationSeconds: Int = 0,
         endedEarly: Bool = false,
         earlyEndJustification: String? = nil,
         autoEndedByInactivity: Bool = false
@@ -475,6 +478,7 @@ struct WorkoutSession: Identifiable, Codable {
         self.targetCalories = targetCalories
         self.routePoints = routePoints
         self.stepCount = stepCount
+        self.pausedDurationSeconds = pausedDurationSeconds
         self.endedEarly = endedEarly
         self.earlyEndJustification = earlyEndJustification
         self.autoEndedByInactivity = autoEndedByInactivity
@@ -500,6 +504,7 @@ struct WorkoutSession: Identifiable, Codable {
         targetCalories = try container.decodeIfPresent(Int.self, forKey: .targetCalories)
         routePoints = try container.decodeIfPresent([RouteCoordinate].self, forKey: .routePoints) ?? []
         stepCount = try container.decodeIfPresent(Int.self, forKey: .stepCount)
+        pausedDurationSeconds = try container.decodeIfPresent(Int.self, forKey: .pausedDurationSeconds) ?? 0
         endedEarly = try container.decodeIfPresent(Bool.self, forKey: .endedEarly) ?? false
         earlyEndJustification = try container.decodeIfPresent(String.self, forKey: .earlyEndJustification)
         autoEndedByInactivity = try container.decodeIfPresent(Bool.self, forKey: .autoEndedByInactivity) ?? false
@@ -527,6 +532,9 @@ struct WorkoutSession: Identifiable, Codable {
             try container.encode(routePoints, forKey: .routePoints)
         }
         try container.encodeIfPresent(stepCount, forKey: .stepCount)
+        if pausedDurationSeconds > 0 {
+            try container.encode(pausedDurationSeconds, forKey: .pausedDurationSeconds)
+        }
         try container.encode(endedEarly, forKey: .endedEarly)
         try container.encodeIfPresent(earlyEndJustification, forKey: .earlyEndJustification)
         try container.encode(autoEndedByInactivity, forKey: .autoEndedByInactivity)
@@ -537,12 +545,17 @@ struct WorkoutSession: Identifiable, Codable {
         case heartRateSamples, caloriesBurned, completedExercises, totalExercises
         case exerciseRecords, tookPreWorkout
         case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel
-        case targetCalories, routePoints, stepCount
+        case targetCalories, routePoints, stepCount, pausedDurationSeconds
         case endedEarly, earlyEndJustification, autoEndedByInactivity
     }
 
     var duration: TimeInterval {
         (endedAt ?? .now).timeIntervalSince(startedAt)
+    }
+
+    /// Tempo ativo de treino (duração de parede menos pausas).
+    var activeDurationSeconds: Int {
+        max(0, Int(duration) - max(0, pausedDurationSeconds))
     }
 
     var averageHeartRate: Double {
@@ -607,12 +620,12 @@ struct WorkoutSession: Identifiable, Codable {
         return targetDistanceKm ?? 0
     }
 
-    /// Ritmo em s/km: gravado ou duração ÷ distância.
+    /// Ritmo em s/km: gravado ou tempo ativo ÷ distância.
     var displayPaceSecondsPerKm: Int? {
         if let pace = averagePaceSecondsPerKm, pace > 0 { return pace }
         let km = displayDistanceKm
         guard km > 0.05 else { return nil }
-        return max(1, Int((duration / km).rounded()))
+        return max(1, Int((Double(activeDurationSeconds) / km).rounded()))
     }
 
     var totalRestSeconds: Int {

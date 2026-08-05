@@ -16,6 +16,8 @@ final class RunTrackingService: NSObject, ObservableObject {
     @Published private(set) var stepCount: Int = 0
     @Published private(set) var isPedometerAvailable: Bool = false
     @Published private(set) var isTracking = false
+    /// Pausa do treino: GPS continua (segmentos azuis); distância de desempenho não avança.
+    @Published private(set) var isPaused = false
 
     /// Corrida, caminhada ou ciclismo — afeta classificação de movimento e pedômetro.
     private(set) var modality: OutdoorCardioModality = .running
@@ -27,6 +29,10 @@ final class RunTrackingService: NSObject, ObservableObject {
     private var lastAcceptedLocation: CLLocation?
     private var usesPedometerSteps = false
     private var motionActivityAvailable = false
+    /// Passos brutos do pedômetro (sessão); offset exclui o que foi contado em pausa.
+    private var latestPedometerRaw = 0
+    private var pedometerOffset = 0
+    private var pedometerRawWhenPaused: Int?
 
     var distanceKm: Double { distanceMeters / 1_000.0 }
 
@@ -73,6 +79,10 @@ final class RunTrackingService: NSObject, ObservableObject {
         activityState = .unknown
         lastAcceptedLocation = nil
         usesPedometerSteps = false
+        latestPedometerRaw = 0
+        pedometerOffset = 0
+        pedometerRawWhenPaused = nil
+        isPaused = false
         isTracking = true
 
         locationManager.activityType = .fitness
@@ -86,9 +96,53 @@ final class RunTrackingService: NSObject, ObservableObject {
         startMotionActivityUpdates()
     }
 
+    /// Pausa/retoma o treino: localização continua para pintar a rota em azul.
+    func setPaused(_ paused: Bool) {
+        guard isTracking, isPaused != paused else { return }
+        isPaused = paused
+        if paused {
+            activityState = .stationary
+            currentSpeedMetersPerSecond = 0
+            pedometerRawWhenPaused = latestPedometerRaw
+            // Marca o ponto de entrada na pausa (segmento azul no mapa).
+            if let location = currentLocation ?? lastAcceptedLocation {
+                appendBoundaryRoutePoint(location, isPaused: true)
+            }
+        } else {
+            // Exclui passos acumulados só durante a pausa.
+            if let rawAtPause = pedometerRawWhenPaused {
+                pedometerOffset += max(0, latestPedometerRaw - rawAtPause)
+            }
+            pedometerRawWhenPaused = nil
+            if usesPedometerSteps {
+                stepCount = max(0, latestPedometerRaw - pedometerOffset)
+            }
+            // Evita somar o deslocamento durante a pausa na distância de treino.
+            if let location = currentLocation {
+                lastAcceptedLocation = location
+                appendBoundaryRoutePoint(location, isPaused: false)
+            }
+        }
+    }
+
+    /// Insere ponto de fronteira pausa/ativo (pode coincidir com o anterior se o flag mudou).
+    private func appendBoundaryRoutePoint(_ location: CLLocation, isPaused: Bool) {
+        let point = RouteCoordinate(location: location, isPaused: isPaused)
+        if let last = routePoints.last,
+           last.isPaused == isPaused {
+            let moved = CLLocation(latitude: last.latitude, longitude: last.longitude)
+                .distance(from: location)
+            if moved < 1 { return }
+        }
+        routePoints.append(point)
+        lastAcceptedLocation = location
+        currentLocation = location
+    }
+
     func stop() {
         guard isTracking else { return }
         isTracking = false
+        isPaused = false
         locationManager.stopUpdatingLocation()
         locationManager.allowsBackgroundLocationUpdates = false
         pedometer.stopUpdates()
@@ -146,8 +200,10 @@ final class RunTrackingService: NSObject, ObservableObject {
             guard let self, error == nil, let data else { return }
             let steps = data.numberOfSteps.intValue
             Task { @MainActor in
+                self.latestPedometerRaw = max(0, steps)
+                guard !self.isPaused else { return }
                 self.usesPedometerSteps = true
-                self.stepCount = max(0, steps)
+                self.stepCount = max(0, self.latestPedometerRaw - self.pedometerOffset)
             }
         }
     }
@@ -163,6 +219,10 @@ final class RunTrackingService: NSObject, ObservableObject {
     }
 
     private func applyMotionActivity(_ activity: CMMotionActivity) {
+        guard !isPaused else {
+            activityState = .stationary
+            return
+        }
         let next: RunningActivityState
         switch modality {
         case .cycling:
@@ -212,14 +272,18 @@ final class RunTrackingService: NSObject, ObservableObject {
             let maxJumpSpeed = modality == .cycling ? 20.0 : 8.0
             if delta > maxJumpSpeed * max(dt, 1), dt < 5 { return }
             if delta > 120, dt < 5 { return }
-            if delta >= 1 {
+            // Distância de treino só em movimento ativo (não durante pausa).
+            if !isPaused, delta >= 1 {
                 distanceMeters += delta
             }
         }
 
         lastAcceptedLocation = location
         currentLocation = location
-        if location.speed >= 0 {
+        if isPaused {
+            currentSpeedMetersPerSecond = 0
+            activityState = .stationary
+        } else if location.speed >= 0 {
             currentSpeedMetersPerSecond = location.speed
             // GPS como fallback / reforço quando CoreMotion não classifica.
             if !motionActivityAvailable || activityState == .unknown {
@@ -240,7 +304,7 @@ final class RunTrackingService: NSObject, ObservableObject {
             activityState = .stationary
         }
 
-        let point = RouteCoordinate(location: location)
+        let point = RouteCoordinate(location: location, isPaused: isPaused)
         if let last = routePoints.last {
             let moved = CLLocation(latitude: last.latitude, longitude: last.longitude)
                 .distance(from: location)

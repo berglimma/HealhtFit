@@ -266,6 +266,19 @@ struct WorkoutShareCardView: View {
                 shareStat(value: runningKmValue, label: "KM")
                 shareStat(value: runningTempoValue, label: "TEMPO")
             }
+            if session.pausedDurationSeconds > 0 {
+                HStack(spacing: 6) {
+                    shareStat(
+                        value: DurationFormatting.format(seconds: session.pausedDurationSeconds),
+                        label: "PAUSA"
+                    )
+                    shareStat(
+                        value: DurationFormatting.format(seconds: session.activeDurationSeconds),
+                        label: "ATIVO"
+                    )
+                    Color.clear.frame(maxWidth: .infinity)
+                }
+            }
         }
     }
 
@@ -677,6 +690,12 @@ struct WorkoutShareCardView: View {
             )
 
             if isCardio {
+                if session.pausedDurationSeconds > 0 {
+                    shareStat(
+                        value: DurationFormatting.format(seconds: session.pausedDurationSeconds),
+                        label: "PAUSA"
+                    )
+                }
                 if session.caloriesBurned > 0 {
                     shareStat(value: "\(Int(session.caloriesBurned))", label: "KCAL")
                 }

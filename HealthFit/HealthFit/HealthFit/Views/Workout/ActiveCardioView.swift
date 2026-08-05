@@ -18,6 +18,9 @@ struct ActiveCardioView: View {
 
     @StateObject private var runTracker = RunTrackingService()
     @State private var elapsedSeconds = 0
+    @State private var isPaused = false
+    @State private var pauseStartedAt: Date?
+    @State private var totalPausedSeconds = 0
     @State private var finishedSession: WorkoutSession?
     @State private var isFinishing = false
     @State private var superationMessage: String?
@@ -26,7 +29,7 @@ struct ActiveCardioView: View {
     @State private var lastProgressMilestone = -1
     @State private var lastHandledFinishTick = 0
 
-    /// Side-effects; display uses wall clock from session start.
+    /// Side-effects; display uses wall clock from session start minus pauses.
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var isRunningSession: Bool { config.isRunningSession }
@@ -174,6 +177,7 @@ struct ActiveCardioView: View {
                         if isOutdoorGPS {
                             runExtraMetricsRow
                         }
+                        pauseControls
                         endButton
                     }
                     .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
@@ -200,9 +204,13 @@ struct ActiveCardioView: View {
             }
         }
         .onReceive(clock) { _ in
-            elapsedSeconds = wallClockElapsedSeconds()
+            if !isPaused {
+                elapsedSeconds = activeElapsedSeconds()
+            }
             syncWithWatch()
-            updateCalorieMotivation()
+            if !isPaused {
+                updateCalorieMotivation()
+            }
             syncWatchData()
             if shouldAutoEndByInactivity {
                 finishCardio(autoEndedByInactivity: true)
@@ -219,7 +227,7 @@ struct ActiveCardioView: View {
             finishedSession = ended
         }
         .onAppear {
-            elapsedSeconds = wallClockElapsedSeconds()
+            elapsedSeconds = activeElapsedSeconds()
             syncWithWatch()
             if isOutdoorGPS {
                 runTracker.prepareForSession(modality: trackingModality)
@@ -314,6 +322,9 @@ struct ActiveCardioView: View {
             Circle()
                 .fill(RoutePerformanceColoring.color(for: .below))
                 .frame(width: 7, height: 7)
+            Circle()
+                .fill(RoutePerformanceColoring.color(for: .paused))
+                .frame(width: 7, height: 7)
             Text(RoutePerformanceColoring.legendText)
                 .font(.caption2)
                 .foregroundStyle(AppTheme.textSecondary)
@@ -325,12 +336,12 @@ struct ActiveCardioView: View {
 
     private var activityStateBanner: some View {
         HStack(spacing: 10) {
-            Image(systemName: runTracker.activityState.systemImage)
+            Image(systemName: isPaused ? "pause.circle.fill" : runTracker.activityState.systemImage)
                 .font(.title3)
-            Text(runTracker.activityState.label)
+            Text(isPaused ? "Pausado" : runTracker.activityState.label)
                 .font(.headline)
             Spacer()
-            if runTracker.currentSpeedMetersPerSecond > 0 {
+            if !isPaused, runTracker.currentSpeedMetersPerSecond > 0 {
                 Text(String(format: "%.1f km/h", runTracker.currentSpeedMetersPerSecond * 3.6))
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(AppTheme.textSecondary)
@@ -344,6 +355,9 @@ struct ActiveCardioView: View {
     }
 
     private var activityStateColor: Color {
+        if isPaused {
+            return Color(red: 0.20, green: 0.48, blue: 0.96)
+        }
         switch runTracker.activityState {
         case .running, .hardCycling: return AppTheme.accent
         case .walking, .lightCycling, .moving: return AppTheme.accentSecondary
@@ -355,17 +369,35 @@ struct ActiveCardioView: View {
     private var liveTimerBanner: some View {
         VStack(spacing: 4) {
             TimelineView(.periodic(from: .now, by: 1)) { context in
-                Text(DurationFormatting.formatElapsedClock(seconds: wallClockElapsedSeconds(at: context.date)))
+                Text(DurationFormatting.formatElapsedClock(seconds: activeElapsedSeconds(at: context.date)))
                     .font(.system(size: 44, weight: .bold, design: .monospaced))
-                    .foregroundStyle(AppTheme.textPrimary)
+                    .foregroundStyle(isPaused ? AppTheme.textSecondary : AppTheme.textPrimary)
                     .contentTransition(.numericText())
             }
-            Text("Tempo em tempo real")
+            Text(isPaused ? "Treino pausado" : "Tempo em tempo real")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
+            if isPaused || totalPausedSeconds > 0 {
+                pauseChronometer
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
+    }
+
+    private var pauseChronometer: some View {
+        VStack(spacing: 2) {
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                Text(DurationFormatting.formatElapsedClock(seconds: pauseElapsedSeconds(at: context.date)))
+                    .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color(red: 0.35, green: 0.58, blue: 1.0))
+                    .contentTransition(.numericText())
+            }
+            Text("Tempo de pausa")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .padding(.top, 6)
     }
 
     private var intensityBadge: some View {
@@ -480,15 +512,21 @@ struct ActiveCardioView: View {
                     if !isOutdoorGPS {
                         Text(DurationFormatting.formatElapsedClock(seconds: elapsedSeconds))
                             .font(.caption.weight(.semibold).monospaced())
-                            .foregroundStyle(AppTheme.accent)
+                            .foregroundStyle(isPaused ? AppTheme.textSecondary : AppTheme.accent)
+                        if isPaused || totalPausedSeconds > 0 {
+                            pauseChronometer
+                        }
                     }
                 } else {
                     Text(DurationFormatting.formatElapsedClock(seconds: elapsedSeconds))
                         .font(.system(size: 36, weight: .bold, design: .monospaced))
-                        .foregroundStyle(AppTheme.textPrimary)
+                        .foregroundStyle(isPaused ? AppTheme.textSecondary : AppTheme.textPrimary)
                     Text("Meta: \(DurationFormatting.format(seconds: config.targetDurationSeconds))")
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
+                    if isPaused || totalPausedSeconds > 0 {
+                        pauseChronometer
+                    }
                 }
             }
         }
@@ -698,11 +736,95 @@ struct ActiveCardioView: View {
         .disabled(isFinishing)
     }
 
-    private func wallClockElapsedSeconds(at date: Date = Date()) -> Int {
+    private var pauseControls: some View {
+        Button {
+            togglePause()
+        } label: {
+            Label(
+                isPaused ? "Retomar" : "Pausar",
+                systemImage: isPaused ? "play.fill" : "pause.fill"
+            )
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .font(.headline)
+            .foregroundStyle(isPaused ? AppTheme.accent : AppTheme.textPrimary)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isPaused ? AppTheme.accent.opacity(0.18) : AppTheme.cardBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(
+                        isPaused ? AppTheme.accent.opacity(0.45) : Color.white.opacity(0.08),
+                        lineWidth: 1
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isFinishing)
+        .accessibilityLabel(isPaused ? "Retomar treino" : "Pausar treino")
+    }
+
+    /// Tempo ativo: parede desde o início menos todos os intervalos de pausa (inclui pausa aberta).
+    private func activeElapsedSeconds(at date: Date = Date()) -> Int {
         guard let startedAt = workoutStore.activeSession?.startedAt else {
             return max(0, elapsedSeconds)
         }
-        return max(0, Int(date.timeIntervalSince(startedAt)))
+        let wall = max(0, Int(date.timeIntervalSince(startedAt)))
+        return max(0, wall - pausedSecondsAccumulated(at: date))
+    }
+
+    private func pausedSecondsAccumulated(at date: Date = Date()) -> Int {
+        var total = max(0, totalPausedSeconds)
+        if let pauseStartedAt {
+            total += max(0, Int(date.timeIntervalSince(pauseStartedAt)))
+        }
+        return total
+    }
+
+    /// Cronômetro de pausa: só a pausa atual se aberta; senão o total acumulado.
+    private func pauseElapsedSeconds(at date: Date = Date()) -> Int {
+        if let pauseStartedAt {
+            return max(0, totalPausedSeconds) + max(0, Int(date.timeIntervalSince(pauseStartedAt)))
+        }
+        return max(0, totalPausedSeconds)
+    }
+
+    private func togglePause() {
+        if isPaused {
+            resumeCardio()
+        } else {
+            pauseCardio()
+        }
+    }
+
+    private func pauseCardio() {
+        guard !isPaused, !isFinishing else { return }
+        isPaused = true
+        pauseStartedAt = .now
+        if isOutdoorGPS {
+            runTracker.setPaused(true)
+        }
+    }
+
+    private func resumeCardio() {
+        guard isPaused else { return }
+        if let pauseStartedAt {
+            totalPausedSeconds += max(0, Int(Date().timeIntervalSince(pauseStartedAt)))
+        }
+        pauseStartedAt = nil
+        isPaused = false
+        if isOutdoorGPS {
+            runTracker.setPaused(false)
+        }
+        elapsedSeconds = activeElapsedSeconds()
+    }
+
+    private func finalizedPausedSeconds() -> Int {
+        if isPaused, let pauseStartedAt {
+            return max(0, totalPausedSeconds) + max(0, Int(Date().timeIntervalSince(pauseStartedAt)))
+        }
+        return max(0, totalPausedSeconds)
     }
 
     private func syncWithWatch() {
@@ -763,6 +885,15 @@ struct ActiveCardioView: View {
         runTracker.stop()
         watchConnectivity.stopWorkoutOnWatch()
 
+        let finalPausedSeconds = finalizedPausedSeconds()
+        // Congela cronômetros ativos antes de gravar.
+        if isPaused {
+            totalPausedSeconds = finalPausedSeconds
+            pauseStartedAt = nil
+            isPaused = false
+        }
+        elapsedSeconds = activeElapsedSeconds()
+
         guard var session = workoutStore.activeSession else {
             if finishedSession == nil,
                let last = workoutStore.sessionHistory.first,
@@ -798,6 +929,7 @@ struct ActiveCardioView: View {
             : nil
         session.cardioIntensityLabel = config.intensity.rawValue
         session.targetCalories = config.targetCalories
+        session.pausedDurationSeconds = finalPausedSeconds
         if isOutdoorGPS {
             session.routePoints = runTracker.routePoints
             // Passos na corrida e na caminhada (pedômetro / estimativa).
@@ -839,7 +971,7 @@ struct ActiveCardioView: View {
 
         Task {
             await healthKitManager.saveWorkout(
-                duration: session.duration,
+                duration: TimeInterval(session.activeDurationSeconds),
                 calories: session.caloriesBurned,
                 heartRate: session.averageHeartRate,
                 activityType: hkActivity

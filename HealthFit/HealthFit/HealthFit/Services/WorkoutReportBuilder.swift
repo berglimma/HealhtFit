@@ -77,6 +77,9 @@ enum WorkoutReportBuilder {
                 lines.append("Tempo ativo: \(DurationFormatting.format(seconds: record.elapsedSeconds))")
                 lines.append("Meta atingida: \(record.isCompleted ? "Sim" : "Parcial")")
             }
+            if session.pausedDurationSeconds > 0 {
+                lines.append("Tempo de pausa: \(DurationFormatting.format(seconds: session.pausedDurationSeconds))")
+            }
             if let targetKm = session.targetDistanceKm, targetKm > 0,
                let report = MarathonReportBuilder.build(session: session, allSessions: allSessions) {
                 lines.append(contentsOf: MarathonReportBuilder.emailLines(report: report, session: session))
@@ -204,8 +207,8 @@ enum WorkoutReportBuilder {
 
         let distanceKm = session.displayDistanceKm
         if session.isOutdoorCyclingSession {
-            if distanceKm > 0.05, session.duration > 0 {
-                let kmh = distanceKm / (session.duration / 3600.0)
+            if distanceKm > 0.05, session.activeDurationSeconds > 0 {
+                let kmh = distanceKm / (Double(session.activeDurationSeconds) / 3600.0)
                 lines.append(String(format: "Ritmo: %.1f km/h", kmh))
             } else {
                 lines.append("Ritmo: —")
@@ -228,7 +231,10 @@ enum WorkoutReportBuilder {
             lines.append("Km: —")
         }
 
-        lines.append("Tempo: \(DurationFormatting.format(seconds: Int(session.duration)))")
+        lines.append("Tempo: \(DurationFormatting.format(seconds: session.activeDurationSeconds))")
+        if session.pausedDurationSeconds > 0 {
+            lines.append("Pausa: \(DurationFormatting.format(seconds: session.pausedDurationSeconds))")
+        }
 
         return lines
     }

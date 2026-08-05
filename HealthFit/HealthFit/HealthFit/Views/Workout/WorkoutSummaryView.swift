@@ -559,6 +559,21 @@ struct WorkoutSummaryView: View {
                     }
                 }
             }
+
+            if isCardioSession, session.pausedDurationSeconds > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: "pause.circle.fill")
+                        .foregroundStyle(Color(red: 0.35, green: 0.58, blue: 1.0))
+                    Text("Pausa: \(DurationFormatting.format(seconds: session.pausedDurationSeconds))")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Spacer()
+                    Text("Ativo: \(DurationFormatting.format(seconds: session.activeDurationSeconds))")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .padding(.top, 4)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding()

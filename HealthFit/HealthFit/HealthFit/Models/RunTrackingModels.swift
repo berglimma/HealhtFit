@@ -50,6 +50,8 @@ struct RouteCoordinate: Identifiable, Codable, Hashable {
     var altitude: Double?
     var timestamp: Date
     var speedMetersPerSecond: Double?
+    /// Gravado durante pausa do treino (segmento azul no mapa).
+    var isPaused: Bool
 
     init(
         id: UUID = UUID(),
@@ -57,7 +59,8 @@ struct RouteCoordinate: Identifiable, Codable, Hashable {
         longitude: Double,
         altitude: Double? = nil,
         timestamp: Date = .now,
-        speedMetersPerSecond: Double? = nil
+        speedMetersPerSecond: Double? = nil,
+        isPaused: Bool = false
     ) {
         self.id = id
         self.latitude = latitude
@@ -65,16 +68,46 @@ struct RouteCoordinate: Identifiable, Codable, Hashable {
         self.altitude = altitude
         self.timestamp = timestamp
         self.speedMetersPerSecond = speedMetersPerSecond
+        self.isPaused = isPaused
     }
 
-    init(location: CLLocation) {
+    init(location: CLLocation, isPaused: Bool = false) {
         self.init(
             latitude: location.coordinate.latitude,
             longitude: location.coordinate.longitude,
             altitude: location.altitude,
             timestamp: location.timestamp,
-            speedMetersPerSecond: location.speed >= 0 ? location.speed : nil
+            speedMetersPerSecond: location.speed >= 0 ? location.speed : nil,
+            isPaused: isPaused
         )
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        latitude = try container.decode(Double.self, forKey: .latitude)
+        longitude = try container.decode(Double.self, forKey: .longitude)
+        altitude = try container.decodeIfPresent(Double.self, forKey: .altitude)
+        timestamp = try container.decodeIfPresent(Date.self, forKey: .timestamp) ?? .now
+        speedMetersPerSecond = try container.decodeIfPresent(Double.self, forKey: .speedMetersPerSecond)
+        isPaused = try container.decodeIfPresent(Bool.self, forKey: .isPaused) ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(latitude, forKey: .latitude)
+        try container.encode(longitude, forKey: .longitude)
+        try container.encodeIfPresent(altitude, forKey: .altitude)
+        try container.encode(timestamp, forKey: .timestamp)
+        try container.encodeIfPresent(speedMetersPerSecond, forKey: .speedMetersPerSecond)
+        if isPaused {
+            try container.encode(isPaused, forKey: .isPaused)
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, latitude, longitude, altitude, timestamp, speedMetersPerSecond, isPaused
     }
 
     var coordinate: CLLocationCoordinate2D {
@@ -203,6 +236,8 @@ enum RoutePerformanceMetric: String, Codable, CaseIterable {
 enum RoutePerformanceBand: String, Equatable, CaseIterable {
     /// Parado / quase parado — cinza (não conta como rendimento ruim).
     case stopped
+    /// Trecho com pausa do treino ativa — azul.
+    case paused
     /// Abaixo do rendimento (< ~90% da mediana).
     case below
     /// Rendimento intermediário (~90–110% da mediana).
@@ -210,9 +245,10 @@ enum RoutePerformanceBand: String, Equatable, CaseIterable {
     /// Rendimento ótimo (≥ ~110% da mediana).
     case optimal
 
-    /// Score canônico para ordenação / legendas: parado=-1, abaixo=0, meio=0.5, ótimo=1.
+    /// Score canônico: pausa=-2, parado=-1, abaixo=0, meio=0.5, ótimo=1.
     var performanceScore: Double {
         switch self {
+        case .paused: return -2
         case .stopped: return -1
         case .below: return 0
         case .intermediate: return 0.5
@@ -259,10 +295,10 @@ enum RoutePerformanceColoring {
     /// Rendimento ótimo: velocidade ≥ 110% da mediana em movimento.
     static let optimalRatio = 1.10
 
-    static let legendText = "Verde ótimo · Amarelo intermediário · Vermelho abaixo"
+    static let legendText = "Verde ótimo · Amarelo intermediário · Vermelho abaixo · Azul pausa"
 
     /// Gera segmentos coloridos por faixa relativa à mediana de velocidades em movimento.
-    /// Verde = ótimo, amarelo = intermediário, vermelho = abaixo; parado = cinza.
+    /// Verde = ótimo, amarelo = intermediário, vermelho = abaixo; parado = cinza; pausa = azul.
     static func segments(
         from routePoints: [RouteCoordinate],
         metric: RoutePerformanceMetric = .pace
@@ -274,26 +310,42 @@ enum RoutePerformanceColoring {
 
         var rawSpeeds: [Double] = []
         rawSpeeds.reserveCapacity(routePoints.count - 1)
+        var isPausedSegment: [Bool] = []
+        isPausedSegment.reserveCapacity(routePoints.count - 1)
 
         for index in 1..<routePoints.count {
-            rawSpeeds.append(segmentSpeed(from: routePoints[index - 1], to: routePoints[index]))
+            let a = routePoints[index - 1]
+            let b = routePoints[index]
+            // Segmento em pausa se qualquer extremo foi gravado durante pausa.
+            isPausedSegment.append(a.isPaused || b.isPaused)
+            rawSpeeds.append(segmentSpeed(from: a, to: b))
         }
 
-        let movingSpeeds = rawSpeeds.filter { $0 >= movingSpeedFloor }
+        // Pausa não entra na mediana (evita puxar faixas de desempenho).
+        let movingSpeeds = zip(rawSpeeds, isPausedSegment)
+            .compactMap { speed, paused -> Double? in
+                guard !paused, speed >= movingSpeedFloor else { return nil }
+                return speed
+            }
         let medianSpeed = median(of: movingSpeeds) ?? movingSpeedFloor
 
         var result: [RoutePerformanceSegment] = []
         result.reserveCapacity(rawSpeeds.count)
 
         for index in 0..<rawSpeeds.count {
-            let band = band(forSpeed: rawSpeeds[index], medianMovingSpeed: medianSpeed)
+            let performanceBand: RoutePerformanceBand
+            if isPausedSegment[index] {
+                performanceBand = .paused
+            } else {
+                performanceBand = band(forSpeed: rawSpeeds[index], medianMovingSpeed: medianSpeed)
+            }
             let a = routePoints[index]
             let b = routePoints[index + 1]
             result.append(
                 RoutePerformanceSegment(
                     start: a.coordinate,
                     end: b.coordinate,
-                    band: band
+                    band: performanceBand
                 )
             )
         }
@@ -312,6 +364,8 @@ enum RoutePerformanceColoring {
 
     static func color(for band: RoutePerformanceBand) -> Color {
         switch band {
+        case .paused:
+            return Color(red: 0.20, green: 0.48, blue: 0.96)
         case .stopped:
             return Color(red: 0.55, green: 0.55, blue: 0.58)
         case .below:
@@ -323,8 +377,9 @@ enum RoutePerformanceColoring {
         }
     }
 
-    /// Mapeia score canônico (−1…1) para cor discreta das três faixas (+ cinza parado).
+    /// Mapeia score canônico para cor discreta das faixas (+ cinza parado, azul pausa).
     static func color(forScore score: Double) -> Color {
+        if score <= -1.5 { return color(for: .paused) }
         if score < 0 { return color(for: .stopped) }
         if score < 0.25 { return color(for: .below) }
         if score < 0.75 { return color(for: .intermediate) }
