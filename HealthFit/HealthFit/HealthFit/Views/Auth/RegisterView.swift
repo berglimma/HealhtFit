@@ -12,6 +12,8 @@ struct RegisterView: View {
     @State private var confirmPassword = ""
     @State private var selectedBiotype: Biotype = .mesomorph
     @State private var selectedGoal: FitnessGoal = .muscleGain
+    @State private var dateOfBirth = Calendar.current.date(byAdding: .year, value: -25, to: .now) ?? .now
+    @State private var selectedCountryCode = CountryOption.defaultCode()
     @State private var acceptedTerms = false
     
     private var isValid: Bool {
@@ -19,6 +21,7 @@ struct RegisterView: View {
             && email.contains("@")
             && PasswordPolicy.isValid(password)
             && password == confirmPassword
+            && UserProfile.isValidDateOfBirth(dateOfBirth)
             && acceptedTerms
     }
     
@@ -90,6 +93,41 @@ struct RegisterView: View {
                             confirmPassword: confirmPassword
                         )
                     }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Data de nascimento *")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.textPrimary)
+                        DatePicker(
+                            "Data de nascimento",
+                            selection: $dateOfBirth,
+                            in: ...Calendar.current.date(byAdding: .year, value: -14, to: .now)!,
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(AppTheme.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        Text("Obrigatório · idade atual: \(UserProfile.age(from: dateOfBirth)) anos")
+                            .font(.caption)
+                            .foregroundStyle(
+                                UserProfile.isValidDateOfBirth(dateOfBirth)
+                                    ? AppTheme.textSecondary
+                                    : .red
+                            )
+
+                        Text("País")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Picker("País", selection: $selectedCountryCode) {
+                            ForEach(CountryOption.catalog) { country in
+                                Text("\(country.flagEmoji)  \(country.name)").tag(country.code)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
                     
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Biotipo")
@@ -147,7 +185,9 @@ struct RegisterView: View {
                                 email: email,
                                 password: password,
                                 biotype: selectedBiotype,
-                                goal: selectedGoal
+                                goal: selectedGoal,
+                                dateOfBirth: dateOfBirth,
+                                countryCode: selectedCountryCode
                             )
                             if authService.isAuthenticated { dismiss() }
                         }

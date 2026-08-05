@@ -10,10 +10,13 @@ struct RunRouteMapView: View {
     var height: CGFloat = 220
     /// Ritmo (corrida) ou velocidade (bike) — mais rápido = verde.
     var performanceMetric: RoutePerformanceMetric = .pace
-    /// Pontos de salto (surf/kitesurf) para anotar no mapa.
+    /// Pontos de salto (surf/kitesurf) para anotar no mapa com altura.
     var jumpEvents: [SurfJumpEvent] = []
+    /// Exibe controle Mapa 2D / 3D (surf e kitesurf).
+    var allows3DMode: Bool = false
 
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
+    @State private var is3DEnabled = false
 
     private var coordinates: [CLLocationCoordinate2D] {
         routePoints.map(\.coordinate)
@@ -27,66 +30,151 @@ struct RunRouteMapView: View {
         RoutePerformanceColoring.segments(from: routePoints, metric: performanceMetric)
     }
 
+    private var mapCenter: CLLocationCoordinate2D? {
+        if followUser, let user = userCoordinate { return user }
+        if let region = fittingRegion() { return region.center }
+        return userCoordinate ?? startCoordinate
+    }
+
     var body: some View {
-        Map(position: $cameraPosition) {
-            ForEach(performanceSegments) { segment in
-                MapPolyline(coordinates: segment.coordinates)
-                    .stroke(segment.color, style: StrokeStyle(lineWidth: 4.5, lineCap: .round, lineJoin: .round))
-            }
-
-            if let start = startCoordinate {
-                Annotation("Início", coordinate: start) {
-                    ZStack {
-                        Circle()
-                            .fill(AppTheme.accent)
-                            .frame(width: 16, height: 16)
-                        Circle()
-                            .stroke(Color.white, lineWidth: 2)
-                            .frame(width: 16, height: 16)
-                    }
+        VStack(alignment: .leading, spacing: 8) {
+            if allows3DMode {
+                Picker("Mapa", selection: $is3DEnabled) {
+                    Text("2D").tag(false)
+                    Text("3D").tag(true)
                 }
+                .pickerStyle(.segmented)
+                .accessibilityLabel("Modo do mapa")
             }
 
-            ForEach(Array(jumpEvents.enumerated()), id: \.element.id) { index, jump in
-                if let coordinate = jump.coordinate {
-                    Annotation(
-                        String(format: "S%d · %.1fm", index + 1, jump.heightMeters),
-                        coordinate: coordinate
-                    ) {
+            Map(position: $cameraPosition) {
+                ForEach(performanceSegments) { segment in
+                    MapPolyline(coordinates: segment.coordinates)
+                        .stroke(
+                            segment.color,
+                            style: StrokeStyle(lineWidth: allows3DMode ? 5.5 : 4.5, lineCap: .round, lineJoin: .round)
+                        )
+                }
+
+                if let start = startCoordinate {
+                    Annotation("Início", coordinate: start) {
                         ZStack {
-                            Image(systemName: "arrow.up.circle.fill")
-                                .font(.title3)
-                                .foregroundStyle(.orange)
-                                .shadow(radius: 2)
+                            Circle()
+                                .fill(AppTheme.accent)
+                                .frame(width: 16, height: 16)
+                            Circle()
+                                .stroke(Color.white, lineWidth: 2)
+                                .frame(width: 16, height: 16)
                         }
                     }
                 }
-            }
 
-            if showsUserLocation {
-                UserAnnotation()
+                ForEach(Array(jumpEvents.enumerated()), id: \.element.id) { index, jump in
+                    if let coordinate = jump.coordinate {
+                        Annotation("", coordinate: coordinate) {
+                            jumpMarker(index: index + 1, heightMeters: jump.heightMeters)
+                        }
+                    }
+                }
+
+                if showsUserLocation {
+                    UserAnnotation()
+                }
+            }
+            .mapStyle(mapStyle)
+            .mapControls {
+                MapCompass()
+                MapUserLocationButton()
+                if is3DEnabled {
+                    MapPitchToggle()
+                }
+            }
+            .frame(height: height)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .onAppear {
+                updateCamera(animated: false)
+            }
+            .onChange(of: routePoints.count) { _, _ in
+                updateCamera(animated: true)
+            }
+            .onChange(of: userCoordinate?.latitude) { _, _ in
+                guard followUser else { return }
+                updateCamera(animated: true)
+            }
+            .onChange(of: is3DEnabled) { _, _ in
+                updateCamera(animated: true)
+            }
+            .onChange(of: jumpEvents.count) { _, _ in
+                updateCamera(animated: true)
             }
         }
-        .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
-        .mapControls {
-            MapCompass()
-            MapUserLocationButton()
+    }
+
+    private var mapStyle: MapStyle {
+        if is3DEnabled {
+            return .standard(
+                elevation: .realistic,
+                pointsOfInterest: .excludingAll,
+                showsTraffic: false
+            )
         }
-        .frame(height: height)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .onAppear {
-            updateCamera(animated: false)
-        }
-        .onChange(of: routePoints.count) { _, _ in
-            updateCamera(animated: true)
-        }
-        .onChange(of: userCoordinate?.latitude) { _, _ in
-            guard followUser else { return }
-            updateCamera(animated: true)
+        return .standard(elevation: .flat, pointsOfInterest: .excludingAll)
+    }
+
+    private func jumpMarker(index: Int, heightMeters: Double) -> some View {
+        VStack(spacing: 2) {
+            Text(String(format: "%.1f m", heightMeters))
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(
+                    LinearGradient(
+                        colors: [Color.orange, Color.red.opacity(0.9)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .clipShape(Capsule())
+                .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
+
+            ZStack {
+                Circle()
+                    .fill(Color.orange)
+                    .frame(width: 22, height: 22)
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .overlay(
+                Circle()
+                    .stroke(Color.white, lineWidth: 2)
+            )
+
+            Text("#\(index)")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(Color.black.opacity(0.55))
+                .clipShape(Capsule())
         }
     }
 
     private func updateCamera(animated: Bool) {
+        if is3DEnabled, let center = mapCenter {
+            let camera = MapCamera(
+                centerCoordinate: center,
+                distance: 900,
+                heading: 25,
+                pitch: 58
+            )
+            withAnimation(animated ? .easeInOut(duration: 0.4) : nil) {
+                cameraPosition = .camera(camera)
+            }
+            return
+        }
+
         if followUser, let user = userCoordinate {
             let region = MKCoordinateRegion(
                 center: user,
@@ -105,7 +193,13 @@ struct RunRouteMapView: View {
     }
 
     private func fittingRegion() -> MKCoordinateRegion? {
-        let coords = coordinates
+        var coords = coordinates
+        for jump in jumpEvents {
+            if let c = jump.coordinate {
+                coords.append(c)
+            }
+        }
+
         guard let first = coords.first else {
             if let user = userCoordinate {
                 return MKCoordinateRegion(

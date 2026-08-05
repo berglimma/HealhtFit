@@ -281,6 +281,10 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var weight: Double
     var height: Double
     var age: Int
+    /// Data de nascimento (obrigatória). Idade é recalculada a partir dela quando presente.
+    var dateOfBirth: Date?
+    /// ISO-3166 alpha-2 (ex.: BR) para bandeira no perfil.
+    var countryCode: String
     var caloricDeficit: Int
     var bodyMeasurements: BodyMeasurements
     /// Snapshot da medição anterior (usado no comparativo de 30 dias).
@@ -308,6 +312,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
         weight: Double = 75,
         height: Double = 175,
         age: Int = 28,
+        dateOfBirth: Date? = nil,
+        countryCode: String = CountryOption.defaultCode(),
         caloricDeficit: Int = 400,
         bodyMeasurements: BodyMeasurements = .empty,
         previousBodyMeasurements: BodyMeasurements? = nil,
@@ -329,7 +335,13 @@ struct UserProfile: Codable, Identifiable, Equatable {
         self.gender = gender
         self.weight = weight
         self.height = height
-        self.age = age
+        self.dateOfBirth = dateOfBirth
+        if let dateOfBirth {
+            self.age = Self.age(from: dateOfBirth)
+        } else {
+            self.age = age
+        }
+        self.countryCode = countryCode.isEmpty ? CountryOption.defaultCode() : countryCode.uppercased()
         self.caloricDeficit = caloricDeficit
         self.bodyMeasurements = bodyMeasurements
         self.previousBodyMeasurements = previousBodyMeasurements
@@ -357,7 +369,21 @@ struct UserProfile: Codable, Identifiable, Equatable {
         gender = try container.decodeIfPresent(Gender.self, forKey: .gender) ?? .male
         weight = try container.decode(Double.self, forKey: .weight)
         height = try container.decode(Double.self, forKey: .height)
-        age = try container.decode(Int.self, forKey: .age)
+        dateOfBirth = try container.decodeIfPresent(Date.self, forKey: .dateOfBirth)
+        let decodedAge = try container.decode(Int.self, forKey: .age)
+        if let dateOfBirth {
+            age = Self.age(from: dateOfBirth)
+        } else {
+            age = decodedAge
+        }
+        let rawCountry = try container.decodeIfPresent(String.self, forKey: .countryCode)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+        if let rawCountry, !rawCountry.isEmpty {
+            countryCode = rawCountry
+        } else {
+            countryCode = CountryOption.defaultCode()
+        }
         caloricDeficit = try container.decodeIfPresent(Int.self, forKey: .caloricDeficit) ?? 400
         bodyMeasurements = try container.decodeIfPresent(BodyMeasurements.self, forKey: .bodyMeasurements) ?? .empty
         previousBodyMeasurements = try container.decodeIfPresent(BodyMeasurements.self, forKey: .previousBodyMeasurements)
@@ -368,7 +394,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case id, name, displayName, email, personalTrainerName, personalTrainerEmail, usesPersonalTrainer
         case nutritionistName, nutritionistEmail, usesNutritionist
-        case biotype, goal, gender, weight, height, age, caloricDeficit
+        case biotype, goal, gender, weight, height, age, dateOfBirth, countryCode, caloricDeficit
         case bodyMeasurements, previousBodyMeasurements, createdAt, updatedAt
     }
 
@@ -385,6 +411,36 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var hasNutritionist: Bool {
         usesNutritionist
             && !nutritionistEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var hasValidDateOfBirth: Bool {
+        guard let dateOfBirth else { return false }
+        let years = Self.age(from: dateOfBirth)
+        return years >= 14 && years <= 100
+    }
+
+    var countryFlagEmoji: String {
+        CountryOption.flagEmoji(for: countryCode)
+    }
+
+    var countryDisplayName: String {
+        CountryOption.option(for: countryCode)?.name ?? countryCode
+    }
+
+    /// Atualiza idade a partir da data de nascimento.
+    mutating func applyDateOfBirth(_ date: Date) {
+        dateOfBirth = date
+        age = Self.age(from: date)
+    }
+
+    static func age(from dateOfBirth: Date, now: Date = .now) -> Int {
+        let years = Calendar.current.dateComponents([.year], from: dateOfBirth, to: now).year ?? 0
+        return max(0, years)
+    }
+
+    static func isValidDateOfBirth(_ date: Date, now: Date = .now) -> Bool {
+        let years = age(from: date, now: now)
+        return years >= 14 && years <= 100 && date <= now
     }
 
     /// Nome usado em saudações e mensagens do app.

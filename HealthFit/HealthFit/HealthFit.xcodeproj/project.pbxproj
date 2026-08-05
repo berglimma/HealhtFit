@@ -83,6 +83,7 @@
 		B1000701 /* JumpMetricsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000701 /* JumpMetricsService.swift */; };
 		B1000702 /* SurfKiteReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000702 /* SurfKiteReportBuilder.swift */; };
 		B1000703 /* SurfKiteLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000703 /* SurfKiteLogbookView.swift */; };
+		B1000704 /* CountryOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000704 /* CountryOption.swift */; };
 		B1000600 /* SubscriptionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000600 /* SubscriptionModels.swift */; };
 		B1000601 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000601 /* SubscriptionService.swift */; };
 		B1000602 /* SubscriptionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000602 /* SubscriptionViews.swift */; };
@@ -356,6 +357,7 @@
 		F1000701 /* JumpMetricsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpMetricsService.swift; sourceTree = "<group>"; };
 		F1000702 /* SurfKiteReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteReportBuilder.swift; sourceTree = "<group>"; };
 		F1000703 /* SurfKiteLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteLogbookView.swift; sourceTree = "<group>"; };
+		F1000704 /* CountryOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountryOption.swift; sourceTree = "<group>"; };
 		F1000600 /* SubscriptionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionModels.swift; sourceTree = "<group>"; };
 		F1000601 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
 		F1000602 /* SubscriptionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionViews.swift; sourceTree = "<group>"; };
@@ -619,6 +621,7 @@
 				F1000043 /* CardioModels.swift */,
 				F1000502 /* BikeModels.swift */,
 				F1000700 /* SurfKiteModels.swift */,
+				F1000704 /* CountryOption.swift */,
 				F1000600 /* SubscriptionModels.swift */,
 				F1000420 /* RunTrackingModels.swift */,
 				F1000004 /* MealModels.swift */,
@@ -1215,6 +1218,7 @@
 				B1000041 /* CardioModels.swift in Sources */,
 				B1000502 /* BikeModels.swift in Sources */,
 				B1000700 /* SurfKiteModels.swift in Sources */,
+				B1000704 /* CountryOption.swift in Sources */,
 				B1000600 /* SubscriptionModels.swift in Sources */,
 				B1000500 /* SwimmingMetricsAnalyzer.swift in Sources */,
 				B1000503 /* BikeMaintenanceService.swift in Sources */,

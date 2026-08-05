@@ -8,6 +8,7 @@ import FirebaseAuth
 final class AuthService: ObservableObject {
     @Published var currentUser: UserProfile?
     @Published var profileImage: UIImage?
+    @Published var profileBackgroundImage: UIImage?
     @Published var isAuthenticated = false
     @Published var isLoading = false
     @Published var isRestoringSession = true
@@ -50,7 +51,15 @@ final class AuthService: ObservableObject {
         }
     }
 
-    func register(name: String, email: String, password: String, biotype: Biotype, goal: FitnessGoal) async {
+    func register(
+        name: String,
+        email: String,
+        password: String,
+        biotype: Biotype,
+        goal: FitnessGoal,
+        dateOfBirth: Date,
+        countryCode: String = CountryOption.defaultCode()
+    ) async {
         guard ensureFirebaseReady() else { return }
 
         isLoading = true
@@ -61,6 +70,12 @@ final class AuthService: ObservableObject {
 
         guard !trimmedName.isEmpty, normalizedEmail.contains("@") else {
             errorMessage = "Preencha todos os campos corretamente"
+            isLoading = false
+            return
+        }
+
+        guard UserProfile.isValidDateOfBirth(dateOfBirth) else {
+            errorMessage = "Informe uma data de nascimento válida (14 a 100 anos)."
             isLoading = false
             return
         }
@@ -78,7 +93,9 @@ final class AuthService: ObservableObject {
                 name: trimmedName,
                 email: normalizedEmail,
                 biotype: biotype,
-                goal: goal
+                goal: goal,
+                dateOfBirth: dateOfBirth,
+                countryCode: countryCode
             )
             persistSession(with: profile)
             isLoading = false
@@ -293,12 +310,26 @@ final class AuthService: ObservableObject {
         }
     }
 
+    func updateProfileBackgroundImage(_ image: UIImage?) {
+        guard let uid = currentUser?.id else { return }
+
+        if let image {
+            Self.saveBackgroundImage(image, for: uid)
+            profileBackgroundImage = image
+        } else {
+            Self.deleteBackgroundImage(for: uid)
+            profileBackgroundImage = nil
+        }
+    }
+
     func loadProfileImage() {
         guard let user = currentUser else {
             profileImage = nil
+            profileBackgroundImage = nil
             return
         }
         profileImage = Self.loadImage(for: user.id) ?? Self.loadLegacyImage(for: user.email)
+        profileBackgroundImage = Self.loadBackgroundImage(for: user.id)
     }
 
     // MARK: - Private
@@ -470,6 +501,7 @@ final class AuthService: ObservableObject {
     private func clearLocalSession() {
         currentUser = nil
         profileImage = nil
+        profileBackgroundImage = nil
         isAuthenticated = false
     }
 
@@ -630,6 +662,31 @@ final class AuthService: ObservableObject {
 
     private static func deleteImage(for uid: String) {
         let url = profileImageURL(for: uid)
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    private static func profileBackgroundURL(for uid: String) -> URL {
+        let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let safeUID = uid.replacingOccurrences(of: "/", with: "_")
+        return directory.appendingPathComponent("profile_bg_\(safeUID).jpg")
+    }
+
+    private static func loadBackgroundImage(for uid: String) -> UIImage? {
+        let url = profileBackgroundURL(for: uid)
+        guard FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              let image = UIImage(data: data) else { return nil }
+        return image
+    }
+
+    private static func saveBackgroundImage(_ image: UIImage, for uid: String) {
+        let resized = image.resizedForProfile(maxSide: 1_200)
+        guard let data = resized.jpegData(compressionQuality: 0.82) else { return }
+        try? data.write(to: profileBackgroundURL(for: uid), options: .atomic)
+    }
+
+    private static func deleteBackgroundImage(for uid: String) {
+        let url = profileBackgroundURL(for: uid)
         try? FileManager.default.removeItem(at: url)
     }
 }

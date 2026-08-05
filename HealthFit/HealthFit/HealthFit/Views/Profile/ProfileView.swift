@@ -16,6 +16,9 @@ struct ProfileView: View {
     @State private var showPhotoSourceDialog = false
     @State private var showProfileGalleryPicker = false
     @State private var showProfileCameraPicker = false
+    @State private var showBackgroundSourceDialog = false
+    @State private var showBackgroundGalleryPicker = false
+    @State private var showBackgroundCameraPicker = false
     @State private var trainerName = ""
     @State private var trainerEmail = ""
     @State private var usesPersonalTrainer = false
@@ -42,7 +45,8 @@ struct ProfileView: View {
     @State private var showMeasurementComparison = false
     @State private var weightText = ""
     @State private var heightText = ""
-    @State private var ageText = ""
+    @State private var dateOfBirth = Calendar.current.date(byAdding: .year, value: -28, to: .now) ?? .now
+    @State private var selectedCountryCode = CountryOption.defaultCode()
     @State private var selectedGender: Gender = .male
     @State private var showBodyDataSavedAlert = false
     @State private var showEmptyMeasurementsAlert = false
@@ -143,6 +147,26 @@ struct ProfileView: View {
                 }
                 Button("Cancelar", role: .cancel) {}
             }
+            .confirmationDialog(
+                "Foto de fundo",
+                isPresented: $showBackgroundSourceDialog,
+                titleVisibility: .visible
+            ) {
+                if PhotoCaptureAvailability.isCameraAvailable {
+                    Button("Câmera") {
+                        DispatchQueue.main.async { showBackgroundCameraPicker = true }
+                    }
+                }
+                Button("Galeria") {
+                    DispatchQueue.main.async { showBackgroundGalleryPicker = true }
+                }
+                if authService.profileBackgroundImage != nil {
+                    Button("Remover fundo", role: .destructive) {
+                        authService.updateProfileBackgroundImage(nil)
+                    }
+                }
+                Button("Cancelar", role: .cancel) {}
+            }
             .sheet(isPresented: $showProfileGalleryPicker) {
                 LibraryImagePicker { image in
                     showProfileGalleryPicker = false
@@ -156,6 +180,22 @@ struct ProfileView: View {
                     showProfileCameraPicker = false
                     guard let image else { return }
                     authService.updateProfileImage(image)
+                }
+                .ignoresSafeArea()
+            }
+            .sheet(isPresented: $showBackgroundGalleryPicker) {
+                LibraryImagePicker { image in
+                    showBackgroundGalleryPicker = false
+                    guard let image else { return }
+                    authService.updateProfileBackgroundImage(image)
+                }
+                .ignoresSafeArea()
+            }
+            .sheet(isPresented: $showBackgroundCameraPicker) {
+                CameraImagePicker { image in
+                    showBackgroundCameraPicker = false
+                    guard let image else { return }
+                    authService.updateProfileBackgroundImage(image)
                 }
                 .ignoresSafeArea()
             }
@@ -173,7 +213,7 @@ struct ProfileView: View {
             .alert("Dados salvos", isPresented: $showBodyDataSavedAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Peso, altura, idade e sexo foram sincronizados com o Firebase.")
+                Text("Peso, altura, data de nascimento e sexo foram sincronizados com o Firebase.")
             }
             .alert("Medidas necessárias", isPresented: $showEmptyMeasurementsAlert) {
                 Button("OK", role: .cancel) {}
@@ -239,48 +279,110 @@ struct ProfileView: View {
     @ViewBuilder
     private func profileHeaderSection(for user: UserProfile) -> some View {
         let profileImage = authService.profileImage
+        let backgroundImage = authService.profileBackgroundImage
         Section {
-            HStack(spacing: 16) {
-                // Button + sheet: PhotosPicker dentro de List costuma exigir long-press.
-                Button {
-                    presentProfilePhotoSource()
-                } label: {
-                    ProfileAvatarView(
-                        image: profileImage,
-                        initial: String(user.greetingName.prefix(1).uppercased())
-                    )
-                    .contentShape(Circle())
-                }
-                .buttonStyle(ListSafeButtonStyle())
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(user.shownName)
-                        .font(.headline)
-                    Text(user.email)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(profileImage == nil ? "Toque para adicionar foto" : "Toque para alterar foto")
-                        .font(.caption2)
-                        .foregroundStyle(AppTheme.accent)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                let healthStatus = wellnessService.healthIconStatus()
-                PulsingHeartIconView(size: 44, glowColor: healthStatus.glowColor)
-
-                if profileImage != nil {
+            VStack(spacing: 0) {
+                ZStack(alignment: .bottomLeading) {
                     Button {
-                        authService.updateProfileImage(nil)
+                        presentBackgroundPhotoSource()
                     } label: {
-                        Image(systemName: "trash")
-                            .foregroundStyle(.red)
-                            .frame(width: 36, height: 36)
-                            .contentShape(Rectangle())
+                        Group {
+                            if let backgroundImage {
+                                Image(uiImage: backgroundImage)
+                                    .resizable()
+                                    .scaledToFill()
+                            } else {
+                                LinearGradient(
+                                    colors: [
+                                        AppTheme.accent.opacity(0.55),
+                                        AppTheme.accentSecondary.opacity(0.35),
+                                        AppTheme.cardBackground
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                                .overlay {
+                                    VStack(spacing: 6) {
+                                        Image(systemName: "photo.on.rectangle.angled")
+                                            .font(.title2)
+                                        Text("Toque para foto de fundo")
+                                            .font(.caption2.weight(.medium))
+                                    }
+                                    .foregroundStyle(.white.opacity(0.9))
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 150)
+                        .clipped()
                     }
                     .buttonStyle(ListSafeButtonStyle())
+
+                    HStack(alignment: .bottom) {
+                        Spacer()
+                        Text(backgroundImage == nil ? "Fundo" : "Alterar fundo")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.black.opacity(0.45))
+                            .clipShape(Capsule())
+                            .padding(10)
+                    }
                 }
+
+                HStack(alignment: .center, spacing: 14) {
+                    Button {
+                        presentProfilePhotoSource()
+                    } label: {
+                        ProfileAvatarView(
+                            image: profileImage,
+                            initial: String(user.greetingName.prefix(1).uppercased()),
+                            countryFlag: user.countryFlagEmoji
+                        )
+                        .contentShape(Circle())
+                    }
+                    .buttonStyle(ListSafeButtonStyle())
+                    .offset(y: -28)
+                    .padding(.bottom, -28)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(user.shownName)
+                            .font(.headline)
+                        Text(user.email)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("\(user.countryFlagEmoji) \(user.countryDisplayName)")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.textSecondary)
+                        Text(profileImage == nil ? "Toque no avatar para foto" : "Toque no avatar para alterar")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 8)
+
+                    let healthStatus = wellnessService.healthIconStatus()
+                    PulsingHeartIconView(size: 40, glowColor: healthStatus.glowColor)
+                        .padding(.top, 8)
+
+                    if profileImage != nil {
+                        Button {
+                            authService.updateProfileImage(nil)
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundStyle(.red)
+                                .frame(width: 36, height: 36)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(ListSafeButtonStyle())
+                        .padding(.top, 8)
+                    }
+                }
+                .padding(.horizontal, 4)
+                .padding(.bottom, 8)
             }
-            .padding(.vertical, 8)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
         }
     }
 
@@ -288,8 +390,15 @@ struct ProfileView: View {
         if PhotoCaptureAvailability.isCameraAvailable {
             showPhotoSourceDialog = true
         } else {
-            // Simulator / devices without camera: open gallery directly.
             showProfileGalleryPicker = true
+        }
+    }
+
+    private func presentBackgroundPhotoSource() {
+        if PhotoCaptureAvailability.isCameraAvailable {
+            showBackgroundSourceDialog = true
+        } else {
+            showBackgroundGalleryPicker = true
         }
     }
 
@@ -953,26 +1062,65 @@ struct ProfileView: View {
         guard let user = authService.currentUser else { return }
         weightText = String(format: "%.1f", user.weight)
         heightText = String(format: "%.0f", user.height)
-        ageText = "\(user.age)"
+        if let dob = user.dateOfBirth {
+            dateOfBirth = dob
+        } else {
+            dateOfBirth = Calendar.current.date(byAdding: .year, value: -user.age, to: .now) ?? dateOfBirth
+        }
+        selectedCountryCode = user.countryCode
         selectedGender = user.gender
     }
 
     private var isBodyDataValid: Bool {
         guard let weight = Double(weightText.replacingOccurrences(of: ",", with: ".")),
-              let height = Double(heightText.replacingOccurrences(of: ",", with: ".")),
-              let age = Int(ageText) else { return false }
-        return weight >= 30 && weight <= 300 && height >= 100 && height <= 250 && age >= 14 && age <= 100
+              let height = Double(heightText.replacingOccurrences(of: ",", with: ".")) else { return false }
+        return weight >= 30 && weight <= 300
+            && height >= 100 && height <= 250
+            && UserProfile.isValidDateOfBirth(dateOfBirth)
     }
 
     @ViewBuilder
     private func bodyDataSection(for user: UserProfile) -> some View {
-        Text("Esses dados alimentam o cálculo de calorias e o cardápio em Nutrição.")
+        Text("Esses dados alimentam o cálculo de calorias e o cardápio em Nutrição. A data de nascimento é obrigatória.")
             .font(.caption)
             .foregroundStyle(.secondary)
 
+        if !user.hasValidDateOfBirth {
+            Label("Informe a data de nascimento para continuar", systemImage: "exclamationmark.triangle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.orange)
+        }
+
         MetricField(label: "Peso", unit: "kg", text: $weightText)
         MetricField(label: "Altura", unit: "cm", text: $heightText)
-        MetricField(label: "Idade", unit: "anos", text: $ageText, keyboard: .numberPad)
+
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Data de nascimento *")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            DatePicker(
+                "Data de nascimento",
+                selection: $dateOfBirth,
+                in: ...Calendar.current.date(byAdding: .year, value: -14, to: .now)!,
+                displayedComponents: .date
+            )
+            .labelsHidden()
+            Text("Idade: \(UserProfile.age(from: dateOfBirth)) anos")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+
+        VStack(alignment: .leading, spacing: 6) {
+            Text("País")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Picker("País", selection: $selectedCountryCode) {
+                ForEach(CountryOption.catalog) { country in
+                    Text("\(country.flagEmoji)  \(country.name)").tag(country.code)
+                }
+            }
+            .pickerStyle(.menu)
+        }
 
         VStack(alignment: .leading, spacing: 6) {
             Text("Sexo")
@@ -1010,9 +1158,8 @@ struct ProfileView: View {
         if let height = Double(heightText.replacingOccurrences(of: ",", with: ".")) {
             preview.height = height
         }
-        if let age = Int(ageText) {
-            preview.age = age
-        }
+        preview.applyDateOfBirth(dateOfBirth)
+        preview.countryCode = selectedCountryCode
         preview.gender = selectedGender
         return preview
     }
@@ -1051,12 +1198,17 @@ struct ProfileView: View {
         guard var user = authService.currentUser,
               let weight = Double(weightText.replacingOccurrences(of: ",", with: ".")),
               let height = Double(heightText.replacingOccurrences(of: ",", with: ".")),
-              let age = Int(ageText),
-              isBodyDataValid else { return }
+              isBodyDataValid else {
+            if !UserProfile.isValidDateOfBirth(dateOfBirth) {
+                bodyDataSaveError = "A data de nascimento é obrigatória (14 a 100 anos)."
+            }
+            return
+        }
 
         user.weight = weight
         user.height = height
-        user.age = age
+        user.applyDateOfBirth(dateOfBirth)
+        user.countryCode = selectedCountryCode
         user.gender = selectedGender
 
         // Medidas corporais são opcionais aqui; se houver valores no formulário, persiste também.
@@ -1243,6 +1395,7 @@ struct ProfileView: View {
 private struct ProfileAvatarView: View {
     let image: UIImage?
     let initial: String
+    var countryFlag: String = "🏳️"
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -1259,8 +1412,13 @@ private struct ProfileAvatarView: View {
                         .foregroundStyle(.white)
                 }
             }
-            .frame(width: 72, height: 72)
+            .frame(width: 80, height: 80)
             .clipShape(Circle())
+            .overlay(
+                Circle()
+                    .stroke(Color.white, lineWidth: 3)
+            )
+            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
 
             Image(systemName: "camera.fill")
                 .font(.caption2)
@@ -1269,6 +1427,17 @@ private struct ProfileAvatarView: View {
                 .background(AppTheme.accent)
                 .clipShape(Circle())
                 .overlay(Circle().stroke(AppTheme.background, lineWidth: 2))
+        }
+        .overlay(alignment: .topLeading) {
+            Text(countryFlag)
+                .font(.system(size: 20))
+                .padding(2)
+                .background(
+                    Circle()
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+                )
+                .offset(x: -4, y: -6)
         }
     }
 }

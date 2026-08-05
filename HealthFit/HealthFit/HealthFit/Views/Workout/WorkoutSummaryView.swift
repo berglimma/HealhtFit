@@ -890,9 +890,10 @@ struct WorkoutSummaryView: View {
                 userCoordinate: session.routePoints.last?.coordinate,
                 followUser: false,
                 showsUserLocation: false,
-                height: 220,
+                height: session.isWaterSportSession ? 260 : 220,
                 performanceMetric: session.routePerformanceMetric,
-                jumpEvents: session.waterSport?.jumps ?? []
+                jumpEvents: session.waterSport?.jumps ?? [],
+                allows3DMode: session.isWaterSportSession
             )
 
             if session.routePoints.count >= 2 {

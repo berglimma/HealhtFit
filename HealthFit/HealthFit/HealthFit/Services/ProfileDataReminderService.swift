@@ -29,15 +29,15 @@ final class ProfileDataReminderService: ObservableObject {
         var message: String {
             switch self {
             case .firstFill:
-                return "No primeiro acesso, preencha Perfil (peso, altura, idade e sexo) e Nutrição (biotipo e objetivo) para personalizar treinos e cardápio."
+                return "No primeiro acesso, preencha data de nascimento, peso, altura e sexo no Perfil (e Nutrição) para personalizar treinos e cardápio."
             case .refreshDue:
-                return "Já se passaram 30 dias desde a última atualização. Revise Perfil e Nutrição para manter metas e calorias corretas."
+                return "Já se passaram 30 dias desde a última atualização. Revise data de nascimento, medidas e Nutrição para manter metas e calorias corretas."
             }
         }
     }
 
     @Published private(set) var activePrompt: PromptKind?
-
+    
     private let defaults = UserDefaults.standard
 
     private init() {}
@@ -112,7 +112,7 @@ final class ProfileDataReminderService: ObservableObject {
     }
 
     private func looksLikeUnsetMetrics(_ user: UserProfile) -> Bool {
-        user.weight == 75 && user.height == 175 && user.age == 28
+        !user.hasValidDateOfBirth || (user.weight == 75 && user.height == 175 && user.age == 28)
     }
 
     private func seedLastUpdated(for userId: String) {

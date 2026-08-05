@@ -411,9 +411,10 @@ struct ActiveCardioView: View {
                     userCoordinate: runTracker.currentLocation?.coordinate,
                     followUser: true,
                     showsUserLocation: true,
-                    height: 240,
+                    height: isWaterSport ? 280 : 240,
                     performanceMetric: config.routePerformanceMetric,
-                    jumpEvents: isWaterSport ? jumpMetrics.jumps : []
+                    jumpEvents: isWaterSport ? jumpMetrics.jumps : [],
+                    allows3DMode: isWaterSport
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
