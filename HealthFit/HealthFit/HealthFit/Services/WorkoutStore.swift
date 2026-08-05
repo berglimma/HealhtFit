@@ -591,9 +591,10 @@ final class WorkoutStore: ObservableObject {
         if exerciseLastProgressAt == nil, !isExerciseTimerPaused {
             exerciseLastProgressAt = Date()
         }
-        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.tickCurrentExercise()
+        let box = WeakMainActorBox(self)
+        let timer = Timer(timeInterval: 1, repeats: true) { _ in
+            box.run { this in
+                this.tickCurrentExercise()
             }
         }
         RunLoop.main.add(timer, forMode: .common)

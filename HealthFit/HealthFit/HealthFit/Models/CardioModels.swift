@@ -168,6 +168,71 @@ struct CardioExercise: Identifiable, Hashable, Codable {
 
     var isWaterSport: Bool { isSurf || isKitesurf }
 
+    /// Gradientes “foto” para cards de modalidade (lista de cardio).
+    var coverColors: [Color] {
+        switch name {
+        case "Corrida":
+            return [Color(red: 0.92, green: 0.38, blue: 0.18), Color(red: 0.55, green: 0.12, blue: 0.08)]
+        case "Caminhada", "Caminhada Rápida":
+            return [Color(red: 0.28, green: 0.72, blue: 0.48), Color(red: 0.12, green: 0.38, blue: 0.28)]
+        case "Mountain bike":
+            return [Color(red: 0.35, green: 0.55, blue: 0.22), Color(red: 0.12, green: 0.22, blue: 0.10)]
+        case "Bicicleta pedal":
+            return [Color(red: 0.22, green: 0.55, blue: 0.92), Color(red: 0.08, green: 0.22, blue: 0.48)]
+        case "Bicicleta ergométrica":
+            return [Color(red: 0.40, green: 0.48, blue: 0.58), Color(red: 0.18, green: 0.22, blue: 0.30)]
+        case "Surf":
+            return [Color(red: 0.15, green: 0.62, blue: 0.85), Color(red: 0.05, green: 0.22, blue: 0.48)]
+        case "Kitesurf", "Kite Surf":
+            return [Color(red: 0.20, green: 0.78, blue: 0.88), Color(red: 0.08, green: 0.35, blue: 0.55)]
+        case "Elíptico":
+            return [Color(red: 0.25, green: 0.68, blue: 0.72), Color(red: 0.10, green: 0.32, blue: 0.40)]
+        case "Pular Corda":
+            return [Color(red: 0.95, green: 0.45, blue: 0.35), Color(red: 0.55, green: 0.18, blue: 0.32)]
+        case "Escada":
+            return [Color(red: 0.72, green: 0.48, blue: 0.28), Color(red: 0.35, green: 0.22, blue: 0.14)]
+        case "Escalada":
+            return [Color(red: 0.58, green: 0.48, blue: 0.42), Color(red: 0.25, green: 0.20, blue: 0.18)]
+        case "Remo":
+            return [Color(red: 0.18, green: 0.48, blue: 0.68), Color(red: 0.06, green: 0.20, blue: 0.35)]
+        case "Natação":
+            return [Color(red: 0.12, green: 0.55, blue: 0.78), Color(red: 0.04, green: 0.22, blue: 0.45)]
+        case "Polichinelo":
+            return [Color(red: 0.95, green: 0.62, blue: 0.22), Color(red: 0.70, green: 0.28, blue: 0.12)]
+        case "Burpees":
+            return [Color(red: 0.88, green: 0.22, blue: 0.28), Color(red: 0.42, green: 0.08, blue: 0.14)]
+        default:
+            return [AppTheme.accentSecondary, AppTheme.accent.opacity(0.7)]
+        }
+    }
+
+    /// Asset de capa no mesmo padrão de `WorkoutProgramMale` / `WorkoutProgramFemale`.
+    var coverImageName: String {
+        switch name {
+        case "Corrida": return "CardioCoverCorrida"
+        case "Caminhada", "Caminhada Rápida": return "CardioCoverCaminhada"
+        case "Mountain bike": return "CardioCoverMountainBike"
+        case "Bicicleta pedal": return "CardioCoverBicicletaPedal"
+        case "Bicicleta ergométrica": return "CardioCoverBicicletaErgometrica"
+        case "Surf": return "CardioCoverSurf"
+        case "Kitesurf", "Kite Surf": return "CardioCoverKitesurf"
+        case "Elíptico": return "CardioCoverEliptico"
+        case "Pular Corda": return "CardioCoverPularCorda"
+        case "Escada": return "CardioCoverEscada"
+        case "Escalada": return "CardioCoverEscalada"
+        case "Remo": return "CardioCoverRemo"
+        case "Natação": return "CardioCoverNatacao"
+        case "Polichinelo": return "CardioCoverPolichinelo"
+        case "Burpees": return "CardioCoverBurpees"
+        default: return "CardioCoverCorrida"
+        }
+    }
+
+    /// SF Symbol da modalidade Surf (listas, setup, badges, resumo).
+    static let surfSystemImage = "figure.surfing"
+    /// SF Symbol da modalidade Kitesurf — vento (esporte a vela / powerkite); sem `figure.kitesurfing` no SF Symbols.
+    static let kitesurfSystemImage = "wind"
+
     private static let outdoorGPSNames: Set<String> = [
         "Corrida", "Caminhada", "Caminhada Rápida", "Bicicleta pedal", "Mountain bike",
         "Surf", "Kitesurf", "Kite Surf"
@@ -188,8 +253,8 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         CardioExercise(name: "Mountain bike", description: "Mountain bike em trilha ou terreno irregular", icon: "bicycle", caloriesPerMinute: 10),
         CardioExercise(name: "Bicicleta pedal", description: "Ciclismo outdoor em rua ou ciclovia", icon: "figure.outdoor.cycle", caloriesPerMinute: 9),
         CardioExercise(name: "Bicicleta ergométrica", description: "Bike estacionária indoor, sem GPS", icon: "figure.indoor.cycle", caloriesPerMinute: 8),
-        CardioExercise(name: "Surf", description: "Sessão de surf com GPS, spot e registro de condições", icon: "figure.surfing", caloriesPerMinute: 10),
-        CardioExercise(name: "Kitesurf", description: "Kitesurf com equipamento, modos, saltos e mapa", icon: "wind", caloriesPerMinute: 12),
+        CardioExercise(name: "Surf", description: "Sessão de surf com GPS, spot e registro de condições", icon: surfSystemImage, caloriesPerMinute: 10),
+        CardioExercise(name: "Kitesurf", description: "Kitesurf com equipamento, modos, saltos e mapa", icon: kitesurfSystemImage, caloriesPerMinute: 12),
         CardioExercise(name: "Elíptico", description: "Movimento fluido de corpo inteiro", icon: "figure.step.training", caloriesPerMinute: 8),
         CardioExercise(name: "Pular Corda", description: "Saltos contínuos com corda", icon: "figure.jumprope", caloriesPerMinute: 12),
         CardioExercise(name: "Escada", description: "Simulador de escadas ou degraus", icon: "figure.stair.stepper", caloriesPerMinute: 11),
@@ -264,12 +329,12 @@ struct CardioWorkoutConfig: Hashable, Codable {
 
         let title = session.workoutTitle
         let lower = title.lowercased()
-        let isFreeRun = lower.contains("livre")
 
         let exerciseName: String = {
             if lower.contains("natação") || lower.contains("natacao") { return "Natação" }
             if lower.contains("kitesurf") || lower.contains("kite surf") { return "Kitesurf" }
-            if lower.contains("surf") { return "Surf" }
+            if session.waterSport?.isKitesurf == true { return "Kitesurf" }
+            if lower.contains("surf") || session.waterSport != nil { return "Surf" }
             if lower.contains("corrida") { return "Corrida" }
             if lower.contains("caminhada") || lower.contains("walk") { return "Caminhada" }
             if lower.contains("mountain bike") { return "Mountain bike" }
@@ -312,10 +377,13 @@ struct CardioWorkoutConfig: Hashable, Codable {
                 caloriesPerMinute: 10
             )
 
+        // "livre" only marks free-run for running/walk/bike — never for Surf/Kitesurf.
+        let isFreeRunFromTitle = lower.contains("livre") && !exercise.isWaterSport
+
         let intensity = CardioIntensity(rawValue: session.cardioIntensityLabel ?? "") ?? .medium
         let customKm = session.targetDistanceKm
         let runningDistance: RunningDistance? = {
-            guard exercise.supportsDistanceGoals, !isFreeRun else { return nil }
+            guard exercise.supportsDistanceGoals, !isFreeRunFromTitle else { return nil }
             guard let km = customKm else { return nil }
             if let match = RunningDistance(rawValue: Int(km.rounded())), abs(match.kilometers - km) < 0.05 {
                 return match
@@ -324,7 +392,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
         }()
 
         let customTarget: Double? = {
-            guard !isFreeRun, let km = customKm, km > 0 else { return nil }
+            guard !isFreeRunFromTitle, let km = customKm, km > 0 else { return nil }
             if runningDistance != nil { return nil }
             if exercise.supportsCustomDistanceGoals { return km }
             return nil
@@ -335,7 +403,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
             intensity: intensity,
             runningDistance: runningDistance,
             targetCalories: session.targetCalories,
-            isFreeRun: isFreeRun || (
+            isFreeRun: exercise.isWaterSport || isFreeRunFromTitle || (
                 exercise.supportsCustomDistanceGoals
                     && runningDistance == nil
                     && customTarget == nil
@@ -411,6 +479,33 @@ struct CardioWorkoutConfig: Hashable, Codable {
     }
 
     var title: String {
+        // Water sports before isFreeRun — kite/surf use free-session tracking but must not inherit "Corrida livre".
+        if isKitesurfSession {
+            let spot = waterSportSetup?.spot.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if let mode = waterSportSetup?.ridingMode {
+                if !spot.isEmpty {
+                    return "Cardio — Kitesurf · \(mode.rawValue) · \(spot)"
+                }
+                return "Cardio — Kitesurf · \(mode.rawValue)"
+            }
+            if !spot.isEmpty {
+                return "Cardio — Kitesurf · \(spot)"
+            }
+            return "Cardio — Kitesurf"
+        }
+        if isSurfSession {
+            let spot = waterSportSetup?.spot.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if let board = waterSportSetup?.boardType {
+                if !spot.isEmpty {
+                    return "Cardio — Surf · \(board.rawValue) · \(spot)"
+                }
+                return "Cardio — Surf · \(board.rawValue)"
+            }
+            if !spot.isEmpty {
+                return "Cardio — Surf · \(spot)"
+            }
+            return "Cardio — Surf"
+        }
         if isFreeRun {
             if isOutdoorCyclingSession || isOutdoorWalkingSession || isRunningSession {
                 return "Cardio — \(exercise.name) livre"
@@ -419,16 +514,6 @@ struct CardioWorkoutConfig: Hashable, Codable {
         }
         if hasDistanceTarget {
             return "Cardio — \(exercise.name) \(formattedTargetKm)"
-        }
-        if isKitesurfSession, let mode = waterSportSetup?.ridingMode {
-            let spot = waterSportSetup?.spot.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !spot.isEmpty {
-                return "Cardio — Kitesurf · \(mode.rawValue) · \(spot)"
-            }
-            return "Cardio — Kitesurf · \(mode.rawValue)"
-        }
-        if isSurfSession, let board = waterSportSetup?.boardType {
-            return "Cardio — Surf · \(board.rawValue)"
         }
         if isSwimmingSession {
             let pool = Int(resolvedPoolLengthMeters.rounded())
@@ -518,6 +603,13 @@ struct CardioWorkoutConfig: Hashable, Codable {
 
     func swimDistanceMeters(laps: Int) -> Double {
         Double(max(0, laps)) * resolvedPoolLengthMeters
+    }
+
+    /// Voltas a partir da distância de natação (HealthKit / Watch).
+    static func swimLaps(fromDistanceMeters distance: Double, poolLengthMeters: Double) -> Int {
+        let pool = max(poolLengthMeters, 1)
+        guard distance > 0 else { return 0 }
+        return max(0, Int((distance / pool).rounded(.down)))
     }
 
     func swimPaceSecondsPer100m(elapsedSeconds: Int, distanceMeters: Double) -> Int? {

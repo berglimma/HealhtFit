@@ -59,11 +59,13 @@
 		B1000402 /* EveningTrainingNudgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000402 /* EveningTrainingNudgeService.swift */; };
 		B1000403 /* EveningTrainingNudgeAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000400 /* EveningTrainingNudgeAttributes.swift */; };
 		B1000410 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000410 /* AppLanguage.swift */; };
+		B1000411 /* WeakMainActorBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000411 /* WeakMainActorBox.swift */; };
+		B100W411 /* WeakMainActorBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000411 /* WeakMainActorBox.swift */; };
 		B1000420 /* RunTrackingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000420 /* RunTrackingModels.swift */; };
 		B1000421 /* RunTrackingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000421 /* RunTrackingService.swift */; };
 		B1000422 /* RunRouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000422 /* RunRouteMapView.swift */; };
 		B2000042 /* RunTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000042 /* RunTrackingTests.swift */; };
-		B1000411 /* LanguagePickerControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000411 /* LanguagePickerControl.swift */; };
+		B1000412 /* LanguagePickerControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000412 /* LanguagePickerControl.swift */; };
 		B1000311 /* HealthFitWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1000311 /* HealthFitWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 
 		B1000036 /* MotivationMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000039 /* MotivationMessages.swift */; };
@@ -72,6 +74,7 @@
 		B1000040 /* DeviceLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000042 /* DeviceLayout.swift */; };
 		B1000041 /* CardioModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000043 /* CardioModels.swift */; };
 		B1000042 /* CardioSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000044 /* CardioSetupView.swift */; };
+		B1000711 /* WorkoutProgramHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000711 /* WorkoutProgramHeroCard.swift */; };
 		B1000043 /* ActiveCardioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000045 /* ActiveCardioView.swift */; };
 		B1000500 /* SwimmingMetricsAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000500 /* SwimmingMetricsAnalyzer.swift */; };
 		B1000501 /* SwimmingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000501 /* SwimmingLogbookView.swift */; };
@@ -84,6 +87,12 @@
 		B1000702 /* SurfKiteReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000702 /* SurfKiteReportBuilder.swift */; };
 		B1000703 /* SurfKiteLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000703 /* SurfKiteLogbookView.swift */; };
 		B1000704 /* CountryOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000704 /* CountryOption.swift */; };
+		B1000705 /* WorkoutResultMediaOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000705 /* WorkoutResultMediaOverlayView.swift */; };
+		B1000706 /* OpenMeteoWindService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000706 /* OpenMeteoWindService.swift */; };
+		B1000707 /* WaterWindConditionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000707 /* WaterWindConditionsView.swift */; };
+		B1000708 /* TransparentOceanWavesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000708 /* TransparentOceanWavesView.swift */; };
+		B1000709 /* TideWindFavorability.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000709 /* TideWindFavorability.swift */; };
+		B1000710 /* AssistantTideAlertEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000710 /* AssistantTideAlertEngine.swift */; };
 		B1000600 /* SubscriptionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000600 /* SubscriptionModels.swift */; };
 		B1000601 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000601 /* SubscriptionService.swift */; };
 		B1000602 /* SubscriptionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000602 /* SubscriptionViews.swift */; };
@@ -332,11 +341,12 @@
 		F1000401 /* EveningTrainingNudgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeController.swift; sourceTree = "<group>"; };
 		F1000402 /* EveningTrainingNudgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeService.swift; sourceTree = "<group>"; };
 		F1000410 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
+		F1000411 /* WeakMainActorBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeakMainActorBox.swift; sourceTree = "<group>"; };
 		F1000420 /* RunTrackingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingModels.swift; sourceTree = "<group>"; };
 		F1000421 /* RunTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingService.swift; sourceTree = "<group>"; };
 		F1000422 /* RunRouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunRouteMapView.swift; sourceTree = "<group>"; };
 		F2000042 /* RunTrackingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingTests.swift; sourceTree = "<group>"; };
-		F1000411 /* LanguagePickerControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguagePickerControl.swift; sourceTree = "<group>"; };
+		F1000412 /* LanguagePickerControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguagePickerControl.swift; sourceTree = "<group>"; };
 		F1000310 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000311 /* HealthFitWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HealthFitWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 
@@ -346,6 +356,7 @@
 		F1000042 /* DeviceLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceLayout.swift; sourceTree = "<group>"; };
 		F1000043 /* CardioModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardioModels.swift; sourceTree = "<group>"; };
 		F1000044 /* CardioSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardioSetupView.swift; sourceTree = "<group>"; };
+		F1000711 /* WorkoutProgramHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProgramHeroCard.swift; sourceTree = "<group>"; };
 		F1000045 /* ActiveCardioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveCardioView.swift; sourceTree = "<group>"; };
 		F1000500 /* SwimmingMetricsAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwimmingMetricsAnalyzer.swift; sourceTree = "<group>"; };
 		F1000501 /* SwimmingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwimmingLogbookView.swift; sourceTree = "<group>"; };
@@ -358,6 +369,12 @@
 		F1000702 /* SurfKiteReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteReportBuilder.swift; sourceTree = "<group>"; };
 		F1000703 /* SurfKiteLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteLogbookView.swift; sourceTree = "<group>"; };
 		F1000704 /* CountryOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountryOption.swift; sourceTree = "<group>"; };
+		F1000705 /* WorkoutResultMediaOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutResultMediaOverlayView.swift; sourceTree = "<group>"; };
+		F1000706 /* OpenMeteoWindService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenMeteoWindService.swift; sourceTree = "<group>"; };
+		F1000707 /* WaterWindConditionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterWindConditionsView.swift; sourceTree = "<group>"; };
+		F1000708 /* TransparentOceanWavesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparentOceanWavesView.swift; sourceTree = "<group>"; };
+		F1000709 /* TideWindFavorability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TideWindFavorability.swift; sourceTree = "<group>"; };
+		F1000710 /* AssistantTideAlertEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantTideAlertEngine.swift; sourceTree = "<group>"; };
 		F1000600 /* SubscriptionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionModels.swift; sourceTree = "<group>"; };
 		F1000601 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
 		F1000602 /* SubscriptionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionViews.swift; sourceTree = "<group>"; };
@@ -621,6 +638,7 @@
 				F1000043 /* CardioModels.swift */,
 				F1000502 /* BikeModels.swift */,
 				F1000700 /* SurfKiteModels.swift */,
+				F1000709 /* TideWindFavorability.swift */,
 				F1000704 /* CountryOption.swift */,
 				F1000600 /* SubscriptionModels.swift */,
 				F1000420 /* RunTrackingModels.swift */,
@@ -666,6 +684,8 @@
 				F1000504 /* RoadHazardService.swift */,
 				F1000701 /* JumpMetricsService.swift */,
 				F1000702 /* SurfKiteReportBuilder.swift */,
+				F1000706 /* OpenMeteoWindService.swift */,
+				F1000710 /* AssistantTideAlertEngine.swift */,
 				F1000601 /* SubscriptionService.swift */,
 				F1000048 /* WeeklyReportService.swift */,
 				F1000330 /* WorkoutShareCardStore.swift */,
@@ -777,11 +797,14 @@
 				F1000023 /* CreateWorkoutView.swift */,
 				F1000038 /* WorkoutSummaryView.swift */,
 				F1000305 /* WorkoutShareCardView.swift */,
+				F1000705 /* WorkoutResultMediaOverlayView.swift */,
 				F1000044 /* CardioSetupView.swift */,
+				F1000711 /* WorkoutProgramHeroCard.swift */,
 				F1000045 /* ActiveCardioView.swift */,
 				F1000501 /* SwimmingLogbookView.swift */,
 				F1000505 /* BikeLogbookView.swift */,
 				F1000703 /* SurfKiteLogbookView.swift */,
+				F1000707 /* WaterWindConditionsView.swift */,
 				F1000422 /* RunRouteMapView.swift */,
 				F1000051 /* MeditationSetupView.swift */,
 				F1000052 /* ActiveMeditationView.swift */,
@@ -832,7 +855,8 @@
 				F1000118 /* LegalLinksView.swift */,
 				F1000126 /* LegalDocumentView.swift */,
 				F1000343 /* PhotoSourcePickers.swift */,
-				F1000411 /* LanguagePickerControl.swift */,
+				F1000412 /* LanguagePickerControl.swift */,
+				F1000708 /* TransparentOceanWavesView.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -919,6 +943,7 @@
 			children = (
 				F1000140 /* L10n.swift */,
 				F1000410 /* AppLanguage.swift */,
+				F1000411 /* WeakMainActorBox.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -1225,6 +1250,9 @@
 				B1000504 /* RoadHazardService.swift in Sources */,
 				B1000701 /* JumpMetricsService.swift in Sources */,
 				B1000702 /* SurfKiteReportBuilder.swift in Sources */,
+				B1000706 /* OpenMeteoWindService.swift in Sources */,
+				B1000709 /* TideWindFavorability.swift in Sources */,
+				B1000710 /* AssistantTideAlertEngine.swift in Sources */,
 				B1000601 /* SubscriptionService.swift in Sources */,
 				B1000004 /* MealModels.swift in Sources */,
 				B1000005 /* AuthService.swift in Sources */,
@@ -1257,11 +1285,15 @@
 				B1000023 /* CreateWorkoutView.swift in Sources */,
 				B1000035 /* WorkoutSummaryView.swift in Sources */,
 				B1000305 /* WorkoutShareCardView.swift in Sources */,
+				B1000705 /* WorkoutResultMediaOverlayView.swift in Sources */,
 				B1000042 /* CardioSetupView.swift in Sources */,
+				B1000711 /* WorkoutProgramHeroCard.swift in Sources */,
 				B1000043 /* ActiveCardioView.swift in Sources */,
 				B1000501 /* SwimmingLogbookView.swift in Sources */,
 				B1000505 /* BikeLogbookView.swift in Sources */,
 				B1000703 /* SurfKiteLogbookView.swift in Sources */,
+				B1000707 /* WaterWindConditionsView.swift in Sources */,
+				B1000708 /* TransparentOceanWavesView.swift in Sources */,
 				B1000602 /* SubscriptionViews.swift in Sources */,
 				B1000036 /* MotivationMessages.swift in Sources */,
 				B1000037 /* WorkoutReportBuilder.swift in Sources */,
@@ -1328,10 +1360,11 @@
 				B1000131 /* NutritionReportBuilder.swift in Sources */,
 				B1000140 /* L10n.swift in Sources */,
 				B1000410 /* AppLanguage.swift in Sources */,
+				B1000411 /* WeakMainActorBox.swift in Sources */,
 				B1000420 /* RunTrackingModels.swift in Sources */,
 				B1000421 /* RunTrackingService.swift in Sources */,
 				B1000422 /* RunRouteMapView.swift in Sources */,
-				B1000411 /* LanguagePickerControl.swift in Sources */,
+				B1000412 /* LanguagePickerControl.swift in Sources */,
 				B1000087 /* ExerciseVideoRepository.swift in Sources */,
 				B1000073 /* ForgotPasswordView.swift in Sources */,
 				B1000075 /* GoogleServiceInfo.swift in Sources */,
@@ -1363,6 +1396,7 @@
 				B1000030 /* HealthFitWatchApp.swift in Sources */,
 				B1000031 /* WatchContentView.swift in Sources */,
 				B1000032 /* WatchWorkoutManager.swift in Sources */,
+				B100W411 /* WeakMainActorBox.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1605,9 +1639,10 @@
 				INFOPLIST_KEY_CFBundleDisplayName = HealthFit;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para tirar fotos de perfil e evolução corporal, e para reconhecer repetições e analisar sua postura durante os exercícios.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HealthFit usa o microfone ao gravar vídeo do treino para compartilhar com a legenda da sessão.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit precisa acessar seus dados de saúde para exibir métricas de desempenho e sincronizar treinos.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil e salvar fotos de evolução corporal.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal e anexar foto ou vídeo ao compartilhar o resultado do treino.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida e ciclismo outdoor para mostrar o mapa e a rota em tempo real.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida e bike outdoor com a tela bloqueada ou em segundo plano.";
@@ -1647,9 +1682,10 @@
 				INFOPLIST_KEY_CFBundleDisplayName = HealthFit;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para tirar fotos de perfil e evolução corporal, e para reconhecer repetições e analisar sua postura durante os exercícios.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HealthFit usa o microfone ao gravar vídeo do treino para compartilhar com a legenda da sessão.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit precisa acessar seus dados de saúde para exibir métricas de desempenho e sincronizar treinos.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil e salvar fotos de evolução corporal.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal e anexar foto ou vídeo ao compartilhar o resultado do treino.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida e ciclismo outdoor para mostrar o mapa e a rota em tempo real.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida e bike outdoor com a tela bloqueada ou em segundo plano.";

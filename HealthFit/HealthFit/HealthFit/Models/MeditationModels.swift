@@ -50,6 +50,49 @@ struct MeditationTopic: Identifiable, Hashable, Codable {
         }
     }
 
+    /// Gradientes “foto” para cards de tópico (lista de meditação).
+    var coverColors: [Color] {
+        switch colorName {
+        case "blue":
+            return [Color(red: 0.35, green: 0.55, blue: 0.95), Color(red: 0.12, green: 0.22, blue: 0.48)]
+        case "green":
+            return [AppTheme.accent, Color(red: 0.08, green: 0.32, blue: 0.22)]
+        case "orange":
+            return [AppTheme.accentSecondary, Color(red: 0.45, green: 0.18, blue: 0.08)]
+        case "pink":
+            return [Color(red: 0.92, green: 0.42, blue: 0.58), Color(red: 0.42, green: 0.12, blue: 0.28)]
+        case "indigo":
+            return [Color(red: 0.40, green: 0.40, blue: 0.85), Color(red: 0.15, green: 0.12, blue: 0.38)]
+        case "teal":
+            return [Color(red: 0.25, green: 0.72, blue: 0.68), Color(red: 0.08, green: 0.32, blue: 0.36)]
+        default:
+            return [Color(red: 0.55, green: 0.38, blue: 0.85), Color(red: 0.22, green: 0.12, blue: 0.40)]
+        }
+    }
+
+    /// Asset de capa no mesmo padrão dos programas de musculação / modalidades de cardio.
+    var coverImageName: String {
+        switch name {
+        case "Respiração Consciente": return "MeditacaoCoverRespiracao"
+        case "Relaxamento Corporal": return "MeditacaoCoverRelaxamento"
+        case "Gratidão": return "MeditacaoCoverGratidao"
+        case "Foco e Clareza": return "MeditacaoCoverFoco"
+        case "Redução de Ansiedade": return "MeditacaoCoverAnsiedade"
+        case "Sono e Descanso": return "MeditacaoCoverSono"
+        case "Recuperação Pós-Treino": return "MeditacaoCoverRecuperacao"
+        default:
+            switch colorName {
+            case "blue": return "MeditacaoCoverRespiracao"
+            case "teal": return "MeditacaoCoverRelaxamento"
+            case "pink": return "MeditacaoCoverGratidao"
+            case "indigo": return "MeditacaoCoverFoco"
+            case "green": return "MeditacaoCoverAnsiedade"
+            case "orange": return "MeditacaoCoverRecuperacao"
+            default: return "MeditacaoCoverSono"
+            }
+        }
+    }
+
     static let catalog: [MeditationTopic] = [
         MeditationTopic(
             name: "Respiração Consciente",

@@ -341,15 +341,15 @@ final class AuthService: ObservableObject {
             return
         }
 
-        FirebaseAuthProvider.startObservingState { [weak self] authUser in
-            guard let self else { return }
-
-            if let authUser {
-                self.applyAuthenticatedUser(authUser, fallbackName: nil)
-            } else {
-                self.clearLocalSession()
+        FirebaseAuthProvider.startObservingState { [box = WeakMainActorBox(self)] authUser in
+            box.run { this in
+                if let authUser {
+                    this.applyAuthenticatedUser(authUser, fallbackName: nil)
+                } else {
+                    this.clearLocalSession()
+                }
+                this.isRestoringSession = false
             }
-            self.isRestoringSession = false
         }
     }
 

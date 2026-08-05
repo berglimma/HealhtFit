@@ -43,15 +43,17 @@ struct MeditationSetupView: View {
     }
 
     private var headerSection: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(topic.color.opacity(0.2))
-                    .frame(width: 72, height: 72)
-                Image(systemName: topic.icon)
-                    .font(.system(size: 32))
-                    .foregroundStyle(topic.color)
-            }
+        HStack(spacing: 14) {
+            ModalityCoverArt(
+                systemImage: topic.icon,
+                colors: topic.coverColors
+            )
+                .frame(width: 72, height: 72)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(topic.color.opacity(0.55), lineWidth: 1)
+                )
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(topic.name)
@@ -150,37 +152,19 @@ struct MeditationSetupView: View {
     }
 }
 
+/// Card de tópico de meditação — mesmo formato hero da musculação.
 struct MeditationTopicCard: View {
     let topic: MeditationTopic
 
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(topic.color.opacity(0.2))
-                    .frame(width: 52, height: 52)
-                Image(systemName: topic.icon)
-                    .font(.title2)
-                    .foregroundStyle(topic.color)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(topic.name)
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.textPrimary)
-                Text(topic.description)
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .lineLimit(2)
-            }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .foregroundStyle(AppTheme.textSecondary)
-        }
-        .padding()
-        .background(AppTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        WorkoutProgramHeroCard(
+            title: topic.name,
+            subtitle: topic.description,
+            accent: topic.color,
+            imageName: topic.coverImageName,
+            systemImage: topic.icon,
+            coverColors: topic.coverColors,
+            footerLabels: [(icon: "text.quote", text: "\(topic.prompts.count) etapas guiadas")]
+        )
     }
 }

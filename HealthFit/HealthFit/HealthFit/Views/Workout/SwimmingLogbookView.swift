@@ -89,7 +89,7 @@ struct SwimmingLogbookView: View {
             Text("Nenhuma natação registrada")
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
-            Text("Inicie um cardio de Natação, defina o tamanho da piscina e conte as voltas. O histórico aparece aqui.")
+            Text("Inicie um cardio de Natação, defina o tamanho da piscina e use o Apple Watch para contar as voltas automaticamente. O histórico aparece aqui.")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)

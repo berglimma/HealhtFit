@@ -76,8 +76,8 @@ struct WorkoutListView: View {
             .navigationDestination(for: BikeLogbookRoute.self) { _ in
                 BikeLogbookView()
             }
-            .navigationDestination(for: SurfKiteLogbookRoute.self) { _ in
-                SurfKiteLogbookView()
+            .navigationDestination(for: SurfKiteLogbookRoute.self) { route in
+                SurfKiteLogbookView(initialKitesurfOnly: route.kitesurfOnly)
             }
             .navigationDestination(for: MeditationTopic.self) { topic in
                 MeditationSetupView(topic: topic)
@@ -205,119 +205,36 @@ struct WorkoutListView: View {
     }
 
     private var cardioSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Escolha um exercício e defina a intensidade")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
 
-            NavigationLink(value: SwimmingLogbookRoute()) {
-                HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.cyan.opacity(0.2))
-                            .frame(width: 52, height: 52)
-                        Image(systemName: "book.pages.fill")
-                            .font(.title2)
-                            .foregroundStyle(.cyan)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Diário de bordo — Natação")
-                            .font(.headline)
-                            .foregroundStyle(AppTheme.textPrimary)
-                        Text("Distância, ritmo, voltas e calorias estimadas")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
-                .padding()
-                .background(AppTheme.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-            }
-            .buttonStyle(.plain)
+            Text("Diários de natação, bike e surf/kite ficam dentro de cada modalidade.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
 
-            NavigationLink(value: BikeLogbookRoute()) {
-                HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.green.opacity(0.2))
-                            .frame(width: 52, height: 52)
-                        Image(systemName: "bicycle")
-                            .font(.title2)
-                            .foregroundStyle(.green)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Diário da bike")
-                            .font(.headline)
-                            .foregroundStyle(AppTheme.textPrimary)
-                        Text("Problemas, manutenção e vida útil (corrente, pneus, freios)")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(AppTheme.textSecondary)
+            // Lista em coluna única — mesmo formato hero da musculação (altura 180).
+            ForEach(CardioExercise.catalog) { exercise in
+                NavigationLink(value: exercise) {
+                    CardioExerciseCard(exercise: exercise)
                 }
-                .padding()
-                .background(AppTheme.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-            }
-            .buttonStyle(.plain)
-
-            NavigationLink(value: SurfKiteLogbookRoute()) {
-                HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.cyan.opacity(0.2))
-                            .frame(width: 52, height: 52)
-                        Image(systemName: "figure.surfing")
-                            .font(.title2)
-                            .foregroundStyle(.cyan)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Diário Surf / Kitesurf")
-                            .font(.headline)
-                            .foregroundStyle(AppTheme.textPrimary)
-                        Text("Saltos, SPOT, vento, maré e comparativo entre sessões")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
-                .padding()
-                .background(AppTheme.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-            }
-            .buttonStyle(.plain)
-
-            LazyVStack(spacing: 12) {
-                ForEach(CardioExercise.catalog) { exercise in
-                    NavigationLink(value: exercise) {
-                        CardioExerciseCard(exercise: exercise)
-                    }
-                    .buttonStyle(.plain)
-                }
+                .buttonStyle(.plain)
             }
         }
     }
 
     private var meditationSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Escolha um tópico e a duração da sessão")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
 
-            LazyVStack(spacing: 12) {
-                ForEach(MeditationTopic.catalog) { topic in
-                    NavigationLink(value: topic) {
-                        MeditationTopicCard(topic: topic)
-                    }
-                    .buttonStyle(.plain)
+            ForEach(MeditationTopic.catalog) { topic in
+                NavigationLink(value: topic) {
+                    MeditationTopicCard(topic: topic)
                 }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -332,48 +249,17 @@ struct HomeProgramHeroCard: View {
     private let accent = Color(red: 0.35, green: 0.72, blue: 0.55)
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            Image("WorkoutProgramHome")
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity)
-                .frame(height: 180)
-                .clipped()
-
-            LinearGradient(
-                colors: [.black.opacity(0.08), .black.opacity(0.72)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            VStack(alignment: .leading, spacing: 8) {
-                Label("SEM EQUIPAMENTOS", systemImage: "house.fill")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(accent)
-
-                Text(L10n.Workout.homeTitle)
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
-
-                Text("Full body, core, HIIT, pernas e superiores com demos")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.85))
-
-                Label("\(recommendedCount) fichas recomendadas", systemImage: "star.fill")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.9))
-            }
-            .padding(16)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 180)
-        .background(accent.opacity(0.25))
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
-                .stroke(accent.opacity(0.45), lineWidth: 1)
+        WorkoutProgramHeroCard(
+            title: L10n.Workout.homeTitle,
+            subtitle: "Full body, core, HIIT, pernas e superiores com demos",
+            accent: accent,
+            imageName: "WorkoutProgramHome",
+            systemImage: "house.fill",
+            coverColors: [accent, accent.opacity(0.55)],
+            eyebrow: "SEM EQUIPAMENTOS",
+            eyebrowSystemImage: "house.fill",
+            footerLabels: [(icon: "star.fill", text: "\(recommendedCount) fichas recomendadas")]
         )
-        .contentShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 }
 
@@ -452,48 +338,17 @@ struct MobilityProgramHeroCard: View {
     private let accent = Color(red: 0.45, green: 0.65, blue: 0.95)
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            Image("WorkoutProgramMobility")
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity)
-                .frame(height: 180)
-                .clipped()
-
-            LinearGradient(
-                colors: [.black.opacity(0.05), .black.opacity(0.75)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            VStack(alignment: .leading, spacing: 8) {
-                Label("PARA MUSCULAÇÃO", systemImage: "figure.flexibility")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(accent)
-
-                Text(L10n.Workout.mobility)
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
-
-                Text("Aquecimento, quadril, ombros e pós-treino com demos")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.85))
-
-                Label("\(recommendedCount) fichas recomendadas", systemImage: "star.fill")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.9))
-            }
-            .padding(16)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 180)
-        .background(accent.opacity(0.25))
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
-                .stroke(accent.opacity(0.45), lineWidth: 1)
+        WorkoutProgramHeroCard(
+            title: L10n.Workout.mobility,
+            subtitle: "Aquecimento, quadril, ombros e pós-treino com demos",
+            accent: accent,
+            imageName: "WorkoutProgramMobility",
+            systemImage: "figure.flexibility",
+            coverColors: [accent, accent.opacity(0.55)],
+            eyebrow: "PARA MUSCULAÇÃO",
+            eyebrowSystemImage: "figure.flexibility",
+            footerLabels: [(icon: "star.fill", text: "\(recommendedCount) fichas recomendadas")]
         )
-        .contentShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 }
 
@@ -607,47 +462,18 @@ struct GenderProgramHeroCard: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            Image(imageName)
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity)
-                .frame(height: 180)
-                .clipped()
-
-            LinearGradient(
-                colors: [.black.opacity(0.05), .black.opacity(0.75)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title)
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
-
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.85))
-
-                HStack(spacing: 10) {
-                    Label("\(recommendedCount) recomendados", systemImage: "star.fill")
-                    Label("\(customCount) personalizados", systemImage: "person.crop.circle")
-                }
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.9))
-            }
-            .padding(16)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 180)
-        .background(accent.opacity(0.25))
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
-                .stroke(accent.opacity(0.45), lineWidth: 1)
+        WorkoutProgramHeroCard(
+            title: title,
+            subtitle: subtitle,
+            accent: accent,
+            imageName: imageName,
+            systemImage: "dumbbell.fill",
+            coverColors: [accent, accent.opacity(0.55)],
+            footerLabels: [
+                (icon: "star.fill", text: "\(recommendedCount) recomendados"),
+                (icon: "person.crop.circle", text: "\(customCount) personalizados")
+            ]
         )
-        .contentShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 }
 

@@ -6,25 +6,45 @@ struct SurfKiteLogbookView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    @State private var filter: LogFilter = .all
+    /// `nil` = Surf + Kitesurf; `true` = só Kitesurf; `false` = só Surf.
+    private let kitesurfOnly: Bool?
 
-    private enum LogFilter: String, CaseIterable, Identifiable {
-        case all = "Todos"
-        case kite = "Kitesurf"
-        case surf = "Surf"
+    init(initialKitesurfOnly: Bool? = nil) {
+        self.kitesurfOnly = initialKitesurfOnly
+    }
 
-        var id: String { rawValue }
+    private var modalityTitle: String {
+        switch kitesurfOnly {
+        case true: return "Diário de Kitesurf"
+        case false: return "Diário de Surf"
+        case nil: return "Diário Surf / Kite"
+        }
+    }
+
+    private var modalitySystemImage: String {
+        switch kitesurfOnly {
+        case true: return CardioExercise.kitesurfSystemImage
+        case false: return CardioExercise.surfSystemImage
+        case nil: return "water.waves"
+        }
+    }
+
+    private var modalitySubtitle: String {
+        switch kitesurfOnly {
+        case true:
+            return "Apenas sessões de Kitesurf concluídas — saltos, altura, GPS e condições."
+        case false:
+            return "Apenas sessões de Surf concluídas — SPOT, GPS e comparativo."
+        case nil:
+            return "Apenas sessões de Surf e Kitesurf concluídas."
+        }
     }
 
     private var sessions: [WorkoutSession] {
-        switch filter {
-        case .all:
-            return SurfKiteMetricsAnalyzer.sessions(from: workoutStore.sessionHistory)
-        case .kite:
-            return SurfKiteMetricsAnalyzer.sessions(from: workoutStore.sessionHistory, kitesurfOnly: true)
-        case .surf:
-            return SurfKiteMetricsAnalyzer.sessions(from: workoutStore.sessionHistory, kitesurfOnly: false)
-        }
+        SurfKiteMetricsAnalyzer.sessions(
+            from: workoutStore.sessionHistory,
+            kitesurfOnly: kitesurfOnly
+        )
     }
 
     private var totalJumps: Int {
@@ -59,12 +79,6 @@ struct SurfKiteLogbookView: View {
         ScrollView {
             VStack(spacing: 20) {
                 headerBanner
-                Picker("Filtro", selection: $filter) {
-                    ForEach(LogFilter.allCases) { item in
-                        Text(item.rawValue).tag(item)
-                    }
-                }
-                .pickerStyle(.segmented)
 
                 if sessions.isEmpty {
                     emptyState
@@ -79,7 +93,7 @@ struct SurfKiteLogbookView: View {
             .adaptiveContentWidth()
         }
         .background(AppTheme.background)
-        .navigationTitle("Diário Surf / Kite")
+        .navigationTitle(modalityTitle)
         .navigationBarTitleDisplayMode(.large)
     }
 
@@ -89,7 +103,7 @@ struct SurfKiteLogbookView: View {
                 Circle()
                     .fill(AppTheme.accent.opacity(0.2))
                     .frame(width: 56, height: 56)
-                Image(systemName: "water.waves")
+                Image(systemName: modalitySystemImage)
                     .font(.title2)
                     .foregroundStyle(AppTheme.accent)
             }
@@ -97,7 +111,7 @@ struct SurfKiteLogbookView: View {
                 Text("Comparativo de sessões")
                     .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
-                Text("Saltos, altura, GPS e condições entre treinos da modalidade.")
+                Text(modalitySubtitle)
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
             }
@@ -116,7 +130,7 @@ struct SurfKiteLogbookView: View {
             Text("Nenhuma sessão registrada")
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
-            Text("Inicie Cardio → Surf ou Kitesurf, preencha equipamento/SPOT e encerre a sessão. O histórico e os comparativos aparecem aqui.")
+            Text(emptyStateMessage)
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -125,6 +139,17 @@ struct SurfKiteLogbookView: View {
         .frame(maxWidth: .infinity)
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private var emptyStateMessage: String {
+        switch kitesurfOnly {
+        case true:
+            return "Inicie Cardio → Kitesurf, preencha equipamento/SPOT e encerre a sessão. Só aparecem aqui treinos de Kitesurf concluídos."
+        case false:
+            return "Inicie Cardio → Surf, preencha SPOT/condições e encerre a sessão. Só aparecem aqui treinos de Surf concluídos."
+        case nil:
+            return "Inicie Cardio → Surf ou Kitesurf, preencha equipamento/SPOT e encerre a sessão. Só aparecem sessões dessas modalidades."
+        }
     }
 
     private var summaryGrid: some View {
@@ -226,9 +251,20 @@ struct SurfKiteLogbookView: View {
 
     private func sessionRow(_ session: WorkoutSession) -> some View {
         let w = session.waterSport
-        let report = SurfKiteReportBuilder.build(session: session, allSessions: workoutStore.sessionHistory)
+        let isKite = SurfKiteMetricsAnalyzer.isKitesurfSession(session)
+        let peers = SurfKiteMetricsAnalyzer.sessions(
+            from: workoutStore.sessionHistory,
+            kitesurfOnly: isKite
+        )
+        let report = SurfKiteReportBuilder.build(session: session, allSessions: peers)
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
+                Image(systemName: isKite
+                      ? CardioExercise.kitesurfSystemImage
+                      : CardioExercise.surfSystemImage)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 22, alignment: .center)
                 Text(session.workoutTitle)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.textPrimary)
@@ -269,4 +305,7 @@ struct SurfKiteLogbookView: View {
     }
 }
 
-struct SurfKiteLogbookRoute: Hashable {}
+struct SurfKiteLogbookRoute: Hashable {
+    /// `nil` = Todos; `true` = Kitesurf; `false` = Surf.
+    var kitesurfOnly: Bool? = nil
+}

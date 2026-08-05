@@ -237,9 +237,10 @@ final class RestTimerService: ObservableObject {
 
     private func startDisplayTimerIfNeeded() {
         guard timer == nil, isRunning || isAwaitingResumeAcknowledgment else { return }
-        let displayTimer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.syncFromWallClock(announceCompletion: true)
+        let box = WeakMainActorBox(self)
+        let displayTimer = Timer(timeInterval: 1, repeats: true) { _ in
+            box.run { this in
+                this.syncFromWallClock(announceCompletion: true)
             }
         }
         RunLoop.main.add(displayTimer, forMode: .common)
@@ -299,13 +300,14 @@ final class RestTimerService: ObservableObject {
 
     private func startReminderSoundLoop() {
         stopReminderSoundLoop()
-        let timer = Timer(timeInterval: 3, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self, self.isAwaitingResumeAcknowledgment else {
-                    self?.stopReminderSoundLoop()
+        let box = WeakMainActorBox(self)
+        let timer = Timer(timeInterval: 3, repeats: true) { _ in
+            box.run { this in
+                guard this.isAwaitingResumeAcknowledgment else {
+                    this.stopReminderSoundLoop()
                     return
                 }
-                self.playRestCompleteSound()
+                this.playRestCompleteSound()
             }
         }
         RunLoop.main.add(timer, forMode: .common)

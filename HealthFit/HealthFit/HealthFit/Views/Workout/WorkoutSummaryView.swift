@@ -33,6 +33,16 @@ struct WorkoutSummaryView: View {
     @State private var isPreparingShare = false
     @State private var scrollToShareToken = 0
 
+    // Mídia pós-treino (opcional — foto/vídeo com overlay estilo Strava)
+    @State private var resultMedia: WorkoutResultPickedMedia?
+    @State private var showMediaSourceDialog = false
+    @State private var showMediaCameraPicker = false
+    @State private var showMediaGalleryPicker = false
+    @State private var showMediaVideoGalleryPicker = false
+    @State private var showMediaVideoCameraPicker = false
+    @State private var isPreparingMediaShare = false
+    @State private var mediaLoadFailed = false
+
     private let shareCardAnchorID = "workoutShareCard"
 
     private var athleteDisplayName: String {
@@ -91,6 +101,7 @@ struct WorkoutSummaryView: View {
                         emailSection
                         shareAchievementSection
                             .id(shareCardAnchorID)
+                        workoutResultMediaSection
                         finishButton
                     }
                     .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
@@ -125,6 +136,74 @@ struct WorkoutSummaryView: View {
             ActivityShareSheet(items: shareItems) {
                 showShareSheet = false
             }
+        }
+        .confirmationDialog(
+            "Adicionar mídia do treino",
+            isPresented: $showMediaSourceDialog,
+            titleVisibility: .visible
+        ) {
+            if PhotoCaptureAvailability.isCameraAvailable {
+                Button("Câmera") {
+                    DispatchQueue.main.async { showMediaCameraPicker = true }
+                }
+            }
+            Button("Galeria") {
+                DispatchQueue.main.async { showMediaGalleryPicker = true }
+            }
+            Button("Vídeo") {
+                DispatchQueue.main.async { showMediaVideoGalleryPicker = true }
+            }
+            if PhotoCaptureAvailability.isVideoCameraAvailable {
+                Button("Gravar vídeo") {
+                    DispatchQueue.main.async { showMediaVideoCameraPicker = true }
+                }
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("A mídia recebe duração, kcal e outros dados da sessão com a marca HealthFit. Opcional — não impede fechar o treino.")
+        }
+        .sheet(isPresented: $showMediaGalleryPicker) {
+            LibraryImagePicker { image in
+                showMediaGalleryPicker = false
+                guard let image else { return }
+                resultMedia = .photo(image)
+            }
+            .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showMediaCameraPicker) {
+            CameraImagePicker { image in
+                showMediaCameraPicker = false
+                guard let image else { return }
+                resultMedia = .photo(image)
+            }
+            .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showMediaVideoGalleryPicker) {
+            LibraryVideoPicker { url in
+                showMediaVideoGalleryPicker = false
+                guard let url else {
+                    mediaLoadFailed = true
+                    return
+                }
+                applyPickedVideo(url: url)
+            }
+            .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showMediaVideoCameraPicker) {
+            CameraVideoPicker { url in
+                showMediaVideoCameraPicker = false
+                guard let url else {
+                    mediaLoadFailed = true
+                    return
+                }
+                applyPickedVideo(url: url)
+            }
+            .ignoresSafeArea()
+        }
+        .alert("Não foi possível carregar a mídia", isPresented: $mediaLoadFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Tente outra foto ou vídeo da galeria.")
         }
         .sheet(item: $mailDraft, onDismiss: {
             presentAlertForPendingMailResult()
@@ -225,6 +304,212 @@ struct WorkoutSummaryView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private var workoutResultMediaSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Foto ou vídeo do treino", systemImage: "photo.on.rectangle.angled")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            Text("Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit (estilo Stories).")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            if let resultMedia {
+                WorkoutResultMediaOverlayView(
+                    image: resultMedia.previewImage,
+                    session: session,
+                    isCardioSession: isCardioSession || session.isOutdoorGPSCardio,
+                    showVideoBadge: resultMedia.isVideo
+                )
+                .frame(maxWidth: .infinity)
+                .aspectRatio(resultMedia.previewImage.size.width / max(resultMedia.previewImage.size.height, 1), contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.35), radius: 18, y: 10)
+
+                // Mesmo CTA do card de conquista: postar em redes sociais.
+                Button {
+                    if resultMedia.isVideo {
+                        prepareAndShareVideo()
+                    } else {
+                        prepareAndShareMediaOverlay()
+                    }
+                } label: {
+                    HStack {
+                        if isPreparingMediaShare {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Image(systemName: "paperplane.fill")
+                        }
+                        Text(
+                            isPreparingMediaShare
+                                ? "Preparando mídia..."
+                                : "Postar no WhatsApp / Instagram"
+                        )
+                        .font(.headline)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(AppTheme.gradientPrimary)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(isPreparingMediaShare)
+
+                if resultMedia.isVideo {
+                    Button {
+                        prepareAndShareMediaOverlay()
+                    } label: {
+                        mediaShareLabel(
+                            icon: "photo.badge.arrow.down",
+                            title: isPreparingMediaShare ? "Preparando..." : "Postar capa com dados",
+                            secondary: true
+                        )
+                    }
+                    .disabled(isPreparingMediaShare)
+                }
+
+                Text("Escolha WhatsApp ou Instagram na tela de compartilhar. Dados da sessão e HealthFit já vão na mídia.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+
+                HStack(spacing: 12) {
+                    Button {
+                        showMediaSourceDialog = true
+                    } label: {
+                        Label("Trocar mídia", systemImage: "arrow.triangle.2.circlepath")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(AppTheme.accent)
+
+                    Button(role: .destructive) {
+                        clearResultMedia()
+                    } label: {
+                        Label("Remover", systemImage: "trash")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.bordered)
+                }
+            } else {
+                Button {
+                    showMediaSourceDialog = true
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Adicionar mídia")
+                            .font(.headline)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        LinearGradient(
+                            colors: [AppTheme.accent.opacity(0.85), AppTheme.accentSecondary.opacity(0.75)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                Text("Câmera, galeria ou vídeo · overlay com duração, km, kcal e HealthFit")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private func mediaShareLabel(icon: String, title: String, secondary: Bool = false) -> some View {
+        HStack {
+            if isPreparingMediaShare {
+                ProgressView()
+                    .tint(secondary ? AppTheme.accent : .white)
+            } else {
+                Image(systemName: icon)
+            }
+            Text(title)
+                .font(.headline)
+        }
+        .foregroundStyle(secondary ? AppTheme.accent : .white)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(
+            secondary
+                ? AnyShapeStyle(AppTheme.cardBackground)
+                : AnyShapeStyle(AppTheme.gradientPrimary)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(secondary ? AppTheme.accent.opacity(0.5) : .clear, lineWidth: 1)
+        )
+    }
+
+    private func applyPickedVideo(url: URL) {
+        if let poster = WorkoutResultMediaOverlayRenderer.posterFrame(fromVideoURL: url) {
+            resultMedia = .video(url: url, poster: poster)
+        } else {
+            mediaLoadFailed = true
+        }
+    }
+
+    private func clearResultMedia() {
+        if case .video(let url, _) = resultMedia {
+            try? FileManager.default.removeItem(at: url)
+        }
+        resultMedia = nil
+    }
+
+    @MainActor
+    private func prepareAndShareMediaOverlay() {
+        guard let resultMedia else { return }
+        isPreparingMediaShare = true
+        let image = WorkoutResultMediaOverlayRenderer.renderComposedImage(
+            image: resultMedia.previewImage,
+            session: session,
+            isCardioSession: isCardioSession || session.isOutdoorGPSCardio,
+            showVideoBadge: resultMedia.isVideo
+        )
+        let caption = WorkoutResultMediaOverlayRenderer.shareCaption(
+            session: session,
+            athleteName: athleteDisplayName
+        )
+        isPreparingMediaShare = false
+        guard let image else { return }
+        shareItems = [image, caption]
+        showShareSheet = true
+    }
+
+    @MainActor
+    private func prepareAndShareVideo() {
+        guard case .video(let url, _) = resultMedia else { return }
+        isPreparingMediaShare = true
+        let caption = WorkoutResultMediaOverlayRenderer.videoShareCaption(
+            session: session,
+            athleteName: athleteDisplayName
+        )
+        isPreparingMediaShare = false
+        shareItems = [url, caption]
+        showShareSheet = true
     }
 
     @MainActor
@@ -749,7 +1034,9 @@ struct WorkoutSummaryView: View {
     private func surfKitePerformanceSection(report: SurfKiteComparisonReport) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Image(systemName: report.session.waterSport?.isKitesurf == true ? "wind" : "figure.surfing")
+                Image(systemName: report.session.waterSport?.isKitesurf == true
+                      ? CardioExercise.kitesurfSystemImage
+                      : CardioExercise.surfSystemImage)
                     .foregroundStyle(AppTheme.accent)
                 Text(report.session.waterSport?.isKitesurf == true ? "Performance Kitesurf" : "Performance Surf")
                     .font(.headline)

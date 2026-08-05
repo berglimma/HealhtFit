@@ -4,23 +4,26 @@ import UIKit
 /// Extrai e compara sessões de Surf / Kitesurf.
 enum SurfKiteMetricsAnalyzer {
     static func isWaterSportSession(_ session: WorkoutSession) -> Bool {
-        if session.waterSport != nil { return true }
-        let t = session.workoutTitle.lowercased()
-        return t.contains("kitesurf") || t.contains("kite surf") || t.contains("surf")
+        isKitesurfSession(session) || isSurfSession(session)
     }
 
     static func isKitesurfSession(_ session: WorkoutSession) -> Bool {
         if let w = session.waterSport { return w.isKitesurf }
-        let t = session.workoutTitle.lowercased()
-        return t.contains("kitesurf") || t.contains("kite surf")
+        if exerciseRecordsIndicateKitesurf(session) { return true }
+        return titleIndicatesKitesurf(session.workoutTitle)
     }
 
     static func isSurfSession(_ session: WorkoutSession) -> Bool {
-        isWaterSportSession(session) && !isKitesurfSession(session)
+        if let w = session.waterSport { return !w.isKitesurf }
+        if isKitesurfSession(session) { return false }
+        if exerciseRecordsIndicateSurf(session) { return true }
+        return titleIndicatesSurf(session.workoutTitle)
     }
 
+    /// Histórico do diário: só sessões concluídas da modalidade (Surf e/ou Kitesurf).
     static func sessions(from history: [WorkoutSession], kitesurfOnly: Bool? = nil) -> [WorkoutSession] {
         history.filter { session in
+            guard session.endedAt != nil else { return false }
             guard isWaterSportSession(session) else { return false }
             if let kitesurfOnly {
                 return isKitesurfSession(session) == kitesurfOnly
@@ -28,6 +31,36 @@ enum SurfKiteMetricsAnalyzer {
             return true
         }
         .sorted { $0.startedAt > $1.startedAt }
+    }
+
+    private static func titleIndicatesKitesurf(_ title: String) -> Bool {
+        let t = title.lowercased()
+        return t.contains("kitesurf") || t.contains("kite surf")
+    }
+
+    private static func titleIndicatesSurf(_ title: String) -> Bool {
+        if titleIndicatesKitesurf(title) { return false }
+        let t = title.lowercased()
+        // Títulos típicos: "Cardio — Surf", "Cardio — Surf · Shortboard · Spot"
+        if t.contains("— surf") || t.contains("- surf") { return true }
+        let tokens = t.split { !$0.isLetter && $0 != "'" }.map(String.init)
+        return tokens.contains("surf") || tokens.contains("surfing")
+    }
+
+    private static func exerciseRecordsIndicateKitesurf(_ session: WorkoutSession) -> Bool {
+        session.exerciseRecords.contains { record in
+            let n = record.exerciseName.lowercased()
+            return n.contains("kitesurf") || n.contains("kite surf")
+        }
+    }
+
+    private static func exerciseRecordsIndicateSurf(_ session: WorkoutSession) -> Bool {
+        session.exerciseRecords.contains { record in
+            let n = record.exerciseName.lowercased()
+            if n.contains("kitesurf") || n.contains("kite surf") { return false }
+            let tokens = n.split { !$0.isLetter }.map(String.init)
+            return tokens.contains("surf") || tokens.contains("surfing")
+        }
     }
 
     static func totalJumps(in sessions: [WorkoutSession]) -> Int {

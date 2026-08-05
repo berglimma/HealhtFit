@@ -22,6 +22,9 @@ final class RunTrackingService: NSObject, ObservableObject {
     /// Corrida, caminhada ou ciclismo — afeta classificação de movimento e pedômetro.
     private(set) var modality: OutdoorCardioModality = .running
 
+    /// Weak handle for CoreLocation callbacks (Swift 6 — no capturing var `self` into Tasks).
+    private nonisolated(unsafe) weak var nonisolatedWeakSelf: RunTrackingService?
+
     private let locationManager = CLLocationManager()
     private let pedometer = CMPedometer()
     private let motionActivityManager = CMMotionActivityManager()
@@ -44,6 +47,7 @@ final class RunTrackingService: NSObject, ObservableObject {
 
     override init() {
         super.init()
+        nonisolatedWeakSelf = self
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = 5
@@ -196,24 +200,26 @@ final class RunTrackingService: NSObject, ObservableObject {
             return
         }
         isPedometerAvailable = true
-        pedometer.startUpdates(from: start) { [weak self] data, error in
-            guard let self, error == nil, let data else { return }
+        let box = WeakMainActorBox(self)
+        pedometer.startUpdates(from: start) { data, error in
+            guard error == nil, let data else { return }
             let steps = data.numberOfSteps.intValue
-            Task { @MainActor in
-                self.latestPedometerRaw = max(0, steps)
-                guard !self.isPaused else { return }
-                self.usesPedometerSteps = true
-                self.stepCount = max(0, self.latestPedometerRaw - self.pedometerOffset)
+            box.run { this in
+                this.latestPedometerRaw = max(0, steps)
+                guard !this.isPaused else { return }
+                this.usesPedometerSteps = true
+                this.stepCount = max(0, this.latestPedometerRaw - this.pedometerOffset)
             }
         }
     }
 
     private func startMotionActivityUpdates() {
         guard motionActivityAvailable else { return }
-        motionActivityManager.startActivityUpdates(to: .main) { [weak self] activity in
-            guard let self, let activity else { return }
-            Task { @MainActor in
-                self.applyMotionActivity(activity)
+        let box = WeakMainActorBox(self)
+        motionActivityManager.startActivityUpdates(to: .main) { activity in
+            guard let activity else { return }
+            box.run { this in
+                this.applyMotionActivity(activity)
             }
         }
     }
@@ -346,19 +352,19 @@ final class RunTrackingService: NSObject, ObservableObject {
 extension RunTrackingService: CLLocationManagerDelegate {
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         let status = manager.authorizationStatus
-        Task { @MainActor in
-            authorizationStatus = status
+        WeakMainActorBox.schedule(nonisolatedWeakSelf) { this in
+            this.authorizationStatus = status
             switch status {
             case .authorizedAlways, .authorizedWhenInUse:
-                locationDeniedMessage = nil
-                if isTracking {
+                this.locationDeniedMessage = nil
+                if this.isTracking {
                     if status == .authorizedWhenInUse {
-                        locationManager.requestAlwaysAuthorization()
+                        this.locationManager.requestAlwaysAuthorization()
                     }
-                    startLocationUpdatesIfAuthorized()
+                    this.startLocationUpdatesIfAuthorized()
                 }
             case .denied, .restricted:
-                locationDeniedMessage = Self.deniedMessage
+                this.locationDeniedMessage = Self.deniedMessage
             case .notDetermined:
                 break
             @unknown default:
@@ -369,16 +375,16 @@ extension RunTrackingService: CLLocationManagerDelegate {
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
-        Task { @MainActor in
-            guard isTracking else { return }
-            accept(location)
+        WeakMainActorBox.schedule(nonisolatedWeakSelf) { this in
+            guard this.isTracking else { return }
+            this.accept(location)
         }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        Task { @MainActor in
-            if authorizationStatus == .denied || authorizationStatus == .restricted {
-                locationDeniedMessage = Self.deniedMessage
+        WeakMainActorBox.schedule(nonisolatedWeakSelf) { this in
+            if this.authorizationStatus == .denied || this.authorizationStatus == .restricted {
+                this.locationDeniedMessage = Self.deniedMessage
             }
             #if DEBUG
             print("RunTrackingService location error: \(error.localizedDescription)")

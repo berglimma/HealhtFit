@@ -202,7 +202,7 @@ final class AppIconInactivityService {
             }
 
             Task { @MainActor in
-                self.handleBackgroundRefresh(task: refreshTask)
+                AppIconInactivityService.shared.handleBackgroundRefresh(task: refreshTask)
             }
         }
     }

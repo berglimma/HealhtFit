@@ -199,14 +199,14 @@ final class NotificationService {
                         // Defer bulk scheduling so first launch permission prompt does not freeze UI.
                         await Task.yield()
                         try? await Task.sleep(nanoseconds: 400_000_000)
-                        self.refreshRecurringNotifications()
+                        NotificationService.shared.refreshRecurringNotifications()
                     }
                 }
             case .authorized, .provisional, .ephemeral:
                 Task { @MainActor in
                     await Task.yield()
                     try? await Task.sleep(nanoseconds: 400_000_000)
-                    self.refreshRecurringNotifications()
+                    NotificationService.shared.refreshRecurringNotifications()
                 }
             case .denied:
                 print("[HealthFit] Notificações desativadas em Ajustes; reative para receber lembretes de refeição e motivação.")
@@ -225,7 +225,7 @@ final class NotificationService {
                 return
             }
             Task { @MainActor in
-                self.scheduleAuthorizedRecurringNotifications()
+                NotificationService.shared.scheduleAuthorizedRecurringNotifications()
             }
         }
     }
@@ -374,10 +374,11 @@ final class NotificationService {
             UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
 
             Task { @MainActor in
+                let service = NotificationService.shared
                 for hour in hours {
-                    let components = self.localTimeComponents(hour: hour, minute: minute)
+                    let components = service.localTimeComponents(hour: hour, minute: minute)
 
-                    self.scheduleOnPhone(
+                    service.scheduleOnPhone(
                         title: "Hora de beber água! 💧",
                         body: MotivationMessages.waterReminderMessage(forHour: hour),
                         category: "WATER_REMINDER",

@@ -24,6 +24,17 @@ enum OutdoorCardioModality: String, Codable, CaseIterable {
         default: return false
         }
     }
+
+    /// SF Symbol alinhado ao catálogo de cardio / badges de modalidade.
+    var systemImage: String {
+        switch self {
+        case .running: return "figure.run"
+        case .walking: return "figure.walk"
+        case .cycling: return "bicycle"
+        case .surfing: return CardioExercise.surfSystemImage
+        case .kitesurfing: return CardioExercise.kitesurfSystemImage
+        }
+    }
 }
 
 /// Estado de atividade durante cardio outdoor (corrida, caminhada ou bike).

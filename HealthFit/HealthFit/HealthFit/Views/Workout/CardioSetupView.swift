@@ -33,6 +33,10 @@ struct CardioSetupView: View {
     @State private var tideHeightMeters: Double = 1.2
     @Environment(\.dismiss) private var dismiss
     @StateObject private var spotLocator = SpotLocationHelper()
+    @State private var showWindConditions = false
+    @State private var windSnapshot: OpenMeteoWindService.Snapshot?
+    @State private var isLoadingWind = false
+    @State private var windLoadError: String?
 
     private static let caloriePresets = [100, 150, 200, 250, 300, 350, 400, 500, 600, 800]
     private static let lapPresets = [10, 20, 30, 40, 50, 60, 80, 100]
@@ -63,6 +67,13 @@ struct CardioSetupView: View {
     }
 
     private var waterSetup: WaterSportSetup? {
+        makeWaterSetup(windSpeedKmh: windSpeedKmh, windDirectionDegrees: windDirectionDegrees)
+    }
+
+    private func makeWaterSetup(
+        windSpeedKmh: Double,
+        windDirectionDegrees: Double
+    ) -> WaterSportSetup? {
         guard exercise.isWaterSport else { return nil }
         var spot = WaterSpotInfo(name: spotName.trimmingCharacters(in: .whitespacesAndNewlines))
         if useCurrentLocationAsSpot, let c = spotLocator.coordinate {
@@ -98,6 +109,13 @@ struct CardioSetupView: View {
     }
 
     private var config: CardioWorkoutConfig {
+        makeConfig()
+    }
+
+    private func makeConfig(windSnapshot: OpenMeteoWindService.Snapshot? = nil) -> CardioWorkoutConfig {
+        let speed = windSnapshot.map { min(max($0.windSpeedKmh, 0), 60) } ?? windSpeedKmh
+        let direction = windSnapshot.map { min(max($0.windDirectionDegrees, 0), 359) } ?? windDirectionDegrees
+
         let supportsKm = exercise.supportsCustomDistanceGoals
         let isFree = supportsKm && distanceMode.isFree
 
@@ -125,7 +143,7 @@ struct CardioSetupView: View {
                 }
                 return nil
             }(),
-            waterSportSetup: waterSetup
+            waterSportSetup: makeWaterSetup(windSpeedKmh: speed, windDirectionDegrees: direction)
         )
     }
 
@@ -133,6 +151,7 @@ struct CardioSetupView: View {
         ScrollView {
             VStack(spacing: 24) {
                 headerSection
+                modalityLogbookLink
                 if exercise.supportsCustomDistanceGoals {
                     outdoorDistanceSection
                 }
@@ -143,8 +162,10 @@ struct CardioSetupView: View {
                     swimmingPoolSection
                     swimmingLapsSection
                 }
-                calorieGoalSection
-                intensitySection
+                if !exercise.isWaterSport {
+                    calorieGoalSection
+                    intensitySection
+                }
                 summarySection
                 startButton
             }
@@ -154,6 +175,26 @@ struct CardioSetupView: View {
         .background(AppTheme.background)
         .navigationTitle(exercise.name)
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showWindConditions) {
+            WaterWindConditionsView(
+                title: exercise.isKitesurf ? "Vento e maré — Kitesurf" : "Vento e maré — Surf",
+                preferredCoordinate: spotLocator.coordinate,
+                locationHint: spotName.isEmpty ? nil : spotName,
+                startButtonTitle: exercise.isKitesurf ? "Iniciar Kitesurf" : "Iniciar Surf",
+                isKitesurf: exercise.isKitesurf,
+                onStart: { snap in
+                    if let snap {
+                        applyWindSnapshot(snap)
+                    }
+                    showWindConditions = false
+                    startCardioSession(windSnapshot: snap ?? windSnapshot)
+                },
+                onCancel: {
+                    showWindConditions = false
+                }
+            )
+            .presentationDetents([.large])
+        }
         .onAppear {
             if exercise.supportsDistanceGoals {
                 distanceMode = .preset(.five)
@@ -168,20 +209,148 @@ struct CardioSetupView: View {
             }
             if exercise.isWaterSport {
                 spotLocator.requestLocation()
+                Task { await preloadWind(force: false) }
             }
+        }
+        .onChange(of: spotLocator.coordinate?.latitude) { _, _ in
+            guard exercise.isWaterSport, spotLocator.coordinate != nil, windSnapshot == nil else { return }
+            Task { await preloadWind(force: false) }
         }
     }
 
-    private var headerSection: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(AppTheme.accent.opacity(0.2))
-                    .frame(width: 72, height: 72)
-                Image(systemName: exercise.icon)
-                    .font(.system(size: 32))
-                    .foregroundStyle(AppTheme.accent)
+    @MainActor
+    private func preloadWind(force: Bool) async {
+        guard exercise.isWaterSport else { return }
+        isLoadingWind = true
+        windLoadError = nil
+        let preferred = spotLocator.coordinate
+        let hint = spotName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let (coord, label) = OpenMeteoWindService.shared.resolveLocation(
+            preferred: preferred,
+            preferredLabel: hint.isEmpty ? nil : hint
+        )
+        do {
+            let result = try await OpenMeteoWindService.shared.fetch(
+                latitude: coord.latitude,
+                longitude: coord.longitude,
+                locationLabel: label,
+                forceRefresh: force
+            )
+            windSnapshot = result
+            applyWindSnapshot(result)
+        } catch {
+            windLoadError = (error as? LocalizedError)?.errorDescription
+                ?? "Não foi possível carregar o vento."
+        }
+        isLoadingWind = false
+    }
+
+    /// Diário da modalidade (dentro de Natação / Bike / Surf / Kite).
+    @ViewBuilder
+    private var modalityLogbookLink: some View {
+        if exercise.supportsSwimmingPool {
+            NavigationLink(value: SwimmingLogbookRoute()) {
+                modalityLogbookRow(
+                    title: "Diário de natação",
+                    subtitle: "Histórico, distância, ritmo e calorias",
+                    icon: "book.pages.fill",
+                    tint: .cyan
+                )
             }
+            .buttonStyle(.plain)
+        } else if exercise.isOutdoorCycling {
+            NavigationLink(value: BikeLogbookRoute()) {
+                modalityLogbookRow(
+                    title: "Diário de bike",
+                    subtitle: "Problemas, manutenção e vida útil das peças",
+                    icon: "book.pages.fill",
+                    tint: .green
+                )
+            }
+            .buttonStyle(.plain)
+        } else if exercise.isKitesurf {
+            NavigationLink(value: SurfKiteLogbookRoute(kitesurfOnly: true)) {
+                modalityLogbookRow(
+                    title: "Diário de kite surf",
+                    subtitle: "Saltos, SPOT, vento e comparativo",
+                    icon: CardioExercise.kitesurfSystemImage,
+                    tint: .cyan
+                )
+            }
+            .buttonStyle(.plain)
+        } else if exercise.isSurf {
+            NavigationLink(value: SurfKiteLogbookRoute(kitesurfOnly: false)) {
+                modalityLogbookRow(
+                    title: "Diário de surf",
+                    subtitle: "SPOT, condições e comparativo de sessões",
+                    icon: CardioExercise.surfSystemImage,
+                    tint: .cyan
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func modalityLogbookRow(
+        title: String,
+        subtitle: String,
+        icon: String,
+        tint: Color
+    ) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(tint.opacity(0.2))
+                    .frame(width: 52, height: 52)
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundStyle(tint)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private func applyWindSnapshot(_ snap: OpenMeteoWindService.Snapshot) {
+        windSpeedKmh = min(max(snap.windSpeedKmh, 0), 60)
+        windDirectionDegrees = min(max(snap.windDirectionDegrees, 0), 359)
+        let tide = snap.estimatedTideLabel
+        if tide != "Não informado" {
+            tideLabel = tide
+        }
+        if let h = snap.displayTideHeightMeters {
+            tideHeightMeters = min(max(h, 0), 6)
+        }
+        OpenMeteoWindService.shared.saveLastKnown(
+            coordinate: CLLocationCoordinate2D(latitude: snap.latitude, longitude: snap.longitude),
+            label: snap.locationLabel
+        )
+    }
+
+    private var headerSection: some View {
+        HStack(spacing: 14) {
+            ModalityCoverArt(
+                systemImage: exercise.icon,
+                colors: exercise.coverColors
+            )
+                .frame(width: 72, height: 72)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(exercise.coverColors.first?.opacity(0.55) ?? AppTheme.accent.opacity(0.4), lineWidth: 1)
+                )
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(exercise.name)
@@ -229,13 +398,18 @@ struct CardioSetupView: View {
                             if case .custom = distanceMode, abs(parsedCustomKm - km) < 0.05 { return true }
                             return false
                         }()
-                        Text(km == km.rounded() ? "\(Int(km))" : String(format: "%.1f", km))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(isSelected ? .white : AppTheme.textPrimary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(isSelected ? AppTheme.accent : AppTheme.cardBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        VStack(spacing: 2) {
+                            Text(km == km.rounded() ? "\(Int(km))" : String(format: "%.1f", km))
+                                .font(.subheadline.weight(.semibold))
+                            Text("KM")
+                                .font(.caption2.weight(.semibold))
+                                .opacity(isSelected ? 0.9 : 0.7)
+                        }
+                        .foregroundStyle(isSelected ? .white : AppTheme.textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(isSelected ? AppTheme.accent : AppTheme.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
                 }
@@ -393,7 +567,7 @@ struct CardioSetupView: View {
                     }
                 }
 
-                Text("3. Modo de velejo")
+                Text("2. Modo de velejo")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.textSecondary)
                 ForEach(KiteRidingMode.allCases) { mode in
@@ -420,7 +594,7 @@ struct CardioSetupView: View {
                 }
             }
 
-            Text(exercise.isKitesurf ? "2. Tipo de prancha" : "Tipo de prancha")
+            Text(exercise.isKitesurf ? "3. Tipo de prancha" : "Tipo de prancha")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.textSecondary)
             TextField("Buscar prancha…", text: $boardSearch)
@@ -479,38 +653,7 @@ struct CardioSetupView: View {
             }
             .foregroundStyle(AppTheme.accent)
 
-            Text("Maré e vento")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppTheme.textSecondary)
-            HStack {
-                Text("Vento \(Int(windSpeedKmh)) km/h")
-                Spacer()
-            }
-            .foregroundStyle(AppTheme.textPrimary)
-            Slider(value: $windSpeedKmh, in: 0...60, step: 1)
-                .tint(AppTheme.accent)
-            HStack {
-                Text("Direção \(Int(windDirectionDegrees))° · \(WindDirectionLabels.label(degrees: windDirectionDegrees))")
-                Spacer()
-            }
-            .font(.caption)
-            .foregroundStyle(AppTheme.textSecondary)
-            Slider(value: $windDirectionDegrees, in: 0...359, step: 5)
-                .tint(AppTheme.accentSecondary)
-
-            Picker("Maré", selection: $tideLabel) {
-                ForEach(WindDirectionLabels.tidePresets, id: \.self) { Text($0).tag($0) }
-            }
-            .pickerStyle(.menu)
-            .tint(AppTheme.accent)
-
-            HStack {
-                Text("Altura maré \(String(format: "%.1f", tideHeightMeters)) m")
-                Spacer()
-            }
-            .foregroundStyle(AppTheme.textPrimary)
-            Slider(value: $tideHeightMeters, in: 0...4, step: 0.1)
-                .tint(AppTheme.accent)
+            preStartWindPanel
 
             if exercise.isKitesurf {
                 Text("No treino: altura de saltos via giroscópio Apple Watch + iPhone, pontos no mapa, gráficos e relatório PDF.")
@@ -518,6 +661,234 @@ struct CardioSetupView: View {
                     .foregroundStyle(AppTheme.textSecondary)
             }
         }
+    }
+
+    /// Painel de vento + maré (Open-Meteo / Marine) exibido no setup antes de iniciar.
+    private var preStartWindPanel: some View {
+        ZStack {
+            TransparentOceanWavesView(
+                tint: Color.cyan,
+                baseOpacity: 0.16,
+                waveCount: 3
+            )
+            .frame(height: 120)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .clipped()
+            .opacity(0.85)
+
+            TransparentWindLinesView(
+                directionDegrees: windSnapshot?.windDirectionDegrees ?? windDirectionDegrees,
+                speedKmh: windSnapshot?.windSpeedKmh ?? windSpeedKmh,
+                tint: Color.cyan.opacity(0.95),
+                baseOpacity: 0.65,
+                lineCount: 7
+            )
+            .frame(height: 88)
+            .frame(maxWidth: .infinity)
+            .allowsHitTesting(false)
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Label("Vento e maré", systemImage: "wind")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Spacer()
+                    Button {
+                        Task { await preloadWind(force: true) }
+                    } label: {
+                        if isLoadingWind {
+                            ProgressView()
+                                .tint(AppTheme.accent)
+                        } else {
+                            Label("Atualizar", systemImage: "arrow.clockwise")
+                                .font(.caption.weight(.semibold))
+                        }
+                    }
+                    .foregroundStyle(AppTheme.accent)
+                    .disabled(isLoadingWind)
+                }
+
+                if isLoadingWind && windSnapshot == nil {
+                    HStack(spacing: 10) {
+                        ProgressView().tint(AppTheme.accent)
+                        Text("Buscando vento e maré (Open-Meteo)…")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                } else if let snap = windSnapshot {
+                    Text(snap.beachSportMessage(isKitesurf: exercise.isKitesurf))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    setupTideCard(snap)
+
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        windMetricTile(title: "Vento", value: String(format: "%.0f km/h", snap.windSpeedKmh), icon: "wind")
+                        windMetricTile(
+                            title: "Direção",
+                            value: "\(Int(snap.windDirectionDegrees.rounded()))° · \(snap.windLabel)",
+                            icon: "safari"
+                        )
+                        if let gusts = snap.windGustsKmh {
+                            windMetricTile(title: "Rajadas", value: String(format: "%.0f km/h", gusts), icon: "tornado")
+                        }
+                        if let wave = snap.waveHeightMeters {
+                            windMetricTile(title: "Ondas", value: String(format: "%.1f m", wave), icon: "water.waves")
+                        }
+                        if let period = snap.wavePeriodSeconds {
+                            windMetricTile(title: "Período", value: String(format: "%.0f s", period), icon: "timer")
+                        }
+                        windMetricTile(title: "Atualizado", value: snap.updatedAtText, icon: "clock")
+                    }
+
+                    if !snap.marineHours.isEmpty {
+                        Text("Próximas horas")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(AppTheme.textSecondary)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(snap.marineHours.prefix(6)) { hour in
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(hour.hourLabel)
+                                            .font(.caption2.weight(.bold))
+                                            .foregroundStyle(AppTheme.accent)
+                                        if let sea = hour.seaLevelMeters {
+                                            Text(String(format: "%+.2f m", sea))
+                                                .font(.caption2.monospacedDigit())
+                                                .foregroundStyle(AppTheme.textPrimary)
+                                        }
+                                        if let wave = hour.waveHeightMeters {
+                                            Text(String(format: "%.1f m ↗", wave))
+                                                .font(.caption2)
+                                                .foregroundStyle(AppTheme.textSecondary)
+                                        }
+                                    }
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 6)
+                                    .background(AppTheme.background.opacity(0.55))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                            }
+                        }
+                    }
+
+                    Text(snap.locationLabel)
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                } else if let windLoadError {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "wifi.slash")
+                            .foregroundStyle(AppTheme.accentSecondary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(windLoadError)
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                            Text("Ative a internet e a localização, depois toque em Atualizar.")
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                    }
+                    HStack {
+                        Text("Vento \(Int(windSpeedKmh)) km/h")
+                        Spacer()
+                    }
+                    .foregroundStyle(AppTheme.textPrimary)
+                    Slider(value: $windSpeedKmh, in: 0...60, step: 1)
+                        .tint(AppTheme.accent)
+                    HStack {
+                        Text("Direção \(Int(windDirectionDegrees))° · \(WindDirectionLabels.label(degrees: windDirectionDegrees))")
+                        Spacer()
+                    }
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    Slider(value: $windDirectionDegrees, in: 0...359, step: 5)
+                        .tint(AppTheme.accentSecondary)
+                } else {
+                    Text("Condições serão carregadas assim que a localização e a internet estiverem prontas.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+            .padding()
+        }
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    /// Card de maré com altura real (internet) e selo de favorabilidade.
+    private func setupTideCard(_ snap: OpenMeteoWindService.Snapshot) -> some View {
+        let fav = snap.favorability(isKitesurf: exercise.isKitesurf)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Maré", systemImage: "water.waves")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                Text(fav.badgeLabel)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(setupFavColor(fav))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(setupFavColor(fav).opacity(0.16))
+                    .clipShape(Capsule())
+            }
+            if let sea = snap.seaLevelHeightMeters {
+                Text(String(format: "%+.2f m MSL", sea))
+                    .font(.title3.bold().monospacedDigit())
+                    .foregroundStyle(AppTheme.textPrimary)
+            } else if let h = snap.displayTideHeightMeters {
+                Text(String(format: "%.2f m", h))
+                    .font(.title3.bold().monospacedDigit())
+                    .foregroundStyle(AppTheme.textPrimary)
+            }
+            Text(snap.estimatedTideLabel)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+            if fav == .favorable {
+                Text(exercise.isKitesurf
+                     ? "Maré e vento favoráveis — boa janela de kite."
+                     : "Maré favorável — boas chances no pico.")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.green)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(fav == .favorable ? Color.green.opacity(0.12) : AppTheme.background.opacity(0.55))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(fav == .favorable ? Color.green.opacity(0.4) : Color.clear, lineWidth: 1)
+        )
+    }
+
+    private func setupFavColor(_ fav: TideWindFavorability) -> Color {
+        switch fav {
+        case .favorable: return .green
+        case .moderate: return AppTheme.accentSecondary
+        case .unfavorable: return .orange
+        case .unknown: return AppTheme.textSecondary
+        }
+    }
+
+    private func windMetricTile(title: String, value: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(title, systemImage: icon)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+            Text(value)
+                .font(.subheadline.bold())
+                .foregroundStyle(AppTheme.textPrimary)
+                .minimumScaleFactor(0.75)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(AppTheme.background.opacity(0.55))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private var swimmingPoolSection: some View {
@@ -605,7 +976,7 @@ struct CardioSetupView: View {
             }
 
             if useLapGoal {
-                Text("Durante o treino você conta as voltas. Uma volta = comprimento da piscina (\(Int(resolvedPoolMeters)) m).")
+                Text("Com o Apple Watch, as voltas são contadas automaticamente. Uma volta = comprimento da piscina (\(Int(resolvedPoolMeters)) m). Sem Watch, você pode ajustar manualmente.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
 
@@ -649,7 +1020,7 @@ struct CardioSetupView: View {
                 }
                 .foregroundStyle(AppTheme.textPrimary)
             } else {
-                Text("Sem meta de voltas — conte livremente e encerre quando quiser.")
+                Text("Sem meta de voltas — o Watch conta automaticamente; você também pode ajustar na tela e encerrar quando quiser.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
             }
@@ -793,7 +1164,76 @@ struct CardioSetupView: View {
 
     private var summarySection: some View {
         VStack(spacing: 10) {
-            if config.isFreeRun {
+            if exercise.isWaterSport {
+                HStack {
+                    Label("Modalidade", systemImage: exercise.icon)
+                    Spacer()
+                    Text(exercise.isKitesurf ? "Kitesurf" : "Surf")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accent)
+                }
+                if exercise.isKitesurf {
+                    HStack {
+                        Label("Equipamento", systemImage: kiteEquipment.icon)
+                        Spacer()
+                        Text(kiteEquipment.rawValue)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
+                    HStack {
+                        Label("Modo de velejo", systemImage: ridingMode.icon)
+                        Spacer()
+                        Text(ridingMode.rawValue)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
+                }
+                HStack {
+                    Label("Prancha", systemImage: selectedBoard.icon)
+                    Spacer()
+                    Text(selectedBoard.rawValue)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
+                HStack {
+                    Label("Vento", systemImage: "wind")
+                    Spacer()
+                    Text("\(Int(windSpeedKmh)) km/h · \(WindDirectionLabels.label(degrees: windDirectionDegrees))")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                }
+                if let snap = windSnapshot, let gusts = snap.windGustsKmh {
+                    HStack {
+                        Label("Rajadas", systemImage: "tornado")
+                        Spacer()
+                        Text(String(format: "%.0f km/h", gusts))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
+                }
+                HStack {
+                    Label("Maré", systemImage: "water.waves")
+                    Spacer()
+                    Text(tideLabel == "Não informado" || tideLabel.isEmpty
+                         ? "Aguardando…"
+                         : String(format: "%@ · %.2f m", tideLabel, tideHeightMeters))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                        .multilineTextAlignment(.trailing)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.75)
+                }
+                if let snap = windSnapshot {
+                    let fav = snap.favorability(isKitesurf: exercise.isKitesurf)
+                    HStack {
+                        Label("Condição", systemImage: fav == .favorable ? "checkmark.seal.fill" : "info.circle")
+                        Spacer()
+                        Text(fav.badgeLabel)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(setupFavColor(fav))
+                    }
+                }
+            } else if config.isFreeRun {
                 HStack {
                     Label("Modo", systemImage: exercise.icon)
                     Spacer()
@@ -900,7 +1340,15 @@ struct CardioSetupView: View {
                         .foregroundStyle(AppTheme.accent)
                 }
             }
-            if config.isFreeRun || config.hasDistanceTarget || config.isOutdoorCyclingSession {
+            if exercise.isWaterSport {
+                HStack {
+                    Label("Calorias", systemImage: "flame.fill")
+                    Spacer()
+                    Text("GPS + Watch em tempo real")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
+            } else if config.isFreeRun || config.hasDistanceTarget || config.isOutdoorCyclingSession {
                 HStack {
                     Label("Calorias (referência)", systemImage: "flame.fill")
                     Spacer()
@@ -952,23 +1400,11 @@ struct CardioSetupView: View {
 
     private var startButton: some View {
         Button {
-            guard workoutStore.startCardioSession(config: config) else { return }
-            watchConnectivity.startCardioOnWatch(
-                workoutName: config.title,
-                targetSeconds: config.targetDurationSeconds,
-                exerciseName: config.exercise.name,
-                targetCalories: config.targetCalories,
-                waterSportMode: config.isWaterSportSession,
-                isKitesurf: config.isKitesurfSession
-            )
-            let athleteName = authService.currentUser?.greetingName ?? "Atleta"
-            NotificationService.shared.deliverCardioStartNotification(
-                sessionTitle: config.title,
-                athleteName: athleteName
-            )
-            // MainTabView hosts ActiveCardioView for the whole session (minimize-safe).
-            workoutStore.resumeActiveWorkout()
-            dismiss()
+            if exercise.isWaterSport {
+                showWindConditions = true
+            } else {
+                startCardioSession()
+            }
         } label: {
             Label(
                 {
@@ -985,51 +1421,62 @@ struct CardioSetupView: View {
         }
         .buttonStyle(PrimaryButtonStyle())
     }
+
+    private func startCardioSession(windSnapshot: OpenMeteoWindService.Snapshot? = nil) {
+        let sessionConfig = makeConfig(windSnapshot: windSnapshot)
+        guard workoutStore.startCardioSession(config: sessionConfig) else { return }
+        watchConnectivity.startCardioOnWatch(
+            workoutName: sessionConfig.title,
+            targetSeconds: sessionConfig.targetDurationSeconds,
+            exerciseName: sessionConfig.exercise.name,
+            targetCalories: sessionConfig.targetCalories,
+            waterSportMode: sessionConfig.isWaterSportSession,
+            isKitesurf: sessionConfig.isKitesurfSession,
+            swimmingMode: sessionConfig.isSwimmingSession,
+            poolLengthMeters: sessionConfig.resolvedPoolLengthMeters
+        )
+        let athleteName = authService.currentUser?.greetingName ?? "Atleta"
+        NotificationService.shared.deliverCardioStartNotification(
+            sessionTitle: sessionConfig.title,
+            athleteName: athleteName
+        )
+        // MainTabView hosts ActiveCardioView for the whole session (minimize-safe).
+        workoutStore.resumeActiveWorkout()
+        dismiss()
+    }
 }
 
+/// Card de modalidade cardio — mesmo formato hero da musculação (imagem + gradiente + título).
 struct CardioExerciseCard: View {
     let exercise: CardioExercise
 
+    private var featureLabel: String {
+        if exercise.supportsDistanceGoals { return "Livre ou 5–40 km" }
+        if exercise.supportsSwimmingPool { return "Piscina e voltas" }
+        if exercise.supportsOutdoorGPS { return "Mapa GPS" }
+        if exercise.isStationaryBike { return "Indoor · sem GPS" }
+        if exercise.isWaterSport { return "Spot e condições" }
+        return String(format: "~%.0f kcal/min", exercise.caloriesPerMinute)
+    }
+
+    private var featureIcon: String {
+        if exercise.supportsDistanceGoals || exercise.supportsCustomDistanceGoals { return "map" }
+        if exercise.supportsSwimmingPool { return "figure.pool.swim" }
+        if exercise.supportsOutdoorGPS || exercise.isWaterSport { return "location.fill" }
+        if exercise.isStationaryBike { return "house.fill" }
+        return "flame.fill"
+    }
+
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(AppTheme.accentSecondary.opacity(0.2))
-                    .frame(width: 52, height: 52)
-                Image(systemName: exercise.icon)
-                    .font(.title2)
-                    .foregroundStyle(AppTheme.accentSecondary)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(exercise.name)
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.textPrimary)
-                Text({
-                    if exercise.supportsDistanceGoals {
-                        return "\(exercise.description) · livre ou 5–40 km"
-                    }
-                    if exercise.supportsSwimmingPool {
-                        return "\(exercise.description) · piscina e voltas"
-                    }
-                    if exercise.supportsOutdoorGPS {
-                        return "\(exercise.description) · mapa GPS"
-                    }
-                    return exercise.description
-                }())
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .lineLimit(2)
-            }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .foregroundStyle(AppTheme.textSecondary)
-        }
-        .padding()
-        .background(AppTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        WorkoutProgramHeroCard(
+            title: exercise.name,
+            subtitle: exercise.description,
+            accent: exercise.coverColors.first ?? AppTheme.accentSecondary,
+            imageName: exercise.coverImageName,
+            systemImage: exercise.icon,
+            coverColors: exercise.coverColors,
+            footerLabels: [(icon: featureIcon, text: featureLabel)]
+        )
     }
 }
 
@@ -1041,9 +1488,11 @@ final class SpotLocationHelper: NSObject, ObservableObject, CLLocationManagerDel
     @Published var statusMessage = "Obtendo GPS…"
 
     private let manager = CLLocationManager()
+    private nonisolated(unsafe) weak var nonisolatedWeakSelf: SpotLocationHelper?
 
     override init() {
         super.init()
+        nonisolatedWeakSelf = self
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
     }
@@ -1061,28 +1510,28 @@ final class SpotLocationHelper: NSObject, ObservableObject, CLLocationManagerDel
     }
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        Task { @MainActor in
-            if manager.authorizationStatus == .authorizedWhenInUse
-                || manager.authorizationStatus == .authorizedAlways {
-                manager.requestLocation()
-            } else if manager.authorizationStatus == .denied {
-                statusMessage = "Permissão de localização negada."
+        let status = manager.authorizationStatus
+        WeakMainActorBox.schedule(nonisolatedWeakSelf) { this in
+            if status == .authorizedWhenInUse || status == .authorizedAlways {
+                this.manager.requestLocation()
+            } else if status == .denied {
+                this.statusMessage = "Permissão de localização negada."
             }
         }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        Task { @MainActor in
-            if let loc = locations.last {
-                coordinate = loc.coordinate
-                statusMessage = "Localização sincronizada com o mapa."
-            }
+        guard let loc = locations.last else { return }
+        WeakMainActorBox.schedule(nonisolatedWeakSelf) { this in
+            this.coordinate = loc.coordinate
+            this.statusMessage = "Localização sincronizada com o mapa."
         }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        Task { @MainActor in
-            statusMessage = error.localizedDescription
+        let message = error.localizedDescription
+        WeakMainActorBox.schedule(nonisolatedWeakSelf) { this in
+            this.statusMessage = message
         }
     }
 }

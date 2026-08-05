@@ -43,23 +43,29 @@ final class JumpMetricsService: ObservableObject {
         isRunning = true
         lastStatusMessage = "Sensores de salto ativos"
 
+        let motionBox = WeakMainActorBox(self)
         if motion.isDeviceMotionAvailable {
             motion.deviceMotionUpdateInterval = 0.05
-            motion.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { [weak self] data, _ in
-                guard let self, let data else { return }
-                self.handleDeviceMotion(data)
+            motion.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { data, _ in
+                guard let data else { return }
+                motionBox.run { this in
+                    this.handleDeviceMotion(data)
+                }
             }
         }
 
+        let altimeterBox = WeakMainActorBox(self)
         if CMAltimeter.isRelativeAltitudeAvailable() {
-            altimeter.startRelativeAltitudeUpdates(to: .main) { [weak self] data, _ in
-                guard let self, let data else { return }
+            altimeter.startRelativeAltitudeUpdates(to: .main) { data, _ in
+                guard let data else { return }
                 let alt = data.relativeAltitude.doubleValue
-                if self.baselineAltitude == nil {
-                    self.baselineAltitude = alt
+                altimeterBox.run { this in
+                    if this.baselineAltitude == nil {
+                        this.baselineAltitude = alt
+                    }
+                    this.relativeAltitudeMeters = alt - (this.baselineAltitude ?? 0)
+                    this.evaluateAltitudeJump()
                 }
-                self.relativeAltitudeMeters = alt - (self.baselineAltitude ?? 0)
-                self.evaluateAltitudeJump()
             }
         }
     }

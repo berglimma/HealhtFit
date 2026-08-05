@@ -157,6 +157,9 @@ struct WatchContentView: View {
             if workoutManager.isWaterSportMode {
                 waterSportCardioExtras
             }
+            if workoutManager.isSwimmingMode {
+                swimmingCardioExtras
+            }
 
             if hasCalorieGoal {
                 Label("Meta calórica", systemImage: "flame.fill")
@@ -217,9 +220,51 @@ struct WatchContentView: View {
         }
     }
 
+    private var swimmingCardioExtras: some View {
+        VStack(spacing: 4) {
+            Label("Natação", systemImage: "figure.pool.swim")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.cyan)
+
+            HStack(spacing: 12) {
+                VStack(spacing: 1) {
+                    Text("\(workoutManager.swimLapCount)")
+                        .font(.title3.bold())
+                    Text("voltas")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                }
+                VStack(spacing: 1) {
+                    Text("\(Int(workoutManager.swimDistanceMeters.rounded()))")
+                        .font(.title3.bold())
+                    Text("m")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                }
+                VStack(spacing: 1) {
+                    Text("\(Int(workoutManager.poolLengthMeters))")
+                        .font(.title3.bold())
+                    Text("m/volta")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Text("Voltas automáticas do relógio")
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+
     private var waterSportCardioExtras: some View {
         VStack(spacing: 6) {
-            Text(workoutManager.isKitesurfMode ? "Kitesurf" : "Surf")
+            Label(
+                workoutManager.isKitesurfMode ? "Kitesurf" : "Surf",
+                systemImage: workoutManager.isKitesurfMode
+                    ? "wind"
+                    : "figure.surfing"
+            )
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.cyan)
 

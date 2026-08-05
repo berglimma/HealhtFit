@@ -159,17 +159,17 @@ final class SubscriptionService: ObservableObject {
     }
 
     private func listenForTransactions() -> Task<Void, Never> {
-        Task { [weak self] in
+        let box = WeakMainActorBox(self)
+        return Task {
             for await result in Transaction.updates {
-                guard let self else { return }
-                do {
-                    let transaction = try self.checkVerified(result)
-                    await self.apply(transaction: transaction)
-                    await transaction.finish()
-                    await self.updateEntitlementsFromStore()
-                } catch {
-                    await MainActor.run {
-                        self.lastErrorMessage = error.localizedDescription
+                await box.runAsync { this in
+                    do {
+                        let transaction = try this.checkVerified(result)
+                        await this.apply(transaction: transaction)
+                        await transaction.finish()
+                        await this.updateEntitlementsFromStore()
+                    } catch {
+                        this.lastErrorMessage = error.localizedDescription
                     }
                 }
             }

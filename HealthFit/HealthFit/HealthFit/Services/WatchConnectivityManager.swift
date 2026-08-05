@@ -60,6 +60,10 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     @Published private(set) var lastWatchJumpEvent: (height: Double, peakG: Double, airtime: Double?)?
     @Published private(set) var watchJumpTick: Int = 0
     @Published private(set) var lastWatchAccelG: Double = 0
+    /// Voltas de natação reportadas pelo Apple Watch (fonte automática).
+    @Published private(set) var watchSwimLapCount: Int = 0
+    @Published private(set) var watchSwimDistanceMeters: Double = 0
+    @Published private(set) var watchSwimLapTick: Int = 0
 
     private var session: WCSession?
 
@@ -200,7 +204,9 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         exerciseName: String,
         targetCalories: Int? = nil,
         waterSportMode: Bool = false,
-        isKitesurf: Bool = false
+        isKitesurf: Bool = false,
+        swimmingMode: Bool = false,
+        poolLengthMeters: Double = 25
     ) {
         clearWatchMetrics()
         sendToWatch([
@@ -211,6 +217,8 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             "targetCalories": targetCalories ?? 0,
             "waterSportMode": waterSportMode,
             "isKitesurf": isKitesurf,
+            "swimmingMode": swimmingMode,
+            "poolLengthMeters": poolLengthMeters,
             "timestamp": Date().timeIntervalSince1970
         ])
         isWorkoutActiveOnWatch = true
@@ -236,6 +244,17 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             "maxJumpHeightMeters": maxHeightMeters,
             "liveAccelG": liveAccelG
         ], realtime: true)
+    }
+
+    /// Pede ao Watch o envio imediato de voltas/distância de natação.
+    func requestWatchSwimSync() {
+        sendToWatch([
+            "action": "requestSwimSync",
+            "timestamp": Date().timeIntervalSince1970
+        ], realtime: true)
+        Task {
+            _ = await attemptSyncWithWatch()
+        }
     }
 
 
@@ -332,6 +351,8 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     private func clearWatchMetrics() {
         watchHeartRate = 0
         watchCalories = 0
+        watchSwimLapCount = 0
+        watchSwimDistanceMeters = 0
         // Passos do dia permanecem; vêm do HealthKit/Watch ao longo do dia.
     }
 
@@ -474,7 +495,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
 extension WatchConnectivityManager: WCSessionDelegate {
     nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         Task { @MainActor in
-            refreshConnectionStatus()
+            WatchConnectivityManager.shared.refreshConnectionStatus()
         }
     }
 
@@ -486,29 +507,30 @@ extension WatchConnectivityManager: WCSessionDelegate {
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         Task { @MainActor in
-            refreshConnectionStatus()
+            let manager = WatchConnectivityManager.shared
+            manager.refreshConnectionStatus()
             // Sem Watch alcançável, não mantém métricas simuladas/antigas.
             if !session.isReachable {
-                clearWatchMetrics()
+                manager.clearWatchMetrics()
             }
         }
     }
 
     nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
         Task { @MainActor in
-            refreshConnectionStatus()
+            WatchConnectivityManager.shared.refreshConnectionStatus()
         }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
         Task { @MainActor in
-            handleWatchMessage(userInfo)
+            WatchConnectivityManager.shared.handleWatchMessage(userInfo)
         }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
         Task { @MainActor in
-            handleWatchMessage(message)
+            WatchConnectivityManager.shared.handleWatchMessage(message)
         }
     }
 
@@ -518,7 +540,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
         Task { @MainActor in
-            handleWatchMessage(message)
+            WatchConnectivityManager.shared.handleWatchMessage(message)
         }
         replyHandler(["ok": true])
     }
@@ -546,6 +568,27 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
 
         let action = message["action"] as? String
+
+        // Natação: voltas e distância vindas do Watch (HK ou métricas de sessão).
+        let swimLaps = (message["swimLapCount"] as? Int)
+            ?? (message["swimLapCount"] as? NSNumber)?.intValue
+        let swimDistance = (message["swimDistanceMeters"] as? Double)
+            ?? (message["swimDistanceMeters"] as? NSNumber)?.doubleValue
+        if action == "swimMetrics" || swimLaps != nil || swimDistance != nil {
+            if let swimLaps {
+                let next = max(0, swimLaps)
+                if next != watchSwimLapCount {
+                    watchSwimLapCount = next
+                    watchSwimLapTick += 1
+                } else {
+                    watchSwimLapCount = next
+                }
+            }
+            if let swimDistance {
+                watchSwimDistanceMeters = max(0, swimDistance)
+            }
+        }
+
         if action == "waterSportJump" {
             let height = (message["heightMeters"] as? Double) ?? (message["heightMeters"] as? NSNumber)?.doubleValue ?? 1
             let peakG = (message["peakG"] as? Double) ?? (message["peakG"] as? NSNumber)?.doubleValue ?? 1.5

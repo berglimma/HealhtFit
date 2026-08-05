@@ -35,6 +35,7 @@ struct ActiveCardioView: View {
     @State private var lastHandledFinishTick = 0
     @State private var swimLapCount = 0
     @State private var lastWatchJumpTick = 0
+    @State private var lastWatchSwimLapTick = 0
     @State private var isSyncingWatch = false
     @State private var watchSyncStatus: String?
     @ObservedObject private var roadHazards = RoadHazardService.shared
@@ -149,6 +150,9 @@ struct ActiveCardioView: View {
 
     private var navigationTitleText: String {
         if isSwimming { return "Natação" }
+        if isWaterSport {
+            return config.isKitesurfSession ? "Kitesurf" : "Surf"
+        }
         if showsRunningUI { return "Corrida" }
         if isOutdoorCycling || isOutdoorWalking { return config.exercise.name }
         return "Cardio"
@@ -217,6 +221,7 @@ struct ActiveCardioView: View {
                         progressRing
                         if isSwimming {
                             swimmingLapControls
+                            swimWatchSyncButton
                         }
                         calorieEvolutionSection
                         if let superationMessage {
@@ -282,6 +287,9 @@ struct ActiveCardioView: View {
                         liveAccelG: jumpMetrics.liveAccelerationG
                     )
                 }
+                if isSwimming {
+                    applyAutomaticSwimLapsFromWatch()
+                }
             }
             syncWatchData()
             if shouldAutoEndByInactivity {
@@ -319,7 +327,18 @@ struct ActiveCardioView: View {
                     watchConnectivity.requestWatchWaterSportSync()
                 }
             }
+            if isSwimming {
+                Task {
+                    _ = await watchConnectivity.attemptSyncWithWatch()
+                    watchConnectivity.requestWatchSwimSync()
+                }
+            }
             handleExternalFinishTickIfNeeded()
+        }
+        .onChange(of: watchConnectivity.watchSwimLapTick) { _, tick in
+            guard isSwimming, tick > lastWatchSwimLapTick else { return }
+            lastWatchSwimLapTick = tick
+            applyAutomaticSwimLapsFromWatch()
         }
         .onChange(of: watchConnectivity.watchJumpTick) { _, tick in
             guard isWaterSport, tick > lastWatchJumpTick else { return }
@@ -436,7 +455,12 @@ struct ActiveCardioView: View {
         VStack(alignment: .leading, spacing: 12) {
             if let setup = config.waterSportSetup {
                 VStack(alignment: .leading, spacing: 6) {
-                    Label(config.isKitesurfSession ? "Kitesurf ao vivo" : "Surf ao vivo", systemImage: "water.waves")
+                    Label(
+                        config.isKitesurfSession ? "Kitesurf ao vivo" : "Surf ao vivo",
+                        systemImage: config.isKitesurfSession
+                            ? CardioExercise.kitesurfSystemImage
+                            : CardioExercise.surfSystemImage
+                    )
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.textPrimary)
                     if !setup.spot.name.isEmpty {
@@ -690,24 +714,41 @@ struct ActiveCardioView: View {
 
     private var intensityBadge: some View {
         HStack(spacing: 8) {
-            Image(systemName: config.intensity.icon)
-            Text("Intensidade \(config.intensity.rawValue)")
-                .font(.subheadline.weight(.semibold))
-            if config.isFreeRun {
-                Text("·")
-                Text("Livre")
+            if isWaterSport {
+                Image(systemName: config.isKitesurfSession
+                      ? CardioExercise.kitesurfSystemImage
+                      : CardioExercise.surfSystemImage)
+                Text(config.isKitesurfSession ? "Kitesurf" : "Surf")
                     .font(.subheadline.weight(.semibold))
-            } else if config.hasDistanceTarget {
-                Text("·")
-                Text(String(format: abs(config.targetDistanceKm - config.targetDistanceKm.rounded()) < 0.05
-                               ? "%.0f km"
-                               : "%.1f km",
-                             config.targetDistanceKm))
+                if let mode = config.waterSportSetup?.ridingMode {
+                    Text("·")
+                    Text(mode.rawValue)
+                        .font(.subheadline.weight(.semibold))
+                } else if let board = config.waterSportSetup?.boardType {
+                    Text("·")
+                    Text(board.rawValue)
+                        .font(.subheadline.weight(.semibold))
+                }
+            } else {
+                Image(systemName: config.intensity.icon)
+                Text("Intensidade \(config.intensity.rawValue)")
                     .font(.subheadline.weight(.semibold))
-            } else if isSwimming {
-                Text("·")
-                Text("\(Int(config.resolvedPoolLengthMeters)) m")
-                    .font(.subheadline.weight(.semibold))
+                if config.isFreeRun {
+                    Text("·")
+                    Text("Livre")
+                        .font(.subheadline.weight(.semibold))
+                } else if config.hasDistanceTarget {
+                    Text("·")
+                    Text(String(format: abs(config.targetDistanceKm - config.targetDistanceKm.rounded()) < 0.05
+                                   ? "%.0f km"
+                                   : "%.1f km",
+                                 config.targetDistanceKm))
+                        .font(.subheadline.weight(.semibold))
+                } else if isSwimming {
+                    Text("·")
+                    Text("\(Int(config.resolvedPoolLengthMeters)) m")
+                        .font(.subheadline.weight(.semibold))
+                }
             }
             if config.hasCalorieGoal, let target = config.targetCalories {
                 Text("·")
@@ -715,10 +756,10 @@ struct ActiveCardioView: View {
                     .font(.subheadline.weight(.semibold))
             }
         }
-        .foregroundStyle(config.intensity.color)
+        .foregroundStyle(isWaterSport ? AppTheme.accent : config.intensity.color)
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(config.intensity.color.opacity(0.15))
+        .background((isWaterSport ? AppTheme.accent : config.intensity.color).opacity(0.15))
         .clipShape(Capsule())
     }
 
@@ -730,7 +771,13 @@ struct ActiveCardioView: View {
             Text(config.exercise.name)
                 .font(.title.bold())
                 .foregroundStyle(AppTheme.textPrimary)
-            if config.isFreeRun {
+            if isWaterSport {
+                let sportName = config.isKitesurfSession ? "Kitesurf" : "Surf"
+                Text("\(sportName) — GPS, condições e encerre quando quiser")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+            } else if config.isFreeRun {
                 Text(isOutdoorCycling
                       ? "Pedal livre — encerre quando quiser"
                       : isOutdoorWalking
@@ -1086,9 +1133,25 @@ struct ActiveCardioView: View {
 
     private var swimmingLapControls: some View {
         VStack(spacing: 12) {
-            Text("Contagem de voltas")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppTheme.textPrimary)
+            HStack {
+                Text("Contagem de voltas")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                if watchConnectivity.watchSwimLapCount > 0 || watchConnectivity.isWatchConnected {
+                    Label(
+                        watchConnectivity.watchSwimLapCount > 0 ? "Automático · Watch" : "Aguardando Watch",
+                        systemImage: "applewatch"
+                    )
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(swimAutoCountCaption)
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 12) {
@@ -1128,7 +1191,7 @@ struct ActiveCardioView: View {
             HStack(spacing: 8) {
                 ForEach([1, 2, 5], id: \.self) { delta in
                     Button {
-                        swimLapCount += delta
+                            swimLapCount += delta
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     } label: {
                         Text("+\(delta)")
@@ -1147,6 +1210,71 @@ struct ActiveCardioView: View {
         .padding()
         .background(AppTheme.cardBackground.opacity(0.6))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private var swimAutoCountCaption: String {
+        if watchConnectivity.watchSwimLapCount > 0 {
+            return "Voltas do Apple Watch: \(watchConnectivity.watchSwimLapCount). Você ainda pode ajustar manualmente."
+        }
+        if watchConnectivity.isWatchConnected {
+            return "Watch emparelhado — as voltas serão atualizadas automaticamente a partir da natação no relógio."
+        }
+        return "Sem Watch emparelhado — conte as voltas com os botões abaixo."
+    }
+
+    private var swimWatchSyncButton: some View {
+        VStack(spacing: 8) {
+            Button {
+                Task {
+                    isSyncingWatch = true
+                    let result = await watchConnectivity.attemptSyncWithWatch()
+                    watchConnectivity.requestWatchSwimSync()
+                    applyAutomaticSwimLapsFromWatch()
+                    isSyncingWatch = false
+                    switch result {
+                    case .synced:
+                        watchSyncStatus = "Watch sincronizado · voltas automáticas"
+                    case .notPaired:
+                        watchSyncStatus = "Watch não emparelhado — contagem manual"
+                    case .unreachable:
+                        watchSyncStatus = "Watch fora de alcance — dados na fila"
+                    case .appNotInstalled:
+                        watchSyncStatus = "Instale o HealthFit no Apple Watch"
+                    case .activationFailed, .notSupported:
+                        watchSyncStatus = "Watch Connectivity indisponível"
+                    }
+                }
+            } label: {
+                HStack {
+                    if isSyncingWatch {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "applewatch.and.arrow.forward")
+                    }
+                    Text(watchConnectivity.isWatchConnected ? "Sincronizar voltas do Watch" : "Tentar sincronizar Watch")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            }
+            .buttonStyle(.bordered)
+            .disabled(isSyncingWatch)
+
+            if let watchSyncStatus {
+                Text(watchSyncStatus)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    /// Aceita o máximo entre contagem local e do Watch, sem reduzir voltas já contadas manualmente.
+    /// Aceita o maior valor entre contagem local e do Watch (nunca reduz voltas já registradas).
+    private func applyAutomaticSwimLapsFromWatch() {
+        let watchLaps = max(0, watchConnectivity.watchSwimLapCount)
+        guard watchLaps > swimLapCount else { return }
+        swimLapCount = watchLaps
     }
 
     private var swimExtraMetricsRow: some View {
@@ -1456,6 +1584,9 @@ struct ActiveCardioView: View {
             ExerciseSessionRecord(
                 exerciseId: config.exercise.id,
                 exerciseName: {
+                    if isWaterSport {
+                        return config.isKitesurfSession ? "Kitesurf" : "Surf"
+                    }
                     if config.isFreeRun {
                         return "\(config.exercise.name) livre (\(config.intensity.rawValue))"
                     }

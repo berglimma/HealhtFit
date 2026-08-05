@@ -13,7 +13,26 @@
     "“%@” será removido permanentemente." : {
 
     },
+    "#" : {
+
+    },
+    "#%lld" : {
+
+    },
+    "%@  %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@  %2$@"
+          }
+        }
+      }
+    },
     "%@ — escolha um cardápio" : {
+
+    },
+    "%@ — GPS, condições e encerre quando quiser" : {
 
     },
     "%@ · %@" : {
@@ -22,6 +41,26 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ / %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "%@ %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
           }
         }
       }
@@ -97,9 +136,6 @@
     "%lld fichas · preparo para carga · demos em GIF" : {
 
     },
-    "%lld fichas recomendadas" : {
-
-    },
     "%lld hoje" : {
 
     },
@@ -113,6 +149,19 @@
 
     },
     "%lld kcal/dia" : {
+
+    },
+    "%lld km/h · %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld km/h · %2$@"
+          }
+        }
+      }
+    },
+    "%lld m" : {
 
     },
     "%lld min" : {
@@ -139,10 +188,7 @@
     "%lld passos" : {
 
     },
-    "%lld personalizados" : {
-
-    },
-    "%lld recomendados" : {
+    "%lld ponto(s) de salto no mapa" : {
 
     },
     "%lld recomendados · %lld personalizados" : {
@@ -249,6 +295,9 @@
         }
       }
     },
+    "+%lld" : {
+
+    },
     "+%lld min vs recorde" : {
 
     },
@@ -279,10 +328,37 @@
     "1 unidade" : {
 
     },
+    "1. Criar grupo “HealthFit Plans” e os 4 product IDs na App Store Connect.\n2. Em Xcode: Scheme → Options → StoreKit Configuration → Products.storekit.\n3. Ativar featureGatesEnabled quando for bloquear IA, Nutrição e Relatórios." : {
+
+    },
+    "1. Tipo de equipamento (kite)" : {
+
+    },
+    "2. Modo de velejo" : {
+
+    },
+    "2D" : {
+
+    },
+    "3. Tipo de prancha" : {
+
+    },
+    "3D" : {
+
+    },
+    "4. SPOT de partida" : {
+
+    },
     "12h" : {
 
     },
+    "A assinatura renova automaticamente até cancelar. Gerencie em Ajustes → Apple ID." : {
+
+    },
     "A demonstração avança automaticamente após um ciclo do GIF." : {
+
+    },
+    "A mídia recebe duração, kcal e outros dados da sessão com a marca HealthFit. Opcional — não impede fechar o treino." : {
 
     },
     "A senha deve conter:" : {
@@ -294,10 +370,16 @@
     "Abrir em tela cheia" : {
 
     },
+    "Aceleração e saltos" : {
+
+    },
     "Acompanhe a queima em tempo real — dados do relógio quando conectado." : {
 
     },
     "Acompanhe durante o treino" : {
+
+    },
+    "Acompanhe livremente — encerre quando quiser." : {
 
     },
     "Acompanhe treinos, calorias e sugestões de melhoria" : {
@@ -321,10 +403,22 @@
     "Adicionar item personalizado" : {
 
     },
+    "Adicionar mídia" : {
+
+    },
+    "Adicionar mídia do treino" : {
+
+    },
     "Agora não" : {
 
     },
     "Água recomendada" : {
+
+    },
+    "Aguardando amostras de aceleração…" : {
+
+    },
+    "Aguardando Watch" : {
 
     },
     "Alerta após: %llds" : {
@@ -337,6 +431,9 @@
 
     },
     "Alerta OMS" : {
+
+    },
+    "Alterar fundo" : {
 
     },
     "Antes × Depois" : {
@@ -354,10 +451,10 @@
     "Ao vivo" : {
 
     },
-    "Apenas corrida" : {
+    "Apagar" : {
 
     },
-    "Apenas corrida — sem distância ou tempo fixo. Encerre quando quiser." : {
+    "Apenas corrida" : {
 
     },
     "Após atualizar as medidas, estas são as que variaram no período." : {
@@ -369,10 +466,16 @@
     "Apple Watch" : {
 
     },
-    "Aquecimento, quadril, ombros e pós-treino com demos" : {
+    "As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal." : {
 
     },
-    "As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal." : {
+    "Assinar %@" : {
+
+    },
+    "Assinatura" : {
+
+    },
+    "Assinaturas" : {
 
     },
     "Assista a demonstração" : {
@@ -396,16 +499,31 @@
     "Ativas" : {
 
     },
+    "Ative a internet e a localização, depois toque em Atualizar." : {
+
+    },
+    "Ative o GPS para reportar com localização." : {
+
+    },
     "Atividade (minutos)" : {
 
     },
     "Atividade diária" : {
 
     },
+    "Ativo: %@" : {
+
+    },
     "Atual" : {
 
     },
+    "Atualizar" : {
+
+    },
     "Atualizar Cardápio" : {
+
+    },
+    "Atualizar localização" : {
 
     },
     "Aumentar pausa 15 segundos" : {
@@ -1107,6 +1225,9 @@
         }
       }
     },
+    "Automático · Watch" : {
+
+    },
     "Aviso" : {
 
     },
@@ -1117,6 +1238,18 @@
 
     },
     "Biotipo" : {
+
+    },
+    "Bloqueios de plano ainda desativados — o paywall e a loja já estão prontos." : {
+
+    },
+    "Buscando vento e maré (Open-Meteo)…" : {
+
+    },
+    "Buscando vento e maré…" : {
+
+    },
+    "Buscar prancha…" : {
 
     },
     "Buscar proteínas, vegetais, frutas..." : {
@@ -1150,6 +1283,9 @@
         }
       }
     },
+    "Calorias" : {
+
+    },
     "Calorias (referência)" : {
 
     },
@@ -1166,6 +1302,12 @@
 
     },
     "Câmera com Vision" : {
+
+    },
+    "Câmera, galeria ou vídeo · overlay com duração, km, kcal e HealthFit" : {
+
+    },
+    "Caminhada livre — encerre quando quiser · Ritmo ref. %@" : {
 
     },
     "Cancelar" : {
@@ -1208,6 +1350,9 @@
 
     },
     "Com base no seu peso (%@ kg), beba:" : {
+
+    },
+    "Com o Apple Watch, as voltas são contadas automaticamente. Uma volta = comprimento da piscina (%lld m). Sem Watch, você pode ajustar manualmente." : {
 
     },
     "Com o cardápio ativo, você recebe alerta e notificação 5 minutos antes de cada refeição (horários padrão do dia)." : {
@@ -1411,6 +1556,9 @@
     "Comparado à semana anterior" : {
 
     },
+    "Comparado com %lld sessão(ões) na modalidade" : {
+
+    },
     "Comparativo" : {
 
     },
@@ -1418,6 +1566,12 @@
 
     },
     "Comparativo de %lld dia(s)" : {
+
+    },
+    "Comparativo de altura disponível após 2+ sessões com saltos." : {
+
+    },
+    "Comparativo de sessões" : {
 
     },
     "Comparativo disponível após %lld dia(s), quando você atualizar as medidas." : {
@@ -1438,6 +1592,9 @@
     "Comprado 1 vez" : {
 
     },
+    "Comprimento" : {
+
+    },
     "Concluídas" : {
 
     },
@@ -1445,6 +1602,15 @@
 
     },
     "Concluir série e pausar %lld segundos" : {
+
+    },
+    "Condição" : {
+
+    },
+    "Condições atualizadas. Revise e inicie quando estiver pronto." : {
+
+    },
+    "Condições serão carregadas assim que a localização e a internet estiverem prontas." : {
 
     },
     "Conectado" : {
@@ -1483,6 +1649,9 @@
     "Consumo moderado. Evite energéticos à noite para não prejudicar o sono." : {
 
     },
+    "Contagem de voltas" : {
+
+    },
     "Continuar" : {
 
     },
@@ -1517,13 +1686,28 @@
     "Dados físicos vêm do Perfil (peso, altura, idade e sexo)." : {
 
     },
+    "Dados insuficientes para o gráfico" : {
+
+    },
     "Dados salvos" : {
 
     },
     "Dashboard" : {
 
     },
+    "Data" : {
+
+    },
+    "Data de nascimento" : {
+
+    },
+    "Data de nascimento *" : {
+
+    },
     "de %lld kcal" : {
+
+    },
+    "de %lld voltas" : {
 
     },
     "Déficit Calórico" : {
@@ -1551,6 +1735,9 @@
 
     },
     "Depois" : {
+
+    },
+    "Desbloquear %@" : {
 
     },
     "Descanso acumulado: %@" : {
@@ -1592,16 +1779,47 @@
     "Destaques do mês" : {
 
     },
+    "Detalhes" : {
+
+    },
     "Detalhes do Cardio" : {
 
     },
     "Dia" : {
 
     },
+    "Diário da bike" : {
+
+    },
+    "Diário de bordo" : {
+
+    },
+    "Diário de natação" : {
+
+    },
+    "Diários de natação, bike e surf/kite ficam dentro de cada modalidade." : {
+
+    },
     "Diminuir pausa 15 segundos" : {
 
     },
+    "Direção %lld° · %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Direção %1$lld° · %2$@"
+          }
+        }
+      }
+    },
     "Disciplina · Evolução · Constância" : {
+
+    },
+    "Disponível a partir do plano %@." : {
+
+    },
+    "Distância da meta" : {
 
     },
     "Distância meta" : {
@@ -1664,6 +1882,9 @@
     "Encerrar treino sem concluir" : {
 
     },
+    "Encerre pedais de Bicicleta pedal ou Mountain bike para acumular km e a vida útil das peças." : {
+
+    },
     "Energéticos e Pré-treino" : {
 
     },
@@ -1697,6 +1918,9 @@
     "Enviaremos um link para o seu e-mail com instruções para criar uma nova senha." : {
 
     },
+    "Equipamento" : {
+
+    },
     "Equivale a cerca de %lld copos de %lld ml ou %lld garrafas de %lld ml." : {
       "localizations" : {
         "pt-BR" : {
@@ -1711,6 +1935,9 @@
 
     },
     "Escolha em qual seção da lista o item deve aparecer." : {
+
+    },
+    "Escolha o plano ideal. Você pode mudar ou cancelar a qualquer momento." : {
 
     },
     "Escolha o programa" : {
@@ -1731,6 +1958,9 @@
     "Escolha uma opção para cada refeição do dia" : {
 
     },
+    "Escolha WhatsApp ou Instagram na tela de compartilhar. Dados da sessão e HealthFit já vão na mídia." : {
+
+    },
     "Escolha WhatsApp ou Instagram na tela de compartilhar. O nome HealthFit já vai no card." : {
 
     },
@@ -1743,7 +1973,7 @@
     "Essa justificativa será enviada no relatório ao personal." : {
 
     },
-    "Esses dados alimentam o cálculo de calorias e o cardápio em Nutrição." : {
+    "Esses dados alimentam o cálculo de calorias e o cardápio em Nutrição. A data de nascimento é obrigatória." : {
 
     },
     "Esta ação é permanente. Sua conta, treinos na nuvem, perfil e dados locais serão removidos." : {
@@ -1753,6 +1983,12 @@
 
     },
     "Estimativa ao vivo" : {
+
+    },
+    "Estimativa natação" : {
+
+    },
+    "Estimativa por tempo, distância em volta e intensidade." : {
 
     },
     "Etapa %lld de %lld" : {
@@ -1774,10 +2010,16 @@
     "Evolução da meditação" : {
 
     },
+    "Evolução de distância, ritmo (/100 m) e gasto calórico estimado." : {
+
+    },
     "Evolução diária" : {
 
     },
     "Ex: 40" : {
+
+    },
+    "Ex.: buraco profundo na direita" : {
 
     },
     "Excluindo conta…" : {
@@ -1805,6 +2047,12 @@
 
     },
     "Exercícios (%lld)" : {
+
+    },
+    "Exportar PDF Surf / Kite" : {
+
+    },
+    "Extremos estimados" : {
 
     },
     "Falha no envio" : {
@@ -1843,13 +2091,22 @@
     "Finalizar Meditação" : {
 
     },
+    "Finalizar Natação" : {
+
+    },
     "Finalizar Pedal" : {
 
     },
     "Firebase não configurado. Substitua o GoogleService-Info.plist pelo arquivo do Firebase Console." : {
 
     },
+    "Foto de fundo" : {
+
+    },
     "Foto do perfil" : {
+
+    },
+    "Foto ou vídeo do treino" : {
 
     },
     "Fotos (opcional e privado)" : {
@@ -1864,7 +2121,10 @@
     "Fotos opcionais e privadas — só você acessa." : {
 
     },
-    "Full body, core, HIIT, pernas e superiores com demos" : {
+    "Fundo" : {
+
+    },
+    "g" : {
 
     },
     "Galeria" : {
@@ -1889,7 +2149,19 @@
     "Gerar Cardápio" : {
 
     },
+    "Gerenciar assinatura" : {
+
+    },
+    "Gerenciar na App Store" : {
+
+    },
     "GPS" : {
+
+    },
+    "GPS + Watch em tempo real" : {
+
+    },
+    "Gravar vídeo" : {
 
     },
     "Grupos Musculares" : {
@@ -1907,13 +2179,22 @@
     "Hidratação" : {
 
     },
+    "Histórico" : {
+
+    },
     "Histórico de 30 dias com gráficos de sono e suplementos" : {
+
+    },
+    "Histórico de pedais, problemas e manutenções. A vida útil avisa troca de corrente, pneus e pastilhas." : {
 
     },
     "Histórico recente" : {
 
     },
     "Hora de treinar!" : {
+
+    },
+    "Horário da atualização: %@" : {
 
     },
     "Horas" : {
@@ -1928,6 +2209,9 @@
     "Ícone de Saúde" : {
 
     },
+    "Idade: %lld anos" : {
+
+    },
     "Identidade confirmada" : {
 
     },
@@ -1938,6 +2222,9 @@
 
     },
     "Informações" : {
+
+    },
+    "Informe a data de nascimento para continuar" : {
 
     },
     "Informe as circunferências em centímetros. Os campos vazios não entram no relatório." : {
@@ -1958,13 +2245,25 @@
     "Iniciar Corrida" : {
 
     },
+    "Iniciar Kitesurf" : {
+
+    },
     "Iniciar Meditação" : {
+
+    },
+    "Iniciar Natação" : {
 
     },
     "Iniciar Pedal" : {
 
     },
+    "Iniciar Surf" : {
+
+    },
     "Iniciar Treino" : {
+
+    },
+    "Inicie um cardio de Natação, defina o tamanho da piscina e use o Apple Watch para contar as voltas automaticamente. O histórico aparece aqui." : {
 
     },
     "Integrações" : {
@@ -1988,10 +2287,28 @@
     "Itens marcados como comprados na lista são contabilizados aqui. Deslize para remover do histórico." : {
 
     },
+    "kcal" : {
+
+    },
     "kcal queimadas" : {
 
     },
     "kg" : {
+
+    },
+    "Kite: %@" : {
+
+    },
+    "Kitesurf" : {
+
+    },
+    "Kitesurf ao vivo" : {
+
+    },
+    "km" : {
+
+    },
+    "KM" : {
 
     },
     "Legal" : {
@@ -2012,10 +2329,25 @@
     "Livre" : {
 
     },
+    "m" : {
+
+    },
+    "Maior salto (m)" : {
+
+    },
     "Mais comprados" : {
 
     },
+    "Mais popular" : {
+
+    },
     "Mais registrados" : {
+
+    },
+    "Manutenção" : {
+
+    },
+    "Mapa" : {
 
     },
     "Maratona (42,2 km)" : {
@@ -2025,6 +2357,30 @@
 
     },
     "Marcar como não concluída" : {
+
+    },
+    "Marcar salto no iPhone" : {
+
+    },
+    "Maré" : {
+
+    },
+    "Maré e ondas" : {
+
+    },
+    "Maré e vento favoráveis — boa janela de kite." : {
+
+    },
+    "Maré e vento no ponto para kite — boa janela de sessão." : {
+
+    },
+    "Maré favorável — boas chances no pico." : {
+
+    },
+    "Maré favorável para o surf — boas chances no pico." : {
+
+    },
+    "Maré: %@" : {
 
     },
     "Masculino" : {
@@ -2075,13 +2431,22 @@
     "Meta de calorias" : {
 
     },
+    "Meta de voltas" : {
+
+    },
     "Meta kcal" : {
+
+    },
+    "Meta voltas" : {
 
     },
     "Meta: %@" : {
 
     },
     "Meta: %@ km" : {
+
+    },
+    "Meta: %@ km · GPS outdoor" : {
 
     },
     "Meta: %@ km · Ritmo %@" : {
@@ -2103,6 +2468,9 @@
     "Métrica" : {
 
     },
+    "Meu plano" : {
+
+    },
     "Minimizar" : {
 
     },
@@ -2118,16 +2486,28 @@
     "Mobilidade ajuda a preparar articulações para agachamento, terra, supino e desenvolvimento." : {
 
     },
+    "Modalidade" : {
+
+    },
     "Modo" : {
 
     },
-    "Modo da corrida" : {
+    "Modo de velejo" : {
+
+    },
+    "Modo do mapa" : {
 
     },
     "Modo perda de gordura: opções restritivas com baixo carboidrato e sem frituras." : {
 
     },
+    "Modo: %@" : {
+
+    },
     "Montar Cardápio" : {
+
+    },
+    "Mudar de plano" : {
 
     },
     "Na meta" : {
@@ -2137,6 +2517,9 @@
 
     },
     "Não foi possível carregar %@." : {
+
+    },
+    "Não foi possível carregar a mídia" : {
 
     },
     "Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas)." : {
@@ -2172,6 +2555,9 @@
     "Nenhum plano gerado" : {
 
     },
+    "Nenhum registro ainda" : {
+
+    },
     "Nenhum registro de sono neste período. Registre em Sono e Hidratação." : {
 
     },
@@ -2202,10 +2588,22 @@
     "Nenhuma medida variou no período." : {
 
     },
+    "Nenhuma natação registrada" : {
+
+    },
     "Nenhuma sessão de meditação nesta semana. Reserve alguns minutos para acalmar a mente." : {
 
     },
+    "Nenhuma sessão registrada" : {
+
+    },
     "Neste treino" : {
+
+    },
+    "Nível do mar via Open-Meteo Marine (estimado — não é tábua de porto)." : {
+
+    },
+    "No treino: altura de saltos via giroscópio Apple Watch + iPhone, pontos no mapa, gráficos e relatório PDF." : {
 
     },
     "Nome  Completo" : {
@@ -2217,10 +2615,16 @@
     "Nome do item" : {
 
     },
+    "Nome do local / praia / spot" : {
+
+    },
     "Nome do suplemento" : {
 
     },
     "Nome do treino" : {
+
+    },
+    "Nota (opcional)" : {
 
     },
     "Notificações" : {
@@ -2387,10 +2791,19 @@
     "Objetivo: %@" : {
 
     },
+    "Obrigatório · idade atual: %lld anos" : {
+
+    },
     "OK" : {
 
     },
     "OK vamos lá" : {
+
+    },
+    "Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit (estilo Stories)." : {
+
+    },
+    "Open-Meteo (vento + Marine): altura real estimada com sua localização." : {
 
     },
     "Orientações" : {
@@ -2399,10 +2812,7 @@
     "Ótimo! Menos cafeína ajuda no sono e na recuperação muscular." : {
 
     },
-    "Ou escolha uma meta em quilômetros:" : {
-
-    },
-    "Outdoor com GPS" : {
+    "Ou escolha uma distância:" : {
 
     },
     "P:%lldg C:%lldg" : {
@@ -2425,7 +2835,7 @@
         }
       }
     },
-    "PARA MUSCULAÇÃO" : {
+    "País" : {
 
     },
     "Para: %@" : {
@@ -2447,6 +2857,18 @@
     "Pausa" : {
 
     },
+    "Pausa: %@" : {
+
+    },
+    "Pausar" : {
+
+    },
+    "Pausar treino" : {
+
+    },
+    "Pedal livre — encerre quando quiser" : {
+
+    },
     "Pendente" : {
 
     },
@@ -2459,19 +2881,60 @@
     "PERFORMANCE" : {
 
     },
+    "Performance Kitesurf" : {
+
+    },
     "Performance Maratona" : {
+
+    },
+    "Performance Surf" : {
+
+    },
+    "Perigo na pista" : {
 
     },
     "Personalizado" : {
 
     },
-    "Peso, altura, idade e sexo foram sincronizados com o Firebase." : {
+    "Personalizar km" : {
+
+    },
+    "Peso, altura, data de nascimento e sexo foram sincronizados com o Firebase." : {
 
     },
     "Pesquise no catálogo ou toque em + para criar um item personalizado e escolher a categoria." : {
 
     },
+    "Piscina" : {
+
+    },
+    "Piscina %lld m · Conte as voltas · %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Piscina %1$lld m · Conte as voltas · %2$@"
+          }
+        }
+      }
+    },
+    "Piscina %lld m · Meta %lld voltas · %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Piscina %1$lld m · Meta %2$lld voltas · %3$@"
+          }
+        }
+      }
+    },
+    "Plano atual" : {
+
+    },
     "Plano de refeições" : {
+
+    },
+    "Plano já ativo" : {
 
     },
     "Plano para %@" : {
@@ -2501,6 +2964,12 @@
     "Poxa… o treino ficou aberto por mais de 2h30. Eu encerrei por segurança — não se preocupe, estou aqui pra te ajudar no próximo." : {
 
     },
+    "Prancha" : {
+
+    },
+    "Prancha: %@" : {
+
+    },
     "Pré-treino" : {
 
     },
@@ -2513,7 +2982,13 @@
     "Preparando card..." : {
 
     },
+    "Preparando mídia..." : {
+
+    },
     "Pressione firmemente por 1s para salvar o card em Fotos" : {
+
+    },
+    "Problema" : {
 
     },
     "profile.has_nutritionist" : {
@@ -2751,7 +3226,13 @@
     "Projeções com este ritmo" : {
 
     },
+    "Próximas horas" : {
+
+    },
     "Próximo relatório em %lld dia(s)" : {
+
+    },
+    "Próximos passos" : {
 
     },
     "Pular Descanso" : {
@@ -2775,6 +3256,9 @@
     "Quantos pré-treinos você tomou hoje?" : {
 
     },
+    "Rajadas" : {
+
+    },
     "Rec. %@" : {
 
     },
@@ -2785,6 +3269,9 @@
 
     },
     "Recomendamos beber %lld ml agora para despertar o metabolismo e iniciar a hidratação." : {
+
+    },
+    "Recorde anterior" : {
 
     },
     "Redefinir senha" : {
@@ -2813,6 +3300,9 @@
 
     },
     "Registrar sono" : {
+
+    },
+    "Registre mais sessões com saltos para ver a evolução." : {
 
     },
     "Registre o que você ingeriu hoje. Os dados ficam salvos no dia atual." : {
@@ -2845,6 +3335,9 @@
     "Relatórios de treino poderão ser enviados por e-mail" : {
 
     },
+    "Remover" : {
+
+    },
     "Remover %@" : {
 
     },
@@ -2854,7 +3347,16 @@
     "Remover foto" : {
 
     },
+    "Remover fundo" : {
+
+    },
     "Repetições" : {
+
+    },
+    "Reportar" : {
+
+    },
+    "Reportar perigo na pista" : {
 
     },
     "Reps" : {
@@ -2875,6 +3377,9 @@
     "restantes" : {
 
     },
+    "Restaurar compras" : {
+
+    },
     "Resultado" : {
 
     },
@@ -2882,6 +3387,12 @@
 
     },
     "Resumo dos últimos %lld dias" : {
+
+    },
+    "Retomar" : {
+
+    },
+    "Retomar treino" : {
 
     },
     "Retomar treino em andamento" : {
@@ -2899,6 +3410,12 @@
     "Ritmo de referência: %@" : {
 
     },
+    "Ritmo ref." : {
+
+    },
+    "Ritmo ref.: %@" : {
+
+    },
     "ROTA" : {
 
     },
@@ -2908,10 +3425,19 @@
     "Rota da corrida" : {
 
     },
+    "Rota do kitesurf" : {
+
+    },
     "Rota do pedal" : {
 
     },
+    "Rota do surf" : {
+
+    },
     "Rotinas de mobilidade voltadas à musculação, com GIFs na execução" : {
+
+    },
+    "s/100m" : {
 
     },
     "Sair" : {
@@ -2921,6 +3447,12 @@
 
     },
     "Sair da conta?" : {
+
+    },
+    "Saltos" : {
+
+    },
+    "Saltos por sessão" : {
 
     },
     "Salvando e sincronizando…" : {
@@ -2983,10 +3515,10 @@
     "Sem Apple Watch · 0 kcal" : {
 
     },
-    "SEM EQUIPAMENTOS" : {
+    "Sem meta de km" : {
 
     },
-    "Sem meta" : {
+    "Sem meta de voltas — o Watch conta automaticamente; você também pode ajustar na tela e encerrar quando quiser." : {
 
     },
     "Sem meta definida — as calorias serão acompanhadas em tempo real pelo Apple Watch durante o treino." : {
@@ -3057,6 +3589,12 @@
         }
       }
     },
+    "Setup Kitesurf" : {
+
+    },
+    "Setup Surf" : {
+
+    },
     "Seu apelido ou primeiro nome" : {
 
     },
@@ -3081,6 +3619,15 @@
     "Sincronização ativa" : {
 
     },
+    "Sincronizar Apple Watch" : {
+
+    },
+    "Sincronizar partida com GPS (mapa)" : {
+
+    },
+    "Sincronizar voltas do Watch" : {
+
+    },
     "Sobre" : {
 
     },
@@ -3091,6 +3638,12 @@
 
     },
     "Sono, suplementos, medidas e plano de refeições" : {
+
+    },
+    "SPOT de partida" : {
+
+    },
+    "SPOT: %@" : {
 
     },
     "Sua carga" : {
@@ -3113,6 +3666,15 @@
 
     },
     "Suporte" : {
+
+    },
+    "Surf" : {
+
+    },
+    "Surf ao vivo" : {
+
+    },
+    "t" : {
 
     },
     "tab.assistant" : {
@@ -3260,6 +3822,9 @@
         }
       }
     },
+    "Tamanho da piscina" : {
+
+    },
     "TDEE: %lld kcal" : {
 
     },
@@ -3267,6 +3832,9 @@
 
     },
     "Tempo configurado: %llds" : {
+
+    },
+    "Tempo de pausa" : {
 
     },
     "Tempo em tempo real" : {
@@ -3279,6 +3847,24 @@
 
     },
     "Tempo por Exercício" : {
+
+    },
+    "Tentar sincronizar Watch" : {
+
+    },
+    "Tente outra foto ou vídeo da galeria." : {
+
+    },
+    "Tipo" : {
+
+    },
+    "Tipo de perigo" : {
+
+    },
+    "Tipo de prancha" : {
+
+    },
+    "Título" : {
 
     },
     "TMB: %lld kcal" : {
@@ -3308,13 +3894,16 @@
     "Toque na refeição para selecionar e marque como concluída quando comer." : {
 
     },
-    "Toque para adicionar foto" : {
+    "Toque no avatar para alterar" : {
 
     },
-    "Toque para alterar foto" : {
+    "Toque no avatar para foto" : {
 
     },
     "Toque para expandir o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos." : {
+
+    },
+    "Toque para foto de fundo" : {
 
     },
     "Toque para recolher o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos." : {
@@ -3356,6 +3945,9 @@
     "Treino encerrado sem conclusão completa" : {
 
     },
+    "Treino pausado" : {
+
+    },
     "Treino repetido" : {
 
     },
@@ -3366,6 +3958,12 @@
 
     },
     "Treinos Recentes" : {
+
+    },
+    "Trocar mídia" : {
+
+    },
+    "Troquei" : {
 
     },
     "Última atualização: %@" : {
@@ -3386,6 +3984,9 @@
     "Usado nas saudações, motivação e mensagens do app." : {
 
     },
+    "Usado para calcular distância, ritmo e o diário de bordo." : {
+
+    },
     "Use + e − para ajustar a quantidade. O número aparece ao lado e entra na lista de compras." : {
 
     },
@@ -3404,10 +4005,46 @@
     "Veja seu progresso e o que melhorar esta semana" : {
 
     },
+    "Velocidade alvo" : {
+
+    },
+    "Velocidade de referência" : {
+
+    },
+    "Velocidade ref.: %@" : {
+
+    },
+    "Vento" : {
+
+    },
+    "Vento %lld km/h" : {
+
+    },
+    "Vento e maré" : {
+
+    },
+    "Vento e maré — Kitesurf" : {
+
+    },
+    "Vento e maré — Surf" : {
+
+    },
+    "Vento: %@" : {
+
+    },
     "Ver comparativo de %lld dia(s)" : {
 
     },
+    "Ver planos e assinar" : {
+
+    },
     "Ver treino" : {
+
+    },
+    "Vida útil das peças" : {
+
+    },
+    "Vídeo" : {
 
     },
     "Vision" : {
@@ -3426,6 +4063,15 @@
 
     },
     "Você tomou pré-treino antes deste treino? %@." : {
+
+    },
+    "voltas" : {
+
+    },
+    "Voltas" : {
+
+    },
+    "voltas · %lld m" : {
 
     },
     "Volume semanal" : {

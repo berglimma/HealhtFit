@@ -29,6 +29,12 @@ struct WorkoutShareCardView: View {
         session.isOutdoorGPSCardio
     }
 
+    private var isWaterSportShare: Bool {
+        session.isWaterSportSession
+            || session.isSurfSession
+            || session.isKitesurfSession
+    }
+
     /// Early-end / inactivity headlines + motivation are longer and need room to wrap.
     private var needsExtraTextSpace: Bool {
         session.endedEarly || session.autoEndedByInactivity
@@ -303,7 +309,9 @@ struct WorkoutShareCardView: View {
                 .fill(
                     isRunning
                         ? Color.yellow.opacity(0.12)
-                        : Color("AccentGreen").opacity(0.16)
+                        : isWaterSportShare
+                            ? Color.cyan.opacity(0.14)
+                            : Color("AccentGreen").opacity(0.16)
                 )
                 .frame(width: 260, height: 260)
                 .blur(radius: 50)
@@ -328,6 +336,20 @@ struct WorkoutShareCardView: View {
                 }
             }
             .padding(.horizontal, 20)
+
+            // Ondas animadas transparentes (Surf / Kitesurf) — decoração sob o texto.
+            if isWaterSportShare {
+                VStack {
+                    Spacer(minLength: 0)
+                    TransparentOceanWavesView(
+                        tint: Color(red: 0.45, green: 0.82, blue: 0.98),
+                        baseOpacity: 0.32,
+                        waveCount: 3
+                    )
+                    .frame(height: 168)
+                }
+                .allowsHitTesting(false)
+            }
         }
     }
 
@@ -434,6 +456,15 @@ struct WorkoutShareCardView: View {
             || lower.hasPrefix("meditação")
             || lower.hasPrefix("meditacao") {
             return "brain.head.profile"
+        }
+
+        if session.isKitesurfSession
+            || lower.contains("kitesurf")
+            || lower.contains("kite surf") {
+            return CardioExercise.kitesurfSystemImage
+        }
+        if session.isSurfSession || lower.contains("surf") {
+            return CardioExercise.surfSystemImage
         }
 
         if session.isOutdoorCyclingSession

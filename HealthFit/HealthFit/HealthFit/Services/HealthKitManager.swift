@@ -228,11 +228,11 @@ final class HealthKitManager: ObservableObject {
 
     private func startMetricObservers() {
         startHeartRateObserver()
-        startQuantityObserver(for: .stepCount, storingIn: &stepsObserverQuery) { [weak self] in
-            await self?.refreshTodayStepsAndCalories()
+        startQuantityObserver(for: .stepCount, storingIn: &stepsObserverQuery) {
+            await HealthKitManager.shared.refreshTodayStepsAndCalories()
         }
-        startQuantityObserver(for: .activeEnergyBurned, storingIn: &caloriesObserverQuery) { [weak self] in
-            await self?.refreshTodayStepsAndCalories()
+        startQuantityObserver(for: .activeEnergyBurned, storingIn: &caloriesObserverQuery) {
+            await HealthKitManager.shared.refreshTodayStepsAndCalories()
         }
         Task { await fetchLatestHeartRate() }
     }
@@ -339,10 +339,11 @@ final class HealthKitManager: ObservableObject {
             healthStore.stop(existing)
         }
 
-        let query = HKObserverQuery(sampleType: heartRateType, predicate: nil) { [weak self] _, _, error in
+        let query = HKObserverQuery(sampleType: heartRateType, predicate: nil) { _, _, error in
             guard error == nil else { return }
+            // Avoid capturing `self` from a Sendable HK callback (Swift 6).
             Task { @MainActor in
-                await self?.fetchLatestHeartRate()
+                await HealthKitManager.shared.fetchLatestHeartRate()
             }
         }
         heartRateQuery = query
@@ -355,14 +356,20 @@ final class HealthKitManager: ObservableObject {
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
 
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            let query = HKSampleQuery(sampleType: type, predicate: nil, limit: 1, sortDescriptors: [sortDescriptor]) { [weak self] _, samples, _ in
+            let query = HKSampleQuery(sampleType: type, predicate: nil, limit: 1, sortDescriptors: [sortDescriptor]) { _, samples, _ in
+                let bpm: Double?
                 if let sample = samples?.first as? HKQuantitySample {
-                    let bpm = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
-                    Task { @MainActor in
-                        self?.currentHeartRate = bpm
-                    }
+                    bpm = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
+                } else {
+                    bpm = nil
                 }
-                continuation.resume()
+                // Hop to MainActor without capturing instance `self` from this callback.
+                Task { @MainActor in
+                    if let bpm {
+                        HealthKitManager.shared.currentHeartRate = bpm
+                    }
+                    continuation.resume()
+                }
             }
             healthStore.execute(query)
         }

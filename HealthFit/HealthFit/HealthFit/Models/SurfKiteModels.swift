@@ -13,7 +13,7 @@ enum KiteEquipmentType: String, CaseIterable, Identifiable, Codable, Hashable {
 
     var icon: String {
         switch self {
-        case .tubeKite: return "wind"
+        case .tubeKite: return CardioExercise.kitesurfSystemImage
         case .foilKite: return "sailboat.fill"
         case .hybrid: return "arrow.triangle.branch"
         case .trainer: return "flag.2.crossed"
@@ -60,8 +60,11 @@ enum WaterBoardCatalog: String, CaseIterable, Identifiable, Codable, Hashable {
 
     var icon: String {
         switch self {
-        case .shortboard, .longboard, .fish, .funboard, .softTop, .directionalSurf, .strapless:
-            return "figure.surfing"
+        case .shortboard, .longboard, .fish, .funboard, .softTop:
+            return CardioExercise.surfSystemImage
+        case .directionalSurf, .strapless:
+            // Pranchas de kite (directional/strapless) — identidade kite + ride.
+            return CardioExercise.kitesurfSystemImage
         case .twinTip: return "rectangle.split.2x1"
         case .foilBoard: return "water.waves.and.arrow.up"
         }
@@ -97,7 +100,7 @@ enum KiteRidingMode: String, CaseIterable, Identifiable, Codable, Hashable {
         case .bigAir: return "arrow.up.to.line"
         case .speed: return "gauge.with.dots.needle.67percent"
         case .coaching: return "person.badge.clock"
-        case .downwind: return "wind"
+        case .downwind: return CardioExercise.kitesurfSystemImage
         }
     }
 

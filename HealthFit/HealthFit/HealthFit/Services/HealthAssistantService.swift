@@ -73,7 +73,7 @@ enum HealthAssistantEngine {
         "O que preciso melhorar?",
     ]
 
-    static func welcomeMessage(context: HealthAssistantContext) -> String {
+    @MainActor static func welcomeMessage(context: HealthAssistantContext) -> String {
         let greeting = MotivationMessages.namedGreeting(name: context.user?.greetingName)
         var sections = ["\(greeting) Sou o assistente HealthFit.", ""]
 
@@ -111,7 +111,7 @@ enum HealthAssistantEngine {
         let hasWorkoutIssue: Bool
     }
 
-    private static func buildWelcomeAlerts(_ context: HealthAssistantContext) -> WelcomeAlertSummary {
+    @MainActor private static func buildWelcomeAlerts(_ context: HealthAssistantContext) -> WelcomeAlertSummary {
         var alerts: [String] = []
         var hasSleepIssue = false
         var hasWaterIssue = false
@@ -169,6 +169,13 @@ enum HealthAssistantEngine {
             alerts.append("Treinos: apenas \(context.weeklyWorkoutCount) \(label) esta semana. O ideal é pelo menos 3.")
         }
 
+        if let tideWelcome = AssistantTideAlertEngine.welcomeAlertIfNeeded(
+            sessions: context.recentWorkoutSessions,
+            snapshot: OpenMeteoWindService.shared.lastSuccessfulSnapshot
+        ) {
+            alerts.append(tideWelcome)
+        }
+
         return WelcomeAlertSummary(
             messages: alerts,
             hasSleepIssue: hasSleepIssue,
@@ -177,7 +184,7 @@ enum HealthAssistantEngine {
         )
     }
 
-    static func welcomeMessage(for name: String?) -> String {
+    @MainActor static func welcomeMessage(for name: String?) -> String {
         welcomeMessage(context: HealthAssistantContext(
             user: name.map { UserProfile(name: $0, email: "") },
             waterIntakeMl: 0,
@@ -1686,6 +1693,7 @@ final class HealthAssistantService: ObservableObject {
     private var inactivityFollowUpDelivered = false
     private var cardioMeditationNudgeDelivered = false
     private var supplementNudgeDelivered = false
+    private var tideAlertDelivered = false
     private var activePostWorkoutCheckIn: PendingPostWorkoutCheckIn?
     private var isDailyMorningCheckInActive = false
     private var isDailyEveningCheckInActive = false
@@ -1862,6 +1870,7 @@ final class HealthAssistantService: ObservableObject {
         inactivityFollowUpDelivered = false
         cardioMeditationNudgeDelivered = false
         supplementNudgeDelivered = false
+        tideAlertDelivered = false
         replyTask?.cancel()
         messages.append(HealthChatMessage(text: trimmed, isUser: true))
 
@@ -2593,6 +2602,7 @@ final class HealthAssistantService: ObservableObject {
         inactivityFollowUpDelivered = false
         cardioMeditationNudgeDelivered = false
         supplementNudgeDelivered = false
+        tideAlertDelivered = false
         resetWorkoutBuilderDraft()
 
         if let checkIn = PostWorkoutCheckInService.shared.dueCheckIn {
@@ -2757,6 +2767,35 @@ final class HealthAssistantService: ObservableObject {
         deliverAssistantMessage(text)
         AssistantSupplementNudgeEngine.markDailyNudgeDelivered()
         supplementNudgeDelivered = true
+        lastUserInteractionAt = Date()
+    }
+
+    /// Alerta de maré para quem pratica Surf / Kitesurf (no máximo 1×/dia).
+    func checkTideAlertIfNeeded(
+        context: HealthAssistantContext,
+        sessions: [WorkoutSession]
+    ) {
+        guard !isTyping else { return }
+        guard !isInGuidedCheckIn else { return }
+        guard !tideAlertDelivered else { return }
+
+        let name = context.user?.greetingName ?? "Atleta"
+        guard let text = AssistantTideAlertEngine.proactiveMessageIfNeeded(
+            athleteName: name,
+            sessions: sessions,
+            snapshot: OpenMeteoWindService.shared.lastSuccessfulSnapshot
+        ) else {
+            tideAlertDelivered = true
+            return
+        }
+
+        if let last = messages.last, !last.isUser, last.text == text {
+            tideAlertDelivered = true
+            return
+        }
+
+        deliverAssistantMessage(text)
+        tideAlertDelivered = true
         lastUserInteractionAt = Date()
     }
 

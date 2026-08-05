@@ -22,6 +22,9 @@ final class VisionWorkoutService: NSObject, ObservableObject {
     private let videoOutput = AVCaptureVideoDataOutput()
     private let processingQueue = DispatchQueue(label: "com.healthfit.vision", qos: .userInitiated)
 
+    /// Weak handle for Vision / capture callbacks (nonisolated + Sendable-safe hop to MainActor).
+    private nonisolated(unsafe) weak var nonisolatedWeakSelf: VisionWorkoutService?
+
     private var lastBodyPosition: CGPoint?
     private var isInDownPosition = false
     private var downThreshold: CGFloat = 0.6
@@ -29,6 +32,7 @@ final class VisionWorkoutService: NSObject, ObservableObject {
 
     func startDetection() {
         guard !isDetecting else { return }
+        nonisolatedWeakSelf = self
         setupCaptureSession()
         isDetecting = true
         repCount = 0
@@ -39,6 +43,7 @@ final class VisionWorkoutService: NSObject, ObservableObject {
         captureSession?.stopRunning()
         isDetecting = false
         postureStatus = .unknown
+        nonisolatedWeakSelf = nil
     }
 
     func resetReps() {
@@ -81,9 +86,7 @@ final class VisionWorkoutService: NSObject, ObservableObject {
               nose.confidence > 0.3,
               leftHip.confidence > 0.3,
               rightHip.confidence > 0.3 else {
-            Task { @MainActor in
-                postureStatus = .unknown
-            }
+            postureStatus = .unknown
             return
         }
 
@@ -91,17 +94,15 @@ final class VisionWorkoutService: NSObject, ObservableObject {
         let bodyAlignment = abs(leftShoulder.location.x - rightShoulder.location.x)
         let spineAngle = abs(nose.location.y - hipY)
 
-        Task { @MainActor in
-            confidence = nose.confidence
+        confidence = nose.confidence
 
-            if bodyAlignment < 0.15 && spineAngle > 0.2 {
-                postureStatus = .correct
-            } else {
-                postureStatus = .incorrect
-            }
-
-            detectRepetition(hipY: hipY)
+        if bodyAlignment < 0.15 && spineAngle > 0.2 {
+            postureStatus = .correct
+        } else {
+            postureStatus = .incorrect
         }
+
+        detectRepetition(hipY: hipY)
     }
 
     private func detectRepetition(hipY: CGFloat) {
@@ -135,16 +136,14 @@ extension VisionWorkoutService: AVCaptureVideoDataOutputSampleBufferDelegate {
     nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
-        let request = VNDetectHumanBodyPoseRequest { [weak self] request, error in
-            guard error == nil,
-                  let observations = request.results as? [VNHumanBodyPoseObservation],
-                  let body = observations.first else { return }
-            Task { @MainActor in
-                self?.processBodyPose(body)
-            }
-        }
-
+        let request = VNDetectHumanBodyPoseRequest()
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .up, options: [:])
         try? handler.perform([request])
+
+        guard let body = request.results?.first else { return }
+
+        WeakMainActorBox.schedule(nonisolatedWeakSelf) { this in
+            this.processBodyPose(body)
+        }
     }
 }

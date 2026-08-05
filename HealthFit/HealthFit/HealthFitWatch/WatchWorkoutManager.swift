@@ -39,6 +39,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var waterMaxJumpMeters: Double = 0
     @Published var waterLiveAccelG: Double = 1
     @Published var waterLastJumpMeters: Double = 0
+    @Published var isSwimmingMode = false
+    @Published var poolLengthMeters: Double = 25
+    @Published var swimLapCount = 0
+    @Published var swimDistanceMeters: Double = 0
     @Published var watchSyncStatus = ""
 
     private var session: WCSession?
@@ -56,9 +60,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var waterRelativeAltitude: Double = 0
     private var waterBaselineAltitude: Double?
     private let altimeter = CMAltimeter()
+    private var hkWorkoutSession: HKWorkoutSession?
+    private var hkLiveBuilder: HKLiveWorkoutBuilder?
+    private var swimEventLapCount = 0
+    private var lastSwimMetricsSentAt: Date = .distantPast
+    /// Safe hop for nonisolated HK/WC callbacks (no captured `var self`).
+    nonisolated(unsafe) private var mainActorBox: WeakMainActorBox<WatchWorkoutManager>?
 
     override init() {
         super.init()
+        mainActorBox = WeakMainActorBox(self)
         if WCSession.isSupported() {
             session = WCSession.default
             session?.delegate = self
@@ -83,7 +94,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         exerciseName: String,
         targetCalories: Int = 0,
         waterSportMode: Bool = false,
-        isKitesurf: Bool = false
+        isKitesurf: Bool = false,
+        swimmingMode: Bool = false,
+        poolLengthMeters: Double = 25
     ) {
         resetWorkoutState()
         workoutName = name
@@ -91,6 +104,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isMeditationWorkout = false
         isWaterSportMode = waterSportMode
         isKitesurfMode = isKitesurf
+        isSwimmingMode = swimmingMode
+        self.poolLengthMeters = max(poolLengthMeters, 1)
         cardioTargetSeconds = max(targetSeconds, 0)
         cardioTargetCalories = max(targetCalories, 0)
         currentExerciseName = exerciseName
@@ -99,6 +114,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         startWorkoutClock()
         if waterSportMode {
             startWaterSportMotion()
+        }
+        if swimmingMode {
+            startSwimmingWorkoutSession()
         }
     }
 
@@ -161,6 +179,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isCardioWorkout = false
         isMeditationWorkout = false
         stopWaterSportMotion()
+        stopSwimmingWorkoutSession()
         heartRateTimer?.invalidate()
         heartRateTimer = nil
         workoutClockTimer?.invalidate()
@@ -190,6 +209,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         secondsSincePhoneSync = 0
         isWaterSportMode = false
         isKitesurfMode = false
+        isSwimmingMode = false
+        poolLengthMeters = 25
+        swimLapCount = 0
+        swimDistanceMeters = 0
+        swimEventLapCount = 0
         waterJumpCount = 0
         waterMaxJumpMeters = 0
         waterLiveAccelG = 1
@@ -203,9 +227,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private func startWorkoutClock() {
         workoutClockTimer?.invalidate()
         secondsSincePhoneSync = 0
-        workoutClockTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.tickWorkoutClock()
+        let clockBox = WeakMainActorBox(self)
+        workoutClockTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            clockBox.run { this in
+                this.tickWorkoutClock()
             }
         }
     }
@@ -286,9 +311,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         restOvertimeSeconds = 0
         hasSentRestOvertimeNotification = false
 
-        restTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.tickRest()
+        let restBox = WeakMainActorBox(self)
+        restTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            restBox.run { this in
+                this.tickRest()
             }
         }
     }
@@ -447,13 +473,14 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         requestHealthKitAuthorizationIfNeeded()
         workoutStartedAt = Date()
         fetchTodaySteps()
-        heartRateTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.fetchHeartRate()
-                self?.fetchActiveCalories()
-                self?.fetchTodaySteps()
-                self?.applySimulatorMetricsIfNeeded()
-                self?.sendMetricsToPhone()
+        let metricsBox = WeakMainActorBox(self)
+        heartRateTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
+            metricsBox.run { this in
+                this.fetchHeartRate()
+                this.fetchActiveCalories()
+                this.fetchTodaySteps()
+                this.applySimulatorMetricsIfNeeded()
+                this.sendMetricsToPhone()
             }
         }
     }
@@ -478,6 +505,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         } else {
             todaySteps += Int.random(in: 0...8)
         }
+        if isSwimmingMode {
+            // ~1 volta a cada 40s no simulador (sem sensores de virada de piscina).
+            let mockLaps = max(swimLapCount, max(0, workoutElapsedSeconds / 40))
+            if mockLaps > swimLapCount {
+                applySwimLapCount(mockLaps, distanceMeters: Double(mockLaps) * poolLengthMeters, source: "simulator")
+            }
+        }
         updateCalorieSuperation()
         #endif
     }
@@ -495,6 +529,14 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
         if let steps = HKObjectType.quantityType(forIdentifier: .stepCount) {
             readTypes.insert(steps)
+        }
+        if let distanceSwim = HKObjectType.quantityType(forIdentifier: .distanceSwimming) {
+            readTypes.insert(distanceSwim)
+            shareTypes.insert(distanceSwim)
+        }
+        if let strokeCount = HKObjectType.quantityType(forIdentifier: .swimmingStrokeCount) {
+            readTypes.insert(strokeCount)
+            shareTypes.insert(strokeCount)
         }
         if let workout = HKObjectType.workoutType() as HKObjectType? {
             readTypes.insert(workout)
@@ -517,10 +559,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             predicate: predicate,
             limit: 1,
             sortDescriptors: [sortDescriptor]
-        ) { [weak self] _, samples, _ in
-            Task { @MainActor in
+        ) { [box = WeakMainActorBox(self)] _, samples, _ in
+            box.run { this in
                 if let sample = samples?.first as? HKQuantitySample {
-                    self?.heartRate = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
+                    this.heartRate = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
                 }
             }
         }
@@ -536,11 +578,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             quantityType: type,
             quantitySamplePredicate: predicate,
             options: .cumulativeSum
-        ) { [weak self] _, statistics, _ in
-            Task { @MainActor in
+        ) { [box = WeakMainActorBox(self)] _, statistics, _ in
+            box.run { this in
                 if let sum = statistics?.sumQuantity() {
-                    self?.calories = sum.doubleValue(for: .kilocalorie())
-                    self?.updateCalorieSuperation()
+                    this.calories = sum.doubleValue(for: .kilocalorie())
+                    this.updateCalorieSuperation()
                 }
             }
         }
@@ -555,10 +597,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             quantityType: type,
             quantitySamplePredicate: predicate,
             options: .cumulativeSum
-        ) { [weak self] _, statistics, _ in
-            Task { @MainActor in
+        ) { [box = WeakMainActorBox(self)] _, statistics, _ in
+            box.run { this in
                 if let sum = statistics?.sumQuantity() {
-                    self?.todaySteps = Int(sum.doubleValue(for: .count()))
+                    this.todaySteps = Int(sum.doubleValue(for: .count()))
                 }
             }
         }
@@ -567,12 +609,18 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     private func sendMetricsToPhone() {
         guard let session else { return }
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "heartRate": heartRate,
             "calories": calories,
             "steps": todaySteps,
             "timestamp": Date().timeIntervalSince1970
         ]
+        if isSwimmingMode {
+            payload["action"] = "swimMetrics"
+            payload["swimLapCount"] = swimLapCount
+            payload["swimDistanceMeters"] = swimDistanceMeters
+            payload["poolLengthMeters"] = poolLengthMeters
+        }
         if session.isReachable {
             session.sendMessage(payload, replyHandler: nil) { _ in
                 session.transferUserInfo(payload)
@@ -593,21 +641,129 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
+    // MARK: - Natação (HKWorkoutSession + voltas)
+
+    private func startSwimmingWorkoutSession() {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            watchSyncStatus = "HealthKit indisponível"
+            return
+        }
+        requestHealthKitAuthorizationIfNeeded()
+
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = .swimming
+        configuration.locationType = .indoor
+        configuration.swimmingLocationType = .pool
+        configuration.lapLength = HKQuantity(unit: .meter(), doubleValue: max(poolLengthMeters, 1))
+
+        do {
+            let hkSession = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
+            let builder = hkSession.associatedWorkoutBuilder()
+            builder.dataSource = HKLiveWorkoutDataSource(
+                healthStore: healthStore,
+                workoutConfiguration: configuration
+            )
+            hkSession.delegate = self
+            builder.delegate = self
+
+            let start = Date()
+            workoutStartedAt = start
+            hkSession.startActivity(with: start)
+            builder.beginCollection(withStart: start) { _, _ in }
+
+            hkWorkoutSession = hkSession
+            hkLiveBuilder = builder
+            watchSyncStatus = "Natação · voltas automáticas"
+            sendSwimMetricsToPhone(force: true)
+        } catch {
+            watchSyncStatus = "Falha ao iniciar natação HK"
+            // Continua com contagem estimada / manual no iPhone.
+        }
+    }
+
+    private func stopSwimmingWorkoutSession() {
+        guard let hkSession = hkWorkoutSession else {
+            hkLiveBuilder = nil
+            return
+        }
+        let end = Date()
+        hkSession.end()
+        if let builder = hkLiveBuilder {
+            builder.endCollection(withEnd: end) { _, _ in
+                builder.finishWorkout { _, _ in }
+            }
+        }
+        hkWorkoutSession = nil
+        hkLiveBuilder = nil
+    }
+
+    private func applySwimLapCount(_ laps: Int, distanceMeters: Double?, source: String) {
+        let resolvedLaps = max(0, laps)
+        if resolvedLaps > swimLapCount {
+            swimLapCount = resolvedLaps
+            if resolvedLaps > 0 {
+                WKInterfaceDevice.current().play(.click)
+            }
+        }
+        if let distanceMeters, distanceMeters > swimDistanceMeters {
+            swimDistanceMeters = distanceMeters
+        } else if swimLapCount > 0 {
+            swimDistanceMeters = max(swimDistanceMeters, Double(swimLapCount) * poolLengthMeters)
+        }
+        _ = source
+        sendSwimMetricsToPhone(force: false)
+    }
+
+    private func applySwimDistanceMeters(_ meters: Double) {
+        guard meters >= 0 else { return }
+        if meters > swimDistanceMeters {
+            swimDistanceMeters = meters
+        }
+        let pool = max(poolLengthMeters, 1)
+        let fromDistance = max(0, Int((meters / pool).rounded(.down)))
+        if fromDistance > swimLapCount {
+            applySwimLapCount(fromDistance, distanceMeters: meters, source: "distance")
+        } else {
+            sendSwimMetricsToPhone(force: false)
+        }
+    }
+
+
+    private func sendSwimMetricsToPhone(force: Bool) {
+        guard isSwimmingMode else { return }
+        let now = Date()
+        if !force, now.timeIntervalSince(lastSwimMetricsSentAt) < 1.5 {
+            return
+        }
+        lastSwimMetricsSentAt = now
+        sendToPhone([
+            "action": "swimMetrics",
+            "swimLapCount": swimLapCount,
+            "swimDistanceMeters": swimDistanceMeters,
+            "poolLengthMeters": poolLengthMeters,
+            "heartRate": heartRate,
+            "calories": calories,
+            "steps": todaySteps,
+            "timestamp": now.timeIntervalSince1970
+        ])
+    }
+
     private func startWaterSportMotion() {
         waterBaselineAltitude = nil
         waterRelativeAltitude = 0
         waterPeakG = 1
+        let motionBox = WeakMainActorBox(self)
         if motionManager.isDeviceMotionAvailable {
             motionManager.deviceMotionUpdateInterval = 0.08
-            motionManager.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { [weak self] data, _ in
-                guard let self, let data else { return }
-                Task { @MainActor in
+            motionManager.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { data, _ in
+                guard let data else { return }
+                motionBox.run { this in
                     let u = data.userAcceleration
                     let mag = sqrt(u.x * u.x + u.y * u.y + u.z * u.z)
-                    self.waterLiveAccelG = max(0.1, mag)
-                    self.waterPeakG = max(self.waterPeakG, mag)
+                    this.waterLiveAccelG = max(0.1, mag)
+                    this.waterPeakG = max(this.waterPeakG, mag)
                     if Int(Date().timeIntervalSince1970 * 10) % 5 == 0 {
-                        self.sendToPhone([
+                        this.sendToPhone([
                             "action": "waterSportAccel",
                             "accelG": mag,
                             "timestamp": Date().timeIntervalSince1970
@@ -616,15 +772,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         }
+        let altimeterBox = WeakMainActorBox(self)
         if CMAltimeter.isRelativeAltitudeAvailable() {
-            altimeter.startRelativeAltitudeUpdates(to: .main) { [weak self] data, _ in
-                guard let self, let data else { return }
-                Task { @MainActor in
-                    let alt = data.relativeAltitude.doubleValue
-                    if self.waterBaselineAltitude == nil {
-                        self.waterBaselineAltitude = alt
+            altimeter.startRelativeAltitudeUpdates(to: .main) { data, _ in
+                guard let data else { return }
+                let alt = data.relativeAltitude.doubleValue
+                altimeterBox.run { this in
+                    if this.waterBaselineAltitude == nil {
+                        this.waterBaselineAltitude = alt
                     }
-                    self.waterRelativeAltitude = alt - (self.waterBaselineAltitude ?? 0)
+                    this.waterRelativeAltitude = alt - (this.waterBaselineAltitude ?? 0)
                 }
             }
         }
@@ -662,13 +819,20 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 ?? ((message["waterSportMode"] as? NSNumber)?.boolValue ?? false)
             let kite = (message["isKitesurf"] as? Bool)
                 ?? ((message["isKitesurf"] as? NSNumber)?.boolValue ?? false)
+            let swimMode = (message["swimmingMode"] as? Bool)
+                ?? ((message["swimmingMode"] as? NSNumber)?.boolValue ?? false)
+            let poolLen = (message["poolLengthMeters"] as? Double)
+                ?? (message["poolLengthMeters"] as? NSNumber)?.doubleValue
+                ?? 25
             startCardio(
                 name: name,
                 targetSeconds: targetSeconds,
                 exerciseName: exerciseName,
                 targetCalories: targetCalories,
                 waterSportMode: waterMode,
-                isKitesurf: kite
+                isKitesurf: kite,
+                swimmingMode: swimMode,
+                poolLengthMeters: poolLen
             )
         case "syncWorkoutProgress":
             applyPhoneSync(
@@ -693,6 +857,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 ])
             }
             watchSyncStatus = "iPhone sincronizado"
+        case "requestSwimSync":
+            sendMetricsToPhone()
+            sendSwimMetricsToPhone(force: true)
+            watchSyncStatus = "Voltas enviadas"
         case "syncWaterSportMetrics":
             if let count = message["jumpCount"] as? Int {
                 waterJumpCount = max(waterJumpCount, count)
@@ -822,6 +990,87 @@ extension WatchWorkoutManager: WCSessionDelegate {
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
         Task { @MainActor in
             handlePhoneMessage(userInfo)
+        }
+    }
+}
+
+
+extension WatchWorkoutManager: HKWorkoutSessionDelegate {
+    nonisolated func workoutSession(
+        _ workoutSession: HKWorkoutSession,
+        didChangeTo toState: HKWorkoutSessionState,
+        from fromState: HKWorkoutSessionState,
+        date: Date
+    ) {
+        // Sessão de natação mantém o app em modo treino na água.
+    }
+
+    nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
+        mainActorBox?.run { manager in
+            manager.watchSyncStatus = "Erro na sessão de natação"
+        }
+    }
+}
+
+extension WatchWorkoutManager: HKLiveWorkoutBuilderDelegate {
+    nonisolated func workoutBuilder(
+        _ workoutBuilder: HKLiveWorkoutBuilder,
+        didCollectDataOf collectedTypes: Set<HKSampleType>
+    ) {
+        var distanceMeters: Double?
+        var energyKcal: Double?
+        var bpm: Double?
+
+        for type in collectedTypes {
+            guard let quantityType = type as? HKQuantityType else { continue }
+            let stats = workoutBuilder.statistics(for: quantityType)
+            if quantityType == HKQuantityType.quantityType(forIdentifier: .distanceSwimming),
+               let sum = stats?.sumQuantity() {
+                distanceMeters = sum.doubleValue(for: .meter())
+            }
+            if quantityType == HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned),
+               let sum = stats?.sumQuantity() {
+                energyKcal = sum.doubleValue(for: .kilocalorie())
+            }
+            if quantityType == HKQuantityType.quantityType(forIdentifier: .heartRate),
+               let quantity = stats?.mostRecentQuantity() {
+                bpm = quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
+            }
+        }
+
+        let distanceSnapshot = distanceMeters
+        let energySnapshot = energyKcal
+        let bpmSnapshot = bpm
+        mainActorBox?.run { manager in
+            guard manager.isSwimmingMode else { return }
+            if let distanceSnapshot {
+                manager.applySwimDistanceMeters(distanceSnapshot)
+            }
+            if let energySnapshot {
+                manager.calories = energySnapshot
+                manager.updateCalorieSuperation()
+            }
+            if let bpmSnapshot {
+                manager.heartRate = bpmSnapshot
+            }
+            manager.sendMetricsToPhone()
+        }
+    }
+
+    nonisolated func workoutBuilderDidCollectEvent(_ workoutBuilder: HKLiveWorkoutBuilder) {
+        let lapCount = workoutBuilder.workoutEvents.filter { $0.type == .lap }.count
+        mainActorBox?.run { manager in
+            guard manager.isSwimmingMode else { return }
+            let previous = manager.swimEventLapCount
+            manager.swimEventLapCount = lapCount
+            if lapCount > previous {
+                let distance = Double(lapCount) * manager.poolLengthMeters
+                manager.applySwimLapCount(
+                    lapCount,
+                    distanceMeters: max(manager.swimDistanceMeters, distance),
+                    source: "lapEvent"
+                )
+            }
         }
     }
 }
