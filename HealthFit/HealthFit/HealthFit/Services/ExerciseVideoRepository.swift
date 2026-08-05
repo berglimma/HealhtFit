@@ -1,5 +1,6 @@
 import Foundation
 
+import Combine
 @MainActor
 final class ExerciseVideoRepository: ObservableObject {
     static let shared = ExerciseVideoRepository()

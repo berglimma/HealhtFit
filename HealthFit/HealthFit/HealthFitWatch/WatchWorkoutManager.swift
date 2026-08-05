@@ -4,6 +4,7 @@ import HealthKit
 import Combine
 import UserNotifications
 import WatchKit
+import CoreMotion
 
 @MainActor
 final class WatchWorkoutManager: NSObject, ObservableObject {
@@ -32,6 +33,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var isRestOvertime = false
     @Published var restExerciseName = ""
     @Published var restOvertimeSeconds = 0
+    @Published var isWaterSportMode = false
+    @Published var isKitesurfMode = false
+    @Published var waterJumpCount = 0
+    @Published var waterMaxJumpMeters: Double = 0
+    @Published var waterLiveAccelG: Double = 1
+    @Published var waterLastJumpMeters: Double = 0
+    @Published var watchSyncStatus = ""
 
     private var session: WCSession?
     private var heartRateTimer: Timer?
@@ -43,6 +51,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var hasSentRestOvertimeNotification = false
     private var workoutStartedAt: Date?
     private let healthStore = HKHealthStore()
+    private let motionManager = CMMotionManager()
+    private var waterPeakG: Double = 1
+    private var waterRelativeAltitude: Double = 0
+    private var waterBaselineAltitude: Double?
+    private let altimeter = CMAltimeter()
 
     override init() {
         super.init()
@@ -64,17 +77,29 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         startWorkoutClock()
     }
 
-    func startCardio(name: String, targetSeconds: Int, exerciseName: String, targetCalories: Int = 0) {
+    func startCardio(
+        name: String,
+        targetSeconds: Int,
+        exerciseName: String,
+        targetCalories: Int = 0,
+        waterSportMode: Bool = false,
+        isKitesurf: Bool = false
+    ) {
         resetWorkoutState()
         workoutName = name
         isCardioWorkout = true
         isMeditationWorkout = false
+        isWaterSportMode = waterSportMode
+        isKitesurfMode = isKitesurf
         cardioTargetSeconds = max(targetSeconds, 0)
         cardioTargetCalories = max(targetCalories, 0)
         currentExerciseName = exerciseName
         isActive = true
         startHeartRateMonitoring()
         startWorkoutClock()
+        if waterSportMode {
+            startWaterSportMotion()
+        }
     }
 
     func startMeditation(
@@ -103,10 +128,39 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         startWorkoutClock()
     }
 
+    /// Marca salto manual e envia altura estimada (altímetro relativo / acelerômetro).
+    func markWaterSportJump() {
+        guard isActive, isWaterSportMode else { return }
+        let height = max(0.4, max(waterRelativeAltitude * 0.9, estimatedHeightFromPeakG()))
+        let peak = max(waterPeakG, waterLiveAccelG)
+        waterJumpCount += 1
+        waterLastJumpMeters = height
+        waterMaxJumpMeters = max(waterMaxJumpMeters, height)
+        waterPeakG = 1
+        WKInterfaceDevice.current().play(.click)
+        sendToPhone([
+            "action": "waterSportJump",
+            "heightMeters": height,
+            "peakG": peak,
+            "airtimeSeconds": 0.0,
+            "timestamp": Date().timeIntervalSince1970
+        ])
+    }
+
+    func requestPhoneSyncFromWatch() {
+        sendToPhone([
+            "action": "requestPhoneSync",
+            "timestamp": Date().timeIntervalSince1970
+        ])
+        sendMetricsToPhone()
+        watchSyncStatus = "Sincronizando…"
+    }
+
     func stopWorkout() {
         isActive = false
         isCardioWorkout = false
         isMeditationWorkout = false
+        stopWaterSportMotion()
         heartRateTimer?.invalidate()
         heartRateTimer = nil
         workoutClockTimer?.invalidate()
@@ -134,6 +188,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         heartRate = 0
         workoutStartedAt = nil
         secondsSincePhoneSync = 0
+        isWaterSportMode = false
+        isKitesurfMode = false
+        waterJumpCount = 0
+        waterMaxJumpMeters = 0
+        waterLiveAccelG = 1
+        waterLastJumpMeters = 0
+        waterPeakG = 1
+        waterRelativeAltitude = 0
+        waterBaselineAltitude = nil
+        watchSyncStatus = ""
     }
 
     private func startWorkoutClock() {
@@ -518,6 +582,64 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
+    private func sendToPhone(_ payload: [String: Any]) {
+        guard let session else { return }
+        if session.isReachable {
+            session.sendMessage(payload, replyHandler: nil) { _ in
+                session.transferUserInfo(payload)
+            }
+        } else if session.activationState == .activated {
+            session.transferUserInfo(payload)
+        }
+    }
+
+    private func startWaterSportMotion() {
+        waterBaselineAltitude = nil
+        waterRelativeAltitude = 0
+        waterPeakG = 1
+        if motionManager.isDeviceMotionAvailable {
+            motionManager.deviceMotionUpdateInterval = 0.08
+            motionManager.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { [weak self] data, _ in
+                guard let self, let data else { return }
+                Task { @MainActor in
+                    let u = data.userAcceleration
+                    let mag = sqrt(u.x * u.x + u.y * u.y + u.z * u.z)
+                    self.waterLiveAccelG = max(0.1, mag)
+                    self.waterPeakG = max(self.waterPeakG, mag)
+                    if Int(Date().timeIntervalSince1970 * 10) % 5 == 0 {
+                        self.sendToPhone([
+                            "action": "waterSportAccel",
+                            "accelG": mag,
+                            "timestamp": Date().timeIntervalSince1970
+                        ])
+                    }
+                }
+            }
+        }
+        if CMAltimeter.isRelativeAltitudeAvailable() {
+            altimeter.startRelativeAltitudeUpdates(to: .main) { [weak self] data, _ in
+                guard let self, let data else { return }
+                Task { @MainActor in
+                    let alt = data.relativeAltitude.doubleValue
+                    if self.waterBaselineAltitude == nil {
+                        self.waterBaselineAltitude = alt
+                    }
+                    self.waterRelativeAltitude = alt - (self.waterBaselineAltitude ?? 0)
+                }
+            }
+        }
+    }
+
+    private func stopWaterSportMotion() {
+        motionManager.stopDeviceMotionUpdates()
+        altimeter.stopRelativeAltitudeUpdates()
+    }
+
+    private func estimatedHeightFromPeakG() -> Double {
+        // Proxy simples a partir de pico de aceleração (g)
+        max(0.3, (waterPeakG - 1.0) * 0.55)
+    }
+
     private func handlePhoneMessage(_ message: [String: Any]) {
         guard let action = message["action"] as? String else { return }
 
@@ -536,7 +658,18 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             let targetSeconds = message["targetSeconds"] as? Int ?? 0
             let exerciseName = message["exerciseName"] as? String ?? "Cardio"
             let targetCalories = message["targetCalories"] as? Int ?? 0
-            startCardio(name: name, targetSeconds: targetSeconds, exerciseName: exerciseName, targetCalories: targetCalories)
+            let waterMode = (message["waterSportMode"] as? Bool)
+                ?? ((message["waterSportMode"] as? NSNumber)?.boolValue ?? false)
+            let kite = (message["isKitesurf"] as? Bool)
+                ?? ((message["isKitesurf"] as? NSNumber)?.boolValue ?? false)
+            startCardio(
+                name: name,
+                targetSeconds: targetSeconds,
+                exerciseName: exerciseName,
+                targetCalories: targetCalories,
+                waterSportMode: waterMode,
+                isKitesurf: kite
+            )
         case "syncWorkoutProgress":
             applyPhoneSync(
                 workoutElapsedSeconds: message["workoutElapsedSeconds"] as? Int,
@@ -550,6 +683,27 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 targetCalories: message["targetCalories"] as? Int,
                 currentCalories: message["currentCalories"] as? Double
             )
+        case "requestWaterSportSync":
+            sendMetricsToPhone()
+            if isWaterSportMode {
+                sendToPhone([
+                    "action": "waterSportAccel",
+                    "accelG": waterLiveAccelG,
+                    "timestamp": Date().timeIntervalSince1970
+                ])
+            }
+            watchSyncStatus = "iPhone sincronizado"
+        case "syncWaterSportMetrics":
+            if let count = message["jumpCount"] as? Int {
+                waterJumpCount = max(waterJumpCount, count)
+            }
+            if let maxH = message["maxJumpHeightMeters"] as? Double {
+                waterMaxJumpMeters = max(waterMaxJumpMeters, maxH)
+            }
+            if let g = message["liveAccelG"] as? Double, g > 0 {
+                waterLiveAccelG = g
+            }
+            watchSyncStatus = "Dados do iPhone"
         case "startMeditation":
             startMeditation(
                 name: message["workoutName"] as? String ?? "Meditação",

@@ -57,6 +57,9 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     @Published var watchCalories: Double = 0
     @Published var watchSteps: Int = 0
     @Published var isWorkoutActiveOnWatch = false
+    @Published private(set) var lastWatchJumpEvent: (height: Double, peakG: Double, airtime: Double?)?
+    @Published private(set) var watchJumpTick: Int = 0
+    @Published private(set) var lastWatchAccelG: Double = 0
 
     private var session: WCSession?
 
@@ -191,7 +194,14 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         refreshConnectionStatus()
     }
 
-    func startCardioOnWatch(workoutName: String, targetSeconds: Int, exerciseName: String, targetCalories: Int? = nil) {
+    func startCardioOnWatch(
+        workoutName: String,
+        targetSeconds: Int,
+        exerciseName: String,
+        targetCalories: Int? = nil,
+        waterSportMode: Bool = false,
+        isKitesurf: Bool = false
+    ) {
         clearWatchMetrics()
         sendToWatch([
             "action": "startCardio",
@@ -199,11 +209,35 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             "targetSeconds": targetSeconds,
             "exerciseName": exerciseName,
             "targetCalories": targetCalories ?? 0,
+            "waterSportMode": waterSportMode,
+            "isKitesurf": isKitesurf,
             "timestamp": Date().timeIntervalSince1970
         ])
         isWorkoutActiveOnWatch = true
         refreshConnectionStatus()
     }
+
+    /// Solicita sincronização imediata e pede amostras de motion ao Watch (surf/kite).
+    func requestWatchWaterSportSync() {
+        sendToWatch([
+            "action": "requestWaterSportSync",
+            "timestamp": Date().timeIntervalSince1970
+        ], realtime: true)
+        Task {
+            _ = await attemptSyncWithWatch()
+        }
+    }
+
+    /// Publica para o Watch: última altura estimada / contagem de saltos (espelho).
+    func syncWaterSportJumpSummary(jumpCount: Int, maxHeightMeters: Double, liveAccelG: Double) {
+        sendToWatch([
+            "action": "syncWaterSportMetrics",
+            "jumpCount": jumpCount,
+            "maxJumpHeightMeters": maxHeightMeters,
+            "liveAccelG": liveAccelG
+        ], realtime: true)
+    }
+
 
     func startMeditationOnWatch(
         workoutName: String,
@@ -509,6 +543,23 @@ extension WatchConnectivityManager: WCSessionDelegate {
         } else if let value = message["steps"] as? Double {
             watchSteps = max(0, Int(value))
             steps = watchSteps
+        }
+
+        let action = message["action"] as? String
+        if action == "waterSportJump" {
+            let height = (message["heightMeters"] as? Double) ?? (message["heightMeters"] as? NSNumber)?.doubleValue ?? 1
+            let peakG = (message["peakG"] as? Double) ?? (message["peakG"] as? NSNumber)?.doubleValue ?? 1.5
+            let airtime = message["airtimeSeconds"] as? Double
+            lastWatchJumpEvent = (height, peakG, airtime)
+            watchJumpTick += 1
+        }
+        if action == "waterSportAccel" || message["accelG"] != nil {
+            if let g = message["accelG"] as? Double ?? (message["accelG"] as? NSNumber)?.doubleValue {
+                lastWatchAccelG = g
+            }
+        }
+        if action == "requestPhoneSync" {
+            Task { _ = await attemptSyncWithWatch() }
         }
 
         HealthKitManager.shared.applyLiveWatchMetrics(

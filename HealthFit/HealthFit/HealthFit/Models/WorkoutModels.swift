@@ -437,6 +437,8 @@ struct WorkoutSession: Identifiable, Codable {
     var swimPaceSecondsPer100m: Int?
     /// Segundos totais de pausa durante cardio (bike, caminhada, outdoor, indoor).
     var pausedDurationSeconds: Int
+    /// Snapshot Surf / Kitesurf (equipamento, spot, saltos, aceleração).
+    var waterSport: WaterSportSessionSnapshot?
     /// Encerrado antes de concluir todos os exercícios.
     var endedEarly: Bool
     /// Motivo informado pelo aluno ao encerrar antecipadamente.
@@ -468,6 +470,7 @@ struct WorkoutSession: Identifiable, Codable {
         targetSwimLaps: Int? = nil,
         swimPaceSecondsPer100m: Int? = nil,
         pausedDurationSeconds: Int = 0,
+        waterSport: WaterSportSessionSnapshot? = nil,
         endedEarly: Bool = false,
         earlyEndJustification: String? = nil,
         autoEndedByInactivity: Bool = false
@@ -495,6 +498,7 @@ struct WorkoutSession: Identifiable, Codable {
         self.targetSwimLaps = targetSwimLaps
         self.swimPaceSecondsPer100m = swimPaceSecondsPer100m
         self.pausedDurationSeconds = pausedDurationSeconds
+        self.waterSport = waterSport
         self.endedEarly = endedEarly
         self.earlyEndJustification = earlyEndJustification
         self.autoEndedByInactivity = autoEndedByInactivity
@@ -525,6 +529,7 @@ struct WorkoutSession: Identifiable, Codable {
         targetSwimLaps = try container.decodeIfPresent(Int.self, forKey: .targetSwimLaps)
         swimPaceSecondsPer100m = try container.decodeIfPresent(Int.self, forKey: .swimPaceSecondsPer100m)
         pausedDurationSeconds = try container.decodeIfPresent(Int.self, forKey: .pausedDurationSeconds) ?? 0
+        waterSport = try container.decodeIfPresent(WaterSportSessionSnapshot.self, forKey: .waterSport)
         endedEarly = try container.decodeIfPresent(Bool.self, forKey: .endedEarly) ?? false
         earlyEndJustification = try container.decodeIfPresent(String.self, forKey: .earlyEndJustification)
         autoEndedByInactivity = try container.decodeIfPresent(Bool.self, forKey: .autoEndedByInactivity) ?? false
@@ -559,6 +564,7 @@ struct WorkoutSession: Identifiable, Codable {
         if pausedDurationSeconds > 0 {
             try container.encode(pausedDurationSeconds, forKey: .pausedDurationSeconds)
         }
+        try container.encodeIfPresent(waterSport, forKey: .waterSport)
         try container.encode(endedEarly, forKey: .endedEarly)
         try container.encodeIfPresent(earlyEndJustification, forKey: .earlyEndJustification)
         try container.encode(autoEndedByInactivity, forKey: .autoEndedByInactivity)
@@ -571,6 +577,7 @@ struct WorkoutSession: Identifiable, Codable {
         case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel
         case targetCalories, routePoints, stepCount, pausedDurationSeconds
         case poolLengthMeters, swimLapCount, targetSwimLaps, swimPaceSecondsPer100m
+        case waterSport
         case endedEarly, earlyEndJustification, autoEndedByInactivity
     }
 
@@ -596,10 +603,52 @@ struct WorkoutSession: Identifiable, Codable {
         return false
     }
 
+    /// Sessão com mapa GPS outdoor (Corrida, caminhada, Bicicleta pedal, Mountain bike, Surf, Kite).
+    var isOutdoorGPSCardio: Bool {
+        if isRunningSession { return true }
+        if isOutdoorWalkingSession { return true }
+        if isOutdoorCyclingSession { return true }
+        if isWaterSportSession { return true }
+        if !routePoints.isEmpty { return true }
+        return false
+    }
+
+    var isWaterSportSession: Bool {
+        SurfKiteMetricsAnalyzer.isWaterSportSession(self)
+    }
+
+    var isKitesurfSession: Bool {
+        SurfKiteMetricsAnalyzer.isKitesurfSession(self)
+    }
+
+    var isSurfSession: Bool {
+        SurfKiteMetricsAnalyzer.isSurfSession(self)
+    }
+
+    /// Caminhada outdoor pelo título (Caminhada, Caminhada Rápida, Walking…; não "Farmer's Walk").
+    var isOutdoorWalkingSession: Bool {
+        if isWaterSportSession { return false }
+        let title = workoutTitle.lowercased()
+        if title.contains("caminhada") { return true }
+        if title.contains("walking") { return true }
+        // "Walk" só em contexto de cardio (evita exercícios como Farmer's Walk).
+        if title.contains("walk"), title.contains("cardio") { return true }
+        return false
+    }
+
+    /// Mountain bike / Bicicleta pedal pelo título.
+    var isOutdoorCyclingSession: Bool {
+        if isWaterSportSession { return false }
+        let title = workoutTitle.lowercased()
+        return title.contains("mountain bike")
+            || title.contains("bicicleta pedal")
+            || title.contains("bike outdoor")
+    }
+
     /// Corrida (título ou heurística legado).
     var isRunningSession: Bool {
         if isSwimmingSession { return false }
-        if isOutdoorWalkingSession || isOutdoorCyclingSession { return false }
+        if isOutdoorWalkingSession || isOutdoorCyclingSession || isWaterSportSession { return false }
         let title = workoutTitle.lowercased()
         if title.contains("corrida") { return true }
         // Rota GPS sem título de bike/caminhada ainda conta como corrida legado.
@@ -612,36 +661,10 @@ struct WorkoutSession: Identifiable, Codable {
         return false
     }
 
-    /// Sessão com mapa GPS outdoor (Corrida, caminhada, Bicicleta pedal, Mountain bike).
-    var isOutdoorGPSCardio: Bool {
-        if isRunningSession { return true }
-        if isOutdoorWalkingSession { return true }
-        if isOutdoorCyclingSession { return true }
-        if !routePoints.isEmpty { return true }
-        return false
-    }
-
-    /// Caminhada outdoor pelo título (Caminhada, Caminhada Rápida, Walking…; não "Farmer's Walk").
-    var isOutdoorWalkingSession: Bool {
-        let title = workoutTitle.lowercased()
-        if title.contains("caminhada") { return true }
-        if title.contains("walking") { return true }
-        // "Walk" só em contexto de cardio (evita exercícios como Farmer's Walk).
-        if title.contains("walk"), title.contains("cardio") { return true }
-        return false
-    }
-
-    /// Mountain bike / Bicicleta pedal pelo título.
-    var isOutdoorCyclingSession: Bool {
-        let title = workoutTitle.lowercased()
-        return title.contains("mountain bike")
-            || title.contains("bicicleta pedal")
-            || title.contains("bike outdoor")
-    }
-
     /// Métrica para colorir a rota no mapa / card.
     var routePerformanceMetric: RoutePerformanceMetric {
-        isOutdoorCyclingSession ? .speed : .pace
+        if isOutdoorCyclingSession || isWaterSportSession { return .speed }
+        return .pace
     }
 
     /// Distância exibida: GPS concluída, senão soma da polyline, senão meta.

@@ -449,7 +449,10 @@ final class WorkoutStore: ObservableObject {
             cardioIntensityLabel: config.intensity.rawValue,
             targetCalories: config.targetCalories,
             poolLengthMeters: config.poolLengthMeters,
-            targetSwimLaps: config.targetSwimLaps
+            targetSwimLaps: config.targetSwimLaps,
+            waterSport: config.waterSportSetup.map {
+                $0.snapshot(isKitesurf: config.isKitesurfSession)
+            }
         )
         activeSession = session
         activeCardioConfig = config

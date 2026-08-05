@@ -1,3 +1,6 @@
+import Charts
+import Combine
+import CoreLocation
 import HealthKit
 import SwiftUI
 import UIKit
@@ -18,6 +21,7 @@ struct ActiveCardioView: View {
     var openFinishTick: Int = 0
 
     @StateObject private var runTracker = RunTrackingService()
+    @StateObject private var jumpMetrics = JumpMetricsService()
     @State private var elapsedSeconds = 0
     @State private var isPaused = false
     @State private var pauseStartedAt: Date?
@@ -30,6 +34,9 @@ struct ActiveCardioView: View {
     @State private var lastProgressMilestone = -1
     @State private var lastHandledFinishTick = 0
     @State private var swimLapCount = 0
+    @State private var lastWatchJumpTick = 0
+    @State private var isSyncingWatch = false
+    @State private var watchSyncStatus: String?
     @ObservedObject private var roadHazards = RoadHazardService.shared
     @State private var activeHazardAlert: RoadHazard?
     @State private var showReportHazardSheet = false
@@ -44,6 +51,7 @@ struct ActiveCardioView: View {
     private var isOutdoorCycling: Bool { config.isOutdoorCyclingSession }
     private var isOutdoorWalking: Bool { config.isOutdoorWalkingSession }
     private var isSwimming: Bool { config.isSwimmingSession }
+    private var isWaterSport: Bool { config.isWaterSportSession }
     private var trackingModality: OutdoorCardioModality {
         config.outdoorTrackingModality
     }
@@ -195,6 +203,9 @@ struct ActiveCardioView: View {
                             runMapSection
                             activityStateBanner
                             liveTimerBanner
+                            if isWaterSport {
+                                waterSportLiveSection
+                            }
                             if isOutdoorCycling, let hazard = activeHazardAlert {
                                 potholeAlertBanner(hazard)
                             }
@@ -216,6 +227,10 @@ struct ActiveCardioView: View {
                         metricsRow
                         if isOutdoorGPS {
                             runExtraMetricsRow
+                        }
+                        if isWaterSport {
+                            waterSportChartsSection
+                            waterSportWatchSyncButton
                         }
                         if isOutdoorCycling {
                             reportHazardButton
@@ -259,6 +274,14 @@ struct ActiveCardioView: View {
                 if isOutdoorCycling {
                     evaluateNearbyHazards()
                 }
+                if isWaterSport {
+                    pollWatchWaterSportEvents()
+                    watchConnectivity.syncWaterSportJumpSummary(
+                        jumpCount: jumpMetrics.jumpCount,
+                        maxHeightMeters: jumpMetrics.maxJumpHeightMeters,
+                        liveAccelG: jumpMetrics.liveAccelerationG
+                    )
+                }
             }
             syncWatchData()
             if shouldAutoEndByInactivity {
@@ -272,6 +295,7 @@ struct ActiveCardioView: View {
                 workoutStore.resumeActiveWorkout()
             }
             runTracker.stop()
+            jumpMetrics.stop()
             watchConnectivity.stopWorkoutOnWatch()
             finishedSession = ended
         }
@@ -285,7 +309,32 @@ struct ActiveCardioView: View {
                     roadHazards.refreshSeedIfNeeded(near: runTracker.currentLocation?.coordinate)
                 }
             }
+            if isWaterSport {
+                jumpMetrics.configure(locationProvider: { [weak runTracker] in
+                    runTracker?.currentLocation
+                })
+                jumpMetrics.start()
+                Task {
+                    _ = await watchConnectivity.attemptSyncWithWatch()
+                    watchConnectivity.requestWatchWaterSportSync()
+                }
+            }
             handleExternalFinishTickIfNeeded()
+        }
+        .onChange(of: watchConnectivity.watchJumpTick) { _, tick in
+            guard isWaterSport, tick > lastWatchJumpTick else { return }
+            lastWatchJumpTick = tick
+            if let event = watchConnectivity.lastWatchJumpEvent {
+                jumpMetrics.ingestWatchJump(
+                    heightMeters: event.height,
+                    peakG: event.peakG,
+                    airtime: event.airtime
+                )
+            }
+        }
+        .onChange(of: watchConnectivity.lastWatchAccelG) { _, g in
+            guard isWaterSport, g > 0 else { return }
+            jumpMetrics.ingestWatchAcceleration(g)
         }
         .sheet(isPresented: $showReportHazardSheet) {
             ReportRoadHazardSheet(
@@ -304,6 +353,7 @@ struct ActiveCardioView: View {
             guard finishedSession == nil else { return }
             if workoutStore.activeSession != nil { return }
             runTracker.stop()
+            jumpMetrics.stop()
         }
         .onChange(of: openFinishTick) { _, tick in
             guard tick > 0 else { return }
@@ -362,7 +412,8 @@ struct ActiveCardioView: View {
                     followUser: true,
                     showsUserLocation: true,
                     height: 240,
-                    performanceMetric: config.routePerformanceMetric
+                    performanceMetric: config.routePerformanceMetric,
+                    jumpEvents: isWaterSport ? jumpMetrics.jumps : []
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
@@ -371,8 +422,180 @@ struct ActiveCardioView: View {
                 if runTracker.routePoints.count >= 2 {
                     performanceLegend
                 }
+                if isWaterSport, !jumpMetrics.jumps.isEmpty {
+                    Text("\(jumpMetrics.jumps.count) ponto(s) de salto no mapa")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
             }
         }
+    }
+
+    private var waterSportLiveSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let setup = config.waterSportSetup {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label(config.isKitesurfSession ? "Kitesurf ao vivo" : "Surf ao vivo", systemImage: "water.waves")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    if !setup.spot.name.isEmpty {
+                        Text("SPOT: \(setup.spot.name)")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    HStack(spacing: 12) {
+                        Label(setup.conditions.windSummary, systemImage: "wind")
+                        Label(setup.conditions.tideSummary, systemImage: "water.waves")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    if let mode = setup.ridingMode {
+                        Text("Modo: \(mode.rawValue)")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+            }
+
+            HStack(spacing: 16) {
+                waterMetricTile(
+                    title: "Saltos",
+                    value: "\(jumpMetrics.jumpCount)",
+                    icon: "arrow.up.to.line"
+                )
+                waterMetricTile(
+                    title: "Maior",
+                    value: String(format: "%.1f m", jumpMetrics.maxJumpHeightMeters),
+                    icon: "arrow.up.circle"
+                )
+                waterMetricTile(
+                    title: "Acel.",
+                    value: String(format: "%.1f g", jumpMetrics.liveAccelerationG),
+                    icon: "waveform.path.ecg"
+                )
+            }
+
+            if let status = jumpMetrics.lastStatusMessage {
+                Text(status)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            if let watchSyncStatus {
+                Text(watchSyncStatus)
+                    .font(.caption2)
+                    .foregroundStyle(watchConnectivity.isWatchConnected ? AppTheme.accent : AppTheme.textSecondary)
+            }
+
+            Button {
+                jumpMetrics.markJump(
+                    source: .manual,
+                    at: runTracker.currentLocation
+                )
+            } label: {
+                Label("Marcar salto no iPhone", systemImage: "hand.tap.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(AppTheme.accentSecondary)
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func waterMetricTile(title: String, value: String, icon: String) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundStyle(AppTheme.accent)
+            Text(value)
+                .font(.headline.monospacedDigit())
+                .foregroundStyle(AppTheme.textPrimary)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var waterSportChartsSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Aceleração e saltos", systemImage: "chart.xyaxis.line")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+
+            if jumpMetrics.accelerationSamples.count >= 2 {
+                Chart(jumpMetrics.accelerationSamples.suffix(80)) { sample in
+                    LineMark(
+                        x: .value("t", sample.timestamp),
+                        y: .value("g", sample.accelerationG)
+                    )
+                    .foregroundStyle(AppTheme.accent)
+                    .interpolationMethod(.catmullRom)
+                }
+                .chartYAxisLabel("g")
+                .frame(height: 140)
+            } else {
+                Text("Aguardando amostras de aceleração…")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if !jumpMetrics.jumps.isEmpty {
+                Chart(jumpMetrics.jumps) { jump in
+                    BarMark(
+                        x: .value("#", jump.timestamp),
+                        y: .value("m", jump.heightMeters)
+                    )
+                    .foregroundStyle(Color.orange.gradient)
+                }
+                .chartYAxisLabel("m")
+                .frame(height: 120)
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var waterSportWatchSyncButton: some View {
+        Button {
+            Task {
+                isSyncingWatch = true
+                let result = await watchConnectivity.attemptSyncWithWatch()
+                watchConnectivity.requestWatchWaterSportSync()
+                isSyncingWatch = false
+                switch result {
+                case .synced:
+                    watchSyncStatus = "Watch sincronizado"
+                case .notPaired:
+                    watchSyncStatus = "Watch não emparelhado"
+                case .unreachable:
+                    watchSyncStatus = "Watch fora de alcance — dados na fila"
+                case .appNotInstalled:
+                    watchSyncStatus = "App HealthFit não instalado no Watch"
+                case .activationFailed, .notSupported:
+                    watchSyncStatus = "Watch Connectivity indisponível"
+                }
+            }
+        } label: {
+            HStack {
+                if isSyncingWatch {
+                    ProgressView()
+                } else {
+                    Image(systemName: "applewatch.and.arrow.forward")
+                }
+                Text(watchConnectivity.isWatchConnected ? "Sincronizar Apple Watch" : "Tentar sincronizar Watch")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.bordered)
+        .disabled(isSyncingWatch)
     }
 
     private var performanceLegend: some View {
@@ -1101,6 +1324,24 @@ struct ActiveCardioView: View {
         workoutStore.updateCalories(liveCalories)
     }
 
+    private func pollWatchWaterSportEvents() {
+        guard isWaterSport else { return }
+        let tick = watchConnectivity.watchJumpTick
+        if tick > lastWatchJumpTick {
+            lastWatchJumpTick = tick
+            if let event = watchConnectivity.lastWatchJumpEvent {
+                jumpMetrics.ingestWatchJump(
+                    heightMeters: event.height,
+                    peakG: event.peakG,
+                    airtime: event.airtime
+                )
+            }
+        }
+        if watchConnectivity.lastWatchAccelG > 0 {
+            jumpMetrics.ingestWatchAcceleration(watchConnectivity.lastWatchAccelG)
+        }
+    }
+
     private var shouldAutoEndByInactivity: Bool {
         guard let startedAt = workoutStore.activeSession?.startedAt, !isFinishing else { return false }
         return Date.now.timeIntervalSince(startedAt) >= WorkoutStore.autoEndInactivityLimit
@@ -1116,6 +1357,7 @@ struct ActiveCardioView: View {
         }
 
         runTracker.stop()
+        jumpMetrics.stop()
         watchConnectivity.stopWorkoutOnWatch()
 
         let finalPausedSeconds = finalizedPausedSeconds()
@@ -1197,6 +1439,18 @@ struct ActiveCardioView: View {
                 session.stepCount = liveSteps
             }
         }
+        if isWaterSport {
+            let exported = jumpMetrics.exportSnapshot()
+            var water = session.waterSport
+                ?? config.waterSportSetup?.snapshot(isKitesurf: config.isKitesurfSession)
+                ?? WaterSportSessionSnapshot(isKitesurf: config.isKitesurfSession)
+            water.jumps = exported.jumps
+            water.accelerationSamples = exported.samples
+            if water.spot == nil, let setupSpot = config.waterSportSetup?.spot {
+                water.spot = setupSpot
+            }
+            session.waterSport = water
+        }
         session.exerciseRecords = [
             ExerciseSessionRecord(
                 exerciseId: config.exercise.id,
@@ -1234,6 +1488,13 @@ struct ActiveCardioView: View {
             if config.isOutdoorCyclingSession { return .cycling }
             if config.isRunningSession || config.isDistanceRun { return .running }
             if config.isOutdoorWalkingSession { return .walking }
+            if config.isKitesurfSession || config.isSurfSession {
+                // HealthKit não tem modalidade kite dedicada; use paddle sports / other.
+                if #available(iOS 14.0, *) {
+                    return .paddleSports
+                }
+                return .other
+            }
             if config.exercise.isStationaryBike { return .cycling }
             return .walking
         }()

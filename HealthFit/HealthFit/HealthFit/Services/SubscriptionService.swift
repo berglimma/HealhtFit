@@ -1,6 +1,7 @@
 import Foundation
 import StoreKit
 
+import Combine
 /// StoreKit 2 — carrega produtos, compra, restaura e resolve o plano ativo.
 @MainActor
 final class SubscriptionService: ObservableObject {

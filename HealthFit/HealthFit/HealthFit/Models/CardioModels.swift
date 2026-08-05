@@ -160,8 +160,17 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         name == "Bicicleta ergométrica"
     }
 
+    var isSurf: Bool { name == "Surf" }
+
+    var isKitesurf: Bool {
+        name == "Kitesurf" || name == "Kite Surf"
+    }
+
+    var isWaterSport: Bool { isSurf || isKitesurf }
+
     private static let outdoorGPSNames: Set<String> = [
-        "Corrida", "Caminhada", "Caminhada Rápida", "Bicicleta pedal", "Mountain bike"
+        "Corrida", "Caminhada", "Caminhada Rápida", "Bicicleta pedal", "Mountain bike",
+        "Surf", "Kitesurf", "Kite Surf"
     ]
 
     /// Inclui o nome legado "Caminhada Rápida" para sessões / reconstrução antigas.
@@ -179,6 +188,8 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         CardioExercise(name: "Mountain bike", description: "Mountain bike em trilha ou terreno irregular", icon: "bicycle", caloriesPerMinute: 10),
         CardioExercise(name: "Bicicleta pedal", description: "Ciclismo outdoor em rua ou ciclovia", icon: "figure.outdoor.cycle", caloriesPerMinute: 9),
         CardioExercise(name: "Bicicleta ergométrica", description: "Bike estacionária indoor, sem GPS", icon: "figure.indoor.cycle", caloriesPerMinute: 8),
+        CardioExercise(name: "Surf", description: "Sessão de surf com GPS, spot e registro de condições", icon: "figure.surfing", caloriesPerMinute: 10),
+        CardioExercise(name: "Kitesurf", description: "Kitesurf com equipamento, modos, saltos e mapa", icon: "wind", caloriesPerMinute: 12),
         CardioExercise(name: "Elíptico", description: "Movimento fluido de corpo inteiro", icon: "figure.step.training", caloriesPerMinute: 8),
         CardioExercise(name: "Pular Corda", description: "Saltos contínuos com corda", icon: "figure.jumprope", caloriesPerMinute: 12),
         CardioExercise(name: "Escada", description: "Simulador de escadas ou degraus", icon: "figure.stair.stepper", caloriesPerMinute: 11),
@@ -222,6 +233,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
     let targetSwimLaps: Int?
     /// Meta de distância personalizada (km) — corrida, caminhada ou bike.
     let customTargetDistanceKm: Double?
+    /// Setup Surf / Kitesurf (equipamento, spot, maré/vento).
+    let waterSportSetup: WaterSportSetup?
 
     init(
         exercise: CardioExercise,
@@ -231,7 +244,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
         isFreeRun: Bool = false,
         poolLengthMeters: Double? = nil,
         targetSwimLaps: Int? = nil,
-        customTargetDistanceKm: Double? = nil
+        customTargetDistanceKm: Double? = nil,
+        waterSportSetup: WaterSportSetup? = nil
     ) {
         self.exercise = exercise
         self.intensity = intensity
@@ -241,6 +255,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
         self.poolLengthMeters = poolLengthMeters
         self.targetSwimLaps = targetSwimLaps
         self.customTargetDistanceKm = customTargetDistanceKm
+        self.waterSportSetup = waterSportSetup
     }
 
     /// Rebuilds a usable config from a persisted active session (app relaunch / stuck session).
@@ -253,6 +268,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
 
         let exerciseName: String = {
             if lower.contains("natação") || lower.contains("natacao") { return "Natação" }
+            if lower.contains("kitesurf") || lower.contains("kite surf") { return "Kitesurf" }
+            if lower.contains("surf") { return "Surf" }
             if lower.contains("corrida") { return "Corrida" }
             if lower.contains("caminhada") || lower.contains("walk") { return "Caminhada" }
             if lower.contains("mountain bike") { return "Mountain bike" }
@@ -326,7 +343,16 @@ struct CardioWorkoutConfig: Hashable, Codable {
             ),
             poolLengthMeters: session.poolLengthMeters,
             targetSwimLaps: session.targetSwimLaps,
-            customTargetDistanceKm: customTarget
+            customTargetDistanceKm: customTarget,
+            waterSportSetup: session.waterSport.map { snap in
+                WaterSportSetup(
+                    kiteEquipment: snap.kiteEquipment,
+                    boardType: snap.boardType,
+                    ridingMode: snap.ridingMode,
+                    spot: snap.spot ?? WaterSpotInfo(name: ""),
+                    conditions: snap.conditions ?? .empty
+                )
+            }
         )
     }
 
@@ -351,11 +377,17 @@ struct CardioWorkoutConfig: Hashable, Codable {
     /// Mountain bike / Bicicleta pedal (velocidade em vez de ritmo).
     var isOutdoorCyclingSession: Bool { exercise.isOutdoorCycling }
 
+    var isSurfSession: Bool { exercise.isSurf }
+    var isKitesurfSession: Bool { exercise.isKitesurf }
+    var isWaterSportSession: Bool { exercise.isWaterSport }
+
     /// Caminhada outdoor (mapa + passos + ritmo; sem metas 5–40 km de corrida).
     var isOutdoorWalkingSession: Bool { exercise.isOutdoorWalking }
 
     /// Modalidade do `RunTrackingService` (passos ligados em corrida e caminhada).
     var outdoorTrackingModality: OutdoorCardioModality {
+        if isKitesurfSession { return .kitesurfing }
+        if isSurfSession { return .surfing }
         if isOutdoorCyclingSession { return .cycling }
         if isOutdoorWalkingSession { return .walking }
         return .running
@@ -388,6 +420,16 @@ struct CardioWorkoutConfig: Hashable, Codable {
         if hasDistanceTarget {
             return "Cardio — \(exercise.name) \(formattedTargetKm)"
         }
+        if isKitesurfSession, let mode = waterSportSetup?.ridingMode {
+            let spot = waterSportSetup?.spot.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !spot.isEmpty {
+                return "Cardio — Kitesurf · \(mode.rawValue) · \(spot)"
+            }
+            return "Cardio — Kitesurf · \(mode.rawValue)"
+        }
+        if isSurfSession, let board = waterSportSetup?.boardType {
+            return "Cardio — Surf · \(board.rawValue)"
+        }
         if isSwimmingSession {
             let pool = Int(resolvedPoolLengthMeters.rounded())
             if let laps = targetSwimLaps, laps > 0 {
@@ -398,9 +440,10 @@ struct CardioWorkoutConfig: Hashable, Codable {
         return "Cardio — \(exercise.name)"
     }
 
-    /// Métrica de desempenho da rota: ritmo (corrida/caminhada) ou velocidade (bike).
+    /// Métrica de desempenho da rota: ritmo (corrida/caminhada) ou velocidade (bike/água).
     var routePerformanceMetric: RoutePerformanceMetric {
-        isOutdoorCyclingSession ? .speed : .pace
+        if isOutdoorCyclingSession || isWaterSportSession { return .speed }
+        return .pace
     }
 
     var targetDistanceKm: Double {

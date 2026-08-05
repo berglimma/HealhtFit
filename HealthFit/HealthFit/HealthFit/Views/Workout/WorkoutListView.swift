@@ -76,6 +76,9 @@ struct WorkoutListView: View {
             .navigationDestination(for: BikeLogbookRoute.self) { _ in
                 BikeLogbookView()
             }
+            .navigationDestination(for: SurfKiteLogbookRoute.self) { _ in
+                SurfKiteLogbookView()
+            }
             .navigationDestination(for: MeditationTopic.self) { topic in
                 MeditationSetupView(topic: topic)
             }
@@ -250,6 +253,34 @@ struct WorkoutListView: View {
                             .font(.headline)
                             .foregroundStyle(AppTheme.textPrimary)
                         Text("Problemas, manutenção e vida útil (corrente, pneus, freios)")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .padding()
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink(value: SurfKiteLogbookRoute()) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.cyan.opacity(0.2))
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "figure.surfing")
+                            .font(.title2)
+                            .foregroundStyle(.cyan)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Diário Surf / Kitesurf")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Saltos, SPOT, vento, maré e comparativo entre sessões")
                             .font(.caption)
                             .foregroundStyle(AppTheme.textSecondary)
                     }

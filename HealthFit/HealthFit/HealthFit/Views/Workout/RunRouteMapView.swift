@@ -10,6 +10,8 @@ struct RunRouteMapView: View {
     var height: CGFloat = 220
     /// Ritmo (corrida) ou velocidade (bike) — mais rápido = verde.
     var performanceMetric: RoutePerformanceMetric = .pace
+    /// Pontos de salto (surf/kitesurf) para anotar no mapa.
+    var jumpEvents: [SurfJumpEvent] = []
 
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
 
@@ -41,6 +43,22 @@ struct RunRouteMapView: View {
                         Circle()
                             .stroke(Color.white, lineWidth: 2)
                             .frame(width: 16, height: 16)
+                    }
+                }
+            }
+
+            ForEach(Array(jumpEvents.enumerated()), id: \.element.id) { index, jump in
+                if let coordinate = jump.coordinate {
+                    Annotation(
+                        String(format: "S%d · %.1fm", index + 1, jump.heightMeters),
+                        coordinate: coordinate
+                    ) {
+                        ZStack {
+                            Image(systemName: "arrow.up.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(.orange)
+                                .shadow(radius: 2)
+                        }
                     }
                 }
             }

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 
+import Combine
 /// Idiomas com traduções em `Localizable.xcstrings`.
 enum AppLanguage: String, CaseIterable, Identifiable, Hashable {
     case portuguese = "pt-BR"

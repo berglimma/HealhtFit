@@ -1,5 +1,6 @@
 import SwiftUI
 
+import Combine
 struct ActiveMeditationView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var authService: AuthService

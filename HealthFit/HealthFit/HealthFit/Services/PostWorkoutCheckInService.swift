@@ -1,5 +1,6 @@
 import Foundation
 
+import Combine
 @MainActor
 final class PostWorkoutCheckInService: ObservableObject {
     static let shared = PostWorkoutCheckInService()

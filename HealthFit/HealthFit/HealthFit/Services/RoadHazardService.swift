@@ -1,6 +1,7 @@
 import CoreLocation
 import Foundation
 
+import Combine
 /// Perigos na pista (buracos etc.) — store local + “comunidade” seed próxima ao ciclista.
 @MainActor
 final class RoadHazardService: ObservableObject {

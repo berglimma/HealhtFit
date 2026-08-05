@@ -1,3 +1,4 @@
+import HealthKit
 import SwiftUI
 
 struct ActiveWorkoutView: View {

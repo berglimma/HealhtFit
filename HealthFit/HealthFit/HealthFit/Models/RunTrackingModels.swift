@@ -7,12 +7,21 @@ enum OutdoorCardioModality: String, Codable, CaseIterable {
     case running
     case walking
     case cycling
+    case surfing
+    case kitesurfing
 
     /// Corrida e caminhada usam pedômetro e estados Parado / Caminhando / Correndo.
     var usesFootTracking: Bool {
         switch self {
         case .running, .walking: return true
-        case .cycling: return false
+        case .cycling, .surfing, .kitesurfing: return false
+        }
+    }
+
+    var isWaterSport: Bool {
+        switch self {
+        case .surfing, .kitesurfing: return true
+        default: return false
         }
     }
 }
@@ -149,6 +158,10 @@ enum RunTrackingMath {
             if speed < 0.8 { return .stationary }
             if speed < 4.5 { return .lightCycling } // ~16 km/h
             return .hardCycling
+        case .surfing, .kitesurfing:
+            if speed < 0.6 { return .stationary }
+            if speed < 3.0 { return .moving }
+            return .hardCycling // reusa ícone alto movimento
         }
     }
 
@@ -195,6 +208,12 @@ enum RunTrackingMath {
                 if speed < 0.8 { return 1.5 }
                 // ~4 MET a 3 m/s (~11 km/h); ~10 MET a 8 m/s (~29 km/h)
                 return min(12.0, 2.5 + speed * 0.95)
+            case .surfing:
+                if speed < 0.6 { return 2.0 }
+                return min(11.0, 4.0 + speed * 1.1)
+            case .kitesurfing:
+                if speed < 0.8 { return 2.5 }
+                return min(13.0, 5.0 + speed * 0.9)
             }
         }
         switch activityState {

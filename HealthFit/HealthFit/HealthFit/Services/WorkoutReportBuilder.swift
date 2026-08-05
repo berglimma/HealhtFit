@@ -84,6 +84,9 @@ enum WorkoutReportBuilder {
                let report = MarathonReportBuilder.build(session: session, allSessions: allSessions) {
                 lines.append(contentsOf: MarathonReportBuilder.emailLines(report: report, session: session))
             }
+            if let waterReport = SurfKiteReportBuilder.build(session: session, allSessions: allSessions) {
+                lines.append(contentsOf: SurfKiteReportBuilder.emailLines(report: waterReport))
+            }
         } else {
             lines.append("Exercícios concluídos: \(session.completedExercises)/\(session.totalExercises)")
             lines.append("Tempo nos exercícios: \(DurationFormatting.format(seconds: session.totalExerciseSeconds))")

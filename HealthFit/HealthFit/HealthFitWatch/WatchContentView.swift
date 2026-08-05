@@ -154,6 +154,10 @@ struct WatchContentView: View {
             : 0
 
         return VStack(spacing: 6) {
+            if workoutManager.isWaterSportMode {
+                waterSportCardioExtras
+            }
+
             if hasCalorieGoal {
                 Label("Meta calórica", systemImage: "flame.fill")
                     .font(.caption2)
@@ -209,6 +213,56 @@ struct WatchContentView: View {
                     .font(.caption)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
+            }
+        }
+    }
+
+    private var waterSportCardioExtras: some View {
+        VStack(spacing: 6) {
+            Text(workoutManager.isKitesurfMode ? "Kitesurf" : "Surf")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.cyan)
+
+            HStack(spacing: 10) {
+                VStack(spacing: 1) {
+                    Text("\(workoutManager.waterJumpCount)")
+                        .font(.title3.bold())
+                    Text("saltos")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                }
+                VStack(spacing: 1) {
+                    Text(String(format: "%.1f", workoutManager.waterMaxJumpMeters))
+                        .font(.title3.bold())
+                    Text("m max")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                }
+                VStack(spacing: 1) {
+                    Text(String(format: "%.1f", workoutManager.waterLiveAccelG))
+                        .font(.title3.bold())
+                    Text("g")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Button("Marcar salto") {
+                workoutManager.markWaterSportJump()
+            }
+            .tint(.orange)
+            .font(.caption2)
+
+            Button("Sincronizar") {
+                workoutManager.requestPhoneSyncFromWatch()
+            }
+            .font(.caption2)
+
+            if !workoutManager.watchSyncStatus.isEmpty {
+                Text(workoutManager.watchSyncStatus)
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
         }
     }

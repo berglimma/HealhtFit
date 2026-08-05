@@ -53,6 +53,10 @@ struct WorkoutSummaryView: View {
         MarathonReportBuilder.build(session: session, allSessions: workoutStore.sessionHistory)
     }
 
+    private var surfKiteReport: SurfKiteComparisonReport? {
+        SurfKiteReportBuilder.build(session: session, allSessions: workoutStore.sessionHistory)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
@@ -71,6 +75,9 @@ struct WorkoutSummaryView: View {
                         }
                         if marathonReport != nil {
                             marathonPerformanceSection
+                        }
+                        if let surfKiteReport {
+                            surfKitePerformanceSection(report: surfKiteReport)
                         }
                         if !session.routePoints.isEmpty {
                             runRouteSection
@@ -739,6 +746,121 @@ struct WorkoutSummaryView: View {
         }
     }
 
+    private func surfKitePerformanceSection(report: SurfKiteComparisonReport) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Image(systemName: report.session.waterSport?.isKitesurf == true ? "wind" : "figure.surfing")
+                    .foregroundStyle(AppTheme.accent)
+                Text(report.session.waterSport?.isKitesurf == true ? "Performance Kitesurf" : "Performance Surf")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+            }
+
+            HStack(spacing: 12) {
+                SummaryStat(
+                    value: "\(report.jumpCount)",
+                    label: "Saltos",
+                    icon: "arrow.up.to.line"
+                )
+                SummaryStat(
+                    value: String(format: "%.1f m", report.maxJumpMeters),
+                    label: "Maior",
+                    icon: "arrow.up.circle"
+                )
+                SummaryStat(
+                    value: String(format: "%.1f g", report.maxAccelerationG),
+                    label: "Pico g",
+                    icon: "waveform.path.ecg"
+                )
+            }
+
+            if report.distanceKm > 0 {
+                Label(String(format: "%.2f km de percurso GPS", report.distanceKm), systemImage: "map")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            if let spot = report.spotName {
+                Label("SPOT: \(spot)", systemImage: "mappin.and.ellipse")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            if let wind = report.windSummary {
+                Label("Vento: \(wind)", systemImage: "wind")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            if let tide = report.tideSummary {
+                Label("Maré: \(tide)", systemImage: "water.waves")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            if let mode = report.ridingModeLabel {
+                Text("Modo: \(mode)")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            if let board = report.boardLabel {
+                Text("Prancha: \(board)")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            if let eq = report.equipmentLabel {
+                Text("Kite: \(eq)")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            if let prev = report.previousBestJumpMeters, prev > 0 {
+                HStack {
+                    Label("Recorde anterior", systemImage: "medal.fill")
+                    Spacer()
+                    Text(String(format: "%.2f m", prev))
+                        .font(.subheadline.weight(.semibold))
+                }
+                if let delta = report.jumpDeltaVsBest {
+                    if delta > 0 {
+                        Text(String(format: "Novo recorde de salto! +%.2f m", delta))
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.green)
+                    } else if delta < 0 {
+                        Text(String(format: "%.2f m vs recorde", delta))
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+            }
+
+            Text("Comparado com \(report.sessionsCompared) sessão(ões) na modalidade")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            Button {
+                shareSurfKitePDF(report: report)
+            } label: {
+                Label("Exportar PDF Surf / Kite", systemImage: "doc.richtext")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(AppTheme.accentSecondary)
+        }
+        .foregroundStyle(AppTheme.textPrimary)
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    @MainActor
+    private func shareSurfKitePDF(report: SurfKiteComparisonReport) {
+        guard let url = SurfKiteReportBuilder.makePDF(report: report, athleteName: athleteDisplayName) else {
+            return
+        }
+        shareItems = [url]
+        showShareSheet = true
+    }
+
     @ViewBuilder
     private var runRouteSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -748,6 +870,9 @@ struct WorkoutSummaryView: View {
                 Text({
                     if session.isOutdoorCyclingSession { return "Rota do pedal" }
                     if session.isOutdoorWalkingSession { return "Rota da caminhada" }
+                    if session.isWaterSportSession {
+                        return session.waterSport?.isKitesurf == true ? "Rota do kitesurf" : "Rota do surf"
+                    }
                     return "Rota da corrida"
                 }())
                     .font(.headline)
@@ -766,7 +891,8 @@ struct WorkoutSummaryView: View {
                 followUser: false,
                 showsUserLocation: false,
                 height: 220,
-                performanceMetric: session.routePerformanceMetric
+                performanceMetric: session.routePerformanceMetric,
+                jumpEvents: session.waterSport?.jumps ?? []
             )
 
             if session.routePoints.count >= 2 {
@@ -777,6 +903,11 @@ struct WorkoutSummaryView: View {
 
             if let distance = session.completedDistanceKm {
                 Text(String(format: "%.2f km percorridos · %d pontos GPS", distance, session.routePoints.count))
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            if let jumps = session.waterSport?.jumps, !jumps.isEmpty {
+                Text("\(jumps.count) ponto(s) de salto no mapa")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
             }

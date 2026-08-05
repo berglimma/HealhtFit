@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 
+import Combine
 struct HealthChatMessage: Identifiable, Equatable {
     let id: UUID
     let text: String

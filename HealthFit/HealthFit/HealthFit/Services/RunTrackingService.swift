@@ -238,6 +238,14 @@ final class RunTrackingService: NSObject, ObservableObject {
             } else {
                 return
             }
+        case .surfing, .kitesurfing:
+            if activity.stationary {
+                next = .stationary
+            } else if activity.automotive {
+                return
+            } else {
+                next = currentSpeedMetersPerSecond >= 3.0 ? .hardCycling : .moving
+            }
         case .running, .walking:
             // Parado / Caminhando / Correndo — igual para corrida e caminhada.
             if activity.running {
@@ -269,7 +277,12 @@ final class RunTrackingService: NSObject, ObservableObject {
             let dt = location.timestamp.timeIntervalSince(last.timestamp)
             if dt <= 0 { return }
             // Rejeita saltos absurdos (bike pode ser mais rápida que corrida).
-            let maxJumpSpeed = modality == .cycling ? 20.0 : 8.0
+            let maxJumpSpeed: Double
+            switch modality {
+            case .cycling, .kitesurfing: maxJumpSpeed = 20.0
+            case .surfing: maxJumpSpeed = 14.0
+            case .running, .walking: maxJumpSpeed = 8.0
+            }
             if delta > maxJumpSpeed * max(dt, 1), dt < 5 { return }
             if delta > 120, dt < 5 { return }
             // Distância de treino só em movimento ativo (não durante pausa).

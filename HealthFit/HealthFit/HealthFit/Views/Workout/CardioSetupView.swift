@@ -1,4 +1,6 @@
 import SwiftUI
+import CoreLocation
+import Combine
 
 struct CardioSetupView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
@@ -18,7 +20,19 @@ struct CardioSetupView: View {
     @State private var useCustomPool = false
     @State private var useLapGoal = false
     @State private var targetLaps: Int = 20
+    // Surf / Kitesurf
+    @State private var kiteEquipment: KiteEquipmentType = .tubeKite
+    @State private var selectedBoard: WaterBoardCatalog = .twinTip
+    @State private var boardSearch = ""
+    @State private var ridingMode: KiteRidingMode = .bigAir
+    @State private var spotName = ""
+    @State private var useCurrentLocationAsSpot = true
+    @State private var windSpeedKmh: Double = 18
+    @State private var windDirectionDegrees: Double = 90
+    @State private var tideLabel = "Enchente"
+    @State private var tideHeightMeters: Double = 1.2
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var spotLocator = SpotLocationHelper()
 
     private static let caloriePresets = [100, 150, 200, 250, 300, 350, 400, 500, 600, 800]
     private static let lapPresets = [10, 20, 30, 40, 50, 60, 80, 100]
@@ -48,6 +62,41 @@ struct CardioSetupView: View {
         return min(max(value, 0.5), 300)
     }
 
+    private var waterSetup: WaterSportSetup? {
+        guard exercise.isWaterSport else { return nil }
+        var spot = WaterSpotInfo(name: spotName.trimmingCharacters(in: .whitespacesAndNewlines))
+        if useCurrentLocationAsSpot, let c = spotLocator.coordinate {
+            spot.latitude = c.latitude
+            spot.longitude = c.longitude
+            if spot.name.isEmpty {
+                spot.name = "Spot GPS"
+            }
+        }
+        let conditions = WindTideConditions(
+            windSpeedKmh: windSpeedKmh,
+            windDirectionDegrees: windDirectionDegrees,
+            windLabel: WindDirectionLabels.label(degrees: windDirectionDegrees),
+            tideLabel: tideLabel,
+            tideHeightMeters: tideHeightMeters
+        )
+        return WaterSportSetup(
+            kiteEquipment: exercise.isKitesurf ? kiteEquipment : nil,
+            boardType: selectedBoard,
+            ridingMode: exercise.isKitesurf ? ridingMode : nil,
+            spot: spot,
+            conditions: conditions
+        )
+    }
+
+    private var filteredBoards: [WaterBoardCatalog] {
+        let base = exercise.isKitesurf ? WaterBoardCatalog.kiteBoards : WaterBoardCatalog.surfBoards
+        let q = boardSearch.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return base }
+        return base.filter {
+            $0.rawValue.lowercased().contains(q) || $0.detail.lowercased().contains(q)
+        }
+    }
+
     private var config: CardioWorkoutConfig {
         let supportsKm = exercise.supportsCustomDistanceGoals
         let isFree = supportsKm && distanceMode.isFree
@@ -67,16 +116,16 @@ struct CardioSetupView: View {
             intensity: selectedIntensity,
             runningDistance: exercise.supportsDistanceGoals ? preset : nil,
             targetCalories: useCalorieGoal ? selectedCalorieGoal : nil,
-            isFreeRun: isFree,
+            isFreeRun: isFree || exercise.isWaterSport,
             poolLengthMeters: exercise.supportsSwimmingPool ? resolvedPoolMeters : nil,
             targetSwimLaps: exercise.supportsSwimmingPool && useLapGoal ? targetLaps : nil,
             customTargetDistanceKm: customKm ?? {
-                // Caminhada/bike com preset de km (sem RunningDistance enum).
                 if supportsKm, !exercise.supportsDistanceGoals, case .preset(let d) = distanceMode {
                     return d.kilometers
                 }
                 return nil
-            }()
+            }(),
+            waterSportSetup: waterSetup
         )
     }
 
@@ -86,6 +135,9 @@ struct CardioSetupView: View {
                 headerSection
                 if exercise.supportsCustomDistanceGoals {
                     outdoorDistanceSection
+                }
+                if exercise.isWaterSport {
+                    waterSportSetupSection
                 }
                 if exercise.supportsSwimmingPool {
                     swimmingPoolSection
@@ -108,6 +160,14 @@ struct CardioSetupView: View {
             } else if exercise.supportsCustomDistanceGoals {
                 distanceMode = .custom
                 customKmText = exercise.isOutdoorCycling ? "20" : "5"
+            }
+            if exercise.isSurf {
+                selectedBoard = .shortboard
+            } else if exercise.isKitesurf {
+                selectedBoard = .twinTip
+            }
+            if exercise.isWaterSport {
+                spotLocator.requestLocation()
             }
         }
     }
@@ -294,6 +354,170 @@ struct CardioSetupView: View {
             return "\(Int(km.rounded()))"
         }
         return String(format: "%.1f", km)
+    }
+
+    private var waterSportSetupSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(exercise.isKitesurf ? "Setup Kitesurf" : "Setup Surf")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            if exercise.isKitesurf {
+                Text("1. Tipo de equipamento (kite)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(KiteEquipmentType.allCases) { item in
+                        Button {
+                            kiteEquipment = item
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Label(item.rawValue, systemImage: item.icon)
+                                    .font(.caption.weight(.semibold))
+                                Text(item.detail)
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                                    .multilineTextAlignment(.leading)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(kiteEquipment == item ? AppTheme.accent.opacity(0.2) : AppTheme.cardBackground)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(kiteEquipment == item ? AppTheme.accent : Color.clear, lineWidth: 1.5)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(AppTheme.textPrimary)
+                    }
+                }
+
+                Text("3. Modo de velejo")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+                ForEach(KiteRidingMode.allCases) { mode in
+                    Button {
+                        ridingMode = mode
+                    } label: {
+                        HStack {
+                            Image(systemName: mode.icon)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(mode.rawValue).font(.subheadline.weight(.semibold))
+                                Text(mode.detail).font(.caption2).foregroundStyle(AppTheme.textSecondary)
+                            }
+                            Spacer()
+                            if ridingMode == mode {
+                                Image(systemName: "checkmark.circle.fill").foregroundStyle(AppTheme.accent)
+                            }
+                        }
+                        .padding(12)
+                        .background(ridingMode == mode ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(AppTheme.textPrimary)
+                }
+            }
+
+            Text(exercise.isKitesurf ? "2. Tipo de prancha" : "Tipo de prancha")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+            TextField("Buscar prancha…", text: $boardSearch)
+                .padding(10)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .foregroundStyle(AppTheme.textPrimary)
+            ForEach(filteredBoards) { board in
+                Button {
+                    selectedBoard = board
+                } label: {
+                    HStack {
+                        Image(systemName: board.icon)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(board.rawValue).font(.subheadline.weight(.semibold))
+                            Text(board.detail).font(.caption2).foregroundStyle(AppTheme.textSecondary)
+                        }
+                        Spacer()
+                        if selectedBoard == board {
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(AppTheme.accent)
+                        }
+                    }
+                    .padding(12)
+                    .background(selectedBoard == board ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppTheme.textPrimary)
+            }
+
+            Text(exercise.isKitesurf ? "4. SPOT de partida" : "SPOT de partida")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+            TextField("Nome do local / praia / spot", text: $spotName)
+                .padding(10)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .foregroundStyle(AppTheme.textPrimary)
+            Toggle("Sincronizar partida com GPS (mapa)", isOn: $useCurrentLocationAsSpot)
+                .tint(AppTheme.accent)
+                .foregroundStyle(AppTheme.textPrimary)
+            if let c = spotLocator.coordinate {
+                Text(String(format: "GPS: %.5f, %.5f", c.latitude, c.longitude))
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.accent)
+            } else if useCurrentLocationAsSpot {
+                Text(spotLocator.statusMessage)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            Button {
+                spotLocator.requestLocation()
+            } label: {
+                Label("Atualizar localização", systemImage: "location.fill")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(AppTheme.accent)
+
+            Text("Maré e vento")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+            HStack {
+                Text("Vento \(Int(windSpeedKmh)) km/h")
+                Spacer()
+            }
+            .foregroundStyle(AppTheme.textPrimary)
+            Slider(value: $windSpeedKmh, in: 0...60, step: 1)
+                .tint(AppTheme.accent)
+            HStack {
+                Text("Direção \(Int(windDirectionDegrees))° · \(WindDirectionLabels.label(degrees: windDirectionDegrees))")
+                Spacer()
+            }
+            .font(.caption)
+            .foregroundStyle(AppTheme.textSecondary)
+            Slider(value: $windDirectionDegrees, in: 0...359, step: 5)
+                .tint(AppTheme.accentSecondary)
+
+            Picker("Maré", selection: $tideLabel) {
+                ForEach(WindDirectionLabels.tidePresets, id: \.self) { Text($0).tag($0) }
+            }
+            .pickerStyle(.menu)
+            .tint(AppTheme.accent)
+
+            HStack {
+                Text("Altura maré \(String(format: "%.1f", tideHeightMeters)) m")
+                Spacer()
+            }
+            .foregroundStyle(AppTheme.textPrimary)
+            Slider(value: $tideHeightMeters, in: 0...4, step: 0.1)
+                .tint(AppTheme.accent)
+
+            if exercise.isKitesurf {
+                Text("No treino: altura de saltos via giroscópio Apple Watch + iPhone, pontos no mapa, gráficos e relatório PDF.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+        }
     }
 
     private var swimmingPoolSection: some View {
@@ -733,7 +957,9 @@ struct CardioSetupView: View {
                 workoutName: config.title,
                 targetSeconds: config.targetDurationSeconds,
                 exerciseName: config.exercise.name,
-                targetCalories: config.targetCalories
+                targetCalories: config.targetCalories,
+                waterSportMode: config.isWaterSportSession,
+                isKitesurf: config.isKitesurfSession
             )
             let athleteName = authService.currentUser?.greetingName ?? "Atleta"
             NotificationService.shared.deliverCardioStartNotification(
@@ -750,6 +976,8 @@ struct CardioSetupView: View {
                     if config.isSwimmingSession { return "Iniciar Natação" }
                     if config.isOutdoorCyclingSession { return "Iniciar Pedal" }
                     if config.isOutdoorWalkingSession { return "Iniciar Caminhada" }
+                    if config.isKitesurfSession { return "Iniciar Kitesurf" }
+                    if config.isSurfSession { return "Iniciar Surf" }
                     return "Iniciar Cardio"
                 }(),
                 systemImage: "play.fill"
@@ -802,5 +1030,59 @@ struct CardioExerciseCard: View {
         .padding()
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+}
+
+// MARK: - GPS do SPOT no setup
+
+@MainActor
+final class SpotLocationHelper: NSObject, ObservableObject, CLLocationManagerDelegate {
+    @Published var coordinate: CLLocationCoordinate2D?
+    @Published var statusMessage = "Obtendo GPS…"
+
+    private let manager = CLLocationManager()
+
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+    }
+
+    func requestLocation() {
+        statusMessage = "Solicitando localização…"
+        switch manager.authorizationStatus {
+        case .notDetermined:
+            manager.requestWhenInUseAuthorization()
+        case .denied, .restricted:
+            statusMessage = "Permissão de localização negada."
+        default:
+            manager.requestLocation()
+        }
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        Task { @MainActor in
+            if manager.authorizationStatus == .authorizedWhenInUse
+                || manager.authorizationStatus == .authorizedAlways {
+                manager.requestLocation()
+            } else if manager.authorizationStatus == .denied {
+                statusMessage = "Permissão de localização negada."
+            }
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        Task { @MainActor in
+            if let loc = locations.last {
+                coordinate = loc.coordinate
+                statusMessage = "Localização sincronizada com o mapa."
+            }
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        Task { @MainActor in
+            statusMessage = error.localizedDescription
+        }
     }
 }

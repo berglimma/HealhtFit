@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 
+import Combine
 struct BodyEvolutionComparisonResult: Equatable {
     let evaluation: BodyEvolutionEvaluation
     let previousImages: [BodyPhotoSlot: UIImage]

@@ -1,5 +1,6 @@
 import Foundation
 
+import Combine
 /// Diário da bike: pedais, problemas, manutenções e vida útil de peças.
 @MainActor
 final class BikeMaintenanceService: ObservableObject {
