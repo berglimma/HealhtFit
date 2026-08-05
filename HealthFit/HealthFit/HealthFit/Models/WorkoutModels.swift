@@ -427,6 +427,14 @@ struct WorkoutSession: Identifiable, Codable {
     var routePoints: [RouteCoordinate]
     /// Passos contados durante a sessão de corrida.
     var stepCount: Int?
+    /// Comprimento da piscina em metros (natação).
+    var poolLengthMeters: Double?
+    /// Voltas completadas na natação.
+    var swimLapCount: Int?
+    /// Meta de voltas (natação).
+    var targetSwimLaps: Int?
+    /// Ritmo médio em segundos por 100 m (natação).
+    var swimPaceSecondsPer100m: Int?
     /// Segundos totais de pausa durante cardio (bike, caminhada, outdoor, indoor).
     var pausedDurationSeconds: Int
     /// Encerrado antes de concluir todos os exercícios.
@@ -455,6 +463,10 @@ struct WorkoutSession: Identifiable, Codable {
         targetCalories: Int? = nil,
         routePoints: [RouteCoordinate] = [],
         stepCount: Int? = nil,
+        poolLengthMeters: Double? = nil,
+        swimLapCount: Int? = nil,
+        targetSwimLaps: Int? = nil,
+        swimPaceSecondsPer100m: Int? = nil,
         pausedDurationSeconds: Int = 0,
         endedEarly: Bool = false,
         earlyEndJustification: String? = nil,
@@ -478,6 +490,10 @@ struct WorkoutSession: Identifiable, Codable {
         self.targetCalories = targetCalories
         self.routePoints = routePoints
         self.stepCount = stepCount
+        self.poolLengthMeters = poolLengthMeters
+        self.swimLapCount = swimLapCount
+        self.targetSwimLaps = targetSwimLaps
+        self.swimPaceSecondsPer100m = swimPaceSecondsPer100m
         self.pausedDurationSeconds = pausedDurationSeconds
         self.endedEarly = endedEarly
         self.earlyEndJustification = earlyEndJustification
@@ -504,6 +520,10 @@ struct WorkoutSession: Identifiable, Codable {
         targetCalories = try container.decodeIfPresent(Int.self, forKey: .targetCalories)
         routePoints = try container.decodeIfPresent([RouteCoordinate].self, forKey: .routePoints) ?? []
         stepCount = try container.decodeIfPresent(Int.self, forKey: .stepCount)
+        poolLengthMeters = try container.decodeIfPresent(Double.self, forKey: .poolLengthMeters)
+        swimLapCount = try container.decodeIfPresent(Int.self, forKey: .swimLapCount)
+        targetSwimLaps = try container.decodeIfPresent(Int.self, forKey: .targetSwimLaps)
+        swimPaceSecondsPer100m = try container.decodeIfPresent(Int.self, forKey: .swimPaceSecondsPer100m)
         pausedDurationSeconds = try container.decodeIfPresent(Int.self, forKey: .pausedDurationSeconds) ?? 0
         endedEarly = try container.decodeIfPresent(Bool.self, forKey: .endedEarly) ?? false
         earlyEndJustification = try container.decodeIfPresent(String.self, forKey: .earlyEndJustification)
@@ -532,6 +552,10 @@ struct WorkoutSession: Identifiable, Codable {
             try container.encode(routePoints, forKey: .routePoints)
         }
         try container.encodeIfPresent(stepCount, forKey: .stepCount)
+        try container.encodeIfPresent(poolLengthMeters, forKey: .poolLengthMeters)
+        try container.encodeIfPresent(swimLapCount, forKey: .swimLapCount)
+        try container.encodeIfPresent(targetSwimLaps, forKey: .targetSwimLaps)
+        try container.encodeIfPresent(swimPaceSecondsPer100m, forKey: .swimPaceSecondsPer100m)
         if pausedDurationSeconds > 0 {
             try container.encode(pausedDurationSeconds, forKey: .pausedDurationSeconds)
         }
@@ -546,6 +570,7 @@ struct WorkoutSession: Identifiable, Codable {
         case exerciseRecords, tookPreWorkout
         case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel
         case targetCalories, routePoints, stepCount, pausedDurationSeconds
+        case poolLengthMeters, swimLapCount, targetSwimLaps, swimPaceSecondsPer100m
         case endedEarly, earlyEndJustification, autoEndedByInactivity
     }
 
@@ -563,8 +588,17 @@ struct WorkoutSession: Identifiable, Codable {
         return heartRateSamples.map(\.bpm).reduce(0, +) / Double(heartRateSamples.count)
     }
 
+    /// Natação (título ou dados de piscina/voltas).
+    var isSwimmingSession: Bool {
+        let title = workoutTitle.lowercased()
+        if title.contains("natação") || title.contains("natacao") { return true }
+        if swimLapCount != nil || poolLengthMeters != nil { return true }
+        return false
+    }
+
     /// Corrida (título ou heurística legado).
     var isRunningSession: Bool {
+        if isSwimmingSession { return false }
         if isOutdoorWalkingSession || isOutdoorCyclingSession { return false }
         let title = workoutTitle.lowercased()
         if title.contains("corrida") { return true }

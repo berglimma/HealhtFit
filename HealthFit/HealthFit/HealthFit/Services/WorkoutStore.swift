@@ -439,9 +439,17 @@ final class WorkoutStore: ObservableObject {
             workoutSheetId: config.exercise.id,
             workoutTitle: config.title,
             totalExercises: 1,
-            targetDistanceKm: config.isDistanceRun ? config.targetDistanceKm : nil,
+            targetDistanceKm: {
+                if config.hasDistanceTarget { return config.targetDistanceKm }
+                if config.isSwimmingSession, config.targetSwimLaps != nil {
+                    return config.targetDistanceKm
+                }
+                return nil
+            }(),
             cardioIntensityLabel: config.intensity.rawValue,
-            targetCalories: config.targetCalories
+            targetCalories: config.targetCalories,
+            poolLengthMeters: config.poolLengthMeters,
+            targetSwimLaps: config.targetSwimLaps
         )
         activeSession = session
         activeCardioConfig = config

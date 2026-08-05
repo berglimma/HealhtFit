@@ -73,6 +73,12 @@
 		B1000041 /* CardioModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000043 /* CardioModels.swift */; };
 		B1000042 /* CardioSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000044 /* CardioSetupView.swift */; };
 		B1000043 /* ActiveCardioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000045 /* ActiveCardioView.swift */; };
+		B1000500 /* SwimmingMetricsAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000500 /* SwimmingMetricsAnalyzer.swift */; };
+		B1000501 /* SwimmingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000501 /* SwimmingLogbookView.swift */; };
+		B1000502 /* BikeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000502 /* BikeModels.swift */; };
+		B1000503 /* BikeMaintenanceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000503 /* BikeMaintenanceService.swift */; };
+		B1000504 /* RoadHazardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000504 /* RoadHazardService.swift */; };
+		B1000505 /* BikeLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000505 /* BikeLogbookView.swift */; };
 		B1000044 /* WeeklyProgressModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000046 /* WeeklyProgressModels.swift */; };
 		B1000045 /* WeeklyProgressAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000047 /* WeeklyProgressAnalyzer.swift */; };
 		B1000046 /* WeeklyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000048 /* WeeklyReportService.swift */; };
@@ -331,6 +337,12 @@
 		F1000043 /* CardioModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardioModels.swift; sourceTree = "<group>"; };
 		F1000044 /* CardioSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardioSetupView.swift; sourceTree = "<group>"; };
 		F1000045 /* ActiveCardioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveCardioView.swift; sourceTree = "<group>"; };
+		F1000500 /* SwimmingMetricsAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwimmingMetricsAnalyzer.swift; sourceTree = "<group>"; };
+		F1000501 /* SwimmingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwimmingLogbookView.swift; sourceTree = "<group>"; };
+		F1000502 /* BikeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BikeModels.swift; sourceTree = "<group>"; };
+		F1000503 /* BikeMaintenanceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BikeMaintenanceService.swift; sourceTree = "<group>"; };
+		F1000504 /* RoadHazardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadHazardService.swift; sourceTree = "<group>"; };
+		F1000505 /* BikeLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BikeLogbookView.swift; sourceTree = "<group>"; };
 		F1000046 /* WeeklyProgressModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressModels.swift; sourceTree = "<group>"; };
 		F1000047 /* WeeklyProgressAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressAnalyzer.swift; sourceTree = "<group>"; };
 		F1000048 /* WeeklyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportService.swift; sourceTree = "<group>"; };
@@ -587,6 +599,7 @@
 				F1000003 /* WorkoutModels.swift */,
 				F1000340 /* GuidedWorkoutCatalog.swift */,
 				F1000043 /* CardioModels.swift */,
+				F1000502 /* BikeModels.swift */,
 				F1000420 /* RunTrackingModels.swift */,
 				F1000004 /* MealModels.swift */,
 				F1000059 /* MealCatalog.swift */,
@@ -625,6 +638,9 @@
 				F1000039 /* MotivationMessages.swift */,
 				F1000040 /* WorkoutReportBuilder.swift */,
 				F1000047 /* WeeklyProgressAnalyzer.swift */,
+				F1000500 /* SwimmingMetricsAnalyzer.swift */,
+				F1000503 /* BikeMaintenanceService.swift */,
+				F1000504 /* RoadHazardService.swift */,
 				F1000048 /* WeeklyReportService.swift */,
 				F1000330 /* WorkoutShareCardStore.swift */,
 				F1000054 /* DailyWellnessService.swift */,
@@ -728,6 +744,8 @@
 				F1000305 /* WorkoutShareCardView.swift */,
 				F1000044 /* CardioSetupView.swift */,
 				F1000045 /* ActiveCardioView.swift */,
+				F1000501 /* SwimmingLogbookView.swift */,
+				F1000505 /* BikeLogbookView.swift */,
 				F1000422 /* RunRouteMapView.swift */,
 				F1000051 /* MeditationSetupView.swift */,
 				F1000052 /* ActiveMeditationView.swift */,
@@ -1159,6 +1177,10 @@
 				B1000320 /* BodyEvolutionModels.swift in Sources */,
 				B1000003 /* WorkoutModels.swift in Sources */,
 				B1000041 /* CardioModels.swift in Sources */,
+				B1000502 /* BikeModels.swift in Sources */,
+				B1000500 /* SwimmingMetricsAnalyzer.swift in Sources */,
+				B1000503 /* BikeMaintenanceService.swift in Sources */,
+				B1000504 /* RoadHazardService.swift in Sources */,
 				B1000004 /* MealModels.swift in Sources */,
 				B1000005 /* AuthService.swift in Sources */,
 				B1000006 /* HealthKitManager.swift in Sources */,
@@ -1192,6 +1214,8 @@
 				B1000305 /* WorkoutShareCardView.swift in Sources */,
 				B1000042 /* CardioSetupView.swift in Sources */,
 				B1000043 /* ActiveCardioView.swift in Sources */,
+				B1000501 /* SwimmingLogbookView.swift in Sources */,
+				B1000505 /* BikeLogbookView.swift in Sources */,
 				B1000036 /* MotivationMessages.swift in Sources */,
 				B1000037 /* WorkoutReportBuilder.swift in Sources */,
 				B1000044 /* WeeklyProgressModels.swift in Sources */,

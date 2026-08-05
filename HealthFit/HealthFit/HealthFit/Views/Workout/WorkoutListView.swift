@@ -70,6 +70,12 @@ struct WorkoutListView: View {
             .navigationDestination(for: CardioExercise.self) { exercise in
                 CardioSetupView(exercise: exercise)
             }
+            .navigationDestination(for: SwimmingLogbookRoute.self) { _ in
+                SwimmingLogbookView()
+            }
+            .navigationDestination(for: BikeLogbookRoute.self) { _ in
+                BikeLogbookView()
+            }
             .navigationDestination(for: MeditationTopic.self) { topic in
                 MeditationSetupView(topic: topic)
             }
@@ -200,6 +206,62 @@ struct WorkoutListView: View {
             Text("Escolha um exercício e defina a intensidade")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
+
+            NavigationLink(value: SwimmingLogbookRoute()) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.cyan.opacity(0.2))
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "book.pages.fill")
+                            .font(.title2)
+                            .foregroundStyle(.cyan)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Diário de bordo — Natação")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Distância, ritmo, voltas e calorias estimadas")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .padding()
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink(value: BikeLogbookRoute()) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.green.opacity(0.2))
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "bicycle")
+                            .font(.title2)
+                            .foregroundStyle(.green)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Diário da bike")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Problemas, manutenção e vida útil (corrente, pneus, freios)")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .padding()
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            }
+            .buttonStyle(.plain)
 
             LazyVStack(spacing: 12) {
                 ForEach(CardioExercise.catalog) { exercise in

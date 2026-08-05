@@ -1,5 +1,6 @@
 import HealthKit
 import SwiftUI
+import UIKit
 
 struct ActiveCardioView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
@@ -28,6 +29,12 @@ struct ActiveCardioView: View {
     @State private var didCelebrateCalorieGoal = false
     @State private var lastProgressMilestone = -1
     @State private var lastHandledFinishTick = 0
+    @State private var swimLapCount = 0
+    @ObservedObject private var roadHazards = RoadHazardService.shared
+    @State private var activeHazardAlert: RoadHazard?
+    @State private var showReportHazardSheet = false
+    @State private var alertedHazardIds = Set<UUID>()
+    @State private var lastHazardCheckAt: Date = .distantPast
 
     /// Side-effects; display uses wall clock from session start minus pauses.
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -36,18 +43,26 @@ struct ActiveCardioView: View {
     private var isOutdoorGPS: Bool { config.isOutdoorGPSCardio }
     private var isOutdoorCycling: Bool { config.isOutdoorCyclingSession }
     private var isOutdoorWalking: Bool { config.isOutdoorWalkingSession }
+    private var isSwimming: Bool { config.isSwimmingSession }
     private var trackingModality: OutdoorCardioModality {
         config.outdoorTrackingModality
     }
 
+    private var swimDistanceMeters: Double {
+        config.swimDistanceMeters(laps: swimLapCount)
+    }
+
     private var completedDistanceKm: Double {
+        if isSwimming {
+            return swimDistanceMeters / 1000.0
+        }
         if isOutdoorGPS, let gpsKm = runTracker.gpsDistanceKmIfAvailable {
-            if config.isDistanceRun {
+            if config.hasDistanceTarget {
                 return min(gpsKm, config.targetDistanceKm)
             }
             return gpsKm
         }
-        if config.isDistanceRun {
+        if config.hasDistanceTarget {
             return min(config.estimatedDistanceKm(elapsedSeconds: elapsedSeconds), config.targetDistanceKm)
         }
         if isOutdoorCycling {
@@ -60,6 +75,14 @@ struct ActiveCardioView: View {
     private var liveCalories: Double {
         let watch = max(0, watchConnectivity.watchCalories)
         if watch > 0 { return watch }
+        if isSwimming {
+            let weight = authService.currentUser?.weight ?? 70
+            return config.estimatedSwimCalories(
+                elapsedSeconds: elapsedSeconds,
+                distanceMeters: swimDistanceMeters,
+                weightKg: weight
+            )
+        }
         if isOutdoorGPS {
             let weight = authService.currentUser?.weight ?? 70
             let estimated = RunTrackingMath.estimatedCalories(
@@ -74,7 +97,7 @@ struct ActiveCardioView: View {
             let paceBased = config.estimatedCalories(for: elapsedSeconds)
             return max(estimated, paceBased * 0.85)
         }
-        return 0
+        return config.estimatedCalories(for: elapsedSeconds)
     }
 
     private var hasWatchMetrics: Bool {
@@ -99,10 +122,13 @@ struct ActiveCardioView: View {
         if config.hasCalorieGoal {
             return calorieProgressClamped
         }
-        if config.isFreeRun || isOutdoorCycling {
+        if isSwimming, let targetLaps = config.targetSwimLaps, targetLaps > 0 {
+            return min(Double(swimLapCount) / Double(targetLaps), 1.0)
+        }
+        if config.isFreeRun {
             return 0
         }
-        if config.isDistanceRun, config.targetDistanceKm > 0 {
+        if config.hasDistanceTarget, config.targetDistanceKm > 0 {
             return min(completedDistanceKm / config.targetDistanceKm, 1.0)
         }
         guard config.targetDurationSeconds > 0 else { return 0 }
@@ -110,13 +136,18 @@ struct ActiveCardioView: View {
     }
 
     private var showsRunningUI: Bool {
-        config.isDistanceRun || config.isFreeRun
+        config.isRunningSession
     }
 
     private var navigationTitleText: String {
+        if isSwimming { return "Natação" }
         if showsRunningUI { return "Corrida" }
         if isOutdoorCycling || isOutdoorWalking { return config.exercise.name }
         return "Cardio"
+    }
+
+    private var currentSwimPaceSecondsPer100m: Int? {
+        config.swimPaceSecondsPer100m(elapsedSeconds: elapsedSeconds, distanceMeters: swimDistanceMeters)
     }
 
     private var progressRingColor: Color {
@@ -133,6 +164,9 @@ struct ActiveCardioView: View {
             )
         }
         if config.isDistanceRun {
+            return config.intensity.paceSecondsPerKm
+        }
+        if config.hasDistanceTarget && !isOutdoorCycling {
             return config.intensity.paceSecondsPerKm
         }
         return config.paceSecondsPerKm(
@@ -161,12 +195,18 @@ struct ActiveCardioView: View {
                             runMapSection
                             activityStateBanner
                             liveTimerBanner
+                            if isOutdoorCycling, let hazard = activeHazardAlert {
+                                potholeAlertBanner(hazard)
+                            }
                         }
                         intensityBadge
                         if !isOutdoorGPS {
                             exerciseInfo
                         }
                         progressRing
+                        if isSwimming {
+                            swimmingLapControls
+                        }
                         calorieEvolutionSection
                         if let superationMessage {
                             superationBanner(message: superationMessage)
@@ -176,6 +216,12 @@ struct ActiveCardioView: View {
                         metricsRow
                         if isOutdoorGPS {
                             runExtraMetricsRow
+                        }
+                        if isOutdoorCycling {
+                            reportHazardButton
+                        }
+                        if isSwimming {
+                            swimExtraMetricsRow
                         }
                         pauseControls
                         endButton
@@ -210,6 +256,9 @@ struct ActiveCardioView: View {
             syncWithWatch()
             if !isPaused {
                 updateCalorieMotivation()
+                if isOutdoorCycling {
+                    evaluateNearbyHazards()
+                }
             }
             syncWatchData()
             if shouldAutoEndByInactivity {
@@ -232,8 +281,23 @@ struct ActiveCardioView: View {
             if isOutdoorGPS {
                 runTracker.prepareForSession(modality: trackingModality)
                 runTracker.start(modality: trackingModality)
+                if isOutdoorCycling {
+                    roadHazards.refreshSeedIfNeeded(near: runTracker.currentLocation?.coordinate)
+                }
             }
             handleExternalFinishTickIfNeeded()
+        }
+        .sheet(isPresented: $showReportHazardSheet) {
+            ReportRoadHazardSheet(
+                coordinate: runTracker.currentLocation?.coordinate,
+                onReport: { type, note in
+                    if let coord = runTracker.currentLocation?.coordinate {
+                        roadHazards.report(type: type, coordinate: coord, note: note)
+                    }
+                    showReportHazardSheet = false
+                }
+            )
+            .presentationDetents([.medium])
         }
         .onDisappear {
             // Hosted minimize keeps this view mounted; only stop if the session is gone.
@@ -409,9 +473,16 @@ struct ActiveCardioView: View {
                 Text("·")
                 Text("Livre")
                     .font(.subheadline.weight(.semibold))
-            } else if config.isDistanceRun, let distance = config.runningDistance {
+            } else if config.hasDistanceTarget {
                 Text("·")
-                Text(distance.label)
+                Text(String(format: abs(config.targetDistanceKm - config.targetDistanceKm.rounded()) < 0.05
+                               ? "%.0f km"
+                               : "%.1f km",
+                             config.targetDistanceKm))
+                    .font(.subheadline.weight(.semibold))
+            } else if isSwimming {
+                Text("·")
+                Text("\(Int(config.resolvedPoolLengthMeters)) m")
                     .font(.subheadline.weight(.semibold))
             }
             if config.hasCalorieGoal, let target = config.targetCalories {
@@ -436,15 +507,43 @@ struct ActiveCardioView: View {
                 .font(.title.bold())
                 .foregroundStyle(AppTheme.textPrimary)
             if config.isFreeRun {
-                Text("Corrida livre — encerre quando quiser · Ritmo ref. \(config.intensity.formattedPace())")
+                Text(isOutdoorCycling
+                      ? "Pedal livre — encerre quando quiser"
+                      : isOutdoorWalking
+                      ? "Caminhada livre — encerre quando quiser · Ritmo ref. \(config.intensity.formattedPace())"
+                      : "Corrida livre — encerre quando quiser · Ritmo ref. \(config.intensity.formattedPace())")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
                     .multilineTextAlignment(.center)
-            } else if config.isDistanceRun {
-                Text("Meta: \(String(format: "%.0f", config.targetDistanceKm)) km · Ritmo \(config.intensity.formattedPace())")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .multilineTextAlignment(.center)
+            } else if config.hasDistanceTarget {
+                let kmLabel = String(format: abs(config.targetDistanceKm - config.targetDistanceKm.rounded()) < 0.05
+                                       ? "%.0f"
+                                       : "%.1f",
+                                     config.targetDistanceKm)
+                if isOutdoorCycling {
+                    Text("Meta: \(kmLabel) km · GPS outdoor")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("Meta: \(kmLabel) km · Ritmo \(config.intensity.formattedPace())")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+            } else if isSwimming {
+                let pool = Int(config.resolvedPoolLengthMeters)
+                if let target = config.targetSwimLaps, target > 0 {
+                    Text("Piscina \(pool) m · Meta \(target) voltas · \(config.intensity.formattedSwimPace())")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("Piscina \(pool) m · Conte as voltas · \(config.intensity.formattedSwimPace())")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
             } else if config.hasCalorieGoal {
                 Text("Meta calórica: \(config.targetCalories ?? 0) kcal · sincronizado com Apple Watch")
                     .font(.caption)
@@ -496,12 +595,12 @@ struct ActiveCardioView: View {
                     Text("\(Int(calorieProgressClamped * 100))%")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(AppTheme.accentSecondary)
-                } else if config.isFreeRun || config.isDistanceRun || isOutdoorCycling {
+                } else if config.isFreeRun || config.hasDistanceTarget || isOutdoorCycling || isOutdoorWalking {
                     Text(String(format: "%.2f km", completedDistanceKm))
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(AppTheme.textPrimary)
-                    if config.isDistanceRun {
-                        Text("Meta: \(String(format: "%.0f", config.targetDistanceKm)) km")
+                    if config.hasDistanceTarget {
+                        Text("Meta: \(String(format: abs(config.targetDistanceKm - config.targetDistanceKm.rounded()) < 0.05 ? "%.0f" : "%.1f", config.targetDistanceKm)) km")
                             .font(.caption)
                             .foregroundStyle(AppTheme.textSecondary)
                     } else {
@@ -516,6 +615,30 @@ struct ActiveCardioView: View {
                         if isPaused || totalPausedSeconds > 0 {
                             pauseChronometer
                         }
+                    }
+                } else if isSwimming {
+                    Text("\(swimLapCount)")
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    if let target = config.targetSwimLaps, target > 0 {
+                        Text("de \(target) voltas")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    } else {
+                        Text("voltas")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    Text(swimDistanceMeters >= 1000
+                          ? String(format: "%.2f km", completedDistanceKm)
+                          : "\(Int(swimDistanceMeters.rounded())) m")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                    Text(DurationFormatting.formatElapsedClock(seconds: elapsedSeconds))
+                        .font(.caption.weight(.semibold).monospaced())
+                        .foregroundStyle(isPaused ? AppTheme.textSecondary : AppTheme.accentSecondary)
+                    if isPaused || totalPausedSeconds > 0 {
+                        pauseChronometer
                     }
                 } else {
                     Text(DurationFormatting.formatElapsedClock(seconds: elapsedSeconds))
@@ -545,6 +668,10 @@ struct ActiveCardioView: View {
                         .foregroundStyle(AppTheme.accent)
                 } else if isOutdoorGPS {
                     Label("Estimativa ao vivo", systemImage: "flame")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                } else if isSwimming {
+                    Label("Estimativa natação", systemImage: "figure.pool.swim")
                         .font(.caption2)
                         .foregroundStyle(AppTheme.textSecondary)
                 } else {
@@ -590,7 +717,9 @@ struct ActiveCardioView: View {
                 Text(
                     isOutdoorGPS
                         ? "Calorias ao vivo via Watch ou estimativa MET × peso × tempo."
-                        : "Acompanhe a queima em tempo real — dados do relógio quando conectado."
+                        : isSwimming
+                            ? "Estimativa por tempo, distância em volta e intensidade."
+                            : "Acompanhe a queima em tempo real — dados do relógio quando conectado."
                 )
                 .font(.caption2)
                 .foregroundStyle(AppTheme.textSecondary)
@@ -654,18 +783,31 @@ struct ActiveCardioView: View {
                 label: "kcal",
                 color: hasExceededCalorieGoal ? .orange : AppTheme.accentSecondary
             )
-            if config.isDistanceRun || (isOutdoorGPS && !isOutdoorCycling) {
+            if isOutdoorCycling {
+                CardioMetricTile(
+                    icon: "speedometer",
+                    value: String(format: "%.1f", liveSpeedKmh),
+                    label: "km/h",
+                    color: config.intensity.color
+                )
+            } else if config.hasDistanceTarget || (isOutdoorGPS && !isOutdoorCycling) {
                 CardioMetricTile(
                     icon: "speedometer",
                     value: PaceFormatting.format(secondsPerKm: currentPaceSecondsPerKm).replacingOccurrences(of: " /km", with: ""),
                     label: "Ritmo",
                     color: config.intensity.color
                 )
-            } else if isOutdoorCycling {
+            } else if isSwimming {
                 CardioMetricTile(
                     icon: "speedometer",
-                    value: String(format: "%.1f", liveSpeedKmh),
-                    label: "km/h",
+                    value: {
+                        if let pace = currentSwimPaceSecondsPer100m {
+                            return PaceFormatting.formatSwimPace(secondsPer100m: pace)
+                                .replacingOccurrences(of: " /100m", with: "")
+                        }
+                        return "—"
+                    }(),
+                    label: "/100m",
                     color: config.intensity.color
                 )
             } else if config.hasCalorieGoal {
@@ -718,12 +860,103 @@ struct ActiveCardioView: View {
         }
     }
 
+    private var swimmingLapControls: some View {
+        VStack(spacing: 12) {
+            Text("Contagem de voltas")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 12) {
+                Button {
+                    swimLapCount = max(0, swimLapCount - 1)
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(size: 40))
+                        .foregroundStyle(swimLapCount > 0 ? AppTheme.accentSecondary : AppTheme.textSecondary.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+                .disabled(isPaused || swimLapCount <= 0)
+
+                VStack(spacing: 4) {
+                    Text("\(swimLapCount)")
+                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .contentTransition(.numericText())
+                    Text("voltas · \(Int(config.resolvedPoolLengthMeters)) m")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+
+                Button {
+                    swimLapCount += 1
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 40))
+                        .foregroundStyle(isPaused ? AppTheme.textSecondary.opacity(0.4) : AppTheme.accent)
+                }
+                .buttonStyle(.plain)
+                .disabled(isPaused)
+            }
+
+            HStack(spacing: 8) {
+                ForEach([1, 2, 5], id: \.self) { delta in
+                    Button {
+                        swimLapCount += delta
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    } label: {
+                        Text("+\(delta)")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(AppTheme.cardBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isPaused)
+                }
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.6))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private var swimExtraMetricsRow: some View {
+        HStack(spacing: 12) {
+            CardioMetricTile(
+                icon: "arrow.triangle.2.circlepath",
+                value: "\(swimLapCount)",
+                label: "Voltas",
+                color: AppTheme.accent
+            )
+            CardioMetricTile(
+                icon: "ruler",
+                value: swimDistanceMeters >= 1000
+                    ? String(format: "%.2f", completedDistanceKm)
+                    : "\(Int(swimDistanceMeters.rounded()))",
+                label: swimDistanceMeters >= 1000 ? "km" : "m",
+                color: config.intensity.color
+            )
+            CardioMetricTile(
+                icon: "flame.fill",
+                value: "\(Int(liveCalories.rounded()))",
+                label: "kcal est.",
+                color: AppTheme.accentSecondary
+            )
+        }
+    }
+
     private var endButton: some View {
         Button {
             finishCardio()
         } label: {
             Label(
                 {
+                    if isSwimming { return "Finalizar Natação" }
                     if showsRunningUI { return "Finalizar Corrida" }
                     if isOutdoorCycling { return "Finalizar Pedal" }
                     if isOutdoorWalking { return "Finalizar Caminhada" }
@@ -907,15 +1140,22 @@ struct ActiveCardioView: View {
 
         let distanceKm = completedDistanceKm
         let pace = config.paceSecondsPerKm(elapsedSeconds: elapsedSeconds, distanceKm: max(distanceKm, 0.01))
+        let swimPace = config.swimPaceSecondsPer100m(elapsedSeconds: elapsedSeconds, distanceMeters: swimDistanceMeters)
         let goalReached: Bool = {
             if autoEndedByInactivity { return false }
             if config.hasCalorieGoal, let target = config.targetCalories {
                 return liveCalories >= Double(target) * 0.98
             }
-            if config.isFreeRun || isOutdoorCycling {
+            if isSwimming {
+                if let target = config.targetSwimLaps, target > 0 {
+                    return swimLapCount >= Int(Double(target) * 0.98)
+                }
+                return swimLapCount >= 1 || elapsedSeconds >= 60
+            }
+            if config.isFreeRun {
                 return elapsedSeconds >= 60
             }
-            if config.isDistanceRun {
+            if config.hasDistanceTarget {
                 return distanceKm >= config.targetDistanceKm * 0.98
             }
             return elapsedSeconds >= config.targetDurationSeconds / 2
@@ -923,10 +1163,30 @@ struct ActiveCardioView: View {
 
         session.endedAt = .now
         session.caloriesBurned = liveCalories
-        session.completedDistanceKm = (config.isDistanceRun || config.isFreeRun || isOutdoorGPS) ? distanceKm : nil
-        session.averagePaceSecondsPerKm = (config.isDistanceRun || config.isFreeRun || (isOutdoorGPS && !isOutdoorCycling))
-            ? pace
+        session.completedDistanceKm = (config.hasDistanceTarget || config.isFreeRun || isOutdoorGPS || isSwimming)
+            ? distanceKm
             : nil
+        session.averagePaceSecondsPerKm = {
+            if isOutdoorCycling { return nil }
+            if config.hasDistanceTarget || config.isFreeRun || isOutdoorGPS { return pace }
+            return nil
+        }()
+        if config.hasDistanceTarget {
+            session.targetDistanceKm = config.targetDistanceKm
+        }
+        if isSwimming {
+            session.poolLengthMeters = config.resolvedPoolLengthMeters
+            session.swimLapCount = swimLapCount
+            session.targetSwimLaps = config.targetSwimLaps
+            session.swimPaceSecondsPer100m = swimPace
+            if let swimPace {
+                // Compatibilidade com gráficos que usam ritmo "por km" (~10 × /100m).
+                session.averagePaceSecondsPerKm = swimPace * 10
+            }
+            if let targetLaps = config.targetSwimLaps, targetLaps > 0 {
+                session.targetDistanceKm = config.targetDistanceKm
+            }
+        }
         session.cardioIntensityLabel = config.intensity.rawValue
         session.targetCalories = config.targetCalories
         session.pausedDurationSeconds = finalPausedSeconds
@@ -942,10 +1202,18 @@ struct ActiveCardioView: View {
                 exerciseId: config.exercise.id,
                 exerciseName: {
                     if config.isFreeRun {
-                        return "Corrida livre (\(config.intensity.rawValue))"
+                        return "\(config.exercise.name) livre (\(config.intensity.rawValue))"
                     }
-                    if config.isDistanceRun {
-                        return "\(config.exercise.name) \(String(format: "%.0f", config.targetDistanceKm)) km (\(config.intensity.rawValue))"
+                    if config.hasDistanceTarget {
+                        let km = String(format: abs(config.targetDistanceKm - config.targetDistanceKm.rounded()) < 0.05
+                                          ? "%.0f"
+                                          : "%.1f",
+                                        config.targetDistanceKm)
+                        return "\(config.exercise.name) \(km) km (\(config.intensity.rawValue))"
+                    }
+                    if isSwimming {
+                        let pool = Int(config.resolvedPoolLengthMeters)
+                        return "Natação \(pool) m · \(swimLapCount) voltas (\(config.intensity.rawValue))"
                     }
                     return "\(config.exercise.name) (\(config.intensity.rawValue))"
                 }(),
@@ -962,6 +1230,7 @@ struct ActiveCardioView: View {
         }
 
         let hkActivity: HKWorkoutActivityType = {
+            if config.isSwimmingSession { return .swimming }
             if config.isOutdoorCyclingSession { return .cycling }
             if config.isRunningSession || config.isDistanceRun { return .running }
             if config.isOutdoorWalkingSession { return .walking }
@@ -983,8 +1252,86 @@ struct ActiveCardioView: View {
             athleteName: authService.currentUser?.greetingName ?? "Atleta"
         )
 
+        if isOutdoorCycling, distanceKm > 0.05 {
+            BikeMaintenanceService.shared.recordRide(
+                distanceKm: distanceKm,
+                title: session.workoutTitle,
+                intensity: config.intensity.rawValue
+            )
+        }
+
         finishedSession = session
         workoutStore.endSession(persisting: session)
+    }
+
+    private func evaluateNearbyHazards() {
+        let now = Date()
+        guard now.timeIntervalSince(lastHazardCheckAt) >= 2 else { return }
+        lastHazardCheckAt = now
+        guard let coordinate = runTracker.currentLocation?.coordinate else { return }
+        roadHazards.refreshSeedIfNeeded(near: coordinate)
+        if let nearby = roadHazards.nearestHazard(
+            to: coordinate,
+            withinMeters: RoadHazardService.alertRadiusMeters,
+            excluding: alertedHazardIds
+        ) {
+            alertedHazardIds.insert(nearby.id)
+            activeHazardAlert = nearby
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 12) {
+                if activeHazardAlert?.id == nearby.id {
+                    activeHazardAlert = nil
+                }
+            }
+        }
+    }
+
+    private func potholeAlertBanner(_ hazard: RoadHazard) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.title2)
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(hazard.type.alertTitle)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text(hazard.alertSubtitle)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            Spacer(minLength: 0)
+            Button {
+                activeHazardAlert = nil
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(14)
+        .background(Color.orange.opacity(0.18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.orange.opacity(0.55), lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    private var reportHazardButton: some View {
+        Button {
+            showReportHazardSheet = true
+        } label: {
+            Label("Reportar perigo na pista", systemImage: "exclamationmark.bubble.fill")
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .foregroundStyle(.white)
+                .background(Color.orange.opacity(0.9))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .disabled(runTracker.currentLocation == nil)
     }
 }
 

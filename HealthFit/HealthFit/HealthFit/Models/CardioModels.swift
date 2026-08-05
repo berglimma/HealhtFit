@@ -126,9 +126,19 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         self.caloriesPerMinute = caloriesPerMinute
     }
 
-    /// Corrida com metas de distância (livre / 5–40 km).
+    /// Corrida com metas de distância (livre / presets / personalizado).
     var supportsDistanceGoals: Bool {
         name == "Corrida"
+    }
+
+    /// Metas de km também em caminhada e bikes outdoor.
+    var supportsCustomDistanceGoals: Bool {
+        supportsDistanceGoals || isOutdoorWalking || isOutdoorCycling
+    }
+
+    /// Natação em piscina: comprimento, voltas e diário.
+    var supportsSwimmingPool: Bool {
+        name == "Natação"
     }
 
     /// Cardio outdoor com mapa GPS (Corrida, caminhada e bikes ao ar livre).
@@ -174,10 +184,30 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         CardioExercise(name: "Escada", description: "Simulador de escadas ou degraus", icon: "figure.stair.stepper", caloriesPerMinute: 11),
         CardioExercise(name: "Escalada", description: "Escalada em parede indoor ou rocha", icon: "figure.climbing", caloriesPerMinute: 11),
         CardioExercise(name: "Remo", description: "Remo ergométrico de alta eficiência", icon: "figure.rower", caloriesPerMinute: 10),
-        CardioExercise(name: "Natação", description: "Nados contínuos em piscina", icon: "figure.pool.swim", caloriesPerMinute: 11),
+        CardioExercise(name: "Natação", description: "Nados em piscina com voltas, distância e ritmo", icon: "figure.pool.swim", caloriesPerMinute: 11),
         CardioExercise(name: "Polichinelo", description: "Jumping jacks em ritmo constante", icon: "figure.mixed.cardio", caloriesPerMinute: 9),
         CardioExercise(name: "Burpees", description: "Exercício funcional de alta intensidade", icon: "figure.highintensity.intervaltraining", caloriesPerMinute: 13)
     ]
+}
+
+enum PoolLength: Int, CaseIterable, Identifiable, Codable, Hashable {
+    case twentyFive = 25
+    case thirtyThree = 33
+    case fifty = 50
+
+    var id: Int { rawValue }
+
+    var meters: Double { Double(rawValue) }
+
+    var label: String { "\(rawValue) m" }
+
+    var description: String {
+        switch self {
+        case .twentyFive: return "Piscina olímpica curta / clube"
+        case .thirtyThree: return "Comum em academias"
+        case .fifty: return "Piscina olímpica"
+        }
+    }
 }
 
 struct CardioWorkoutConfig: Hashable, Codable {
@@ -186,19 +216,31 @@ struct CardioWorkoutConfig: Hashable, Codable {
     let runningDistance: RunningDistance?
     let targetCalories: Int?
     let isFreeRun: Bool
+    /// Comprimento da piscina em metros (natação).
+    let poolLengthMeters: Double?
+    /// Meta opcional de voltas (natação).
+    let targetSwimLaps: Int?
+    /// Meta de distância personalizada (km) — corrida, caminhada ou bike.
+    let customTargetDistanceKm: Double?
 
     init(
         exercise: CardioExercise,
         intensity: CardioIntensity,
         runningDistance: RunningDistance? = nil,
         targetCalories: Int? = nil,
-        isFreeRun: Bool = false
+        isFreeRun: Bool = false,
+        poolLengthMeters: Double? = nil,
+        targetSwimLaps: Int? = nil,
+        customTargetDistanceKm: Double? = nil
     ) {
         self.exercise = exercise
         self.intensity = intensity
         self.runningDistance = runningDistance
         self.targetCalories = targetCalories
         self.isFreeRun = isFreeRun
+        self.poolLengthMeters = poolLengthMeters
+        self.targetSwimLaps = targetSwimLaps
+        self.customTargetDistanceKm = customTargetDistanceKm
     }
 
     /// Rebuilds a usable config from a persisted active session (app relaunch / stuck session).
@@ -210,8 +252,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
         let isFreeRun = lower.contains("livre")
 
         let exerciseName: String = {
+            if lower.contains("natação") || lower.contains("natacao") { return "Natação" }
             if lower.contains("corrida") { return "Corrida" }
-            // Histórico: "Caminhada Rápida", "Caminhada", walking…
             if lower.contains("caminhada") || lower.contains("walk") { return "Caminhada" }
             if lower.contains("mountain bike") { return "Mountain bike" }
             if lower.contains("bicicleta pedal") { return "Bicicleta pedal" }
@@ -221,14 +263,22 @@ struct CardioWorkoutConfig: Hashable, Codable {
             if let afterDash = title.components(separatedBy: " — ").dropFirst().first?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !afterDash.isEmpty {
-                // "Corrida 5 km" / "Corrida livre" / exercise name
                 if afterDash.lowercased().hasPrefix("corrida") { return "Corrida" }
+                if afterDash.lowercased().hasPrefix("natação")
+                    || afterDash.lowercased().hasPrefix("natacao") {
+                    return "Natação"
+                }
                 if afterDash.lowercased().hasPrefix("caminhada")
                     || afterDash.lowercased().hasPrefix("walk") {
                     return "Caminhada"
                 }
+                if afterDash.lowercased().contains("mountain") { return "Mountain bike" }
+                if afterDash.lowercased().contains("bicicleta pedal")
+                    || afterDash.lowercased().contains("bike") {
+                    return "Bicicleta pedal"
+                }
                 let withoutDistance = afterDash
-                    .replacingOccurrences(of: #"\s+\d+\s*km"#, with: "", options: .regularExpression)
+                    .replacingOccurrences(of: #"\s+\d+([.,]\d+)?\s*km"#, with: "", options: .regularExpression)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 return withoutDistance.isEmpty ? afterDash : withoutDistance
             }
@@ -246,11 +296,20 @@ struct CardioWorkoutConfig: Hashable, Codable {
             )
 
         let intensity = CardioIntensity(rawValue: session.cardioIntensityLabel ?? "") ?? .medium
+        let customKm = session.targetDistanceKm
         let runningDistance: RunningDistance? = {
             guard exercise.supportsDistanceGoals, !isFreeRun else { return nil }
-            if let km = session.targetDistanceKm, let match = RunningDistance(rawValue: Int(km.rounded())) {
+            guard let km = customKm else { return nil }
+            if let match = RunningDistance(rawValue: Int(km.rounded())), abs(match.kilometers - km) < 0.05 {
                 return match
             }
+            return nil
+        }()
+
+        let customTarget: Double? = {
+            guard !isFreeRun, let km = customKm, km > 0 else { return nil }
+            if runningDistance != nil { return nil }
+            if exercise.supportsCustomDistanceGoals { return km }
             return nil
         }()
 
@@ -259,14 +318,32 @@ struct CardioWorkoutConfig: Hashable, Codable {
             intensity: intensity,
             runningDistance: runningDistance,
             targetCalories: session.targetCalories,
-            isFreeRun: isFreeRun || (exercise.supportsDistanceGoals && runningDistance == nil && session.targetDistanceKm == nil)
+            isFreeRun: isFreeRun || (
+                exercise.supportsCustomDistanceGoals
+                    && runningDistance == nil
+                    && customTarget == nil
+                    && session.targetDistanceKm == nil
+            ),
+            poolLengthMeters: session.poolLengthMeters,
+            targetSwimLaps: session.targetSwimLaps,
+            customTargetDistanceKm: customTarget
         )
     }
 
-    var isDistanceRun: Bool { runningDistance != nil && !isFreeRun }
+    var isDistanceRun: Bool {
+        exercise.supportsDistanceGoals && !isFreeRun && targetDistanceKm > 0
+    }
+
+    /// Qualquer meta em km (corrida, caminhada, bike outdoor).
+    var hasDistanceTarget: Bool {
+        !isFreeRun && targetDistanceKm > 0 && !isSwimmingSession
+    }
 
     /// Sessão de Corrida (metas de distância / corrida livre).
     var isRunningSession: Bool { exercise.supportsDistanceGoals }
+
+    /// Natação com contagem de voltas e piscina.
+    var isSwimmingSession: Bool { exercise.supportsSwimmingPool }
 
     /// Corrida, caminhada ou bike outdoor — mapa GPS, rota e métricas de movimento.
     var isOutdoorGPSCardio: Bool { exercise.supportsOutdoorGPS }
@@ -289,12 +366,34 @@ struct CardioWorkoutConfig: Hashable, Codable {
         return targetCalories > 0
     }
 
+    var resolvedPoolLengthMeters: Double {
+        max(poolLengthMeters ?? 25, 10)
+    }
+
+    private var formattedTargetKm: String {
+        let km = targetDistanceKm
+        if abs(km - km.rounded()) < 0.05 {
+            return "\(Int(km.rounded())) km"
+        }
+        return String(format: "%.1f km", km)
+    }
+
     var title: String {
         if isFreeRun {
+            if isOutdoorCyclingSession || isOutdoorWalkingSession || isRunningSession {
+                return "Cardio — \(exercise.name) livre"
+            }
             return "Cardio — Corrida livre"
         }
-        if let distance = runningDistance {
-            return "Cardio — Corrida \(distance.label)"
+        if hasDistanceTarget {
+            return "Cardio — \(exercise.name) \(formattedTargetKm)"
+        }
+        if isSwimmingSession {
+            let pool = Int(resolvedPoolLengthMeters.rounded())
+            if let laps = targetSwimLaps, laps > 0 {
+                return "Cardio — Natação · \(pool) m · \(laps) voltas"
+            }
+            return "Cardio — Natação · \(pool) m"
         }
         return "Cardio — \(exercise.name)"
     }
@@ -305,15 +404,39 @@ struct CardioWorkoutConfig: Hashable, Codable {
     }
 
     var targetDistanceKm: Double {
-        runningDistance?.kilometers ?? 0
+        if isSwimmingSession, let laps = targetSwimLaps, laps > 0 {
+            return (Double(laps) * resolvedPoolLengthMeters) / 1000.0
+        }
+        if let custom = customTargetDistanceKm, custom > 0 {
+            return custom
+        }
+        return runningDistance?.kilometers ?? 0
     }
 
     var targetDurationSeconds: Int {
         if isFreeRun {
             return 0
         }
-        if let distance = runningDistance {
-            return Int(distance.kilometers * Double(intensity.paceSecondsPerKm))
+        if isSwimmingSession {
+            let targetMeters = targetDistanceKm * 1000
+            if targetMeters > 0 {
+                let basePacePer100m = Double(intensity.swimPaceSecondsPer100m)
+                return max(60, Int((targetMeters / 100.0) * basePacePer100m))
+            }
+            return intensity.durationMinutes * 60
+        }
+        if hasDistanceTarget {
+            if isOutdoorCyclingSession {
+                // Velocidade ref. ~18/22/28 km/h conforme intensidade.
+                let speedKmh: Double
+                switch intensity {
+                case .low: speedKmh = 18
+                case .medium: speedKmh = 22
+                case .high: speedKmh = 28
+                }
+                return max(60, Int((targetDistanceKm / speedKmh) * 3600))
+            }
+            return Int(targetDistanceKm * Double(intensity.paceSecondsPerKm))
         }
         return intensity.durationMinutes * 60
     }
@@ -323,7 +446,24 @@ struct CardioWorkoutConfig: Hashable, Codable {
         return exercise.caloriesPerMinute * intensity.multiplier * minutes
     }
 
+    /// Estimativa de kcal na natação por distância + intensidade (além do tempo).
+    func estimatedSwimCalories(elapsedSeconds: Int, distanceMeters: Double, weightKg: Double = 70) -> Double {
+        let timeBased = estimatedCalories(for: elapsedSeconds)
+        let per100m = 0.45 + (intensity.multiplier - 0.75) * 0.25
+        let distanceBased = (distanceMeters / 100.0) * per100m * weightKg
+        return max(timeBased, distanceBased)
+    }
+
     func estimatedDistanceKm(elapsedSeconds: Int) -> Double {
+        if isOutdoorCyclingSession {
+            let speedKmh: Double
+            switch intensity {
+            case .low: speedKmh = 18
+            case .medium: speedKmh = 22
+            case .high: speedKmh = 28
+            }
+            return (Double(elapsedSeconds) / 3600.0) * speedKmh
+        }
         guard intensity.paceSecondsPerKm > 0 else { return 0 }
         return Double(elapsedSeconds) / Double(intensity.paceSecondsPerKm)
     }
@@ -331,6 +471,30 @@ struct CardioWorkoutConfig: Hashable, Codable {
     func paceSecondsPerKm(elapsedSeconds: Int, distanceKm: Double) -> Int {
         guard distanceKm > 0 else { return intensity.paceSecondsPerKm }
         return Int((Double(elapsedSeconds) / distanceKm).rounded())
+    }
+
+    func swimDistanceMeters(laps: Int) -> Double {
+        Double(max(0, laps)) * resolvedPoolLengthMeters
+    }
+
+    func swimPaceSecondsPer100m(elapsedSeconds: Int, distanceMeters: Double) -> Int? {
+        guard distanceMeters >= 25, elapsedSeconds > 0 else { return nil }
+        return max(1, Int((Double(elapsedSeconds) / (distanceMeters / 100.0)).rounded()))
+    }
+}
+
+extension CardioIntensity {
+    /// Ritmo de referência em natação (segundos por 100 m).
+    var swimPaceSecondsPer100m: Int {
+        switch self {
+        case .low: return 150
+        case .medium: return 120
+        case .high: return 95
+        }
+    }
+
+    func formattedSwimPace() -> String {
+        PaceFormatting.formatSwimPace(secondsPer100m: swimPaceSecondsPer100m)
     }
 }
 
@@ -342,6 +506,12 @@ enum PaceFormatting {
         let minutes = secondsPerKm / 60
         let seconds = secondsPerKm % 60
         return String(format: "%d:%02d /km", minutes, seconds)
+    }
+
+    static func formatSwimPace(secondsPer100m: Int) -> String {
+        let minutes = secondsPer100m / 60
+        let seconds = secondsPer100m % 60
+        return String(format: "%d:%02d /100m", minutes, seconds)
     }
 
     static func formatDuration(seconds: Int) -> String {

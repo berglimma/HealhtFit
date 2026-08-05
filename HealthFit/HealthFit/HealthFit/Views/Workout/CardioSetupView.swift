@@ -9,35 +9,74 @@ struct CardioSetupView: View {
     let exercise: CardioExercise
     @State private var selectedIntensity: CardioIntensity = .medium
     @State private var selectedDistance: RunningDistance = .five
-    @State private var runningMode: RunningSetupMode = .distance(.five)
+    @State private var distanceMode: DistanceSetupMode = .free
+    @State private var customKmText = "8"
     @State private var useCalorieGoal = false
     @State private var selectedCalorieGoal = 300
+    @State private var selectedPool: PoolLength = .twentyFive
+    @State private var customPoolMeters: Int = 25
+    @State private var useCustomPool = false
+    @State private var useLapGoal = false
+    @State private var targetLaps: Int = 20
     @Environment(\.dismiss) private var dismiss
 
     private static let caloriePresets = [100, 150, 200, 250, 300, 350, 400, 500, 600, 800]
+    private static let lapPresets = [10, 20, 30, 40, 50, 60, 80, 100]
+    private static let outdoorKmPresets: [Double] = [3, 5, 8, 10, 15, 20, 30, 40]
 
-    private enum RunningSetupMode: Hashable {
-        case freeRun
-        case distance(RunningDistance)
+    private enum DistanceSetupMode: Hashable {
+        case free
+        case preset(RunningDistance)
+        case custom
 
-        var isFreeRun: Bool {
-            if case .freeRun = self { return true }
+        var isFree: Bool {
+            if case .free = self { return true }
             return false
         }
     }
 
+    private var resolvedPoolMeters: Double {
+        if useCustomPool {
+            return Double(min(max(customPoolMeters, 10), 100))
+        }
+        return selectedPool.meters
+    }
+
+    private var parsedCustomKm: Double {
+        let normalized = customKmText.replacingOccurrences(of: ",", with: ".")
+        let value = Double(normalized) ?? 5
+        return min(max(value, 0.5), 300)
+    }
+
     private var config: CardioWorkoutConfig {
-        let distance: RunningDistance? = {
-            guard exercise.supportsDistanceGoals, case .distance(let value) = runningMode else { return nil }
-            return value
+        let supportsKm = exercise.supportsCustomDistanceGoals
+        let isFree = supportsKm && distanceMode.isFree
+
+        let preset: RunningDistance? = {
+            guard supportsKm, case .preset(let d) = distanceMode else { return nil }
+            return d
+        }()
+
+        let customKm: Double? = {
+            guard supportsKm, case .custom = distanceMode else { return nil }
+            return parsedCustomKm
         }()
 
         return CardioWorkoutConfig(
             exercise: exercise,
             intensity: selectedIntensity,
-            runningDistance: distance,
+            runningDistance: exercise.supportsDistanceGoals ? preset : nil,
             targetCalories: useCalorieGoal ? selectedCalorieGoal : nil,
-            isFreeRun: exercise.supportsDistanceGoals && runningMode.isFreeRun
+            isFreeRun: isFree,
+            poolLengthMeters: exercise.supportsSwimmingPool ? resolvedPoolMeters : nil,
+            targetSwimLaps: exercise.supportsSwimmingPool && useLapGoal ? targetLaps : nil,
+            customTargetDistanceKm: customKm ?? {
+                // Caminhada/bike com preset de km (sem RunningDistance enum).
+                if supportsKm, !exercise.supportsDistanceGoals, case .preset(let d) = distanceMode {
+                    return d.kilometers
+                }
+                return nil
+            }()
         )
     }
 
@@ -45,8 +84,12 @@ struct CardioSetupView: View {
         ScrollView {
             VStack(spacing: 24) {
                 headerSection
-                if exercise.supportsDistanceGoals {
-                    distanceSection
+                if exercise.supportsCustomDistanceGoals {
+                    outdoorDistanceSection
+                }
+                if exercise.supportsSwimmingPool {
+                    swimmingPoolSection
+                    swimmingLapsSection
                 }
                 calorieGoalSection
                 intensitySection
@@ -59,6 +102,14 @@ struct CardioSetupView: View {
         .background(AppTheme.background)
         .navigationTitle(exercise.name)
         .navigationBarTitleDisplayMode(.large)
+        .onAppear {
+            if exercise.supportsDistanceGoals {
+                distanceMode = .preset(.five)
+            } else if exercise.supportsCustomDistanceGoals {
+                distanceMode = .custom
+                customKmText = exercise.isOutdoorCycling ? "20" : "5"
+            }
+        }
     }
 
     private var headerSection: some View {
@@ -90,82 +141,293 @@ struct CardioSetupView: View {
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
-    private var distanceSection: some View {
+    private var outdoorDistanceSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Modo da corrida")
+            Text(distanceSectionTitle)
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
 
             Button {
-                runningMode = .freeRun
+                distanceMode = .free
             } label: {
-                HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(runningMode.isFreeRun ? AppTheme.accent.opacity(0.25) : AppTheme.cardBackground)
-                            .frame(width: 52, height: 52)
-                        Image(systemName: "figure.run")
-                            .font(.title2)
-                            .foregroundStyle(runningMode.isFreeRun ? AppTheme.accent : AppTheme.textSecondary)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Sem meta")
-                            .font(.headline)
-                            .foregroundStyle(runningMode.isFreeRun ? AppTheme.accent : AppTheme.textPrimary)
-                        Text("Apenas corrida — sem distância ou tempo fixo. Encerre quando quiser.")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                            .multilineTextAlignment(.leading)
-                    }
-
-                    Spacer()
-
-                    if runningMode.isFreeRun {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(AppTheme.accent)
-                    }
-                }
-                .padding()
-                .background(runningMode.isFreeRun ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
-                        .stroke(runningMode.isFreeRun ? AppTheme.accent : Color.clear, lineWidth: 2)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+                freeDistanceRow
             }
             .buttonStyle(.plain)
 
-            Text("Ou escolha uma meta em quilômetros:")
+            Text("Ou escolha uma distância:")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppTheme.textSecondary)
                 .padding(.top, 4)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                ForEach(RunningDistance.allCases) { distance in
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ForEach(Self.outdoorKmPresets, id: \.self) { km in
                     Button {
-                        selectedDistance = distance
-                        runningMode = .distance(distance)
+                        selectPresetKm(km)
                     } label: {
-                        let isSelected = runningMode == .distance(distance)
-                        VStack(spacing: 8) {
-                            Image(systemName: distance.icon)
-                                .font(.title2)
-                            Text(distance.label)
+                        let isSelected: Bool = {
+                            if case .preset(let d) = distanceMode, abs(d.kilometers - km) < 0.05 { return true }
+                            if case .custom = distanceMode, abs(parsedCustomKm - km) < 0.05 { return true }
+                            return false
+                        }()
+                        Text(km == km.rounded() ? "\(Int(km))" : String(format: "%.1f", km))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(isSelected ? .white : AppTheme.textPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(isSelected ? AppTheme.accent : AppTheme.cardBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Button {
+                    distanceMode = .custom
+                    if parsedCustomKm < 0.5 { customKmText = "5" }
+                } label: {
+                    HStack {
+                        Image(systemName: "slider.horizontal.3")
+                        Text("Personalizar km")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        if case .custom = distanceMode {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                    }
+                    .foregroundStyle({
+                        if case .custom = distanceMode { return AppTheme.accent }
+                        return AppTheme.textPrimary
+                    }())
+                    .padding()
+                    .background({
+                        if case .custom = distanceMode { return AppTheme.accent.opacity(0.12) }
+                        return AppTheme.cardBackground
+                    }())
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+
+                if case .custom = distanceMode {
+                    HStack {
+                        TextField("km", text: $customKmText)
+                            .keyboardType(.decimalPad)
+                            .padding(12)
+                            .background(AppTheme.background)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("km")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+
+                    Stepper(value: Binding(
+                        get: { parsedCustomKm },
+                        set: { customKmText = formatKmInput($0) }
+                    ), in: 0.5...300, step: 0.5) {
+                        Text("Meta: \(formatKmInput(parsedCustomKm)) km")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .foregroundStyle(AppTheme.textPrimary)
+                }
+            }
+        }
+    }
+
+    private var distanceSectionTitle: String {
+        if exercise.isOutdoorCycling { return "Meta de pedal (km)" }
+        if exercise.isOutdoorWalking { return "Meta de caminhada (km)" }
+        return "Modo da corrida"
+    }
+
+    private var freeDistanceRow: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(distanceMode.isFree ? AppTheme.accent.opacity(0.25) : AppTheme.cardBackground)
+                    .frame(width: 52, height: 52)
+                Image(systemName: exercise.icon)
+                    .font(.title2)
+                    .foregroundStyle(distanceMode.isFree ? AppTheme.accent : AppTheme.textSecondary)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Sem meta de km")
+                    .font(.headline)
+                    .foregroundStyle(distanceMode.isFree ? AppTheme.accent : AppTheme.textPrimary)
+                Text("Acompanhe livremente — encerre quando quiser.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.leading)
+            }
+            Spacer()
+            if distanceMode.isFree {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(AppTheme.accent)
+            }
+        }
+        .padding()
+        .background(distanceMode.isFree ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .stroke(distanceMode.isFree ? AppTheme.accent : Color.clear, lineWidth: 2)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private func selectPresetKm(_ km: Double) {
+        if exercise.supportsDistanceGoals, let match = RunningDistance(rawValue: Int(km.rounded())), abs(match.kilometers - km) < 0.05 {
+            selectedDistance = match
+            distanceMode = .preset(match)
+        } else {
+            customKmText = formatKmInput(km)
+            distanceMode = .custom
+            if exercise.supportsDistanceGoals, let match = RunningDistance(rawValue: Int(km.rounded())) {
+                selectedDistance = match
+            }
+        }
+    }
+
+    private func formatKmInput(_ km: Double) -> String {
+        if abs(km - km.rounded()) < 0.05 {
+            return "\(Int(km.rounded()))"
+        }
+        return String(format: "%.1f", km)
+    }
+
+    private var swimmingPoolSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Tamanho da piscina")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            Text("Usado para calcular distância, ritmo e o diário de bordo.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                ForEach(PoolLength.allCases) { pool in
+                    Button {
+                        useCustomPool = false
+                        selectedPool = pool
+                        customPoolMeters = pool.rawValue
+                    } label: {
+                        let isSelected = !useCustomPool && selectedPool == pool
+                        VStack(spacing: 6) {
+                            Text(pool.label)
                                 .font(.headline)
-                            Text(distance.marathonRole)
+                            Text(pool.description)
                                 .font(.caption2)
                                 .multilineTextAlignment(.center)
                                 .lineLimit(2)
                         }
                         .foregroundStyle(isSelected ? .white : AppTheme.textPrimary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 6)
                         .background(isSelected ? AppTheme.accent : AppTheme.cardBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)
                 }
+            }
+
+            Button {
+                useCustomPool = true
+            } label: {
+                HStack {
+                    Image(systemName: "ruler")
+                    Text("Personalizado")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    if useCustomPool {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                }
+                .foregroundStyle(useCustomPool ? AppTheme.accent : AppTheme.textPrimary)
+                .padding()
+                .background(useCustomPool ? AppTheme.accent.opacity(0.12) : AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+
+            if useCustomPool {
+                Stepper(value: $customPoolMeters, in: 10...100, step: 1) {
+                    HStack {
+                        Text("Comprimento")
+                        Spacer()
+                        Text("\(customPoolMeters) m")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                }
+                .foregroundStyle(AppTheme.textPrimary)
+            }
+        }
+    }
+
+    private var swimmingLapsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Meta de voltas")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                Toggle("Meta voltas", isOn: $useLapGoal)
+                    .labelsHidden()
+                    .tint(AppTheme.accent)
+            }
+
+            if useLapGoal {
+                Text("Durante o treino você conta as voltas. Uma volta = comprimento da piscina (\(Int(resolvedPoolMeters)) m).")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(Self.lapPresets, id: \.self) { laps in
+                        Button {
+                            targetLaps = laps
+                        } label: {
+                            Text("\(laps)")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(targetLaps == laps ? .white : AppTheme.textPrimary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(targetLaps == laps ? AppTheme.accent : AppTheme.cardBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                Stepper(value: $targetLaps, in: 1...500, step: 1) {
+                    HStack {
+                        Label("Voltas", systemImage: "arrow.triangle.2.circlepath")
+                        Spacer()
+                        Text("\(targetLaps)")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                }
+                .foregroundStyle(AppTheme.textPrimary)
+
+                let meters = Double(targetLaps) * resolvedPoolMeters
+                HStack {
+                    Label("Distância da meta", systemImage: "ruler")
+                    Spacer()
+                    Text(meters >= 1000
+                          ? String(format: "%.2f km", meters / 1000)
+                          : "\(Int(meters.rounded())) m")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
+                .foregroundStyle(AppTheme.textPrimary)
+            } else {
+                Text("Sem meta de voltas — conte livremente e encerre quando quiser.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
         }
     }
@@ -250,14 +512,30 @@ struct CardioSetupView: View {
                                 .font(.caption)
                                 .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.85) : AppTheme.textSecondary)
                                 .multilineTextAlignment(.leading)
-                            if exercise.supportsDistanceGoals && !runningMode.isFreeRun {
-                                Text("Ritmo alvo: \(intensity.formattedPace())")
+                            if exercise.supportsSwimmingPool {
+                                Text("Ritmo ref.: \(intensity.formattedSwimPace())")
                                     .font(.caption2.weight(.semibold))
                                     .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.9) : intensity.color)
-                            } else if exercise.supportsDistanceGoals && runningMode.isFreeRun {
-                                Text("Ritmo de referência: \(intensity.formattedPace())")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.9) : intensity.color)
+                            } else if exercise.supportsCustomDistanceGoals && !distanceMode.isFree {
+                                if exercise.isOutdoorCycling {
+                                    Text("Velocidade ref.: \(cyclingSpeedLabel(for: intensity))")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.9) : intensity.color)
+                                } else {
+                                    Text("Ritmo alvo: \(intensity.formattedPace())")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.9) : intensity.color)
+                                }
+                            } else if exercise.supportsCustomDistanceGoals && distanceMode.isFree {
+                                if exercise.isOutdoorCycling {
+                                    Text("Velocidade ref.: \(cyclingSpeedLabel(for: intensity))")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.9) : intensity.color)
+                                } else {
+                                    Text("Ritmo de referência: \(intensity.formattedPace())")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(selectedIntensity == intensity ? .white.opacity(0.9) : intensity.color)
+                                }
                             } else {
                                 Text("\(intensity.durationMinutes) min sugeridos")
                                     .font(.caption2.weight(.semibold))
@@ -281,28 +559,49 @@ struct CardioSetupView: View {
         }
     }
 
+    private func cyclingSpeedLabel(for intensity: CardioIntensity) -> String {
+        switch intensity {
+        case .low: return "~18 km/h"
+        case .medium: return "~22 km/h"
+        case .high: return "~28 km/h"
+        }
+    }
+
     private var summarySection: some View {
         VStack(spacing: 10) {
             if config.isFreeRun {
                 HStack {
-                    Label("Modo", systemImage: "figure.run")
+                    Label("Modo", systemImage: exercise.icon)
                     Spacer()
-                    Text("Apenas corrida")
+                    Text(exercise.supportsCustomDistanceGoals ? "Sem meta de km" : "Apenas corrida")
                         .font(.headline)
                         .foregroundStyle(AppTheme.accent)
                 }
-                HStack {
-                    Label("Ritmo de referência", systemImage: "speedometer")
-                    Spacer()
-                    Text(selectedIntensity.formattedPace())
-                        .font(.headline)
-                        .foregroundStyle(AppTheme.accentSecondary)
+                if exercise.isOutdoorCycling {
+                    HStack {
+                        Label("Velocidade de referência", systemImage: "speedometer")
+                        Spacer()
+                        Text(cyclingSpeedLabel(for: selectedIntensity))
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
+                } else if exercise.supportsCustomDistanceGoals {
+                    HStack {
+                        Label("Ritmo de referência", systemImage: "speedometer")
+                        Spacer()
+                        Text(selectedIntensity.formattedPace())
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
                 }
-            } else if config.isDistanceRun {
+            } else if config.hasDistanceTarget {
                 HStack {
-                    Label("Distância meta", systemImage: "figure.run")
+                    Label("Distância meta", systemImage: exercise.icon)
                     Spacer()
-                    Text(selectedDistance.label)
+                    Text(String(format: abs(config.targetDistanceKm - config.targetDistanceKm.rounded()) < 0.05
+                                   ? "%.0f km"
+                                   : "%.1f km",
+                                 config.targetDistanceKm))
                         .font(.headline)
                         .foregroundStyle(AppTheme.accent)
                 }
@@ -313,27 +612,60 @@ struct CardioSetupView: View {
                         .font(.headline)
                         .foregroundStyle(AppTheme.accent)
                 }
+                if exercise.isOutdoorCycling {
+                    HStack {
+                        Label("Velocidade alvo", systemImage: "speedometer")
+                        Spacer()
+                        Text(cyclingSpeedLabel(for: selectedIntensity))
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
+                } else {
+                    HStack {
+                        Label("Ritmo alvo", systemImage: "speedometer")
+                        Spacer()
+                        Text(selectedIntensity.formattedPace())
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
+                }
+            } else if config.isSwimmingSession {
                 HStack {
-                    Label("Ritmo alvo", systemImage: "speedometer")
+                    Label("Piscina", systemImage: "figure.pool.swim")
                     Spacer()
-                    Text(selectedIntensity.formattedPace())
+                    Text("\(Int(config.resolvedPoolLengthMeters)) m")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accent)
+                }
+                if let laps = config.targetSwimLaps, laps > 0 {
+                    HStack {
+                        Label("Meta de voltas", systemImage: "arrow.triangle.2.circlepath")
+                        Spacer()
+                        Text("\(laps)")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    HStack {
+                        Label("Distância meta", systemImage: "ruler")
+                        Spacer()
+                        Text(String(format: "%.0f m", config.targetDistanceKm * 1000))
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
+                    HStack {
+                        Label("Tempo estimado", systemImage: "clock.fill")
+                        Spacer()
+                        Text(PaceFormatting.formatDuration(seconds: config.targetDurationSeconds))
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                }
+                HStack {
+                    Label("Ritmo ref.", systemImage: "speedometer")
+                    Spacer()
+                    Text(selectedIntensity.formattedSwimPace())
                         .font(.headline)
                         .foregroundStyle(AppTheme.accentSecondary)
-                }
-            } else if config.isOutdoorCyclingSession {
-                HStack {
-                    Label("Modo", systemImage: "bicycle")
-                    Spacer()
-                    Text("Outdoor com GPS")
-                        .font(.headline)
-                        .foregroundStyle(AppTheme.accent)
-                }
-                HStack {
-                    Label("Duração sugerida", systemImage: "clock.fill")
-                    Spacer()
-                    Text("\(selectedIntensity.durationMinutes) min")
-                        .font(.headline)
-                        .foregroundStyle(AppTheme.accent)
                 }
             } else {
                 HStack {
@@ -344,12 +676,29 @@ struct CardioSetupView: View {
                         .foregroundStyle(AppTheme.accent)
                 }
             }
-            if config.isFreeRun || config.isDistanceRun || config.isOutdoorCyclingSession {
+            if config.isFreeRun || config.hasDistanceTarget || config.isOutdoorCyclingSession {
                 HStack {
                     Label("Calorias (referência)", systemImage: "flame.fill")
                     Spacer()
                     Text("Acompanhe durante o treino")
                         .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
+            } else if config.isSwimmingSession {
+                let estimateSeconds = max(config.targetDurationSeconds, selectedIntensity.durationMinutes * 60)
+                let meters = config.targetDistanceKm > 0
+                    ? config.targetDistanceKm * 1000
+                    : Double(20) * config.resolvedPoolLengthMeters
+                let est = config.estimatedSwimCalories(
+                    elapsedSeconds: estimateSeconds,
+                    distanceMeters: meters,
+                    weightKg: authService.currentUser?.weight ?? 70
+                )
+                HStack {
+                    Label("Calorias estimadas", systemImage: "flame.fill")
+                    Spacer()
+                    Text("~\(Int(est.rounded())) kcal")
+                        .font(.headline)
                         .foregroundStyle(AppTheme.accentSecondary)
                 }
             } else {
@@ -397,7 +746,8 @@ struct CardioSetupView: View {
         } label: {
             Label(
                 {
-                    if config.isDistanceRun || config.isFreeRun { return "Iniciar Corrida" }
+                    if config.isRunningSession { return "Iniciar Corrida" }
+                    if config.isSwimmingSession { return "Iniciar Natação" }
                     if config.isOutdoorCyclingSession { return "Iniciar Pedal" }
                     if config.isOutdoorWalkingSession { return "Iniciar Caminhada" }
                     return "Iniciar Cardio"
@@ -430,6 +780,9 @@ struct CardioExerciseCard: View {
                 Text({
                     if exercise.supportsDistanceGoals {
                         return "\(exercise.description) · livre ou 5–40 km"
+                    }
+                    if exercise.supportsSwimmingPool {
+                        return "\(exercise.description) · piscina e voltas"
                     }
                     if exercise.supportsOutdoorGPS {
                         return "\(exercise.description) · mapa GPS"
