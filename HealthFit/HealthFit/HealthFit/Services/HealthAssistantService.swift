@@ -38,6 +38,10 @@ struct HealthAssistantContext {
     let weekMealsCompleted: Int
     let weekMealsTotal: Int
     let supplementsLoggedToday: Int
+    /// HRV SDNN mais recente (ms), do Apple Watch via HealthKit.
+    var latestHRVMs: Double?
+    /// Inventário de escalada, para responder o que inspecionar antes de subir.
+    var climbingGear: [ClimbingGearItem] = []
 }
 
 enum HealthAssistantEngine {
@@ -72,6 +76,13 @@ enum HealthAssistantEngine {
         "Como está minha evolução corporal?",
         "O que preciso melhorar?",
     ]
+
+    /// Sugestões de escalada só aparecem para quem escala — senão a lista vira ruído.
+    static func suggestedQuestions(context: HealthAssistantContext) -> [String] {
+        let climbs = context.recentWorkoutSessions.contains { $0.climbing != nil }
+        guard climbs || !context.climbingGear.isEmpty else { return suggestedQuestions }
+        return ClimbingAssistantEngine.suggestedQuestions + suggestedQuestions
+    }
 
     static func welcomeMessage(context: HealthAssistantContext) -> String {
         let greeting = MotivationMessages.namedGreeting(name: context.user?.greetingName)
@@ -211,6 +222,11 @@ enum HealthAssistantEngine {
     static func answer(for question: String, context: HealthAssistantContext) -> String {
         if AssistantImprovementAnalysisEngine.matches(question) {
             return AssistantImprovementAnalysisEngine.answer(context: context)
+        }
+
+        // Antes das palavras-chave gerais: "grau", "clima" e "equipamento" colidem com outros tópicos.
+        if ClimbingAssistantEngine.matches(question) {
+            return ClimbingAssistantEngine.answer(for: question, context: context)
         }
 
         let normalized = normalize(question)

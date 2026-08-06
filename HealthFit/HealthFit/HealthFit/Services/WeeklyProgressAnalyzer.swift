@@ -101,7 +101,9 @@ enum WeeklyProgressAnalyzer {
     }
 
     static func isCardioSession(_ session: WorkoutSession) -> Bool {
-        session.workoutTitle.lowercased().hasPrefix("cardio")
+        let title = session.workoutTitle.lowercased()
+        // Luta usa o mesmo cronômetro do cardio e conta como sessão de cardio nas estatísticas.
+        return title.hasPrefix("cardio") || title.hasPrefix("luta")
     }
 
     private static func buildMeditationSummary(

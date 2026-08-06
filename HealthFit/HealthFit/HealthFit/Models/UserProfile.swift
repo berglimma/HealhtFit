@@ -95,6 +95,8 @@ enum PracticeModalityID {
     static let strength = "strength"
     static let home = "home"
     static let meditation = "meditation"
+    /// Card "Luta" (hub de modalidades de combate) — fora do catálogo de cardio.
+    static let fight = "cardio.Luta"
 
     static func cardio(_ exerciseName: String) -> String {
         "cardio.\(exerciseName)"
@@ -102,7 +104,7 @@ enum PracticeModalityID {
 
     /// Lista completa usada como padrão (perfil antigo / vazio = todas).
     static var allDefaultIDs: [String] {
-        [strength, home, meditation] + CardioExercise.catalog.map { cardio($0.name) }
+        [strength, home, meditation] + CardioExercise.catalog.map { cardio($0.name) } + [fight]
     }
 }
 
@@ -147,6 +149,15 @@ struct PracticeModalityOption: Identifiable, Hashable {
                 detail: exercise.description
             )
         }
+        items.append(
+            PracticeModalityOption(
+                id: PracticeModalityID.fight,
+                title: "Luta",
+                icon: "figure.boxing",
+                group: .cardio,
+                detail: "Boxe, Muay Thai, Jiu-Jitsu, MMA e outras modalidades"
+            )
+        )
         items.append(
             PracticeModalityOption(
                 id: PracticeModalityID.meditation,
@@ -506,7 +517,12 @@ struct UserProfile: Codable, Identifiable, Equatable {
 
     var practicesAnyCardio: Bool {
         let ids = effectivePracticedModalityIDs
+        if ids.contains(PracticeModalityID.fight) { return true }
         return CardioExercise.catalog.contains { ids.contains(PracticeModalityID.cardio($0.name)) }
+    }
+
+    var practicesFight: Bool {
+        practices(PracticeModalityID.fight)
     }
 
     var practicedCardioExercises: [CardioExercise] {

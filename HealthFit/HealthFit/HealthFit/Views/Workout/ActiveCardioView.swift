@@ -23,6 +23,11 @@ struct ActiveCardioView: View {
     @StateObject private var runTracker = RunTrackingService()
     @StateObject private var jumpMetrics = JumpMetricsService()
     @StateObject private var rowingMetrics = RowingMetricsService()
+    @StateObject private var climbingMotion = ClimbingMotionService()
+    @ObservedObject private var climbingWeather = ClimbingWeatherService.shared
+    @State private var climbingAttempts: [ClimbingAttempt] = []
+    @State private var showsAttemptSheet = false
+    @State private var climbingHealth: HealthKitManager.ClimbingHealthSnapshot?
     @State private var elapsedSeconds = 0
     @State private var isPaused = false
     @State private var pauseStartedAt: Date?
@@ -56,6 +61,9 @@ struct ActiveCardioView: View {
     private var isSwimming: Bool { config.isSwimmingSession }
     private var isWaterSport: Bool { config.isWaterSportSession }
     private var isRowing: Bool { config.isRowingSession }
+    private var isClimbing: Bool { config.isClimbingSession }
+    private var isFight: Bool { config.isFightSession }
+    private var climbingSetup: ClimbingSetup { config.climbingSetup ?? .default }
     private var trackingModality: OutdoorCardioModality {
         config.outdoorTrackingModality
     }
@@ -131,6 +139,8 @@ struct ActiveCardioView: View {
     }
 
     private var primaryProgress: Double {
+        // Luta é cronômetro puro: sem meta, o anel fica só como moldura do tempo.
+        if isFight { return 0 }
         if config.hasCalorieGoal {
             return calorieProgressClamped
         }
@@ -152,6 +162,7 @@ struct ActiveCardioView: View {
     }
 
     private var navigationTitleText: String {
+        if isFight { return config.exercise.name }
         if isSwimming { return "Natação" }
         if isWaterSport {
             return config.isKitesurfSession ? "Kitesurf" : "Surf"
@@ -225,6 +236,11 @@ struct ActiveCardioView: View {
                             exerciseInfo
                             if isRowing {
                                 rowingLiveSection
+                            }
+                            if isClimbing {
+                                climbingWeatherSection
+                                climbingLiveSection
+                                climbingAttemptsSection
                             }
                         }
                         progressRing
@@ -364,6 +380,9 @@ struct ActiveCardioView: View {
                 Task {
                     _ = await watchConnectivity.attemptSyncWithWatch()
                 }
+            }
+            if isClimbing {
+                Task { await startClimbingSupport() }
             }
             if isSwimming {
                 Task {
@@ -989,6 +1008,10 @@ struct ActiveCardioView: View {
                     Text(board.rawValue)
                         .font(.subheadline.weight(.semibold))
                 }
+            } else if let modality = config.fightModality {
+                Image(systemName: modality.icon)
+                Text(modality.name)
+                    .font(.subheadline.weight(.semibold))
             } else {
                 Image(systemName: config.intensity.icon)
                 Text("Intensidade \(config.intensity.rawValue)")
@@ -1075,6 +1098,11 @@ struct ActiveCardioView: View {
                         .foregroundStyle(AppTheme.textSecondary)
                         .multilineTextAlignment(.center)
                 }
+            } else if let modality = config.fightModality {
+                Text("\(modality.roundReference) · encerre quando a luta acabar")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
             } else if config.hasCalorieGoal {
                 Text("Meta calórica: \(config.targetCalories ?? 0) kcal · sincronizado com Apple Watch")
                     .font(.caption)
@@ -1175,7 +1203,9 @@ struct ActiveCardioView: View {
                     Text(DurationFormatting.formatElapsedClock(seconds: elapsedSeconds))
                         .font(.system(size: 36, weight: .bold, design: .monospaced))
                         .foregroundStyle(isPaused ? AppTheme.textSecondary : AppTheme.textPrimary)
-                    Text("Meta: \(DurationFormatting.format(seconds: config.targetDurationSeconds))")
+                    Text(isFight
+                          ? (isPaused ? "Luta pausada" : "Tempo de luta")
+                          : "Meta: \(DurationFormatting.format(seconds: config.targetDurationSeconds))")
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                     if isPaused || totalPausedSeconds > 0 {
@@ -1653,6 +1683,9 @@ struct ActiveCardioView: View {
         if isRowing {
             rowingMetrics.setPaused(true)
         }
+        if isClimbing {
+            climbingMotion.setPaused(true)
+        }
     }
 
     private func resumeCardio() {
@@ -1667,6 +1700,9 @@ struct ActiveCardioView: View {
         }
         if isRowing {
             rowingMetrics.setPaused(false)
+        }
+        if isClimbing {
+            climbingMotion.setPaused(false)
         }
         elapsedSeconds = activeElapsedSeconds()
     }
@@ -1742,6 +1778,223 @@ struct ActiveCardioView: View {
         return Date.now.timeIntervalSince(startedAt) >= WorkoutStore.autoEndInactivityLimit
     }
 
+    // MARK: - Escalada
+
+    @ViewBuilder
+    private var climbingWeatherSection: some View {
+        if climbingSetup.discipline.isOutdoor {
+            VStack(alignment: .leading, spacing: 10) {
+                if let snapshot = climbingWeather.snapshot {
+                    HStack {
+                        Label(snapshot.alertLevel.label, systemImage: snapshot.alertLevel.icon)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(snapshot.alertLevel.color)
+                        Spacer()
+                        Text(snapshot.updatedAtText)
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+
+                    Text(snapshot.summaryLine)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    ForEach(snapshot.alerts, id: \.self) { alert in
+                        Label(alert, systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(snapshot.alertLevel.color)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    if let friction = snapshot.frictionNote {
+                        Label(friction, systemImage: "hand.raised.fingers.spread")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else if climbingWeather.isLoading {
+                    Label("Buscando condições do tempo…", systemImage: "cloud")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                } else {
+                    Label(
+                        climbingWeather.errorMessage ?? "Sem dados de clima para este setor.",
+                        systemImage: "cloud.slash"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(
+                (climbingWeather.snapshot?.alertLevel.color ?? AppTheme.textSecondary).opacity(0.12),
+                in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+            )
+        }
+    }
+
+    private var climbingLiveSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label(climbingMotion.phase.label, systemImage: climbingMotion.phase.icon)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(climbingMotion.phase == .climbing ? AppTheme.accent : AppTheme.textSecondary)
+                Spacer()
+                if climbingSetup.usesMotionDetection {
+                    ProgressView(value: climbingMotion.motionIntensity)
+                        .frame(width: 70)
+                        .tint(AppTheme.accent)
+                }
+            }
+
+            HStack(spacing: 0) {
+                climbingMetric(
+                    value: formattedDuration(climbingMotion.activeClimbingSeconds),
+                    label: "em parede"
+                )
+                climbingMetric(
+                    value: formattedDuration(climbingMotion.restSeconds),
+                    label: "descanso"
+                )
+                climbingMetric(
+                    value: "\(max(climbingMotion.detectedAttempts, climbingAttempts.count))",
+                    label: "tentativas"
+                )
+                climbingMetric(
+                    value: climbingAttempts.isEmpty
+                        ? "—"
+                        : "\(climbingAttempts.filter(\.isSuccess).count)",
+                    label: "encadenadas"
+                )
+            }
+
+            if !climbingSetup.usesMotionDetection {
+                Text("Detecção por sensores desligada nesta sessão — registre as vias manualmente.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(AppTheme.cardBackground, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private var climbingAttemptsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Vias da sessão")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                Button {
+                    showsAttemptSheet = true
+                } label: {
+                    Label("Registrar", systemImage: "plus.circle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if climbingAttempts.isEmpty {
+                Text("Nenhuma via registrada ainda. Toque em Registrar ao terminar cada tentativa.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            } else {
+                ForEach(climbingAttempts) { attempt in
+                    HStack(spacing: 8) {
+                        Image(systemName: attempt.style.icon)
+                            .foregroundStyle(attempt.style.color)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(attempt.displayName)
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.textPrimary)
+                            Text("\(attempt.grade.displayLabel) · \(attempt.style.rawValue)")
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                        Spacer()
+                        Button {
+                            climbingAttempts.removeAll { $0.id == attempt.id }
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(AppTheme.cardBackground, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .sheet(isPresented: $showsAttemptSheet) {
+            ClimbingAttemptEditorView(setup: climbingSetup) { attempt in
+                climbingAttempts.append(attempt)
+            }
+        }
+    }
+
+    private func climbingMetric(value: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func formattedDuration(_ seconds: Int) -> String {
+        let minutes = seconds / 60
+        let remaining = seconds % 60
+        return String(format: "%d:%02d", minutes, remaining)
+    }
+
+    /// Sobe os sensores e busca clima e recuperação, fora do caminho crítico de abertura da tela.
+    private func startClimbingSupport() async {
+        if climbingSetup.usesMotionDetection {
+            climbingMotion.start()
+        }
+
+        // Sono e HRV lidos no início descrevem a recuperação *antes* da escalada.
+        climbingHealth = await healthKitManager.climbingHealthSnapshot(
+            from: Date().addingTimeInterval(-3600)
+        )
+
+        guard climbingSetup.discipline.isOutdoor else { return }
+
+        let coordinate = climbingSetup.coordinate ?? runTracker.currentLocation?.coordinate
+        guard let coordinate else { return }
+        await climbingWeather.refresh(
+            coordinate: coordinate,
+            locationLabel: climbingSetup.areaName.isEmpty ? "Setor" : climbingSetup.areaName
+        )
+    }
+
+    /// Snapshot final: sensores, vias registradas, clima e contexto de saúde.
+    private func buildClimbingSnapshot(session: WorkoutSession) -> ClimbingSessionSnapshot {
+        let motion = climbingMotion.exportSnapshotValues()
+        let weather = climbingWeather.snapshot
+
+        var snapshot = session.climbing ?? climbingSetup.snapshot()
+        snapshot.attempts = climbingAttempts
+        snapshot.activeClimbingSeconds = motion.active
+        snapshot.detectedRestSeconds = motion.rest
+        snapshot.autoDetectedAttemptCount = motion.attempts
+        snapshot.heartRateAverage = session.averageHeartRate > 0 ? session.averageHeartRate : nil
+        snapshot.caloriesBurned = session.caloriesBurned > 0 ? session.caloriesBurned : nil
+        snapshot.sleepHoursBefore = climbingHealth?.sleepHours
+        snapshot.hrvMsBefore = climbingHealth?.hrvMs
+        snapshot.temperatureCelsius = weather?.temperatureCelsius
+        snapshot.humidityPercent = weather?.humidityPercent
+        return snapshot
+    }
+
     private func finishCardio(autoEndedByInactivity: Bool = false) {
         guard !isFinishing else { return }
         isFinishing = true
@@ -1754,6 +2007,7 @@ struct ActiveCardioView: View {
         runTracker.stop()
         jumpMetrics.stop()
         rowingMetrics.stop()
+        climbingMotion.stop()
         watchConnectivity.stopWorkoutOnWatch()
 
         let finalPausedSeconds = finalizedPausedSeconds()
@@ -1850,6 +2104,10 @@ struct ActiveCardioView: View {
         if isRowing {
             syncRowingKinematics()
             session.rowing = rowingMetrics.exportSnapshot()
+        }
+        if isClimbing {
+            session.climbing = buildClimbingSnapshot(session: session)
+            ClimbingGearService.shared.registerSessionUse(discipline: climbingSetup.discipline)
         }
         session.exerciseRecords = [
             ExerciseSessionRecord(

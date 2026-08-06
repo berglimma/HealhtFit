@@ -33,6 +33,8 @@ final class HealthKitManager: ObservableObject {
         if let heartRate = HKObjectType.quantityType(forIdentifier: .heartRate) { types.insert(heartRate) }
         if let restingHR = HKObjectType.quantityType(forIdentifier: .restingHeartRate) { types.insert(restingHR) }
         if let bodyMass = HKObjectType.quantityType(forIdentifier: .bodyMass) { types.insert(bodyMass) }
+        if let hrv = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN) { types.insert(hrv) }
+        if let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) { types.insert(sleep) }
         if let workout = HKObjectType.workoutType() as HKObjectType? { types.insert(workout) }
         return types
     }
@@ -372,6 +374,126 @@ final class HealthKitManager: ObservableObject {
                 }
             }
             healthStore.execute(query)
+        }
+    }
+
+    // MARK: - Escalada
+
+    /// Contexto de saúde de uma sessão de escalada: esforço na parede e recuperação da noite anterior.
+    struct ClimbingHealthSnapshot: Equatable, Sendable {
+        var averageHeartRate: Double?
+        var peakHeartRate: Double?
+        var activeCalories: Double?
+        /// Horas dormidas na noite anterior (HealthKit; cai para o registro manual se vazio).
+        var sleepHours: Double?
+        /// HRV SDNN mais recente, em ms.
+        var hrvMs: Double?
+    }
+
+    /// Métricas de uma janela de sessão. Usado ao encerrar a escalada e pelo IAssistente.
+    func climbingHealthSnapshot(from start: Date, to end: Date = .now) async -> ClimbingHealthSnapshot {
+        guard isHealthKitAvailable, isAuthorized else {
+            return ClimbingHealthSnapshot(sleepHours: DailyWellnessService.shared.todaySleepHours)
+        }
+
+        async let average = fetchDiscreteAverage(
+            .heartRate,
+            unit: HKUnit.count().unitDivided(by: .minute()),
+            from: start,
+            to: end
+        )
+        async let peak = fetchDiscreteMax(
+            .heartRate,
+            unit: HKUnit.count().unitDivided(by: .minute()),
+            from: start,
+            to: end
+        )
+        async let calories = fetchCumulativeSum(.activeEnergyBurned, unit: .kilocalorie(), from: start, to: end)
+        async let sleep = fetchLastNightSleepHours()
+        async let hrv = fetchLatestHRV()
+
+        let (averageValue, peakValue, caloriesValue, sleepValue, hrvValue) = await (average, peak, calories, sleep, hrv)
+
+        return ClimbingHealthSnapshot(
+            averageHeartRate: averageValue > 0 ? averageValue : nil,
+            peakHeartRate: peakValue > 0 ? peakValue : nil,
+            activeCalories: caloriesValue > 0 ? caloriesValue : nil,
+            sleepHours: sleepValue ?? DailyWellnessService.shared.todaySleepHours,
+            hrvMs: hrvValue
+        )
+    }
+
+    /// HRV SDNN mais recente das últimas 24 h — a leitura que o Watch grava durante o sono.
+    func fetchLatestHRV() async -> Double? {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else { return nil }
+        let start = Date().addingTimeInterval(-24 * 3600)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: .now)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+
+        return await withCheckedContinuation { (continuation: CheckedContinuation<Double?, Never>) in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: predicate,
+                limit: 1,
+                sortDescriptors: [sort]
+            ) { _, samples, _ in
+                guard let sample = samples?.first as? HKQuantitySample else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                continuation.resume(returning: sample.quantity.doubleValue(for: .secondUnit(with: .milli)))
+            }
+            healthStore.execute(query)
+        }
+    }
+
+    /// Horas de sono da noite anterior, somando apenas as fases realmente adormecidas.
+    func fetchLastNightSleepHours() async -> Double? {
+        guard let type = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return nil }
+
+        // Janela das 18h de ontem até agora, cobrindo quem dorme antes ou depois da meia-noite.
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: .now)
+        guard let windowStart = calendar.date(byAdding: .hour, value: -6, to: startOfToday) else { return nil }
+        let predicate = HKQuery.predicateForSamples(withStart: windowStart, end: .now)
+
+        return await withCheckedContinuation { (continuation: CheckedContinuation<Double?, Never>) in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, _ in
+                guard let samples = samples as? [HKCategorySample], !samples.isEmpty else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                let asleepValues: Set<Int> = [
+                    HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+                    HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+                    HKCategoryValueSleepAnalysis.asleepREM.rawValue,
+                    HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue
+                ]
+
+                let seconds = samples
+                    .filter { asleepValues.contains($0.value) }
+                    .reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) }
+
+                continuation.resume(returning: seconds > 0 ? seconds / 3600 : nil)
+            }
+            healthStore.execute(query)
+        }
+    }
+
+    private func fetchDiscreteMax(
+        _ identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        from start: Date,
+        to end: Date
+    ) async -> Double {
+        await fetchStatistic(identifier, unit: unit, from: start, to: end, options: .discreteMax) { result, unit in
+            result?.maximumQuantity()?.doubleValue(for: unit) ?? 0
         }
     }
 

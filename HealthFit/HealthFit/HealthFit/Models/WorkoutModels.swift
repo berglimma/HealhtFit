@@ -441,6 +441,8 @@ struct WorkoutSession: Identifiable, Codable {
     var waterSport: WaterSportSessionSnapshot?
     /// Snapshot remo (SPM, split, eficiência, simetria).
     var rowing: RowingSessionSnapshot?
+    /// Snapshot escalada (vias, graus, tempo em parede, clima e saúde).
+    var climbing: ClimbingSessionSnapshot?
     /// Encerrado antes de concluir todos os exercícios.
     var endedEarly: Bool
     /// Motivo informado pelo aluno ao encerrar antecipadamente.
@@ -474,6 +476,7 @@ struct WorkoutSession: Identifiable, Codable {
         pausedDurationSeconds: Int = 0,
         waterSport: WaterSportSessionSnapshot? = nil,
         rowing: RowingSessionSnapshot? = nil,
+        climbing: ClimbingSessionSnapshot? = nil,
         endedEarly: Bool = false,
         earlyEndJustification: String? = nil,
         autoEndedByInactivity: Bool = false
@@ -503,6 +506,7 @@ struct WorkoutSession: Identifiable, Codable {
         self.pausedDurationSeconds = pausedDurationSeconds
         self.waterSport = waterSport
         self.rowing = rowing
+        self.climbing = climbing
         self.endedEarly = endedEarly
         self.earlyEndJustification = earlyEndJustification
         self.autoEndedByInactivity = autoEndedByInactivity
@@ -535,6 +539,7 @@ struct WorkoutSession: Identifiable, Codable {
         pausedDurationSeconds = try container.decodeIfPresent(Int.self, forKey: .pausedDurationSeconds) ?? 0
         waterSport = try container.decodeIfPresent(WaterSportSessionSnapshot.self, forKey: .waterSport)
         rowing = try container.decodeIfPresent(RowingSessionSnapshot.self, forKey: .rowing)
+        climbing = try container.decodeIfPresent(ClimbingSessionSnapshot.self, forKey: .climbing)
         endedEarly = try container.decodeIfPresent(Bool.self, forKey: .endedEarly) ?? false
         earlyEndJustification = try container.decodeIfPresent(String.self, forKey: .earlyEndJustification)
         autoEndedByInactivity = try container.decodeIfPresent(Bool.self, forKey: .autoEndedByInactivity) ?? false
@@ -571,6 +576,7 @@ struct WorkoutSession: Identifiable, Codable {
         }
         try container.encodeIfPresent(waterSport, forKey: .waterSport)
         try container.encodeIfPresent(rowing, forKey: .rowing)
+        try container.encodeIfPresent(climbing, forKey: .climbing)
         try container.encode(endedEarly, forKey: .endedEarly)
         try container.encodeIfPresent(earlyEndJustification, forKey: .earlyEndJustification)
         try container.encode(autoEndedByInactivity, forKey: .autoEndedByInactivity)
@@ -583,7 +589,7 @@ struct WorkoutSession: Identifiable, Codable {
         case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel
         case targetCalories, routePoints, stepCount, pausedDurationSeconds
         case poolLengthMeters, swimLapCount, targetSwimLaps, swimPaceSecondsPer100m
-        case waterSport, rowing
+        case waterSport, rowing, climbing
         case endedEarly, earlyEndJustification, autoEndedByInactivity
     }
 

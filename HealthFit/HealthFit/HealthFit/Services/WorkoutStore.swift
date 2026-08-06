@@ -548,7 +548,8 @@ final class WorkoutStore: ObservableObject {
             waterSport: config.waterSportSetup.map {
                 $0.snapshot(isKitesurf: config.isKitesurfSession)
             },
-            rowing: config.rowingSetup?.snapshot()
+            rowing: config.rowingSetup?.snapshot(),
+            climbing: config.climbingSetup?.snapshot()
         )
         activeSession = session
         activeCardioConfig = config
@@ -613,7 +614,8 @@ final class WorkoutStore: ObservableObject {
         topicIcon: String = "brain.head.profile",
         colorName: String = "purple",
         waterSetupModeName: String = "",
-        waterSetupBoardName: String = ""
+        waterSetupBoardName: String = "",
+        autoDetected: Bool = false
     ) -> Bool {
         // Já espelhando a mesma sessão (títulos do Watch e do iPhone podem diferir levemente)
         if let active = activeSession {
@@ -640,7 +642,8 @@ final class WorkoutStore: ObservableObject {
                 isKitesurf: isKitesurf,
                 swimmingMode: swimmingMode,
                 modeName: waterSetupModeName,
-                boardName: waterSetupBoardName
+                boardName: waterSetupBoardName,
+                autoDetected: autoDetected
             )
         case "meditation":
             started = startWatchMirroredMeditation(
@@ -705,7 +708,8 @@ final class WorkoutStore: ObservableObject {
         isKitesurf: Bool,
         swimmingMode: Bool,
         modeName: String = "",
-        boardName: String = ""
+        boardName: String = "",
+        autoDetected: Bool = false
     ) -> Bool {
         let exercise = CardioExercise.catalog.first {
             $0.name.caseInsensitiveCompare(exerciseName) == .orderedSame
@@ -758,9 +762,15 @@ final class WorkoutStore: ObservableObject {
             poolLengthMeters: (swimmingMode || exercise.supportsSwimmingPool) ? 25 : nil,
             targetSwimLaps: nil,
             customTargetDistanceKm: nil,
-            waterSportSetup: setup
+            waterSportSetup: setup,
+            climbingSetup: exercise.isClimbing ? .default : nil
         )
-        return startCardioSession(config: config)
+        guard startCardioSession(config: config) else { return false }
+
+        if exercise.isClimbing, autoDetected {
+            activeSession?.climbing?.startedAutomatically = true
+        }
+        return true
     }
 
     private func startWatchMirroredMeditation(

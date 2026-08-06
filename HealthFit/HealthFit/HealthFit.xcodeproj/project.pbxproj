@@ -7,6 +7,19 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B1000912 /* FightModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000912 /* FightModels.swift */; };
+		B1000913 /* FightHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000913 /* FightHubView.swift */; };
+		B1000911 /* ClimbingAttemptEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000911 /* ClimbingAttemptEditorView.swift */; };
+		B1000901 /* ClimbingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000901 /* ClimbingModels.swift */; };
+		B1000902 /* ClimbingGearModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000902 /* ClimbingGearModels.swift */; };
+		B1000903 /* ClimbingAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000903 /* ClimbingAnalytics.swift */; };
+		B1000904 /* ClimbingMotionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000904 /* ClimbingMotionService.swift */; };
+		B1000905 /* ClimbingWeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000905 /* ClimbingWeatherService.swift */; };
+		B1000906 /* ClimbingGearService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000906 /* ClimbingGearService.swift */; };
+		B1000907 /* ClimbingAssistantEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000907 /* ClimbingAssistantEngine.swift */; };
+		B1000908 /* ClimbingAreaCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000908 /* ClimbingAreaCatalog.swift */; };
+		B1000909 /* ClimbingMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000909 /* ClimbingMapView.swift */; };
+		B1000910 /* ClimbingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000910 /* ClimbingLogbookView.swift */; };
 		B1000001 /* HealthFitApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000001 /* HealthFitApp.swift */; };
 		B1000002 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000002 /* UserProfile.swift */; };
 		B1000003 /* WorkoutModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000003 /* WorkoutModels.swift */; };
@@ -292,6 +305,19 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1000912 /* FightModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightModels.swift; sourceTree = "<group>"; };
+		F1000913 /* FightHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightHubView.swift; sourceTree = "<group>"; };
+		F1000911 /* ClimbingAttemptEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAttemptEditorView.swift; sourceTree = "<group>"; };
+		F1000901 /* ClimbingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingModels.swift; sourceTree = "<group>"; };
+		F1000902 /* ClimbingGearModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingGearModels.swift; sourceTree = "<group>"; };
+		F1000903 /* ClimbingAnalytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAnalytics.swift; sourceTree = "<group>"; };
+		F1000904 /* ClimbingMotionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingMotionService.swift; sourceTree = "<group>"; };
+		F1000905 /* ClimbingWeatherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingWeatherService.swift; sourceTree = "<group>"; };
+		F1000906 /* ClimbingGearService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingGearService.swift; sourceTree = "<group>"; };
+		F1000907 /* ClimbingAssistantEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAssistantEngine.swift; sourceTree = "<group>"; };
+		F1000908 /* ClimbingAreaCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAreaCatalog.swift; sourceTree = "<group>"; };
+		F1000909 /* ClimbingMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingMapView.swift; sourceTree = "<group>"; };
+		F1000910 /* ClimbingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingLogbookView.swift; sourceTree = "<group>"; };
 		F1000001 /* HealthFitApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitApp.swift; sourceTree = "<group>"; };
 		F1000002 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		F1000003 /* WorkoutModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutModels.swift; sourceTree = "<group>"; };
@@ -643,6 +669,9 @@
 				F1000502 /* BikeModels.swift */,
 				F1000700 /* SurfKiteModels.swift */,
 				F1000801 /* RowingModels.swift */,
+				F1000912 /* FightModels.swift */,
+				F1000902 /* ClimbingGearModels.swift */,
+				F1000901 /* ClimbingModels.swift */,
 				F1000709 /* TideWindFavorability.swift */,
 				F1000704 /* CountryOption.swift */,
 				F1000600 /* SubscriptionModels.swift */,
@@ -691,6 +720,12 @@
 				F1000504 /* RoadHazardService.swift */,
 				F1000701 /* JumpMetricsService.swift */,
 				F1000802 /* RowingMetricsService.swift */,
+				F1000908 /* ClimbingAreaCatalog.swift */,
+				F1000907 /* ClimbingAssistantEngine.swift */,
+				F1000906 /* ClimbingGearService.swift */,
+				F1000905 /* ClimbingWeatherService.swift */,
+				F1000904 /* ClimbingMotionService.swift */,
+				F1000903 /* ClimbingAnalytics.swift */,
 				F1000702 /* SurfKiteReportBuilder.swift */,
 				F100034B /* WorkoutSessionPDFBuilder.swift */,
 				F1000706 /* OpenMeteoWindService.swift */,
@@ -807,6 +842,10 @@
 				F1000703 /* SurfKiteLogbookView.swift */,
 				F1000707 /* WaterWindConditionsView.swift */,
 				F1000422 /* RunRouteMapView.swift */,
+				F1000913 /* FightHubView.swift */,
+				F1000911 /* ClimbingAttemptEditorView.swift */,
+				F1000910 /* ClimbingLogbookView.swift */,
+				F1000909 /* ClimbingMapView.swift */,
 				F1000051 /* MeditationSetupView.swift */,
 				F1000052 /* ActiveMeditationView.swift */,
 				F1000081 /* ExerciseDemoVideoView.swift */,
@@ -1269,7 +1308,16 @@
 				B1000504 /* RoadHazardService.swift in Sources */,
 				B1000701 /* JumpMetricsService.swift in Sources */,
 				B1000801 /* RowingModels.swift in Sources */,
+				B1000912 /* FightModels.swift in Sources */,
+				B1000902 /* ClimbingGearModels.swift in Sources */,
+				B1000901 /* ClimbingModels.swift in Sources */,
 				B1000802 /* RowingMetricsService.swift in Sources */,
+				B1000908 /* ClimbingAreaCatalog.swift in Sources */,
+				B1000907 /* ClimbingAssistantEngine.swift in Sources */,
+				B1000906 /* ClimbingGearService.swift in Sources */,
+				B1000905 /* ClimbingWeatherService.swift in Sources */,
+				B1000904 /* ClimbingMotionService.swift in Sources */,
+				B1000903 /* ClimbingAnalytics.swift in Sources */,
 				B1000702 /* SurfKiteReportBuilder.swift in Sources */,
 				B1000706 /* OpenMeteoWindService.swift in Sources */,
 				B1000709 /* TideWindFavorability.swift in Sources */,
@@ -1389,6 +1437,10 @@
 				B1000420 /* RunTrackingModels.swift in Sources */,
 				B1000421 /* RunTrackingService.swift in Sources */,
 				B1000422 /* RunRouteMapView.swift in Sources */,
+				B1000913 /* FightHubView.swift in Sources */,
+				B1000911 /* ClimbingAttemptEditorView.swift in Sources */,
+				B1000910 /* ClimbingLogbookView.swift in Sources */,
+				B1000909 /* ClimbingMapView.swift in Sources */,
 				B1000412 /* LanguagePickerControl.swift in Sources */,
 				B1000087 /* ExerciseVideoRepository.swift in Sources */,
 				B1000073 /* ForgotPasswordView.swift in Sources */,

@@ -14,6 +14,8 @@ struct WorkoutProgramHeroCard: View {
     var eyebrowSystemImage: String? = nil
     /// Linha extra abaixo do subtítulo (ex.: contagens do programa).
     var footerLabels: [(icon: String, text: String)] = []
+    /// Plano mínimo quando a modalidade está bloqueada — desenha o cadeado no card.
+    var lockedByPlan: PlanTier? = nil
 
     private var resolvedAccent: Color {
         coverColors.first ?? accent
@@ -68,9 +70,16 @@ struct WorkoutProgramHeroCard: View {
                 }
             }
             .padding(16)
+
+            if let lockedByPlan {
+                PlanRequirementBadge(tier: lockedByPlan, compact: true)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            }
         }
         .frame(maxWidth: .infinity)
         .frame(height: 180)
+        .saturation(lockedByPlan == nil ? 1 : 0.35)
         .background(resolvedAccent.opacity(0.25))
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
         .overlay(

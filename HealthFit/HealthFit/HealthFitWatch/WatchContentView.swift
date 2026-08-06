@@ -116,6 +116,18 @@ struct WatchContentView: View {
                     }
                 }
             }
+
+            Section("Escalada") {
+                Toggle(isOn: $workoutManager.isClimbingAutoDetectEnabled) {
+                    Label("Detectar automático", systemImage: "figure.climbing")
+                        .font(.caption)
+                }
+                if !workoutManager.climbingDetectionStatus.isEmpty {
+                    Text(workoutManager.climbingDetectionStatus)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .navigationTitle("Cardio")
     }

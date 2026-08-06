@@ -24,7 +24,7 @@ struct PreWorkoutSessionEntry: Identifiable, Equatable {
 
 enum WorkoutReportBuilder {
     static func isCardioSession(_ session: WorkoutSession) -> Bool {
-        session.workoutTitle.lowercased().hasPrefix("cardio")
+        WeeklyProgressAnalyzer.isCardioSession(session)
     }
 
     static func emailSubject(session: WorkoutSession, athleteName: String) -> String {

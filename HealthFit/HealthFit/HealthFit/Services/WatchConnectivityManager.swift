@@ -682,6 +682,8 @@ extension WatchConnectivityManager: WCSessionDelegate {
             ?? ((message["swimmingMode"] as? NSNumber)?.boolValue ?? false)
         let topicIcon = (message["topicIcon"] as? String) ?? "brain.head.profile"
         let colorName = (message["colorName"] as? String) ?? "purple"
+        let autoDetected = (message["autoDetected"] as? Bool)
+            ?? ((message["autoDetected"] as? NSNumber)?.boolValue ?? false)
 
         guard let workoutStore else {
             #if DEBUG
@@ -701,12 +703,13 @@ extension WatchConnectivityManager: WCSessionDelegate {
             topicIcon: topicIcon,
             colorName: colorName,
             waterSetupModeName: (message["waterSetupModeName"] as? String) ?? "",
-            waterSetupBoardName: (message["waterSetupBoardName"] as? String) ?? ""
+            waterSetupBoardName: (message["waterSetupBoardName"] as? String) ?? "",
+            autoDetected: autoDetected
         )
 
         if started {
             NotificationService.shared.deliverWorkoutStartNotification(
-                workoutTitle: workoutName,
+                workoutTitle: autoDetected ? "\(workoutName) (detectado no Watch)" : workoutName,
                 athleteName: "Atleta"
             )
         }

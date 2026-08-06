@@ -305,6 +305,9 @@ struct MainTabView: View {
         if phase == .active || phase == .background || phase == .inactive {
             KeyboardDismiss.hide()
         }
+        if phase == .active {
+            ClimbingGearService.shared.notifyInspectionIfNeeded()
+        }
     }
 
     private func handleSelectedTabChange(_ tab: Int) {

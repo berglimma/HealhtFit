@@ -35,6 +35,18 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var restOvertimeSeconds = 0
     @Published var isWaterSportMode = false
     @Published var isKitesurfMode = false
+    /// Detecção automática de escalada ligada pelo usuário.
+    @Published var isClimbingAutoDetectEnabled = false {
+        didSet {
+            UserDefaults.standard.set(isClimbingAutoDetectEnabled, forKey: Self.climbingAutoDetectKey)
+            if isClimbingAutoDetectEnabled {
+                startClimbingDetection()
+            } else {
+                stopClimbingDetection()
+            }
+        }
+    }
+    @Published var climbingDetectionStatus = ""
     /// Rótulo de setup (modo kite / prancha surf) — espelha sessão Surf no iPhone.
     @Published var waterSetupModeName = ""
     @Published var waterSetupBoardName = ""
@@ -75,6 +87,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var lastAccelSendAt: Date = .distantPast
     private let healthStore = HKHealthStore()
     private let motionManager = CMMotionManager()
+    /// Manager dedicado à detecção de escalada, para não disputar o de esportes de água.
+    private let climbingDetectionManager = CMMotionManager()
+    private var climbingSignalSince: Date?
     private var waterPeakG: Double = 1
     private var waterBaselineAltitude: Double?
     private let altimeter = CMAltimeter()
@@ -93,6 +108,114 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             session?.delegate = self
             session?.activate()
         }
+        // O observador de propriedade não dispara dentro do init, então liga na mão.
+        isClimbingAutoDetectEnabled = UserDefaults.standard.bool(forKey: Self.climbingAutoDetectKey)
+        startClimbingDetection()
+    }
+
+    // MARK: - Detecção automática de escalada
+
+    private static let climbingAutoDetectKey = "healthfit.watch.climbingAutoDetect"
+
+    /// Movimento sustentado necessário antes de abrir a sessão sozinho.
+    private static let climbingDetectionWindow: TimeInterval = 90
+
+    /// Monitora o movimento em segundo plano procurando o padrão de escalada.
+    ///
+    /// Roda a 5 Hz num manager próprio, separado do de esportes de água, para não
+    /// competir com a detecção de saltos durante uma sessão de surf.
+    func startClimbingDetection() {
+        guard isClimbingAutoDetectEnabled, !isActive else { return }
+        guard climbingDetectionManager.isDeviceMotionAvailable else {
+            climbingDetectionStatus = "Sensores indisponíveis"
+            return
+        }
+        guard !climbingDetectionManager.isDeviceMotionActive else { return }
+
+        climbingSignalSince = nil
+        climbingDetectionStatus = "Monitorando movimento"
+
+        let box = WeakMainActorBox(self)
+        climbingDetectionManager.deviceMotionUpdateInterval = 0.2
+        climbingDetectionManager.startDeviceMotionUpdates(to: .main) { data, _ in
+            guard let data else { return }
+            box.run { this in
+                this.evaluateClimbingSignal(data)
+            }
+        }
+    }
+
+    func stopClimbingDetection() {
+        guard climbingDetectionManager.isDeviceMotionActive else { return }
+        climbingDetectionManager.stopDeviceMotionUpdates()
+        climbingSignalSince = nil
+        climbingDetectionStatus = ""
+    }
+
+    private func evaluateClimbingSignal(_ data: CMDeviceMotion) {
+        guard isClimbingAutoDetectEnabled, !isActive else {
+            stopClimbingDetection()
+            return
+        }
+
+        let accel = data.userAcceleration
+        let rotation = data.rotationRate
+        let accelMagnitude = sqrt(accel.x * accel.x + accel.y * accel.y + accel.z * accel.z)
+        let gyroMagnitude = sqrt(
+            rotation.x * rotation.x + rotation.y * rotation.y + rotation.z * rotation.z
+        )
+
+        // Escalada: braço acima do ombro com rotação frequente e aceleração moderada.
+        // O eixo Z da gravidade fica próximo de zero quando o antebraço está na vertical.
+        let armRaised = abs(data.gravity.z) < 0.55
+        let isClimbingLike = armRaised
+            && (accelMagnitude > 0.10 || gyroMagnitude > 0.5)
+            && accelMagnitude < 1.2 // acima disso é corrida ou impacto, não escalada
+
+        guard isClimbingLike else {
+            climbingSignalSince = nil
+            climbingDetectionStatus = "Monitorando movimento"
+            return
+        }
+
+        guard let since = climbingSignalSince else {
+            climbingSignalSince = Date()
+            return
+        }
+
+        let sustained = Date().timeIntervalSince(since)
+        guard sustained >= Self.climbingDetectionWindow else {
+            climbingDetectionStatus = String(
+                format: "Possível escalada… %.0fs", Self.climbingDetectionWindow - sustained
+            )
+            return
+        }
+
+        autoStartClimbing()
+    }
+
+    private func autoStartClimbing() {
+        guard !isActive else { return }
+        stopClimbingDetection()
+
+        guard let activity = WatchCatalog.cardioActivities.first(where: { $0.id == "climb" }) else {
+            return
+        }
+
+        let title = "Cardio — \(activity.name)"
+        startCardio(
+            name: title,
+            targetSeconds: 0,
+            exerciseName: activity.name,
+            targetCalories: 0
+        )
+        notifyPhoneWatchStarted(
+            kind: "cardio",
+            workoutName: title,
+            exerciseName: activity.name,
+            autoDetected: true
+        )
+        climbingDetectionStatus = "Sessão de escalada iniciada automaticamente"
     }
 
     func startWorkout(name: String, exerciseName: String = "") {
@@ -316,6 +439,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         ])
         resetWorkoutState()
         sendMetricsToPhone()
+        // Volta a vigiar assim que a sessão termina.
+        startClimbingDetection()
     }
 
     private func resetWorkoutStateKeepingMeditationOwnership() {
@@ -423,7 +548,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         topicIcon: String = "",
         colorName: String = "",
         waterSetupModeName: String = "",
-        waterSetupBoardName: String = ""
+        waterSetupBoardName: String = "",
+        autoDetected: Bool = false
     ) {
         var payload: [String: Any] = [
             "action": "watchStartedSession",
@@ -437,6 +563,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             payload["waterSportMode"] = waterSportMode
             payload["isKitesurf"] = isKitesurf
             payload["swimmingMode"] = swimmingMode
+            payload["autoDetected"] = autoDetected
             if !waterSetupModeName.isEmpty {
                 payload["waterSetupModeName"] = waterSetupModeName
             }

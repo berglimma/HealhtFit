@@ -4,8 +4,6 @@ struct ExerciseDemoGifView: View {
     let exercise: Exercise
     var preferredGender: Gender? = nil
     var compact: Bool = false
-    var autoAdvanceAfterOneLoop: Bool = false
-    var onDemoFinished: (() -> Void)?
 
     @State private var loadState: ExerciseGifLoadState = .loading
     @State private var activeURL: URL?
@@ -59,8 +57,7 @@ struct ExerciseDemoGifView: View {
                         url: activeURL,
                         loadState: $loadState,
                         contentMode: .scaleAspectFit,
-                        loopsBeforeCompletion: autoAdvanceAfterOneLoop ? 1 : 0,
-                        onAnimationLoopFinished: autoAdvanceAfterOneLoop ? onDemoFinished : nil
+                        loopsBeforeCompletion: 0
                     )
                     .id("\(exercise.id.uuidString)-\(activeURL.absoluteString)")
                     .opacity(loadState == .loaded ? 1 : 0)
@@ -106,11 +103,6 @@ struct ExerciseDemoGifView: View {
                activeURL == primary {
                 activeURL = fallback
                 loadState = .loading
-                return
-            }
-            // Demo quebrada: não segure o cronômetro do exercício para sempre.
-            if newState == .failed, autoAdvanceAfterOneLoop {
-                onDemoFinished?()
             }
         }
     }

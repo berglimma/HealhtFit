@@ -42,11 +42,24 @@ struct WorkoutListView: View {
     }
 
     private var visibleCardioExercises: [CardioExercise] {
-        if let user = authService.currentUser {
-            let filtered = user.practicedCardioExercises
-            if !filtered.isEmpty { return filtered }
+        guard let user = authService.currentUser else {
+            return CardioExercise.catalog
         }
-        return CardioExercise.catalog
+        // Lista vazia no perfil = “todas”; senão só as marcadas (pode ficar só Luta).
+        if user.practicedModalityIDs.isEmpty {
+            return CardioExercise.catalog
+        }
+        return user.practicedCardioExercises
+    }
+
+    /// Sem usuário ou preferência “todas” → Luta aparece; senão respeita o toggle do perfil.
+    private var showsFightCard: Bool {
+        authService.currentUser?.practicesFight ?? true
+    }
+
+    private var hasHiddenCardioModalities: Bool {
+        let hiddenCardio = CardioExercise.catalog.count - visibleCardioExercises.count
+        return hiddenCardio > 0 || !showsFightCard
     }
 
     var body: some View {
@@ -109,6 +122,15 @@ struct WorkoutListView: View {
             }
             .navigationDestination(for: SurfKiteLogbookRoute.self) { route in
                 SurfKiteLogbookView(initialKitesurfOnly: route.kitesurfOnly)
+            }
+            .navigationDestination(for: ClimbingLogbookRoute.self) { _ in
+                ClimbingLogbookView()
+            }
+            .navigationDestination(for: ClimbingMapRoute.self) { _ in
+                ClimbingMapView()
+            }
+            .navigationDestination(for: FightHubRoute.self) { _ in
+                FightHubView()
             }
             .navigationDestination(for: MeditationTopic.self) { topic in
                 MeditationSetupView(topic: topic)
@@ -282,7 +304,14 @@ struct WorkoutListView: View {
                 .buttonStyle(.plain)
             }
 
-            if visibleCardioExercises.count < CardioExercise.catalog.count {
+            if showsFightCard {
+                NavigationLink(value: FightHubRoute()) {
+                    FightProgramHeroCard()
+                }
+                .buttonStyle(.plain)
+            }
+
+            if hasHiddenCardioModalities {
                 Text("Outras modalidades de cardio ficam em Perfil → Modalidades que pratico.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)

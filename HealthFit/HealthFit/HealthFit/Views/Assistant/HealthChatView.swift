@@ -13,6 +13,8 @@ struct HealthChatView: View {
     @ObservedObject private var dailyMorningService = DailyMorningCheckInService.shared
     @ObservedObject private var dailyEveningService = DailyEveningCheckInService.shared
     @State private var draft = ""
+    /// HRV mais recente do HealthKit — leitura assíncrona, guardada para o contexto síncrono.
+    @State private var latestHRVMs: Double?
     @FocusState private var isInputFocused: Bool
 
     private var context: HealthAssistantContext {
@@ -59,7 +61,9 @@ struct HealthChatView: View {
             todayMealsTotal: mealAdherence.todayTotal,
             weekMealsCompleted: mealAdherence.weekCompleted,
             weekMealsTotal: mealAdherence.weekTotal,
-            supplementsLoggedToday: wellnessService.todaySupplementIntakes.count
+            supplementsLoggedToday: wellnessService.todaySupplementIntakes.count,
+            latestHRVMs: latestHRVMs,
+            climbingGear: ClimbingGearService.shared.items
         )
     }
 
@@ -148,6 +152,9 @@ struct HealthChatView: View {
                     sessions: workoutStore.sessionHistory
                 )
                 assistant.deliverPendingSupplementAcknowledgmentIfNeeded()
+            }
+            .task(id: "climbing-hrv") {
+                latestHRVMs = await HealthKitManager.shared.fetchLatestHRV()
             }
             .onDisappear {
                 dismissChatKeyboard()
@@ -334,7 +341,7 @@ struct HealthChatView: View {
         if assistant.isInWorkoutBuilder {
             return assistant.workoutBuilderQuickReplies
         }
-        return HealthAssistantEngine.suggestedQuestions
+        return HealthAssistantEngine.suggestedQuestions(context: context)
     }
 
     private var inputPlaceholder: String {

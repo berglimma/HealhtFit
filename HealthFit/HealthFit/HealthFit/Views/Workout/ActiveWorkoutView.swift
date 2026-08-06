@@ -178,7 +178,9 @@ struct ActiveWorkoutView: View {
             prepareDemoForCurrentExercise(force: true)
         }
         .onChange(of: timerService.isRunning) { _, isResting in
-            workoutStore.setExerciseTimerPaused(isResting)
+            // Fim do descanso não destrava o cronômetro se a demonstração do próximo
+            // exercício ainda estiver na tela: só "Começar exercício" faz isso.
+            workoutStore.setExerciseTimerPaused(isResting || isShowingExerciseDemo)
             if isResting {
                 // watch notified in startRest
             } else {
@@ -308,11 +310,7 @@ struct ActiveWorkoutView: View {
             ExerciseDemoGifView(
                 exercise: exercise,
                 preferredGender: sheet.resolvedProgramGender,
-                compact: false,
-                autoAdvanceAfterOneLoop: true,
-                onDemoFinished: {
-                    beginCurrentExercise(exercise)
-                }
+                compact: false
             )
 
             Button {
@@ -327,7 +325,7 @@ struct ActiveWorkoutView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
-            Text("A demonstração avança automaticamente após um ciclo do GIF.")
+            Text("A demonstração fica em loop. O cronômetro só começa quando você toca em Começar exercício.")
                 .font(.caption2)
                 .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -485,7 +483,7 @@ struct ActiveWorkoutView: View {
         guard demoExerciseId == exercise.id else { return }
         ensurePerformedWeightText(for: exercise)
         isShowingExerciseDemo = false
-        workoutStore.setExerciseTimerPaused(false)
+        workoutStore.setExerciseTimerPaused(timerService.isRunning)
         syncWatchWorkoutState()
     }
 

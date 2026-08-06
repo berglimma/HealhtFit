@@ -171,6 +171,9 @@ struct CardioExercise: Identifiable, Hashable, Codable {
     /// Remo (água ou ergométrico): SPM, split /500 m, eficiência e simetria.
     var isRowing: Bool { name == "Remo" }
 
+    /// Escalada: vias, graus, clima, detecção de movimento e inventário de equipamento.
+    var isClimbing: Bool { name == "Escalada" }
+
     /// Gradientes “foto” para cards de modalidade (lista de cardio).
     var coverColors: [Color] {
         switch name {
@@ -305,6 +308,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
     let waterSportSetup: WaterSportSetup?
     /// Setup de remo (embarcação Single / Double / Four / Erg).
     let rowingSetup: RowingSetup?
+    /// Setup de escalada (modalidade, graduação, setor e detecção de movimento).
+    let climbingSetup: ClimbingSetup?
 
     init(
         exercise: CardioExercise,
@@ -316,7 +321,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
         targetSwimLaps: Int? = nil,
         customTargetDistanceKm: Double? = nil,
         waterSportSetup: WaterSportSetup? = nil,
-        rowingSetup: RowingSetup? = nil
+        rowingSetup: RowingSetup? = nil,
+        climbingSetup: ClimbingSetup? = nil
     ) {
         self.exercise = exercise
         self.intensity = intensity
@@ -328,6 +334,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
         self.customTargetDistanceKm = customTargetDistanceKm
         self.waterSportSetup = waterSportSetup
         self.rowingSetup = rowingSetup
+        self.climbingSetup = climbingSetup
     }
 
     /// Rebuilds a usable config from a persisted active session (app relaunch / stuck session).
@@ -339,6 +346,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
 
         let exerciseName: String = {
             if lower.contains("natação") || lower.contains("natacao") { return "Natação" }
+            if lower.contains("escalada") || session.climbing != nil { return "Escalada" }
             if lower.contains("remo") || session.rowing != nil { return "Remo" }
             if lower.contains("kitesurf") || lower.contains("kite surf") { return "Kitesurf" }
             if session.waterSport?.isKitesurf == true { return "Kitesurf" }
@@ -375,7 +383,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
             return "Corrida"
         }()
 
-        let exercise = CardioExercise.catalog.first(where: { $0.name == exerciseName })
+        // `allKnown` inclui as lutas: sem isso "Cardio — Boxe" voltaria como Corrida (e com GPS).
+        let exercise = CardioExercise.allKnown.first(where: { $0.name == exerciseName })
             ?? CardioExercise.catalog.first(where: { $0.name == "Corrida" })
             ?? CardioExercise(
                 id: session.workoutSheetId,
@@ -430,7 +439,19 @@ struct CardioWorkoutConfig: Hashable, Codable {
                 )
             },
             rowingSetup: session.rowing.map { RowingSetup(boatType: $0.boatType) }
-                ?? (exercise.isRowing ? .default : nil)
+                ?? (exercise.isRowing ? .default : nil),
+            climbingSetup: session.climbing.map { snap in
+                ClimbingSetup(
+                    discipline: snap.discipline,
+                    gradeSystem: snap.gradeSystem,
+                    targetGrade: snap.targetGradeLabel.map {
+                        ClimbingGrade(system: snap.gradeSystem, label: $0)
+                    },
+                    areaName: snap.areaName ?? "",
+                    areaLatitude: snap.areaLatitude,
+                    areaLongitude: snap.areaLongitude
+                )
+            } ?? (exercise.isClimbing ? .default : nil)
         )
     }
 
@@ -459,6 +480,14 @@ struct CardioWorkoutConfig: Hashable, Codable {
     var isKitesurfSession: Bool { exercise.isKitesurf }
     var isWaterSportSession: Bool { exercise.isWaterSport }
     var isRowingSession: Bool { exercise.isRowing }
+    var isClimbingSession: Bool { exercise.isClimbing }
+    /// Luta: só cronômetro de combate, sem meta de distância, ritmo ou GPS.
+    var isFightSession: Bool { exercise.isFight }
+    var fightModality: FightModality? { exercise.fightModality }
+    /// Escalada em rocha — clima, mapa e GPS só fazem sentido fora do ginásio.
+    var isOutdoorClimbingSession: Bool {
+        isClimbingSession && (climbingSetup?.discipline.isOutdoor ?? true)
+    }
 
     /// Remo com barco na água (GPS + equilíbrio); erg também usa sensores sem exigir rota.
     var isWaterRowingSession: Bool {
@@ -532,6 +561,17 @@ struct CardioWorkoutConfig: Hashable, Codable {
                 return "Cardio — Remo · \(boat) · \(formattedTargetKm)"
             }
             return "Cardio — Remo · \(boat)"
+        }
+        if isClimbingSession {
+            let discipline = climbingSetup?.discipline.rawValue ?? "Escalada"
+            let area = climbingSetup?.areaName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !area.isEmpty {
+                return "Cardio — Escalada · \(discipline) · \(area)"
+            }
+            return "Cardio — Escalada · \(discipline)"
+        }
+        if isFightSession {
+            return "Luta — \(exercise.name)"
         }
         if isFreeRun {
             if isOutdoorCyclingSession || isOutdoorWalkingSession || isRunningSession {

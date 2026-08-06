@@ -393,30 +393,24 @@ struct SubscriptionPlanView: View {
     #endif
 }
 
-// MARK: - Helpers de UI para locks futuros
+// MARK: - Locks por plano
 
-/// Uso futuro: `.requiresSubscription(feature: .mealPlan) { MealPlanView() }`
+/// Bloqueia uma tela inteira: desfoca o conteúdo e oferece o upgrade.
 struct RequiresSubscriptionModifier: ViewModifier {
     @EnvironmentObject private var subscriptions: SubscriptionService
     let feature: AppFeature
     @State private var showPaywall = false
 
+    private var isLocked: Bool { !subscriptions.canAccess(feature) }
+
     func body(content: Content) -> some View {
         content
-            .disabled(!subscriptions.canAccess(feature))
+            .disabled(isLocked)
+            // O conteúdo real fica visível mas ilegível: mostra o valor sem entregar.
+            .blur(radius: isLocked ? 14 : 0)
             .overlay {
-                if !subscriptions.canAccess(feature) {
-                    Color.black.opacity(0.35)
-                        .ignoresSafeArea()
-                    Button {
-                        showPaywall = true
-                    } label: {
-                        Label("Desbloquear \(feature.displayName)", systemImage: "lock.open.fill")
-                            .padding()
-                            .background(AppTheme.accent)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
+                if isLocked {
+                    PlanLockedCurtain(feature: feature) { showPaywall = true }
                 }
             }
             .sheet(isPresented: $showPaywall) {
@@ -429,5 +423,70 @@ struct RequiresSubscriptionModifier: ViewModifier {
 extension View {
     func requiresSubscription(_ feature: AppFeature) -> some View {
         modifier(RequiresSubscriptionModifier(feature: feature))
+    }
+}
+
+/// Cortina de bloqueio com o plano necessário e o botão de upgrade.
+struct PlanLockedCurtain: View {
+    let feature: AppFeature
+    var onUpgrade: () -> Void
+
+    private var requiredPlan: PlanTier { FeatureGate.minimumPlan(for: feature) }
+
+    var body: some View {
+        ZStack {
+            AppTheme.background.opacity(0.82)
+                .ignoresSafeArea()
+
+            VStack(spacing: 14) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 34))
+                    .foregroundStyle(AppTheme.accentSecondary)
+
+                Text(feature.displayName)
+                    .font(.title3.bold())
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .multilineTextAlignment(.center)
+
+                Text(feature.upsellDescription)
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+
+                PlanRequirementBadge(tier: requiredPlan)
+
+                Button(action: onUpgrade) {
+                    Label("Liberar com o plano \(requiredPlan.displayName)", systemImage: "arrow.up.circle.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .padding(.top, 4)
+            }
+            .padding(24)
+            .frame(maxWidth: 380)
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                    .stroke(AppTheme.accent.opacity(0.35), lineWidth: 1)
+            )
+            .padding(24)
+        }
+    }
+}
+
+/// Selo “a partir do plano X”, usado na cortina e em cards de lista.
+struct PlanRequirementBadge: View {
+    let tier: PlanTier
+    var compact = false
+
+    var body: some View {
+        Label("A partir do \(tier.displayName)", systemImage: "lock.fill")
+            .font(compact ? .caption2.weight(.bold) : .caption.weight(.semibold))
+            .foregroundStyle(AppTheme.accentSecondary)
+            .padding(.horizontal, compact ? 8 : 12)
+            .padding(.vertical, compact ? 4 : 6)
+            .background(AppTheme.accentSecondary.opacity(0.18))
+            .clipShape(Capsule())
     }
 }

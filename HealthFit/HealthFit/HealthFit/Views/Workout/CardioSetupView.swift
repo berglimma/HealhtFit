@@ -32,6 +32,14 @@ struct CardioSetupView: View {
     @State private var tideLabel = "Não informado"
     @State private var tideHeightMeters: Double = 0
     @State private var selectedRowingBoat: RowingBoatType = .singleSkiff
+    // Escalada
+    @State private var climbingDiscipline: ClimbingDiscipline = .sport
+    @State private var climbingGradeSystem: ClimbingGradeSystem = .brazilian
+    @State private var climbingTargetGradeLabel: String?
+    @State private var climbingArea: ClimbingArea?
+    @State private var climbingAreaName = ""
+    @State private var climbingUsesMotion = true
+    @State private var showsClimbingMap = false
     @Environment(\.dismiss) private var dismiss
     @StateObject private var spotLocator = SpotLocationHelper()
     @State private var showWindConditions = false
@@ -145,7 +153,8 @@ struct CardioSetupView: View {
                 return nil
             }(),
             waterSportSetup: makeWaterSetup(windSpeedKmh: speed, windDirectionDegrees: direction),
-            rowingSetup: exercise.isRowing ? RowingSetup(boatType: selectedRowingBoat) : nil
+            rowingSetup: exercise.isRowing ? RowingSetup(boatType: selectedRowingBoat) : nil,
+            climbingSetup: climbingSetup
         )
     }
 
@@ -162,6 +171,9 @@ struct CardioSetupView: View {
                 }
                 if exercise.isRowing {
                     rowingSetupSection
+                }
+                if exercise.isClimbing {
+                    climbingSetupSection
                 }
                 if exercise.supportsSwimmingPool {
                     swimmingPoolSection
@@ -299,6 +311,16 @@ struct CardioSetupView: View {
                     subtitle: "SPOT, condições e comparativo de sessões",
                     icon: CardioExercise.surfSystemImage,
                     tint: .cyan
+                )
+            }
+            .buttonStyle(.plain)
+        } else if exercise.isClimbing {
+            NavigationLink(value: ClimbingLogbookRoute()) {
+                modalityLogbookRow(
+                    title: "Diário de escalada",
+                    subtitle: "Progressão por grau, vias e inspeção de equipamento",
+                    icon: "book.pages.fill",
+                    tint: .orange
                 )
             }
             .buttonStyle(.plain)
@@ -961,6 +983,193 @@ struct CardioSetupView: View {
                 .foregroundStyle(AppTheme.textSecondary)
             }
         }
+    }
+
+    // MARK: - Escalada
+
+    private var climbingSetupSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Modalidade")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 108), spacing: 8)], spacing: 8) {
+                    ForEach(ClimbingDiscipline.allCases) { discipline in
+                        Button {
+                            climbingDiscipline = discipline
+                            climbingGradeSystem = discipline.preferredGradeSystem
+                            climbingTargetGradeLabel = nil
+                        } label: {
+                            VStack(spacing: 4) {
+                                Image(systemName: discipline.icon)
+                                Text(discipline.rawValue)
+                                    .font(.caption.weight(.medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(
+                                climbingDiscipline == discipline ? AppTheme.accent : AppTheme.cardBackground,
+                                in: RoundedRectangle(cornerRadius: 12)
+                            )
+                            .foregroundStyle(climbingDiscipline == discipline ? .black : AppTheme.textPrimary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                Text(climbingDiscipline.detail)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Graduação")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                Picker("Sistema", selection: $climbingGradeSystem) {
+                    ForEach(ClimbingGradeSystem.allCases) { system in
+                        Text(system.rawValue).tag(system)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: climbingGradeSystem) { _, _ in
+                    climbingTargetGradeLabel = nil
+                }
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(climbingGradeSystem.ladder, id: \.self) { label in
+                            Button {
+                                climbingTargetGradeLabel = climbingTargetGradeLabel == label ? nil : label
+                            } label: {
+                                Text(label)
+                                    .font(.caption.weight(.semibold))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        climbingTargetGradeLabel == label ? AppTheme.accentSecondary : AppTheme.cardBackground,
+                                        in: Capsule()
+                                    )
+                                    .foregroundStyle(climbingTargetGradeLabel == label ? .black : AppTheme.textPrimary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 2)
+                }
+
+                Text(climbingTargetGradeLabel == nil
+                     ? "Meta de grau opcional — escolha para acompanhar a sessão contra o objetivo."
+                     : "Meta da sessão: \(climbingTargetGradeLabel ?? "")")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            if climbingDiscipline.isOutdoor {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Setor")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    TextField("Nome do setor ou via", text: $climbingAreaName)
+                        .textFieldStyle(.plain)
+                        .padding(12)
+                        .background(AppTheme.cardBackground, in: RoundedRectangle(cornerRadius: 12))
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    Button {
+                        showsClimbingMap = true
+                    } label: {
+                        Label("Escolher no mapa de áreas", systemImage: "map.fill")
+                            .font(.subheadline.weight(.medium))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(AppTheme.cardBackground, in: RoundedRectangle(cornerRadius: 12))
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+
+                    if let climbingArea {
+                        Label(
+                            "\(climbingArea.name) · \(climbingArea.gradeRange)",
+                            systemImage: "mappin.circle.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.accent)
+                    }
+
+                    Label(
+                        "Com o setor definido, eu busco chuva, vento e risco de raios durante a sessão.",
+                        systemImage: "cloud.bolt.rain"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle(isOn: $climbingUsesMotion) {
+                    Text("Detectar tentativas pelos sensores")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+                .tint(AppTheme.accent)
+
+                Text("Acelerômetro e giroscópio separam tempo em parede, pausas e número de tentativas.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            climbingGearWarning
+        }
+        .sheet(isPresented: $showsClimbingMap) {
+            NavigationStack {
+                ClimbingMapView { area in
+                    climbingArea = area
+                    climbingAreaName = area.name
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var climbingGearWarning: some View {
+        let gear = ClimbingGearService.shared
+        let flagged = gear.overdueItems + gear.dueSoonItems
+        if !flagged.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Equipamento para inspecionar", systemImage: "exclamationmark.triangle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.accentSecondary)
+
+                ForEach(flagged.prefix(3)) { item in
+                    Text("• \(item.alertMessage)")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(AppTheme.accentSecondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    private var climbingSetup: ClimbingSetup? {
+        guard exercise.isClimbing else { return nil }
+        return ClimbingSetup(
+            discipline: climbingDiscipline,
+            gradeSystem: climbingGradeSystem,
+            targetGrade: climbingTargetGradeLabel.map {
+                ClimbingGrade(system: climbingGradeSystem, label: $0)
+            },
+            areaName: climbingAreaName,
+            areaLatitude: climbingArea?.latitude,
+            areaLongitude: climbingArea?.longitude,
+            usesMotionDetection: climbingUsesMotion
+        )
     }
 
     private var rowingSPMZonesInfoSection: some View {
@@ -1789,6 +1998,8 @@ struct CardioSetupView: View {
 /// Card de modalidade cardio — mesmo formato hero da musculação (imagem + gradiente + título).
 struct CardioExerciseCard: View {
     let exercise: CardioExercise
+    /// Plano mínimo quando a modalidade exige upgrade.
+    var lockedByPlan: PlanTier? = nil
 
     private var featureLabel: String {
         if exercise.supportsDistanceGoals { return "Livre ou 5–40 km" }
@@ -1815,7 +2026,8 @@ struct CardioExerciseCard: View {
             imageName: exercise.coverImageName,
             systemImage: exercise.icon,
             coverColors: exercise.coverColors,
-            footerLabels: [(icon: featureIcon, text: featureLabel)]
+            footerLabels: [(icon: featureIcon, text: featureLabel)],
+            lockedByPlan: lockedByPlan
         )
     }
 }

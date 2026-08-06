@@ -13,6 +13,9 @@
     "“%@” será removido permanentemente." : {
 
     },
+    "(%lld)" : {
+
+    },
     "#" : {
 
     },
@@ -54,6 +57,19 @@
           }
         }
       }
+    },
+    "%@ · %@%@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@%3$@"
+          }
+        }
+      }
+    },
+    "%@ · encerre quando a luta acabar" : {
+
     },
     "%@ / %@" : {
       "localizations" : {
@@ -123,6 +139,16 @@
     },
     "%lld BPM" : {
 
+    },
+    "%lld de %lld tentativas · %lld%% de sucesso" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld de %2$lld tentativas · %3$lld%% de sucesso"
+          }
+        }
+      }
     },
     "%lld doses" : {
 
@@ -243,6 +269,9 @@
     "%lld unidades" : {
 
     },
+    "%lld vias" : {
+
+    },
     "%lld." : {
 
     },
@@ -276,13 +305,36 @@
         }
       }
     },
+    "%lld/%lld usos · %lld/%lld meses" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld usos · %3$lld/%4$lld meses"
+          }
+        }
+      }
+    },
     "%lld/6 fotos (opcional)" : {
 
     },
     "%lld%%" : {
 
     },
+    "%lld%% (%lld)" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld%% (%2$lld)"
+          }
+        }
+      }
+    },
     "%lld×" : {
+
+    },
+    "%lldº grau" : {
 
     },
     "%llds descanso" : {
@@ -310,6 +362,9 @@
           }
         }
       }
+    },
+    "• %@" : {
+
     },
     "• Aceleração / desaceleração · estabilidade · equilíbrio" : {
 
@@ -389,10 +444,13 @@
     "A assinatura renova automaticamente até cancelar. Gerencie em Ajustes → Apple ID." : {
 
     },
-    "A demonstração avança automaticamente após um ciclo do GIF." : {
+    "A demonstração fica em loop. O cronômetro só começa quando você toca em Começar exercício." : {
 
     },
     "A mídia recebe duração, kcal e outros dados da sessão com a marca HealthFit. Opcional — não impede fechar o treino." : {
+
+    },
+    "A partir do %@" : {
 
     },
     "A senha deve conter:" : {
@@ -408,6 +466,9 @@
 
     },
     "Acelerômetro + giroscópio (iPhone) e reforço do Apple Watch." : {
+
+    },
+    "Acelerômetro e giroscópio separam tempo em parede, pausas e número de tentativas." : {
 
     },
     "Acompanhe a queima em tempo real — dados do relógio quando conectado." : {
@@ -432,6 +493,9 @@
 
     },
     "Adicionar à lista" : {
+
+    },
+    "Adicionar equipamento" : {
 
     },
     "Adicionar foto" : {
@@ -497,10 +561,16 @@
     "Após atualizar as medidas, estas são as que variaram no período." : {
 
     },
+    "Aposentar" : {
+
+    },
     "App" : {
 
     },
     "Apple Watch" : {
+
+    },
+    "Áreas de escalada" : {
 
     },
     "As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal." : {
@@ -1265,6 +1335,9 @@
         }
       }
     },
+    "Auto" : {
+
+    },
     "Automático · Watch" : {
 
     },
@@ -1277,10 +1350,19 @@
     "Bebidas" : {
 
     },
+    "Beta, sensação, condição da rocha…" : {
+
+    },
     "Biotipo" : {
 
     },
     "Bloqueios de plano ainda desativados — o paywall e a loja já estão prontos." : {
+
+    },
+    "Buscando condições do tempo…" : {
+
+    },
+    "Buscando setores próximos…" : {
 
     },
     "Buscando vento e maré (Open-Meteo)…" : {
@@ -1290,6 +1372,9 @@
 
     },
     "Buscando vento e posição…" : {
+
+    },
+    "Buscar áreas próximas no mapa" : {
 
     },
     "Buscar prancha…" : {
@@ -1402,6 +1487,9 @@
 
     },
     "Com o cardápio ativo, você recebe alerta e notificação 5 minutos antes de cada refeição (horários padrão do dia)." : {
+
+    },
+    "Com o setor definido, eu busco chuva, vento e risco de raios durante a sessão." : {
 
     },
     "Começar exercício" : {
@@ -1783,9 +1871,6 @@
     "Depois" : {
 
     },
-    "Desbloquear %@" : {
-
-    },
     "Descanso acumulado: %@" : {
 
     },
@@ -1831,6 +1916,12 @@
     "Detalhes do Cardio" : {
 
     },
+    "Detecção por sensores desligada nesta sessão — registre as vias manualmente." : {
+
+    },
+    "Detectar tentativas pelos sensores" : {
+
+    },
     "Dia" : {
 
     },
@@ -1838,6 +1929,9 @@
 
     },
     "Diário de bordo" : {
+
+    },
+    "Diário de escalada" : {
 
     },
     "Diário de natação" : {
@@ -1914,6 +2008,9 @@
     "Editar" : {
 
     },
+    "Editar equipamento" : {
+
+    },
     "Editar ficha" : {
 
     },
@@ -1926,10 +2023,16 @@
     "Em Perfil, marque as modalidades que você pratica para montar a lista de treinos." : {
 
     },
+    "Em uso desde" : {
+
+    },
     "Embarcação" : {
 
     },
     "Empate com recorde" : {
+
+    },
+    "Encadenadas" : {
 
     },
     "Encerra o treino antes de concluir todos os exercícios e pede uma justificativa" : {
@@ -1992,6 +2095,9 @@
     "Equipamento" : {
 
     },
+    "Equipamento para inspecionar" : {
+
+    },
     "Equivale a cerca de %lld copos de %lld ml ou %lld garrafas de %lld ml." : {
       "localizations" : {
         "pt-BR" : {
@@ -2001,6 +2107,15 @@
           }
         }
       }
+    },
+    "Escalar aqui" : {
+
+    },
+    "Escale em rocha com o app aberto para eu gravar temperatura e umidade de cada sessão." : {
+
+    },
+    "Escolha a modalidade" : {
+
     },
     "Escolha com qual exercício deseja começar. Você pode mudar a qualquer momento durante o treino." : {
 
@@ -2038,6 +2153,9 @@
     "Escolha WhatsApp ou Instagram na tela de compartilhar. O nome HealthFit já vai no card." : {
 
     },
+    "Escolher no mapa de áreas" : {
+
+    },
     "Escolher outro" : {
 
     },
@@ -2054,6 +2172,9 @@
 
     },
     "Esta ação é permanente. Sua conta, treinos na nuvem, perfil e dados locais serão removidos." : {
+
+    },
+    "Estilo" : {
 
     },
     "Estimado" : {
@@ -2244,6 +2365,12 @@
     "GPS + Watch em tempo real" : {
 
     },
+    "Graduação" : {
+
+    },
+    "Grau" : {
+
+    },
     "Gravar vídeo" : {
 
     },
@@ -2358,6 +2485,12 @@
     "Inicie um cardio de Natação, defina o tamanho da piscina e use o Apple Watch para contar as voltas automaticamente. O histórico aparece aqui." : {
 
     },
+    "Inspeção por usos" : {
+
+    },
+    "Inspecionei" : {
+
+    },
     "Integrações" : {
 
     },
@@ -2388,6 +2521,9 @@
     "kg" : {
 
     },
+    "Kit de %@" : {
+
+    },
     "Kite: %@" : {
 
     },
@@ -2409,6 +2545,12 @@
     "Li e aceito os Termos de Uso e a Política de Privacidade" : {
 
     },
+    "Liberar com o plano %@" : {
+
+    },
+    "Limites" : {
+
+    },
     "Limpar conversa" : {
 
     },
@@ -2421,6 +2563,15 @@
     "Livre" : {
 
     },
+    "Luta" : {
+
+    },
+    "LUTA" : {
+
+    },
+    "Luta pausada" : {
+
+    },
     "m" : {
 
     },
@@ -2429,6 +2580,16 @@
     },
     "Mais comprados" : {
 
+    },
+    "Mais difícil: %@ em %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mais difícil: %1$@ em %2$@"
+          }
+        }
+      }
     },
     "Mais popular" : {
 
@@ -2514,6 +2675,16 @@
     "Meia (21,1 km)" : {
 
     },
+    "Melhor faixa: %@ — %lld%%" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Melhor faixa: %1$@ — %2$lld%%"
+          }
+        }
+      }
+    },
     "Melhor marca anterior" : {
 
     },
@@ -2522,6 +2693,16 @@
     },
     "Melhor split: %@ /500 m" : {
 
+    },
+    "Melhor umidade: %@ — %lld%%" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Melhor umidade: %1$@ — %2$lld%%"
+          }
+        }
+      }
     },
     "Meta %@ km" : {
 
@@ -2535,7 +2716,13 @@
     "Meta calórica: %lld kcal · sincronizado com Apple Watch" : {
 
     },
+    "Meta da sessão: %@" : {
+
+    },
     "Meta de calorias" : {
+
+    },
+    "Meta de grau opcional — escolha para acompanhar a sessão contra o objetivo." : {
 
     },
     "Meta de voltas" : {
@@ -2716,6 +2903,9 @@
     "Nenhuma sessão registrada" : {
 
     },
+    "Nenhuma via registrada ainda. Toque em Registrar ao terminar cada tentativa." : {
+
+    },
     "Neste treino" : {
 
     },
@@ -2728,13 +2918,22 @@
     "Nome  Completo" : {
 
     },
+    "Nome (ex.: Corda 9.8 mm 60 m)" : {
+
+    },
     "Nome completo: %@" : {
+
+    },
+    "Nome da via" : {
 
     },
     "Nome do item" : {
 
     },
     "Nome do local / praia / spot" : {
+
+    },
+    "Nome do setor ou via" : {
 
     },
     "Nome do suplemento" : {
@@ -2756,6 +2955,9 @@
 
     },
     "NOVO" : {
+
+    },
+    "Novo equipamento" : {
 
     },
     "Novo item" : {
@@ -2886,6 +3088,9 @@
         }
       }
     },
+    "O cronômetro abre na hora, já contando o tempo de luta." : {
+
+    },
     "O ícone do app na tela inicial usa a mesma cor." : {
 
     },
@@ -2911,6 +3116,9 @@
 
     },
     "Obrigatório · idade atual: %lld anos" : {
+
+    },
+    "Observações" : {
 
     },
     "OK" : {
@@ -3384,7 +3592,16 @@
     "Quantos pré-treinos você tomou hoje?" : {
 
     },
+    "Quedas severas, cortes, reparos…" : {
+
+    },
+    "Quedas: %lld" : {
+
+    },
     "Rajadas" : {
+
+    },
+    "Reativar" : {
 
     },
     "Rec. %@" : {
@@ -3424,13 +3641,22 @@
     "Registrados hoje" : {
 
     },
+    "Registrar" : {
+
+    },
     "Registrar ingestão" : {
 
     },
     "Registrar sono" : {
 
     },
+    "Registrar via" : {
+
+    },
     "Registre mais sessões com saltos para ver a evolução." : {
+
+    },
+    "Registre o grau das vias para acompanhar a progressão." : {
 
     },
     "Registre o que você ingeriu hoje. Os dados ficam salvos no dia atual." : {
@@ -3479,6 +3705,9 @@
 
     },
     "Remover fundo" : {
+
+    },
+    "Remover item" : {
 
     },
     "Repetições" : {
@@ -3563,6 +3792,9 @@
 
     },
     "Rota do surf" : {
+
+    },
+    "Rotas" : {
 
     },
     "Rotinas de mobilidade voltadas à musculação, com GIFs na execução" : {
@@ -3658,6 +3890,9 @@
     "Sem Apple Watch · 0 kcal" : {
 
     },
+    "Sem dados suficientes." : {
+
+    },
     "Sem meta de km" : {
 
     },
@@ -3677,6 +3912,12 @@
 
     },
     "Sem pontos GPS registrados nesta sessão." : {
+
+    },
+    "Sem tentativas registradas." : {
+
+    },
+    "Semana" : {
 
     },
     "Semana anterior" : {
@@ -3710,6 +3951,12 @@
 
     },
     "Sessão não disponível. Faça login novamente." : {
+
+    },
+    "Sessão sem vias registradas · %lld min em parede" : {
+
+    },
+    "Setor" : {
 
     },
     "settings.language" : {
@@ -3781,6 +4028,9 @@
 
     },
     "Sincronizar voltas do Watch" : {
+
+    },
+    "Sistema" : {
 
     },
     "Só musculação" : {
@@ -3998,7 +4248,16 @@
     "Tempo configurado: %llds" : {
 
     },
+    "Tempo de combate, BPM e calorias no Apple Watch" : {
+
+    },
+    "Tempo de luta" : {
+
+    },
     "Tempo de pausa" : {
+
+    },
+    "Tempo de serviço" : {
 
     },
     "Tempo em tempo real" : {
@@ -4017,6 +4276,9 @@
 
     },
     "Tentar sincronizar Watch" : {
+
+    },
+    "Tentativas" : {
 
     },
     "Tente outra foto ou vídeo da galeria." : {
@@ -4056,6 +4318,9 @@
 
     },
     "Toque em um exercício para treiná-lo agora (sem precisar seguir a ordem)." : {
+
+    },
+    "Toque em um marcador para ver o setor." : {
 
     },
     "Toque na refeição para selecionar e marque como concluída quando comer." : {
@@ -4160,6 +4425,9 @@
     "Use os resultados abaixo para adicionar à lista de compras." : {
 
     },
+    "Usos: %lld" : {
+
+    },
     "Usou pré-treino" : {
 
     },
@@ -4225,6 +4493,12 @@
 
     },
     "Versão" : {
+
+    },
+    "Via" : {
+
+    },
+    "Vias da sessão" : {
 
     },
     "Vida útil das peças" : {

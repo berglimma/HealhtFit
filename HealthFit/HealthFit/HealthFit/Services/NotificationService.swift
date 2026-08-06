@@ -955,6 +955,34 @@ final class NotificationService {
         "post_workout_checkin_\(sessionId.uuidString)"
     }
 
+    // MARK: - Inspeção de equipamento de escalada
+
+    func deliverClimbingGearInspectionAlert(overdueNames: [String], dueSoonNames: [String]) {
+        let names = overdueNames + dueSoonNames
+        guard !names.isEmpty else { return }
+
+        let title = overdueNames.isEmpty
+            ? "Inspeção de equipamento próxima 🧗"
+            : "Inspecione seu equipamento antes de subir 🧗"
+
+        let body: String = {
+            let listed = names.prefix(3).joined(separator: ", ")
+            let remainder = names.count - min(3, names.count)
+            let suffix = remainder > 0 ? " e mais \(remainder)" : ""
+            if overdueNames.isEmpty {
+                return "\(listed)\(suffix) estão perto do limite de usos ou de tempo de serviço."
+            }
+            return "\(listed)\(suffix) passaram do limite de usos ou de tempo de serviço. Revise antes da próxima escalada."
+        }()
+
+        deliverImmediately(
+            title: title,
+            body: body,
+            category: "CLIMBING_GEAR_INSPECTION",
+            identifier: "climbing_gear_inspection_\(UUID().uuidString)"
+        )
+    }
+
     func recordWorkoutCompleted(at date: Date = .now) {
         UserDefaults.standard.set(date, forKey: lastWorkoutKey)
         UserDefaults.standard.removeObject(forKey: inactivityNotifiedKey)
