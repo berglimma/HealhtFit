@@ -189,6 +189,9 @@
 		B1000603 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = F1000603 /* Products.storekit */; };
 		B1000700 /* SurfKiteModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000700 /* SurfKiteModels.swift */; };
 		B1000701 /* JumpMetricsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000701 /* JumpMetricsService.swift */; };
+		B1000801 /* RowingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000801 /* RowingModels.swift */; };
+		B1000802 /* RowingMetricsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000802 /* RowingMetricsService.swift */; };
+		B1000803 /* RowingMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000803 /* RowingMetricsTests.swift */; };
 		B1000702 /* SurfKiteReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000702 /* SurfKiteReportBuilder.swift */; };
 		B1000703 /* SurfKiteLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000703 /* SurfKiteLogbookView.swift */; };
 		B1000704 /* CountryOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000704 /* CountryOption.swift */; };
@@ -473,6 +476,9 @@
 		F1000603 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 		F1000700 /* SurfKiteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteModels.swift; sourceTree = "<group>"; };
 		F1000701 /* JumpMetricsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpMetricsService.swift; sourceTree = "<group>"; };
+		F1000801 /* RowingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowingModels.swift; sourceTree = "<group>"; };
+		F1000802 /* RowingMetricsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowingMetricsService.swift; sourceTree = "<group>"; };
+		F1000803 /* RowingMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowingMetricsTests.swift; sourceTree = "<group>"; };
 		F1000702 /* SurfKiteReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteReportBuilder.swift; sourceTree = "<group>"; };
 		F1000703 /* SurfKiteLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteLogbookView.swift; sourceTree = "<group>"; };
 		F1000704 /* CountryOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountryOption.swift; sourceTree = "<group>"; };
@@ -636,6 +642,7 @@
 				F1000043 /* CardioModels.swift */,
 				F1000502 /* BikeModels.swift */,
 				F1000700 /* SurfKiteModels.swift */,
+				F1000801 /* RowingModels.swift */,
 				F1000709 /* TideWindFavorability.swift */,
 				F1000704 /* CountryOption.swift */,
 				F1000600 /* SubscriptionModels.swift */,
@@ -683,6 +690,7 @@
 				F1000503 /* BikeMaintenanceService.swift */,
 				F1000504 /* RoadHazardService.swift */,
 				F1000701 /* JumpMetricsService.swift */,
+				F1000802 /* RowingMetricsService.swift */,
 				F1000702 /* SurfKiteReportBuilder.swift */,
 				F100034B /* WorkoutSessionPDFBuilder.swift */,
 				F1000706 /* OpenMeteoWindService.swift */,
@@ -974,6 +982,7 @@
 				F2000011 /* UserProfileTests.swift */,
 				F2000012 /* MarathonReportBuilderTests.swift */,
 				F2000013 /* CardioWorkoutConfigTests.swift */,
+				F1000803 /* RowingMetricsTests.swift */,
 				F2000014 /* PaceFormattingTests.swift */,
 				F2000015 /* HealthAssistantEngineTests.swift */,
 				F2000016 /* WeeklyProgressAnalyzerTests.swift */,
@@ -1259,6 +1268,8 @@
 				B1000503 /* BikeMaintenanceService.swift in Sources */,
 				B1000504 /* RoadHazardService.swift in Sources */,
 				B1000701 /* JumpMetricsService.swift in Sources */,
+				B1000801 /* RowingModels.swift in Sources */,
+				B1000802 /* RowingMetricsService.swift in Sources */,
 				B1000702 /* SurfKiteReportBuilder.swift in Sources */,
 				B1000706 /* OpenMeteoWindService.swift in Sources */,
 				B1000709 /* TideWindFavorability.swift in Sources */,
@@ -1433,6 +1444,7 @@
 				B2000002 /* UserProfileTests.swift in Sources */,
 				B2000003 /* MarathonReportBuilderTests.swift in Sources */,
 				B2000004 /* CardioWorkoutConfigTests.swift in Sources */,
+				B1000803 /* RowingMetricsTests.swift in Sources */,
 				B2000040 /* EveningTrainingNudgeTests.swift in Sources */,
 				B2000005 /* PaceFormattingTests.swift in Sources */,
 				B2000006 /* HealthAssistantEngineTests.swift in Sources */,

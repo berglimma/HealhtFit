@@ -88,6 +88,82 @@ enum Gender: String, CaseIterable, Codable, Identifiable, Hashable {
     var id: String { rawValue }
 }
 
+// MARK: - Modalidades praticadas
+
+/// IDs estáveis das modalidades que o usuário pode marcar no perfil.
+enum PracticeModalityID {
+    static let strength = "strength"
+    static let home = "home"
+    static let meditation = "meditation"
+
+    static func cardio(_ exerciseName: String) -> String {
+        "cardio.\(exerciseName)"
+    }
+
+    /// Lista completa usada como padrão (perfil antigo / vazio = todas).
+    static var allDefaultIDs: [String] {
+        [strength, home, meditation] + CardioExercise.catalog.map { cardio($0.name) }
+    }
+}
+
+enum PracticeModalityGroup: String, CaseIterable, Identifiable {
+    case training = "Treino"
+    case cardio = "Cardio"
+    case recovery = "Recuperação"
+
+    var id: String { rawValue }
+}
+
+struct PracticeModalityOption: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let icon: String
+    let group: PracticeModalityGroup
+    let detail: String
+
+    static let catalog: [PracticeModalityOption] = {
+        var items: [PracticeModalityOption] = [
+            PracticeModalityOption(
+                id: PracticeModalityID.strength,
+                title: "Musculação",
+                icon: "dumbbell.fill",
+                group: .training,
+                detail: "Programas academia e mobilidade"
+            ),
+            PracticeModalityOption(
+                id: PracticeModalityID.home,
+                title: "Treino em casa",
+                icon: "house.fill",
+                group: .training,
+                detail: "Peso corporal, HIIT e core"
+            )
+        ]
+        items += CardioExercise.catalog.map { exercise in
+            PracticeModalityOption(
+                id: PracticeModalityID.cardio(exercise.name),
+                title: exercise.name,
+                icon: exercise.icon,
+                group: .cardio,
+                detail: exercise.description
+            )
+        }
+        items.append(
+            PracticeModalityOption(
+                id: PracticeModalityID.meditation,
+                title: "Meditação",
+                icon: "brain.head.profile",
+                group: .recovery,
+                detail: "Respiração, foco e relaxamento"
+            )
+        )
+        return items
+    }()
+
+    static func options(in group: PracticeModalityGroup) -> [PracticeModalityOption] {
+        catalog.filter { $0.group == group }
+    }
+}
+
 /// Circunferências corporais em centímetros (valores opcionais).
 struct BodyMeasurements: Codable, Equatable {
     var neckCm: Double?
@@ -289,6 +365,9 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var bodyMeasurements: BodyMeasurements
     /// Snapshot da medição anterior (usado no comparativo de 30 dias).
     var previousBodyMeasurements: BodyMeasurements?
+    /// IDs das modalidades que o usuário pratica (`PracticeModalityID`).
+    /// Vazio = todas (compatível com contas antigas).
+    var practicedModalityIDs: [String]
     var createdAt: Date
     /// Última alteração local/remota — usado para não sobrescrever dados novos com Firestore antigo.
     var updatedAt: Date
@@ -317,6 +396,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         caloricDeficit: Int = 400,
         bodyMeasurements: BodyMeasurements = .empty,
         previousBodyMeasurements: BodyMeasurements? = nil,
+        practicedModalityIDs: [String] = [],
         createdAt: Date = .now,
         updatedAt: Date? = nil
     ) {
@@ -345,6 +425,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         self.caloricDeficit = caloricDeficit
         self.bodyMeasurements = bodyMeasurements
         self.previousBodyMeasurements = previousBodyMeasurements
+        self.practicedModalityIDs = practicedModalityIDs
         self.createdAt = createdAt
         self.updatedAt = updatedAt ?? createdAt
     }
@@ -387,6 +468,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         caloricDeficit = try container.decodeIfPresent(Int.self, forKey: .caloricDeficit) ?? 400
         bodyMeasurements = try container.decodeIfPresent(BodyMeasurements.self, forKey: .bodyMeasurements) ?? .empty
         previousBodyMeasurements = try container.decodeIfPresent(BodyMeasurements.self, forKey: .previousBodyMeasurements)
+        practicedModalityIDs = try container.decodeIfPresent([String].self, forKey: .practicedModalityIDs) ?? []
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
     }
@@ -395,7 +477,72 @@ struct UserProfile: Codable, Identifiable, Equatable {
         case id, name, displayName, email, personalTrainerName, personalTrainerEmail, usesPersonalTrainer
         case nutritionistName, nutritionistEmail, usesNutritionist
         case biotype, goal, gender, weight, height, age, dateOfBirth, countryCode, caloricDeficit
-        case bodyMeasurements, previousBodyMeasurements, createdAt, updatedAt
+        case bodyMeasurements, previousBodyMeasurements, practicedModalityIDs, createdAt, updatedAt
+    }
+
+    /// Conjunto efetivo: lista salva ou todas as modalidades (perfil sem preferência).
+    var effectivePracticedModalityIDs: Set<String> {
+        let cleaned = practicedModalityIDs
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if cleaned.isEmpty {
+            return Set(PracticeModalityID.allDefaultIDs)
+        }
+        return Set(cleaned)
+    }
+
+    var practicesAllModalities: Bool {
+        practicedModalityIDs.isEmpty
+            || Set(practicedModalityIDs) == Set(PracticeModalityID.allDefaultIDs)
+    }
+
+    func practices(_ modalityID: String) -> Bool {
+        effectivePracticedModalityIDs.contains(modalityID)
+    }
+
+    func practicesCardio(named exerciseName: String) -> Bool {
+        practices(PracticeModalityID.cardio(exerciseName))
+    }
+
+    var practicesAnyCardio: Bool {
+        let ids = effectivePracticedModalityIDs
+        return CardioExercise.catalog.contains { ids.contains(PracticeModalityID.cardio($0.name)) }
+    }
+
+    var practicedCardioExercises: [CardioExercise] {
+        CardioExercise.catalog.filter { practicesCardio(named: $0.name) }
+    }
+
+    var practicedModalityCount: Int {
+        effectivePracticedModalityIDs.count
+    }
+
+    mutating func setPractices(_ modalityID: String, enabled: Bool) {
+        var set = Set(practicedModalityIDs)
+        // Se ainda está no modo “todas” implícito (vazio), materializa a lista completa ao editar.
+        if practicedModalityIDs.isEmpty {
+            set = Set(PracticeModalityID.allDefaultIDs)
+        }
+        if enabled {
+            set.insert(modalityID)
+        } else {
+            set.remove(modalityID)
+        }
+        // Impede lista totalmente vazia (sempre pelo menos uma modalidade).
+        if set.isEmpty {
+            set.insert(modalityID)
+        }
+        // Se voltou a todas, grava explícito completo (comportamento estável no cloud).
+        practicedModalityIDs = PracticeModalityID.allDefaultIDs.filter { set.contains($0) }
+    }
+
+    mutating func setPracticesAll(_ enabled: Bool) {
+        if enabled {
+            practicedModalityIDs = PracticeModalityID.allDefaultIDs
+        } else {
+            // Mantém musculação como mínimo se desmarcar tudo.
+            practicedModalityIDs = [PracticeModalityID.strength]
+        }
     }
 
     var latestMeasurementComparison: BodyMeasurementComparison? {

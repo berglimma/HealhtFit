@@ -244,7 +244,7 @@ final class RunTrackingService: NSObject, ObservableObject {
             } else {
                 return
             }
-        case .surfing, .kitesurfing:
+        case .surfing, .kitesurfing, .rowing:
             if activity.stationary {
                 next = .stationary
             } else if activity.automotive {
@@ -286,7 +286,7 @@ final class RunTrackingService: NSObject, ObservableObject {
             let maxJumpSpeed: Double
             switch modality {
             case .cycling, .kitesurfing: maxJumpSpeed = 20.0
-            case .surfing: maxJumpSpeed = 14.0
+            case .surfing, .rowing: maxJumpSpeed = 14.0
             case .running, .walking: maxJumpSpeed = 8.0
             }
             if delta > maxJumpSpeed * max(dt, 1), dt < 5 { return }

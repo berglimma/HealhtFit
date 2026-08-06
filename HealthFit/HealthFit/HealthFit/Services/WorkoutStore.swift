@@ -547,7 +547,8 @@ final class WorkoutStore: ObservableObject {
             targetSwimLaps: config.targetSwimLaps,
             waterSport: config.waterSportSetup.map {
                 $0.snapshot(isKitesurf: config.isKitesurfSession)
-            }
+            },
+            rowing: config.rowingSetup?.snapshot()
         )
         activeSession = session
         activeCardioConfig = config

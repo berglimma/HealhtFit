@@ -61,10 +61,10 @@ final class WorkoutInactivityAutoEndTests: XCTestCase {
             routeMapAttachmentIncluded: true
         )
         // Mapa primeiro, métricas abaixo do mapa.
-        let mapIdx = withMap.range(of: "Mapa do percurso em anexo")!.lowerBound
+        let mapIdx = withMap.range(of: "Mapa do percurso:")!.lowerBound
         let metricsIdx = withMap.range(of: "Métricas da sessão:")!.lowerBound
         XCTAssertTrue(mapIdx < metricsIdx)
-        XCTAssertTrue(withMap.contains("rota-treino.png"))
+        XCTAssertTrue(withMap.contains("Legenda:"))
         XCTAssertTrue(withMap.contains("Evolução calórica: 420 / 400 kcal"))
         XCTAssertTrue(withMap.contains("BPM: 148"))
         XCTAssertTrue(withMap.contains("Kcal: 420"))
@@ -79,16 +79,20 @@ final class WorkoutInactivityAutoEndTests: XCTestCase {
             routeMapAttachmentIncluded: false
         )
         XCTAssertTrue(withoutMap.contains("disponível no app HealthFit"))
-        XCTAssertFalse(withoutMap.contains("em anexo"))
+        XCTAssertFalse(withoutMap.contains("Mapa do percurso:\nLegenda"))
         XCTAssertTrue(withoutMap.contains("Métricas da sessão:"))
 
+        let tinyPNG = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")!
         let html = WorkoutReportBuilder.emailHTMLBody(
             session: session,
             athlete: TestFixtures.userProfile(name: "Berg"),
-            routeMapAttachmentIncluded: true
+            routeMapAttachmentIncluded: true,
+            routeMapPNGData: tinyPNG
         )
         XCTAssertTrue(html.contains("<html>"))
-        XCTAssertTrue(html.contains("Mapa do percurso em anexo"))
+        XCTAssertTrue(html.contains("Mapa do percurso"))
+        XCTAssertTrue(html.contains("data:image/png;base64,"))
+        XCTAssertTrue(html.contains("<img "))
         XCTAssertTrue(html.contains("Métricas da sessão"))
         XCTAssertTrue(html.contains("<strong>BPM:</strong>"))
         XCTAssertTrue(html.contains("<strong>Kcal:</strong>"))
@@ -122,7 +126,7 @@ final class WorkoutInactivityAutoEndTests: XCTestCase {
             athlete: TestFixtures.userProfile(name: "Ana"),
             routeMapAttachmentIncluded: true
         )
-        XCTAssertTrue(walkBody.contains("Mapa do percurso em anexo"))
+        XCTAssertTrue(walkBody.contains("Mapa do percurso:"))
         XCTAssertTrue(walkBody.contains("Km: 3.20"))
         XCTAssertTrue(walkBody.contains("Passos: 4100"))
         XCTAssertTrue(walkBody.contains("Ritmo:"))
@@ -144,7 +148,7 @@ final class WorkoutInactivityAutoEndTests: XCTestCase {
         )
         XCTAssertTrue(bikeBody.contains("Ritmo:"))
         XCTAssertTrue(bikeBody.contains("km/h"))
-        XCTAssertTrue(bikeBody.contains("Mapa do percurso em anexo"))
+        XCTAssertTrue(bikeBody.contains("Mapa do percurso:"))
         XCTAssertTrue(bikeBody.contains("Km: 20.00"))
     }
 

@@ -22,7 +22,7 @@ struct CardioSetupView: View {
     @State private var targetLaps: Int = 20
     // Surf / Kitesurf
     @State private var kiteEquipment: KiteEquipmentType = .tubeKite
-    @State private var selectedBoard: WaterBoardCatalog = .twinTip
+            @State private var selectedBoard: WaterBoardCatalog = .twinTip
     @State private var boardSearch = ""
     @State private var ridingMode: KiteRidingMode = .bigAir
     @State private var spotName = ""
@@ -31,6 +31,7 @@ struct CardioSetupView: View {
     @State private var windDirectionDegrees: Double = 90
     @State private var tideLabel = "Não informado"
     @State private var tideHeightMeters: Double = 0
+    @State private var selectedRowingBoat: RowingBoatType = .singleSkiff
     @Environment(\.dismiss) private var dismiss
     @StateObject private var spotLocator = SpotLocationHelper()
     @State private var showWindConditions = false
@@ -143,7 +144,8 @@ struct CardioSetupView: View {
                 }
                 return nil
             }(),
-            waterSportSetup: makeWaterSetup(windSpeedKmh: speed, windDirectionDegrees: direction)
+            waterSportSetup: makeWaterSetup(windSpeedKmh: speed, windDirectionDegrees: direction),
+            rowingSetup: exercise.isRowing ? RowingSetup(boatType: selectedRowingBoat) : nil
         )
     }
 
@@ -158,6 +160,9 @@ struct CardioSetupView: View {
                 if exercise.isWaterSport {
                     waterSportSetupSection
                 }
+                if exercise.isRowing {
+                    rowingSetupSection
+                }
                 if exercise.supportsSwimmingPool {
                     swimmingPoolSection
                     swimmingLapsSection
@@ -167,6 +172,9 @@ struct CardioSetupView: View {
                     intensitySection
                     if exercise.supportsDistanceGoals {
                         runningWindSection
+                    }
+                    if exercise.isRowing {
+                        rowingSPMZonesInfoSection
                     }
                 }
                 summarySection
@@ -895,6 +903,121 @@ struct CardioSetupView: View {
         .padding(10)
         .background(AppTheme.background.opacity(0.55))
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    // MARK: - Remo
+
+    private var rowingSetupSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Embarcação")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            Text("Escolha o barco para calibrar equilíbrio e simetria (Single, Double, Four) ou o ergométrico.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            ForEach(RowingBoatType.allCases) { boat in
+                Button {
+                    selectedRowingBoat = boat
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: boat.icon)
+                            .font(.title3)
+                            .foregroundStyle(selectedRowingBoat == boat ? .white : AppTheme.accent)
+                            .frame(width: 36)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(boat.rawValue)
+                                .font(.headline)
+                                .foregroundStyle(selectedRowingBoat == boat ? .white : AppTheme.textPrimary)
+                            Text(boat.detail)
+                                .font(.caption)
+                                .foregroundStyle(
+                                    selectedRowingBoat == boat
+                                    ? .white.opacity(0.85)
+                                    : AppTheme.textSecondary
+                                )
+                                .multilineTextAlignment(.leading)
+                        }
+                        Spacer()
+                        if selectedRowingBoat == boat {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .padding()
+                    .background(selectedRowingBoat == boat ? AppTheme.accent : AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if selectedRowingBoat.emphasizesBalance {
+                Label(
+                    "Sensores do iPhone e Apple Watch medem oscilações, equilíbrio do barco e simetria E/D.",
+                    systemImage: "gyroscope"
+                )
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+            }
+        }
+    }
+
+    private var rowingSPMZonesInfoSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Faixas de SPM (Stroke Rate)")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            Text("Stroke rate em remadas por minuto. Split /500 m (quanto menor, melhor) e eficiência saem da distância, remadas e sensores.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            VStack(spacing: 8) {
+                ForEach(
+                    [RowingSPMZone.recovery, .endurance, .technical, .race, .sprint],
+                    id: \.self
+                ) { zone in
+                    HStack {
+                        Circle()
+                            .fill(zone.color)
+                            .frame(width: 8, height: 8)
+                        Text(zone.rangeLabel)
+                            .font(.subheadline.weight(.bold).monospacedDigit())
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .frame(width: 56, alignment: .leading)
+                        Text(zone.rawValue)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Spacer()
+                        Text(zone.tip)
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .multilineTextAlignment(.trailing)
+                            .lineLimit(2)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Indicadores na sessão", systemImage: "chart.bar.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                Text("• Split /500 m · metros por remada · velocidade")
+                Text("• Aceleração / desaceleração · estabilidade · equilíbrio")
+                Text("• Simetria esquerda × direita (risco de lesão se assimétrico)")
+            }
+            .font(.caption)
+            .foregroundStyle(AppTheme.textSecondary)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppTheme.accent.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
     }
 
     private var swimmingPoolSection: some View {

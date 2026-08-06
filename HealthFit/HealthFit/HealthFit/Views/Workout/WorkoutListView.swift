@@ -28,23 +28,50 @@ struct WorkoutListView: View {
     @State private var sheetPendingDeletion: WorkoutSheet?
     @State private var selectedSection: WorkoutSection = .strength
 
+    private var availableSections: [WorkoutSection] {
+        let user = authService.currentUser
+        return WorkoutSection.allCases.filter { section in
+            guard let user else { return true }
+            switch section {
+            case .strength: return user.practices(PracticeModalityID.strength)
+            case .home: return user.practices(PracticeModalityID.home)
+            case .cardio: return user.practicesAnyCardio
+            case .meditation: return user.practices(PracticeModalityID.meditation)
+            }
+        }
+    }
+
+    private var visibleCardioExercises: [CardioExercise] {
+        if let user = authService.currentUser {
+            let filtered = user.practicedCardioExercises
+            if !filtered.isEmpty { return filtered }
+        }
+        return CardioExercise.catalog
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 LazyVStack(spacing: 16) {
-                    sectionPicker
+                    if availableSections.count > 1 {
+                        sectionPicker
+                    }
 
                     // Global minimized banner lives on MainTabView; avoid a duplicate card here.
 
-                    switch selectedSection {
-                    case .strength:
-                        strengthSection
-                    case .home:
-                        homeSection
-                    case .cardio:
-                        cardioSection
-                    case .meditation:
-                        meditationSection
+                    if availableSections.isEmpty {
+                        emptyModalitiesHint
+                    } else {
+                        switch resolvedSelectedSection {
+                        case .strength:
+                            strengthSection
+                        case .home:
+                            homeSection
+                        case .cardio:
+                            cardioSection
+                        case .meditation:
+                            meditationSection
+                        }
                     }
                 }
                 .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
@@ -52,6 +79,10 @@ struct WorkoutListView: View {
             }
             .background(AppTheme.background)
             .navigationTitle("Treinos")
+            .onAppear { alignSelectedSectionWithPreferences() }
+            .onChange(of: authService.currentUser?.practicedModalityIDs) { _, _ in
+                alignSelectedSectionWithPreferences()
+            }
             .navigationDestination(for: WorkoutSheet.self) { sheet in
                 WorkoutDetailView(sheet: sheet)
             }
@@ -137,11 +168,40 @@ struct WorkoutListView: View {
 
     private var sectionPicker: some View {
         Picker("Seção", selection: $selectedSection) {
-            ForEach(WorkoutSection.allCases) { section in
+            ForEach(availableSections) { section in
                 Text(section.title).tag(section)
             }
         }
         .pickerStyle(.segmented)
+    }
+
+    private var resolvedSelectedSection: WorkoutSection {
+        if availableSections.contains(selectedSection) {
+            return selectedSection
+        }
+        return availableSections.first ?? .strength
+    }
+
+    private func alignSelectedSectionWithPreferences() {
+        if !availableSections.contains(selectedSection),
+           let first = availableSections.first {
+            selectedSection = first
+        }
+    }
+
+    private var emptyModalitiesHint: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Nenhuma modalidade ativa", systemImage: "figure.run.circle")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+            Text("Em Perfil, marque as modalidades que você pratica para montar a lista de treinos.")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
     private var homeSection: some View {
@@ -215,11 +275,17 @@ struct WorkoutListView: View {
                 .foregroundStyle(AppTheme.textSecondary)
 
             // Lista em coluna única — mesmo formato hero da musculação (altura 180).
-            ForEach(CardioExercise.catalog) { exercise in
+            ForEach(visibleCardioExercises) { exercise in
                 NavigationLink(value: exercise) {
                     CardioExerciseCard(exercise: exercise)
                 }
                 .buttonStyle(.plain)
+            }
+
+            if visibleCardioExercises.count < CardioExercise.catalog.count {
+                Text("Outras modalidades de cardio ficam em Perfil → Modalidades que pratico.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
         }
     }

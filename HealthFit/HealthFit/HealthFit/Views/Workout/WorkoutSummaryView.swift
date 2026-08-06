@@ -108,6 +108,9 @@ struct WorkoutSummaryView: View {
                         if let surfKiteReport {
                             surfKitePerformanceSection(report: surfKiteReport)
                         }
+                        if let rowing = session.rowing {
+                            rowingPerformanceSection(rowing)
+                        }
                         if shouldShowRouteMap {
                             runRouteSection
                         }
@@ -838,18 +841,20 @@ struct WorkoutSummaryView: View {
         }
 
         let subject = WorkoutReportBuilder.emailSubject(session: session, athleteName: user.name)
-        // MFMailCompose aceita anexos; mailto: não — mapa só no compositor nativo.
+        // PNG do mapa: embutido no HTML + anexo de backup (clientes que bloqueiam data URI).
         let mapAttachment = MailComposeView.canSendMail
             ? WorkoutRouteMapRenderer.mailAttachment(for: session)
             : nil
-        let mapIncluded = mapAttachment != nil
+        let mapPNGData = mapAttachment?.data
+        let mapIncluded = mapPNGData != nil
 
         if MailComposeView.canSendMail {
             let htmlBody = WorkoutReportBuilder.emailHTMLBody(
                 session: session,
                 athlete: user,
                 allSessions: workoutStore.sessionHistory,
-                routeMapAttachmentIncluded: mapIncluded
+                routeMapAttachmentIncluded: mapIncluded,
+                routeMapPNGData: mapPNGData
             )
             pendingMailResult = nil
             mailDraft = TrainerMailDraft(
@@ -860,7 +865,7 @@ struct WorkoutSummaryView: View {
                 attachments: mapAttachment.map { [$0] } ?? []
             )
         } else {
-            // Fallback mailto: corpo em texto sem anexo; avisa que o mapa está no app.
+            // Fallback mailto: corpo em texto sem imagem; avisa que o mapa está no app.
             let plainBody = WorkoutReportBuilder.emailBody(
                 session: session,
                 athlete: user,
@@ -1314,6 +1319,86 @@ struct WorkoutSummaryView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(AppTheme.accentSecondary)
+        }
+        .foregroundStyle(AppTheme.textPrimary)
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private func rowingPerformanceSection(_ r: RowingSessionSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Image(systemName: "figure.rower")
+                    .foregroundStyle(AppTheme.accent)
+                Text("Performance Remo")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                Text(r.boatType.rawValue)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+            }
+
+            HStack(spacing: 12) {
+                SummaryStat(
+                    value: RowingMetricsMath.formatSPM(r.averageSPM),
+                    label: "SPM méd.",
+                    icon: "metronome.fill"
+                )
+                SummaryStat(
+                    value: r.formattedAverageSplit,
+                    label: "Split /500 m",
+                    icon: "timer"
+                )
+                SummaryStat(
+                    value: "\(r.totalStrokes)",
+                    label: "Remadas",
+                    icon: "arrow.left.arrow.right"
+                )
+            }
+
+            HStack(spacing: 12) {
+                SummaryStat(
+                    value: String(format: "%.1f m", r.metersPerStroke),
+                    label: "m/remada",
+                    icon: "ruler"
+                )
+                SummaryStat(
+                    value: String(format: "%.0f", r.efficiencyScore),
+                    label: "Eficiência",
+                    icon: "chart.bar.fill"
+                )
+                SummaryStat(
+                    value: String(format: "%.0f%%", r.asymmetryPercent),
+                    label: "Assimetria",
+                    icon: "arrow.left.and.right"
+                )
+            }
+
+            Label(
+                String(
+                    format: "Estabilidade %.0f · Equilíbrio %.0f · Esq. %.0f%% / Dir. %.0f%%",
+                    r.stabilityScore,
+                    r.balanceScore,
+                    r.leftSideShare * 100,
+                    r.rightSideShare * 100
+                ),
+                systemImage: "gyroscope"
+            )
+            .font(.caption)
+            .foregroundStyle(AppTheme.textSecondary)
+
+            if r.bestSplitSecondsPer500m != nil {
+                Text("Melhor split: \(r.formattedBestSplit) /500 m")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+            }
+
+            Text(r.symmetryInsight)
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .foregroundStyle(AppTheme.textPrimary)
         .padding()

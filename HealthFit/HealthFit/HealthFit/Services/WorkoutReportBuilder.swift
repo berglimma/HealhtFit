@@ -146,19 +146,26 @@ enum WorkoutReportBuilder {
     }
 
     /// Corpo HTML para `MFMailCompose` (preserva quebras de linha do texto).
+    /// - Parameter routeMapPNGData: PNG do mapa embutido no corpo como `<img>` (base64).
     static func emailHTMLBody(
         session: WorkoutSession,
         athlete: UserProfile,
         allSessions: [WorkoutSession] = [],
-        routeMapAttachmentIncluded: Bool = false
+        routeMapAttachmentIncluded: Bool = false,
+        routeMapPNGData: Data? = nil
     ) -> String {
+        let hasMapImage = routeMapPNGData != nil
         let plain = emailBody(
             session: session,
             athlete: athlete,
             allSessions: allSessions,
-            routeMapAttachmentIncluded: routeMapAttachmentIncluded
+            routeMapAttachmentIncluded: routeMapAttachmentIncluded || hasMapImage
         )
-        return htmlDocument(fromPlainText: plain, emphasizeMetricsSection: isOutdoorRouteEmailCandidate(session))
+        return htmlDocument(
+            fromPlainText: plain,
+            emphasizeMetricsSection: isOutdoorRouteEmailCandidate(session),
+            routeMapPNGData: routeMapPNGData
+        )
     }
 
     /// Nota do mapa + métricas iguais à tela final / card de partilha (abaixo do mapa).
@@ -171,11 +178,11 @@ enum WorkoutReportBuilder {
         var lines: [String] = []
 
         if routeMapAttachmentIncluded {
-            lines.append("Mapa do percurso em anexo (rota-treino.png).")
+            lines.append("Mapa do percurso:")
             lines.append("Legenda: \(RoutePerformanceColoring.legendText).")
         } else if hasRouteMapForEmail(session) {
-            // mailto: não suporta anexos — avisa que o mapa está no app.
-            lines.append("Mapa do percurso: disponível no app HealthFit (e-mail sem suporte a anexos).")
+            // mailto: não suporta imagens — avisa que o mapa está no app.
+            lines.append("Mapa do percurso: disponível no app HealthFit (e-mail sem suporte a imagens).")
         }
 
         lines.append(contentsOf: outdoorGPSSessionStatLines(session: session))
@@ -242,7 +249,11 @@ enum WorkoutReportBuilder {
         return lines
     }
 
-    private static func htmlDocument(fromPlainText plain: String, emphasizeMetricsSection: Bool = false) -> String {
+    private static func htmlDocument(
+        fromPlainText plain: String,
+        emphasizeMetricsSection: Bool = false,
+        routeMapPNGData: Data? = nil
+    ) -> String {
         let escaped = plain
             .replacingOccurrences(of: "&", with: "&amp;")
             .replacingOccurrences(of: "<", with: "&lt;")
@@ -313,11 +324,42 @@ enum WorkoutReportBuilder {
             bodyHTML = escaped.replacingOccurrences(of: "\n", with: "<br>\n")
         }
 
+        let withMap = embedRouteMapImage(in: bodyHTML, routeMapPNGData: routeMapPNGData)
+
         return """
         <html><body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;line-height:1.45;color:#111;">
-        \(bodyHTML)
+        \(withMap)
         </body></html>
         """
+    }
+
+    /// Insere o PNG do percurso como imagem no corpo HTML (data URI — visível no Mail do iOS).
+    private static func embedRouteMapImage(in bodyHTML: String, routeMapPNGData: Data?) -> String {
+        guard let data = routeMapPNGData, !data.isEmpty else { return bodyHTML }
+
+        let base64 = data.base64EncodedString()
+        let mapBlock = """
+        <div style="margin:16px 0 12px;">
+        <p style="margin:0 0 8px;font-weight:600;color:#111;">Mapa do percurso</p>
+        <img src="data:image/png;base64,\(base64)" alt="Mapa do percurso do treino" width="560" style="max-width:100%;width:560px;height:auto;border-radius:12px;border:1px solid #e0e0e0;display:block;" />
+        </div>
+        """
+
+        // Troca o título textual pelo bloco com a imagem (legenda fica logo abaixo no texto).
+        if let range = bodyHTML.range(of: "Mapa do percurso:") {
+            var result = bodyHTML
+            result.replaceSubrange(range, with: mapBlock)
+            return result
+        }
+
+        // Fallback: imagem antes das métricas ou no fim do corpo.
+        if let metricsRange = bodyHTML.range(of: "Métricas da sessão") {
+            var result = bodyHTML
+            result.insert(contentsOf: mapBlock, at: metricsRange.lowerBound)
+            return result
+        }
+
+        return bodyHTML + mapBlock
     }
 
     static func preWorkoutEntries(from sessions: [WorkoutSession]) -> [PreWorkoutSessionEntry] {

@@ -22,6 +22,7 @@ struct ActiveCardioView: View {
 
     @StateObject private var runTracker = RunTrackingService()
     @StateObject private var jumpMetrics = JumpMetricsService()
+    @StateObject private var rowingMetrics = RowingMetricsService()
     @State private var elapsedSeconds = 0
     @State private var isPaused = false
     @State private var pauseStartedAt: Date?
@@ -54,6 +55,7 @@ struct ActiveCardioView: View {
     private var isOutdoorWalking: Bool { config.isOutdoorWalkingSession }
     private var isSwimming: Bool { config.isSwimmingSession }
     private var isWaterSport: Bool { config.isWaterSportSession }
+    private var isRowing: Bool { config.isRowingSession }
     private var trackingModality: OutdoorCardioModality {
         config.outdoorTrackingModality
     }
@@ -211,6 +213,9 @@ struct ActiveCardioView: View {
                             if isWaterSport {
                                 waterSportLiveSection
                             }
+                            if isRowing {
+                                rowingLiveSection
+                            }
                             if isOutdoorCycling, let hazard = activeHazardAlert {
                                 potholeAlertBanner(hazard)
                             }
@@ -218,6 +223,9 @@ struct ActiveCardioView: View {
                         intensityBadge
                         if !isOutdoorGPS {
                             exerciseInfo
+                            if isRowing {
+                                rowingLiveSection
+                            }
                         }
                         progressRing
                         if isSwimming {
@@ -233,6 +241,10 @@ struct ActiveCardioView: View {
                         metricsRow
                         if isOutdoorGPS {
                             runExtraMetricsRow
+                        }
+                        if isRowing {
+                            rowingExtraMetricsGrid
+                            rowingSymmetrySection
                         }
                         if isWaterSport {
                             waterSportChartsSection
@@ -274,6 +286,9 @@ struct ActiveCardioView: View {
             clockTickCount += 1
             if !isPaused {
                 elapsedSeconds = activeElapsedSeconds()
+                if isRowing {
+                    syncRowingKinematics()
+                }
             }
 
             let minimized = workoutStore.isActiveWorkoutMinimized
@@ -295,6 +310,11 @@ struct ActiveCardioView: View {
                             liveAccelG: jumpMetrics.liveAccelerationG
                         )
                     }
+                    if isRowing, watchConnectivity.lastWatchAccelG > 0 {
+                        // Watch acel. como reforço de carga lateral (simetria).
+                        let g = watchConnectivity.lastWatchAccelG
+                        rowingMetrics.ingestWatchSideLoad(lateralG: (g - 1.0) * 0.4)
+                    }
                     if isSwimming {
                         applyAutomaticSwimLapsFromWatch()
                     }
@@ -314,6 +334,7 @@ struct ActiveCardioView: View {
             }
             runTracker.stop()
             jumpMetrics.stop()
+            rowingMetrics.stop()
             watchConnectivity.stopWorkoutOnWatch()
             finishedSession = ended
         }
@@ -335,6 +356,13 @@ struct ActiveCardioView: View {
                 Task {
                     _ = await watchConnectivity.attemptSyncWithWatch()
                     watchConnectivity.requestWatchWaterSportSync()
+                }
+            }
+            if isRowing {
+                let boat = config.rowingSetup?.boatType ?? .singleSkiff
+                rowingMetrics.start(boat: boat)
+                Task {
+                    _ = await watchConnectivity.attemptSyncWithWatch()
                 }
             }
             if isSwimming {
@@ -383,6 +411,7 @@ struct ActiveCardioView: View {
             if workoutStore.activeSession != nil { return }
             runTracker.stop()
             jumpMetrics.stop()
+            rowingMetrics.stop()
         }
         .onChange(of: openFinishTick) { _, tick in
             guard tick > 0 else { return }
@@ -545,7 +574,220 @@ struct ActiveCardioView: View {
         }
         .padding()
         .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    // MARK: - Remo ao vivo
+
+    private var rowingLiveSection: some View {
+        let zone = rowingMetrics.spmZone
+        let splitText: String = {
+            if let s = rowingMetrics.splitSecondsPer500m {
+                return RowingMetricsMath.formatSplit(seconds: s) + " /500 m"
+            }
+            return "— /500 m"
+        }()
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Remo ao vivo", systemImage: "figure.rower")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                if let boat = config.rowingSetup?.boatType {
+                    Text(boat.rawValue)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                }
+            }
+
+            HStack(spacing: 12) {
+                waterMetricTile(
+                    title: "SPM",
+                    value: RowingMetricsMath.formatSPM(rowingMetrics.strokeRateSPM),
+                    icon: "metronome.fill"
+                )
+                waterMetricTile(
+                    title: "Split",
+                    value: splitText.replacingOccurrences(of: " /500 m", with: ""),
+                    icon: "timer"
+                )
+                waterMetricTile(
+                    title: "Remadas",
+                    value: "\(rowingMetrics.strokeCount)",
+                    icon: "arrow.left.arrow.right"
+                )
+            }
+
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(zone.color)
+                    .frame(width: 8, height: 8)
+                Text("\(zone.rawValue) · \(zone.rangeLabel) SPM")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(zone.color)
+                Spacer()
+                Text(zone.tip)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+            }
+
+            if let status = rowingMetrics.lastStatusMessage {
+                Text(status)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private var rowingExtraMetricsGrid: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Eficiência e barco")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                rowingStatTile(
+                    title: "m / remada",
+                    value: rowingMetrics.metersPerStroke > 0
+                        ? String(format: "%.1f m", rowingMetrics.metersPerStroke)
+                        : "—"
+                )
+                rowingStatTile(
+                    title: "Eficiência",
+                    value: String(format: "%.0f", rowingMetrics.efficiencyScore)
+                )
+                rowingStatTile(
+                    title: "Velocidade",
+                    value: String(format: "%.1f km/h", max(liveSpeedKmh, rowingMetrics.speedMps * 3.6))
+                )
+                rowingStatTile(
+                    title: "Estabilidade",
+                    value: String(format: "%.0f", rowingMetrics.stabilityScore)
+                )
+                rowingStatTile(
+                    title: "Aceleração",
+                    value: String(format: "%.2f m/s²", rowingMetrics.accelerationMps2)
+                )
+                rowingStatTile(
+                    title: "Desaceleração",
+                    value: String(format: "%.2f m/s²", rowingMetrics.decelerationMps2)
+                )
+                rowingStatTile(
+                    title: "Equilíbrio",
+                    value: String(format: "%.0f", rowingMetrics.balanceScore)
+                )
+                rowingStatTile(
+                    title: "Melhor split",
+                    value: {
+                        if let s = rowingMetrics.bestSplitSecondsPer500m {
+                            return RowingMetricsMath.formatSplit(seconds: s)
+                        }
+                        return "—"
+                    }()
+                )
+            }
+        }
+    }
+
+    private var rowingSymmetrySection: some View {
+        let leftPct = Int((rowingMetrics.leftSideShare * 100).rounded())
+        let rightPct = Int((rowingMetrics.rightSideShare * 100).rounded())
+        let asym = rowingMetrics.asymmetryPercent
+        let riskColor: Color = asym < 8 ? .green : (asym < 15 ? AppTheme.accentSecondary : .orange)
+
+        return VStack(alignment: .leading, spacing: 10) {
+            Label("Simetria · esquerda × direita", systemImage: "arrow.left.and.right.righttriangle.left.righttriangle.right")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            GeometryReader { geo in
+                HStack(spacing: 3) {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.cyan.opacity(0.85))
+                        .frame(width: max(8, geo.size.width * rowingMetrics.leftSideShare))
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(AppTheme.accent.opacity(0.9))
+                        .frame(width: max(8, geo.size.width * rowingMetrics.rightSideShare))
+                }
+            }
+            .frame(height: 14)
+
+            HStack {
+                Label("Esq. \(leftPct)%", systemImage: "l.circle.fill")
+                    .foregroundStyle(.cyan)
+                Spacer()
+                Label("Dir. \(rightPct)%", systemImage: "r.circle.fill")
+                    .foregroundStyle(AppTheme.accent)
+            }
+            .font(.caption.weight(.semibold))
+
+            HStack {
+                Text(String(format: "Assimetria %.0f%%", asym))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(riskColor)
+                Spacer()
+                Text(String(format: "Equilíbrio %.0f", rowingMetrics.balanceScore))
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            Text(RowingSessionSnapshot(
+                leftSideShare: rowingMetrics.leftSideShare,
+                rightSideShare: rowingMetrics.rightSideShare,
+                asymmetryPercent: asym
+            ).symmetryInsight)
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Acelerômetro + giroscópio (iPhone) e reforço do Apple Watch.")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func rowingStatTile(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+            Text(value)
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(AppTheme.textPrimary)
+                .minimumScaleFactor(0.8)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func syncRowingKinematics() {
+        guard isRowing else { return }
+        let meters = completedDistanceKm * 1000.0
+        let speed = max(runTracker.currentSpeedMetersPerSecond, 0)
+        // Erg sem GPS: estima velocidade pelo ritmo se já houver remadas e tempo.
+        let resolvedSpeed: Double = {
+            if speed > 0.2 { return speed }
+            if meters > 5, elapsedSeconds > 5 {
+                return meters / Double(elapsedSeconds)
+            }
+            return 0
+        }()
+        rowingMetrics.updateKinematics(
+            distanceMeters: meters,
+            speedMetersPerSecond: resolvedSpeed,
+            elapsedSeconds: Double(max(elapsedSeconds, 1))
+        )
     }
 
     private func waterMetricTile(title: String, value: String, icon: String) -> some View {
@@ -1408,6 +1650,9 @@ struct ActiveCardioView: View {
         if isOutdoorGPS {
             runTracker.setPaused(true)
         }
+        if isRowing {
+            rowingMetrics.setPaused(true)
+        }
     }
 
     private func resumeCardio() {
@@ -1419,6 +1664,9 @@ struct ActiveCardioView: View {
         isPaused = false
         if isOutdoorGPS {
             runTracker.setPaused(false)
+        }
+        if isRowing {
+            rowingMetrics.setPaused(false)
         }
         elapsedSeconds = activeElapsedSeconds()
     }
@@ -1505,6 +1753,7 @@ struct ActiveCardioView: View {
 
         runTracker.stop()
         jumpMetrics.stop()
+        rowingMetrics.stop()
         watchConnectivity.stopWorkoutOnWatch()
 
         let finalPausedSeconds = finalizedPausedSeconds()
@@ -1598,12 +1847,20 @@ struct ActiveCardioView: View {
             }
             session.waterSport = water
         }
+        if isRowing {
+            syncRowingKinematics()
+            session.rowing = rowingMetrics.exportSnapshot()
+        }
         session.exerciseRecords = [
             ExerciseSessionRecord(
                 exerciseId: config.exercise.id,
                 exerciseName: {
                     if isWaterSport {
                         return config.isKitesurfSession ? "Kitesurf" : "Surf"
+                    }
+                    if isRowing {
+                        let boat = config.rowingSetup?.boatType.rawValue ?? "Remo"
+                        return "Remo · \(boat) (\(config.intensity.rawValue))"
                     }
                     if config.isFreeRun {
                         return "\(config.exercise.name) livre (\(config.intensity.rawValue))"
@@ -1638,6 +1895,7 @@ struct ActiveCardioView: View {
             if config.isOutdoorCyclingSession { return .cycling }
             if config.isRunningSession || config.isDistanceRun { return .running }
             if config.isOutdoorWalkingSession { return .walking }
+            if config.isRowingSession { return .rowing }
             if config.isKitesurfSession || config.isSurfSession {
                 // HealthKit não tem modalidade kite dedicada; use paddle sports / other.
                 if #available(iOS 14.0, *) {

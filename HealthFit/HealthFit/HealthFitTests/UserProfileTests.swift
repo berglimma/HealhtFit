@@ -35,4 +35,42 @@ final class UserProfileTests: XCTestCase {
         XCTAssertEqual(profile.greetingName, "João")
         XCTAssertEqual(profile.shownName, "João Silva")
     }
+
+    func testEmptyPracticedModalitiesMeansAll() {
+        let profile = TestFixtures.userProfile()
+        XCTAssertTrue(profile.practicedModalityIDs.isEmpty)
+        XCTAssertTrue(profile.practicesAllModalities)
+        XCTAssertTrue(profile.practices(PracticeModalityID.strength))
+        XCTAssertTrue(profile.practicesCardio(named: "Remo"))
+        XCTAssertTrue(profile.practicesAnyCardio)
+        XCTAssertEqual(profile.practicedCardioExercises.count, CardioExercise.catalog.count)
+    }
+
+    func testPracticedModalitiesFilterAndPersist() throws {
+        var profile = TestFixtures.userProfile()
+        profile.setPractices(PracticeModalityID.cardio("Remo"), enabled: true)
+        // Materializes full list then toggles
+        profile.setPractices(PracticeModalityID.cardio("Corrida"), enabled: false)
+        XCTAssertFalse(profile.practicesCardio(named: "Corrida"))
+        XCTAssertTrue(profile.practicesCardio(named: "Remo"))
+        XCTAssertTrue(profile.practices(PracticeModalityID.strength))
+
+        profile.setPracticesAll(false)
+        XCTAssertEqual(profile.practicedModalityIDs, [PracticeModalityID.strength])
+        XCTAssertFalse(profile.practicesAnyCardio)
+
+        profile.setPracticesAll(true)
+        XCTAssertEqual(Set(profile.practicedModalityIDs), Set(PracticeModalityID.allDefaultIDs))
+
+        let data = try JSONEncoder().encode(profile)
+        let decoded = try JSONDecoder().decode(UserProfile.self, from: data)
+        XCTAssertEqual(decoded.practicedModalityIDs, profile.practicedModalityIDs)
+    }
+
+    func testCannotClearLastPracticedModality() {
+        var profile = TestFixtures.userProfile()
+        profile.practicedModalityIDs = [PracticeModalityID.meditation]
+        profile.setPractices(PracticeModalityID.meditation, enabled: false)
+        XCTAssertTrue(profile.practices(PracticeModalityID.meditation))
+    }
 }

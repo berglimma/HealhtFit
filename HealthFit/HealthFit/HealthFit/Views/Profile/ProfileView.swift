@@ -133,6 +133,7 @@ struct ProfileView: View {
 
                 if showSecondarySections {
                     biotypeSection(for: user)
+                    practicedModalitiesSection(for: user)
                     personalTrainerSection
                     nutritionistSection
                     healthIconSection
@@ -485,6 +486,99 @@ struct ProfileView: View {
             BiotypeIdentificationHint(biotype: user.biotype)
         }
         .listRowBackground(AppTheme.cardBackground)
+    }
+
+    @ViewBuilder
+    private func practicedModalitiesSection(for user: UserProfile) -> some View {
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Marque o que você pratica. A lista de treinos mostra só as modalidades ativas.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                HStack(spacing: 10) {
+                    Button("Marcar todas") {
+                        updatePracticedModalitiesAll(true)
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+
+                    Button("Só musculação") {
+                        updatePracticedModalitiesAll(false)
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                    Spacer()
+
+                    Text("\(user.practicedModalityCount) ativas")
+                        .font(.caption.weight(.bold).monospacedDigit())
+                        .foregroundStyle(AppTheme.accent)
+                }
+            }
+            .padding(.vertical, 2)
+
+            ForEach(PracticeModalityGroup.allCases) { group in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(group.rawValue.uppercased())
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .padding(.top, 4)
+
+                    ForEach(PracticeModalityOption.options(in: group)) { option in
+                        practicedModalityToggleRow(
+                            option: option,
+                            isOn: user.practices(option.id)
+                        ) {
+                            togglePracticedModality(option.id)
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text("Modalidades que pratico")
+        } footer: {
+            Text("Perfis novos ou sem preferência exibem todas as modalidades. É preciso manter ao menos uma marcada.")
+                .font(.caption2)
+        }
+        .listRowBackground(AppTheme.cardBackground)
+    }
+
+    private func practicedModalityToggleRow(
+        option: PracticeModalityOption,
+        isOn: Bool,
+        onToggle: @escaping () -> Void
+    ) -> some View {
+        Button(action: onToggle) {
+            HStack(spacing: 12) {
+                Image(systemName: option.icon)
+                    .font(.body)
+                    .foregroundStyle(isOn ? AppTheme.accent : AppTheme.textSecondary)
+                    .frame(width: 28)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(option.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Text(option.detail)
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(isOn ? AppTheme.accent : AppTheme.textSecondary.opacity(0.5))
+            }
+            .contentShape(Rectangle())
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(option.title)
+        .accessibilityValue(isOn ? "Ativa" : "Inativa")
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
     @ViewBuilder
@@ -1059,6 +1153,19 @@ struct ProfileView: View {
                 || user.personalTrainerName != trainerName
                 || user.personalTrainerEmail != trainerEmail else { return }
         user.usesPersonalTrainer = enabled
+        authService.updateProfile(user)
+    }
+
+    private func togglePracticedModality(_ modalityID: String) {
+        guard var user = authService.currentUser else { return }
+        let currentlyOn = user.practices(modalityID)
+        user.setPractices(modalityID, enabled: !currentlyOn)
+        authService.updateProfile(user)
+    }
+
+    private func updatePracticedModalitiesAll(_ enabled: Bool) {
+        guard var user = authService.currentUser else { return }
+        user.setPracticesAll(enabled)
         authService.updateProfile(user)
     }
 
