@@ -188,9 +188,6 @@
     "%lld passos" : {
 
     },
-    "%lld ponto(s) de salto no mapa" : {
-
-    },
     "%lld recomendados · %lld personalizados" : {
       "localizations" : {
         "pt-BR" : {
@@ -210,6 +207,12 @@
           }
         }
       }
+    },
+    "%lld salto(s) · ciano = subida · laranja = descida (sobre o GPS)" : {
+
+    },
+    "%lld salto(s) · curva subida/descida no mapa GPS" : {
+
     },
     "%lld sessões · %lld min" : {
       "localizations" : {
@@ -347,6 +350,9 @@
 
     },
     "3D: percurso no terreno" : {
+
+    },
+    "3D: rota GPS + curvas de salto (subida/descida)" : {
 
     },
     "3D: vista inclinada do local" : {
@@ -1255,6 +1261,9 @@
     "Buscando vento e maré…" : {
 
     },
+    "Buscando vento e posição…" : {
+
+    },
     "Buscar prancha…" : {
 
     },
@@ -1818,6 +1827,19 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Direção %1$lld° · %2$@"
+          }
+        }
+      }
+    },
+    "Direção do vento %lld graus" : {
+
+    },
+    "Direção: %lld° · %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Direção: %1$lld° · %2$@"
           }
         }
       }
@@ -2432,6 +2454,9 @@
 
     },
     "Melhor marca anterior" : {
+
+    },
+    "Melhor posição para correr" : {
 
     },
     "Meta %@ km" : {
@@ -3894,6 +3919,9 @@
     "Tempo por Exercício" : {
 
     },
+    "Tentar de novo" : {
+
+    },
     "Tentar sincronizar Watch" : {
 
     },
@@ -4062,8 +4090,21 @@
     "Vento" : {
 
     },
+    "VENTO" : {
+
+    },
     "Vento %lld km/h" : {
 
+    },
+    "Vento de %@ → %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Vento de %1$@ → %2$@"
+          }
+        }
+      }
     },
     "Vento e maré" : {
 
@@ -4072,6 +4113,9 @@
 
     },
     "Vento e maré — Surf" : {
+
+    },
+    "Vento e posição" : {
 
     },
     "Vento: %@" : {

@@ -165,6 +165,9 @@ struct CardioSetupView: View {
                 if !exercise.isWaterSport {
                     calorieGoalSection
                     intensitySection
+                    if exercise.supportsDistanceGoals {
+                        runningWindSection
+                    }
                 }
                 summarySection
                 startButton
@@ -207,20 +210,21 @@ struct CardioSetupView: View {
             } else if exercise.isKitesurf {
                 selectedBoard = .twinTip
             }
-            if exercise.isWaterSport {
+            if exercise.isWaterSport || exercise.supportsDistanceGoals {
                 spotLocator.requestLocation()
                 Task { await preloadWind(force: false) }
             }
         }
         .onChange(of: spotLocator.coordinate?.latitude) { _, _ in
-            guard exercise.isWaterSport, spotLocator.coordinate != nil, windSnapshot == nil else { return }
+            let shouldLoad = exercise.isWaterSport || exercise.supportsDistanceGoals
+            guard shouldLoad, spotLocator.coordinate != nil, windSnapshot == nil else { return }
             Task { await preloadWind(force: false) }
         }
     }
 
     @MainActor
     private func preloadWind(force: Bool) async {
-        guard exercise.isWaterSport else { return }
+        guard exercise.isWaterSport || exercise.supportsDistanceGoals else { return }
         isLoadingWind = true
         windLoadError = nil
         let preferred = spotLocator.coordinate
@@ -240,7 +244,9 @@ struct CardioSetupView: View {
             applyWindSnapshot(result)
         } catch {
             windLoadError = (error as? LocalizedError)?.errorDescription
-                ?? "Não foi possível carregar o vento."
+                ?? (exercise.isWaterSport
+                    ? "Não foi possível carregar vento e maré."
+                    : "Não foi possível carregar o vento.")
         }
         isLoadingWind = false
     }
@@ -1154,6 +1160,217 @@ struct CardioSetupView: View {
         }
     }
 
+    // MARK: - Vento na Corrida
+
+    /// Card animado de vento + melhor orientação de percurso (abaixo da intensidade).
+    private var runningWindSection: some View {
+        let dir = windSnapshot?.windDirectionDegrees ?? windDirectionDegrees
+        let speed = windSnapshot?.windSpeedKmh ?? windSpeedKmh
+        let guide = RunningWindGuide.make(speedKmh: speed, directionDegrees: dir)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Vento e posição", systemImage: "wind")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                Button {
+                    Task { await preloadWind(force: true) }
+                } label: {
+                    if isLoadingWind {
+                        ProgressView()
+                            .tint(AppTheme.accent)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                }
+                .foregroundStyle(AppTheme.accent)
+                .disabled(isLoadingWind)
+            }
+
+            ZStack {
+                RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
+                    .fill(AppTheme.cardBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
+                            .stroke(AppTheme.accent.opacity(0.28), lineWidth: 1)
+                    )
+
+                TransparentWindLinesView(
+                    directionDegrees: dir,
+                    speedKmh: max(speed, 6),
+                    tint: AppTheme.accent.opacity(0.95),
+                    baseOpacity: 0.55,
+                    lineCount: 8
+                )
+                .frame(height: 168)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
+                .allowsHitTesting(false)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    if isLoadingWind && windSnapshot == nil {
+                        HStack(spacing: 10) {
+                            ProgressView().tint(AppTheme.accent)
+                            Text("Buscando vento e posição…")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                        .padding(.top, 4)
+                    } else if let error = windLoadError, windSnapshot == nil {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                        Button("Tentar de novo") {
+                            Task { await preloadWind(force: true) }
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                    } else {
+                        HStack(alignment: .top, spacing: 14) {
+                            runningWindCompass(directionDegrees: dir, speedKmh: speed)
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(guide.intensityTitle)
+                                    .font(.subheadline.weight(.bold))
+                                    .foregroundStyle(AppTheme.accent)
+
+                                HStack(spacing: 6) {
+                                    Image(systemName: "speedometer")
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.accent)
+                                    Text(String(format: "%.0f km/h", speed))
+                                        .font(.title3.weight(.bold).monospacedDigit())
+                                        .foregroundStyle(AppTheme.textPrimary)
+                                }
+
+                                Text("Direção: \(Int(dir.rounded()))° · \(guide.fromLabel)")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(AppTheme.textSecondary)
+
+                                Text("Vento de \(guide.fromLabel) → \(guide.towardLabel)")
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+                            Spacer(minLength: 0)
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label("Melhor posição para correr", systemImage: "figure.run")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(AppTheme.accent)
+
+                            Text(guide.bestPositionSummary)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(AppTheme.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            HStack(spacing: 8) {
+                                runningDirectionChip(
+                                    title: "Ida",
+                                    detail: "contra · \(guide.outboundLabel)",
+                                    icon: "arrow.up.right"
+                                )
+                                runningDirectionChip(
+                                    title: "Volta",
+                                    detail: "a favor · \(guide.returnLabel)",
+                                    icon: "arrow.down.left"
+                                )
+                            }
+
+                            Text(guide.detailTip)
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(AppTheme.accent.opacity(0.10))
+                        )
+
+                        if let snap = windSnapshot {
+                            HStack(spacing: 6) {
+                                Image(systemName: "mappin.and.ellipse")
+                                    .font(.caption2)
+                                Text(snap.locationLabel)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text(snap.updatedAtText)
+                            }
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.textSecondary)
+                        }
+                    }
+                }
+                .padding(14)
+            }
+            .frame(minHeight: 160)
+        }
+    }
+
+    private func runningWindCompass(directionDegrees: Double, speedKmh: Double) -> some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let pulse = 0.92 + 0.08 * sin(t * (1.4 + min(speedKmh, 40) / 35.0))
+            let spinBoost = sin(t * 2.2) * 6
+
+            ZStack {
+                Circle()
+                    .stroke(AppTheme.accent.opacity(0.25), lineWidth: 2)
+                    .frame(width: 72, height: 72)
+
+                ForEach(["N", "L", "S", "O"], id: \.self) { mark in
+                    Text(mark)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .offset(y: mark == "N" ? -28 : mark == "S" ? 28 : 0)
+                        .offset(x: mark == "L" ? 28 : mark == "O" ? -28 : 0)
+                }
+
+                Image(systemName: "location.north.fill")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .rotationEffect(.degrees(directionDegrees + spinBoost))
+                    .scaleEffect(pulse)
+                    .shadow(color: AppTheme.accent.opacity(0.45), radius: 6, y: 0)
+
+                Text("VENTO")
+                    .font(.system(size: 7, weight: .heavy))
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .offset(y: 22)
+            }
+            .frame(width: 76, height: 76)
+        }
+        .accessibilityLabel("Direção do vento \(Int(directionDegrees.rounded())) graus")
+    }
+
+    private func runningDirectionChip(title: String, detail: String, icon: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(AppTheme.accent)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(AppTheme.textSecondary)
+                Text(detail)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(AppTheme.background.opacity(0.55))
+        )
+    }
+
     private func cyclingSpeedLabel(for intensity: CardioIntensity) -> String {
         switch intensity {
         case .low: return "~18 km/h"
@@ -1476,6 +1693,60 @@ struct CardioExerciseCard: View {
             systemImage: exercise.icon,
             coverColors: exercise.coverColors,
             footerLabels: [(icon: featureIcon, text: featureLabel)]
+        )
+    }
+}
+
+// MARK: - Guia de vento para corrida
+
+/// Orienta percurso ida/volta com base no vento (ida contra, volta a favor).
+struct RunningWindGuide: Equatable {
+    let fromLabel: String
+    let towardLabel: String
+    let outboundLabel: String
+    let returnLabel: String
+    let intensityTitle: String
+    let bestPositionSummary: String
+    let detailTip: String
+
+    static func make(speedKmh: Double, directionDegrees: Double) -> RunningWindGuide {
+        let from = WindDirectionLabels.label(degrees: directionDegrees)
+        let toward = WindDirectionLabels.label(degrees: directionDegrees + 180)
+        // Correr em direção à origem do vento = contra o vento.
+        let outbound = from
+        let returnDir = toward
+
+        let intensity: String
+        let tip: String
+        let summary: String
+
+        switch speedKmh {
+        case ..<8:
+            intensity = "Vento fraco"
+            summary = "Qualquer direção é confortável. No ida e volta, prefira o eixo \(outbound)–\(returnDir)."
+            tip = "Aproveite para focar no ritmo; o vento quase não muda o esforço."
+        case 8..<18:
+            intensity = "Vento moderado"
+            summary = "Melhor percurso: eixo \(outbound)–\(returnDir). Saia para \(outbound) (contra) e volte para \(returnDir) (a favor)."
+            tip = "Ida contra o vento aquece bem sem deixar a volta estafante no vento de frente."
+        case 18..<28:
+            intensity = "Vento forte"
+            summary = "Priorize ida/volta no eixo \(outbound)–\(returnDir): contra (\(outbound)) na ida e a favor (\(returnDir)) na volta."
+            tip = "Evite longos trechos laterais (vento de lado); se possível, use trechos com abrigo natural."
+        default:
+            intensity = "Vento muito forte"
+            summary = "Se exposto, use o eixo \(outbound)–\(returnDir) com ida contra e volta a favor. Prefira rotas abrigadas."
+            tip = "Reduza a meta de ritmo e proteja o rosto; em rajadas, encurte o trecho aberto."
+        }
+
+        return RunningWindGuide(
+            fromLabel: from,
+            towardLabel: toward,
+            outboundLabel: outbound,
+            returnLabel: returnDir,
+            intensityTitle: intensity,
+            bestPositionSummary: summary,
+            detailTip: tip
         )
     }
 }

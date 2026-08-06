@@ -36,9 +36,9 @@ struct MeditationSetupView: View {
                 dismiss()
             }
         }) {
-            ActiveMeditationView(config: config) {
+            ActiveMeditationView(config: config, onHostClose:  {
                 shouldPopToWorkoutList = true
-            }
+            })
         }
     }
 

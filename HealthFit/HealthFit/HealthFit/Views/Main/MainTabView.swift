@@ -53,233 +53,289 @@ struct MainTabView: View {
         hostedActiveSheet != nil || hostedCardioConfig != nil || hostedMeditationConfig != nil
     }
 
+    private var isHostedWorkoutMinimized: Bool {
+        workoutStore.isActiveWorkoutMinimized
+    }
+
+    // MARK: - Body (split to help the type-checker)
+
     var body: some View {
-        // ZStack keeps the minimized card above tab content without keyboard avoidance,
-        // and hosts the active strength/cardio workout as a persistent overlay (not fullScreenCover)
-        // so minimize/resume never races SwiftUI presentation identity.
-        ZStack(alignment: .bottom) {
-            TabView(selection: tabSelection) {
-                lazyTab(homeTabTag) {
-                    DashboardView()
-                }
-                .tabItem {
-                    Label(L10n.Tab.home, systemImage: "house.fill")
-                }
-                .tag(homeTabTag)
+        rootWithAlerts
+    }
 
-                lazyTab(workoutsTabTag) {
-                    WorkoutListView()
-                }
-                .tabItem {
-                    Label(L10n.Tab.workouts, systemImage: "dumbbell.fill")
-                }
-                .tag(workoutsTabTag)
-
-                lazyTab(nutritionTabTag) {
-                    MealPlanView()
-                }
-                .tabItem {
-                    Label(L10n.Tab.nutrition, systemImage: "fork.knife")
-                }
-                .tag(nutritionTabTag)
-
-                lazyTab(assistantTabTag) {
-                    HealthChatView()
-                }
-                .tabItem {
-                    Label(L10n.Tab.assistant, systemImage: "bubble.left.and.bubble.right.fill")
-                }
-                .tag(assistantTabTag)
-                .badge(checkInService.assistantTabBadgeCount)
-
-                lazyTab(profileTabTag) {
-                    ProfileView()
-                }
-                .tabItem {
-                    Label(L10n.Tab.profile, systemImage: "person.fill")
-                }
-                .tag(profileTabTag)
+    private var rootWithAlerts: some View {
+        rootWithSessionHandlers
+            .alert(
+                profileReminder.activePrompt?.title ?? "Seus dados",
+                isPresented: $isShowingProfileDataPrompt
+            ) {
+                profileDataAlertButtons
+            } message: {
+                Text(profileReminder.activePrompt?.message ?? "")
             }
-            .tint(AppTheme.accent)
-            .tabViewStyle(.automatic)
-
-            if showsMinimizedWorkoutBanner, let session = workoutStore.activeSession {
-                VStack(spacing: 0) {
-                    ActiveWorkoutBanner(
-                        session: session,
-                        currentExerciseName: workoutStore.currentExercise?.name,
-                        onResume: {
-                            resumeMinimizedWorkout()
-                        },
-                        onEnd: canEndFromMinimizedBanner
-                            ? { endMinimizedWorkoutFromBanner() }
-                            : nil
-                    )
-                    .padding(.horizontal, 12)
-                    .padding(.top, 4)
-                    .padding(.bottom, 8)
-
-                    // Hit-through strip so UITabBar icons/labels still receive taps.
-                    Color.clear
-                        .frame(height: DeviceLayout.mainTabBarContentHeight)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
-                .frame(maxWidth: .infinity, alignment: .bottom)
-                .ignoresSafeArea(.keyboard)
-                .zIndex(2)
+            .alert(
+                WorkoutStore.activeWorkoutConflictAlertTitle,
+                isPresented: $workoutStore.showActiveWorkoutConflictAlert
+            ) {
+                activeWorkoutConflictAlertButtons
+            } message: {
+                Text(workoutStore.activeWorkoutConflictAlertMessage)
             }
-
-            if let sheet = hostedActiveSheet {
-                ActiveWorkoutView(
-                    sheet: sheet,
-                    onReturnToWorkoutList: {
-                        selectedTab = workoutsTabTag
-                    },
-                    onHostClose: {
-                        hostedActiveSheet = nil
-                    },
-                    openEarlyEndTick: openEarlyEndTick
-                )
-                .opacity(workoutStore.isActiveWorkoutMinimized ? 0 : 1)
-                .allowsHitTesting(!workoutStore.isActiveWorkoutMinimized)
-                .accessibilityHidden(workoutStore.isActiveWorkoutMinimized)
-                .zIndex(workoutStore.isActiveWorkoutMinimized ? 0 : 3)
+            .task(id: selectedTab) {
+                await pollAssistantBadgeWhileVisible()
             }
+    }
 
-            if let config = hostedCardioConfig {
-                ActiveCardioView(
-                    config: config,
-                    onReturnToWorkoutList: {
-                        selectedTab = workoutsTabTag
-                    },
-                    onHostClose: {
-                        hostedCardioConfig = nil
-                    },
-                    openFinishTick: requestCardioFinishTick
-                )
-                .opacity(workoutStore.isActiveWorkoutMinimized ? 0 : 1)
-                .allowsHitTesting(!workoutStore.isActiveWorkoutMinimized)
-                .accessibilityHidden(workoutStore.isActiveWorkoutMinimized)
-                .zIndex(workoutStore.isActiveWorkoutMinimized ? 0 : 3)
+    private var rootWithSessionHandlers: some View {
+        rootWithLifecycle
+            .onChange(of: workoutStore.activeSession?.id) { _, _ in
+                syncActiveWorkoutHosting()
             }
-
-            if let meditation = hostedMeditationConfig {
-                ActiveMeditationView(
-                    config: meditation,
-                    onReturnToWorkoutList: {
-                        selectedTab = workoutsTabTag
-                    },
-                    onHostClose: {
-                        hostedMeditationConfig = nil
-                    }
-                )
-                .opacity(workoutStore.isActiveWorkoutMinimized ? 0 : 1)
-                .allowsHitTesting(!workoutStore.isActiveWorkoutMinimized)
-                .accessibilityHidden(workoutStore.isActiveWorkoutMinimized)
-                .zIndex(workoutStore.isActiveWorkoutMinimized ? 0 : 3)
+            .onChange(of: workoutStore.isActiveWorkoutMinimized) { _, _ in
+                syncActiveWorkoutHosting()
             }
-        }
-        .onAppear {
-            KeyboardDismiss.hide()
-            updateAssistantTabVisibility(for: selectedTab)
-            checkInService.refreshAssistantBadge()
-            profileReminder.evaluate(for: authService.currentUser)
-            syncActiveWorkoutHosting()
-            Task { @MainActor in
-                // Aguarda o check-in de sono (se houver) ter prioridade antes do pop-up de dados.
-                try? await Task.sleep(for: .milliseconds(700))
+            .onChange(of: workoutStore.activeCardioConfig?.title) { _, _ in
+                syncActiveWorkoutHosting()
+            }
+            .onChange(of: workoutStore.activeMeditationConfig?.title) { _, _ in
+                syncActiveWorkoutHosting()
+            }
+            .onChange(of: watchConnectivity.watchForcedSessionCloseTick) { _, _ in
+                clearHostedWorkoutOverlays()
+            }
+            .onChange(of: authService.currentUser?.id) { _, _ in
+                profileReminder.evaluate(for: authService.currentUser)
                 presentProfilePromptIfNeeded()
             }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active || phase == .background || phase == .inactive {
-                KeyboardDismiss.hide()
+    }
+
+    private var rootWithLifecycle: some View {
+        mainStack
+            .onAppear(perform: handleAppear)
+            .onChange(of: scenePhase) { _, phase in
+                handleScenePhase(phase)
             }
-        }
-        .onChange(of: selectedTab) { _, tab in
-            // Libera o teclado do IAssistente para as abas/tab bar responderem no iPhone.
-            KeyboardDismiss.hide()
-            loadedTabs.insert(tab)
-            updateAssistantTabVisibility(for: tab)
-        }
-        .onChange(of: workoutStore.activeSession?.id) { _, _ in
-            syncActiveWorkoutHosting()
-        }
-        .onChange(of: workoutStore.isActiveWorkoutMinimized) { _, _ in
-            syncActiveWorkoutHosting()
-        }
-        .onChange(of: workoutStore.activeCardioConfig?.title) { _, _ in
-            syncActiveWorkoutHosting()
-        }
-        .onChange(of: workoutStore.activeMeditationConfig?.title) { _, _ in
-            syncActiveWorkoutHosting()
-        }
-        .onChange(of: watchConnectivity.watchForcedSessionCloseTick) { _, _ in
-            // Watch encerrou: fecha overlays (não há summary local nesse fluxo).
-            hostedActiveSheet = nil
-            hostedCardioConfig = nil
-            hostedMeditationConfig = nil
-        }
-        .onChange(of: authService.currentUser?.id) { _, _ in
-            profileReminder.evaluate(for: authService.currentUser)
-            presentProfilePromptIfNeeded()
-        }
-        .onChange(of: wellnessService.showSleepCheckIn) { _, isShowingSleep in
-            if isShowingSleep {
-                // Evita conflito com o sheet de sono; o pop-up volta ao fechar.
-                isShowingProfileDataPrompt = false
-            } else {
+            .onChange(of: selectedTab) { _, tab in
+                handleSelectedTabChange(tab)
+            }
+            .onChange(of: wellnessService.showSleepCheckIn) { _, isShowingSleep in
+                handleSleepCheckInChange(isShowingSleep)
+            }
+            .onChange(of: profileReminder.activePrompt) { _, _ in
                 presentProfilePromptIfNeeded()
             }
-        }
-        .onChange(of: profileReminder.activePrompt) { _, _ in
-            presentProfilePromptIfNeeded()
-        }
-        .onChange(of: dailyMorningService.state?.phase) { _, _ in
-            checkInService.refreshAssistantBadge()
-        }
-        .onChange(of: dailyEveningService.state?.phase) { _, _ in
-            checkInService.refreshAssistantBadge()
-        }
-        .alert(
-            profileReminder.activePrompt?.title ?? "Seus dados",
-            isPresented: $isShowingProfileDataPrompt
-        ) {
-            Button("Ir para Perfil") {
-                handlePromptChoice(navigateTo: profileTabTag)
-            }
-            Button("Ir para Nutrição") {
-                handlePromptChoice(navigateTo: nutritionTabTag)
-            }
-            Button("Agora não", role: .cancel) {
-                handlePromptChoice(navigateTo: nil)
-            }
-        } message: {
-            Text(profileReminder.activePrompt?.message ?? "")
-        }
-        .alert(
-            WorkoutStore.activeWorkoutConflictAlertTitle,
-            isPresented: $workoutStore.showActiveWorkoutConflictAlert
-        ) {
-            Button("Encerrar") {
-                endActiveWorkoutFromConflictAlert()
-            }
-            Button("Continuar") {
-                resumeMinimizedWorkout()
-            }
-            Button("Sair", role: .cancel) {}
-        } message: {
-            Text(workoutStore.activeWorkoutConflictAlertMessage)
-        }
-        .task(id: selectedTab) {
-            guard selectedTab == assistantTabTag else { return }
-            while !Task.isCancelled {
+            .onChange(of: dailyMorningService.state?.phase) { _, _ in
                 checkInService.refreshAssistantBadge()
-                try? await Task.sleep(for: .seconds(45))
             }
+            .onChange(of: dailyEveningService.state?.phase) { _, _ in
+                checkInService.refreshAssistantBadge()
+            }
+    }
+
+    /// ZStack: tabs + banner minimizado + overlays de treino ativo.
+    private var mainStack: some View {
+        ZStack(alignment: .bottom) {
+            mainTabView
+            minimizedWorkoutBanner
+            hostedActiveStrengthOverlay
+            hostedActiveCardioOverlay
+            hostedActiveMeditationOverlay
         }
     }
+
+    // MARK: - Tab bar
+
+    private var mainTabView: some View {
+        TabView(selection: tabSelection) {
+            lazyTab(homeTabTag) {
+                DashboardView()
+            }
+            .tabItem {
+                Label(L10n.Tab.home, systemImage: "house.fill")
+            }
+            .tag(homeTabTag)
+
+            lazyTab(workoutsTabTag) {
+                WorkoutListView()
+            }
+            .tabItem {
+                Label(L10n.Tab.workouts, systemImage: "dumbbell.fill")
+            }
+            .tag(workoutsTabTag)
+
+            lazyTab(nutritionTabTag) {
+                MealPlanView()
+            }
+            .tabItem {
+                Label(L10n.Tab.nutrition, systemImage: "fork.knife")
+            }
+            .tag(nutritionTabTag)
+
+            lazyTab(assistantTabTag) {
+                HealthChatView()
+            }
+            .tabItem {
+                Label(L10n.Tab.assistant, systemImage: "bubble.left.and.bubble.right.fill")
+            }
+            .tag(assistantTabTag)
+            .badge(checkInService.assistantTabBadgeCount)
+
+            lazyTab(profileTabTag) {
+                ProfileView()
+            }
+            .tabItem {
+                Label(L10n.Tab.profile, systemImage: "person.fill")
+            }
+            .tag(profileTabTag)
+        }
+        .tint(AppTheme.accent)
+        .tabViewStyle(.automatic)
+    }
+
+    // MARK: - Overlays
+
+    @ViewBuilder
+    private var minimizedWorkoutBanner: some View {
+        if showsMinimizedWorkoutBanner, let session = workoutStore.activeSession {
+            minimizedBannerContent(session: session)
+        }
+    }
+
+    private func minimizedBannerContent(session: WorkoutSession) -> some View {
+        VStack(spacing: 0) {
+            ActiveWorkoutBanner(
+                session: session,
+                currentExerciseName: workoutStore.currentExercise?.name,
+                onResume: { resumeMinimizedWorkout() },
+                onEnd: canEndFromMinimizedBanner ? { endMinimizedWorkoutFromBanner() } : nil
+            )
+            .padding(.horizontal, 12)
+            .padding(.top, 4)
+            .padding(.bottom, 8)
+
+            Color.clear
+                .frame(height: DeviceLayout.mainTabBarContentHeight)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity, alignment: .bottom)
+        .ignoresSafeArea(.keyboard)
+        .zIndex(2)
+    }
+
+    @ViewBuilder
+    private var hostedActiveStrengthOverlay: some View {
+        if let sheet = hostedActiveSheet {
+            ActiveWorkoutView(
+                sheet: sheet,
+                onReturnToWorkoutList: { selectedTab = workoutsTabTag },
+                onHostClose: { hostedActiveSheet = nil },
+                openEarlyEndTick: openEarlyEndTick
+            )
+            .modifier(HostedActiveWorkoutChrome(isMinimized: isHostedWorkoutMinimized))
+        }
+    }
+
+    @ViewBuilder
+    private var hostedActiveCardioOverlay: some View {
+        if let config = hostedCardioConfig {
+            ActiveCardioView(
+                config: config,
+                onReturnToWorkoutList: { selectedTab = workoutsTabTag },
+                onHostClose: { hostedCardioConfig = nil },
+                openFinishTick: requestCardioFinishTick
+            )
+            .modifier(HostedActiveWorkoutChrome(isMinimized: isHostedWorkoutMinimized))
+        }
+    }
+
+    @ViewBuilder
+    private var hostedActiveMeditationOverlay: some View {
+        if let meditation = hostedMeditationConfig {
+            ActiveMeditationView(
+                config: meditation,
+                onReturnToWorkoutList: { selectedTab = workoutsTabTag },
+                onHostClose: { hostedMeditationConfig = nil }
+            )
+            .modifier(HostedActiveWorkoutChrome(isMinimized: isHostedWorkoutMinimized))
+        }
+    }
+
+    // MARK: - Alerts
+
+    @ViewBuilder
+    private var profileDataAlertButtons: some View {
+        Button("Ir para Perfil") {
+            handlePromptChoice(navigateTo: profileTabTag)
+        }
+        Button("Ir para Nutrição") {
+            handlePromptChoice(navigateTo: nutritionTabTag)
+        }
+        Button("Agora não", role: .cancel) {
+            handlePromptChoice(navigateTo: nil)
+        }
+    }
+
+    @ViewBuilder
+    private var activeWorkoutConflictAlertButtons: some View {
+        Button("Encerrar") {
+            endActiveWorkoutFromConflictAlert()
+        }
+        Button("Continuar") {
+            resumeMinimizedWorkout()
+        }
+        Button("Sair", role: .cancel) {}
+    }
+
+    // MARK: - Lifecycle handlers
+
+    private func handleAppear() {
+        KeyboardDismiss.hide()
+        updateAssistantTabVisibility(for: selectedTab)
+        checkInService.refreshAssistantBadge()
+        profileReminder.evaluate(for: authService.currentUser)
+        syncActiveWorkoutHosting()
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(700))
+            presentProfilePromptIfNeeded()
+        }
+    }
+
+    private func handleScenePhase(_ phase: ScenePhase) {
+        if phase == .active || phase == .background || phase == .inactive {
+            KeyboardDismiss.hide()
+        }
+    }
+
+    private func handleSelectedTabChange(_ tab: Int) {
+        KeyboardDismiss.hide()
+        loadedTabs.insert(tab)
+        updateAssistantTabVisibility(for: tab)
+    }
+
+    private func handleSleepCheckInChange(_ isShowingSleep: Bool) {
+        if isShowingSleep {
+            isShowingProfileDataPrompt = false
+        } else {
+            presentProfilePromptIfNeeded()
+        }
+    }
+
+    private func clearHostedWorkoutOverlays() {
+        hostedActiveSheet = nil
+        hostedCardioConfig = nil
+        hostedMeditationConfig = nil
+    }
+
+    private func pollAssistantBadgeWhileVisible() async {
+        guard selectedTab == assistantTabTag else { return }
+        while !Task.isCancelled {
+            checkInService.refreshAssistantBadge()
+            try? await Task.sleep(for: .seconds(45))
+        }
+    }
+
+    // MARK: - Lazy tabs
 
     /// Placeholder until the tab is first selected — keeps Profile/Chat/Nutrição off first paint.
     @ViewBuilder
@@ -294,12 +350,13 @@ struct MainTabView: View {
         }
     }
 
+    // MARK: - Profile prompt
+
     private func presentProfilePromptIfNeeded() {
         guard profileReminder.activePrompt != nil else {
             isShowingProfileDataPrompt = false
             return
         }
-        // Não compete com o check-in de sono.
         guard !wellnessService.showSleepCheckIn else {
             isShowingProfileDataPrompt = false
             return
@@ -313,7 +370,6 @@ struct MainTabView: View {
 
         guard let tab else { return }
 
-        // Garante a troca de aba após o alert fechar (evita o tab ficar preso).
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(150))
             loadedTabs.insert(tab)
@@ -324,6 +380,8 @@ struct MainTabView: View {
     private func updateAssistantTabVisibility(for tab: Int) {
         checkInService.setAssistantTabActive(tab == assistantTabTag)
     }
+
+    // MARK: - Active workout host
 
     private func resumeMinimizedWorkout() {
         workoutStore.resumeActiveWorkout()
@@ -339,7 +397,6 @@ struct MainTabView: View {
     private func endActiveWorkoutFromConflictAlert() {
         workoutStore.resumeActiveWorkout()
         syncActiveWorkoutHosting()
-        // Allow the host to mount before triggering finish (stuck / relaunched cardio).
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(80))
             syncActiveWorkoutHosting()
@@ -353,7 +410,6 @@ struct MainTabView: View {
         } else if hostedActiveSheet != nil {
             openEarlyEndTick += 1
         } else if let config = workoutStore.resolvedActiveCardioConfig() {
-            // Last-resort remount for stuck cardio, then finish.
             hostedCardioConfig = config
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(80))
@@ -370,12 +426,8 @@ struct MainTabView: View {
         }
 
         if let sheet = workoutStore.activeStrengthSheet() {
-            if hostedCardioConfig != nil {
-                hostedCardioConfig = nil
-            }
-            if hostedMeditationConfig != nil {
-                hostedMeditationConfig = nil
-            }
+            if hostedCardioConfig != nil { hostedCardioConfig = nil }
+            if hostedMeditationConfig != nil { hostedMeditationConfig = nil }
             if hostedActiveSheet?.id != sheet.id {
                 hostedActiveSheet = sheet
             }
@@ -383,12 +435,8 @@ struct MainTabView: View {
         }
 
         if let config = workoutStore.resolvedActiveCardioConfig() {
-            if hostedActiveSheet != nil {
-                hostedActiveSheet = nil
-            }
-            if hostedMeditationConfig != nil {
-                hostedMeditationConfig = nil
-            }
+            if hostedActiveSheet != nil { hostedActiveSheet = nil }
+            if hostedMeditationConfig != nil { hostedMeditationConfig = nil }
             if hostedCardioConfig != config {
                 hostedCardioConfig = config
             }
@@ -398,15 +446,26 @@ struct MainTabView: View {
         if let meditation = workoutStore.activeMeditationConfig,
            let session = workoutStore.activeSession,
            WeeklyProgressAnalyzer.isMeditationSession(session) {
-            if hostedActiveSheet != nil {
-                hostedActiveSheet = nil
-            }
-            if hostedCardioConfig != nil {
-                hostedCardioConfig = nil
-            }
+            if hostedActiveSheet != nil { hostedActiveSheet = nil }
+            if hostedCardioConfig != nil { hostedCardioConfig = nil }
             if hostedMeditationConfig != meditation {
                 hostedMeditationConfig = meditation
             }
         }
+    }
+}
+
+// MARK: - Hosted workout chrome
+
+/// Shared opacity / hit-testing for strength, cardio and meditation overlays.
+private struct HostedActiveWorkoutChrome: ViewModifier {
+    let isMinimized: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isMinimized ? 0 : 1)
+            .allowsHitTesting(!isMinimized)
+            .accessibilityHidden(isMinimized)
+            .zIndex(isMinimized ? 0 : 3)
     }
 }
