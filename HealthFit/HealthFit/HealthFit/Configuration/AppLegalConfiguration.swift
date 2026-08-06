@@ -1,10 +1,15 @@
 import Foundation
 
 enum AppLegalConfiguration {
-    static let privacyPolicyURL = URL(string: "https://blswiftsolutions.com/healthfit/privacidade")!
-    static let termsOfUseURL = URL(string: "https://blswiftsolutions.com/healthfit/termos")!
+    /// Páginas públicas via GitHub Pages (workflow `.github/workflows/pages.yml`).
+    /// Quando blswiftsolutions.com estiver online, troque o `publicBase`.
+    private static let publicBase = "https://berglimma.github.io/HealhtFit"
+
+    static let privacyPolicyURL = URL(string: "\(publicBase)/privacidade/")!
+    static let termsOfUseURL = URL(string: "\(publicBase)/termos/")!
     static let developerNames = "Berg Limma e Luan Chiminelli"
     static let supportEmail = "berg.limma@gmail.com"
-    static let supportURL = URL(string: "mailto:\(supportEmail)")!
-    static let marketingURL = URL(string: "https://blswiftsolutions.com/healthfit")!
+    /// App Store exige URL https (não mailto) no campo Support URL.
+    static let supportURL = URL(string: "\(publicBase)/suporte/")!
+    static let marketingURL = URL(string: "\(publicBase)/")!
 }

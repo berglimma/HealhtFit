@@ -1,0 +1,48 @@
+HealthFit — App Review Notes (v1.0.0)
+
+BUNDLE
+- iOS: luan.com.healthfit.app
+- watchOS: luan.com.healthfit.app.watchkitapp
+- Version 1.0.0 / Build 1
+
+DEMO ACCOUNT
+No pre-seeded account required. On the review device:
+1) Tap Criar conta (email + password), OR
+2) Use Sign in with Apple.
+Complete the short profile prompts, then use the flows below.
+If the review team prefers a fixed account, contact berg.limma@gmail.com and we will provide credentials within a few hours.
+
+HOW TO TEST CORE FLOWS
+1. Onboarding → complete profile (gender, goal, modalities).
+2. Workouts tab → start a guided strength workout OR Cardio → Corrida / Luta.
+3. Nutrition tab → view meal plan; shopping list via cart icon.
+4. Assistant tab → ask a simple question (e.g. “Como melhorar meu sono?”).
+5. Profile → Meu plano → Restore purchases / view subscription tiers.
+6. Profile → Excluir conta is available (Guideline 5.1.1(v)).
+
+SUBSCRIPTIONS (StoreKit 2)
+- Group: HealthFit Plans
+- Product IDs:
+  healthfit.plan.basic.monthly
+  healthfit.plan.fit.monthly
+  healthfit.plan.ai.monthly
+  healthfit.plan.complete.monthly
+- Restore: Profile → Meu plano → Restaurar compras
+- Manage: Profile → Meu plano → Gerenciar na App Store
+- Terms & Privacy links are shown on the paywall.
+
+HEALTHKIT / LOCATION / MOTION
+- HealthKit: metrics and workout sync (user must grant permission).
+- Location: outdoor run/walk/bike/surf/kite maps only while using the app.
+- Motion: pedometer / activity state / climbing motion assist.
+- No third-party advertising; no cross-app tracking.
+
+CONTENT DISCLAIMER
+HealthFit provides informational fitness and nutrition guidance only. It does not provide medical diagnosis or replace a licensed professional.
+
+WATCH APP
+Companion app for live heart rate / calories / session control. Pair Apple Watch with the same Apple ID for best results. Review can be completed on iPhone alone.
+
+CONTACT
+berg.limma@gmail.com
+Support page: https://berglimma.github.io/HealhtFit/suporte/

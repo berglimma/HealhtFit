@@ -1,0 +1,9 @@
+First public release of HealthFit.
+
+• Strength, home, cardio, and meditation workouts
+• Advanced modalities: Surf, Kitesurf, Rowing, Climbing, and Combat sports
+• Meal plan, shopping list, and calorie goals
+• AI Assistant with check-ins and guidance
+• Apple Health + Apple Watch companion
+• Progress reports and body evolution
+• Optional subscription plans (Profile → My Plan)

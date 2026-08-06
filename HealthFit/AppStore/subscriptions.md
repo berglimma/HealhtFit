@@ -37,21 +37,23 @@ Arquivo local de teste: `HealthFit/Configuration/Products.storekit`
 | Planos + features | `Models/SubscriptionModels.swift` |
 | StoreKit 2 | `Services/SubscriptionService.swift` |
 | Paywall + Meu plano | `Views/Subscription/SubscriptionViews.swift` |
-| Gates on/off | `SubscriptionConfiguration.featureGatesEnabled` (default **off**) |
+| Gates on/off | `SubscriptionConfiguration.featureGatesEnabled` |
+| Features novas | `.advancedModalities` (Fit), `.advancedSportAnalytics` (IA+) |
+| UI lock | `.requiresSubscription(.feature)` em `SubscriptionViews.swift` |
 
-### Ativar bloqueios (fase seguinte)
+### Bloqueios na v1.0 (lançamento)
+
+Para o **primeiro review**, mantenha a app usável sem assinatura (evita rejeição por “feature quebrada”).  
+Ative os locks na **v1.1** (ver `ROADMAP.md`) após aprovação:
 
 ```swift
-SubscriptionConfiguration.featureGatesEnabled = true
-// ou UI DEBUG em Meu plano
-
 // Em uma tela:
 .requiresSubscription(.mealPlan)
 // ou
 if subscriptions.canAccess(.aiChatUnlimited) { ... }
 ```
 
-Sugestão de locks v1: `.mealPlan`, `.aiChatUnlimited`, `.monthlyReport`.
+Locks recomendados v1.1: `.advancedModalities`, `.mealPlan`, `.aiChatUnlimited`, `.monthlyReport`, `.advancedSportAnalytics`.
 
 ## Firebase (fase 4 — ainda não implementado)
 

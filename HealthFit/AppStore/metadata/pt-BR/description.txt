@@ -5,18 +5,24 @@ Treine com inteligência, acompanhe sua evolução e cuide da sua saúde em um s
 RECURSOS PRINCIPAIS
 • Treinos personalizados por biotipo e objetivo (hipertrofia, emagrecimento, manutenção)
 • GIFs demonstrativos para cada exercício
-• IAssistente com check-ins matinais e noturnos, dicas de suplementação e motivação diária
-• Plano alimentar semanal com lista de compras
-• Integração com Apple Health (frequência cardíaca, calorias, passos)
+• Cardio: corrida, caminhada, bike, natação e mais
+• Modalidades avançadas: Surf, Kitesurf, Remo, Escalada e Luta (cronômetro de combate)
+• IAssistente com check-ins, dicas e motivação diária
+• Plano alimentar com lista de compras
+• Integração com Apple Health (frequência cardíaca, calorias, passos, sono/HRV quando autorizado)
 • Cronômetro de descanso entre séries
-• Relatório semanal de progresso
-• Apple Watch companion
-• Notificações de água, treino e descanso
+• Relatórios de progresso e evolução corporal
+• Companion Apple Watch
+• Lembretes de água, treino e descanso
+• Planos opcionais (Básico, Fit, IA Plus, Completo) em Perfil → Meu plano
 
 PARA QUEM É
 Atletas iniciantes e intermediários que querem treinar com orientação, registrar evolução e manter consistência — com ou sem personal trainer.
 
 IMPORTANTE
-O HealthFit oferece orientação informativa. Não substitui avaliação médica ou acompanhamento profissional. Consulte um médico antes de iniciar qualquer programa de exercícios.
+O HealthFit oferece orientação informativa. Não substitui avaliação médica, nutricionista ou acompanhamento profissional. Consulte um médico antes de iniciar qualquer programa de exercícios.
 
-Desenvolvido por BERG / LUAN.
+Privacidade: https://berglimma.github.io/HealhtFit/privacidade/
+Suporte: https://berglimma.github.io/HealhtFit/suporte/
+
+Desenvolvido por Berg Limma e Luan Chiminelli.

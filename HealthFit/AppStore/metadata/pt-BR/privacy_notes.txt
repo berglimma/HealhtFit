@@ -10,5 +10,5 @@ Dados coletados e finalidade (para o questionário App Privacy):
 Fotos de evolução: confidenciais, vinculadas à conta; exclusão com a conta e, quando o ciclo de evolução avança, exclusão automática das fotos do ciclo anterior conforme o app.
 Dados NÃO usados para rastreamento entre apps.
 Exclusão de conta disponível no app (Perfil → Excluir Conta).
-Política: https://blswiftsolutions.com/healthfit/privacidade
+Política: https://berglimma.github.io/HealhtFit/privacidade/
 Contato: berg.limma@gmail.com

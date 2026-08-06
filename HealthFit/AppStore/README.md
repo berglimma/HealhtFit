@@ -1,40 +1,53 @@
 # App Store Connect — HealthFit
 
-Metadados por idioma em `metadata/`:
+Pacote de publicação v1.0. Comece por **[SUBMISSION_CHECKLIST.md](./SUBMISSION_CHECKLIST.md)** e o **[ROADMAP.md](./ROADMAP.md)**.
 
-| Locale | Pasta | Idioma |
-|--------|-------|--------|
-| Português (Brasil) | `pt-BR/` | padrão |
-| English (U.S.) | `en-US/` | inglês |
-| Español (España) | `es-ES/` | espanhol |
-| Français (France) | `fr-FR/` | francês |
+## Documentos deste pacote
 
-Copie cada pasta para a localização correspondente na ficha do app no App Store Connect.
+| Arquivo | Uso |
+|---------|-----|
+| [SUBMISSION_CHECKLIST.md](./SUBMISSION_CHECKLIST.md) | Passo a passo até o Submit |
+| [ROADMAP.md](./ROADMAP.md) | Roadmap v1 → v2 |
+| [review_notes.txt](./review_notes.txt) | Colar em App Review Information |
+| [APP_PRIVACY.md](./APP_PRIVACY.md) | Questionário App Privacy |
+| [AGE_RATING.md](./AGE_RATING.md) | Classificação etária |
+| [SCREENSHOTS_GUIDE.md](./SCREENSHOTS_GUIDE.md) | Capturas obrigatórias |
+| [subscriptions.md](./subscriptions.md) | Product IDs e StoreKit |
 
-## Campos por pasta
+## Metadados por idioma (`metadata/`)
+
+| Locale | Pasta |
+|--------|-------|
+| Português (Brasil) | `pt-BR/` |
+| English (U.S.) | `en-US/` |
+| Español (España) | `es-ES/` |
+| Français (France) | `fr-FR/` |
+
+### Campos por pasta
 
 | Campo | Arquivo |
 |-------|---------|
 | Nome | `name.txt` |
 | Subtítulo | `subtitle.txt` |
 | Descrição | `description.txt` |
+| Texto promocional | `promotional_text.txt` |
+| Novidades | `whatsnew.txt` |
 | Palavras-chave | `keywords.txt` |
 | URL de suporte | `support_url.txt` |
 | URL de marketing | `marketing_url.txt` |
 | Política de privacidade | `privacy_url.txt` |
 | Notas App Privacy | `privacy_notes.txt` |
 
-## Localização no app (código)
+## URLs públicas (obrigatórias no review)
 
-- Catálogo: `HealthFit/Resources/Localizable.xcstrings` (`pt-BR`, `en`, `es`, `fr`)
-- Permissões Info.plist: `pt-BR.lproj/`, `en.lproj/`, `es.lproj/`, `fr.lproj/`
-- Helper: `Utilities/L10n.swift`
+Ative GitHub Pages: branch `main` → pasta `/docs`.
 
-Idioma do dispositivo do usuário define a UI. Conteúdo longo (IAssistente, catálogos de treino/cardápio) ainda está majoritariamente em português e pode ser expandido no catálogo aos poucos.
+- Marketing: https://berglimma.github.io/HealhtFit/
+- Privacidade: https://berglimma.github.io/HealhtFit/privacidade/
+- Termos: https://berglimma.github.io/HealhtFit/termos/
+- Suporte: https://berglimma.github.io/HealhtFit/suporte/
 
 ## Screenshots
-
-Organize em:
 
 ```
 AppStore/screenshots/pt-BR/iphone-6.7/
@@ -43,11 +56,14 @@ AppStore/screenshots/es-ES/iphone-6.7/
 AppStore/screenshots/fr-FR/iphone-6.7/
 ```
 
-## Checklist antes do envio mundial
+Ver [SCREENSHOTS_GUIDE.md](./SCREENSHOTS_GUIDE.md).
 
-- [ ] Preencher as 4 localizações no App Store Connect
-- [ ] Upload de screenshots por idioma (ou reutilizar as mesmas se a UI estiver localizada)
-- [ ] App Privacy + exclusão de conta
-- [ ] Testar idioma do sistema em inglês/espanhol/francês no simulador
-- [ ] `GoogleService-Info.plist` no build de release
-- [ ] Assinaturas: ver [subscriptions.md](./subscriptions.md)
+## Checklist rápido
+
+- [ ] Páginas legais no ar (GitHub Pages)
+- [ ] 4 localizações preenchidas no Connect
+- [ ] Screenshots 6.7"
+- [ ] App Privacy + Age Rating
+- [ ] Assinaturas + Paid Apps Agreement
+- [ ] Archive + Upload + Review Notes
+- [ ] Submit for Review

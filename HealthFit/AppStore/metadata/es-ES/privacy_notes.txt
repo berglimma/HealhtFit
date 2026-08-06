@@ -8,4 +8,4 @@ Datos recopilados y finalidad (para el cuestionario App Privacy):
 
 Los datos NO se usan para seguimiento entre apps.
 Eliminación de cuenta disponible en la app (Perfil → Eliminar cuenta).
-Política: https://blswiftsolutions.com/healthfit/privacidade
+Política: https://berglimma.github.io/HealhtFit/privacidade/

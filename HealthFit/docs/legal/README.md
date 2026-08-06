@@ -1,22 +1,19 @@
 # Hospedagem dos documentos legais
 
-Publique os arquivos desta pasta em URLs públicas **antes** de enviar o app à App Store.
-
-## URLs configuradas no app
+## URLs públicas (GitHub Pages — use estas na App Store)
 
 | Documento | URL |
 |-----------|-----|
-| Política de Privacidade | https://blswiftsolutions.com/healthfit/privacidade |
-| Termos de Uso | https://blswiftsolutions.com/healthfit/termos |
+| Marketing | https://berglimma.github.io/HealhtFit/ |
+| Política de Privacidade | https://berglimma.github.io/HealhtFit/privacidade/ |
+| Termos de Uso | https://berglimma.github.io/HealhtFit/termos/ |
+| Suporte | https://berglimma.github.io/HealhtFit/suporte/ |
 
-## Como publicar
+Fontes HTML: pasta `docs/healthfit/` na raiz do repositório (GitHub Pages → Deploy from branch `main` / folder `/docs`).
 
-1. Faça upload de `privacy-policy.html` e `terms-of-use.html` no servidor do domínio.
-2. Configure redirecionamentos ou renomeie conforme as URLs acima.
-3. Verifique que as páginas abrem sem login em Safari no iPhone.
-
-Alternativa: use [GitHub Pages](https://pages.github.com/) e atualize as URLs em `HealthFit/Configuration/AppLegalConfiguration.swift`.
+O domínio `blswiftsolutions.com` ainda retorna 403; quando estiver online, atualize `AppLegalConfiguration.swift` e os arquivos em `AppStore/metadata/*/`.
 
 ## App Store Connect
 
-Informe a URL da Política de Privacidade no campo **Privacy Policy URL** da ficha do app.
+Informe a URL da Política de Privacidade no campo **Privacy Policy URL**.
+Support URL deve ser **https** (não use `mailto:`).

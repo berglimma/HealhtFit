@@ -1,0 +1,9 @@
+Primeira versão pública do HealthFit.
+
+• Treinos de musculação, casa, cardio e meditação
+• Modalidades avançadas: Surf, Kitesurf, Remo, Escalada e Luta
+• Cardápio, lista de compras e metas calóricas
+• IAssistente com check-ins e orientação
+• Apple Health + companion Apple Watch
+• Relatórios de progresso e evolução corporal
+• Planos de assinatura opcionais (Perfil → Meu plano)
