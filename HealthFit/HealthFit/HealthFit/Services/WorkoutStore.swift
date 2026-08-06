@@ -13,6 +13,10 @@ final class WorkoutStore: ObservableObject {
     @Published var showActiveWorkoutConflictAlert = false
     /// Config da sessão de cardio ativa (persistida para retomar mapa / Encerrar).
     @Published private(set) var activeCardioConfig: CardioWorkoutConfig?
+    /// Config da meditação ativa (para hospedar UI quando iniciada no Watch ou no iPhone).
+    @Published private(set) var activeMeditationConfig: MeditationWorkoutConfig?
+    /// Sessão iniciada no Apple Watch (espelhada no iPhone).
+    @Published private(set) var sessionOriginatedFromWatch = false
     /// Vision AI / câmera aberta — o banner minimizado some para não cobrir os controles.
     @Published private(set) var isVisionCameraPresented = false
     /// Evita repetir a tela de motivação ao retomar o mesmo treino.
@@ -61,6 +65,8 @@ final class WorkoutStore: ObservableObject {
         isActiveWorkoutMinimized = false
         showActiveWorkoutConflictAlert = false
         activeCardioConfig = nil
+        activeMeditationConfig = nil
+        sessionOriginatedFromWatch = false
         isVisionCameraPresented = false
         hasShownStartMotivation = false
         hasBoundActiveWorkoutUI = false
@@ -409,6 +415,8 @@ final class WorkoutStore: ObservableObject {
         )
         activeSession = session
         activeCardioConfig = nil
+        activeMeditationConfig = nil
+        sessionOriginatedFromWatch = false
         let clampedStart: Int
         if sheet.exercises.isEmpty {
             clampedStart = 0
@@ -543,6 +551,8 @@ final class WorkoutStore: ObservableObject {
         )
         activeSession = session
         activeCardioConfig = config
+        activeMeditationConfig = nil
+        sessionOriginatedFromWatch = false
         currentExerciseIndex = 0
         replaceExerciseRecords([
             ExerciseSessionRecord(
@@ -572,6 +582,8 @@ final class WorkoutStore: ObservableObject {
         )
         activeSession = session
         activeCardioConfig = nil
+        activeMeditationConfig = config
+        sessionOriginatedFromWatch = false
         currentExerciseIndex = 0
         replaceExerciseRecords([
             ExerciseSessionRecord(
@@ -585,6 +597,197 @@ final class WorkoutStore: ObservableObject {
         scheduleAutoEnd(for: session)
         EveningTrainingNudgeService.handleActiveWorkoutStarted()
         return true
+    }
+
+    /// Espelha no iPhone um treino iniciado no Apple Watch pareado.
+    @discardableResult
+    func startSessionFromAppleWatch(
+        kind: String,
+        workoutName: String,
+        exerciseName: String,
+        targetSeconds: Int = 0,
+        waterSportMode: Bool = false,
+        isKitesurf: Bool = false,
+        swimmingMode: Bool = false,
+        topicIcon: String = "brain.head.profile",
+        colorName: String = "purple",
+        waterSetupModeName: String = "",
+        waterSetupBoardName: String = ""
+    ) -> Bool {
+        // Já espelhando a mesma sessão (títulos do Watch e do iPhone podem diferir levemente)
+        if let active = activeSession {
+            let title = active.workoutTitle
+            let sameTitle = title == workoutName
+                || title.localizedCaseInsensitiveContains(workoutName)
+                || workoutName.localizedCaseInsensitiveContains(title)
+            let sameExercise = !exerciseName.isEmpty
+                && title.localizedCaseInsensitiveContains(exerciseName)
+            if sameTitle || sameExercise {
+                sessionOriginatedFromWatch = true
+                return true
+            }
+        }
+
+        guard ensureCanStartNewSession() else { return false }
+
+        let started: Bool
+        switch kind {
+        case "cardio":
+            started = startWatchMirroredCardio(
+                exerciseName: exerciseName,
+                waterSportMode: waterSportMode,
+                isKitesurf: isKitesurf,
+                swimmingMode: swimmingMode,
+                modeName: waterSetupModeName,
+                boardName: waterSetupBoardName
+            )
+        case "meditation":
+            started = startWatchMirroredMeditation(
+                topicName: exerciseName,
+                targetSeconds: targetSeconds,
+                topicIcon: topicIcon,
+                colorName: colorName
+            )
+        default:
+            started = startWatchMirroredStrength(
+                workoutName: workoutName,
+                exerciseName: exerciseName
+            )
+        }
+
+        if started {
+            sessionOriginatedFromWatch = true
+            // Abre a UI no iPhone (não deixar minimizado ao iniciar no Watch)
+            isActiveWorkoutMinimized = false
+        }
+        return started
+    }
+
+    /// Encerra a sessão espelhada quando o Watch finaliza (sem forçar resumo na UI local).
+    func endSessionMirroredFromWatch() {
+        guard activeSession != nil else {
+            sessionOriginatedFromWatch = false
+            return
+        }
+        endSession()
+        sessionOriginatedFromWatch = false
+    }
+
+    private func startWatchMirroredStrength(workoutName: String, exerciseName: String) -> Bool {
+        if let sheet = workoutSheets.first(where: { $0.title == workoutName }) {
+            return startSession(for: sheet, tookPreWorkout: false)
+        }
+
+        let exercise = Exercise(
+            name: exerciseName.isEmpty ? "Treino" : exerciseName,
+            sets: 3,
+            reps: 12,
+            notes: "Iniciado no Apple Watch"
+        )
+        let sheet = WorkoutSheet(
+            title: workoutName.isEmpty ? "Treino (Watch)" : workoutName,
+            description: "Sessão iniciada no Apple Watch",
+            exercises: [exercise],
+            isUserCreated: false
+        )
+        // Garante look-up em `activeStrengthSheet` / host da UI
+        if !workoutSheets.contains(where: { $0.id == sheet.id }) {
+            workoutSheets.append(sheet)
+            saveData()
+        }
+        return startSession(for: sheet, tookPreWorkout: false)
+    }
+
+    private func startWatchMirroredCardio(
+        exerciseName: String,
+        waterSportMode: Bool,
+        isKitesurf: Bool,
+        swimmingMode: Bool,
+        modeName: String = "",
+        boardName: String = ""
+    ) -> Bool {
+        let exercise = CardioExercise.catalog.first {
+            $0.name.caseInsensitiveCompare(exerciseName) == .orderedSame
+        } ?? CardioExercise.catalog.first {
+            exerciseName.localizedCaseInsensitiveContains($0.name)
+        } ?? CardioExercise(
+            name: exerciseName.isEmpty ? "Corrida" : exerciseName,
+            description: "Iniciado no Apple Watch",
+            icon: swimmingMode ? "figure.pool.swim" : (waterSportMode ? "figure.surfing" : "figure.run"),
+            caloriesPerMinute: 10
+        )
+
+        let setup: WaterSportSetup? = {
+            guard waterSportMode || exercise.isWaterSport else { return nil }
+            let isKite = isKitesurf || exercise.isKitesurf
+            if isKite {
+                var s = WaterSportSetup.defaultKite()
+                if let mode = KiteRidingMode(rawValue: modeName) {
+                    s.ridingMode = mode
+                } else if !modeName.isEmpty {
+                    s.ridingMode = KiteRidingMode.allCases.first {
+                        $0.rawValue.caseInsensitiveCompare(modeName) == .orderedSame
+                    } ?? s.ridingMode
+                }
+                if let board = WaterBoardCatalog.kiteBoards.first(where: {
+                    $0.rawValue.localizedCaseInsensitiveContains(boardName)
+                        || boardName.localizedCaseInsensitiveContains($0.rawValue)
+                }) {
+                    s.boardType = board
+                }
+                return s
+            } else {
+                var s = WaterSportSetup.defaultSurf()
+                if let board = WaterBoardCatalog.surfBoards.first(where: {
+                    $0.rawValue.caseInsensitiveCompare(modeName) == .orderedSame
+                        || modeName.localizedCaseInsensitiveContains($0.rawValue)
+                }) {
+                    s.boardType = board
+                }
+                return s
+            }
+        }()
+
+        let config = CardioWorkoutConfig(
+            exercise: exercise,
+            intensity: .medium,
+            runningDistance: nil,
+            targetCalories: nil,
+            isFreeRun: true,
+            poolLengthMeters: (swimmingMode || exercise.supportsSwimmingPool) ? 25 : nil,
+            targetSwimLaps: nil,
+            customTargetDistanceKm: nil,
+            waterSportSetup: setup
+        )
+        return startCardioSession(config: config)
+    }
+
+    private func startWatchMirroredMeditation(
+        topicName: String,
+        targetSeconds: Int,
+        topicIcon: String,
+        colorName: String
+    ) -> Bool {
+        let topic = MeditationTopic.catalog.first {
+            $0.name.caseInsensitiveCompare(topicName) == .orderedSame
+        } ?? MeditationTopic(
+            name: topicName.isEmpty ? "Meditação" : topicName,
+            description: "Iniciada no Apple Watch",
+            icon: topicIcon.isEmpty ? "brain.head.profile" : topicIcon,
+            colorName: colorName.isEmpty ? "purple" : colorName,
+            prompts: [
+                "Respire calmamente e esteja presente.",
+                "Mantenha o foco na respiração.",
+                "Quando a mente divagar, retorne sem julgamento.",
+                "Finalize a sessão com gratidão."
+            ]
+        )
+
+        let duration = MeditationDuration.allCases.min {
+            abs($0.seconds - max(targetSeconds, 300)) < abs($1.seconds - max(targetSeconds, 300))
+        } ?? .ten
+
+        return startMeditationSession(config: MeditationWorkoutConfig(topic: topic, duration: duration))
     }
 
     func completeExercise() {
@@ -798,6 +1001,8 @@ final class WorkoutStore: ObservableObject {
         }
         activeSession = nil
         activeCardioConfig = nil
+        activeMeditationConfig = nil
+        sessionOriginatedFromWatch = false
         currentExerciseIndex = 0
         exerciseRecords = []
         isExerciseTimerPaused = false

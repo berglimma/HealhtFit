@@ -10,6 +10,8 @@ struct ActiveMeditationView: View {
 
     let config: MeditationWorkoutConfig
     var onReturnToWorkoutList: (() -> Void)? = nil
+    /// Quando hospedada no MainTab (não como sheet), fecha o overlay.
+    var onHostClose: (() -> Void)? = nil
 
     @State private var elapsedSeconds = 0
     @State private var finishedSession: WorkoutSession?
@@ -96,16 +98,24 @@ struct ActiveMeditationView: View {
                 session: session,
                 onFinish: {
                     finishedSession = nil
-                    dismiss()
+                    closeMeditationHost()
                 },
                 onReturnToWorkoutList: {
                     onReturnToWorkoutList?()
                     finishedSession = nil
                     DispatchQueue.main.async {
-                        dismiss()
+                        closeMeditationHost()
                     }
                 }
             )
+        }
+    }
+
+    private func closeMeditationHost() {
+        if let onHostClose {
+            onHostClose()
+        } else {
+            dismiss()
         }
     }
 
@@ -202,7 +212,7 @@ struct ActiveMeditationView: View {
                last.autoEndedByInactivity {
                 finishedSession = last
             } else if finishedSession == nil {
-                dismiss()
+                closeMeditationHost()
             }
             return
         }

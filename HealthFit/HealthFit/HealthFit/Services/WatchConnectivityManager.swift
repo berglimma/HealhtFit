@@ -64,8 +64,15 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     @Published private(set) var watchSwimLapCount: Int = 0
     @Published private(set) var watchSwimDistanceMeters: Double = 0
     @Published private(set) var watchSwimLapTick: Int = 0
+    /// Pause enviado pelo Watch para a sessão espelhada.
+    @Published private(set) var isWatchSessionPaused = false
+    /// Incrementado quando o Watch encerra uma sessão que estava espelhada — o iPhone fecha o overlay.
+    @Published private(set) var watchForcedSessionCloseTick: Int = 0
 
     private var session: WCSession?
+    /// Store de treinos do iPhone — necessário para espelhar início no Watch.
+    private weak var workoutStore: WorkoutStore?
+    private var lastMirroredWatchStartAt: TimeInterval = 0
 
     private override init() {
         super.init()
@@ -74,6 +81,11 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             session = WCSession.default
             session?.delegate = self
         }
+    }
+
+    /// Liga o store da UI para treinos iniciados no Watch abrirem no iPhone.
+    func bind(workoutStore: WorkoutStore) {
+        self.workoutStore = workoutStore
     }
 
     /// Activates WatchConnectivity after the UI is interactive (cold launch).
@@ -338,6 +350,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         sendToWatch(message)
         publishWorkoutContext(message)
         isWorkoutActiveOnWatch = false
+        isWatchSessionPaused = false
         lastWorkoutName = ""
         clearWatchMetrics()
         refreshConnectionStatus()
@@ -605,16 +618,28 @@ extension WatchConnectivityManager: WCSessionDelegate {
             Task { _ = await attemptSyncWithWatch() }
         }
         if action == "watchStartedSession" {
-            isWorkoutActiveOnWatch = true
-            if let name = message["workoutName"] as? String {
-                lastWorkoutName = name
-            }
-            refreshConnectionStatus()
+            mirrorWatchStartedSession(message)
         }
         if action == "watchStoppedSession" {
             isWorkoutActiveOnWatch = false
+            isWatchSessionPaused = false
             lastWorkoutName = ""
             clearWatchMetrics()
+            refreshConnectionStatus()
+            if workoutStore?.sessionOriginatedFromWatch == true {
+                workoutStore?.endSessionMirroredFromWatch()
+                watchForcedSessionCloseTick += 1
+            }
+        }
+        if action == "watchPausedSession" {
+            isWatchSessionPaused = true
+            workoutStore?.setExerciseTimerPaused(true)
+            refreshConnectionStatus()
+        }
+        if action == "watchResumedSession" {
+            isWatchSessionPaused = false
+            isWorkoutActiveOnWatch = true
+            workoutStore?.setExerciseTimerPaused(false)
             refreshConnectionStatus()
         }
 
@@ -623,5 +648,67 @@ extension WatchConnectivityManager: WCSessionDelegate {
             calories: calories,
             steps: steps
         )
+    }
+
+    /// Abre no iPhone o treino/cardio/meditação iniciado no Apple Watch pareado.
+    private func mirrorWatchStartedSession(_ message: [String: Any]) {
+        isWorkoutActiveOnWatch = true
+        isWatchSessionPaused = false
+        if let name = message["workoutName"] as? String {
+            lastWorkoutName = name
+        }
+        refreshConnectionStatus()
+
+        let timestamp = (message["timestamp"] as? TimeInterval)
+            ?? (message["timestamp"] as? NSNumber)?.doubleValue
+            ?? Date().timeIntervalSince1970
+        // Evita processar a mesma mensagem duas vezes (sendMessage + transferUserInfo).
+        if abs(timestamp - lastMirroredWatchStartAt) < 1.5 {
+            return
+        }
+        lastMirroredWatchStartAt = timestamp
+
+        let kind = (message["kind"] as? String) ?? "strength"
+        let workoutName = (message["workoutName"] as? String) ?? lastWorkoutName
+        let exerciseName = (message["exerciseName"] as? String) ?? ""
+        let targetSeconds = (message["targetSeconds"] as? Int)
+            ?? (message["targetSeconds"] as? NSNumber)?.intValue
+            ?? 0
+        let waterMode = (message["waterSportMode"] as? Bool)
+            ?? ((message["waterSportMode"] as? NSNumber)?.boolValue ?? false)
+        let kite = (message["isKitesurf"] as? Bool)
+            ?? ((message["isKitesurf"] as? NSNumber)?.boolValue ?? false)
+        let swimMode = (message["swimmingMode"] as? Bool)
+            ?? ((message["swimmingMode"] as? NSNumber)?.boolValue ?? false)
+        let topicIcon = (message["topicIcon"] as? String) ?? "brain.head.profile"
+        let colorName = (message["colorName"] as? String) ?? "purple"
+
+        guard let workoutStore else {
+            #if DEBUG
+            print("[HealthFit] watchStartedSession sem WorkoutStore ligado — abra o app no iPhone")
+            #endif
+            return
+        }
+
+        let started = workoutStore.startSessionFromAppleWatch(
+            kind: kind,
+            workoutName: workoutName,
+            exerciseName: exerciseName,
+            targetSeconds: targetSeconds,
+            waterSportMode: waterMode,
+            isKitesurf: kite,
+            swimmingMode: swimMode,
+            topicIcon: topicIcon,
+            colorName: colorName,
+            waterSetupModeName: (message["waterSetupModeName"] as? String) ?? "",
+            waterSetupBoardName: (message["waterSetupBoardName"] as? String) ?? ""
+        )
+
+        if started {
+            NotificationService.shared.deliverWorkoutStartNotification(
+                workoutTitle: workoutName,
+                athleteName: "Atleta"
+            )
+        }
     }
 }

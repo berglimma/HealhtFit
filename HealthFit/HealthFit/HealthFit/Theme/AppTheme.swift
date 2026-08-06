@@ -29,7 +29,17 @@ enum AppInfo {
     static let developerName = AppLegalConfiguration.developerNames
     static let developerPeople = AppLegalConfiguration.developerNames
     static let developerCredit =
-        "Sistema HealthFit desenvolvido por \(AppLegalConfiguration.developerNames)"
+        "Desenvolvido por \(AppLegalConfiguration.developerNames)"
+
+    /// Versão exibida na aba Sobre (Marketing + build).
+    static var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+        if let build, !build.isEmpty, build != version {
+            return "\(version) (\(build))"
+        }
+        return version
+    }
 }
 
 struct CardModifier: ViewModifier {

@@ -88,7 +88,6 @@ struct SupportContactView: View {
         NavigationStack {
             List {
                 Section {
-                    LabeledContent("Desenvolvedores", value: AppLegalConfiguration.developerNames)
                     LabeledContent("E-mail", value: AppLegalConfiguration.supportEmail)
                 } footer: {
                     Text("Entre em contato para dúvidas, sugestões ou problemas com o HealthFit.")

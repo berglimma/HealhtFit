@@ -461,7 +461,7 @@ struct ActiveCardioView: View {
                         .foregroundStyle(AppTheme.textSecondary)
                 }
                 if isWaterSport, !jumpMetrics.jumps.isEmpty {
-                    Text("\(jumpMetrics.jumps.count) ponto(s) de salto no mapa")
+                    Text("\(jumpMetrics.jumps.count) salto(s) · curva subida/descida no mapa GPS")
                         .font(.caption2)
                         .foregroundStyle(AppTheme.textSecondary)
                 }

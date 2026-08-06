@@ -18,6 +18,38 @@ enum WatchCatalog {
         let isSwimming: Bool
     }
 
+    /// Modos de kitesurf (espelham o setup do iPhone / Surf).
+    struct WaterRideOption: Identifiable, Hashable {
+        let id: String
+        let name: String
+        let icon: String
+        let detail: String
+    }
+
+    static let kiteRidingModes: [WaterRideOption] = [
+        .init(id: "bigAir", name: "Big Air", icon: "arrow.up.to.line", detail: "Saltos e tempo de ar"),
+        .init(id: "speed", name: "Speed", icon: "gauge.with.dots.needle.67percent", detail: "Velocidade e percurso"),
+        .init(id: "coaching", name: "Coaching", icon: "person.badge.clock", detail: "Treino guiado"),
+        .init(id: "downwind", name: "Downwind", icon: "wind", detail: "Percurso a favor do vento")
+    ]
+
+    /// Pranchas de surf no Watch (mesmo espírito do setup Surf no iPhone).
+    static let surfBoards: [WaterRideOption] = [
+        .init(id: "shortboard", name: "Shortboard", icon: "figure.surfing", detail: "Performance"),
+        .init(id: "longboard", name: "Longboard", icon: "figure.surfing", detail: "Estabilidade"),
+        .init(id: "fish", name: "Fish", icon: "figure.surfing", detail: "Ondas pequenas"),
+        .init(id: "funboard", name: "Funboard", icon: "figure.surfing", detail: "Intermediário"),
+        .init(id: "softTop", name: "Soft top", icon: "figure.surfing", detail: "Iniciante")
+    ]
+
+    /// Pranchas kite — escolhas rápidas parecidas com o setup Surf.
+    static let kiteBoards: [WaterRideOption] = [
+        .init(id: "twinTip", name: "Twin Tip", icon: "rectangle.split.2x1", detail: "Freeride e saltos"),
+        .init(id: "directional", name: "Directional", icon: "wind", detail: "Rides direcionais"),
+        .init(id: "foil", name: "Foil Board", icon: "water.waves.and.arrow.up", detail: "Hydrofoil"),
+        .init(id: "strapless", name: "Strapless", icon: "wind", detail: "Sem straps")
+    ]
+
     struct MeditationTopic: Identifiable, Hashable {
         let id: String
         let name: String

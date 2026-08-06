@@ -678,10 +678,7 @@ struct ProfileView: View {
     private var aboutSection: some View {
         Section("Sobre") {
             LabeledContent("App", value: "HealthFit")
-            LabeledContent("Desenvolvedores", value: AppInfo.developerPeople)
-            Text(AppInfo.developerCredit)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            LabeledContent("Versão", value: AppInfo.appVersion)
         }
     }
 
@@ -701,6 +698,13 @@ struct ProfileView: View {
             Button("Excluir Conta", role: .destructive) {
                 showDeleteAccountSheet = true
             }
+        } footer: {
+            Text(AppInfo.developerCredit)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
+                .padding(.top, 10)
         }
     }
 

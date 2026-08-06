@@ -4,6 +4,7 @@ struct MainTabView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var workoutStore: WorkoutStore
+    @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var checkInService = PostWorkoutCheckInService.shared
     @ObservedObject private var dailyMorningService = DailyMorningCheckInService.shared
@@ -18,6 +19,8 @@ struct MainTabView: View {
     @State private var hostedActiveSheet: WorkoutSheet?
     /// Same Option A hosting for cardio/bike (keeps GPS map + tracker alive when minimized).
     @State private var hostedCardioConfig: CardioWorkoutConfig?
+    /// Meditação ativa (inclui sessão iniciada no Apple Watch).
+    @State private var hostedMeditationConfig: MeditationWorkoutConfig?
     /// Bumped to open the early-end sheet after resuming from the banner / conflict alert.
     @State private var openEarlyEndTick = 0
     /// Bumped to finish the hosted cardio session (summary + share card).
@@ -47,7 +50,7 @@ struct MainTabView: View {
     }
 
     private var canEndFromMinimizedBanner: Bool {
-        hostedActiveSheet != nil || hostedCardioConfig != nil
+        hostedActiveSheet != nil || hostedCardioConfig != nil || hostedMeditationConfig != nil
     }
 
     var body: some View {
@@ -160,6 +163,22 @@ struct MainTabView: View {
                 .accessibilityHidden(workoutStore.isActiveWorkoutMinimized)
                 .zIndex(workoutStore.isActiveWorkoutMinimized ? 0 : 3)
             }
+
+            if let meditation = hostedMeditationConfig {
+                ActiveMeditationView(
+                    config: meditation,
+                    onReturnToWorkoutList: {
+                        selectedTab = workoutsTabTag
+                    },
+                    onHostClose: {
+                        hostedMeditationConfig = nil
+                    }
+                )
+                .opacity(workoutStore.isActiveWorkoutMinimized ? 0 : 1)
+                .allowsHitTesting(!workoutStore.isActiveWorkoutMinimized)
+                .accessibilityHidden(workoutStore.isActiveWorkoutMinimized)
+                .zIndex(workoutStore.isActiveWorkoutMinimized ? 0 : 3)
+            }
         }
         .onAppear {
             KeyboardDismiss.hide()
@@ -192,6 +211,15 @@ struct MainTabView: View {
         }
         .onChange(of: workoutStore.activeCardioConfig?.title) { _, _ in
             syncActiveWorkoutHosting()
+        }
+        .onChange(of: workoutStore.activeMeditationConfig?.title) { _, _ in
+            syncActiveWorkoutHosting()
+        }
+        .onChange(of: watchConnectivity.watchForcedSessionCloseTick) { _, _ in
+            // Watch encerrou: fecha overlays (não há summary local nesse fluxo).
+            hostedActiveSheet = nil
+            hostedCardioConfig = nil
+            hostedMeditationConfig = nil
         }
         .onChange(of: authService.currentUser?.id) { _, _ in
             profileReminder.evaluate(for: authService.currentUser)
@@ -345,6 +373,9 @@ struct MainTabView: View {
             if hostedCardioConfig != nil {
                 hostedCardioConfig = nil
             }
+            if hostedMeditationConfig != nil {
+                hostedMeditationConfig = nil
+            }
             if hostedActiveSheet?.id != sheet.id {
                 hostedActiveSheet = sheet
             }
@@ -355,10 +386,27 @@ struct MainTabView: View {
             if hostedActiveSheet != nil {
                 hostedActiveSheet = nil
             }
+            if hostedMeditationConfig != nil {
+                hostedMeditationConfig = nil
+            }
             if hostedCardioConfig != config {
                 hostedCardioConfig = config
             }
             return
+        }
+
+        if let meditation = workoutStore.activeMeditationConfig,
+           let session = workoutStore.activeSession,
+           WeeklyProgressAnalyzer.isMeditationSession(session) {
+            if hostedActiveSheet != nil {
+                hostedActiveSheet = nil
+            }
+            if hostedCardioConfig != nil {
+                hostedCardioConfig = nil
+            }
+            if hostedMeditationConfig != meditation {
+                hostedMeditationConfig = meditation
+            }
         }
     }
 }

@@ -91,16 +91,45 @@ struct WatchContentView: View {
 
     private var cardioList: some View {
         List {
-            ForEach(WatchCatalog.cardioActivities) { activity in
-                NavigationLink {
-                    cardioDurationPicker(activity: activity)
-                } label: {
-                    Label(activity.name, systemImage: activity.icon)
-                        .font(.caption)
+            Section("Água · Surf / Kitesurf") {
+                ForEach(WatchCatalog.cardioActivities.filter(\.isWaterSport)) { activity in
+                    NavigationLink {
+                        waterSportStartView(activity: activity)
+                    } label: {
+                        Label(activity.name, systemImage: activity.icon)
+                            .font(.caption)
+                    }
+                }
+            }
+
+            Section("Cardio") {
+                ForEach(WatchCatalog.cardioActivities.filter { !$0.isWaterSport }) { activity in
+                    NavigationLink {
+                        if activity.isSwimming {
+                            cardioDurationPicker(activity: activity)
+                        } else {
+                            cardioDurationPicker(activity: activity)
+                        }
+                    } label: {
+                        Label(activity.name, systemImage: activity.icon)
+                            .font(.caption)
+                    }
                 }
             }
         }
         .navigationTitle("Cardio")
+    }
+
+    /// Setup estilo Surf para Surf e Kitesurf (mesmo fluxo, opções paralelas).
+    private func waterSportStartView(activity: WatchCatalog.CardioActivity) -> some View {
+        WaterSportWatchStartView(activity: activity) { mode, board in
+            workoutManager.beginLocalCardio(
+                activity,
+                targetSeconds: 0,
+                setupModeName: mode,
+                setupBoardName: board
+            )
+        }
     }
 
     private func cardioDurationPicker(activity: WatchCatalog.CardioActivity) -> some View {
@@ -166,40 +195,221 @@ struct WatchContentView: View {
 
     private var activeWorkoutRoot: some View {
         TabView {
-            activeWorkoutTab
-            metricsTab
+            activeMetricsPage
+            if workoutManager.isWaterSportMode {
+                waterSportStatsPage
+            }
+            sessionControlsPage
         }
         .tabViewStyle(.verticalPage)
     }
 
-    private var activeWorkoutTab: some View {
-        VStack(spacing: 10) {
-            Text(workoutManager.workoutName)
+    /// Página 1: cronômetro e métricas (sem botões empilhados).
+    private var activeMetricsPage: some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    Text(workoutManager.workoutName)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    if workoutManager.isPaused {
+                        Text("PAUSADO")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.orange.opacity(0.2))
+                            .clipShape(Capsule())
+                    }
+                }
+
+                if workoutManager.isResting {
+                    restSection
+                } else if workoutManager.isMeditationWorkout {
+                    meditationSection
+                } else if workoutManager.isCardioWorkout {
+                    cardioSection
+                } else {
+                    strengthSection
+                }
+
+                if !workoutManager.isMeditationWorkout {
+                    compactMetricsRow
+                }
+
+                Text("Deslize ↑ para Pausar / Encerrar")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 2)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+        }
+    }
+
+    /// Página dedicada — mesma experiência para Surf e Kitesurf (funções espelhadas).
+    private var waterSportStatsPage: some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                Label(
+                    workoutManager.isKitesurfMode ? "Kitesurf ao vivo" : "Surf ao vivo",
+                    systemImage: workoutManager.isKitesurfMode ? "wind" : "figure.surfing"
+                )
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.cyan)
+
+                if !workoutManager.waterSetupModeName.isEmpty || !workoutManager.waterSetupBoardName.isEmpty {
+                    VStack(spacing: 2) {
+                        if !workoutManager.waterSetupModeName.isEmpty {
+                            Text(workoutManager.isKitesurfMode
+                                 ? "Modo: \(workoutManager.waterSetupModeName)"
+                                 : "Prancha: \(workoutManager.waterSetupModeName)")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        if !workoutManager.waterSetupBoardName.isEmpty {
+                            Text(workoutManager.isKitesurfMode
+                                 ? "Prancha: \(workoutManager.waterSetupBoardName)"
+                                 : workoutManager.waterSetupBoardName)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .multilineTextAlignment(.center)
+                }
+
+                HStack(spacing: 10) {
+                    waterStat("\(workoutManager.waterJumpCount)", "saltos")
+                    waterStat(String(format: "%.1f", workoutManager.waterMaxJumpMeters), "m max")
+                    waterStat(String(format: "%.1f", workoutManager.waterLastJumpMeters), "último")
+                }
+
+                HStack(spacing: 10) {
+                    waterStat(String(format: "%.1f", workoutManager.waterLiveAccelG), "g")
+                    waterStat(
+                        String(format: "%+.1f", workoutManager.waterRelativeAltitude),
+                        "alt m"
+                    )
+                    waterStat("\(Int(workoutManager.heartRate))", "BPM")
+                }
+
+                Text(workoutManager.isKitesurfMode
+                     ? "Saltos: giroscópio + acelerômetro (como no Surf)"
+                     : "Sensores ativos · saltos automáticos e manuais")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                if !workoutManager.waterSensorStatus.isEmpty {
+                    Text(workoutManager.waterSensorStatus)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                if !workoutManager.lastAutoJumpNote.isEmpty {
+                    Text(workoutManager.lastAutoJumpNote)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.cyan)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                }
+
+                Button {
+                    workoutManager.markWaterSportJump()
+                } label: {
+                    Label("Marcar salto", systemImage: "hand.tap")
+                        .font(.caption2)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+                .disabled(workoutManager.isPaused)
+
+                Button {
+                    workoutManager.requestPhoneSyncFromWatch()
+                } label: {
+                    Label(
+                        workoutManager.isPhoneReachable
+                            ? "Sincronizar iPhone"
+                            : "Enviar p/ iPhone",
+                        systemImage: "iphone.and.arrow.forward"
+                    )
+                    .font(.caption2)
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                if !workoutManager.watchSyncStatus.isEmpty {
+                    Text(workoutManager.watchSyncStatus)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func waterStat(_ value: String, _ label: String) -> some View {
+        VStack(spacing: 1) {
+            Text(value)
+                .font(.title3.bold())
+            Text(label)
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Página de controles: Pausar e Encerrar em linha, sem sobreposição.
+    private var sessionControlsPage: some View {
+        VStack(spacing: 12) {
+            Spacer(minLength: 0)
+
+            Text(formatDuration(workoutManager.workoutElapsedSeconds))
+                .font(.system(size: 28, weight: .bold, design: .monospaced))
+                .foregroundStyle(workoutManager.isPaused ? .orange : .primary)
+
+            Text(workoutManager.isPaused ? "Sessão pausada" : "Sessão em andamento")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
 
-            if workoutManager.isResting {
-                restSection
-            } else if workoutManager.isMeditationWorkout {
-                meditationSection
-            } else if workoutManager.isCardioWorkout {
-                cardioSection
-            } else {
-                strengthSection
+            HStack(spacing: 8) {
+                Button {
+                    workoutManager.togglePause()
+                } label: {
+                    Label(
+                        workoutManager.isPaused ? "Retomar" : "Pausar",
+                        systemImage: workoutManager.isPaused ? "play.fill" : "pause.fill"
+                    )
+                    .font(.caption2.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(workoutManager.isPaused ? .green : .orange)
+
+                Button {
+                    workoutManager.stopWorkout()
+                } label: {
+                    Label("Encerrar", systemImage: "xmark")
+                        .font(.caption2.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
             }
 
-            if !workoutManager.isMeditationWorkout {
-                compactMetricsRow
-            }
-
-            Button("Encerrar") {
-                workoutManager.stopWorkout()
-            }
-            .tint(.red)
-            .font(.caption2)
+            Spacer(minLength: 0)
         }
-        .padding()
+        .padding(.horizontal, 8)
     }
 
     private var strengthSection: some View {
@@ -210,7 +420,7 @@ struct WatchContentView: View {
 
             Text(formatDuration(workoutManager.workoutElapsedSeconds))
                 .font(.system(size: 44, weight: .bold, design: .monospaced))
-                .foregroundStyle(.green)
+                .foregroundStyle(workoutManager.isPaused ? .yellow : .green)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
 
@@ -304,7 +514,7 @@ struct WatchContentView: View {
 
         return VStack(spacing: 6) {
             if workoutManager.isWaterSportMode {
-                waterSportCardioExtras
+                waterSportCompactChip
             }
             if workoutManager.isSwimmingMode {
                 swimmingCardioExtras
@@ -316,21 +526,24 @@ struct WatchContentView: View {
                     .foregroundStyle(.orange)
 
                 Text("\(Int(workoutManager.calories))")
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(workoutManager.calories >= Double(workoutManager.cardioTargetCalories) ? .orange : .primary)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
 
                 Text("de \(workoutManager.cardioTargetCalories) kcal")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
                 ProgressView(value: calorieProgress)
-                    .tint(workoutManager.calories >= Double(workoutManager.cardioTargetCalories) ? .orange : .orange.opacity(0.8))
+                    .tint(.orange)
 
                 if !workoutManager.cardioSuperationMessage.isEmpty {
                     Text(workoutManager.cardioSuperationMessage)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.orange)
                         .multilineTextAlignment(.center)
+                        .lineLimit(2)
                 }
             } else {
                 Label("Cronômetro", systemImage: "stopwatch.fill")
@@ -338,9 +551,9 @@ struct WatchContentView: View {
                     .foregroundStyle(.secondary)
 
                 Text(formatDuration(workoutManager.workoutElapsedSeconds))
-                    .font(.system(size: 44, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.orange)
-                    .minimumScaleFactor(0.7)
+                    .font(.system(size: 40, weight: .bold, design: .monospaced))
+                    .foregroundStyle(workoutManager.isPaused ? Color.yellow : Color.orange)
+                    .minimumScaleFactor(0.65)
                     .lineLimit(1)
 
                 if workoutManager.cardioTargetSeconds > 0 {
@@ -350,15 +563,11 @@ struct WatchContentView: View {
 
                     ProgressView(
                         value: Double(workoutManager.workoutElapsedSeconds),
-                        total: Double(workoutManager.cardioTargetSeconds)
+                        total: Double(max(workoutManager.cardioTargetSeconds, 1))
                     )
                     .tint(.orange)
                 }
             }
-
-            Text(formatDuration(workoutManager.workoutElapsedSeconds))
-                .font(.caption2.monospaced())
-                .foregroundStyle(.secondary)
 
             if !workoutManager.currentExerciseName.isEmpty {
                 Text(workoutManager.currentExerciseName)
@@ -369,13 +578,34 @@ struct WatchContentView: View {
         }
     }
 
+    /// Chip resumido na página de métricas; detalhe + sync ficam na página de água.
+    private var waterSportCompactChip: some View {
+        HStack(spacing: 6) {
+            Image(systemName: workoutManager.isKitesurfMode ? "wind" : "figure.surfing")
+            Text("\(workoutManager.waterJumpCount) saltos")
+            Text("·")
+            Text(String(format: "%.1f m", workoutManager.waterMaxJumpMeters))
+            if !workoutManager.waterSetupModeName.isEmpty {
+                Text("·")
+                Text(workoutManager.waterSetupModeName)
+                    .lineLimit(1)
+            }
+        }
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundStyle(.cyan)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.cyan.opacity(0.15))
+        .clipShape(Capsule())
+    }
+
     private var swimmingCardioExtras: some View {
         VStack(spacing: 4) {
             Label("Natação", systemImage: "figure.pool.swim")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.cyan)
 
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 VStack(spacing: 1) {
                     Text("\(workoutManager.swimLapCount)")
                         .font(.title3.bold())
@@ -403,61 +633,6 @@ struct WatchContentView: View {
                 .font(.system(size: 9))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-        }
-    }
-
-    private var waterSportCardioExtras: some View {
-        VStack(spacing: 6) {
-            Label(
-                workoutManager.isKitesurfMode ? "Kitesurf" : "Surf",
-                systemImage: workoutManager.isKitesurfMode
-                    ? "wind"
-                    : "figure.surfing"
-            )
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.cyan)
-
-            HStack(spacing: 10) {
-                VStack(spacing: 1) {
-                    Text("\(workoutManager.waterJumpCount)")
-                        .font(.title3.bold())
-                    Text("saltos")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.secondary)
-                }
-                VStack(spacing: 1) {
-                    Text(String(format: "%.1f", workoutManager.waterMaxJumpMeters))
-                        .font(.title3.bold())
-                    Text("m max")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.secondary)
-                }
-                VStack(spacing: 1) {
-                    Text(String(format: "%.1f", workoutManager.waterLiveAccelG))
-                        .font(.title3.bold())
-                    Text("g")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Button("Marcar salto") {
-                workoutManager.markWaterSportJump()
-            }
-            .tint(.orange)
-            .font(.caption2)
-
-            Button("Sincronizar") {
-                workoutManager.requestPhoneSyncFromWatch()
-            }
-            .font(.caption2)
-
-            if !workoutManager.watchSyncStatus.isEmpty {
-                Text(workoutManager.watchSyncStatus)
-                    .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
         }
     }
 
@@ -533,21 +708,120 @@ struct WatchContentView: View {
         return String(format: "%02d:%02d", minutes, secs)
     }
 
-    private var metricsTab: some View {
-        VStack(spacing: 8) {
-            Label(
-                workoutManager.isPhoneReachable ? "Sincronizado com iPhone" : "Sessão no Watch",
-                systemImage: workoutManager.isPhoneReachable
-                    ? "iphone.and.arrow.forward"
-                    : "applewatch"
-            )
-            .font(.caption)
-            Text("Treino, cardio e meditação podem ser iniciados no próprio relógio.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+}
+
+// MARK: - Setup Surf / Kitesurf (paridade com sessão Surf)
+
+/// Mesmo fluxo para Surf e Kitesurf: escolhe setup leve e inicia sessão livre.
+private struct WaterSportWatchStartView: View {
+    let activity: WatchCatalog.CardioActivity
+    let onStart: (_ modeName: String, _ boardName: String) -> Void
+
+    @State private var selectedMode: WatchCatalog.WaterRideOption?
+    @State private var selectedBoard: WatchCatalog.WaterRideOption?
+
+    private var modeOptions: [WatchCatalog.WaterRideOption] {
+        activity.isKitesurf ? WatchCatalog.kiteRidingModes : WatchCatalog.surfBoards
+    }
+
+    private var boardOptions: [WatchCatalog.WaterRideOption] {
+        activity.isKitesurf ? WatchCatalog.kiteBoards : []
+    }
+
+    private var modeSectionTitle: String {
+        activity.isKitesurf ? "Modo de velejo" : "Tipo de prancha"
+    }
+
+    var body: some View {
+        List {
+            Section {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label(activity.name, systemImage: activity.icon)
+                        .font(.headline)
+                        .foregroundStyle(.cyan)
+                    Text(activity.isKitesurf
+                          ? "Mesmas funções do Surf: saltos, sensores, sync iPhone, pausar e encerrar."
+                          : "Sessão livre com saltos opcionais (giroscópio) e sync com o iPhone.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Section(modeSectionTitle) {
+                ForEach(modeOptions) { option in
+                    Button {
+                        selectedMode = option
+                    } label: {
+                        HStack {
+                            Label(option.name, systemImage: option.icon)
+                                .font(.caption)
+                            Spacer()
+                            if selectedMode?.id == option.id {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.cyan)
+                                    .font(.caption)
+                            }
+                        }
+                    }
+                }
+                if selectedMode == nil {
+                    Text("Toque para escolher (opcional)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if activity.isKitesurf, !boardOptions.isEmpty {
+                Section("Prancha") {
+                    ForEach(boardOptions) { option in
+                        Button {
+                            selectedBoard = option
+                        } label: {
+                            HStack {
+                                Label(option.name, systemImage: option.icon)
+                                    .font(.caption)
+                                Spacer()
+                                if selectedBoard?.id == option.id {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.cyan)
+                                        .font(.caption)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Section {
+                Button {
+                    onStart(
+                        selectedMode?.name ?? (activity.isKitesurf ? "Big Air" : "Shortboard"),
+                        selectedBoard?.name ?? (activity.isKitesurf ? "Twin Tip" : "")
+                    )
+                } label: {
+                    Label(
+                        activity.isKitesurf ? "Iniciar Kitesurf" : "Iniciar Surf",
+                        systemImage: "play.fill"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                }
+                .tint(.cyan)
+            } footer: {
+                Text("Sessão livre · sensors de salto iguais ao Surf · métricas no iPhone pareado.")
+                    .font(.system(size: 10))
+            }
         }
-        .padding()
+        .navigationTitle(activity.name)
+        .onAppear {
+            if selectedMode == nil {
+                selectedMode = modeOptions.first
+            }
+            if activity.isKitesurf, selectedBoard == nil {
+                selectedBoard = boardOptions.first
+            }
+        }
     }
 }
 

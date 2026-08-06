@@ -1386,7 +1386,7 @@ struct WorkoutSummaryView: View {
                     .foregroundStyle(AppTheme.textSecondary)
             }
             if let jumps = session.waterSport?.jumps, !jumps.isEmpty {
-                Text("\(jumps.count) ponto(s) de salto no mapa")
+                Text("\(jumps.count) salto(s) · ciano = subida · laranja = descida (sobre o GPS)")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
             }

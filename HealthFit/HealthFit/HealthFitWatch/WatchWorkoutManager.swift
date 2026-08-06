@@ -35,16 +35,24 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var restOvertimeSeconds = 0
     @Published var isWaterSportMode = false
     @Published var isKitesurfMode = false
+    /// Rótulo de setup (modo kite / prancha surf) — espelha sessão Surf no iPhone.
+    @Published var waterSetupModeName = ""
+    @Published var waterSetupBoardName = ""
     @Published var waterJumpCount = 0
     @Published var waterMaxJumpMeters: Double = 0
     @Published var waterLiveAccelG: Double = 1
     @Published var waterLastJumpMeters: Double = 0
+    @Published var waterRelativeAltitude: Double = 0
+    @Published var waterSensorStatus = ""
     @Published var isSwimmingMode = false
     @Published var poolLengthMeters: Double = 25
     @Published var swimLapCount = 0
     @Published var swimDistanceMeters: Double = 0
     @Published var watchSyncStatus = ""
     @Published var isPhoneReachable = false
+    @Published var isPaused = false
+    /// Último salto detectado automaticamente (giroscópio / acelerômetro).
+    @Published var lastAutoJumpNote = ""
 
     private var session: WCSession?
     private var heartRateTimer: Timer?
@@ -57,10 +65,17 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var workoutStartedAt: Date?
     private var localMeditationPrompts: [String] = []
     private var meditationOwnedByWatch = false
+    /// Detecção de salto (motion + giroscópio do DeviceMotion).
+    private var isInAir = false
+    private var possibleTakeoffAltitude: Double?
+    private var possibleTakeoffTime: Date?
+    private var peakGDuringAir: Double = 1
+    private var peakGyroDuringAir: Double = 0
+    private var lastAutoJumpAt: Date = .distantPast
+    private var lastAccelSendAt: Date = .distantPast
     private let healthStore = HKHealthStore()
     private let motionManager = CMMotionManager()
     private var waterPeakG: Double = 1
-    private var waterRelativeAltitude: Double = 0
     private var waterBaselineAltitude: Double?
     private let altimeter = CMAltimeter()
     private var hkWorkoutSession: HKWorkoutSession?
@@ -106,7 +121,24 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     /// Inicia cardio escolhido no Watch (com duração alvo opcional).
     func beginLocalCardio(_ activity: WatchCatalog.CardioActivity, targetSeconds: Int) {
-        let title = "Cardio — \(activity.name)"
+        beginLocalCardio(
+            activity,
+            targetSeconds: targetSeconds,
+            setupModeName: "",
+            setupBoardName: ""
+        )
+    }
+
+    /// Inicia água (Surf / Kitesurf) com setup opcional — mesmo espírito da sessão Surf no iPhone.
+    func beginLocalCardio(
+        _ activity: WatchCatalog.CardioActivity,
+        targetSeconds: Int,
+        setupModeName: String,
+        setupBoardName: String
+    ) {
+        let title = activity.isWaterSport
+            ? "Cardio — \(activity.name)"
+            : "Cardio — \(activity.name)"
         startCardio(
             name: title,
             targetSeconds: targetSeconds,
@@ -115,7 +147,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             waterSportMode: activity.isWaterSport,
             isKitesurf: activity.isKitesurf,
             swimmingMode: activity.isSwimming,
-            poolLengthMeters: activity.isSwimming ? 25 : 25
+            poolLengthMeters: activity.isSwimming ? 25 : 25,
+            setupModeName: setupModeName,
+            setupBoardName: setupBoardName
         )
         notifyPhoneWatchStarted(
             kind: "cardio",
@@ -124,9 +158,49 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             targetSeconds: targetSeconds,
             waterSportMode: activity.isWaterSport,
             isKitesurf: activity.isKitesurf,
-            swimmingMode: activity.isSwimming
+            swimmingMode: activity.isSwimming,
+            waterSetupModeName: setupModeName,
+            waterSetupBoardName: setupBoardName
         )
         WKInterfaceDevice.current().play(.start)
+    }
+
+    func startCardio(
+        name: String,
+        targetSeconds: Int,
+        exerciseName: String,
+        targetCalories: Int = 0,
+        waterSportMode: Bool = false,
+        isKitesurf: Bool = false,
+        swimmingMode: Bool = false,
+        poolLengthMeters: Double = 25,
+        setupModeName: String = "",
+        setupBoardName: String = ""
+    ) {
+        resetWorkoutState()
+        meditationOwnedByWatch = false
+        localMeditationPrompts = []
+        workoutName = name
+        isCardioWorkout = true
+        isMeditationWorkout = false
+        isWaterSportMode = waterSportMode
+        isKitesurfMode = isKitesurf
+        isSwimmingMode = swimmingMode
+        self.poolLengthMeters = max(poolLengthMeters, 1)
+        cardioTargetSeconds = max(targetSeconds, 0)
+        cardioTargetCalories = max(targetCalories, 0)
+        currentExerciseName = exerciseName
+        waterSetupModeName = setupModeName
+        waterSetupBoardName = setupBoardName
+        isActive = true
+        startHeartRateMonitoring()
+        startWorkoutClock()
+        if waterSportMode {
+            startWaterSportMotion()
+        }
+        if swimmingMode {
+            startSwimmingWorkoutSession()
+        }
     }
 
     /// Inicia meditação escolhida no Watch.
@@ -152,40 +226,6 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             colorName: topic.colorName
         )
         WKInterfaceDevice.current().play(.start)
-    }
-
-    func startCardio(
-        name: String,
-        targetSeconds: Int,
-        exerciseName: String,
-        targetCalories: Int = 0,
-        waterSportMode: Bool = false,
-        isKitesurf: Bool = false,
-        swimmingMode: Bool = false,
-        poolLengthMeters: Double = 25
-    ) {
-        resetWorkoutState()
-        meditationOwnedByWatch = false
-        localMeditationPrompts = []
-        workoutName = name
-        isCardioWorkout = true
-        isMeditationWorkout = false
-        isWaterSportMode = waterSportMode
-        isKitesurfMode = isKitesurf
-        isSwimmingMode = swimmingMode
-        self.poolLengthMeters = max(poolLengthMeters, 1)
-        cardioTargetSeconds = max(targetSeconds, 0)
-        cardioTargetCalories = max(targetCalories, 0)
-        currentExerciseName = exerciseName
-        isActive = true
-        startHeartRateMonitoring()
-        startWorkoutClock()
-        if waterSportMode {
-            startWaterSportMotion()
-        }
-        if swimmingMode {
-            startSwimmingWorkoutSession()
-        }
     }
 
     func startMeditation(
@@ -218,23 +258,33 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         startWorkoutClock()
     }
 
-    /// Marca salto manual e envia altura estimada (altímetro relativo / acelerômetro).
+    /// Marca salto manual (backup). Preferência: detecção automática por sensores.
     func markWaterSportJump() {
-        guard isActive, isWaterSportMode else { return }
+        guard isActive, isWaterSportMode, !isPaused else { return }
         let height = max(0.4, max(waterRelativeAltitude * 0.9, estimatedHeightFromPeakG()))
         let peak = max(waterPeakG, waterLiveAccelG)
-        waterJumpCount += 1
-        waterLastJumpMeters = height
-        waterMaxJumpMeters = max(waterMaxJumpMeters, height)
-        waterPeakG = 1
-        WKInterfaceDevice.current().play(.click)
-        sendToPhone([
-            "action": "waterSportJump",
-            "heightMeters": height,
-            "peakG": peak,
-            "airtimeSeconds": 0.0,
-            "timestamp": Date().timeIntervalSince1970
-        ])
+        registerWaterJump(heightMeters: height, peakG: peak, airtime: nil, automatic: false)
+    }
+
+    func togglePause() {
+        guard isActive else { return }
+        isPaused.toggle()
+        if isPaused {
+            resetAirborneJumpState()
+            WKInterfaceDevice.current().play(.stop)
+            sendToPhone([
+                "action": "watchPausedSession",
+                "timestamp": Date().timeIntervalSince1970
+            ])
+            watchSyncStatus = "Pausado"
+        } else {
+            WKInterfaceDevice.current().play(.start)
+            sendToPhone([
+                "action": "watchResumedSession",
+                "timestamp": Date().timeIntervalSince1970
+            ])
+            watchSyncStatus = "Em andamento"
+        }
     }
 
     func requestPhoneSyncFromWatch() {
@@ -248,6 +298,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     func stopWorkout() {
         isActive = false
+        isPaused = false
         isCardioWorkout = false
         isMeditationWorkout = false
         meditationOwnedByWatch = false
@@ -296,8 +347,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         heartRate = 0
         workoutStartedAt = nil
         secondsSincePhoneSync = 0
+        isPaused = false
         isWaterSportMode = false
         isKitesurfMode = false
+        waterSetupModeName = ""
+        waterSetupBoardName = ""
         isSwimmingMode = false
         poolLengthMeters = 25
         swimLapCount = 0
@@ -310,7 +364,52 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         waterPeakG = 1
         waterRelativeAltitude = 0
         waterBaselineAltitude = nil
+        waterSensorStatus = ""
         watchSyncStatus = ""
+        lastAutoJumpNote = ""
+        resetAirborneJumpState()
+    }
+
+    private func resetAirborneJumpState() {
+        isInAir = false
+        possibleTakeoffAltitude = nil
+        possibleTakeoffTime = nil
+        peakGDuringAir = 1
+        peakGyroDuringAir = 0
+    }
+
+    private func registerWaterJump(
+        heightMeters: Double,
+        peakG: Double,
+        airtime: TimeInterval?,
+        automatic: Bool
+    ) {
+        let height = max(0.3, heightMeters)
+        let peak = max(1, peakG)
+        waterJumpCount += 1
+        waterLastJumpMeters = height
+        waterMaxJumpMeters = max(waterMaxJumpMeters, height)
+        waterPeakG = 1
+        if automatic {
+            lastAutoJumpNote = String(format: "Salto auto · %.1f m", height)
+            watchSyncStatus = lastAutoJumpNote
+        } else {
+            lastAutoJumpNote = String(format: "Salto manual · %.1f m", height)
+        }
+        WKInterfaceDevice.current().play(automatic ? .success : .click)
+        var payload: [String: Any] = [
+            "action": "waterSportJump",
+            "heightMeters": height,
+            "peakG": peak,
+            "timestamp": Date().timeIntervalSince1970,
+            "source": automatic ? "gyro" : "manual"
+        ]
+        if let airtime {
+            payload["airtimeSeconds"] = airtime
+        } else {
+            payload["airtimeSeconds"] = 0.0
+        }
+        sendToPhone(payload)
     }
 
     private func notifyPhoneWatchStarted(
@@ -322,7 +421,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isKitesurf: Bool = false,
         swimmingMode: Bool = false,
         topicIcon: String = "",
-        colorName: String = ""
+        colorName: String = "",
+        waterSetupModeName: String = "",
+        waterSetupBoardName: String = ""
     ) {
         var payload: [String: Any] = [
             "action": "watchStartedSession",
@@ -336,12 +437,20 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             payload["waterSportMode"] = waterSportMode
             payload["isKitesurf"] = isKitesurf
             payload["swimmingMode"] = swimmingMode
+            if !waterSetupModeName.isEmpty {
+                payload["waterSetupModeName"] = waterSetupModeName
+            }
+            if !waterSetupBoardName.isEmpty {
+                payload["waterSetupBoardName"] = waterSetupBoardName
+            }
         }
         if kind == "meditation" {
             payload["topicIcon"] = topicIcon
             payload["colorName"] = colorName
         }
         sendToPhone(payload)
+        // Métricas logo após o início (BPM/kcal).
+        sendMetricsToPhone()
         refreshPhoneReachability()
     }
 
@@ -361,7 +470,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     private func tickWorkoutClock() {
-        guard isActive else { return }
+        guard isActive, !isPaused else { return }
         secondsSincePhoneSync += 1
 
         guard secondsSincePhoneSync > 2, !isResting else { return }
@@ -592,6 +701,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     private func tickRest() {
+        guard !isPaused else { return }
         restElapsedSeconds += 1
 
         if restRemainingSeconds > 0 {
@@ -772,12 +882,17 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     private func sendToPhone(_ payload: [String: Any]) {
         guard let session else { return }
+        if session.activationState != .activated {
+            session.activate()
+        }
+        // transferUserInfo entrega mesmo com o iPhone em background / app fechado.
+        if session.activationState == .activated {
+            session.transferUserInfo(payload)
+        }
         if session.isReachable {
             session.sendMessage(payload, replyHandler: nil) { _ in
-                session.transferUserInfo(payload)
+                // Já enfileirado em transferUserInfo acima
             }
-        } else if session.activationState == .activated {
-            session.transferUserInfo(payload)
         }
     }
 
@@ -892,23 +1007,30 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         waterBaselineAltitude = nil
         waterRelativeAltitude = 0
         waterPeakG = 1
+        resetAirborneJumpState()
+        lastAutoJumpAt = .distantPast
+        lastAccelSendAt = .distantPast
+        lastAutoJumpNote = "Sensores de salto ativos"
+        waterSensorStatus = "Giroscópio + acelerômetro + altímetro"
         let motionBox = WeakMainActorBox(self)
         if motionManager.isDeviceMotionAvailable {
-            motionManager.deviceMotionUpdateInterval = 0.08
+            // ~20 Hz — acel. + giroscópio fundidos no DeviceMotion
+            motionManager.deviceMotionUpdateInterval = 0.05
             motionManager.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { data, _ in
                 guard let data else { return }
                 motionBox.run { this in
-                    let u = data.userAcceleration
-                    let mag = sqrt(u.x * u.x + u.y * u.y + u.z * u.z)
-                    this.waterLiveAccelG = max(0.1, mag)
-                    this.waterPeakG = max(this.waterPeakG, mag)
-                    if Int(Date().timeIntervalSince1970 * 10) % 5 == 0 {
-                        this.sendToPhone([
-                            "action": "waterSportAccel",
-                            "accelG": mag,
-                            "timestamp": Date().timeIntervalSince1970
-                        ])
-                    }
+                    this.handleWaterSportDeviceMotion(data)
+                }
+            }
+        } else if motionManager.isGyroAvailable {
+            // Fallback raro: só giroscópio
+            motionManager.gyroUpdateInterval = 0.05
+            motionManager.startGyroUpdates(to: .main) { data, _ in
+                guard let data else { return }
+                motionBox.run { this in
+                    let r = data.rotationRate
+                    let gyroMag = sqrt(r.x * r.x + r.y * r.y + r.z * r.z)
+                    this.evaluateWaterJump(accelG: max(1, this.waterLiveAccelG), gyroRadPerSec: gyroMag)
                 }
             }
         }
@@ -927,13 +1049,103 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
+    private func handleWaterSportDeviceMotion(_ data: CMDeviceMotion) {
+        let u = data.userAcceleration
+        let accelMag = sqrt(u.x * u.x + u.y * u.y + u.z * u.z)
+        // Giroscópio (rad/s) — rotação do pulso/corpo no salto
+        let r = data.rotationRate
+        let gyroMag = sqrt(r.x * r.x + r.y * r.y + r.z * r.z)
+
+        waterLiveAccelG = max(0.1, accelMag)
+        waterPeakG = max(waterPeakG, accelMag)
+
+        let now = Date()
+        if now.timeIntervalSince(lastAccelSendAt) >= 0.45 {
+            lastAccelSendAt = now
+            sendToPhone([
+                "action": "waterSportAccel",
+                "accelG": accelMag,
+                "gyroRadPerSec": gyroMag,
+                "timestamp": now.timeIntervalSince1970
+            ])
+        }
+
+        evaluateWaterJump(accelG: accelMag, gyroRadPerSec: gyroMag)
+    }
+
+    /// Detecta salto com acelerômetro + giroscópio (DeviceMotion).
+    private func evaluateWaterJump(accelG: Double, gyroRadPerSec: Double) {
+        guard isActive, isWaterSportMode, !isPaused else { return }
+
+        // Decolagem: pico de aceleração e/ou giroscópio ativo
+        let takeoffByAccel = accelG > 2.6
+        let takeoffByGyro = accelG > 1.7 && gyroRadPerSec > 3.2
+        if !isInAir, takeoffByAccel || takeoffByGyro {
+            isInAir = true
+            possibleTakeoffAltitude = waterRelativeAltitude
+            possibleTakeoffTime = .now
+            peakGDuringAir = accelG
+            peakGyroDuringAir = gyroRadPerSec
+            return
+        }
+
+        guard isInAir else { return }
+        peakGDuringAir = max(peakGDuringAir, accelG)
+        peakGyroDuringAir = max(peakGyroDuringAir, gyroRadPerSec)
+
+        // Pouso: acel. baixa de novo (queda “suavizada”)
+        if accelG < 0.55 {
+            finalizeAirborneJumpIfValid()
+        } else if let t0 = possibleTakeoffTime, Date().timeIntervalSince(t0) > 4.5 {
+            // Timeout aéreo — descarta ou finaliza se houve rotação forte
+            if peakGyroDuringAir > 4.0, peakGDuringAir > 2.2 {
+                finalizeAirborneJumpIfValid()
+            } else {
+                resetAirborneJumpState()
+            }
+        }
+    }
+
+    private func finalizeAirborneJumpIfValid() {
+        guard isInAir else { return }
+        let t0 = possibleTakeoffTime ?? .now
+        let air = Date().timeIntervalSince(t0)
+        let takeoffAlt = possibleTakeoffAltitude ?? waterRelativeAltitude
+        let heightFromAlt = max(0, waterRelativeAltitude - takeoffAlt)
+        let half = max(0.1, air / 2)
+        let heightFromAir = 0.5 * 9.81 * half * half
+        let heightFromG = max(0.3, (peakGDuringAir - 1.0) * 0.55)
+        let height = max(0.35, min(max(heightFromAlt, max(heightFromAir * 0.85, heightFromG)), 14))
+
+        defer { resetAirborneJumpState() }
+
+        // Mínimo de ar / cooldown anti-duplo
+        guard air >= 0.28 else { return }
+        guard Date().timeIntervalSince(lastAutoJumpAt) > 1.25 else { return }
+
+        // Exige evidência real de salto (não só tremor)
+        let looksLikeJump = heightFromAlt >= 0.35
+            || air >= 0.4
+            || (peakGDuringAir >= 2.8 && peakGyroDuringAir >= 2.5)
+        guard looksLikeJump else { return }
+
+        lastAutoJumpAt = .now
+        registerWaterJump(
+            heightMeters: height,
+            peakG: peakGDuringAir,
+            airtime: air,
+            automatic: true
+        )
+    }
+
     private func stopWaterSportMotion() {
         motionManager.stopDeviceMotionUpdates()
+        motionManager.stopGyroUpdates()
         altimeter.stopRelativeAltitudeUpdates()
+        resetAirborneJumpState()
     }
 
     private func estimatedHeightFromPeakG() -> Double {
-        // Proxy simples a partir de pico de aceleração (g)
         max(0.3, (waterPeakG - 1.0) * 0.55)
     }
 
@@ -942,6 +1154,15 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
         switch action {
         case "startWorkout":
+            // Já em treino no Watch (iniciado localmente): só espelha progresso do iPhone.
+            if isActive {
+                applyPhoneSync(
+                    workoutElapsedSeconds: message["workoutElapsedSeconds"] as? Int,
+                    exerciseElapsedSeconds: message["exerciseElapsedSeconds"] as? Int,
+                    exerciseName: message["exerciseName"] as? String
+                )
+                return
+            }
             meditationOwnedByWatch = false
             localMeditationPrompts = []
             let name = message["workoutName"] as? String ?? "Treino"
@@ -953,6 +1174,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 exerciseName: exerciseName
             )
         case "startCardio":
+            if isActive { return }
             meditationOwnedByWatch = false
             localMeditationPrompts = []
             let name = message["workoutName"] as? String ?? "Cardio"
@@ -1017,6 +1239,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
             watchSyncStatus = "Dados do iPhone"
         case "startMeditation":
+            if isActive { return }
             meditationOwnedByWatch = false
             localMeditationPrompts = []
             startMeditation(

@@ -47,11 +47,15 @@ struct HealthFitApp: App {
                 .onOpenURL { url in
                     _ = SocialSignInService.handleIncomingURL(url)
                 }
+                .onAppear {
+                    watchConnectivity.bind(workoutStore: workoutStore)
+                }
                 .task(priority: .utility) {
                     await Task.yield()
                     try? await Task.sleep(nanoseconds: 800_000_000)
                     NotificationService.shared.requestAuthorization()
                     watchConnectivity.ensureSessionActivated()
+                    watchConnectivity.bind(workoutStore: workoutStore)
                     // StoreKit products only after first UI frames — not during install/login paint.
                     await SubscriptionService.shared.refreshIfNeeded()
                 }
