@@ -308,12 +308,13 @@ struct SurfKiteLogbookView: View {
                     userCoordinate: session.routePoints.last?.coordinate ?? w?.spot?.coordinate,
                     followUser: false,
                     showsUserLocation: false,
-                    height: 180,
+                    height: 220,
                     performanceMetric: .speed,
                     jumpEvents: w?.jumps ?? [],
                     allows3DMode: true,
                     spotCoordinate: w?.spot?.coordinate,
-                    spotTitle: w?.spot?.name
+                    spotTitle: w?.spot?.name,
+                    prefers3DInitially: session.routePoints.count >= 2
                 )
             }
         }

@@ -4,6 +4,167 @@ struct WatchContentView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
 
     var body: some View {
+        Group {
+            if workoutManager.isActive {
+                activeWorkoutRoot
+            } else {
+                NavigationStack {
+                    homeMenu
+                }
+            }
+        }
+    }
+
+    // MARK: - Menu principal
+
+    private var homeMenu: some View {
+        List {
+            Section {
+                VStack(spacing: 6) {
+                    Image(systemName: "heart.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.green)
+                    Text("HealthFit")
+                        .font(.headline)
+                    Text("Escolha o que fazer")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .listRowBackground(Color.clear)
+            }
+
+            Section("Iniciar") {
+                NavigationLink {
+                    strengthList
+                } label: {
+                    Label("Treinos", systemImage: "dumbbell.fill")
+                }
+
+                NavigationLink {
+                    cardioList
+                } label: {
+                    Label("Cardio", systemImage: "figure.run")
+                }
+
+                NavigationLink {
+                    meditationList
+                } label: {
+                    Label("Meditação", systemImage: "brain.head.profile")
+                }
+            }
+
+            Section {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label(
+                        workoutManager.isPhoneReachable ? "iPhone conectado" : "Modo solo no relógio",
+                        systemImage: workoutManager.isPhoneReachable
+                            ? "iphone.and.arrow.forward"
+                            : "applewatch"
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(workoutManager.isPhoneReachable ? .green : .secondary)
+                    Text("Você pode iniciar treinos mesmo sem o iPhone. BPM e kcal usam o Watch.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .navigationTitle("HealthFit")
+    }
+
+    // MARK: - Listas
+
+    private var strengthList: some View {
+        List {
+            ForEach(WatchCatalog.strengthPrograms) { program in
+                Button {
+                    workoutManager.beginLocalStrength(program)
+                } label: {
+                    Label(program.title, systemImage: program.icon)
+                        .font(.caption)
+                }
+            }
+        }
+        .navigationTitle("Treinos")
+    }
+
+    private var cardioList: some View {
+        List {
+            ForEach(WatchCatalog.cardioActivities) { activity in
+                NavigationLink {
+                    cardioDurationPicker(activity: activity)
+                } label: {
+                    Label(activity.name, systemImage: activity.icon)
+                        .font(.caption)
+                }
+            }
+        }
+        .navigationTitle("Cardio")
+    }
+
+    private func cardioDurationPicker(activity: WatchCatalog.CardioActivity) -> some View {
+        List {
+            Section {
+                Text(activity.name)
+                    .font(.headline)
+                Text("Duração alvo (opcional — livre se não escolher)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Duração") {
+                Button("Livre (sem meta de tempo)") {
+                    workoutManager.beginLocalCardio(activity, targetSeconds: 0)
+                }
+                .font(.caption)
+
+                ForEach(WatchCatalog.DurationOption.allCases) { option in
+                    Button(option.label) {
+                        workoutManager.beginLocalCardio(activity, targetSeconds: option.seconds)
+                    }
+                    .font(.caption)
+                }
+            }
+        }
+        .navigationTitle(activity.name)
+    }
+
+    private var meditationList: some View {
+        List {
+            ForEach(WatchCatalog.meditationTopics) { topic in
+                NavigationLink {
+                    meditationDurationPicker(topic: topic)
+                } label: {
+                    Label(topic.name, systemImage: topic.icon)
+                        .font(.caption)
+                }
+            }
+        }
+        .navigationTitle("Meditação")
+    }
+
+    private func meditationDurationPicker(topic: WatchCatalog.MeditationTopic) -> some View {
+        List {
+            Section {
+                Text(topic.name)
+                    .font(.headline)
+            }
+            Section("Duração") {
+                ForEach([WatchCatalog.DurationOption.five, .ten, .fifteen, .twenty], id: \.id) { option in
+                    Button(option.label) {
+                        workoutManager.beginLocalMeditation(topic, targetSeconds: option.seconds)
+                    }
+                    .font(.caption)
+                }
+            }
+        }
+        .navigationTitle(topic.name)
+    }
+
+    // MARK: - Sessão ativa
+
+    private var activeWorkoutRoot: some View {
         TabView {
             activeWorkoutTab
             metricsTab
@@ -13,42 +174,30 @@ struct WatchContentView: View {
 
     private var activeWorkoutTab: some View {
         VStack(spacing: 10) {
-            if workoutManager.isActive {
-                Text(workoutManager.workoutName)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-
-                if workoutManager.isResting {
-                    restSection
-                } else if workoutManager.isMeditationWorkout {
-                    meditationSection
-                } else if workoutManager.isCardioWorkout {
-                    cardioSection
-                } else {
-                    strengthSection
-                }
-
-                if !workoutManager.isMeditationWorkout {
-                    compactMetricsRow
-                }
-
-                Button("Encerrar") {
-                    workoutManager.stopWorkout()
-                }
-                .tint(.red)
+            Text(workoutManager.workoutName)
                 .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            if workoutManager.isResting {
+                restSection
+            } else if workoutManager.isMeditationWorkout {
+                meditationSection
+            } else if workoutManager.isCardioWorkout {
+                cardioSection
             } else {
-                Image(systemName: "heart.circle.fill")
-                    .font(.largeTitle)
-                    .foregroundStyle(.green)
-                Text("HealthFit")
-                    .font(.headline)
-                Text("Aguardando treino do iPhone")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                strengthSection
             }
+
+            if !workoutManager.isMeditationWorkout {
+                compactMetricsRow
+            }
+
+            Button("Encerrar") {
+                workoutManager.stopWorkout()
+            }
+            .tint(.red)
+            .font(.caption2)
         }
         .padding()
     }
@@ -265,8 +414,8 @@ struct WatchContentView: View {
                     ? "wind"
                     : "figure.surfing"
             )
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.cyan)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.cyan)
 
             HStack(spacing: 10) {
                 VStack(spacing: 1) {
@@ -386,9 +535,14 @@ struct WatchContentView: View {
 
     private var metricsTab: some View {
         VStack(spacing: 8) {
-            Label("Sincronizado", systemImage: "iphone.and.arrow.forward")
-                .font(.caption)
-            Text("Treino, cardio, meditação e cronômetro sincronizados com o iPhone.")
+            Label(
+                workoutManager.isPhoneReachable ? "Sincronizado com iPhone" : "Sessão no Watch",
+                systemImage: workoutManager.isPhoneReachable
+                    ? "iphone.and.arrow.forward"
+                    : "applewatch"
+            )
+            .font(.caption)
+            Text("Treino, cardio e meditação podem ser iniciados no próprio relógio.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

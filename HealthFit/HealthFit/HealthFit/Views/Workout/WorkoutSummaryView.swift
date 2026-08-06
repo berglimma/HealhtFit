@@ -1359,12 +1359,13 @@ struct WorkoutSummaryView: View {
                 userCoordinate: session.routePoints.last?.coordinate ?? waterSpotCoordinate,
                 followUser: false,
                 showsUserLocation: false,
-                height: session.isWaterSportSession ? 260 : 220,
+                height: session.isWaterSportSession || session.isOutdoorGPSCardio ? 300 : 260,
                 performanceMetric: session.routePerformanceMetric,
                 jumpEvents: session.waterSport?.jumps ?? [],
-                allows3DMode: session.isWaterSportSession,
+                allows3DMode: true,
                 spotCoordinate: waterSpotCoordinate,
-                spotTitle: session.waterSport?.spot?.name
+                spotTitle: session.waterSport?.spot?.name,
+                prefers3DInitially: session.routePoints.count >= 2
             )
 
             if session.routePoints.count >= 2 {

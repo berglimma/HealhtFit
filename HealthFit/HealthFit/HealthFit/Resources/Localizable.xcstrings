@@ -346,6 +346,12 @@
     "3D" : {
 
     },
+    "3D: percurso no terreno" : {
+
+    },
+    "3D: vista inclinada do local" : {
+
+    },
     "4. SPOT de partida" : {
 
     },
@@ -2510,7 +2516,7 @@
     "Modo de velejo" : {
 
     },
-    "Modo do mapa" : {
+    "Modo do mapa — 2D ou 3D com percurso" : {
 
     },
     "Modo perda de gordura: opções restritivas com baixo carboidrato e sem frituras." : {

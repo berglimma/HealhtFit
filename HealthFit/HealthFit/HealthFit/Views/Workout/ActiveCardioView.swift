@@ -441,12 +441,13 @@ struct ActiveCardioView: View {
                         ?? config.waterSportSetup?.spot.coordinate,
                     followUser: true,
                     showsUserLocation: true,
-                    height: isWaterSport ? 280 : 240,
+                    height: isWaterSport ? 300 : 260,
                     performanceMetric: config.routePerformanceMetric,
                     jumpEvents: isWaterSport ? jumpMetrics.jumps : [],
-                    allows3DMode: isWaterSport,
+                    allows3DMode: true,
                     spotCoordinate: isWaterSport ? config.waterSportSetup?.spot.coordinate : nil,
-                    spotTitle: isWaterSport ? config.waterSportSetup?.spot.name : nil
+                    spotTitle: isWaterSport ? config.waterSportSetup?.spot.name : nil,
+                    prefers3DInitially: false
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)

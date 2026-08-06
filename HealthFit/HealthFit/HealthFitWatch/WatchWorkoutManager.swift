@@ -44,6 +44,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var swimLapCount = 0
     @Published var swimDistanceMeters: Double = 0
     @Published var watchSyncStatus = ""
+    @Published var isPhoneReachable = false
 
     private var session: WCSession?
     private var heartRateTimer: Timer?
@@ -54,6 +55,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var secondsSincePhoneSync = 0
     private var hasSentRestOvertimeNotification = false
     private var workoutStartedAt: Date?
+    private var localMeditationPrompts: [String] = []
+    private var meditationOwnedByWatch = false
     private let healthStore = HKHealthStore()
     private let motionManager = CMMotionManager()
     private var waterPeakG: Double = 1
@@ -79,6 +82,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     func startWorkout(name: String, exerciseName: String = "") {
         resetWorkoutState()
+        meditationOwnedByWatch = false
+        localMeditationPrompts = []
         workoutName = name
         currentExerciseName = exerciseName
         isCardioWorkout = false
@@ -86,6 +91,67 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isActive = true
         startHeartRateMonitoring()
         startWorkoutClock()
+    }
+
+    /// Inicia programa de musculação/casa/mobilidade escolhido no Watch.
+    func beginLocalStrength(_ program: WatchCatalog.StrengthProgram) {
+        startWorkout(name: program.title, exerciseName: program.firstExercise)
+        notifyPhoneWatchStarted(
+            kind: "strength",
+            workoutName: program.title,
+            exerciseName: program.firstExercise
+        )
+        WKInterfaceDevice.current().play(.start)
+    }
+
+    /// Inicia cardio escolhido no Watch (com duração alvo opcional).
+    func beginLocalCardio(_ activity: WatchCatalog.CardioActivity, targetSeconds: Int) {
+        let title = "Cardio — \(activity.name)"
+        startCardio(
+            name: title,
+            targetSeconds: targetSeconds,
+            exerciseName: activity.name,
+            targetCalories: 0,
+            waterSportMode: activity.isWaterSport,
+            isKitesurf: activity.isKitesurf,
+            swimmingMode: activity.isSwimming,
+            poolLengthMeters: activity.isSwimming ? 25 : 25
+        )
+        notifyPhoneWatchStarted(
+            kind: "cardio",
+            workoutName: title,
+            exerciseName: activity.name,
+            targetSeconds: targetSeconds,
+            waterSportMode: activity.isWaterSport,
+            isKitesurf: activity.isKitesurf,
+            swimmingMode: activity.isSwimming
+        )
+        WKInterfaceDevice.current().play(.start)
+    }
+
+    /// Inicia meditação escolhida no Watch.
+    func beginLocalMeditation(_ topic: WatchCatalog.MeditationTopic, targetSeconds: Int) {
+        localMeditationPrompts = topic.prompts
+        meditationOwnedByWatch = true
+        startMeditation(
+            name: "Meditação — \(topic.name)",
+            targetSeconds: targetSeconds,
+            topicName: topic.name,
+            topicIcon: topic.icon,
+            colorName: topic.colorName,
+            currentPrompt: topic.prompts.first ?? "",
+            promptIndex: 0,
+            totalPrompts: max(topic.prompts.count, 1)
+        )
+        notifyPhoneWatchStarted(
+            kind: "meditation",
+            workoutName: "Meditação — \(topic.name)",
+            exerciseName: topic.name,
+            targetSeconds: targetSeconds,
+            topicIcon: topic.icon,
+            colorName: topic.colorName
+        )
+        WKInterfaceDevice.current().play(.start)
     }
 
     func startCardio(
@@ -99,6 +165,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         poolLengthMeters: Double = 25
     ) {
         resetWorkoutState()
+        meditationOwnedByWatch = false
+        localMeditationPrompts = []
         workoutName = name
         isCardioWorkout = true
         isMeditationWorkout = false
@@ -130,7 +198,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         promptIndex: Int,
         totalPrompts: Int
     ) {
-        resetWorkoutState()
+        // Se prompts locais já foram definidos em beginLocalMeditation, preserve-os.
+        if !meditationOwnedByWatch {
+            localMeditationPrompts = []
+        }
+        resetWorkoutStateKeepingMeditationOwnership()
         workoutName = name
         isCardioWorkout = false
         isMeditationWorkout = true
@@ -178,6 +250,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isActive = false
         isCardioWorkout = false
         isMeditationWorkout = false
+        meditationOwnedByWatch = false
+        localMeditationPrompts = []
         stopWaterSportMotion()
         stopSwimmingWorkoutSession()
         heartRateTimer?.invalidate()
@@ -185,8 +259,20 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         workoutClockTimer?.invalidate()
         workoutClockTimer = nil
         stopRestCountdown()
+        sendToPhone([
+            "action": "watchStoppedSession",
+            "timestamp": Date().timeIntervalSince1970
+        ])
         resetWorkoutState()
         sendMetricsToPhone()
+    }
+
+    private func resetWorkoutStateKeepingMeditationOwnership() {
+        let keepPrompts = localMeditationPrompts
+        let keepOwned = meditationOwnedByWatch
+        resetWorkoutState()
+        localMeditationPrompts = keepPrompts
+        meditationOwnedByWatch = keepOwned
     }
 
     private func resetWorkoutState() {
@@ -203,6 +289,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         meditationPrompt = ""
         meditationPromptIndex = 0
         meditationTotalPrompts = 1
+        if !meditationOwnedByWatch {
+            localMeditationPrompts = []
+        }
         calories = 0
         heartRate = 0
         workoutStartedAt = nil
@@ -224,6 +313,42 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         watchSyncStatus = ""
     }
 
+    private func notifyPhoneWatchStarted(
+        kind: String,
+        workoutName: String,
+        exerciseName: String,
+        targetSeconds: Int = 0,
+        waterSportMode: Bool = false,
+        isKitesurf: Bool = false,
+        swimmingMode: Bool = false,
+        topicIcon: String = "",
+        colorName: String = ""
+    ) {
+        var payload: [String: Any] = [
+            "action": "watchStartedSession",
+            "kind": kind,
+            "workoutName": workoutName,
+            "exerciseName": exerciseName,
+            "targetSeconds": targetSeconds,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        if kind == "cardio" {
+            payload["waterSportMode"] = waterSportMode
+            payload["isKitesurf"] = isKitesurf
+            payload["swimmingMode"] = swimmingMode
+        }
+        if kind == "meditation" {
+            payload["topicIcon"] = topicIcon
+            payload["colorName"] = colorName
+        }
+        sendToPhone(payload)
+        refreshPhoneReachability()
+    }
+
+    private func refreshPhoneReachability() {
+        isPhoneReachable = session?.isReachable == true && session?.activationState == .activated
+    }
+
     private func startWorkoutClock() {
         workoutClockTimer?.invalidate()
         secondsSincePhoneSync = 0
@@ -243,6 +368,21 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         workoutElapsedSeconds += 1
         if !isCardioWorkout && !isMeditationWorkout {
             exerciseElapsedSeconds += 1
+        }
+        advanceLocalMeditationPromptIfNeeded()
+    }
+
+    /// Rotaciona prompts da meditação iniciada no próprio Watch.
+    private func advanceLocalMeditationPromptIfNeeded() {
+        guard isMeditationWorkout, meditationOwnedByWatch, !localMeditationPrompts.isEmpty else { return }
+        let total = max(localMeditationPrompts.count, 1)
+        let slice = max(meditationTargetSeconds / total, 1)
+        let index = min(workoutElapsedSeconds / slice, total - 1)
+        if index != meditationPromptIndex {
+            meditationPromptIndex = index
+            meditationPrompt = localMeditationPrompts[index]
+            meditationTotalPrompts = total
+            WKInterfaceDevice.current().play(.click)
         }
     }
 
@@ -802,6 +942,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
         switch action {
         case "startWorkout":
+            meditationOwnedByWatch = false
+            localMeditationPrompts = []
             let name = message["workoutName"] as? String ?? "Treino"
             let exerciseName = message["exerciseName"] as? String ?? ""
             startWorkout(name: name, exerciseName: exerciseName)
@@ -811,6 +953,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 exerciseName: exerciseName
             )
         case "startCardio":
+            meditationOwnedByWatch = false
+            localMeditationPrompts = []
             let name = message["workoutName"] as? String ?? "Cardio"
             let targetSeconds = message["targetSeconds"] as? Int ?? 0
             let exerciseName = message["exerciseName"] as? String ?? "Cardio"
@@ -873,6 +1017,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
             watchSyncStatus = "Dados do iPhone"
         case "startMeditation":
+            meditationOwnedByWatch = false
+            localMeditationPrompts = []
             startMeditation(
                 name: message["workoutName"] as? String ?? "Meditação",
                 targetSeconds: message["targetSeconds"] as? Int ?? 0,
@@ -946,11 +1092,18 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
 extension WatchWorkoutManager: WCSessionDelegate {
     nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
-        guard activationState == .activated else { return }
-        let context = session.receivedApplicationContext
-        guard !context.isEmpty else { return }
         Task { @MainActor in
+            refreshPhoneReachability()
+            guard activationState == .activated else { return }
+            let context = session.receivedApplicationContext
+            guard !context.isEmpty else { return }
             handlePhoneMessage(context)
+        }
+    }
+
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
+        Task { @MainActor in
+            refreshPhoneReachability()
         }
     }
 

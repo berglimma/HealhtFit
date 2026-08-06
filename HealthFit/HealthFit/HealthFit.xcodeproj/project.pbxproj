@@ -40,84 +40,19 @@
 		B1000031 /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000031 /* WatchContentView.swift */; };
 		B1000032 /* WatchWorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000032 /* WatchWorkoutManager.swift */; };
 		B1000033 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000033 /* Assets.xcassets */; };
+		B100W412 /* WatchCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100W412 /* WatchCatalog.swift */; };
 		B1000034 /* HealthFitWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = F1000034 /* HealthFitWatch.app */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		B1000035 /* WorkoutSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000038 /* WorkoutSummaryView.swift */; };
-		B1000305 /* WorkoutShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000305 /* WorkoutShareCardView.swift */; };
-		B1000320 /* BodyEvolutionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000320 /* BodyEvolutionModels.swift */; };
-		B1000321 /* BodyEvolutionStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000321 /* BodyEvolutionStorageService.swift */; };
-		B1000322 /* BodyEvolutionFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000322 /* BodyEvolutionFirestoreService.swift */; };
-		B1000323 /* BodyMeasurementsPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000323 /* BodyMeasurementsPDFBuilder.swift */; };
-		B1000324 /* BodyEvolutionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000324 /* BodyEvolutionService.swift */; };
-		B1000325 /* BodyEvolutionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000325 /* BodyEvolutionView.swift */; };
-		B1000306 /* WorkoutLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000306 /* WorkoutLiveActivityAttributes.swift */; };
-		B1000307 /* WorkoutLiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000307 /* WorkoutLiveActivityController.swift */; };
-		B1000308 /* WorkoutLiveActivitySync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000308 /* WorkoutLiveActivitySync.swift */; };
-		B1000309 /* WorkoutLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000309 /* WorkoutLiveActivityWidget.swift */; };
-		B1000310 /* WorkoutLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000306 /* WorkoutLiveActivityAttributes.swift */; };
-		B1000400 /* EveningTrainingNudgeAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000400 /* EveningTrainingNudgeAttributes.swift */; };
-		B1000401 /* EveningTrainingNudgeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000401 /* EveningTrainingNudgeController.swift */; };
-		B1000402 /* EveningTrainingNudgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000402 /* EveningTrainingNudgeService.swift */; };
-		B1000403 /* EveningTrainingNudgeAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000400 /* EveningTrainingNudgeAttributes.swift */; };
-		B1000410 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000410 /* AppLanguage.swift */; };
-		B1000411 /* WeakMainActorBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000411 /* WeakMainActorBox.swift */; };
-		B100W411 /* WeakMainActorBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000411 /* WeakMainActorBox.swift */; };
-		B1000420 /* RunTrackingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000420 /* RunTrackingModels.swift */; };
-		B1000421 /* RunTrackingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000421 /* RunTrackingService.swift */; };
-		B1000422 /* RunRouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000422 /* RunRouteMapView.swift */; };
-		B2000042 /* RunTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000042 /* RunTrackingTests.swift */; };
-		B1000412 /* LanguagePickerControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000412 /* LanguagePickerControl.swift */; };
-		B1000311 /* HealthFitWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1000311 /* HealthFitWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-
 		B1000036 /* MotivationMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000039 /* MotivationMessages.swift */; };
 		B1000037 /* WorkoutReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000040 /* WorkoutReportBuilder.swift */; };
 		B1000039 /* MailComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000041 /* MailComposeView.swift */; };
 		B1000040 /* DeviceLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000042 /* DeviceLayout.swift */; };
 		B1000041 /* CardioModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000043 /* CardioModels.swift */; };
 		B1000042 /* CardioSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000044 /* CardioSetupView.swift */; };
-		B1000711 /* WorkoutProgramHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000711 /* WorkoutProgramHeroCard.swift */; };
 		B1000043 /* ActiveCardioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000045 /* ActiveCardioView.swift */; };
-		B1000500 /* SwimmingMetricsAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000500 /* SwimmingMetricsAnalyzer.swift */; };
-		B1000501 /* SwimmingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000501 /* SwimmingLogbookView.swift */; };
-		B1000502 /* BikeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000502 /* BikeModels.swift */; };
-		B1000503 /* BikeMaintenanceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000503 /* BikeMaintenanceService.swift */; };
-		B1000504 /* RoadHazardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000504 /* RoadHazardService.swift */; };
-		B1000505 /* BikeLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000505 /* BikeLogbookView.swift */; };
-		B1000700 /* SurfKiteModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000700 /* SurfKiteModels.swift */; };
-		B1000701 /* JumpMetricsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000701 /* JumpMetricsService.swift */; };
-		B1000702 /* SurfKiteReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000702 /* SurfKiteReportBuilder.swift */; };
-		B1000703 /* SurfKiteLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000703 /* SurfKiteLogbookView.swift */; };
-		B1000704 /* CountryOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000704 /* CountryOption.swift */; };
-		B1000705 /* WorkoutResultMediaOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000705 /* WorkoutResultMediaOverlayView.swift */; };
-		B1000706 /* OpenMeteoWindService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000706 /* OpenMeteoWindService.swift */; };
-		B1000707 /* WaterWindConditionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000707 /* WaterWindConditionsView.swift */; };
-		B1000708 /* TransparentOceanWavesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000708 /* TransparentOceanWavesView.swift */; };
-		B1000709 /* TideWindFavorability.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000709 /* TideWindFavorability.swift */; };
-		B1000710 /* AssistantTideAlertEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000710 /* AssistantTideAlertEngine.swift */; };
-		B1000712 /* TransparentWindLinesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000712 /* TransparentWindLinesView.swift */; };
-		B1000600 /* SubscriptionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000600 /* SubscriptionModels.swift */; };
-		B1000601 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000601 /* SubscriptionService.swift */; };
-		B1000602 /* SubscriptionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000602 /* SubscriptionViews.swift */; };
-		B1000603 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = F1000603 /* Products.storekit */; };
 		B1000044 /* WeeklyProgressModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000046 /* WeeklyProgressModels.swift */; };
 		B1000045 /* WeeklyProgressAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000047 /* WeeklyProgressAnalyzer.swift */; };
 		B1000046 /* WeeklyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000048 /* WeeklyReportService.swift */; };
-		B1000330 /* WorkoutShareCardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000330 /* WorkoutShareCardStore.swift */; };
-		B1000340 /* GuidedWorkoutCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000340 /* GuidedWorkoutCatalog.swift */; };
-		B1000341 /* TrainingNutritionSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000341 /* TrainingNutritionSyncService.swift */; };
-		B1000342 /* GuidedWorkoutViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000342 /* GuidedWorkoutViews.swift */; };
-		B1000343 /* PhotoSourcePickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000343 /* PhotoSourcePickers.swift */; };
-		B100034A /* PhotoLibrarySaver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034A /* PhotoLibrarySaver.swift */; };
-		B100034C /* WorkoutCalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034C /* WorkoutCalendarService.swift */; };
-		B100034B /* WorkoutSessionPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034B /* WorkoutSessionPDFBuilder.swift */; };
-		B1000344 /* SupplementModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000344 /* SupplementModels.swift */; };
-		B1000345 /* SupplementsLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000345 /* SupplementsLogView.swift */; };
-		B1000346 /* AssistantSupplementNudgeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000346 /* AssistantSupplementNudgeEngine.swift */; };
-		B1000347 /* MonthlyProgressModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000347 /* MonthlyProgressModels.swift */; };
-		B1000348 /* MonthlyProgressAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000348 /* MonthlyProgressAnalyzer.swift */; };
-		B1000349 /* MonthlyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000349 /* MonthlyReportService.swift */; };
-		B1000350 /* MonthlyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000350 /* MonthlyReportView.swift */; };
-		B1000351 /* AssistantImprovementAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000351 /* AssistantImprovementAnalysisEngine.swift */; };
-		B2000026 /* AssistantImprovementAnalysisEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000035 /* AssistantImprovementAnalysisEngineTests.swift */; };
 		B1000047 /* WeeklyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000049 /* WeeklyReportView.swift */; };
 		B1000048 /* MeditationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000050 /* MeditationModels.swift */; };
 		B1000049 /* MeditationSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000051 /* MeditationSetupView.swift */; };
@@ -203,11 +138,73 @@
 		B1000203 /* KeyboardDismiss.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000203 /* KeyboardDismiss.swift */; };
 		B1000204 /* DailyWellnessFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000204 /* DailyWellnessFirestoreService.swift */; };
 		B1000205 /* AssistantCardioMeditationNudgeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000205 /* AssistantCardioMeditationNudgeEngine.swift */; };
+		B1000305 /* WorkoutShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000305 /* WorkoutShareCardView.swift */; };
+		B1000306 /* WorkoutLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000306 /* WorkoutLiveActivityAttributes.swift */; };
+		B1000307 /* WorkoutLiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000307 /* WorkoutLiveActivityController.swift */; };
+		B1000308 /* WorkoutLiveActivitySync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000308 /* WorkoutLiveActivitySync.swift */; };
+		B1000309 /* WorkoutLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000309 /* WorkoutLiveActivityWidget.swift */; };
+		B1000310 /* WorkoutLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000306 /* WorkoutLiveActivityAttributes.swift */; };
+		B1000311 /* HealthFitWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1000311 /* HealthFitWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B1000320 /* BodyEvolutionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000320 /* BodyEvolutionModels.swift */; };
+		B1000321 /* BodyEvolutionStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000321 /* BodyEvolutionStorageService.swift */; };
+		B1000322 /* BodyEvolutionFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000322 /* BodyEvolutionFirestoreService.swift */; };
+		B1000323 /* BodyMeasurementsPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000323 /* BodyMeasurementsPDFBuilder.swift */; };
+		B1000324 /* BodyEvolutionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000324 /* BodyEvolutionService.swift */; };
+		B1000325 /* BodyEvolutionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000325 /* BodyEvolutionView.swift */; };
+		B1000330 /* WorkoutShareCardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000330 /* WorkoutShareCardStore.swift */; };
+		B1000340 /* GuidedWorkoutCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000340 /* GuidedWorkoutCatalog.swift */; };
+		B1000341 /* TrainingNutritionSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000341 /* TrainingNutritionSyncService.swift */; };
+		B1000342 /* GuidedWorkoutViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000342 /* GuidedWorkoutViews.swift */; };
+		B1000343 /* PhotoSourcePickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000343 /* PhotoSourcePickers.swift */; };
+		B1000344 /* SupplementModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000344 /* SupplementModels.swift */; };
+		B1000345 /* SupplementsLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000345 /* SupplementsLogView.swift */; };
+		B1000346 /* AssistantSupplementNudgeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000346 /* AssistantSupplementNudgeEngine.swift */; };
+		B1000347 /* MonthlyProgressModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000347 /* MonthlyProgressModels.swift */; };
+		B1000348 /* MonthlyProgressAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000348 /* MonthlyProgressAnalyzer.swift */; };
+		B1000349 /* MonthlyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000349 /* MonthlyReportService.swift */; };
+		B100034A /* PhotoLibrarySaver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034A /* PhotoLibrarySaver.swift */; };
+		B100034B /* WorkoutSessionPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034B /* WorkoutSessionPDFBuilder.swift */; };
+		B100034C /* WorkoutCalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034C /* WorkoutCalendarService.swift */; };
+		B1000350 /* MonthlyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000350 /* MonthlyReportView.swift */; };
+		B1000351 /* AssistantImprovementAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000351 /* AssistantImprovementAnalysisEngine.swift */; };
+		B1000400 /* EveningTrainingNudgeAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000400 /* EveningTrainingNudgeAttributes.swift */; };
+		B1000401 /* EveningTrainingNudgeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000401 /* EveningTrainingNudgeController.swift */; };
+		B1000402 /* EveningTrainingNudgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000402 /* EveningTrainingNudgeService.swift */; };
+		B1000403 /* EveningTrainingNudgeAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000400 /* EveningTrainingNudgeAttributes.swift */; };
+		B1000410 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000410 /* AppLanguage.swift */; };
+		B1000411 /* WeakMainActorBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000411 /* WeakMainActorBox.swift */; };
+		B1000412 /* LanguagePickerControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000412 /* LanguagePickerControl.swift */; };
+		B1000420 /* RunTrackingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000420 /* RunTrackingModels.swift */; };
+		B1000421 /* RunTrackingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000421 /* RunTrackingService.swift */; };
+		B1000422 /* RunRouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000422 /* RunRouteMapView.swift */; };
+		B1000500 /* SwimmingMetricsAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000500 /* SwimmingMetricsAnalyzer.swift */; };
+		B1000501 /* SwimmingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000501 /* SwimmingLogbookView.swift */; };
+		B1000502 /* BikeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000502 /* BikeModels.swift */; };
+		B1000503 /* BikeMaintenanceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000503 /* BikeMaintenanceService.swift */; };
+		B1000504 /* RoadHazardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000504 /* RoadHazardService.swift */; };
+		B1000505 /* BikeLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000505 /* BikeLogbookView.swift */; };
+		B1000600 /* SubscriptionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000600 /* SubscriptionModels.swift */; };
+		B1000601 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000601 /* SubscriptionService.swift */; };
+		B1000602 /* SubscriptionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000602 /* SubscriptionViews.swift */; };
+		B1000603 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = F1000603 /* Products.storekit */; };
+		B1000700 /* SurfKiteModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000700 /* SurfKiteModels.swift */; };
+		B1000701 /* JumpMetricsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000701 /* JumpMetricsService.swift */; };
+		B1000702 /* SurfKiteReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000702 /* SurfKiteReportBuilder.swift */; };
+		B1000703 /* SurfKiteLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000703 /* SurfKiteLogbookView.swift */; };
+		B1000704 /* CountryOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000704 /* CountryOption.swift */; };
+		B1000705 /* WorkoutResultMediaOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000705 /* WorkoutResultMediaOverlayView.swift */; };
+		B1000706 /* OpenMeteoWindService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000706 /* OpenMeteoWindService.swift */; };
+		B1000707 /* WaterWindConditionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000707 /* WaterWindConditionsView.swift */; };
+		B1000708 /* TransparentOceanWavesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000708 /* TransparentOceanWavesView.swift */; };
+		B1000709 /* TideWindFavorability.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000709 /* TideWindFavorability.swift */; };
+		B1000710 /* AssistantTideAlertEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000710 /* AssistantTideAlertEngine.swift */; };
+		B1000711 /* WorkoutProgramHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000711 /* WorkoutProgramHeroCard.swift */; };
+		B1000712 /* TransparentWindLinesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000712 /* TransparentWindLinesView.swift */; };
+		B100W411 /* WeakMainActorBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000411 /* WeakMainActorBox.swift */; };
 		B2000001 /* TestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000010 /* TestFixtures.swift */; };
 		B2000002 /* UserProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000011 /* UserProfileTests.swift */; };
 		B2000003 /* MarathonReportBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000012 /* MarathonReportBuilderTests.swift */; };
 		B2000004 /* CardioWorkoutConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000013 /* CardioWorkoutConfigTests.swift */; };
-		B2000040 /* SubscriptionModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000040 /* SubscriptionModelsTests.swift */; };
 		B2000005 /* PaceFormattingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000014 /* PaceFormattingTests.swift */; };
 		B2000006 /* HealthAssistantEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000015 /* HealthAssistantEngineTests.swift */; };
 		B2000007 /* WeeklyProgressAnalyzerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000016 /* WeeklyProgressAnalyzerTests.swift */; };
@@ -215,8 +212,6 @@
 		B2000009 /* ShoppingCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000018 /* ShoppingCatalogTests.swift */; };
 		B2000010 /* HealthFitUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000020 /* HealthFitUITests.swift */; };
 		B2000011 /* NotificationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000019 /* NotificationServiceTests.swift */; };
-		B2000040 /* EveningTrainingNudgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000040 /* EveningTrainingNudgeTests.swift */; };
-		B2000041 /* AppLanguageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000041 /* AppLanguageTests.swift */; };
 		B2000012 /* ExerciseVideoCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000021 /* ExerciseVideoCatalogTests.swift */; };
 		B2000013 /* PostWorkoutCheckInEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000022 /* PostWorkoutCheckInEngineTests.swift */; };
 		B2000014 /* ExerciseGifCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000023 /* ExerciseGifCatalogTests.swift */; };
@@ -231,6 +226,10 @@
 		B2000023 /* NutritionReportBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000032 /* NutritionReportBuilderTests.swift */; };
 		B2000024 /* BodyEvolutionModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000033 /* BodyEvolutionModelsTests.swift */; };
 		B2000025 /* MusculacaoProgramTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000034 /* MusculacaoProgramTests.swift */; };
+		B2000026 /* AssistantImprovementAnalysisEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000035 /* AssistantImprovementAnalysisEngineTests.swift */; };
+		B2000040 /* EveningTrainingNudgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000040 /* EveningTrainingNudgeTests.swift */; };
+		B2000041 /* AppLanguageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000041 /* AppLanguageTests.swift */; };
+		B2000042 /* RunTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000042 /* RunTrackingTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -240,6 +239,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = T1000002;
 			remoteInfo = HealthFitWatch;
+		};
+		C1000005 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = P1000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = T1000005;
+			remoteInfo = HealthFitWidgets;
 		};
 		C2000001 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -255,27 +261,9 @@
 			remoteGlobalIDString = T1000001;
 			remoteInfo = HealthFit;
 		};
-		C1000005 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = P1000001 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = T1000005;
-			remoteInfo = HealthFitWidgets;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		CP100002 /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				B1000311 /* HealthFitWidgets.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		CP100001 /* Embed Watch Content */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -285,6 +273,17 @@
 				B1000034 /* HealthFitWatch.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CP100002 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B1000311 /* HealthFitWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -322,88 +321,23 @@
 		F1000030 /* HealthFitWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitWatchApp.swift; sourceTree = "<group>"; };
 		F1000031 /* WatchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
 		F1000032 /* WatchWorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWorkoutManager.swift; sourceTree = "<group>"; };
+		F100W412 /* WatchCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchCatalog.swift; sourceTree = "<group>"; };
 		F1000033 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		F100W001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		F100W002 /* HealthFitWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HealthFitWatch.entitlements; sourceTree = "<group>"; };
 		F1000034 /* HealthFitWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthFitWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1000035 /* HealthFit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthFit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1000036 /* HealthFit.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HealthFit.entitlements; sourceTree = "<group>"; };
 		F1000037 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000038 /* WorkoutSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSummaryView.swift; sourceTree = "<group>"; };
-		F1000305 /* WorkoutShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutShareCardView.swift; sourceTree = "<group>"; };
-		F1000320 /* BodyEvolutionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionModels.swift; sourceTree = "<group>"; };
-		F1000321 /* BodyEvolutionStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionStorageService.swift; sourceTree = "<group>"; };
-		F1000322 /* BodyEvolutionFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionFirestoreService.swift; sourceTree = "<group>"; };
-		F1000323 /* BodyMeasurementsPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyMeasurementsPDFBuilder.swift; sourceTree = "<group>"; };
-		F1000324 /* BodyEvolutionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionService.swift; sourceTree = "<group>"; };
-		F1000325 /* BodyEvolutionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionView.swift; sourceTree = "<group>"; };
-		F1000306 /* WorkoutLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityAttributes.swift; sourceTree = "<group>"; };
-		F1000307 /* WorkoutLiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityController.swift; sourceTree = "<group>"; };
-		F1000308 /* WorkoutLiveActivitySync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivitySync.swift; sourceTree = "<group>"; };
-		F1000309 /* WorkoutLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityWidget.swift; sourceTree = "<group>"; };
-		F1000400 /* EveningTrainingNudgeAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeAttributes.swift; sourceTree = "<group>"; };
-		F1000401 /* EveningTrainingNudgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeController.swift; sourceTree = "<group>"; };
-		F1000402 /* EveningTrainingNudgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeService.swift; sourceTree = "<group>"; };
-		F1000410 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
-		F1000411 /* WeakMainActorBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeakMainActorBox.swift; sourceTree = "<group>"; };
-		F1000420 /* RunTrackingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingModels.swift; sourceTree = "<group>"; };
-		F1000421 /* RunTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingService.swift; sourceTree = "<group>"; };
-		F1000422 /* RunRouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunRouteMapView.swift; sourceTree = "<group>"; };
-		F2000042 /* RunTrackingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingTests.swift; sourceTree = "<group>"; };
-		F1000412 /* LanguagePickerControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguagePickerControl.swift; sourceTree = "<group>"; };
-		F1000310 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		F1000311 /* HealthFitWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HealthFitWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-
 		F1000039 /* MotivationMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotivationMessages.swift; sourceTree = "<group>"; };
 		F1000040 /* WorkoutReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutReportBuilder.swift; sourceTree = "<group>"; };
 		F1000041 /* MailComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailComposeView.swift; sourceTree = "<group>"; };
 		F1000042 /* DeviceLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceLayout.swift; sourceTree = "<group>"; };
 		F1000043 /* CardioModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardioModels.swift; sourceTree = "<group>"; };
 		F1000044 /* CardioSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardioSetupView.swift; sourceTree = "<group>"; };
-		F1000711 /* WorkoutProgramHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProgramHeroCard.swift; sourceTree = "<group>"; };
 		F1000045 /* ActiveCardioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveCardioView.swift; sourceTree = "<group>"; };
-		F1000500 /* SwimmingMetricsAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwimmingMetricsAnalyzer.swift; sourceTree = "<group>"; };
-		F1000501 /* SwimmingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwimmingLogbookView.swift; sourceTree = "<group>"; };
-		F1000502 /* BikeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BikeModels.swift; sourceTree = "<group>"; };
-		F1000503 /* BikeMaintenanceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BikeMaintenanceService.swift; sourceTree = "<group>"; };
-		F1000504 /* RoadHazardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadHazardService.swift; sourceTree = "<group>"; };
-		F1000505 /* BikeLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BikeLogbookView.swift; sourceTree = "<group>"; };
-		F1000700 /* SurfKiteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteModels.swift; sourceTree = "<group>"; };
-		F1000701 /* JumpMetricsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpMetricsService.swift; sourceTree = "<group>"; };
-		F1000702 /* SurfKiteReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteReportBuilder.swift; sourceTree = "<group>"; };
-		F1000703 /* SurfKiteLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteLogbookView.swift; sourceTree = "<group>"; };
-		F1000704 /* CountryOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountryOption.swift; sourceTree = "<group>"; };
-		F1000705 /* WorkoutResultMediaOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutResultMediaOverlayView.swift; sourceTree = "<group>"; };
-		F1000706 /* OpenMeteoWindService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenMeteoWindService.swift; sourceTree = "<group>"; };
-		F1000707 /* WaterWindConditionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterWindConditionsView.swift; sourceTree = "<group>"; };
-		F1000708 /* TransparentOceanWavesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparentOceanWavesView.swift; sourceTree = "<group>"; };
-		F1000709 /* TideWindFavorability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TideWindFavorability.swift; sourceTree = "<group>"; };
-		F1000710 /* AssistantTideAlertEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantTideAlertEngine.swift; sourceTree = "<group>"; };
-		F1000712 /* TransparentWindLinesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparentWindLinesView.swift; sourceTree = "<group>"; };
-		F1000600 /* SubscriptionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionModels.swift; sourceTree = "<group>"; };
-		F1000601 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
-		F1000602 /* SubscriptionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionViews.swift; sourceTree = "<group>"; };
-		F1000603 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 		F1000046 /* WeeklyProgressModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressModels.swift; sourceTree = "<group>"; };
 		F1000047 /* WeeklyProgressAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressAnalyzer.swift; sourceTree = "<group>"; };
 		F1000048 /* WeeklyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportService.swift; sourceTree = "<group>"; };
-		F1000330 /* WorkoutShareCardStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutShareCardStore.swift; sourceTree = "<group>"; };
-		F1000340 /* GuidedWorkoutCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedWorkoutCatalog.swift; sourceTree = "<group>"; };
-		F1000341 /* TrainingNutritionSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingNutritionSyncService.swift; sourceTree = "<group>"; };
-		F1000342 /* GuidedWorkoutViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedWorkoutViews.swift; sourceTree = "<group>"; };
-		F1000343 /* PhotoSourcePickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSourcePickers.swift; sourceTree = "<group>"; };
-		F100034A /* PhotoLibrarySaver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibrarySaver.swift; sourceTree = "<group>"; };
-		F100034C /* WorkoutCalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCalendarService.swift; sourceTree = "<group>"; };
-		F100034B /* WorkoutSessionPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSessionPDFBuilder.swift; sourceTree = "<group>"; };
-		F1000344 /* SupplementModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementModels.swift; sourceTree = "<group>"; };
-		F1000345 /* SupplementsLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementsLogView.swift; sourceTree = "<group>"; };
-		F1000346 /* AssistantSupplementNudgeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSupplementNudgeEngine.swift; sourceTree = "<group>"; };
-		F1000347 /* MonthlyProgressModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyProgressModels.swift; sourceTree = "<group>"; };
-		F1000348 /* MonthlyProgressAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyProgressAnalyzer.swift; sourceTree = "<group>"; };
-		F1000349 /* MonthlyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportService.swift; sourceTree = "<group>"; };
-		F1000350 /* MonthlyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportView.swift; sourceTree = "<group>"; };
-		F1000351 /* AssistantImprovementAnalysisEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantImprovementAnalysisEngine.swift; sourceTree = "<group>"; };
-		F2000035 /* AssistantImprovementAnalysisEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantImprovementAnalysisEngineTests.swift; sourceTree = "<group>"; };
 		F1000049 /* WeeklyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportView.swift; sourceTree = "<group>"; };
 		F1000050 /* MeditationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationModels.swift; sourceTree = "<group>"; };
 		F1000051 /* MeditationSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationSetupView.swift; sourceTree = "<group>"; };
@@ -489,21 +423,81 @@
 		F1000203 /* KeyboardDismiss.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardDismiss.swift; sourceTree = "<group>"; };
 		F1000204 /* DailyWellnessFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyWellnessFirestoreService.swift; sourceTree = "<group>"; };
 		F1000205 /* AssistantCardioMeditationNudgeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCardioMeditationNudgeEngine.swift; sourceTree = "<group>"; };
+		F1000305 /* WorkoutShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutShareCardView.swift; sourceTree = "<group>"; };
+		F1000306 /* WorkoutLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityAttributes.swift; sourceTree = "<group>"; };
+		F1000307 /* WorkoutLiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityController.swift; sourceTree = "<group>"; };
+		F1000308 /* WorkoutLiveActivitySync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivitySync.swift; sourceTree = "<group>"; };
+		F1000309 /* WorkoutLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityWidget.swift; sourceTree = "<group>"; };
+		F1000310 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F1000311 /* HealthFitWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HealthFitWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F1000320 /* BodyEvolutionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionModels.swift; sourceTree = "<group>"; };
+		F1000321 /* BodyEvolutionStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionStorageService.swift; sourceTree = "<group>"; };
+		F1000322 /* BodyEvolutionFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionFirestoreService.swift; sourceTree = "<group>"; };
+		F1000323 /* BodyMeasurementsPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyMeasurementsPDFBuilder.swift; sourceTree = "<group>"; };
+		F1000324 /* BodyEvolutionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionService.swift; sourceTree = "<group>"; };
+		F1000325 /* BodyEvolutionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionView.swift; sourceTree = "<group>"; };
+		F1000330 /* WorkoutShareCardStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutShareCardStore.swift; sourceTree = "<group>"; };
+		F1000340 /* GuidedWorkoutCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedWorkoutCatalog.swift; sourceTree = "<group>"; };
+		F1000341 /* TrainingNutritionSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingNutritionSyncService.swift; sourceTree = "<group>"; };
+		F1000342 /* GuidedWorkoutViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedWorkoutViews.swift; sourceTree = "<group>"; };
+		F1000343 /* PhotoSourcePickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSourcePickers.swift; sourceTree = "<group>"; };
+		F1000344 /* SupplementModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementModels.swift; sourceTree = "<group>"; };
+		F1000345 /* SupplementsLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementsLogView.swift; sourceTree = "<group>"; };
+		F1000346 /* AssistantSupplementNudgeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSupplementNudgeEngine.swift; sourceTree = "<group>"; };
+		F1000347 /* MonthlyProgressModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyProgressModels.swift; sourceTree = "<group>"; };
+		F1000348 /* MonthlyProgressAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyProgressAnalyzer.swift; sourceTree = "<group>"; };
+		F1000349 /* MonthlyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportService.swift; sourceTree = "<group>"; };
+		F100034A /* PhotoLibrarySaver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibrarySaver.swift; sourceTree = "<group>"; };
+		F100034B /* WorkoutSessionPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSessionPDFBuilder.swift; sourceTree = "<group>"; };
+		F100034C /* WorkoutCalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCalendarService.swift; sourceTree = "<group>"; };
+		F1000350 /* MonthlyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportView.swift; sourceTree = "<group>"; };
+		F1000351 /* AssistantImprovementAnalysisEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantImprovementAnalysisEngine.swift; sourceTree = "<group>"; };
+		F1000400 /* EveningTrainingNudgeAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeAttributes.swift; sourceTree = "<group>"; };
+		F1000401 /* EveningTrainingNudgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeController.swift; sourceTree = "<group>"; };
+		F1000402 /* EveningTrainingNudgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeService.swift; sourceTree = "<group>"; };
+		F1000410 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
+		F1000411 /* WeakMainActorBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeakMainActorBox.swift; sourceTree = "<group>"; };
+		F1000412 /* LanguagePickerControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguagePickerControl.swift; sourceTree = "<group>"; };
+		F1000420 /* RunTrackingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingModels.swift; sourceTree = "<group>"; };
+		F1000421 /* RunTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingService.swift; sourceTree = "<group>"; };
+		F1000422 /* RunRouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunRouteMapView.swift; sourceTree = "<group>"; };
+		F1000500 /* SwimmingMetricsAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwimmingMetricsAnalyzer.swift; sourceTree = "<group>"; };
+		F1000501 /* SwimmingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwimmingLogbookView.swift; sourceTree = "<group>"; };
+		F1000502 /* BikeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BikeModels.swift; sourceTree = "<group>"; };
+		F1000503 /* BikeMaintenanceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BikeMaintenanceService.swift; sourceTree = "<group>"; };
+		F1000504 /* RoadHazardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadHazardService.swift; sourceTree = "<group>"; };
+		F1000505 /* BikeLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BikeLogbookView.swift; sourceTree = "<group>"; };
+		F1000600 /* SubscriptionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionModels.swift; sourceTree = "<group>"; };
+		F1000601 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
+		F1000602 /* SubscriptionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionViews.swift; sourceTree = "<group>"; };
+		F1000603 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
+		F1000700 /* SurfKiteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteModels.swift; sourceTree = "<group>"; };
+		F1000701 /* JumpMetricsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpMetricsService.swift; sourceTree = "<group>"; };
+		F1000702 /* SurfKiteReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteReportBuilder.swift; sourceTree = "<group>"; };
+		F1000703 /* SurfKiteLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfKiteLogbookView.swift; sourceTree = "<group>"; };
+		F1000704 /* CountryOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountryOption.swift; sourceTree = "<group>"; };
+		F1000705 /* WorkoutResultMediaOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutResultMediaOverlayView.swift; sourceTree = "<group>"; };
+		F1000706 /* OpenMeteoWindService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenMeteoWindService.swift; sourceTree = "<group>"; };
+		F1000707 /* WaterWindConditionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterWindConditionsView.swift; sourceTree = "<group>"; };
+		F1000708 /* TransparentOceanWavesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparentOceanWavesView.swift; sourceTree = "<group>"; };
+		F1000709 /* TideWindFavorability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TideWindFavorability.swift; sourceTree = "<group>"; };
+		F1000710 /* AssistantTideAlertEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantTideAlertEngine.swift; sourceTree = "<group>"; };
+		F1000711 /* WorkoutProgramHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProgramHeroCard.swift; sourceTree = "<group>"; };
+		F1000712 /* TransparentWindLinesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparentWindLinesView.swift; sourceTree = "<group>"; };
+		F100W001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F100W002 /* HealthFitWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HealthFitWatch.entitlements; sourceTree = "<group>"; };
 		F2000001 /* HealthFitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2000002 /* HealthFitUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2000010 /* TestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFixtures.swift; sourceTree = "<group>"; };
 		F2000011 /* UserProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileTests.swift; sourceTree = "<group>"; };
 		F2000012 /* MarathonReportBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarathonReportBuilderTests.swift; sourceTree = "<group>"; };
 		F2000013 /* CardioWorkoutConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardioWorkoutConfigTests.swift; sourceTree = "<group>"; };
-		F2000040 /* SubscriptionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionModelsTests.swift; sourceTree = "<group>"; };
 		F2000014 /* PaceFormattingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceFormattingTests.swift; sourceTree = "<group>"; };
 		F2000015 /* HealthAssistantEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthAssistantEngineTests.swift; sourceTree = "<group>"; };
 		F2000016 /* WeeklyProgressAnalyzerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressAnalyzerTests.swift; sourceTree = "<group>"; };
 		F2000017 /* SleepAssessmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepAssessmentTests.swift; sourceTree = "<group>"; };
 		F2000018 /* ShoppingCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingCatalogTests.swift; sourceTree = "<group>"; };
 		F2000019 /* NotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationServiceTests.swift; sourceTree = "<group>"; };
-		F2000040 /* EveningTrainingNudgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeTests.swift; sourceTree = "<group>"; };
-		F2000041 /* AppLanguageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguageTests.swift; sourceTree = "<group>"; };
 		F2000020 /* HealthFitUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitUITests.swift; sourceTree = "<group>"; };
 		F2000021 /* ExerciseVideoCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseVideoCatalogTests.swift; sourceTree = "<group>"; };
 		F2000022 /* PostWorkoutCheckInEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostWorkoutCheckInEngineTests.swift; sourceTree = "<group>"; };
@@ -519,6 +513,10 @@
 		F2000032 /* NutritionReportBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionReportBuilderTests.swift; sourceTree = "<group>"; };
 		F2000033 /* BodyEvolutionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionModelsTests.swift; sourceTree = "<group>"; };
 		F2000034 /* MusculacaoProgramTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusculacaoProgramTests.swift; sourceTree = "<group>"; };
+		F2000035 /* AssistantImprovementAnalysisEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantImprovementAnalysisEngineTests.swift; sourceTree = "<group>"; };
+		F2000040 /* EveningTrainingNudgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeTests.swift; sourceTree = "<group>"; };
+		F2000041 /* AppLanguageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguageTests.swift; sourceTree = "<group>"; };
+		F2000042 /* RunTrackingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -608,20 +606,12 @@
 				F1000030 /* HealthFitWatchApp.swift */,
 				F1000031 /* WatchContentView.swift */,
 				F1000032 /* WatchWorkoutManager.swift */,
+				F100W412 /* WatchCatalog.swift */,
 				F1000033 /* Assets.xcassets */,
 				F100W001 /* Info.plist */,
 				F100W002 /* HealthFitWatch.entitlements */,
 			);
 			path = HealthFitWatch;
-			sourceTree = "<group>";
-		};
-		G1000050 /* HealthFitWidgets */ = {
-			isa = PBXGroup;
-			children = (
-				F1000309 /* WorkoutLiveActivityWidget.swift */,
-				F1000310 /* Info.plist */,
-			);
-			path = HealthFitWidgets;
 			sourceTree = "<group>";
 		};
 		G1000004 /* Products */ = {
@@ -759,14 +749,6 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
-		G1000060 /* Subscription */ = {
-			isa = PBXGroup;
-			children = (
-				F1000602 /* SubscriptionViews.swift */,
-			);
-			path = Subscription;
-			sourceTree = "<group>";
-		};
 		G1000009 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
@@ -881,6 +863,23 @@
 			path = Assistant;
 			sourceTree = "<group>";
 		};
+		G1000050 /* HealthFitWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				F1000309 /* WorkoutLiveActivityWidget.swift */,
+				F1000310 /* Info.plist */,
+			);
+			path = HealthFitWidgets;
+			sourceTree = "<group>";
+		};
+		G1000060 /* Subscription */ = {
+			isa = PBXGroup;
+			children = (
+				F1000602 /* SubscriptionViews.swift */,
+			);
+			path = Subscription;
+			sourceTree = "<group>";
+		};
 		G1000070 /* Firebase */ = {
 			isa = PBXGroup;
 			children = (
@@ -975,7 +974,6 @@
 				F2000011 /* UserProfileTests.swift */,
 				F2000012 /* MarathonReportBuilderTests.swift */,
 				F2000013 /* CardioWorkoutConfigTests.swift */,
-				F2000040 /* SubscriptionModelsTests.swift */,
 				F2000014 /* PaceFormattingTests.swift */,
 				F2000015 /* HealthAssistantEngineTests.swift */,
 				F2000016 /* WeeklyProgressAnalyzerTests.swift */,
@@ -1220,6 +1218,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		R1000005 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		R2000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1228,13 +1233,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		R2000002 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		R1000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1412,7 +1410,18 @@
 				B1000030 /* HealthFitWatchApp.swift in Sources */,
 				B1000031 /* WatchContentView.swift in Sources */,
 				B1000032 /* WatchWorkoutManager.swift in Sources */,
+				B100W412 /* WatchCatalog.swift in Sources */,
 				B100W411 /* WeakMainActorBox.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		S1000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1000309 /* WorkoutLiveActivityWidget.swift in Sources */,
+				B1000310 /* WorkoutLiveActivityAttributes.swift in Sources */,
+				B1000403 /* EveningTrainingNudgeAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1424,7 +1433,7 @@
 				B2000002 /* UserProfileTests.swift in Sources */,
 				B2000003 /* MarathonReportBuilderTests.swift in Sources */,
 				B2000004 /* CardioWorkoutConfigTests.swift in Sources */,
-				B2000040 /* SubscriptionModelsTests.swift in Sources */,
+				B2000040 /* EveningTrainingNudgeTests.swift in Sources */,
 				B2000005 /* PaceFormattingTests.swift in Sources */,
 				B2000006 /* HealthAssistantEngineTests.swift in Sources */,
 				B2000007 /* WeeklyProgressAnalyzerTests.swift in Sources */,
@@ -1457,16 +1466,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				B2000010 /* HealthFitUITests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		S1000005 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B1000309 /* WorkoutLiveActivityWidget.swift in Sources */,
-				B1000310 /* WorkoutLiveActivityAttributes.swift in Sources */,
-				B1000403 /* EveningTrainingNudgeAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1654,22 +1653,23 @@
 				INFOPLIST_FILE = HealthFit/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = HealthFit;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para tirar fotos de perfil e evolução corporal, e para reconhecer repetições e analisar sua postura durante os exercícios.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HealthFit usa o microfone ao gravar vídeo do treino para compartilhar com a legenda da sessão.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit precisa acessar seus dados de saúde para exibir métricas de desempenho e sincronizar treinos.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal e anexar foto ou vídeo ao compartilhar o resultado do treino.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mostrar o mapa e a rota em tempo real.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano.";
-				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "HealthFit adiciona ao Calendário os treinos concluídos no dia.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para tirar fotos de perfil e evolução corporal, e para reconhecer repetições e analisar sua postura durante os exercícios.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit precisa acessar seus dados de saúde para exibir métricas de desempenho e sincronizar treinos.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mostrar o mapa e a rota em tempo real.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HealthFit usa o microfone ao gravar vídeo do treino para compartilhar com a legenda da sessão.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal e anexar foto ou vídeo ao compartilhar o resultado do treino.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1677,8 +1677,8 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1700,22 +1700,23 @@
 				INFOPLIST_FILE = HealthFit/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = HealthFit;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para tirar fotos de perfil e evolução corporal, e para reconhecer repetições e analisar sua postura durante os exercícios.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HealthFit usa o microfone ao gravar vídeo do treino para compartilhar com a legenda da sessão.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit precisa acessar seus dados de saúde para exibir métricas de desempenho e sincronizar treinos.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal e anexar foto ou vídeo ao compartilhar o resultado do treino.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mostrar o mapa e a rota em tempo real.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano.";
-				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "HealthFit adiciona ao Calendário os treinos concluídos no dia.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para tirar fotos de perfil e evolução corporal, e para reconhecer repetições e analisar sua postura durante os exercícios.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit precisa acessar seus dados de saúde para exibir métricas de desempenho e sincronizar treinos.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mostrar o mapa e a rota em tempo real.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HealthFit usa o microfone ao gravar vídeo do treino para compartilhar com a legenda da sessão.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal e anexar foto ou vídeo ao compartilhar o resultado do treino.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1723,8 +1724,8 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1759,11 +1760,11 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.watchkitapp;
 				PRODUCT_NAME = HealthFitWatch;
 				SDKROOT = watchos;
-				SKIP_INSTALL = NO;
+				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "watchos watchsimulator";
 				SUPPORTS_MACCATALYST = NO;
-				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
@@ -1802,115 +1803,13 @@
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "watchos watchsimulator";
 				SUPPORTS_MACCATALYST = NO;
-				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				VALIDATE_PRODUCT = YES;
 				WATCHOS_DEPLOYMENT_TARGET = 10.0;
-			};
-			name = Release;
-		};
-		XC200007 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = A56XUZKJFJ;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HealthFit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HealthFit";
-			};
-			name = Debug;
-		};
-		XC200008 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = A56XUZKJFJ;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HealthFit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HealthFit";
-			};
-			name = Release;
-		};
-		XC200009 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = A56XUZKJFJ;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = HealthFit;
-			};
-			name = Debug;
-		};
-		XC200010 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = A56XUZKJFJ;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = HealthFit;
 			};
 			name = Release;
 		};
@@ -1934,8 +1833,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1962,12 +1861,114 @@
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		XC200007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A56XUZKJFJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HealthFit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HealthFit";
+			};
+			name = Debug;
+		};
+		XC200008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A56XUZKJFJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HealthFit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HealthFit";
+			};
+			name = Release;
+		};
+		XC200009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A56XUZKJFJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HealthFit;
+			};
+			name = Debug;
+		};
+		XC200010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A56XUZKJFJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HealthFit;
 			};
 			name = Release;
 		};
@@ -2001,6 +2002,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		BC100005 /* Build configuration list for PBXNativeTarget "HealthFitWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				XC100020 /* Debug */,
+				XC100021 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		BC200001 /* Build configuration list for PBXNativeTarget "HealthFitTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -2015,15 +2025,6 @@
 			buildConfigurations = (
 				XC200009 /* Debug */,
 				XC200010 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		BC100005 /* Build configuration list for PBXNativeTarget "HealthFitWidgets" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				XC100020 /* Debug */,
-				XC100021 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

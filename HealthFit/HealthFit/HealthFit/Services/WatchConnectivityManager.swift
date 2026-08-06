@@ -604,6 +604,19 @@ extension WatchConnectivityManager: WCSessionDelegate {
         if action == "requestPhoneSync" {
             Task { _ = await attemptSyncWithWatch() }
         }
+        if action == "watchStartedSession" {
+            isWorkoutActiveOnWatch = true
+            if let name = message["workoutName"] as? String {
+                lastWorkoutName = name
+            }
+            refreshConnectionStatus()
+        }
+        if action == "watchStoppedSession" {
+            isWorkoutActiveOnWatch = false
+            lastWorkoutName = ""
+            clearWatchMetrics()
+            refreshConnectionStatus()
+        }
 
         HealthKitManager.shared.applyLiveWatchMetrics(
             heartRate: heartRate,

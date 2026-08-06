@@ -153,7 +153,7 @@ struct WorkoutResultMediaOverlayView: View {
                     Spacer(minLength: 0)
 
                     VStack(alignment: .leading, spacing: max(8, pad * 0.45)) {
-                        Text(session.workoutTitle)
+                        Text(session.completedModalityTitle)
                             .font(.system(size: titleSize, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .lineLimit(2)

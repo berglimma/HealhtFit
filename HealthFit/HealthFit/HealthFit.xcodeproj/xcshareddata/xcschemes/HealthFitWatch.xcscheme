@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "T1000002"
-               BuildableName = "HealthFitWatch.app"
-               BlueprintName = "HealthFitWatch"
+               BlueprintIdentifier = "T1000001"
+               BuildableName = "HealthFit.app"
+               BlueprintName = "HealthFit"
                ReferencedContainer = "container:HealthFit.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -28,9 +28,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "T1000001"
-               BuildableName = "HealthFit.app"
-               BlueprintName = "HealthFit"
+               BlueprintIdentifier = "T1000002"
+               BuildableName = "HealthFitWatch.app"
+               BlueprintName = "HealthFitWatch"
                ReferencedContainer = "container:HealthFit.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>

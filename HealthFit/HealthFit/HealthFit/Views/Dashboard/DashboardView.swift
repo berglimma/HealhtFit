@@ -265,7 +265,7 @@ struct DashboardView: View {
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(AppTheme.textPrimary)
 
-                                    Text("\(card.workoutTitle) · \(formattedShareCardDate(card.displayDate))")
+                                    Text("\(card.makeSession().completedModalityTitle) · \(formattedShareCardDate(card.displayDate))")
                                         .font(.caption)
                                         .foregroundStyle(AppTheme.textSecondary)
                                         .lineLimit(2)
@@ -299,7 +299,7 @@ struct DashboardView: View {
                                 showFullscreenShareCard = true
                             }
                     )
-                    .accessibilityLabel("Card de postagem de \(card.workoutTitle)")
+                    .accessibilityLabel("Card de postagem de \(card.makeSession().completedModalityTitle)")
                     .accessibilityHint(
                         isShareCardExpanded
                             ? "Toque para recolher o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos."

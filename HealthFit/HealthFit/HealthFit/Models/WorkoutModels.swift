@@ -697,6 +697,59 @@ struct WorkoutSession: Identifiable, Codable {
     func musculacaoProgram(resolvingSheet sheet: WorkoutSheet?) -> MusculacaoProgram? {
         MusculacaoProgram.resolve(sheet: sheet, fallbackTitle: workoutTitle)
     }
+
+    /// Nome curto da modalidade para cards de postagem (ex.: “Kitesurf”, “Corrida”, “Respiração Consciente”).
+    var completedModalityTitle: String {
+        let raw = workoutTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return "Treino" }
+        let lower = raw.lowercased()
+
+        // Meditação — <tópico>
+        if lower.hasPrefix("meditação") || lower.hasPrefix("meditacao") {
+            if let dash = raw.range(of: "—") ?? raw.range(of: "-") {
+                let topic = raw[dash.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !topic.isEmpty { return topic }
+            }
+            return "Meditação"
+        }
+
+        // Cardio — <modalidade> · extras  /  Cardio — Corrida livre
+        if lower.hasPrefix("cardio") {
+            var rest = raw
+            for prefix in ["Cardio — ", "Cardio - ", "Cardio – ", "Cardio: ", "Cardio "] {
+                if rest.lowercased().hasPrefix(prefix.lowercased()) {
+                    rest = String(rest.dropFirst(prefix.count))
+                    break
+                }
+            }
+            rest = rest.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Só o primeiro segmento (antes de · ou |).
+            if let sep = rest.range(of: "·") ?? rest.range(of: "|") {
+                rest = String(rest[..<sep.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            // Casar catálogo de cardio (nome mais longo primeiro).
+            if let match = CardioExercise.catalog
+                .sorted(by: { $0.name.count > $1.name.count })
+                .first(where: { rest.localizedCaseInsensitiveContains($0.name) }) {
+                return match.name
+            }
+            if isKitesurfSession { return "Kitesurf" }
+            if isSurfSession { return "Surf" }
+            if isSwimmingSession { return "Natação" }
+            if isOutdoorCyclingSession { return "Bicicleta pedal" }
+            if isOutdoorWalkingSession { return "Caminhada" }
+            if isRunningSession { return "Corrida" }
+            // Remove sufixos tipo "livre" / distâncias.
+            let cleaned = rest
+                .replacingOccurrences(of: #"\s+livre$"#, with: "", options: .regularExpression)
+                .replacingOccurrences(of: #"\s+\d+([.,]\d+)?\s*km$"#, with: "", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return cleaned.isEmpty ? "Cardio" : cleaned
+        }
+
+        // Programas de força / casa / mobilidade — manter título do treino.
+        return raw
+    }
 }
 
 enum DurationFormatting {

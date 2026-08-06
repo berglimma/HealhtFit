@@ -111,7 +111,7 @@ struct WorkoutShareCardView: View {
                     .layoutPriority(3)
             }
 
-            Text(session.workoutTitle)
+            Text(session.completedModalityTitle)
                 .font(.system(size: needsExtraTextSpace ? 13 : 15, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color("AccentGreen"))
                 .multilineTextAlignment(.center)
@@ -160,7 +160,7 @@ struct WorkoutShareCardView: View {
                     .frame(maxWidth: .infinity)
             }
 
-            Text(session.workoutTitle)
+            Text(session.completedModalityTitle)
                 .font(.system(size: needsExtraTextSpace ? 12 : 13.5, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color("AccentGreen"))
                 .multilineTextAlignment(.center)
@@ -186,12 +186,26 @@ struct WorkoutShareCardView: View {
     }
 
     private var outdoorSessionNoun: String {
+        if session.isKitesurfSession { return "o kitesurf" }
+        if session.isSurfSession { return "o surf" }
+        if session.isSwimmingSession { return "a natação" }
         if session.isOutdoorCyclingSession { return "o pedal" }
         if session.isOutdoorWalkingSession { return "a caminhada" }
+        // Preferência: título da modalidade quando conhecido (ex.: "Elíptico" não entra aqui).
+        let modality = session.completedModalityTitle.lowercased()
+        if modality == "corrida" { return "a corrida" }
+        if modality == "caminhada" { return "a caminhada" }
+        if !modality.isEmpty, modality != "cardio", modality != "treino" {
+            // "o kite", "o remo" etc. — artigo genérico + nome da modalidade
+            return "o \(modality)"
+        }
         return "a corrida"
     }
 
     private var outdoorSessionVerb: String {
+        if session.isKitesurfSession { return "kitesurfou" }
+        if session.isSurfSession { return "surfou" }
+        if session.isSwimmingSession { return "nadou" }
         if session.isOutdoorCyclingSession { return "pedalou" }
         if session.isOutdoorWalkingSession { return "caminhou" }
         return "correu"
@@ -1024,39 +1038,56 @@ enum WorkoutShareCardRenderer {
         let name = athleteName.trimmingCharacters(in: .whitespacesAndNewlines)
         let who = name.isEmpty ? "Hoje" : "\(name) hoje"
         let duration = DurationFormatting.format(seconds: Int(session.duration))
+        let modality = session.completedModalityTitle
         if session.isOutdoorGPSCardio {
             let km = session.displayDistanceKm
             let kmPart = km > 0 ? String(format: " · %.2f km", km) : ""
-            let isBike = session.isOutdoorCyclingSession
-            let isWalk = session.isOutdoorWalkingSession
-            let tag = isBike ? "#Ciclismo" : (isWalk ? "#Caminhada" : "#Corrida")
-            let verb = isBike ? "pedalou" : (isWalk ? "caminhou" : "correu")
-            let noun = isBike ? "o pedal" : (isWalk ? "a caminhada" : "a corrida")
+            let (noun, verb, tag) = outdoorShareCopy(for: session)
             if session.endedEarly || session.autoEndedByInactivity {
                 return """
-                \(who) \(verb) (não concluiu): \(session.workoutTitle) · \(duration)\(kmPart)
+                \(who) \(verb) (não concluiu): \(modality) · \(duration)\(kmPart)
                 Cada sessão conta — HealthFit 💪
                 #HealthFit \(tag) #Treino
                 """
             }
             return """
-            \(who) finalizou \(noun): \(session.workoutTitle) · \(duration)\(kmPart)
+            \(who) finalizou \(noun): \(modality) · \(duration)\(kmPart)
             Treinei com HealthFit 💪
             #HealthFit \(tag) #Treino
             """
         }
         if session.endedEarly || session.autoEndedByInactivity {
             return """
-            \(who) treinou (não concluiu): \(session.workoutTitle) · \(duration)
+            \(who) treinou (não concluiu): \(modality) · \(duration)
             Cada sessão conta — HealthFit 💪
             #HealthFit #Treino #Evolucao
             """
         }
         return """
-        \(who) finalizou: \(session.workoutTitle) · \(duration)
+        \(who) finalizou: \(modality) · \(duration)
         Treinei com HealthFit 💪
         #HealthFit #Treino #Evolucao
         """
+    }
+
+    /// Copy de legenda / hashtag alinhado à modalidade outdoor.
+    private static func outdoorShareCopy(for session: WorkoutSession) -> (noun: String, verb: String, tag: String) {
+        if session.isKitesurfSession {
+            return ("o kitesurf", "kitesurfou", "#Kitesurf")
+        }
+        if session.isSurfSession {
+            return ("o surf", "surfou", "#Surf")
+        }
+        if session.isSwimmingSession {
+            return ("a natação", "nadou", "#Natacao")
+        }
+        if session.isOutdoorCyclingSession {
+            return ("o pedal", "pedalou", "#Ciclismo")
+        }
+        if session.isOutdoorWalkingSession {
+            return ("a caminhada", "caminhou", "#Caminhada")
+        }
+        return ("a corrida", "correu", "#Corrida")
     }
 
     static func motivationLine(for session: WorkoutSession) -> String {
@@ -1076,6 +1107,33 @@ enum WorkoutShareCardRenderer {
         }
         if session.isOutdoorGPSCardio {
             let lines: [String] = {
+                if session.isKitesurfSession {
+                    return [
+                        "Vento, água e presença. Sessão de kite fechada.",
+                        "Cada virada e salto contam. Evolução no kite.",
+                        "Você foi à água e kitesurfou. Orgulho merecido.",
+                        "O mar responde a quem aparece com o kite.",
+                        "Constância no kite, evolução no corpo e na mente."
+                    ]
+                }
+                if session.isSurfSession {
+                    return [
+                        "Ondas e presença. Sessão de surf fechada.",
+                        "Cada wave conta. Ritmo, equilíbrio e foco.",
+                        "Você foi à água e surfou. Orgulho merecido.",
+                        "O mar responde a quem aparece na prancha.",
+                        "Constância no surf, evolução no corpo."
+                    ]
+                }
+                if session.isSwimmingSession {
+                    return [
+                        "Voltas na água viram disciplina.",
+                        "Você nadou com presença. Orgulho merecido.",
+                        "Ritmo na piscina, mente focada.",
+                        "Cada braçada conta. Evolução na natação.",
+                        "Constância na água, progresso no corpo."
+                    ]
+                }
                 if session.isOutdoorCyclingSession {
                     return [
                         "Quilômetros no pedal. Ritmo firme, mente leve.",
