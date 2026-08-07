@@ -143,7 +143,8 @@ struct CardioSetupView: View {
             intensity: selectedIntensity,
             runningDistance: exercise.supportsDistanceGoals ? preset : nil,
             targetCalories: useCalorieGoal ? selectedCalorieGoal : nil,
-            isFreeRun: isFree || exercise.isWaterSport,
+            // Com meta de kcal, outdoor fica em modo livre (sem meta de tempo/km que possa sugerir fim automático).
+            isFreeRun: isFree || exercise.isWaterSport || (useCalorieGoal && supportsKm),
             poolLengthMeters: exercise.supportsSwimmingPool ? resolvedPoolMeters : nil,
             targetSwimLaps: exercise.supportsSwimmingPool && useLapGoal ? targetLaps : nil,
             customTargetDistanceKm: customKm ?? {
@@ -1378,7 +1379,7 @@ struct CardioSetupView: View {
             }
 
             if useCalorieGoal {
-                Text("Defina quantas calorias pretende gastar neste cardio.")
+                Text("Defina quantas calorias pretende gastar. Ao atingir a meta o treino continua — ele só encerra quando você tocar em Finalizar.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
 

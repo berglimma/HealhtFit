@@ -668,7 +668,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
         if calories >= Double(cardioTargetCalories) {
             if cardioSuperationMessage.isEmpty {
-                cardioSuperationMessage = "Meta superada! 🔥"
+                cardioSuperationMessage = "Meta ok! Toque Encerrar p/ finalizar"
                 WKInterfaceDevice.current().play(.success)
             }
         } else {

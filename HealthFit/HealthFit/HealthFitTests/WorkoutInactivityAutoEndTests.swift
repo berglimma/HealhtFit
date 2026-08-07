@@ -6,6 +6,36 @@ final class WorkoutInactivityAutoEndTests: XCTestCase {
         XCTAssertEqual(WorkoutStore.autoEndInactivityLimit, 2.5 * 60 * 60, accuracy: 0.1)
     }
 
+    @MainActor
+    func testCalorieGoalSessionDoesNotAutoEndByInactivity() {
+        let store = WorkoutStore()
+        store.clearAllLocalData()
+        defer { store.clearAllLocalData() }
+
+        let walk = CardioExercise.catalog.first(where: { $0.name == "Caminhada" })
+            ?? TestFixtures.runningExercise
+        let config = CardioWorkoutConfig(
+            exercise: walk,
+            intensity: .medium,
+            targetCalories: 250,
+            isFreeRun: true
+        )
+        XCTAssertTrue(store.startCardioSession(config: config))
+        guard var session = store.activeSession else {
+            return XCTFail("Sessão ativa esperada")
+        }
+        session.startedAt = Date().addingTimeInterval(-(WorkoutStore.autoEndInactivityLimit + 60))
+        store.activeSession = session
+
+        let ended = store.autoEndStaleActiveSessionIfNeeded(
+            now: .now,
+            athleteName: "Teste"
+        )
+        XCTAssertNil(ended)
+        XCTAssertNotNil(store.activeSession)
+        XCTAssertEqual(store.activeSession?.targetCalories, 250)
+    }
+
     func testEmailReportIncludesAutoEndLines() {
         var session = TestFixtures.completedWorkoutSession(workoutTitle: "Treino Costas")
         session.endedEarly = true

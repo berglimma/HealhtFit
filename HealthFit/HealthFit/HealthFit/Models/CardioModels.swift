@@ -609,6 +609,10 @@ struct CardioWorkoutConfig: Hashable, Codable {
     }
 
     var targetDurationSeconds: Int {
+        // Meta de calorias é sessão aberta: o treino só encerra quando o usuário tocar em Finalizar.
+        if hasCalorieGoal {
+            return 0
+        }
         if isFreeRun {
             return 0
         }

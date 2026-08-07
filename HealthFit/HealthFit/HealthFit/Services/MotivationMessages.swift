@@ -384,7 +384,7 @@ enum MotivationMessages {
         case 25..<50: return "Metade do caminho — mantenha o ritmo!"
         case 50..<75: return "Mais da metade! A meta está chegando!"
         case 75..<100: return "Reta final — quase lá!"
-        default: return "Meta atingida — hora de celebrar!"
+        default: return "Meta atingida — continue ou toque em Finalizar quando quiser!"
         }
     }
 

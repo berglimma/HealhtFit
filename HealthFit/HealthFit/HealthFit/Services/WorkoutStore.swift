@@ -196,6 +196,11 @@ final class WorkoutStore: ObservableObject {
         }
         guard var session = activeSession else { return nil }
 
+        // Sessão com meta de calorias só encerra pelo botão Finalizar do usuário.
+        if let targetCalories = session.targetCalories, targetCalories > 0 {
+            return nil
+        }
+
         let elapsed = now.timeIntervalSince(session.startedAt)
         guard elapsed >= Self.autoEndInactivityLimit else { return nil }
 

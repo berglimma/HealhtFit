@@ -338,7 +338,8 @@ struct ActiveCardioView: View {
                 syncWatchData()
             }
 
-            if shouldAutoEndByInactivity {
+            // Meta de calorias: nunca encerra sozinho (nem por inatividade) — só Finalizar/Encerrar.
+            if !config.hasCalorieGoal, shouldAutoEndByInactivity {
                 finishCardio(autoEndedByInactivity: true)
             }
         }
@@ -1728,13 +1729,15 @@ struct ActiveCardioView: View {
 
         let percent = Int((liveCalories / Double(target)) * 100)
 
+        // Atingir a meta só celebra — o treino continua até o usuário tocar em Finalizar.
         if hasExceededCalorieGoal {
             if !didCelebrateCalorieGoal {
                 didCelebrateCalorieGoal = true
-                superationMessage = MotivationMessages.cardioCalorieExceededMessage(
+                let celebration = MotivationMessages.cardioCalorieExceededMessage(
                     currentCalories: Int(liveCalories),
                     targetCalories: target
                 )
+                superationMessage = "\(celebration) Continue ou toque em Finalizar quando quiser encerrar."
                 progressMessage = nil
             }
             return

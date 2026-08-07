@@ -47,6 +47,9 @@ final class CardioWorkoutConfigTests: XCTestCase {
         )
         XCTAssertTrue(withGoal.hasCalorieGoal)
         XCTAssertFalse(withoutGoal.hasCalorieGoal)
+        // Meta de kcal = sessão aberta (só encerra no Finalizar).
+        XCTAssertEqual(withGoal.targetDurationSeconds, 0)
+        XCTAssertGreaterThan(withoutGoal.targetDurationSeconds, 0)
     }
 
     func testSwimmingPoolConfigAndDistance() {
