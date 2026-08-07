@@ -21,12 +21,14 @@ private enum WorkoutSection: String, CaseIterable, Identifiable {
 struct WorkoutListView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var authService: AuthService
+    @EnvironmentObject var subscriptions: SubscriptionService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showCreateWorkout = false
     @State private var createTargetGender: Gender = .male
     @State private var sheetToEdit: WorkoutSheet?
     @State private var sheetPendingDeletion: WorkoutSheet?
     @State private var selectedSection: WorkoutSection = .strength
+    @State private var paywallFeature: AppFeature?
 
     private var availableSections: [WorkoutSection] {
         let user = authService.currentUser
@@ -95,6 +97,10 @@ struct WorkoutListView: View {
             .onAppear { alignSelectedSectionWithPreferences() }
             .onChange(of: authService.currentUser?.practicedModalityIDs) { _, _ in
                 alignSelectedSectionWithPreferences()
+            }
+            .sheet(item: $paywallFeature) { feature in
+                PaywallView(highlight: feature)
+                    .environmentObject(subscriptions)
             }
             .navigationDestination(for: WorkoutSheet.self) { sheet in
                 WorkoutDetailView(sheet: sheet)
@@ -298,17 +304,11 @@ struct WorkoutListView: View {
 
             // Lista em coluna única — mesmo formato hero da musculação (altura 180).
             ForEach(visibleCardioExercises) { exercise in
-                NavigationLink(value: exercise) {
-                    CardioExerciseCard(exercise: exercise)
-                }
-                .buttonStyle(.plain)
+                cardioExerciseEntry(exercise)
             }
 
             if showsFightCard {
-                NavigationLink(value: FightHubRoute()) {
-                    FightProgramHeroCard()
-                }
-                .buttonStyle(.plain)
+                fightCardEntry
             }
 
             if hasHiddenCardioModalities {
@@ -317,6 +317,48 @@ struct WorkoutListView: View {
                     .foregroundStyle(AppTheme.textSecondary)
             }
         }
+    }
+
+    @ViewBuilder
+    private func cardioExerciseEntry(_ exercise: CardioExercise) -> some View {
+        let lockedTier = lockedPlan(for: exercise)
+        if let lockedTier, let feature = PlanAccessRules.requiredFeature(for: exercise) {
+            Button {
+                paywallFeature = feature
+            } label: {
+                CardioExerciseCard(exercise: exercise, lockedByPlan: lockedTier)
+            }
+            .buttonStyle(.plain)
+        } else {
+            NavigationLink(value: exercise) {
+                CardioExerciseCard(exercise: exercise)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private var fightCardEntry: some View {
+        let feature = AppFeature.advancedModalities
+        if subscriptions.canAccess(feature) {
+            NavigationLink(value: FightHubRoute()) {
+                FightProgramHeroCard()
+            }
+            .buttonStyle(.plain)
+        } else {
+            Button {
+                paywallFeature = feature
+            } label: {
+                FightProgramHeroCard(lockedByPlan: FeatureGate.minimumPlan(for: feature))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func lockedPlan(for exercise: CardioExercise) -> PlanTier? {
+        guard let feature = PlanAccessRules.requiredFeature(for: exercise) else { return nil }
+        guard !subscriptions.canAccess(feature) else { return nil }
+        return FeatureGate.minimumPlan(for: feature)
     }
 
     private var meditationSection: some View {

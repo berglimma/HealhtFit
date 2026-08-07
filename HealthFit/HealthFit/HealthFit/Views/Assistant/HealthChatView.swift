@@ -5,6 +5,7 @@ struct HealthChatView: View {
     @EnvironmentObject var mealPlanService: MealPlanService
     @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var workoutStore: WorkoutStore
+    @EnvironmentObject var subscriptions: SubscriptionService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
 
@@ -16,6 +17,8 @@ struct HealthChatView: View {
     /// HRV mais recente do HealthKit — leitura assíncrona, guardada para o contexto síncrono.
     @State private var latestHRVMs: Double?
     @FocusState private var isInputFocused: Bool
+    @State private var showPaywall = false
+    @State private var paywallFeature: AppFeature = .aiChatLimited
 
     private var context: HealthAssistantContext {
         let user = authService.currentUser
@@ -232,6 +235,10 @@ struct HealthChatView: View {
                     assistant.recordUserInteraction()
                 }
             }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView(highlight: paywallFeature)
+                    .environmentObject(subscriptions)
+            }
         }
     }
 
@@ -415,8 +422,18 @@ struct HealthChatView: View {
             dismissChatKeyboard()
             return
         }
+
+        let tier = subscriptions.currentTier
+        if !AssistantUsageQuota.canSend(tier: tier) {
+            dismissChatKeyboard()
+            paywallFeature = tier >= .fit ? .aiChatUnlimited : .aiChatLimited
+            showPaywall = true
+            return
+        }
+
         draft = ""
         dismissChatKeyboard()
+        AssistantUsageQuota.registerSend()
         assistant.send(text, context: context, workoutStore: workoutStore)
     }
 }

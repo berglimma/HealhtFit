@@ -61,6 +61,7 @@ struct PaywallView: View {
                 }
             }
             .task {
+                AppAnalytics.paywallView(feature: highlight?.rawValue)
                 await subscriptions.refresh()
                 if subscriptions.currentTier.isPaid {
                     selectedTier = max(selectedTier, subscriptions.currentTier)
@@ -277,8 +278,8 @@ struct SubscriptionPlanView: View {
                 currentPlanCard
                 comparisonSection
                 actions
-                rolloutNote
                 #if DEBUG
+                rolloutNote
                 debugSection
                 #endif
             }

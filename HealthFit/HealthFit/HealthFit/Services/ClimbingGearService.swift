@@ -8,10 +8,17 @@ final class ClimbingGearService: ObservableObject {
 
     private let storageKey = "healthfit.climbing.gear.v1"
     private let lastAlertKey = "healthfit.climbing.gear.lastAlert.v1"
+    private var boundUserId: String?
 
     @Published private(set) var items: [ClimbingGearItem] = []
 
     private init() {
+        load()
+    }
+
+    func bind(userId: String?) {
+        guard boundUserId != userId else { return }
+        boundUserId = userId
         load()
     }
 
@@ -157,7 +164,12 @@ final class ClimbingGearService: ObservableObject {
     // MARK: - Persistência
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey),
+        items = []
+        guard let data = UserScopedDefaults.data(
+            forLogicalKey: "climbing.gear.v1",
+            uid: boundUserId,
+            legacyKey: storageKey
+        ),
               let decoded = try? JSONDecoder().decode([ClimbingGearItem].self, from: data) else {
             return
         }
@@ -166,6 +178,11 @@ final class ClimbingGearService: ObservableObject {
 
     private func save() {
         guard let data = try? JSONEncoder().encode(items) else { return }
-        UserDefaults.standard.set(data, forKey: storageKey)
+        UserScopedDefaults.setData(
+            data,
+            forLogicalKey: "climbing.gear.v1",
+            uid: boundUserId,
+            legacyKey: storageKey
+        )
     }
 }

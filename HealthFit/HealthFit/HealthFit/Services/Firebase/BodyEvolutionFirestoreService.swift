@@ -115,4 +115,40 @@ enum BodyEvolutionFirestoreService {
         }
         return removedPDFPaths
     }
+
+    /// Apaga avaliações e meta de evolução corporal. Retorna paths de Storage a limpar.
+    @discardableResult
+    static func deleteAllUserData(userId: String) async throws -> [String] {
+        guard isAvailable else { return [] }
+
+        var storagePaths: [String] = []
+
+        if let meta = try await fetchMeta(userId: userId) {
+            storagePaths.append(contentsOf: meta.activePhotoSet?.storagePaths ?? [])
+        }
+
+        let evaluations = try await evaluationsCollection(userId: userId).getDocuments()
+        for document in evaluations.documents {
+            if let path = document.data()["pdfStoragePath"] as? String, !path.isEmpty {
+                storagePaths.append(path)
+            }
+            if let json = document.data()["payload"] as? String,
+               let payload = json.data(using: .utf8),
+               let evaluation = try? decoder.decode(BodyEvolutionEvaluation.self, from: payload),
+               let pdf = evaluation.pdfStoragePath,
+               !pdf.isEmpty {
+                storagePaths.append(pdf)
+            }
+            try await document.reference.delete()
+        }
+
+        let metaDocs = try await db.collection("users").document(userId)
+            .collection("bodyEvolutionMeta")
+            .getDocuments()
+        for document in metaDocs.documents {
+            try await document.reference.delete()
+        }
+
+        return Array(Set(storagePaths.filter { !$0.isEmpty }))
+    }
 }

@@ -103,6 +103,41 @@ enum BodyEvolutionStorageService {
         }
     }
 
+    /// Apaga fotos/PDFs sob `users/{userId}/bodyEvolution/` (listagem recursiva + paths conhecidos).
+    static func deleteAllUserData(userId: String, knownPaths: [String] = []) async {
+        guard isAvailable else { return }
+        await deletePaths(knownPaths)
+        let root = storage.reference(withPath: "users/\(userId)/bodyEvolution")
+        await deleteStoragePrefix(root)
+        // Perfil / outros arquivos do usuário sob o mesmo prefixo.
+        let userRoot = storage.reference(withPath: "users/\(userId)")
+        await deleteStoragePrefix(userRoot)
+    }
+
+    private static func deleteStoragePrefix(_ reference: StorageReference) async {
+        do {
+            let listing = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<StorageListResult, Error>) in
+                reference.listAll { result, error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else if let result {
+                        continuation.resume(returning: result)
+                    } else {
+                        continuation.resume(throwing: BodyEvolutionError.unknown)
+                    }
+                }
+            }
+            for prefix in listing.prefixes {
+                await deleteStoragePrefix(prefix)
+            }
+            await deletePaths(listing.items.map(\.fullPath))
+        } catch {
+            #if DEBUG
+            print("[HealthFit] listAll Storage \(reference.fullPath): \(error.localizedDescription)")
+            #endif
+        }
+    }
+
     private static func putData(
         _ data: Data,
         to reference: StorageReference,

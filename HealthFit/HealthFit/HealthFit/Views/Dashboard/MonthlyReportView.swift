@@ -63,6 +63,7 @@ struct MonthlyReportView: View {
                 monthlyReportService.markReportViewed()
             }
         }
+        .requiresSubscription(.monthlyReport)
     }
 
     // MARK: - Score

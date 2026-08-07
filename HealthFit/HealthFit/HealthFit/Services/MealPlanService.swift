@@ -15,8 +15,25 @@ final class MealPlanService: ObservableObject {
     private let shoppingKey = "healthfit_shopping_list"
     private let customMenuKey = "healthfit_custom_menu"
     private let purchaseStatsKey = "healthfit_shopping_purchase_stats"
+    private var boundUserId: String?
+
+    private enum ScopedKey {
+        static let plan = "meal_plan"
+        static let shopping = "shopping_list"
+        static let customMenu = "custom_menu"
+        static let purchaseStats = "shopping_purchase_stats"
+    }
 
     @Published private(set) var purchaseStats: [ShoppingPurchaseStat] = []
+
+    func bind(userId: String?) {
+        guard boundUserId != userId else { return }
+        boundUserId = userId
+        loadSavedData()
+        Task {
+            await syncFromCloudIfNeeded()
+        }
+    }
 
     func clearAllLocalData() {
         weeklyPlan = []
@@ -27,10 +44,11 @@ final class MealPlanService: ObservableObject {
         caloricDeficit = 0
         customMenuSelection = .default
         purchaseStats = []
-        UserDefaults.standard.removeObject(forKey: planKey)
-        UserDefaults.standard.removeObject(forKey: shoppingKey)
-        UserDefaults.standard.removeObject(forKey: customMenuKey)
-        UserDefaults.standard.removeObject(forKey: purchaseStatsKey)
+        UserScopedDefaults.remove(logicalKey: ScopedKey.plan, uid: boundUserId, legacyKey: planKey)
+        UserScopedDefaults.remove(logicalKey: ScopedKey.shopping, uid: boundUserId, legacyKey: shoppingKey)
+        UserScopedDefaults.remove(logicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey)
+        UserScopedDefaults.remove(logicalKey: ScopedKey.purchaseStats, uid: boundUserId, legacyKey: purchaseStatsKey)
+        boundUserId = nil
         syncMealReminders()
     }
 
@@ -312,15 +330,20 @@ final class MealPlanService: ObservableObject {
     }
 
     func loadSavedData() {
-        if let data = UserDefaults.standard.data(forKey: planKey),
+        weeklyPlan = []
+        shoppingList = []
+        customMenuSelection = .default
+        purchaseStats = []
+
+        if let data = UserScopedDefaults.data(forLogicalKey: ScopedKey.plan, uid: boundUserId, legacyKey: planKey),
            let plan = try? JSONDecoder().decode([DailyMealPlan].self, from: data) {
             weeklyPlan = plan
         }
-        if let data = UserDefaults.standard.data(forKey: shoppingKey),
+        if let data = UserScopedDefaults.data(forLogicalKey: ScopedKey.shopping, uid: boundUserId, legacyKey: shoppingKey),
            let list = try? JSONDecoder().decode([ShoppingItem].self, from: data) {
             shoppingList = list
         }
-        if let data = UserDefaults.standard.data(forKey: customMenuKey),
+        if let data = UserScopedDefaults.data(forLogicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey),
            let selection = try? JSONDecoder().decode(CustomMenuSelection.self, from: data) {
             customMenuSelection = selection
         }
@@ -333,7 +356,11 @@ final class MealPlanService: ObservableObject {
     }
 
     private func loadPurchaseStats() {
-        guard let data = UserDefaults.standard.data(forKey: purchaseStatsKey),
+        guard let data = UserScopedDefaults.data(
+            forLogicalKey: ScopedKey.purchaseStats,
+            uid: boundUserId,
+            legacyKey: purchaseStatsKey
+        ),
               let stats = try? JSONDecoder().decode([ShoppingPurchaseStat].self, from: data) else {
             purchaseStats = []
             return
@@ -343,20 +370,66 @@ final class MealPlanService: ObservableObject {
 
     private func savePurchaseStats() {
         if let data = try? JSONEncoder().encode(purchaseStats) {
-            UserDefaults.standard.set(data, forKey: purchaseStatsKey)
+            UserScopedDefaults.setData(
+                data,
+                forLogicalKey: ScopedKey.purchaseStats,
+                uid: boundUserId,
+                legacyKey: purchaseStatsKey
+            )
         }
     }
 
     private func saveData() {
         if let data = try? JSONEncoder().encode(weeklyPlan) {
-            UserDefaults.standard.set(data, forKey: planKey)
+            UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.plan, uid: boundUserId, legacyKey: planKey)
         }
         if let data = try? JSONEncoder().encode(shoppingList) {
-            UserDefaults.standard.set(data, forKey: shoppingKey)
+            UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.shopping, uid: boundUserId, legacyKey: shoppingKey)
         }
         if let data = try? JSONEncoder().encode(customMenuSelection) {
-            UserDefaults.standard.set(data, forKey: customMenuKey)
+            UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey)
         }
+        Task {
+            await pushToCloudIfNeeded()
+        }
+    }
+
+    private func syncFromCloudIfNeeded() async {
+        guard let userId = boundUserId, MealPlanFirestoreService.isAvailable else { return }
+        guard weeklyPlan.isEmpty else { return }
+        if let remote = try? await MealPlanFirestoreService.fetchPlan(userId: userId) {
+            weeklyPlan = remote.weeklyPlan
+            shoppingList = remote.shoppingList
+            customMenuSelection = remote.customMenuSelection
+            basalMetabolicRate = remote.basalMetabolicRate
+            dailyCalorieTarget = remote.dailyCalorieTarget
+            estimatedTDEE = remote.estimatedTDEE
+            caloricDeficit = remote.caloricDeficit
+            if let data = try? JSONEncoder().encode(weeklyPlan) {
+                UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.plan, uid: boundUserId, legacyKey: planKey)
+            }
+            if let data = try? JSONEncoder().encode(shoppingList) {
+                UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.shopping, uid: boundUserId, legacyKey: shoppingKey)
+            }
+            if let data = try? JSONEncoder().encode(customMenuSelection) {
+                UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey)
+            }
+            syncMealReminders()
+        }
+    }
+
+    private func pushToCloudIfNeeded() async {
+        guard let userId = boundUserId, MealPlanFirestoreService.isAvailable else { return }
+        let snapshot = MealPlanCloudSnapshot(
+            weeklyPlan: weeklyPlan,
+            shoppingList: shoppingList,
+            customMenuSelection: customMenuSelection,
+            basalMetabolicRate: basalMetabolicRate,
+            dailyCalorieTarget: dailyCalorieTarget,
+            estimatedTDEE: estimatedTDEE,
+            caloricDeficit: caloricDeficit
+        )
+        try? await MealPlanFirestoreService.savePlan(snapshot, userId: userId)
     }
 
     private func ensureDefaultSelections(goal: FitnessGoal = .maintenance) {

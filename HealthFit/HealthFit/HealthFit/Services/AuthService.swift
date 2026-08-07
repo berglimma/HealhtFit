@@ -44,6 +44,7 @@ final class AuthService: ObservableObject {
         do {
             let authUser = try await FirebaseAuthProvider.signIn(email: normalizedEmail, password: password)
             applyAuthenticatedUser(authUser, fallbackName: nil)
+            AppAnalytics.login(method: "password")
             isLoading = false
         } catch {
             errorMessage = AuthErrorMapper.message(for: error)
@@ -98,6 +99,7 @@ final class AuthService: ObservableObject {
                 countryCode: countryCode
             )
             persistSession(with: profile)
+            AppAnalytics.signUp(method: "password")
             isLoading = false
             syncProfileToCloud(profile)
         } catch {
@@ -141,6 +143,7 @@ final class AuthService: ObservableObject {
         do {
             let authUser = try await SocialSignInService.signInWithGoogle()
             applyAuthenticatedUser(authUser, fallbackName: authUser.displayName)
+            AppAnalytics.login(method: "google")
             isLoading = false
         } catch let error as SocialSignInError where error == .cancelled {
             isLoading = false
@@ -172,6 +175,7 @@ final class AuthService: ObservableObject {
                     rawNonce: rawNonce
                 )
                 applyAuthenticatedUser(signInResult.user, fallbackName: signInResult.suggestedName)
+                AppAnalytics.login(method: "apple")
                 isLoading = false
             } catch let error as SocialSignInError where error == .cancelled {
                 isLoading = false
@@ -182,7 +186,15 @@ final class AuthService: ObservableObject {
         }
     }
 
-    func logout() {
+    func logout(
+        workoutStore: WorkoutStore? = nil,
+        mealPlanService: MealPlanService? = nil,
+        wellnessService: DailyWellnessService? = nil,
+        evolutionService: BodyEvolutionService? = nil
+    ) {
+        let uid = currentUser?.id ?? ""
+        let email = currentUser?.email ?? ""
+
         NotificationService.shared.cancelWorkoutInactivityReminder()
         NotificationService.shared.cancelCardioInactivityReminder()
         NotificationService.shared.cancelMeditationInactivityReminder()
@@ -194,10 +206,26 @@ final class AuthService: ObservableObject {
         EveningTrainingNudgeService.cancelAll()
         WorkoutLiveActivitySync.end()
 
+        if let workoutStore, let mealPlanService, let wellnessService {
+            purgeLocalData(
+                uid: uid,
+                email: email,
+                workoutStore: workoutStore,
+                mealPlanService: mealPlanService,
+                wellnessService: wellnessService
+            )
+        } else if !uid.isEmpty {
+            UserDataCleaner.clearAllLocalData(uid: uid, email: email)
+        }
+
+        evolutionService?.resetForAccountSwitch()
+        ClimbingGearService.shared.bind(userId: nil)
+
         if FirebaseBootstrap.isConfigured {
             try? FirebaseAuthProvider.signOut()
         }
 
+        AppAnalytics.setUserID(nil)
         clearLocalSession()
     }
 
@@ -221,6 +249,7 @@ final class AuthService: ObservableObject {
                 try await reauthenticateForDeletion(password: password)
             }
             try await deleteRemoteData(userId: user.id)
+            AppAnalytics.accountDelete()
             purgeLocalData(
                 uid: user.id,
                 email: user.email,
@@ -481,6 +510,7 @@ final class AuthService: ObservableObject {
     private func persistSession(with profile: UserProfile) {
         currentUser = profile
         isAuthenticated = true
+        AppAnalytics.setUserID(profile.id)
         saveCachedProfile(profile)
         loadProfileImage()
         NotificationService.shared.refreshRecurringNotifications()
@@ -590,8 +620,14 @@ final class AuthService: ObservableObject {
 
     private func deleteRemoteData(userId: String) async throws {
         guard WorkoutFirestoreService.isAvailable else { return }
+
+        // Ordem: subcollections → Storage → documento raiz.
+        let bodyPaths = try await BodyEvolutionFirestoreService.deleteAllUserData(userId: userId)
+        await BodyEvolutionStorageService.deleteAllUserData(userId: userId, knownPaths: bodyPaths)
         try await DailyWellnessFirestoreService.deleteAllEntries(userId: userId)
+        try await MealPlanFirestoreService.deleteAllUserData(userId: userId)
         try await WorkoutFirestoreService.deleteAllUserData(userId: userId)
+        try await WorkoutFirestoreService.deleteUserDocument(userId: userId)
     }
 
     private func purgeLocalData(

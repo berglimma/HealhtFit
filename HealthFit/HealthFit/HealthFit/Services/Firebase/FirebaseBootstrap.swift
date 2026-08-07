@@ -16,6 +16,7 @@ enum FirebaseBootstrap {
 
         FirebaseApp.configure()
         isConfigured = true
+        AppAnalytics.configureAfterFirebase()
 
         #if DEBUG
         configureAuthEmulatorIfNeeded()

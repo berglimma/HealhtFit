@@ -153,18 +153,23 @@ final class SubscriptionService: ObservableObject {
                 await apply(transaction: transaction)
                 await transaction.finish()
                 await updateEntitlementsFromStore()
+                AppAnalytics.purchaseSuccess(productId: product.id)
                 return true
             case .userCancelled:
+                AppAnalytics.purchaseFail(productId: product.id, reason: "user_cancelled")
                 return false
             case .pending:
                 lastErrorMessage = "Compra pendente de aprovação (Controles parentais / Ask to Buy)."
+                AppAnalytics.purchaseFail(productId: product.id, reason: "pending")
                 return false
             @unknown default:
                 lastErrorMessage = "Resultado de compra desconhecido."
+                AppAnalytics.purchaseFail(productId: product.id, reason: "unknown")
                 return false
             }
         } catch {
             lastErrorMessage = friendlyError(error)
+            AppAnalytics.purchaseFail(productId: product.id, reason: "error")
             return false
         }
     }

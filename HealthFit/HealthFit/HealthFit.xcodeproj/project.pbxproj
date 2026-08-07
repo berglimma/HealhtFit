@@ -83,6 +83,8 @@
 		B1000061 /* WelcomeMotivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000063 /* WelcomeMotivationView.swift */; };
 		B1000062 /* MarathonReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000064 /* MarathonReportBuilder.swift */; };
 		B1000070 /* FirebaseBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000070 /* FirebaseBootstrap.swift */; };
+		B2000071 /* MealPlanFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000071 /* MealPlanFirestoreService.swift */; };
+		B2000070 /* AppAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000070 /* AppAnalytics.swift */; };
 		B1000071 /* AuthErrorMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000071 /* AuthErrorMapper.swift */; };
 		B1000072 /* FirebaseAuthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000072 /* FirebaseAuthProvider.swift */; };
 		B1000073 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000073 /* ForgotPasswordView.swift */; };
@@ -101,6 +103,8 @@
 		B1000086 /* ExerciseVideoFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000082 /* ExerciseVideoFirestoreService.swift */; };
 		B1000087 /* ExerciseVideoRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000083 /* ExerciseVideoRepository.swift */; };
 		B1000088 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD005 /* FirebaseStorage */; };
+		B2000089 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD006 /* FirebaseCrashlytics */; };
+		B2000090 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD007 /* FirebaseAnalytics */; };
 		B1000089 /* ExerciseVideoStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000084 /* ExerciseVideoStorageService.swift */; };
 		B1000090 /* PostWorkoutCheckInEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000085 /* PostWorkoutCheckInEngine.swift */; };
 		B1000091 /* PostWorkoutCheckInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000086 /* PostWorkoutCheckInService.swift */; };
@@ -133,6 +137,8 @@
 		B1000118 /* LegalLinksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000118 /* LegalLinksView.swift */; };
 		B1000119 /* DeleteAccountSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000119 /* DeleteAccountSheet.swift */; };
 		B1000120 /* UserDataCleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000120 /* UserDataCleaner.swift */; };
+		B2000122 /* PlanAccessRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000122 /* PlanAccessRules.swift */; };
+		B2000121 /* UserScopedDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000121 /* UserScopedDefaults.swift */; };
 		B1000121 /* AccountDeletionError.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000121 /* AccountDeletionError.swift */; };
 		B1000122 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F1000122 /* PrivacyInfo.xcprivacy */; };
 		B1000123 /* ShoppingReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000123 /* ShoppingReportBuilder.swift */; };
@@ -384,6 +390,8 @@
 		F1000063 /* WelcomeMotivationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeMotivationView.swift; sourceTree = "<group>"; };
 		F1000064 /* MarathonReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarathonReportBuilder.swift; sourceTree = "<group>"; };
 		F1000070 /* FirebaseBootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseBootstrap.swift; sourceTree = "<group>"; };
+		F2000071 /* MealPlanFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanFirestoreService.swift; sourceTree = "<group>"; };
+		F2000070 /* AppAnalytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAnalytics.swift; sourceTree = "<group>"; };
 		F1000071 /* AuthErrorMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthErrorMapper.swift; sourceTree = "<group>"; };
 		F1000072 /* FirebaseAuthProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseAuthProvider.swift; sourceTree = "<group>"; };
 		F1000073 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
@@ -429,6 +437,8 @@
 		F1000118 /* LegalLinksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalLinksView.swift; sourceTree = "<group>"; };
 		F1000119 /* DeleteAccountSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteAccountSheet.swift; sourceTree = "<group>"; };
 		F1000120 /* UserDataCleaner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDataCleaner.swift; sourceTree = "<group>"; };
+		F2000122 /* PlanAccessRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanAccessRules.swift; sourceTree = "<group>"; };
+		F2000121 /* UserScopedDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserScopedDefaults.swift; sourceTree = "<group>"; };
 		F1000121 /* AccountDeletionError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDeletionError.swift; sourceTree = "<group>"; };
 		F1000122 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F1000123 /* ShoppingReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingReportBuilder.swift; sourceTree = "<group>"; };
@@ -560,6 +570,8 @@
 				B1000082 /* FirebaseCore in Frameworks */,
 				B1000083 /* FirebaseFirestore in Frameworks */,
 				B1000088 /* FirebaseStorage in Frameworks */,
+				B2000089 /* FirebaseCrashlytics in Frameworks */,
+				B2000090 /* FirebaseAnalytics in Frameworks */,
 				B1000080 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -750,6 +762,8 @@
 				F1000348 /* MonthlyProgressAnalyzer.swift */,
 				F1000349 /* MonthlyReportService.swift */,
 				F1000120 /* UserDataCleaner.swift */,
+				F2000121 /* UserScopedDefaults.swift */,
+				F2000122 /* PlanAccessRules.swift */,
 				F1000121 /* AccountDeletionError.swift */,
 				F1000123 /* ShoppingReportBuilder.swift */,
 				F1000131 /* NutritionReportBuilder.swift */,
@@ -931,6 +945,8 @@
 			isa = PBXGroup;
 			children = (
 				F1000070 /* FirebaseBootstrap.swift */,
+				F2000070 /* AppAnalytics.swift */,
+				F2000071 /* MealPlanFirestoreService.swift */,
 				F1000071 /* AuthErrorMapper.swift */,
 				F1000072 /* FirebaseAuthProvider.swift */,
 				F1000075 /* GoogleServiceInfo.swift */,
@@ -1091,6 +1107,8 @@
 				PKGPROD002 /* FirebaseCore */,
 				PKGPROD004 /* FirebaseFirestore */,
 				PKGPROD005 /* FirebaseStorage */,
+				PKGPROD006 /* FirebaseCrashlytics */,
+				PKGPROD007 /* FirebaseAnalytics */,
 				PKGPROD003 /* GoogleSignIn */,
 			);
 			productName = HealthFit;
@@ -1397,6 +1415,8 @@
 				B1000061 /* WelcomeMotivationView.swift in Sources */,
 				B1000062 /* MarathonReportBuilder.swift in Sources */,
 				B1000070 /* FirebaseBootstrap.swift in Sources */,
+				B2000070 /* AppAnalytics.swift in Sources */,
+				B2000071 /* MealPlanFirestoreService.swift in Sources */,
 				B1000071 /* AuthErrorMapper.swift in Sources */,
 				B1000072 /* FirebaseAuthProvider.swift in Sources */,
 				B1000079 /* WorkoutFirestoreService.swift in Sources */,
@@ -1428,6 +1448,8 @@
 				B1000128 /* PasswordRequirementsView.swift in Sources */,
 				B1000119 /* DeleteAccountSheet.swift in Sources */,
 				B1000120 /* UserDataCleaner.swift in Sources */,
+				B2000121 /* UserScopedDefaults.swift in Sources */,
+				B2000122 /* PlanAccessRules.swift in Sources */,
 				B1000121 /* AccountDeletionError.swift in Sources */,
 				B1000123 /* ShoppingReportBuilder.swift in Sources */,
 				B1000131 /* NutritionReportBuilder.swift in Sources */,
@@ -2139,6 +2161,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = PKGREF001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseStorage;
+		};
+		PKGPROD006 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PKGREF001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+		PKGPROD007 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PKGREF001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

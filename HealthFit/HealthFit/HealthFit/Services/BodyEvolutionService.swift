@@ -417,4 +417,17 @@ final class BodyEvolutionService: ObservableObject {
         let url = pdfDirectory(userId: userId).appendingPathComponent("\(evaluationId).pdf")
         try? FileManager.default.removeItem(at: url)
     }
+
+    /// Limpa estado em memória e pending message ao trocar/sair da conta.
+    func resetForAccountSwitch() {
+        meta = .empty
+        evaluations = []
+        isLoading = false
+        isSaving = false
+        lastError = nil
+        lastDeletionNotice = nil
+        loadedUserId = nil
+        pendingAssistantMessage = nil
+        UserDefaults.standard.removeObject(forKey: pendingMessageKey)
+    }
 }

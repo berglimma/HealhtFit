@@ -45,6 +45,8 @@ final class WorkoutStore: ObservableObject {
     static let autoEndInactivityLimit: TimeInterval = 2.5 * 60 * 60
     static let autoEndJustification =
         "Encerrado automaticamente após 2h30 sem finalização (inatividade)."
+    /// Histórico local no device (maior que o sync cloud).
+    static let maxLocalHistorySessions = 200
     private var exerciseTimer: Timer?
     private var exerciseLastProgressAt: Date?
     private var lastActivePersistAt: Date?
@@ -52,11 +54,21 @@ final class WorkoutStore: ObservableObject {
     /// Persistência no tick do cronômetro (evita JSON+UserDefaults a cada 1s travando a UI).
     private static let activePersistMinInterval: TimeInterval = 15
 
+    private enum ScopedKey {
+        static let sheets = "workout_sheets"
+        static let history = "session_history"
+    }
+
     func configureCloudSync(userId: String?) {
+        let previous = cloudUserId
         cloudUserId = userId
+        if previous != userId {
+            reloadScopedPersistedState()
+        }
     }
 
     func clearAllLocalData() {
+        let uid = cloudUserId
         activeSession = nil
         currentExerciseIndex = 0
         exerciseRecords = []
@@ -70,9 +82,9 @@ final class WorkoutStore: ObservableObject {
         isVisionCameraPresented = false
         hasShownStartMotivation = false
         hasBoundActiveWorkoutUI = false
+        UserScopedDefaults.remove(logicalKey: ScopedKey.sheets, uid: uid, legacyKey: storageKey)
+        UserScopedDefaults.remove(logicalKey: ScopedKey.history, uid: uid, legacyKey: historyKey)
         cloudUserId = nil
-        UserDefaults.standard.removeObject(forKey: storageKey)
-        UserDefaults.standard.removeObject(forKey: historyKey)
         clearPersistedActiveSession()
         NotificationService.shared.cancelActiveWorkoutAutoEnd()
         NotificationService.shared.cancelActiveWorkoutBackgroundReminder()
@@ -133,11 +145,13 @@ final class WorkoutStore: ObservableObject {
         let storageKey = self.storageKey
         let historyKey = self.historyKey
         let sampleTitles = Self.sampleWorkoutTitles
+        let uid = cloudUserId
 
         let decoded = await Task.detached(priority: .userInitiated) { () -> (sheets: [WorkoutSheet]?, history: [WorkoutSession]?) in
             var sheets: [WorkoutSheet]?
             var history: [WorkoutSession]?
-            if let data = UserDefaults.standard.data(forKey: storageKey),
+            let sheetsData = UserScopedDefaults.data(forLogicalKey: "workout_sheets", uid: uid, legacyKey: storageKey)
+            if let data = sheetsData,
                let parsed = try? JSONDecoder().decode([WorkoutSheet].self, from: data) {
                 sheets = parsed.map { sheet in
                     var updated = sheet
@@ -147,9 +161,10 @@ final class WorkoutStore: ObservableObject {
                     return updated
                 }
             }
-            if let data = UserDefaults.standard.data(forKey: historyKey),
+            let historyData = UserScopedDefaults.data(forLogicalKey: "session_history", uid: uid, legacyKey: historyKey)
+            if let data = historyData,
                let parsed = try? JSONDecoder().decode([WorkoutSession].self, from: data) {
-                history = Array(parsed.prefix(WorkoutFirestoreService.maxStoredSessions))
+                history = Array(parsed.prefix(WorkoutStore.maxLocalHistorySessions))
             }
             return (sheets, history)
         }.value
@@ -1012,9 +1027,13 @@ final class WorkoutStore: ObservableObject {
         NotificationService.shared.cancelActiveWorkoutAutoEnd(sessionId: session.id)
 
         sessionHistory.insert(session, at: 0)
-        if sessionHistory.count > WorkoutFirestoreService.maxStoredSessions {
-            sessionHistory = Array(sessionHistory.prefix(WorkoutFirestoreService.maxStoredSessions))
+        if sessionHistory.count > Self.maxLocalHistorySessions {
+            sessionHistory = Array(sessionHistory.prefix(Self.maxLocalHistorySessions))
         }
+        AppAnalytics.workoutCompleted(
+            kind: session.workoutTitle,
+            calories: Int(session.caloriesBurned.rounded())
+        )
         activeSession = nil
         activeCardioConfig = nil
         activeMeditationConfig = nil
@@ -1181,13 +1200,41 @@ final class WorkoutStore: ObservableObject {
 
     private func saveData() {
         if let data = try? JSONEncoder().encode(workoutSheets) {
-            UserDefaults.standard.set(data, forKey: storageKey)
+            UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.sheets, uid: cloudUserId, legacyKey: storageKey)
         }
     }
 
     private func saveHistory() {
         if let data = try? JSONEncoder().encode(sessionHistory) {
-            UserDefaults.standard.set(data, forKey: historyKey)
+            UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.history, uid: cloudUserId, legacyKey: historyKey)
+        }
+    }
+
+    /// Recarrega fichas/histórico do namespace do usuário autenticado.
+    private func reloadScopedPersistedState() {
+        let sheetsData = UserScopedDefaults.data(
+            forLogicalKey: ScopedKey.sheets,
+            uid: cloudUserId,
+            legacyKey: storageKey
+        )
+        if let data = sheetsData,
+           let parsed = try? JSONDecoder().decode([WorkoutSheet].self, from: data) {
+            workoutSheets = parsed
+        } else if cloudUserId != nil {
+            workoutSheets = Self.sampleWorkouts
+            saveData()
+        }
+
+        let historyData = UserScopedDefaults.data(
+            forLogicalKey: ScopedKey.history,
+            uid: cloudUserId,
+            legacyKey: historyKey
+        )
+        if let data = historyData,
+           let parsed = try? JSONDecoder().decode([WorkoutSession].self, from: data) {
+            sessionHistory = Array(parsed.prefix(Self.maxLocalHistorySessions))
+        } else if cloudUserId != nil {
+            sessionHistory = []
         }
     }
 

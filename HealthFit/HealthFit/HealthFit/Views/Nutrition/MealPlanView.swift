@@ -48,6 +48,7 @@ struct MealPlanView: View {
         NavigationStack {
             contentWithLifecycleHandlers
         }
+        .requiresSubscription(.mealPlan)
     }
 
     private var contentWithLifecycleHandlers: some View {

@@ -2,7 +2,7 @@ import FirebaseFirestore
 import Foundation
 
 enum WorkoutFirestoreService {
-    static let maxStoredSessions = 10
+    static let maxStoredSessions = 100
 
     private static let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
@@ -43,7 +43,7 @@ enum WorkoutFirestoreService {
             "updatedAt": Timestamp(date: .now),
         ])
 
-        try await trimToLastTen(userId: userId)
+        try await trimOldestSessions(userId: userId)
     }
 
     static func fetchRecentSessions(userId: String) async throws -> [WorkoutSession] {
@@ -57,7 +57,7 @@ enum WorkoutFirestoreService {
         return snapshot.documents.compactMap { decodeSession(from: $0.data()) }
     }
 
-    private static func trimToLastTen(userId: String) async throws {
+    private static func trimOldestSessions(userId: String) async throws {
         let snapshot = try await sessionsCollection(userId: userId)
             .order(by: "endedAt", descending: true)
             .getDocuments()
@@ -86,7 +86,11 @@ enum WorkoutFirestoreService {
         for document in sessions.documents {
             try await document.reference.delete()
         }
+    }
 
-        try await userDocument.delete()
+    /// Remove o documento raiz do usuário após limpar subcollections.
+    static func deleteUserDocument(userId: String) async throws {
+        guard isAvailable else { return }
+        try await db.collection("users").document(userId).delete()
     }
 }

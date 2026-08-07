@@ -112,6 +112,7 @@ struct ShoppingListView: View {
                 )
             }
         }
+        .requiresSubscription(.shoppingList)
     }
 
     private var searchResultsSection: some View {

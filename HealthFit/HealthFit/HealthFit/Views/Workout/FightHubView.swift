@@ -6,6 +6,7 @@ struct FightHubRoute: Hashable {}
 /// Card "Luta" na lista de cardio — abre as modalidades de combate.
 struct FightProgramHeroCard: View {
     private let accent = Color(red: 0.82, green: 0.20, blue: 0.22)
+    var lockedByPlan: PlanTier? = nil
 
     var body: some View {
         WorkoutProgramHeroCard(
@@ -19,7 +20,8 @@ struct FightProgramHeroCard: View {
             eyebrowSystemImage: "stopwatch.fill",
             footerLabels: [
                 (icon: "list.bullet", text: "\(FightModality.allCases.count) modalidades")
-            ]
+            ],
+            lockedByPlan: lockedByPlan
         )
     }
 }
@@ -65,6 +67,7 @@ struct FightHubView: View {
         .background(AppTheme.background)
         .navigationTitle("Luta")
         .navigationBarTitleDisplayMode(.inline)
+        .requiresSubscription(.advancedModalities)
     }
 
     private var hubHeader: some View {

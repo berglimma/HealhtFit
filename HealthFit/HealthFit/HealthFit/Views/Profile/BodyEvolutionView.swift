@@ -34,6 +34,7 @@ struct BodyEvolutionView: View {
         .background(AppTheme.background.ignoresSafeArea())
         .navigationTitle("Evolução Corporal")
         .navigationBarTitleDisplayMode(.inline)
+        .requiresSubscription(.bodyEvolutionExport)
         .task {
             guard let userId = authService.currentUser?.id else { return }
             await evolutionService.loadIfNeeded(userId: userId)

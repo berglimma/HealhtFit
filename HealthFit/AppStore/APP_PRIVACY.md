@@ -27,13 +27,14 @@ Marque apenas o que o app realmente coleta. Base: `privacy_notes.txt` + Firebase
 |------|--------|-----------|----------|------------|
 | User ID | Sim (Firebase Auth uid) | Sim | Não | App Functionality |
 
-### Diagnostics (se Firebase Analytics/Crashlytics estiver ativo)
+### Diagnostics (Firebase Analytics / Crashlytics ativos no app)
 | Tipo | Coleta | Vinculado | Tracking | Finalidade |
 |------|--------|-----------|----------|------------|
-| Crash Data | Sim* | Não / Sim conforme config | Não | Analytics / App Functionality |
-| Performance Data | Sim* | Não | Não | Analytics |
+| Crash Data | Sim | Sim (User ID opcional) | Não | App Functionality |
+| Performance Data | Sim | Não | Não | Analytics |
+| Product Interaction | Sim (eventos de funil: login, paywall, purchase, workout) | Sim | Não | Analytics / App Functionality |
 
-\*Confirme no Firebase Console se Analytics/Crashlytics estão ligados no build de release. Se não, não declare.
+Declare Crash Data + Product Interaction. **Não** marque como tracking (sem IDFA / ads).
 
 ## NÃO declarar
 - Advertising Data
@@ -44,4 +45,4 @@ Marque apenas o que o app realmente coleta. Base: `privacy_notes.txt` + Firebase
 `https://berglimma.github.io/HealhtFit/privacidade/`
 
 ## Account deletion
-Disponível em **Perfil → Excluir conta** (obrigatório Guideline 5.1.1(v)).
+Disponível em **Perfil → Excluir conta** (obrigatório Guideline 5.1.1(v)). Apaga Auth, Firestore (perfil, treinos, wellness, meal plan, evolução corporal) e Storage do usuário.

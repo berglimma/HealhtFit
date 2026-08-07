@@ -113,7 +113,14 @@ struct ProfileView: View {
                     showDeleteAccountSheet: $showDeleteAccountSheet,
                     usesPasswordProvider: authService.usesPasswordProvider,
                     usesAppleProvider: authService.usesAppleProvider,
-                    onLogout: { authService.logout() },
+                    onLogout: {
+                        authService.logout(
+                            workoutStore: workoutStore,
+                            mealPlanService: mealPlanService,
+                            wellnessService: wellnessService,
+                            evolutionService: evolutionService
+                        )
+                    },
                     onClearSaveErrors: {
                         measurementsSaveError = nil
                         bodyDataSaveError = nil

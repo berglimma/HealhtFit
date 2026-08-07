@@ -99,6 +99,8 @@ struct RootView: View {
                 welcomeContext = nil
                 workoutStore.configureCloudSync(userId: nil)
                 wellnessService.configureCloudSync(userId: nil)
+                mealPlanService.bind(userId: nil)
+                ClimbingGearService.shared.bind(userId: nil)
                 WorkoutLiveActivitySync.end()
                 EveningTrainingNudgeService.cancelAll()
             }
@@ -135,6 +137,8 @@ struct RootView: View {
         try? await Task.sleep(nanoseconds: 450_000_000)
 
         // Phase 2 — meal plan + light reminders (decode can hitch main; after first interaction window)
+        mealPlanService.bind(userId: authService.currentUser?.id)
+        ClimbingGearService.shared.bind(userId: authService.currentUser?.id)
         mealPlanService.loadSavedData()
         if mealPlanService.weeklyPlan.isEmpty, let user = authService.currentUser {
             mealPlanService.generatePlan(for: user)
@@ -183,6 +187,8 @@ struct RootView: View {
 
         await Task.yield()
 
+        mealPlanService.bind(userId: authService.currentUser?.id)
+        ClimbingGearService.shared.bind(userId: authService.currentUser?.id)
         mealPlanService.loadSavedData()
         refreshInactivityReminder()
         EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
