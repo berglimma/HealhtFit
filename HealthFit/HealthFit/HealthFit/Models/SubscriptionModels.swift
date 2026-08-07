@@ -1,5 +1,24 @@
 import Foundation
 
+// MARK: - Periodicidade
+
+enum SubscriptionBillingPeriod: String, CaseIterable, Identifiable, Codable, Hashable {
+    case monthly
+    case yearly
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .monthly: return "Mensal"
+        case .yearly: return "Anual"
+        }
+    }
+
+    /// Desconto do plano anual em relação a 12× o mensal (marketing + referência local).
+    static let yearlyDiscountPercent = 20
+}
+
 // MARK: - Catalogo de produtos (App Store Connect)
 
 /// IDs de assinatura. Criar com **os mesmos strings** no App Store Connect.
@@ -9,23 +28,51 @@ enum SubscriptionProductID: String, CaseIterable, Identifiable, Codable {
     case aiMonthly = "healthfit.plan.ai.monthly"
     case completeMonthly = "healthfit.plan.complete.monthly"
 
-    // Reservados para fase 2 (trial / anual) — ainda fora do paywall principal
+    case basicYearly = "healthfit.plan.basic.yearly"
+    case fitYearly = "healthfit.plan.fit.yearly"
+    case aiYearly = "healthfit.plan.ai.yearly"
     case completeYearly = "healthfit.plan.complete.yearly"
 
     var id: String { rawValue }
 
     var tier: PlanTier {
         switch self {
-        case .basicMonthly: return .basic
-        case .fitMonthly: return .fit
-        case .aiMonthly: return .ai
+        case .basicMonthly, .basicYearly: return .basic
+        case .fitMonthly, .fitYearly: return .fit
+        case .aiMonthly, .aiYearly: return .ai
         case .completeMonthly, .completeYearly: return .complete
         }
     }
 
-    /// Produtos oferecidos no paywall v1.
+    var billingPeriod: SubscriptionBillingPeriod {
+        switch self {
+        case .basicMonthly, .fitMonthly, .aiMonthly, .completeMonthly:
+            return .monthly
+        case .basicYearly, .fitYearly, .aiYearly, .completeYearly:
+            return .yearly
+        }
+    }
+
+    /// Produtos oferecidos no paywall (mensal + anual com desconto).
     static var storefrontCatalog: [SubscriptionProductID] {
-        [.basicMonthly, .fitMonthly, .aiMonthly, .completeMonthly]
+        [
+            .basicMonthly, .fitMonthly, .aiMonthly, .completeMonthly,
+            .basicYearly, .fitYearly, .aiYearly, .completeYearly
+        ]
+    }
+
+    static func productID(tier: PlanTier, period: SubscriptionBillingPeriod) -> SubscriptionProductID? {
+        switch (tier, period) {
+        case (.basic, .monthly): return .basicMonthly
+        case (.fit, .monthly): return .fitMonthly
+        case (.ai, .monthly): return .aiMonthly
+        case (.complete, .monthly): return .completeMonthly
+        case (.basic, .yearly): return .basicYearly
+        case (.fit, .yearly): return .fitYearly
+        case (.ai, .yearly): return .aiYearly
+        case (.complete, .yearly): return .completeYearly
+        case (.free, _): return nil
+        }
     }
 
     static var allKnownIDs: [String] {
@@ -54,7 +101,7 @@ enum PlanTier: Int, CaseIterable, Codable, Comparable, Identifiable {
         }
     }
 
-    /// Preço de referência para marketing (Apple define o tier real na Connect).
+    /// Preço mensal de referência (Apple define o valor real na Connect).
     var referencePriceBRL: String {
         switch self {
         case .free: return "R$ 0"
@@ -62,6 +109,28 @@ enum PlanTier: Int, CaseIterable, Codable, Comparable, Identifiable {
         case .fit: return "R$ 12,90"
         case .ai: return "R$ 19,90"
         case .complete: return "R$ 24,90"
+        }
+    }
+
+    /// Preço anual de referência (~20% off vs 12× mensal).
+    var referenceYearlyPriceBRL: String {
+        switch self {
+        case .free: return "R$ 0"
+        case .basic: return "R$ 94,90"
+        case .fit: return "R$ 123,90"
+        case .ai: return "R$ 190,90"
+        case .complete: return "R$ 239,90"
+        }
+    }
+
+    /// Equivalente mensal do anual, para comparação no paywall.
+    var referenceYearlyPerMonthBRL: String {
+        switch self {
+        case .free: return "R$ 0"
+        case .basic: return "R$ 7,91"
+        case .fit: return "R$ 10,33"
+        case .ai: return "R$ 15,91"
+        case .complete: return "R$ 19,99"
         }
     }
 
@@ -76,13 +145,15 @@ enum PlanTier: Int, CaseIterable, Codable, Comparable, Identifiable {
     }
 
     var monthlyProductID: SubscriptionProductID? {
-        switch self {
-        case .free: return nil
-        case .basic: return .basicMonthly
-        case .fit: return .fitMonthly
-        case .ai: return .aiMonthly
-        case .complete: return .completeMonthly
-        }
+        SubscriptionProductID.productID(tier: self, period: .monthly)
+    }
+
+    var yearlyProductID: SubscriptionProductID? {
+        SubscriptionProductID.productID(tier: self, period: .yearly)
+    }
+
+    func productID(for period: SubscriptionBillingPeriod) -> SubscriptionProductID? {
+        SubscriptionProductID.productID(tier: self, period: period)
     }
 
     var isPaid: Bool { self != .free }

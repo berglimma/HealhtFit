@@ -9,6 +9,8 @@ final class SubscriptionService: ObservableObject {
 
     @Published private(set) var products: [Product] = []
     @Published private(set) var storeTier: PlanTier = .free
+    /// Product ID ativo mais recente (mensal ou anual) — para UI de “já ativo”.
+    @Published private(set) var activeProductID: String?
     @Published private(set) var isLoading = false
     @Published private(set) var purchaseInProgress = false
     @Published var lastErrorMessage: String?
@@ -25,6 +27,12 @@ final class SubscriptionService: ObservableObject {
     }
 
     var isSubscribed: Bool { currentTier.isPaid }
+
+    var activeBillingPeriod: SubscriptionBillingPeriod? {
+        guard let activeProductID,
+              let product = SubscriptionProductID(rawValue: activeProductID) else { return nil }
+        return product.billingPeriod
+    }
 
     private var transactionListener: Task<Void, Never>?
 
@@ -52,16 +60,64 @@ final class SubscriptionService: ObservableObject {
         FeatureGate.canAccess(feature, tier: currentTier)
     }
 
-    func product(for tier: PlanTier) -> Product? {
-        guard let id = tier.monthlyProductID?.rawValue else { return nil }
+    func product(for tier: PlanTier, period: SubscriptionBillingPeriod = .monthly) -> Product? {
+        guard let id = tier.productID(for: period)?.rawValue else { return nil }
         return products.first { $0.id == id }
     }
 
-    func displayPrice(for tier: PlanTier) -> String {
-        if let product = product(for: tier) {
-            return product.displayPrice
+    func displayPrice(for tier: PlanTier, period: SubscriptionBillingPeriod = .monthly) -> String {
+        if let product = product(for: tier, period: period) {
+            switch period {
+            case .monthly:
+                return "\(product.displayPrice)/mês"
+            case .yearly:
+                return "\(product.displayPrice)/ano"
+            }
         }
-        return "\(tier.referencePriceBRL)/mês"
+        switch period {
+        case .monthly:
+            return "\(tier.referencePriceBRL)/mês"
+        case .yearly:
+            return "\(tier.referenceYearlyPriceBRL)/ano"
+        }
+    }
+
+    /// Preço mostrado no card: no anual, destaca o equivalente mensal + total.
+    func displayPriceHeadline(for tier: PlanTier, period: SubscriptionBillingPeriod) -> String {
+        switch period {
+        case .monthly:
+            return displayPrice(for: tier, period: .monthly)
+        case .yearly:
+            if let product = product(for: tier, period: .yearly),
+               let monthly = equivalentMonthlyPrice(from: product) {
+                return "\(monthly)/mês"
+            }
+            return "\(tier.referenceYearlyPerMonthBRL)/mês"
+        }
+    }
+
+    func displayPriceSubtitle(for tier: PlanTier, period: SubscriptionBillingPeriod) -> String? {
+        guard period == .yearly else { return nil }
+        return displayPrice(for: tier, period: .yearly)
+    }
+
+    func savingsBadge() -> String {
+        "Economize \(SubscriptionBillingPeriod.yearlyDiscountPercent)%"
+    }
+
+    func isActive(tier: PlanTier, period: SubscriptionBillingPeriod) -> Bool {
+        guard currentTier == tier else { return false }
+        #if DEBUG
+        if SubscriptionConfiguration.debugPlanOverride != nil {
+            // Override de DEBUG não distingue período.
+            return period == (activeBillingPeriod ?? .monthly)
+        }
+        #endif
+        guard let activeProductID,
+              let product = SubscriptionProductID(rawValue: activeProductID) else {
+            return false
+        }
+        return product.tier == tier && product.billingPeriod == period
     }
 
     func refresh() async {
@@ -75,9 +131,9 @@ final class SubscriptionService: ObservableObject {
         isConfigured = true
     }
 
-    func purchase(tier: PlanTier) async -> Bool {
+    func purchase(tier: PlanTier, period: SubscriptionBillingPeriod = .monthly) async -> Bool {
         await refreshIfNeeded()
-        guard let product = product(for: tier) else {
+        guard let product = product(for: tier, period: period) else {
             lastErrorMessage = "Plano indisponível no momento. Verifique a conexão ou tente mais tarde."
             return false
         }
@@ -137,9 +193,14 @@ final class SubscriptionService: ObservableObject {
             let ids = SubscriptionProductID.storefrontCatalog.map(\.rawValue)
             let loaded = try await Product.products(for: ids)
             products = loaded.sorted { lhs, rhs in
-                let l = SubscriptionProductID(rawValue: lhs.id)?.tier.rawValue ?? 0
-                let r = SubscriptionProductID(rawValue: rhs.id)?.tier.rawValue ?? 0
-                return l < r
+                let lProduct = SubscriptionProductID(rawValue: lhs.id)
+                let rProduct = SubscriptionProductID(rawValue: rhs.id)
+                let lTier = lProduct?.tier.rawValue ?? 0
+                let rTier = rProduct?.tier.rawValue ?? 0
+                if lTier != rTier { return lTier < rTier }
+                let lPeriod = lProduct?.billingPeriod == .yearly ? 1 : 0
+                let rPeriod = rProduct?.billingPeriod == .yearly ? 1 : 0
+                return lPeriod < rPeriod
             }
             if products.isEmpty {
                 // Normal em Simulator sem .storekit ligado / produtos ainda inexistentes na Connect.
@@ -153,21 +214,42 @@ final class SubscriptionService: ObservableObject {
 
     private func updateEntitlementsFromStore() async {
         var active: [PlanTier] = []
+        var bestProductID: String?
+        var bestTier = PlanTier.free
         for await result in Transaction.currentEntitlements {
             guard let transaction = try? checkVerified(result) else { continue }
             guard transaction.revocationDate == nil else { continue }
             if let expiration = transaction.expirationDate, expiration < Date() { continue }
             if let product = SubscriptionProductID(rawValue: transaction.productID) {
                 active.append(product.tier)
+                if product.tier >= bestTier {
+                    bestTier = product.tier
+                    bestProductID = transaction.productID
+                }
             }
         }
         storeTier = PlanTier.highest(of: active)
+        activeProductID = bestProductID
     }
 
     private func apply(transaction: Transaction) async {
         if let product = SubscriptionProductID(rawValue: transaction.productID) {
             storeTier = max(storeTier, product.tier)
+            activeProductID = transaction.productID
         }
+    }
+
+    private func equivalentMonthlyPrice(from yearlyProduct: Product) -> String? {
+        // StoreKit não expõe “por mês” do anual; estimamos pelo preço / 12 no locale do produto.
+        let yearly = yearlyProduct.price as Decimal
+        let monthly = yearly / 12
+        var rounded = monthly
+        var result = Decimal()
+        NSDecimalRound(&result, &rounded, 2, .plain)
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale(identifier: "pt_BR")
+        return formatter.string(from: result as NSDecimalNumber)
     }
 
     private func listenForTransactions() -> Task<Void, Never> {

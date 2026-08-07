@@ -28,6 +28,25 @@ final class SubscriptionModelsTests: XCTestCase {
     }
 
     func testStorefrontCatalogCount() {
-        XCTAssertEqual(SubscriptionProductID.storefrontCatalog.count, 4)
+        XCTAssertEqual(SubscriptionProductID.storefrontCatalog.count, 8)
+    }
+
+    func testYearlyProductsMapToSameTiers() {
+        XCTAssertEqual(SubscriptionProductID.basicYearly.tier, .basic)
+        XCTAssertEqual(SubscriptionProductID.fitYearly.tier, .fit)
+        XCTAssertEqual(SubscriptionProductID.aiYearly.tier, .ai)
+        XCTAssertEqual(SubscriptionProductID.completeYearly.tier, .complete)
+        XCTAssertEqual(SubscriptionProductID.basicYearly.billingPeriod, .yearly)
+        XCTAssertEqual(SubscriptionProductID.basicMonthly.billingPeriod, .monthly)
+    }
+
+    func testProductIDLookupByPeriod() {
+        XCTAssertEqual(SubscriptionProductID.productID(tier: .complete, period: .yearly), .completeYearly)
+        XCTAssertEqual(SubscriptionProductID.productID(tier: .fit, period: .monthly), .fitMonthly)
+        XCTAssertNil(SubscriptionProductID.productID(tier: .free, period: .yearly))
+    }
+
+    func testYearlyDiscountPercent() {
+        XCTAssertEqual(SubscriptionBillingPeriod.yearlyDiscountPercent, 20)
     }
 }

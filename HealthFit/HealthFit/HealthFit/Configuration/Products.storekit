@@ -66,12 +66,12 @@
       "id" : "21500000",
       "localizations" : [
         {
-          "description" : "Planos mensais do HealthFit",
+          "description" : "Planos mensais e anuais do HealthFit",
           "displayName" : "HealthFit Plans",
           "locale" : "pt_BR"
         },
         {
-          "description" : "HealthFit monthly plans",
+          "description" : "HealthFit monthly and yearly plans",
           "displayName" : "HealthFit Plans",
           "locale" : "en_US"
         }
@@ -204,6 +204,138 @@
           "productID" : "healthfit.plan.complete.monthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "Complete Monthly",
+          "subscriptionGroupID" : "21500000",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "94.90",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6500000011",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Treinos no iPhone e Watch — 20% off no anual",
+              "displayName" : "Básico Anual",
+              "locale" : "pt_BR"
+            },
+            {
+              "description" : "Workouts on iPhone and Watch — 20% off yearly",
+              "displayName" : "Basic Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "healthfit.plan.basic.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Basic Yearly",
+          "subscriptionGroupID" : "21500000",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "123.90",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6500000012",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Treino + cardápio — 20% off no anual",
+              "displayName" : "Fit Anual",
+              "locale" : "pt_BR"
+            },
+            {
+              "description" : "Training + meal plan — 20% off yearly",
+              "displayName" : "Fit Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "healthfit.plan.fit.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Fit Yearly",
+          "subscriptionGroupID" : "21500000",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "190.90",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "6500000013",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "IA e análises — 20% off no anual",
+              "displayName" : "IA Plus Anual",
+              "locale" : "pt_BR"
+            },
+            {
+              "description" : "AI assistant and analytics — 20% off yearly",
+              "displayName" : "AI Plus Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "healthfit.plan.ai.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "AI Plus Yearly",
+          "subscriptionGroupID" : "21500000",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "239.90",
+          "familyShareable" : false,
+          "groupNumber" : 4,
+          "internalID" : "6500000014",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Tudo liberado — 20% off no anual",
+              "displayName" : "Completo Anual",
+              "locale" : "pt_BR"
+            },
+            {
+              "description" : "Full access — 20% off yearly",
+              "displayName" : "Complete Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "healthfit.plan.complete.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Complete Yearly",
           "subscriptionGroupID" : "21500000",
           "type" : "RecurringSubscription",
           "winbackOffers" : [

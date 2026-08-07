@@ -2,7 +2,7 @@ import Combine
 import StoreKit
 import SwiftUI
 
-/// Paywall com os 4 planos mensais. Usar via sheet ou navigation.
+/// Paywall com planos mensais e anuais (desconto no anual). Usar via sheet ou navigation.
 struct PaywallView: View {
     @EnvironmentObject private var subscriptions: SubscriptionService
     @Environment(\.dismiss) private var dismiss
@@ -13,11 +13,16 @@ struct PaywallView: View {
     var onPurchaseSuccess: (() -> Void)?
 
     @State private var selectedTier: PlanTier = .complete
+    @State private var billingPeriod: SubscriptionBillingPeriod = .yearly
     @State private var showManage = false
 
     private let plans: [PlanMarketingCopy] = PlanTier.allCases
         .filter(\.isPaid)
         .map(PlanMarketingCopy.init)
+
+    private var selectedIsActive: Bool {
+        subscriptions.isActive(tier: selectedTier, period: billingPeriod)
+    }
 
     var body: some View {
         NavigationStack {
@@ -27,6 +32,7 @@ struct PaywallView: View {
                     if let highlight {
                         lockedFeatureBanner(highlight)
                     }
+                    billingPeriodPicker
                     plansStack
                     if let message = subscriptions.lastErrorMessage, !message.isEmpty {
                         Text(message)
@@ -59,6 +65,9 @@ struct PaywallView: View {
                 if subscriptions.currentTier.isPaid {
                     selectedTier = max(selectedTier, subscriptions.currentTier)
                 }
+                if let period = subscriptions.activeBillingPeriod {
+                    billingPeriod = period
+                }
             }
             .manageSubscriptionsSheet(isPresented: $showManage)
         }
@@ -73,12 +82,33 @@ struct PaywallView: View {
                 .font(.title2.bold())
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
-            Text("Escolha o plano ideal. Você pode mudar ou cancelar a qualquer momento.")
+            Text("Escolha o plano ideal. No anual você economiza \(SubscriptionBillingPeriod.yearlyDiscountPercent)%.")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .padding(.top, 8)
+    }
+
+    private var billingPeriodPicker: some View {
+        VStack(spacing: 8) {
+            Picker("Cobrança", selection: $billingPeriod) {
+                ForEach(SubscriptionBillingPeriod.allCases) { period in
+                    Text(period.displayName).tag(period)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            if billingPeriod == .yearly {
+                Text(subscriptions.savingsBadge())
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppTheme.accentSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(AppTheme.accentSecondary.opacity(0.18))
+                    .clipShape(Capsule())
+            }
+        }
     }
 
     private func lockedFeatureBanner(_ feature: AppFeature) -> some View {
@@ -110,13 +140,13 @@ struct PaywallView: View {
 
     private func planCard(_ plan: PlanMarketingCopy) -> some View {
         let isSelected = selectedTier == plan.tier
-        let isCurrent = subscriptions.currentTier == plan.tier
+        let isCurrent = subscriptions.isActive(tier: plan.tier, period: billingPeriod)
 
         return Button {
             selectedTier = plan.tier
         } label: {
             VStack(alignment: .leading, spacing: 10) {
-                HStack {
+                HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 8) {
                             Text(plan.tier.displayName)
@@ -129,6 +159,15 @@ struct PaywallView: View {
                                     .padding(.vertical, 3)
                                     .background(AppTheme.accentSecondary.opacity(0.25))
                                     .foregroundStyle(AppTheme.accentSecondary)
+                                    .clipShape(Capsule())
+                            }
+                            if billingPeriod == .yearly {
+                                Text("-\(SubscriptionBillingPeriod.yearlyDiscountPercent)%")
+                                    .font(.caption2.weight(.bold))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color.green.opacity(0.2))
+                                    .foregroundStyle(.green)
                                     .clipShape(Capsule())
                             }
                             if isCurrent {
@@ -146,10 +185,17 @@ struct PaywallView: View {
                             .foregroundStyle(AppTheme.textSecondary)
                             .multilineTextAlignment(.leading)
                     }
-                    Spacer()
-                    Text(subscriptions.displayPrice(for: plan.tier))
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(AppTheme.textPrimary)
+                    Spacer(minLength: 8)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(subscriptions.displayPriceHeadline(for: plan.tier, period: billingPeriod))
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        if let subtitle = subscriptions.displayPriceSubtitle(for: plan.tier, period: billingPeriod) {
+                            Text(subtitle)
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                    }
                 }
 
                 ForEach(plan.bulletPoints, id: \.self) { line in
@@ -173,7 +219,7 @@ struct PaywallView: View {
     private var purchaseButton: some View {
         Button {
             Task {
-                let ok = await subscriptions.purchase(tier: selectedTier)
+                let ok = await subscriptions.purchase(tier: selectedTier, period: billingPeriod)
                 if ok {
                     onPurchaseSuccess?()
                     dismiss()
@@ -185,16 +231,16 @@ struct PaywallView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
             } else {
-                Text(subscriptions.currentTier == selectedTier
+                Text(selectedIsActive
                       ? "Plano já ativo"
-                      : "Assinar \(selectedTier.displayName)")
+                      : "Assinar \(selectedTier.displayName) \(billingPeriod.displayName.lowercased())")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
             }
         }
         .buttonStyle(PrimaryButtonStyle())
-        .disabled(subscriptions.purchaseInProgress || subscriptions.currentTier == selectedTier)
+        .disabled(subscriptions.purchaseInProgress || selectedIsActive)
     }
 
     private var secondaryActions: some View {
@@ -278,8 +324,11 @@ struct SubscriptionPlanView: View {
             Text("Comparativo")
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
+            Text("Anual com \(SubscriptionBillingPeriod.yearlyDiscountPercent)% de desconto")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
             ForEach(PlanTier.allCases.filter(\.isPaid), id: \.self) { tier in
-                HStack {
+                HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(tier.displayName)
                             .font(.subheadline.weight(.semibold))
@@ -290,9 +339,14 @@ struct SubscriptionPlanView: View {
                             .lineLimit(2)
                     }
                     Spacer()
-                    Text(subscriptions.displayPrice(for: tier))
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(AppTheme.accent)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(subscriptions.displayPrice(for: tier, period: .monthly))
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(AppTheme.accent)
+                        Text(subscriptions.displayPrice(for: tier, period: .yearly))
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.green)
+                    }
                 }
                 .padding(.vertical, 6)
             }
@@ -342,7 +396,7 @@ struct SubscriptionPlanView: View {
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
             Text("""
-            1. Criar grupo “HealthFit Plans” e os 4 product IDs na App Store Connect.
+            1. Criar grupo “HealthFit Plans” e os 8 product IDs (4 mensais + 4 anuais) na App Store Connect.
             2. Em Xcode: Scheme → Options → StoreKit Configuration → Products.storekit.
             3. Ativar featureGatesEnabled quando for bloquear IA, Nutrição e Relatórios.
             """)
