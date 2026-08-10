@@ -37,37 +37,42 @@ service cloud.firestore {
     }
 
     // Treino em dupla/equipe — grupos em duoTeams + vínculo em users/{uid}/duoMemberships.
+    function isDuoMember(teamId) {
+      return request.auth != null
+        && request.auth.uid in get(/databases/$(database)/documents/duoTeams/$(teamId)).data.get('memberUids', []);
+    }
+
+    function hasDuoMembership(teamId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)/duoMemberships/$(teamId));
+    }
+
     match /duoTeams/{teamId} {
+      // Membro listado no doc OU com vínculo em duoMemberships (evita bloqueio após sync parcial).
       allow read: if request.auth != null
-        && request.auth.uid in resource.data.memberUids;
+        && (request.auth.uid in resource.data.get('memberUids', [])
+            || hasDuoMembership(teamId));
       allow create: if request.auth != null
         && request.auth.uid == request.resource.data.createdByUid
-        && request.auth.uid in request.resource.data.memberUids
-        && request.resource.data.keys().hasAll([
-          'name', 'createdByUid', 'memberUids', 'payload', 'createdAt', 'updatedAt'
-        ]);
+        && request.auth.uid in request.resource.data.get('memberUids', []);
       allow update: if request.auth != null
-        && (request.auth.uid in resource.data.memberUids
-            || request.auth.uid in request.resource.data.memberUids);
+        && (request.auth.uid in resource.data.get('memberUids', [])
+            || request.auth.uid in request.resource.data.get('memberUids', [])
+            || hasDuoMembership(teamId));
       allow delete: if request.auth != null
         && (request.auth.uid == resource.data.createdByUid
-            || request.auth.uid in resource.data.memberUids);
+            || request.auth.uid in resource.data.get('memberUids', []));
 
       match /messages/{messageId} {
-        allow read, create: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/duoTeams/$(teamId)).data.get('memberUids', []);
-        // Qualquer membro pode apagar (TTL de 24h do chat de marcação).
-        allow update, delete: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/duoTeams/$(teamId)).data.get('memberUids', []);
+        allow read, create: if isDuoMember(teamId) || hasDuoMembership(teamId);
+        allow update, delete: if isDuoMember(teamId) || hasDuoMembership(teamId);
       }
 
-      // Resumo de desempenho para ranking (sem localização).
       match /memberStats/{memberUid} {
-        allow read: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/duoTeams/$(teamId)).data.get('memberUids', []);
+        allow read: if isDuoMember(teamId) || hasDuoMembership(teamId);
         allow create, update: if request.auth != null
           && request.auth.uid == memberUid
-          && request.auth.uid in get(/databases/$(database)/documents/duoTeams/$(teamId)).data.get('memberUids', []);
+          && (isDuoMember(teamId) || hasDuoMembership(teamId));
         allow delete: if request.auth != null
           && (request.auth.uid == memberUid
               || request.auth.uid == get(/databases/$(database)/documents/duoTeams/$(teamId)).data.createdByUid);

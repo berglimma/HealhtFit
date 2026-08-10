@@ -101,6 +101,7 @@ enum DuoTeamFirestoreService {
     static func fetchTeam(id: String) async throws -> DuoTeam? {
         guard isAvailable else { return nil }
         let snap = try await teamsCollection().document(id).getDocument()
+        guard snap.exists else { return nil }
         return decode(DuoTeam.self, from: snap.data())
     }
 
@@ -111,8 +112,13 @@ enum DuoTeamFirestoreService {
             .getDocuments()
         var teams: [DuoTeam] = []
         for doc in memberships.documents {
-            if let team = try await fetchTeam(id: doc.documentID) {
-                teams.append(team)
+            do {
+                if let team = try await fetchTeam(id: doc.documentID) {
+                    teams.append(team)
+                }
+            } catch {
+                // Permissão/índice em um grupo não derruba a lista inteira.
+                print("[HealthFit] DuoTeam fetch \(doc.documentID): \(error.localizedDescription)")
             }
         }
         return teams.sorted { $0.updatedAt > $1.updatedAt }
@@ -175,12 +181,14 @@ enum DuoTeamFirestoreService {
 
     static func fetchPendingInvites(forUserId userId: String) async throws -> [DuoTeamInvite] {
         guard isAvailable else { return [] }
+        // Sem orderBy composto — evita erro de índice; ordena no cliente.
         let snap = try await db.collection("users").document(userId)
             .collection("duoPendingInvites")
-            .order(by: "createdAt", descending: true)
             .limit(to: 40)
             .getDocuments()
-        return snap.documents.compactMap { decode(DuoTeamInvite.self, from: $0.data()) }
+        return snap.documents
+            .compactMap { decode(DuoTeamInvite.self, from: $0.data()) }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     static func deletePendingInvite(forUserId userId: String, inviteId: String) async throws {
@@ -206,12 +214,14 @@ enum DuoTeamFirestoreService {
 
     static func fetchInvitesSent(byUserId userId: String) async throws -> [DuoTeamInvite] {
         guard isAvailable else { return [] }
+        // where + orderBy exige índice composto; ordenamos no app.
         let snap = try await invitesCollection()
             .whereField("fromUid", isEqualTo: userId)
-            .order(by: "createdAt", descending: true)
             .limit(to: 40)
             .getDocuments()
-        return snap.documents.compactMap { decode(DuoTeamInvite.self, from: $0.data()) }
+        return snap.documents
+            .compactMap { decode(DuoTeamInvite.self, from: $0.data()) }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     // MARK: - Messages

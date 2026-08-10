@@ -67,31 +67,45 @@ final class DuoTeamService: ObservableObject {
         isLoading = true
         lastError = nil
         defer { isLoading = false }
-        do {
-            if let entry = try? await ProfileFirestoreService.fetchMemberPublicProfile(userId: userId) {
-                if !entry.shownName.isEmpty { boundUserName = entry.shownName }
-                // Não apagar país/foto locais se o diretório ainda estiver incompleto.
-                if let code = entry.countryCode, !code.isEmpty {
-                    boundCountryCode = code
-                }
-                if let photo = entry.photoURL, !photo.isEmpty {
-                    boundPhotoURL = photo
-                }
+
+        if let entry = try? await ProfileFirestoreService.fetchMemberPublicProfile(userId: userId) {
+            if !entry.shownName.isEmpty { boundUserName = entry.shownName }
+            if let code = entry.countryCode, !code.isEmpty {
+                boundCountryCode = code
             }
+            if let photo = entry.photoURL, !photo.isEmpty {
+                boundPhotoURL = photo
+            }
+        }
+
+        // Cada etapa é isolada: falha em convites não bloqueia as equipes.
+        do {
             let localTeams = teams
             let remoteTeams = try await DuoTeamFirestoreService.fetchTeams(forUserId: userId)
             teams = await mergeTeamsPreferringCloud(local: localTeams, remote: remoteTeams)
+        } catch {
+            print("[HealthFit] Duo teams sync: \(error.localizedDescription)")
+            lastError = "Não foi possível sincronizar as equipes com o banco."
+        }
+
+        do {
             let remoteInvites = try await DuoTeamFirestoreService.fetchInvitesSent(byUserId: userId)
             if !remoteInvites.isEmpty {
                 sentInvites = remoteInvites
             }
+        } catch {
+            print("[HealthFit] Duo invites sent sync: \(error.localizedDescription)")
+        }
+
+        do {
             receivedInvites = try await DuoTeamFirestoreService.fetchPendingInvites(forUserId: userId)
                 .filter { !$0.isExpired && $0.status == .pending }
-            await refreshMyMemberProfileAcrossTeams()
-            persistLocal()
         } catch {
-            lastError = "Não foi possível sincronizar as equipes com o banco."
+            print("[HealthFit] Duo pending invites sync: \(error.localizedDescription)")
         }
+
+        await refreshMyMemberProfileAcrossTeams()
+        persistLocal()
     }
 
     func clearAllLocalData() {
