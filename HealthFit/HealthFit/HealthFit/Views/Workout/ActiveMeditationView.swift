@@ -7,6 +7,7 @@ struct ActiveMeditationView: View {
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.scenePhase) private var scenePhase
 
     let config: MeditationWorkoutConfig
     var onReturnToWorkoutList: (() -> Void)? = nil
@@ -66,15 +67,18 @@ struct ActiveMeditationView: View {
         }
         .onReceive(clock) { _ in
             elapsedSeconds = wallClockElapsedSeconds()
-            watchConnectivity.syncMeditationProgress(
-                elapsedSeconds: elapsedSeconds,
-                targetSeconds: config.targetDurationSeconds,
-                currentPrompt: currentPrompt,
-                promptIndex: currentPromptIndex
-            )
+            // Em background: só encerra por tempo; evita sync Watch a cada segundo.
+            if scenePhase == .active {
+                watchConnectivity.syncMeditationProgress(
+                    elapsedSeconds: elapsedSeconds,
+                    targetSeconds: config.targetDurationSeconds,
+                    currentPrompt: currentPrompt,
+                    promptIndex: currentPromptIndex
+                )
+            }
             if elapsedSeconds >= config.targetDurationSeconds && !isFinishing {
                 finishMeditation()
-            } else if shouldAutoEndByInactivity {
+            } else if scenePhase == .active, shouldAutoEndByInactivity {
                 finishMeditation(autoEndedByInactivity: true)
             }
         }

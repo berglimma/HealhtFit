@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 import Combine
 
-/// Payload do último card de conquista gerado para postagem (Stories / status).
+/// Payload do card de conquista gerado para postagem (Stories / status).
 struct LastWorkoutShareCard: Codable, Equatable {
     var sessionId: UUID
     var workoutSheetId: UUID
@@ -24,8 +24,16 @@ struct LastWorkoutShareCard: Codable, Equatable {
     var averagePaceSecondsPerKm: Int?
     var stepCount: Int?
     var routePoints: [RouteCoordinate]
+    /// Presente quando o treino contou para dupla/equipe.
+    var duoTeamId: String?
+    var duoTeamName: String?
 
     var displayDate: Date { endedAt }
+
+    var isDuoTeamCard: Bool {
+        guard let duoTeamId, !duoTeamId.isEmpty else { return false }
+        return true
+    }
 
     init(
         sessionId: UUID,
@@ -45,7 +53,9 @@ struct LastWorkoutShareCard: Codable, Equatable {
         completedDistanceKm: Double? = nil,
         averagePaceSecondsPerKm: Int? = nil,
         stepCount: Int? = nil,
-        routePoints: [RouteCoordinate] = []
+        routePoints: [RouteCoordinate] = [],
+        duoTeamId: String? = nil,
+        duoTeamName: String? = nil
     ) {
         self.sessionId = sessionId
         self.workoutSheetId = workoutSheetId
@@ -65,6 +75,8 @@ struct LastWorkoutShareCard: Codable, Equatable {
         self.averagePaceSecondsPerKm = averagePaceSecondsPerKm
         self.stepCount = stepCount
         self.routePoints = routePoints
+        self.duoTeamId = duoTeamId
+        self.duoTeamName = duoTeamName
     }
 
     init(from decoder: Decoder) throws {
@@ -87,6 +99,8 @@ struct LastWorkoutShareCard: Codable, Equatable {
         averagePaceSecondsPerKm = try container.decodeIfPresent(Int.self, forKey: .averagePaceSecondsPerKm)
         stepCount = try container.decodeIfPresent(Int.self, forKey: .stepCount)
         routePoints = try container.decodeIfPresent([RouteCoordinate].self, forKey: .routePoints) ?? []
+        duoTeamId = try container.decodeIfPresent(String.self, forKey: .duoTeamId)
+        duoTeamName = try container.decodeIfPresent(String.self, forKey: .duoTeamName)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -111,6 +125,8 @@ struct LastWorkoutShareCard: Codable, Equatable {
         if !routePoints.isEmpty {
             try container.encode(routePoints, forKey: .routePoints)
         }
+        try container.encodeIfPresent(duoTeamId, forKey: .duoTeamId)
+        try container.encodeIfPresent(duoTeamName, forKey: .duoTeamName)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -118,6 +134,7 @@ struct LastWorkoutShareCard: Codable, Equatable {
         case athleteName, motivationLine, caloriesBurned, completedExercises, totalExercises
         case averageHeartRate, endedEarly, autoEndedByInactivity, savedAt
         case completedDistanceKm, averagePaceSecondsPerKm, stepCount, routePoints
+        case duoTeamId, duoTeamName
     }
 
     func makeSession() -> WorkoutSession {
@@ -135,7 +152,9 @@ struct LastWorkoutShareCard: Codable, Equatable {
             routePoints: routePoints,
             stepCount: stepCount,
             endedEarly: endedEarly,
-            autoEndedByInactivity: autoEndedByInactivity
+            autoEndedByInactivity: autoEndedByInactivity,
+            duoTeamId: duoTeamId,
+            duoTeamName: duoTeamName
         )
         if averageHeartRate > 0 {
             session.heartRateSamples = [
@@ -146,21 +165,76 @@ struct LastWorkoutShareCard: Codable, Equatable {
     }
 }
 
+enum WorkoutShareCardSlot: String, CaseIterable, Identifiable {
+    case individual
+    case duoTeam
+
+    var id: String { rawValue }
+
+    var payloadKey: String {
+        switch self {
+        case .individual: return "healthfit_last_workout_share_card"
+        case .duoTeam: return "healthfit_last_duo_workout_share_card"
+        }
+    }
+
+    var imageFileName: String {
+        switch self {
+        case .individual: return "last_workout_share_card.png"
+        case .duoTeam: return "last_duo_workout_share_card.png"
+        }
+    }
+
+    var sectionTitle: String {
+        switch self {
+        case .individual: return "Último card individual"
+        case .duoTeam: return "Último card em grupo"
+        }
+    }
+
+    var emptyHint: String {
+        switch self {
+        case .individual:
+            return "Nenhum card gerado ainda. Finalize um treino individual para criar o card de postagem."
+        case .duoTeam:
+            return "Nenhum card de grupo ainda. Ative o modo equipe e finalize um treino para postar."
+        }
+    }
+}
+
 @MainActor
 final class WorkoutShareCardStore: ObservableObject {
     static let shared = WorkoutShareCardStore()
 
-    private let payloadKey = "healthfit_last_workout_share_card"
-    private let imageFileName = "last_workout_share_card.png"
+    @Published private(set) var lastIndividualCard: LastWorkoutShareCard?
+    @Published private(set) var lastDuoCard: LastWorkoutShareCard?
+    @Published private(set) var individualPreviewImage: UIImage?
+    @Published private(set) var duoPreviewImage: UIImage?
 
-    @Published private(set) var lastCard: LastWorkoutShareCard?
-    @Published private(set) var previewImage: UIImage?
+    /// Compat: aponta para o card individual (usos antigos / resumo).
+    var lastCard: LastWorkoutShareCard? { lastIndividualCard }
+    var previewImage: UIImage? { individualPreviewImage }
 
     private init() {
         load()
     }
 
+    func card(for slot: WorkoutShareCardSlot) -> LastWorkoutShareCard? {
+        switch slot {
+        case .individual: return lastIndividualCard
+        case .duoTeam: return lastDuoCard
+        }
+    }
+
+    func previewImage(for slot: WorkoutShareCardSlot) -> UIImage? {
+        switch slot {
+        case .individual: return individualPreviewImage
+        case .duoTeam: return duoPreviewImage
+        }
+    }
+
     /// Persiste o card mostrado no fim do treino (metadata + imagem renderizada).
+    /// Treinos com `duoTeamId` vão para o slot de grupo; os demais, para o individual.
     func remember(
         session: WorkoutSession,
         athleteName: String,
@@ -168,11 +242,26 @@ final class WorkoutShareCardStore: ObservableObject {
         recentSessions: [WorkoutSession] = [],
         profileImage: UIImage? = nil
     ) {
-        if lastCard?.sessionId == session.id, previewImage != nil {
+        let slot: WorkoutShareCardSlot = session.isDuoTeamSession ? .duoTeam : .individual
+        if card(for: slot)?.sessionId == session.id, previewImage(for: slot) != nil {
             return
         }
 
         let endedAt = session.endedAt ?? session.startedAt
+        let duoLine: String = {
+            guard session.isDuoTeamSession else { return motivationLine }
+            let team = session.duoTeamName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if team.isEmpty {
+                return motivationLine.isEmpty
+                    ? "Treino em dupla/equipe no HealthFit."
+                    : "\(motivationLine) · Treino em grupo"
+            }
+            if motivationLine.isEmpty {
+                return "Treino com a equipe “\(team)”."
+            }
+            return "\(motivationLine) · Equipe “\(team)”"
+        }()
+
         let payload = LastWorkoutShareCard(
             sessionId: session.id,
             workoutSheetId: session.workoutSheetId,
@@ -180,7 +269,7 @@ final class WorkoutShareCardStore: ObservableObject {
             startedAt: session.startedAt,
             endedAt: endedAt,
             athleteName: athleteName,
-            motivationLine: motivationLine,
+            motivationLine: duoLine,
             caloriesBurned: session.caloriesBurned,
             completedExercises: session.completedExercises,
             totalExercises: session.totalExercises,
@@ -191,64 +280,104 @@ final class WorkoutShareCardStore: ObservableObject {
             completedDistanceKm: session.completedDistanceKm,
             averagePaceSecondsPerKm: session.averagePaceSecondsPerKm,
             stepCount: session.stepCount,
-            routePoints: session.routePoints
+            routePoints: session.routePoints,
+            duoTeamId: session.duoTeamId,
+            duoTeamName: session.duoTeamName
         )
 
-        lastCard = payload
-        persistPayload(payload)
+        setCard(payload, slot: slot)
+        persistPayload(payload, slot: slot)
 
         if let image = WorkoutShareCardRenderer.renderImage(
             session: session,
             athleteName: athleteName,
-            motivationLine: motivationLine,
+            motivationLine: duoLine,
             recentSessions: recentSessions,
             profileImage: profileImage
         ) {
-            previewImage = image
-            saveImage(image)
+            setPreviewImage(image, slot: slot)
+            saveImage(image, slot: slot)
         }
     }
 
-    /// Atualiza só a imagem (ex.: após renderizar para compartilhar).
+    /// Atualiza só a imagem do slot individual (compat).
     func updatePreviewImage(_ image: UIImage) {
-        previewImage = image
-        saveImage(image)
+        updatePreviewImage(image, slot: .individual)
+    }
+
+    func updatePreviewImage(_ image: UIImage, slot: WorkoutShareCardSlot) {
+        setPreviewImage(image, slot: slot)
+        saveImage(image, slot: slot)
     }
 
     func reset() {
-        lastCard = nil
-        previewImage = nil
-        UserDefaults.standard.removeObject(forKey: payloadKey)
-        if let url = imageURL {
-            try? FileManager.default.removeItem(at: url)
+        lastIndividualCard = nil
+        lastDuoCard = nil
+        individualPreviewImage = nil
+        duoPreviewImage = nil
+        for slot in WorkoutShareCardSlot.allCases {
+            UserDefaults.standard.removeObject(forKey: slot.payloadKey)
+            if let url = imageURL(for: slot) {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+    }
+
+    private func setCard(_ payload: LastWorkoutShareCard, slot: WorkoutShareCardSlot) {
+        switch slot {
+        case .individual: lastIndividualCard = payload
+        case .duoTeam: lastDuoCard = payload
+        }
+    }
+
+    private func setPreviewImage(_ image: UIImage?, slot: WorkoutShareCardSlot) {
+        switch slot {
+        case .individual: individualPreviewImage = image
+        case .duoTeam: duoPreviewImage = image
         }
     }
 
     private func load() {
-        if let data = UserDefaults.standard.data(forKey: payloadKey),
-           let payload = try? JSONDecoder().decode(LastWorkoutShareCard.self, from: data) {
-            lastCard = payload
-        }
-        if let url = imageURL,
-           FileManager.default.fileExists(atPath: url.path),
-           let data = try? Data(contentsOf: url),
-           let image = UIImage(data: data) {
-            previewImage = image
+        for slot in WorkoutShareCardSlot.allCases {
+            if let data = UserDefaults.standard.data(forKey: slot.payloadKey),
+               let payload = try? JSONDecoder().decode(LastWorkoutShareCard.self, from: data) {
+                // Migração: card antigo com duo no slot individual → move para duo.
+                if slot == .individual, payload.isDuoTeamCard {
+                    setCard(payload, slot: .duoTeam)
+                    persistPayload(payload, slot: .duoTeam)
+                    UserDefaults.standard.removeObject(forKey: slot.payloadKey)
+                } else {
+                    setCard(payload, slot: slot)
+                }
+            }
+            if let url = imageURL(for: slot),
+               FileManager.default.fileExists(atPath: url.path),
+               let data = try? Data(contentsOf: url),
+               let image = UIImage(data: data) {
+                // Se o payload foi migrado, a imagem antiga individual pode ser a do duo.
+                if slot == .individual, lastIndividualCard == nil, lastDuoCard != nil, duoPreviewImage == nil {
+                    setPreviewImage(image, slot: .duoTeam)
+                    saveImage(image, slot: .duoTeam)
+                    try? FileManager.default.removeItem(at: url)
+                } else {
+                    setPreviewImage(image, slot: slot)
+                }
+            }
         }
     }
 
-    private func persistPayload(_ payload: LastWorkoutShareCard) {
+    private func persistPayload(_ payload: LastWorkoutShareCard, slot: WorkoutShareCardSlot) {
         guard let data = try? JSONEncoder().encode(payload) else { return }
-        UserDefaults.standard.set(data, forKey: payloadKey)
+        UserDefaults.standard.set(data, forKey: slot.payloadKey)
     }
 
-    private var imageURL: URL? {
+    private func imageURL(for slot: WorkoutShareCardSlot) -> URL? {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
-            .appendingPathComponent(imageFileName)
+            .appendingPathComponent(slot.imageFileName)
     }
 
-    private func saveImage(_ image: UIImage) {
-        guard let url = imageURL,
+    private func saveImage(_ image: UIImage, slot: WorkoutShareCardSlot) {
+        guard let url = imageURL(for: slot),
               let data = image.pngData() else { return }
         try? data.write(to: url, options: .atomic)
     }

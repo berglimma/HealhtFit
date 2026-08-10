@@ -70,10 +70,11 @@ enum DuoTeamFirestoreService {
             return row
         }
 
-        try await teamsCollection().document(team.id).setData([
+        var teamData: [String: Any] = [
             "payload": json,
             "name": team.name,
             "modality": team.modality.rawValue,
+            "modalities": team.effectiveModalities.map(\.rawValue),
             "createdByUid": team.createdByUid,
             "createdByName": team.createdByName,
             "memberUids": memberUids,
@@ -82,7 +83,13 @@ enum DuoTeamFirestoreService {
             "updatedAt": Timestamp(date: team.updatedAt),
             "createdAt": Timestamp(date: team.createdAt),
             "privacyAcknowledged": true,
-        ], merge: true)
+        ]
+        if let photoURL = team.photoURL, !photoURL.isEmpty {
+            teamData["photoURL"] = photoURL
+        } else {
+            teamData["photoURL"] = FieldValue.delete()
+        }
+        try await teamsCollection().document(team.id).setData(teamData, merge: true)
 
         for member in team.members {
             guard let uid = member.uid else { continue }
@@ -90,6 +97,7 @@ enum DuoTeamFirestoreService {
                 "teamId": team.id,
                 "teamName": team.name,
                 "modality": team.modality.rawValue,
+                "modalities": team.effectiveModalities.map(\.rawValue),
                 "createdByUid": team.createdByUid,
                 "memberCount": team.memberCount,
                 "updatedAt": Timestamp(date: .now),
@@ -194,6 +202,75 @@ enum DuoTeamFirestoreService {
     static func deletePendingInvite(forUserId userId: String, inviteId: String) async throws {
         guard isAvailable else { return }
         try await pendingInviteDoc(userId: userId, inviteId: inviteId).delete()
+    }
+
+    // MARK: - Inbox notifications (adicionado ao grupo, etc.)
+
+    private static func notificationDoc(userId: String, id: String) -> DocumentReference {
+        db.collection("users").document(userId).collection("duoNotifications").document(id)
+    }
+
+    static func saveInboxNotification(
+        forUserId userId: String,
+        notification: DuoInboxNotification
+    ) async throws {
+        guard isAvailable else { return }
+        let payload = try encoder.encode(notification)
+        guard let json = String(data: payload, encoding: .utf8) else { return }
+        try await notificationDoc(userId: userId, id: notification.id).setData([
+            "payload": json,
+            "fromUid": notification.fromUid,
+            "teamId": notification.teamId,
+            "kind": notification.kind,
+            "delivered": notification.delivered,
+            "createdAt": Timestamp(date: notification.createdAt),
+        ], merge: true)
+    }
+
+    static func fetchUndeliveredNotifications(forUserId userId: String) async throws -> [DuoInboxNotification] {
+        guard isAvailable else { return [] }
+        let snap = try await db.collection("users").document(userId)
+            .collection("duoNotifications")
+            .whereField("delivered", isEqualTo: false)
+            .limit(to: 30)
+            .getDocuments()
+        return snap.documents
+            .compactMap { decode(DuoInboxNotification.self, from: $0.data()) }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    static func markNotificationDelivered(forUserId userId: String, id: String) async throws {
+        guard isAvailable else { return }
+        if var note = try await fetchNotification(userId: userId, id: id) {
+            note.delivered = true
+            try await saveInboxNotification(forUserId: userId, notification: note)
+        } else {
+            try await notificationDoc(userId: userId, id: id).setData([
+                "delivered": true,
+            ], merge: true)
+        }
+    }
+
+    private static func fetchNotification(userId: String, id: String) async throws -> DuoInboxNotification? {
+        let snap = try await notificationDoc(userId: userId, id: id).getDocument()
+        return decode(DuoInboxNotification.self, from: snap.data())
+    }
+
+    static func listenInboxNotifications(
+        userId: String,
+        onChange: @escaping @Sendable ([DuoInboxNotification]) -> Void
+    ) -> ListenerRegistration? {
+        guard isAvailable else { return nil }
+        return db.collection("users").document(userId)
+            .collection("duoNotifications")
+            .whereField("delivered", isEqualTo: false)
+            .limit(to: 30)
+            .addSnapshotListener { snapshot, _ in
+                let notes = snapshot?.documents.compactMap {
+                    decode(DuoInboxNotification.self, from: $0.data())
+                } ?? []
+                onChange(notes)
+            }
     }
 
     static func fetchInvite(id: String) async throws -> DuoTeamInvite? {
@@ -313,6 +390,12 @@ enum DuoTeamFirestoreService {
             .collection("duoPendingInvites")
             .getDocuments()
         for doc in pending.documents {
+            try await doc.reference.delete()
+        }
+        let notifications = try await db.collection("users").document(userId)
+            .collection("duoNotifications")
+            .getDocuments()
+        for doc in notifications.documents {
             try await doc.reference.delete()
         }
         let sent = try await invitesCollection().whereField("fromUid", isEqualTo: userId).getDocuments()

@@ -20,6 +20,8 @@ final class WorkoutStore: ObservableObject {
     /// Próximos treinos iniciados contam para esta dupla/equipe (relatório do grupo).
     @Published private(set) var activeDuoTeamId: String?
     @Published private(set) var activeDuoTeamName: String?
+    /// Modalidades do grupo ativo — só treinos dessas modalidades recebem `duoTeamId`.
+    @Published private(set) var activeDuoTeamModalities: [DuoTeamModality] = []
     /// Scanner de ficha / câmera em tela cheia — o banner minimizado some para não cobrir os controles.
     @Published private(set) var isFullscreenCameraPresented = false
     /// Evita repetir a tela de motivação ao retomar o mesmo treino.
@@ -49,6 +51,7 @@ final class WorkoutStore: ObservableObject {
     private let activeCardioConfigKey = "healthfit_active_cardio_config"
     private let activeDuoTeamIdKey = "healthfit_active_duo_team_id"
     private let activeDuoTeamNameKey = "healthfit_active_duo_team_name"
+    private let activeDuoTeamModalitiesKey = "healthfit_active_duo_team_modalities"
     /// Após 2h30 sem finalizar, o treino é encerrado automaticamente.
     static let autoEndInactivityLimit: TimeInterval = 2.5 * 60 * 60
     static let autoEndJustification =
@@ -439,18 +442,28 @@ final class WorkoutStore: ObservableObject {
     }
 
     /// Ativa/desativa o modo “treino em dupla/equipe” para os próximos inícios de sessão.
-    func setDuoTeamWorkoutContext(teamId: String?, teamName: String?) {
+    func setDuoTeamWorkoutContext(
+        teamId: String?,
+        teamName: String?,
+        modalities: [DuoTeamModality] = []
+    ) {
         let id = teamId?.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = teamName?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let id, !id.isEmpty {
             activeDuoTeamId = id
             activeDuoTeamName = (name?.isEmpty == false) ? name : nil
+            let cleaned = modalities.filter { $0 != .mixed }
+            activeDuoTeamModalities = cleaned.isEmpty
+                ? DuoTeamModality.selectableCases
+                : Array(Set(cleaned)).sorted { $0.rawValue < $1.rawValue }
             UserDefaults.standard.set(id, forKey: activeDuoTeamIdKey)
             if let activeDuoTeamName {
                 UserDefaults.standard.set(activeDuoTeamName, forKey: activeDuoTeamNameKey)
             } else {
                 UserDefaults.standard.removeObject(forKey: activeDuoTeamNameKey)
             }
+            let rawMods = activeDuoTeamModalities.map(\.rawValue)
+            UserDefaults.standard.set(rawMods, forKey: activeDuoTeamModalitiesKey)
         } else {
             clearDuoTeamWorkoutContext()
         }
@@ -459,22 +472,44 @@ final class WorkoutStore: ObservableObject {
     func clearDuoTeamWorkoutContext() {
         activeDuoTeamId = nil
         activeDuoTeamName = nil
+        activeDuoTeamModalities = []
         UserDefaults.standard.removeObject(forKey: activeDuoTeamIdKey)
         UserDefaults.standard.removeObject(forKey: activeDuoTeamNameKey)
+        UserDefaults.standard.removeObject(forKey: activeDuoTeamModalitiesKey)
     }
 
     func restoreDuoTeamWorkoutContextIfNeeded() {
         guard let id = UserDefaults.standard.string(forKey: activeDuoTeamIdKey), !id.isEmpty else {
             activeDuoTeamId = nil
             activeDuoTeamName = nil
+            activeDuoTeamModalities = []
             return
         }
         activeDuoTeamId = id
         activeDuoTeamName = UserDefaults.standard.string(forKey: activeDuoTeamNameKey)
+        if let raw = UserDefaults.standard.array(forKey: activeDuoTeamModalitiesKey) as? [String] {
+            let parsed = raw.compactMap { DuoTeamModality(rawValue: $0) }.filter { $0 != .mixed }
+            activeDuoTeamModalities = parsed.isEmpty ? DuoTeamModality.selectableCases : parsed
+        } else {
+            // Contexto antigo sem modalidades → conta todas (compat).
+            activeDuoTeamModalities = DuoTeamModality.selectableCases
+        }
     }
 
-    private func duoContextForNewSession() -> (id: String?, name: String?) {
-        (activeDuoTeamId, activeDuoTeamName)
+    private var activeDuoModalitySet: Set<DuoTeamModality> {
+        Set(activeDuoTeamModalities.filter { $0 != .mixed })
+    }
+
+    /// Só marca a sessão como grupo se a modalidade do treino estiver nas do grupo ativo.
+    private func duoContextForNewSession(
+        matching modality: DuoTeamModality?
+    ) -> (id: String?, name: String?) {
+        guard let teamId = activeDuoTeamId, !teamId.isEmpty else { return (nil, nil) }
+        guard let modality else { return (nil, nil) }
+        let allowed = activeDuoModalitySet
+        let effective = allowed.isEmpty ? Set(DuoTeamModality.selectableCases) : allowed
+        guard effective.contains(modality) else { return (nil, nil) }
+        return (teamId, activeDuoTeamName)
     }
 
     @discardableResult
@@ -485,7 +520,7 @@ final class WorkoutStore: ObservableObject {
     ) -> Bool {
         guard ensureCanStartNewSession() else { return false }
 
-        let duo = duoContextForNewSession()
+        let duo = duoContextForNewSession(matching: .strength)
         let session = WorkoutSession(
             workoutSheetId: sheet.id,
             workoutTitle: sheet.title,
@@ -612,7 +647,9 @@ final class WorkoutStore: ObservableObject {
         guard ensureCanStartNewSession() else { return false }
 
         stopExerciseTimer()
-        let duo = duoContextForNewSession()
+        let cardioModality = DuoTeamModality.resolved(fromCardioExerciseName: config.exercise.name)
+            ?? DuoTeamModality.resolved(fromCardioExerciseName: config.title)
+        let duo = duoContextForNewSession(matching: cardioModality)
         let session = WorkoutSession(
             workoutSheetId: config.exercise.id,
             workoutTitle: config.title,
@@ -663,7 +700,8 @@ final class WorkoutStore: ObservableObject {
         guard ensureCanStartNewSession() else { return false }
 
         stopExerciseTimer()
-        let duo = duoContextForNewSession()
+        // Meditação não entra nas modalidades de equipe atuais → sempre individual.
+        let duo = duoContextForNewSession(matching: nil)
         let session = WorkoutSession(
             workoutSheetId: config.topic.id,
             workoutTitle: config.title,
@@ -942,6 +980,9 @@ final class WorkoutStore: ObservableObject {
 
     func handleAppEnteredBackground() {
         catchUpExerciseElapsedFromWallClock(persist: true)
+        // Timer de 1 Hz só é útil com a UI ativa; wall-clock recupera ao voltar.
+        exerciseTimer?.invalidate()
+        exerciseTimer = nil
         persistActiveSession()
     }
 

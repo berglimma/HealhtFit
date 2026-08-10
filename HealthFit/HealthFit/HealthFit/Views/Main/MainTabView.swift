@@ -333,8 +333,10 @@ struct MainTabView: View {
     private func pollAssistantBadgeWhileVisible() async {
         guard selectedTab == assistantTabTag else { return }
         while !Task.isCancelled {
-            checkInService.refreshAssistantBadge()
-            try? await Task.sleep(for: .seconds(45))
+            if scenePhase == .active {
+                checkInService.refreshAssistantBadge()
+            }
+            try? await Task.sleep(for: .seconds(60))
         }
     }
 

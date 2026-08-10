@@ -32,6 +32,14 @@ final class JumpMetricsService: ObservableObject {
     private var lastAltitudePublishAt: Date = .distantPast
 
     private var locationProvider: (() -> CLLocation?)?
+    private var isPaused = false
+    private let processingQueue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.name = "com.healthfit.jump.motion"
+        queue.maxConcurrentOperationCount = 1
+        queue.qualityOfService = .utility
+        return queue
+    }()
 
     func configure(locationProvider: @escaping () -> CLLocation?) {
         self.locationProvider = locationProvider
@@ -54,14 +62,31 @@ final class JumpMetricsService: ObservableObject {
         lastAltitudePublishAt = .distantPast
         sessionStart = .now
         isRunning = true
+        isPaused = false
         lastStatusMessage = "Sensores de salto ativos"
+        startHardware()
+    }
 
+    /// Pausa o hardware (acel./altímetro) sem perder os saltos já capturados.
+    func setPaused(_ paused: Bool) {
+        guard isRunning, isPaused != paused else { return }
+        isPaused = paused
+        if paused {
+            stopHardware()
+        } else {
+            startHardware()
+        }
+    }
+
+    private func startHardware() {
         let motionBox = WeakMainActorBox(self)
         if motion.isDeviceMotionAvailable {
-            motion.deviceMotionUpdateInterval = 0.05
-            motion.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { data, _ in
+            // 10 Hz: suficiente para saltos; bem mais leve que 20 Hz na main.
+            motion.deviceMotionUpdateInterval = 0.1
+            motion.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: processingQueue) { data, _ in
                 guard let data else { return }
                 motionBox.run { this in
+                    guard this.isRunning, !this.isPaused else { return }
                     this.handleDeviceMotion(data)
                 }
             }
@@ -69,10 +94,11 @@ final class JumpMetricsService: ObservableObject {
 
         let altimeterBox = WeakMainActorBox(self)
         if CMAltimeter.isRelativeAltitudeAvailable() {
-            altimeter.startRelativeAltitudeUpdates(to: .main) { data, _ in
+            altimeter.startRelativeAltitudeUpdates(to: processingQueue) { data, _ in
                 guard let data else { return }
                 let alt = data.relativeAltitude.doubleValue
                 altimeterBox.run { this in
+                    guard this.isRunning, !this.isPaused else { return }
                     if this.baselineAltitude == nil {
                         this.baselineAltitude = alt
                     }
@@ -84,10 +110,15 @@ final class JumpMetricsService: ObservableObject {
         }
     }
 
-    func stop() {
-        isRunning = false
+    private func stopHardware() {
         motion.stopDeviceMotionUpdates()
         altimeter.stopRelativeAltitudeUpdates()
+    }
+
+    func stop() {
+        isRunning = false
+        isPaused = false
+        stopHardware()
     }
 
     /// Marcação manual (iPhone) ou botão do Watch.

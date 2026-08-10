@@ -6,7 +6,7 @@ struct DuoTeamHubView: View {
     @State private var showJoin = false
     @State private var joinCode = ""
     @State private var newName = ""
-    @State private var newModality: DuoTeamModality = .mixed
+    @State private var selectedModalities: Set<DuoTeamModality> = []
     @State private var isWorking = false
 
     var body: some View {
@@ -110,12 +110,8 @@ struct DuoTeamHubView: View {
 
     private func teamRow(_ team: DuoTeam) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: team.modality.icon)
-                .font(.title3)
-                .foregroundStyle(AppTheme.accent)
-                .frame(width: 44, height: 44)
-                .background(AppTheme.accent.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            DuoTeamCoverThumb(photoURL: team.photoURL, modality: team.effectiveModalities.first)
+                .frame(width: 52, height: 52)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(team.name)
@@ -124,6 +120,7 @@ struct DuoTeamHubView: View {
                 Text(team.subtitle)
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(2)
             }
             Spacer()
             Image(systemName: "chevron.right")
@@ -172,23 +169,40 @@ struct DuoTeamHubView: View {
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
             ForEach(duoService.sentInvites.prefix(8)) { invite in
-                HStack {
+                HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(invite.toName) · \(invite.code)")
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(AppTheme.textPrimary)
                         Text(
                             invite.toUid == nil
-                                ? "\(invite.teamName) · \(invite.status.rawValue)"
-                                : "\(invite.teamName) · no app · \(invite.status.rawValue)"
+                                ? invite.teamName
+                                : "\(invite.teamName) · no app"
                         )
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                     }
-                    Spacer()
+                    Spacer(minLength: 8)
+                    Text(invite.isExpired && invite.status == .pending
+                         ? DuoInviteStatus.expired.displayLabel
+                         : invite.status.displayLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(statusColor(for: invite))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(statusColor(for: invite).opacity(0.12), in: Capsule())
                 }
                 .cardStyle()
             }
+        }
+    }
+
+    private func statusColor(for invite: DuoTeamInvite) -> Color {
+        if invite.isExpired && invite.status == .pending { return .secondary }
+        switch invite.status {
+        case .pending: return .orange
+        case .accepted: return .green
+        case .declined, .cancelled, .expired: return .secondary
         }
     }
 
@@ -197,12 +211,35 @@ struct DuoTeamHubView: View {
             Form {
                 Section("Nova dupla / equipe") {
                     TextField("Nome", text: $newName)
-                    Picker("Modalidade", selection: $newModality) {
-                        ForEach(DuoTeamModality.allCases) { modality in
-                            Label(modality.rawValue, systemImage: modality.icon)
-                                .tag(modality)
+                }
+                Section {
+                    ForEach(DuoTeamModality.selectableCases) { modality in
+                        Button {
+                            if selectedModalities.contains(modality) {
+                                selectedModalities.remove(modality)
+                            } else {
+                                selectedModalities.insert(modality)
+                            }
+                        } label: {
+                            HStack {
+                                Label(modality.rawValue, systemImage: modality.icon)
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                Spacer()
+                                Image(systemName: selectedModalities.contains(modality)
+                                      ? "checkmark.circle.fill"
+                                      : "circle")
+                                    .foregroundStyle(
+                                        selectedModalities.contains(modality)
+                                            ? AppTheme.accent
+                                            : AppTheme.textSecondary
+                                    )
+                            }
                         }
                     }
+                } header: {
+                    Text("Modalidades do grupo")
+                } footer: {
+                    Text("Selecione uma ou mais. Só treinos dessas modalidades contam no ranking e geram o card de postagem em grupo.")
                 }
                 Section {
                     Text("Por segurança o HealthFit não usa localização em tempo real.")
@@ -220,13 +257,21 @@ struct DuoTeamHubView: View {
                     Button("Criar") {
                         Task {
                             isWorking = true
-                            _ = await duoService.createTeam(name: newName, modality: newModality)
+                            _ = await duoService.createTeam(
+                                name: newName,
+                                modalities: Array(selectedModalities)
+                            )
                             isWorking = false
                             newName = ""
+                            selectedModalities = []
                             showCreate = false
                         }
                     }
-                    .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isWorking)
+                    .disabled(
+                        newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || selectedModalities.isEmpty
+                            || isWorking
+                    )
                 }
             }
         }
@@ -278,6 +323,10 @@ struct DuoTeamDetailView: View {
     @State private var showInvite = false
     @State private var showLeaveConfirm = false
     @State private var isLeaving = false
+    @State private var showPhotoSource = false
+    @State private var showLibraryPicker = false
+    @State private var showCameraPicker = false
+    @State private var isUpdatingPhoto = false
 
     private var team: DuoTeam? {
         duoService.teams.first(where: { $0.id == teamId })
@@ -290,149 +339,360 @@ struct DuoTeamDetailView: View {
     var body: some View {
         Group {
             if let team {
-                List {
-                    Section {
-                        Label("Sem mapa ou localização em tempo real", systemImage: "location.slash")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    }
-
-                    Section("Membros (\(team.memberCount))") {
-                        LazyVGrid(
-                            columns: [GridItem(.adaptive(minimum: 72, maximum: 80), spacing: 10)],
-                            alignment: .leading,
-                            spacing: 10
-                        ) {
-                            ForEach(team.members) { member in
-                                DuoMemberCardView(
-                                    member: member,
-                                    localImage: member.uid == authService.currentUser?.id
-                                        ? authService.profileImage
-                                        : nil
-                                )
-                            }
-                        }
-                        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
-                        .listRowBackground(Color.clear)
-                    }
-
-                    Section("Adicionar pessoas") {
-                        Button {
-                            showInvite = true
-                        } label: {
-                            Label("Buscar no app, SMS, e-mail ou código", systemImage: "person.badge.plus")
-                        }
-                        Text("Busque pelo nome ou “Como você gostaria de ser chamado”. Também dá para convidar por SMS, e-mail motivador ou código.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Section("Treino em equipe") {
-                        Button {
-                            if isDuoWorkoutActive {
-                                workoutStore.clearDuoTeamWorkoutContext()
-                            } else {
-                                workoutStore.setDuoTeamWorkoutContext(
-                                    teamId: team.id,
-                                    teamName: team.name
-                                )
-                            }
-                        } label: {
-                            Label(
-                                isDuoWorkoutActive
-                                    ? "Modo equipe ativo — toque para desligar"
-                                    : "Ativar: próximos treinos contam para a equipe",
-                                systemImage: isDuoWorkoutActive
-                                    ? "person.3.fill"
-                                    : "figure.run.circle"
-                            )
-                        }
-                        Text(
-                            isDuoWorkoutActive
-                                ? "Os próximos treinos que você iniciar (força, cardio, etc.) entram no relatório desta equipe. Treinos individuais não entram."
-                                : "Ative o modo equipe antes de iniciar o treino. Só esses treinos aparecem no ranking — os individuais ficam de fora."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-
-                    Section("Ações") {
-                        NavigationLink {
-                            DuoTeamChatView(teamId: team.id, teamName: team.name)
-                        } label: {
-                            Label("Chat", systemImage: "bubble.left.and.bubble.right.fill")
-                        }
-                        NavigationLink {
-                            DuoTeamReportView(teamId: team.id)
-                        } label: {
-                            Label("Relatório e ranking da equipe", systemImage: "chart.bar.fill")
-                        }
-                    }
-
-                    if !duoService.scheduledMessages(for: team.id).isEmpty {
-                        Section("Treinos combinados") {
-                            ForEach(duoService.scheduledMessages(for: team.id)) { message in
-                                Text(message.text)
-                                    .font(.subheadline)
-                            }
-                        }
-                    }
-
-                    Section {
-                        Button(role: .destructive) {
-                            showLeaveConfirm = true
-                        } label: {
-                            Label(
-                                isLeaving ? "Saindo…" : "Sair do grupo",
-                                systemImage: "rectangle.portrait.and.arrow.right"
-                            )
-                        }
-                        .disabled(isLeaving)
-                    } footer: {
-                        Text(
-                            team.memberCount <= 1
-                                ? "Você é o único membro. Ao sair, a equipe será encerrada."
-                                : "Você deixa de ver o chat e os convites desta equipe. Os demais membros continuam."
-                        )
-                    }
-                }
-                .navigationTitle(team.name)
-                .navigationBarTitleDisplayMode(.inline)
-                .sheet(isPresented: $showInvite) {
-                    DuoTeamInviteView(team: team)
-                }
-                .confirmationDialog(
-                    "Sair do grupo?",
-                    isPresented: $showLeaveConfirm,
-                    titleVisibility: .visible
-                ) {
-                    Button("Sair do grupo", role: .destructive) {
-                        Task {
-                            isLeaving = true
-                            let leftTeamId = team.id
-                            let ok = await duoService.leaveTeam(teamId: leftTeamId)
-                            if ok, workoutStore.activeDuoTeamId == leftTeamId {
-                                workoutStore.clearDuoTeamWorkoutContext()
-                            }
-                            isLeaving = false
-                            if ok { dismiss() }
-                        }
-                    }
-                    Button("Cancelar", role: .cancel) {}
-                } message: {
-                    Text(
-                        team.memberCount <= 1
-                            ? "A equipe será encerrada porque não haverá mais membros."
-                            : "Você poderá entrar de novo só com um novo convite/código."
-                    )
-                }
-                .task {
-                    await duoService.enrichMembersFromDirectory(teamId: team.id)
-                    await duoService.loadMessages(teamId: team.id)
-                }
+                detailList(for: team)
             } else {
                 ContentUnavailableView("Equipe não encontrada", systemImage: "person.3")
             }
+        }
+    }
+
+    @ViewBuilder
+    private func detailList(for team: DuoTeam) -> some View {
+        List {
+            privacySection
+            photoSection(for: team)
+            membersSection(for: team)
+            inviteSection
+            pendingInvitesSection(for: team)
+            modalitiesSection(for: team)
+            duoWorkoutSection(for: team)
+            actionsSection(for: team)
+            scheduledSection(for: team)
+            leaveSection(for: team)
+        }
+        .navigationTitle(team.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showInvite) {
+            DuoTeamInviteView(team: team)
+                .environmentObject(authService)
+        }
+        .confirmationDialog(
+            "Foto do grupo",
+            isPresented: $showPhotoSource,
+            titleVisibility: .visible
+        ) {
+            Button("Galeria") { showLibraryPicker = true }
+            if PhotoCaptureAvailability.isCameraAvailable {
+                Button("Câmera") { showCameraPicker = true }
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Escolha uma imagem para a capa da equipe.")
+        }
+        .sheet(isPresented: $showLibraryPicker) {
+            LibraryImagePicker { image in
+                showLibraryPicker = false
+                guard let image else { return }
+                Task { await applyTeamPhoto(image) }
+            }
+        }
+        .fullScreenCover(isPresented: $showCameraPicker) {
+            CameraImagePicker { image in
+                showCameraPicker = false
+                guard let image else { return }
+                Task { await applyTeamPhoto(image) }
+            }
+        }
+        .confirmationDialog(
+            "Sair do grupo?",
+            isPresented: $showLeaveConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Sair do grupo", role: .destructive) {
+                Task { await leaveTeam(teamId: team.id) }
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text(
+                team.memberCount <= 1
+                    ? "A equipe será encerrada porque não haverá mais membros."
+                    : "Você poderá entrar de novo só com um novo convite/código."
+            )
+        }
+        .task {
+            await duoService.enrichMembersFromDirectory(teamId: team.id)
+            await duoService.loadMessages(teamId: team.id)
+        }
+    }
+
+    private var privacySection: some View {
+        Section {
+            Label("Sem mapa ou localização em tempo real", systemImage: "location.slash")
+                .font(.caption)
+                .foregroundStyle(.orange)
+        }
+    }
+
+    @ViewBuilder
+    private func photoSection(for team: DuoTeam) -> some View {
+        Section("Foto do grupo") {
+            HStack(spacing: 14) {
+                DuoTeamCoverThumb(
+                    photoURL: team.photoURL,
+                    modality: team.effectiveModalities.first,
+                    size: 72
+                )
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(team.photoURL == nil ? "Sem foto ainda" : "Foto da capa")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Opcional — aparece no card da equipe.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 12) {
+                        Button(team.photoURL == nil ? "Adicionar foto" : "Trocar foto") {
+                            showPhotoSource = true
+                        }
+                        .disabled(isUpdatingPhoto)
+                        if team.photoURL != nil {
+                            Button("Remover", role: .destructive) {
+                                Task {
+                                    isUpdatingPhoto = true
+                                    _ = await duoService.removeTeamPhoto(teamId: team.id)
+                                    isUpdatingPhoto = false
+                                }
+                            }
+                            .disabled(isUpdatingPhoto)
+                        }
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+                Spacer(minLength: 0)
+                if isUpdatingPhoto {
+                    ProgressView()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func membersSection(for team: DuoTeam) -> some View {
+        let currentUid = authService.currentUser?.id
+        let profileImage = authService.profileImage
+        Section("Membros (\(team.memberCount))") {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 72, maximum: 80), spacing: 10)],
+                alignment: .leading,
+                spacing: 10
+            ) {
+                ForEach(team.members) { member in
+                    DuoMemberCardView(
+                        member: member,
+                        localImage: member.uid == currentUid ? profileImage : nil
+                    )
+                }
+            }
+            .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+            .listRowBackground(Color.clear)
+        }
+    }
+
+    private var inviteSection: some View {
+        Section("Adicionar pessoas") {
+            Button {
+                showInvite = true
+            } label: {
+                Label("Buscar no app, SMS, e-mail ou código", systemImage: "person.badge.plus")
+            }
+            Text("A pessoa recebe o convite e precisa aceitar ou recusar. Você vê o status (pendente, aceito ou recusado).")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func pendingInvitesSection(for team: DuoTeam) -> some View {
+        let invites = duoService.sentInvites(forTeamId: team.id)
+        if !invites.isEmpty {
+            Section("Convites deste grupo") {
+                ForEach(invites.prefix(12)) { invite in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(invite.toName)
+                                .font(.subheadline.weight(.medium))
+                            Text(invite.toUid == nil ? "SMS / código · \(invite.code)" : "No app · \(invite.code)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(invite.isExpired && invite.status == .pending
+                             ? DuoInviteStatus.expired.displayLabel
+                             : invite.status.displayLabel)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(inviteStatusColor(invite))
+                    }
+                }
+            }
+        }
+    }
+
+    private func inviteStatusColor(_ invite: DuoTeamInvite) -> Color {
+        if invite.isExpired && invite.status == .pending { return .secondary }
+        switch invite.status {
+        case .pending: return .orange
+        case .accepted: return .green
+        case .declined, .cancelled, .expired: return .secondary
+        }
+    }
+
+    @ViewBuilder
+    private func modalitiesSection(for team: DuoTeam) -> some View {
+        Section("Modalidades do grupo") {
+            ForEach(team.effectiveModalities) { modality in
+                Label(modality.rawValue, systemImage: modality.icon)
+            }
+            Text("Só treinos dessas modalidades entram no ranking e geram o card de postagem em grupo.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func duoWorkoutSection(for team: DuoTeam) -> some View {
+        let active = isDuoWorkoutActive
+        let label = team.modalitiesLabel
+        Section("Treino em equipe") {
+            Button {
+                if active {
+                    workoutStore.clearDuoTeamWorkoutContext()
+                } else {
+                    workoutStore.setDuoTeamWorkoutContext(
+                        teamId: team.id,
+                        teamName: team.name,
+                        modalities: team.effectiveModalities
+                    )
+                }
+            } label: {
+                Label(
+                    active
+                        ? "Modo equipe ativo — toque para desligar"
+                        : "Ativar: próximos treinos das modalidades do grupo",
+                    systemImage: active ? "person.3.fill" : "figure.run.circle"
+                )
+            }
+            Text(
+                active
+                    ? "Modo ativo para: \(label). Outras modalidades ficam individuais (sem card/ranking de grupo)."
+                    : "Ative o modo equipe e treine uma das modalidades do grupo (\(label)). Só assim conta no ranking e gera o card em grupo."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func actionsSection(for team: DuoTeam) -> some View {
+        Section("Ações") {
+            NavigationLink {
+                DuoTeamChatView(teamId: team.id, teamName: team.name)
+            } label: {
+                Label("Chat", systemImage: "bubble.left.and.bubble.right.fill")
+            }
+            NavigationLink {
+                DuoTeamReportView(teamId: team.id)
+            } label: {
+                Label("Relatório e ranking da equipe", systemImage: "chart.bar.fill")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func scheduledSection(for team: DuoTeam) -> some View {
+        let messages = duoService.scheduledMessages(for: team.id)
+        if !messages.isEmpty {
+            Section("Treinos combinados") {
+                ForEach(messages) { message in
+                    Text(message.text)
+                        .font(.subheadline)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func leaveSection(for team: DuoTeam) -> some View {
+        Section {
+            Button(role: .destructive) {
+                showLeaveConfirm = true
+            } label: {
+                Label(
+                    isLeaving ? "Saindo…" : "Sair do grupo",
+                    systemImage: "rectangle.portrait.and.arrow.right"
+                )
+            }
+            .disabled(isLeaving)
+        } footer: {
+            Text(leaveFooter(for: team))
+        }
+    }
+
+    private func leaveFooter(for team: DuoTeam) -> String {
+        if team.memberCount <= 1 {
+            return "Você é o único membro. Ao sair, a equipe será encerrada."
+        }
+        return "Você deixa de ver o chat e os convites desta equipe. Os demais membros continuam."
+    }
+
+    private func leaveTeam(teamId: String) async {
+        isLeaving = true
+        let ok = await duoService.leaveTeam(teamId: teamId)
+        if ok, workoutStore.activeDuoTeamId == teamId {
+            workoutStore.clearDuoTeamWorkoutContext()
+        }
+        isLeaving = false
+        if ok { dismiss() }
+    }
+
+    private func applyTeamPhoto(_ image: UIImage) async {
+        isUpdatingPhoto = true
+        _ = await duoService.updateTeamPhoto(teamId: teamId, image: image)
+        isUpdatingPhoto = false
+    }
+}
+
+/// Miniatura da capa do grupo (foto ou ícone da modalidade).
+struct DuoTeamCoverThumb: View {
+    var photoURL: String?
+    var modality: DuoTeamModality?
+    var size: CGFloat = 52
+
+    var body: some View {
+        Group {
+            if let photoURL, let url = URL(string: photoURL) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        placeholder
+                    case .empty:
+                        ZStack {
+                            AppTheme.accent.opacity(0.12)
+                            ProgressView()
+                        }
+                    @unknown default:
+                        placeholder
+                    }
+                }
+            } else {
+                placeholder
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppTheme.accent.opacity(0.25), lineWidth: 1)
+        )
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            AppTheme.accent.opacity(0.15)
+            Image(systemName: modality?.icon ?? DuoTeamModality.mixed.icon)
+                .font(.system(size: size * 0.38, weight: .semibold))
+                .foregroundStyle(AppTheme.accent)
         }
     }
 }

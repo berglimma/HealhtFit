@@ -6,6 +6,20 @@ struct DuoTeamCard: View {
     @State private var showConsent = false
     @State private var showHub = false
 
+    private var subtitle: String {
+        if !duoService.hasPrivacyConsent {
+            return "Toque para saber como funciona (sem mapa em tempo real)"
+        }
+        if duoService.teams.isEmpty {
+            return "Convide parceiros, chat e ranking — sem localização ao vivo"
+        }
+        return "\(duoService.teams.count) equipe(s) · chat para marcar treinos"
+    }
+
+    private var footerText: String {
+        duoService.teams.isEmpty ? "Criar ou entrar" : "Abrir equipes"
+    }
+
     var body: some View {
         Button {
             if duoService.hasPrivacyConsent {
@@ -14,38 +28,18 @@ struct DuoTeamCard: View {
                 showConsent = true
             }
         } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(AppTheme.accent.opacity(0.2))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "person.3.fill")
-                        .font(.title3)
-                        .foregroundStyle(AppTheme.accent)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Treino em dupla / equipe")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppTheme.textPrimary)
-                    Text(
-                        duoService.hasPrivacyConsent
-                            ? (duoService.teams.isEmpty
-                                ? "Convide parceiros, chat e SMS — sem localização ao vivo"
-                                : "\(duoService.teams.count) equipe(s) · chat para marcar treinos")
-                            : "Toque para saber como funciona (sem mapa em tempo real)"
-                    )
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .multilineTextAlignment(.leading)
-                }
-
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(AppTheme.textSecondary)
-            }
-            .cardStyle()
+            WorkoutProgramHeroCard(
+                title: "Treino em dupla / equipe",
+                subtitle: subtitle,
+                accent: AppTheme.accent,
+                imageName: "DuoTeamCover",
+                systemImage: "person.3.fill",
+                coverColors: [AppTheme.accent, AppTheme.accentSecondary],
+                footerLabels: [
+                    (icon: "person.3.fill", text: footerText),
+                    (icon: "chart.bar.fill", text: "Ranking")
+                ]
+            )
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $showConsent) {

@@ -68,9 +68,11 @@ struct WorkoutListView: View {
         NavigationStack {
             ScrollView {
                 LazyVStack(spacing: 16) {
-                    DuoTeamCard()
-
                     if let duoName = workoutStore.activeDuoTeamName ?? workoutStore.activeDuoTeamId {
+                        let mods = workoutStore.activeDuoTeamModalities
+                        let modsLabel = mods.isEmpty
+                            ? "modalidades do grupo"
+                            : mods.map(\.rawValue).joined(separator: ", ")
                         HStack(spacing: 10) {
                             Image(systemName: "person.3.fill")
                                 .foregroundStyle(AppTheme.accent)
@@ -78,7 +80,7 @@ struct WorkoutListView: View {
                                 Text("Treino em equipe ativo")
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(AppTheme.textPrimary)
-                                Text("“\(duoName)” — este treino entra no relatório do grupo")
+                                Text("“\(duoName)” · conta só: \(modsLabel)")
                                     .font(.caption)
                                     .foregroundStyle(AppTheme.textSecondary)
                             }
@@ -98,6 +100,11 @@ struct WorkoutListView: View {
                     }
 
                     // Global minimized banner lives on MainTabView; avoid a duplicate card here.
+
+                    // Se musculação não está nas modalidades, o card duo fica no topo.
+                    if !availableSections.contains(.strength) {
+                        DuoTeamCard()
+                    }
 
                     if availableSections.isEmpty {
                         emptyModalitiesHint
@@ -280,6 +287,8 @@ struct WorkoutListView: View {
 
     private var strengthSection: some View {
         VStack(spacing: 16) {
+            DuoTeamCard()
+
             Text("Escolha o programa")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)

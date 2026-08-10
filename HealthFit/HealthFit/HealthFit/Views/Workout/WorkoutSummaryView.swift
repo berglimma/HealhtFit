@@ -606,7 +606,10 @@ struct WorkoutSummaryView: View {
 
         guard let image else { return }
         shareImage = image
-        shareCardStore.updatePreviewImage(image)
+        shareCardStore.updatePreviewImage(
+            image,
+            slot: session.isDuoTeamSession ? .duoTeam : .individual
+        )
         shareItems = [image, caption]
         showShareSheet = true
     }
@@ -650,7 +653,10 @@ struct WorkoutSummaryView: View {
             return
         }
         shareImage = image
-        shareCardStore.updatePreviewImage(image)
+        shareCardStore.updatePreviewImage(
+            image,
+            slot: session.isDuoTeamSession ? .duoTeam : .individual
+        )
         do {
             try await PhotoLibrarySaver.saveImage(image)
             gallerySaveAlertTitle = "Salvo em Fotos"

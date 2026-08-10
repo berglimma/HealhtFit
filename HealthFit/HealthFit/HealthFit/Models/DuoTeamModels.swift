@@ -11,6 +11,11 @@ enum DuoTeamModality: String, CaseIterable, Codable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
+    /// Modalidades escolhíveis na criação (sem “Mista”).
+    static var selectableCases: [DuoTeamModality] {
+        allCases.filter { $0 != .mixed }
+    }
+
     var icon: String {
         switch self {
         case .running: return "figure.run"
@@ -22,6 +27,42 @@ enum DuoTeamModality: String, CaseIterable, Codable, Identifiable, Hashable {
         case .mixed: return "person.3.fill"
         }
     }
+
+    /// Inferência da modalidade do treino a partir da sessão (título / flags).
+    static func resolved(from session: WorkoutSession) -> DuoTeamModality? {
+        if session.isKitesurfSession { return .kitesurf }
+        if session.isSurfSession { return .surfing }
+        if session.isOutdoorWalkingSession { return .walking }
+        if session.isOutdoorCyclingSession { return .cycling }
+        let title = session.workoutTitle.lowercased()
+        if title.contains("kite") { return .kitesurf }
+        if title.contains("surf") { return .surfing }
+        if title.contains("caminhada") || title.contains("walk") { return .walking }
+        if title.contains("bike") || title.contains("cicl") || title.contains("pedal")
+            || title.contains("bicicleta") {
+            return .cycling
+        }
+        if title.contains("corrida") || title.contains("run") { return .running }
+        if title.hasPrefix("meditação") || title.hasPrefix("meditacao") { return nil }
+        if session.isOutdoorGPSCardio { return .running }
+        // Força / fichas / home / mobilidade.
+        if WorkoutReportBuilder.isCardioSession(session) {
+            return nil
+        }
+        return .strength
+    }
+
+    static func resolved(fromCardioExerciseName name: String) -> DuoTeamModality? {
+        let lower = name.lowercased()
+        if lower.contains("kite") { return .kitesurf }
+        if lower.contains("surf") { return .surfing }
+        if lower.contains("caminhada") { return .walking }
+        if lower.contains("bike") || lower.contains("bicicleta") || lower.contains("mountain") {
+            return .cycling
+        }
+        if lower.contains("corrida") { return .running }
+        return nil
+    }
 }
 
 enum DuoInviteStatus: String, Codable, Equatable {
@@ -30,6 +71,24 @@ enum DuoInviteStatus: String, Codable, Equatable {
     case declined
     case cancelled
     case expired
+
+    var displayLabel: String {
+        switch self {
+        case .pending: return "Pendente"
+        case .accepted: return "Aceito"
+        case .declined: return "Recusado"
+        case .cancelled: return "Cancelado"
+        case .expired: return "Expirado"
+        }
+    }
+
+    var accentColorName: String {
+        switch self {
+        case .pending: return "orange"
+        case .accepted: return "green"
+        case .declined, .cancelled, .expired: return "secondary"
+        }
+    }
 }
 
 enum DuoChatMessageKind: String, Codable, Equatable {
@@ -73,7 +132,8 @@ struct DuoTeamMember: Identifiable, Codable, Equatable, Hashable {
 struct DuoTeam: Identifiable, Codable, Equatable, Hashable {
     var id: String
     var name: String
-    var modality: DuoTeamModality
+    /// Modalidades ativas do grupo (1…N). `modality` legado espelha a primeira.
+    var modalities: [DuoTeamModality]
     var createdByUid: String
     var createdByName: String
     var members: [DuoTeamMember]
@@ -81,11 +141,152 @@ struct DuoTeam: Identifiable, Codable, Equatable, Hashable {
     var updatedAt: Date
     /// Confirma que o criador aceitou o aviso de privacidade (sem localização em tempo real).
     var privacyAcknowledged: Bool
+    /// Foto opcional da capa do grupo (Firebase Storage).
+    var photoURL: String?
 
     var memberCount: Int { members.count }
 
+    /// Compat / display: primeira modalidade (ou Mista se várias).
+    var modality: DuoTeamModality {
+        get {
+            let effective = effectiveModalities
+            if effective.count == 1 { return effective[0] }
+            if effective.isEmpty { return .mixed }
+            return .mixed
+        }
+        set {
+            if modalities.isEmpty {
+                modalities = [newValue]
+            } else {
+                modalities[0] = newValue
+            }
+        }
+    }
+
+    /// Modalidades que realmente contam no ranking/modo equipe.
+    /// Legado só com “Mista” → todas as selecionáveis.
+    var effectiveModalities: [DuoTeamModality] {
+        let cleaned = modalities.filter { $0 != .mixed }
+        if cleaned.isEmpty { return DuoTeamModality.selectableCases }
+        // Mantém ordem e remove duplicatas.
+        var seen = Set<DuoTeamModality>()
+        return cleaned.filter { seen.insert($0).inserted }
+    }
+
+    var modalitiesLabel: String {
+        let list = effectiveModalities
+        if list.count == DuoTeamModality.selectableCases.count {
+            return "Todas"
+        }
+        if list.isEmpty { return DuoTeamModality.mixed.rawValue }
+        return list.map(\.rawValue).joined(separator: ", ")
+    }
+
     var subtitle: String {
-        "\(modality.rawValue) · \(memberCount) \(memberCount == 1 ? "pessoa" : "pessoas")"
+        "\(modalitiesLabel) · \(memberCount) \(memberCount == 1 ? "pessoa" : "pessoas")"
+    }
+
+    init(
+        id: String,
+        name: String,
+        modalities: [DuoTeamModality],
+        createdByUid: String,
+        createdByName: String,
+        members: [DuoTeamMember],
+        createdAt: Date,
+        updatedAt: Date,
+        privacyAcknowledged: Bool,
+        photoURL: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        let cleaned = modalities.filter { $0 != .mixed }
+        self.modalities = cleaned.isEmpty ? [.mixed] : cleaned
+        self.createdByUid = createdByUid
+        self.createdByName = createdByName
+        self.members = members
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.privacyAcknowledged = privacyAcknowledged
+        self.photoURL = photoURL
+    }
+
+    /// Compat com código antigo que passava uma modalidade.
+    init(
+        id: String,
+        name: String,
+        modality: DuoTeamModality,
+        createdByUid: String,
+        createdByName: String,
+        members: [DuoTeamMember],
+        createdAt: Date,
+        updatedAt: Date,
+        privacyAcknowledged: Bool,
+        photoURL: String? = nil
+    ) {
+        self.init(
+            id: id,
+            name: name,
+            modalities: modality == .mixed ? [.mixed] : [modality],
+            createdByUid: createdByUid,
+            createdByName: createdByName,
+            members: members,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            privacyAcknowledged: privacyAcknowledged,
+            photoURL: photoURL
+        )
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        createdByUid = try container.decode(String.self, forKey: .createdByUid)
+        createdByName = try container.decode(String.self, forKey: .createdByName)
+        members = try container.decode([DuoTeamMember].self, forKey: .members)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        privacyAcknowledged = try container.decodeIfPresent(Bool.self, forKey: .privacyAcknowledged) ?? true
+        photoURL = try container.decodeIfPresent(String.self, forKey: .photoURL)
+
+        if let multi = try container.decodeIfPresent([DuoTeamModality].self, forKey: .modalities),
+           !multi.isEmpty {
+            modalities = multi
+        } else if let single = try container.decodeIfPresent(DuoTeamModality.self, forKey: .modality) {
+            modalities = [single]
+        } else {
+            modalities = [.mixed]
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(modalities, forKey: .modalities)
+        try container.encode(modality, forKey: .modality)
+        try container.encode(createdByUid, forKey: .createdByUid)
+        try container.encode(createdByName, forKey: .createdByName)
+        try container.encode(members, forKey: .members)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(updatedAt, forKey: .updatedAt)
+        try container.encode(privacyAcknowledged, forKey: .privacyAcknowledged)
+        try container.encodeIfPresent(photoURL, forKey: .photoURL)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, modalities, modality, createdByUid, createdByName
+        case members, createdAt, updatedAt, privacyAcknowledged, photoURL
+    }
+
+    func allows(_ sessionModality: DuoTeamModality?) -> Bool {
+        guard let sessionModality else { return false }
+        return effectiveModalities.contains(sessionModality)
+    }
+
+    func allows(session: WorkoutSession) -> Bool {
+        allows(DuoTeamModality.resolved(from: session))
     }
 }
 
@@ -117,6 +318,20 @@ struct DuoInviteShareCopy: Equatable {
     var emailSubject: String
     var emailBody: String
     var shareText: String
+}
+
+/// Aviso na caixa de entrada do usuário (ex.: foi adicionado a um grupo).
+struct DuoInboxNotification: Identifiable, Codable, Equatable, Hashable {
+    var id: String
+    var kind: String
+    var title: String
+    var body: String
+    var teamId: String
+    var teamName: String
+    var fromUid: String
+    var fromName: String
+    var createdAt: Date
+    var delivered: Bool
 }
 
 /// Desempenho compartilhado com a equipe para o ranking (sem localização).
@@ -178,14 +393,10 @@ struct UserDirectoryEntry: Identifiable, Codable, Equatable, Hashable {
 
     var detailLine: String {
         let callName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let base: String
         if callName.isEmpty || callName.caseInsensitiveCompare(name) == .orderedSame {
-            base = name
-        } else {
-            base = "\(name) · “\(callName)”"
+            return name
         }
-        let flag = flagEmoji
-        return flag == "🏳️" ? base : "\(flag) \(base)"
+        return "\(name) · “\(callName)”"
     }
 }
 

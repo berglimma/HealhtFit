@@ -24,6 +24,8 @@ final class RestTimerService: ObservableObject {
     private var currentRestExerciseId: UUID?
     private var hasSignaledRestComplete = false
     private var reminderSoundTimer: Timer?
+    private var reminderSoundPlayCount = 0
+    private static let maxReminderSoundPlays = 4
     /// Duração efetiva desta pausa (pode diferir do padrão se o usuário ajustou no cronômetro).
     private var activeRestDurationSeconds = 60
     /// Descanso já acumulado por exercício antes desta pausa (para catch-up em background).
@@ -150,6 +152,14 @@ final class RestTimerService: ObservableObject {
     func handleAppEnteredBackground() {
         syncFromWallClock(announceCompletion: false)
         persistRestState()
+        // Sem UI: para som/vibração e timer de display; a notificação local cobre o aviso.
+        stopReminderSoundLoop()
+        stopDisplayTimer()
+    }
+
+    private func stopDisplayTimer() {
+        timer?.invalidate()
+        timer = nil
     }
 
     var progress: Double {
@@ -300,10 +310,16 @@ final class RestTimerService: ObservableObject {
 
     private func startReminderSoundLoop() {
         stopReminderSoundLoop()
+        reminderSoundPlayCount = 0
         let box = WeakMainActorBox(self)
         let timer = Timer(timeInterval: 3, repeats: true) { _ in
             box.run { this in
                 guard this.isAwaitingResumeAcknowledgment else {
+                    this.stopReminderSoundLoop()
+                    return
+                }
+                this.reminderSoundPlayCount += 1
+                if this.reminderSoundPlayCount > Self.maxReminderSoundPlays {
                     this.stopReminderSoundLoop()
                     return
                 }
@@ -317,6 +333,7 @@ final class RestTimerService: ObservableObject {
     private func stopReminderSoundLoop() {
         reminderSoundTimer?.invalidate()
         reminderSoundTimer = nil
+        reminderSoundPlayCount = 0
     }
 
     private struct PersistedRestState: Codable {

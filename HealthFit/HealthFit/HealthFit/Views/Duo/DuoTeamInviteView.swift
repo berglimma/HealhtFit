@@ -4,12 +4,14 @@ import SwiftUI
 struct DuoTeamInviteView: View {
     let team: DuoTeam
     @ObservedObject private var duoService = DuoTeamService.shared
+    @EnvironmentObject private var authService: AuthService
     @Environment(\.dismiss) private var dismiss
 
     @State private var searchQuery = ""
     @State private var searchResults: [UserDirectoryEntry] = []
     @State private var isSearching = false
     @State private var invitingUid: String?
+    @State private var searchError: String?
 
     @State private var partnerName = ""
     @State private var phone = ""
@@ -31,15 +33,15 @@ struct DuoTeamInviteView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("Busque no app, envie SMS ou e-mail com um convite motivador. O HealthFit espera por quem ainda não entrou. Sem localização em tempo real.")
+                    Text("Busque no app e envie o convite. A pessoa precisa aceitar ou recusar. Você acompanha o status (pendente, aceito ou recusado). Também dá para SMS, e-mail ou código. Sem localização em tempo real.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 Section("Buscar no HealthFit") {
                     HStack {
-                        TextField("Nome ou como quer ser chamado", text: $searchQuery)
-                            .textInputAutocapitalization(.words)
+                        TextField("Nome, apelido ou e-mail", text: $searchQuery)
+                            .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .submitLabel(.search)
                             .onSubmit { Task { await runSearch() } }
@@ -55,17 +57,23 @@ struct DuoTeamInviteView: View {
                         }
                     }
 
-                    if searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
-                        Text("Digite pelo menos 2 letras.")
+                    if let searchError {
+                        Text(searchError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    } else if searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
+                        Text("Digite pelo menos 2 letras do nome, apelido ou e-mail.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else if !isSearching && searchResults.isEmpty && !searchQuery.isEmpty {
-                        Text("Ninguém encontrado com esse nome.")
+                        Text("Ninguém encontrado. A pessoa precisa ter aberto o app pelo menos uma vez (com esta versão) para aparecer na busca. Enquanto isso, use SMS, e-mail ou código.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
 
                     ForEach(searchResults) { user in
+                        let isMember = team.members.contains(where: { $0.uid == user.uid })
+                        let pending = duoService.pendingInvite(forUserId: user.uid, teamId: team.id)
                         Button {
                             Task { await inviteUser(user) }
                         } label: {
@@ -74,32 +82,45 @@ struct DuoTeamInviteView: View {
                                     name: user.shownName,
                                     photoURL: user.photoURL,
                                     countryCode: user.countryCode,
-                                    size: 40
+                                    size: 48
                                 )
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(user.shownName)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(AppTheme.textPrimary)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(spacing: 6) {
+                                        Text(user.shownName)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(AppTheme.textPrimary)
+                                        if user.flagEmoji != "🏳️" {
+                                            Text(user.flagEmoji)
+                                                .font(.subheadline)
+                                        }
+                                    }
                                     Text(user.detailLine)
                                         .font(.caption)
                                         .foregroundStyle(AppTheme.textSecondary)
+                                        .lineLimit(2)
                                 }
                                 Spacer()
                                 if invitingUid == user.uid {
                                     ProgressView()
-                                } else if team.members.contains(where: { $0.uid == user.uid }) {
+                                } else if isMember {
                                     Text("Na equipe")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
+                                } else if pending != nil {
+                                    Text("Pendente")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.orange)
                                 } else {
                                     Image(systemName: "person.badge.plus")
                                         .foregroundStyle(AppTheme.accent)
                                 }
                             }
                         }
-                        .disabled(invitingUid != nil || team.members.contains(where: { $0.uid == user.uid }))
+                        .disabled(invitingUid != nil || isMember || pending != nil)
                     }
                 }
+
+                teamInvitesStatusSection
 
                 Section("Convidar por SMS") {
                     TextField("Nome", text: $partnerName)
@@ -184,6 +205,9 @@ struct DuoTeamInviteView: View {
                     Button("Fechar") { dismiss() }
                 }
             }
+            .task {
+                await duoService.ensureDirectorySynced(profile: authService.currentUser)
+            }
             .onChange(of: searchQuery) { _, newValue in
                 let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard trimmed.count >= 2 else {
@@ -263,11 +287,14 @@ struct DuoTeamInviteView: View {
         let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard q.count >= 2 else {
             searchResults = []
+            searchError = nil
             return
         }
         isSearching = true
         defer { isSearching = false }
+        await duoService.ensureDirectorySynced(profile: authService.currentUser)
         searchResults = await duoService.searchAppUsers(query: q)
+        searchError = duoService.lastError
     }
 
     private func inviteUser(_ user: UserDirectoryEntry) async {
@@ -275,10 +302,44 @@ struct DuoTeamInviteView: View {
         defer { invitingUid = nil }
         let ok = await duoService.inviteAppUser(team: team, user: user)
         if ok {
-            statusMessage = "Convite enviado para \(user.shownName). O HealthFit espera pela resposta em Dupla / equipe."
-            generatedCode = duoService.sentInvites.first(where: { $0.toUid == user.uid })?.code
+            statusMessage = "Convite enviado para \(user.shownName). Status: pendente — aguardando aceite ou recusa."
         } else if let error = duoService.lastError {
             statusMessage = error
+        }
+    }
+
+    @ViewBuilder
+    private var teamInvitesStatusSection: some View {
+        let invites = duoService.sentInvites(forTeamId: team.id)
+        if !invites.isEmpty {
+            Section("Status dos convites") {
+                ForEach(invites.prefix(10)) { invite in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(invite.toName)
+                                .font(.subheadline.weight(.medium))
+                            Text(invite.toUid == nil ? "SMS / código" : "No app")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(invite.isExpired && invite.status == .pending
+                             ? DuoInviteStatus.expired.displayLabel
+                             : invite.status.displayLabel)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(inviteStatusColor(invite))
+                    }
+                }
+            }
+        }
+    }
+
+    private func inviteStatusColor(_ invite: DuoTeamInvite) -> Color {
+        if invite.isExpired && invite.status == .pending { return .secondary }
+        switch invite.status {
+        case .pending: return .orange
+        case .accepted: return .green
+        case .declined, .cancelled, .expired: return .secondary
         }
     }
 

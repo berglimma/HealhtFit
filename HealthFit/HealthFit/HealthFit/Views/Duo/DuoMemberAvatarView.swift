@@ -16,8 +16,13 @@ struct DuoMemberAvatarView: View {
         return String(trimmed.prefix(1)).uppercased()
     }
 
+    private var showsFlag: Bool {
+        let code = countryCode?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !code.isEmpty && flag != "🏳️"
+    }
+
     var body: some View {
-        ZStack(alignment: .topLeading) {
+        ZStack(alignment: .bottomTrailing) {
             Group {
                 if let localImage {
                     Image(uiImage: localImage)
@@ -46,12 +51,15 @@ struct DuoMemberAvatarView: View {
             .clipShape(Circle())
             .overlay(Circle().stroke(AppTheme.accent.opacity(0.25), lineWidth: 1))
 
-            Text(flag)
-                .font(.system(size: max(12, size * 0.36)))
-                .offset(x: -2, y: -3)
+            if showsFlag {
+                Text(flag)
+                    .font(.system(size: max(14, size * 0.42)))
+                    .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
+                    .offset(x: 4, y: 4)
+            }
         }
-        .frame(width: size, height: size)
-        .accessibilityLabel("\(name), \(flag)")
+        .frame(width: size + 4, height: size + 4)
+        .accessibilityLabel(showsFlag ? "\(name), \(flag)" : name)
     }
 
     private var placeholder: some View {

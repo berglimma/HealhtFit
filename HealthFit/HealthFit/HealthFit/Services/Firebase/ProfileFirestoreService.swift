@@ -100,20 +100,36 @@ enum ProfileFirestoreService {
         guard isAvailable else { return }
         let name = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let displayName = profile.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let email = profile.email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let country = CountryOption.resolvedCode(profile.countryCode)
         var data: [String: Any] = [
             "uid": profile.id,
             "name": name,
             "displayName": displayName,
-            "nameLower": name.lowercased(),
-            "displayNameLower": displayName.lowercased(),
+            "email": email,
+            "nameLower": searchableText(name),
+            "displayNameLower": searchableText(displayName),
+            "emailLower": searchableText(email),
             "countryCode": country,
             "updatedAt": Timestamp(date: .now),
         ]
-        if let photoURL {
+        if let photoURL, !photoURL.isEmpty {
             data["photoURL"] = photoURL
+        } else if let existing = try? await fetchDirectoryEntry(userId: profile.id)?.photoURL,
+                  !existing.isEmpty {
+            data["photoURL"] = existing
+        } else if let fromStorage = await ProfilePhotoStorageService.downloadURLIfExists(userId: profile.id) {
+            data["photoURL"] = fromStorage
         }
         try await directoryDocument(userId: profile.id).setData(data, merge: true)
+    }
+
+    /// Normaliza texto para busca (minúsculas + sem acentos).
+    static func searchableText(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+            .lowercased()
     }
 
     /// Nome / país / foto para membros da equipe (diretório, com fallback no doc do usuário).
@@ -158,10 +174,15 @@ enum ProfileFirestoreService {
             "uid": userId,
             "name": name,
             "displayName": displayName,
-            "nameLower": name.lowercased(),
-            "displayNameLower": displayName.lowercased(),
+            "nameLower": searchableText(name),
+            "displayNameLower": searchableText(displayName),
             "updatedAt": Timestamp(date: .now),
         ]
+        if let email = (data["email"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+           !email.isEmpty {
+            directoryData["email"] = email
+            directoryData["emailLower"] = searchableText(email)
+        }
         if let country {
             directoryData["countryCode"] = country
         }
@@ -221,43 +242,103 @@ enum ProfileFirestoreService {
         try await directoryDocument(userId: userId).delete()
     }
 
-    /// Busca por prefixo no nome do cadastro ou em “como você gostaria de ser chamado”.
+    /// Busca no diretório por nome, apelido ou e-mail (contém, sem acento).
+    /// Com base pequena, lista o diretório e filtra no cliente — mais confiável que só prefixo.
     static func searchUsers(
         query: String,
         excludingUserId: String?,
         limit: Int = 20
     ) async throws -> [UserDirectoryEntry] {
         guard isAvailable else { return [] }
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard trimmed.count >= 2 else { return [] }
+        let needle = searchableText(query)
+        guard needle.count >= 2 else { return [] }
 
-        let end = trimmed + "\u{f8ff}"
-        async let byName = directoryCollection()
-            .whereField("nameLower", isGreaterThanOrEqualTo: trimmed)
-            .whereField("nameLower", isLessThan: end)
-            .limit(to: limit)
-            .getDocuments()
-        async let byDisplay = directoryCollection()
-            .whereField("displayNameLower", isGreaterThanOrEqualTo: trimmed)
-            .whereField("displayNameLower", isLessThan: end)
-            .limit(to: limit)
+        let snap = try await directoryCollection()
+            .order(by: FieldPath.documentID())
+            .limit(to: 300)
             .getDocuments()
 
-        let nameSnap = try await byName
-        let displaySnap = try await byDisplay
-        var byUid: [String: UserDirectoryEntry] = [:]
-        for doc in nameSnap.documents + displaySnap.documents {
-            guard let entry = decodeDirectoryEntry(doc.data()) else { continue }
+        var matches: [UserDirectoryEntry] = []
+        for doc in snap.documents {
+            var data = doc.data()
+            if data["uid"] == nil { data["uid"] = doc.documentID }
+            guard let entry = decodeDirectoryEntry(data) else { continue }
             if let excludingUserId, entry.uid == excludingUserId { continue }
-            byUid[entry.uid] = entry
+
+            let haystacks = [
+                searchableText(entry.name),
+                searchableText(entry.displayName),
+                searchableText(data["email"] as? String ?? ""),
+                searchableText(data["nameLower"] as? String ?? ""),
+                searchableText(data["displayNameLower"] as? String ?? ""),
+                searchableText(data["emailLower"] as? String ?? ""),
+            ]
+            guard haystacks.contains(where: { $0.contains(needle) }) else { continue }
+            matches.append(entry)
         }
 
-        return Array(byUid.values)
-            .sorted {
+        let limited = Array(
+            matches
+                .sorted {
+                    $0.shownName.localizedCaseInsensitiveCompare($1.shownName) == .orderedAscending
+                }
+                .prefix(limit)
+        )
+
+        // Garante foto + bandeira na busca (repara diretório incompleto).
+        return await withTaskGroup(of: UserDirectoryEntry.self) { group in
+            for entry in limited {
+                group.addTask {
+                    await enrichDirectoryEntryForSearch(entry)
+                }
+            }
+            var enriched: [UserDirectoryEntry] = []
+            for await item in group {
+                enriched.append(item)
+            }
+            return enriched.sorted {
                 $0.shownName.localizedCaseInsensitiveCompare($1.shownName) == .orderedAscending
             }
-            .prefix(limit)
-            .map { $0 }
+        }
+    }
+
+    /// Completa `photoURL` / `countryCode` ausentes e republica no diretório.
+    private static func enrichDirectoryEntryForSearch(_ entry: UserDirectoryEntry) async -> UserDirectoryEntry {
+        var updated = entry
+        var patch: [String: Any] = [:]
+
+        if updated.countryCode == nil {
+            if let code = try? await fetchCountryCodeFromUserDoc(userId: entry.uid) {
+                updated.countryCode = code
+                patch["countryCode"] = code
+            }
+        }
+
+        if updated.photoURL == nil {
+            if let fromUser = try? await fetchPhotoURLFromUserDoc(userId: entry.uid) {
+                updated.photoURL = fromUser
+                patch["photoURL"] = fromUser
+            } else if let fromStorage = await ProfilePhotoStorageService.downloadURLIfExists(userId: entry.uid) {
+                updated.photoURL = fromStorage
+                patch["photoURL"] = fromStorage
+            }
+        }
+
+        if !patch.isEmpty {
+            patch["uid"] = entry.uid
+            patch["updatedAt"] = Timestamp(date: .now)
+            try? await directoryDocument(userId: entry.uid).setData(patch, merge: true)
+        }
+        return updated
+    }
+
+    private static func fetchPhotoURLFromUserDoc(userId: String) async throws -> String? {
+        let snap = try await userDocument(userId: userId).getDocument()
+        guard let data = snap.data() else { return nil }
+        if let photo = data["photoURL"] as? String, !photo.isEmpty {
+            return photo
+        }
+        return nil
     }
 
     private static func directoryCollection() -> CollectionReference {

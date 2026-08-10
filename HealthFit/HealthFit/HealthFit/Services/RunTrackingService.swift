@@ -52,7 +52,8 @@ final class RunTrackingService: NSObject, ObservableObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = 5
         locationManager.activityType = .fitness
-        locationManager.pausesLocationUpdatesAutomatically = false
+        // Permite o sistema pausar GPS quando parado — grande ganho de bateria em pausas/estacionário.
+        locationManager.pausesLocationUpdatesAutomatically = true
         authorizationStatus = locationManager.authorizationStatus
         isPedometerAvailable = CMPedometer.isStepCountingAvailable()
         motionActivityAvailable = CMMotionActivityManager.isActivityAvailable()
@@ -112,7 +113,12 @@ final class RunTrackingService: NSObject, ObservableObject {
             if let location = currentLocation ?? lastAcceptedLocation {
                 appendBoundaryRoutePoint(location, isPaused: true)
             }
+            // Na pausa do treino: precisão menor + filtro maior (menos ciclos GPS/rádio).
+            locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+            locationManager.distanceFilter = 25
         } else {
+            locationManager.desiredAccuracy = kCLLocationAccuracyBest
+            locationManager.distanceFilter = 5
             // Exclui passos acumulados só durante a pausa.
             if let rawAtPause = pedometerRawWhenPaused {
                 pedometerOffset += max(0, latestPedometerRaw - rawAtPause)
@@ -188,6 +194,10 @@ final class RunTrackingService: NSObject, ObservableObject {
     private func startLocationUpdatesIfAuthorized() {
         let status = locationManager.authorizationStatus
         guard status == .authorizedAlways || status == .authorizedWhenInUse else { return }
+        locationManager.desiredAccuracy = isPaused
+            ? kCLLocationAccuracyHundredMeters
+            : kCLLocationAccuracyBest
+        locationManager.distanceFilter = isPaused ? 25 : 5
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.showsBackgroundLocationIndicator = true
         locationManager.startUpdatingLocation()

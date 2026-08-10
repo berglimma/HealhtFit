@@ -59,6 +59,13 @@ final class RowingMetricsService: ObservableObject {
     private let peakThreshold: Double = 0.22 // m/s² user accel long axis
     private let samplePublishEvery = 3
     private var sampleCounter = 0
+    private let processingQueue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.name = "com.healthfit.rowing.motion"
+        queue.maxConcurrentOperationCount = 1
+        queue.qualityOfService = .utility
+        return queue
+    }()
 
     private var totalElapsedForAvg: TimeInterval {
         guard let start = sessionStart else { return 0 }
@@ -73,11 +80,15 @@ final class RowingMetricsService: ObservableObject {
         isRunning = true
         isPaused = false
         lastStatusMessage = "Sensores de remo ativos (acel. + giro)"
+        startHardware()
+    }
 
+    private func startHardware() {
         let box = WeakMainActorBox(self)
         if motion.isDeviceMotionAvailable {
-            motion.deviceMotionUpdateInterval = 0.04 // 25 Hz
-            motion.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { data, _ in
+            // ~12 Hz: detecta remadas com bem menos custo que 25 Hz.
+            motion.deviceMotionUpdateInterval = 0.08
+            motion.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: processingQueue) { data, _ in
                 guard let data else { return }
                 box.run { this in
                     this.handleDeviceMotion(data)
@@ -90,12 +101,19 @@ final class RowingMetricsService: ObservableObject {
 
     func stop() {
         isRunning = false
+        isPaused = false
         motion.stopDeviceMotionUpdates()
         recomputeDerivedMetrics()
     }
 
     func setPaused(_ paused: Bool) {
+        guard isRunning, isPaused != paused else { return }
         isPaused = paused
+        if paused {
+            motion.stopDeviceMotionUpdates()
+        } else {
+            startHardware()
+        }
     }
 
     /// Distância e velocidade da sessão (GPS no barco; estimativa no erg).

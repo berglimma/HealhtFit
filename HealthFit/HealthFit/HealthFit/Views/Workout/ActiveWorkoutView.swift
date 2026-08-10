@@ -10,6 +10,7 @@ struct ActiveWorkoutView: View {
     @EnvironmentObject var authService: AuthService
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.scenePhase) private var scenePhase
 
     let sheet: WorkoutSheet
     var onReturnToWorkoutList: (() -> Void)? = nil
@@ -210,6 +211,7 @@ struct ActiveWorkoutView: View {
             }
         }
         .onReceive(workoutClock) { _ in
+            guard scenePhase == .active else { return }
             // Mantém estado leve alinhado ao relógio (TimelineView já redesenha o HH:MM:SS).
             updateWorkoutElapsed()
             liveExerciseElapsedSeconds = workoutStore.liveExerciseElapsedSeconds()
@@ -226,6 +228,7 @@ struct ActiveWorkoutView: View {
             liveExerciseElapsedSeconds = seconds
         }
         .onReceive(watchSyncClock) { _ in
+            guard scenePhase == .active else { return }
             syncWatchData()
         }
         .onChange(of: workoutStore.allExercisesCompleted) { _, allDone in

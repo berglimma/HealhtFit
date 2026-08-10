@@ -157,6 +157,8 @@ struct LoginView: View {
 
 struct CreateAccountCard: View {
     let action: () -> Void
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let workoutIcons = [
         "figure.strengthtraining.traditional",
@@ -190,7 +192,7 @@ struct CreateAccountCard: View {
                         .id(workoutIcons[iconIndex])
                         .transition(.scale.combined(with: .opacity))
                 }
-                .animation(.easeInOut(duration: 0.35), value: iconIndex)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: iconIndex)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(L10n.Auth.createAccount)
@@ -222,6 +224,7 @@ struct CreateAccountCard: View {
         }
         .buttonStyle(.plain)
         .onReceive(iconTimer) { _ in
+            guard scenePhase == .active, !reduceMotion else { return }
             iconIndex = (iconIndex + 1) % workoutIcons.count
         }
     }

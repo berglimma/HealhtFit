@@ -46,6 +46,8 @@ struct HealthAssistantContext {
     var latestHRVMs: Double?
     /// Inventário de escalada, para responder o que inspecionar antes de subir.
     var climbingGear: [ClimbingGearItem] = []
+    /// Rotina aprendida (horários de treino + humor dos check-ins).
+    var routineProfile: AssistantRoutineProfile = .empty
 }
 
 enum HealthAssistantEngine {
@@ -110,6 +112,16 @@ enum HealthAssistantEngine {
             sections.append("")
         }
 
+        let routineLines = AssistantRoutineProfileEngine.welcomePersonalizationLines(
+            profile: context.routineProfile
+        )
+        if !routineLines.isEmpty {
+            sections.append(contentsOf: routineLines)
+            sections.append("")
+        }
+
+        sections.append("Analiso seus dados (treino, sono, água, nutrição e check-ins) e personalizo os avisos conforme sua rotina.")
+        sections.append("")
         sections.append("Posso tirar dúvidas sobre dieta, IMC, biotipos (ecto/meso/endo), sono, treinos (academia ou em casa), cardio, meditação, macros, suplementação, álcool e evolução corporal (fotos e medidas).")
         sections.append("")
         sections.append(healthSafetyDisclaimer)
@@ -2331,6 +2343,11 @@ final class HealthAssistantService: ObservableObject {
         }
 
         let feeling = DailyMorningCheckInEngine.classifyFeeling(text)
+        AssistantRoutineStore.recordMood(
+            userId: context.user?.id,
+            kind: "morning",
+            feeling: String(describing: feeling)
+        )
         let responses = DailyMorningCheckInEngine.responseSequence(
             feeling: feeling,
             context: context
@@ -2496,6 +2513,16 @@ final class HealthAssistantService: ObservableObject {
 
         let readiness = DailyEveningCheckInEngine.classifyRestReadiness(text)
         let dayFeeling = lastEveningDayFeeling ?? .neutral
+        AssistantRoutineStore.recordMood(
+            userId: context.user?.id,
+            kind: "eveningDay",
+            feeling: String(describing: dayFeeling)
+        )
+        AssistantRoutineStore.recordMood(
+            userId: context.user?.id,
+            kind: "eveningRest",
+            feeling: String(describing: readiness)
+        )
         let responses = DailyEveningCheckInEngine.closingSequence(
             readiness: readiness,
             dayFeeling: dayFeeling,
@@ -2597,6 +2624,11 @@ final class HealthAssistantService: ObservableObject {
         }
 
         let feeling = PostWorkoutCheckInEngine.classifyFeeling(text)
+        AssistantRoutineStore.recordMood(
+            userId: context.user?.id,
+            kind: "postWorkout",
+            feeling: String(describing: feeling)
+        )
         let athleteName = context.user?.greetingName ?? ""
         let responses = PostWorkoutCheckInEngine.responseSequence(
             feeling: feeling,
@@ -2800,6 +2832,48 @@ final class HealthAssistantService: ObservableObject {
         AssistantSupplementNudgeEngine.markDailyNudgeDelivered()
         supplementNudgeDelivered = true
         lastUserInteractionAt = Date()
+    }
+
+    /// Insights de rotina aprendida + análise personalizada dos dados (proativo).
+    func checkRoutineInsightsIfNeeded(context: HealthAssistantContext) {
+        guard !isTyping else { return }
+        guard !isInGuidedCheckIn else { return }
+
+        let userId = context.user?.id
+        let snapshot = AssistantRoutineStore.load(userId: userId)
+        let name = context.user?.greetingName ?? "Atleta"
+        let dayKey = AssistantRoutineStore.dayKey()
+
+        if let missed = AssistantRoutineProfileEngine.missedWindowMessageIfNeeded(
+            athleteName: name,
+            profile: context.routineProfile,
+            context: context,
+            snapshot: snapshot
+        ) {
+            if let last = messages.last, !last.isUser, last.text == missed {
+                AssistantRoutineStore.markInsightDelivered(userId: userId, dayKey: dayKey)
+                return
+            }
+            deliverAssistantMessage(missed)
+            AssistantRoutineStore.markInsightDelivered(userId: userId, dayKey: dayKey)
+            lastUserInteractionAt = Date()
+            return
+        }
+
+        if let analysis = AssistantRoutineProfileEngine.personalizedAnalysisMessageIfNeeded(
+            athleteName: name,
+            profile: context.routineProfile,
+            context: context,
+            snapshot: snapshot
+        ) {
+            if let last = messages.last, !last.isUser, last.text == analysis {
+                AssistantRoutineStore.markAnalysisDelivered(userId: userId, dayKey: dayKey)
+                return
+            }
+            deliverAssistantMessage(analysis)
+            AssistantRoutineStore.markAnalysisDelivered(userId: userId, dayKey: dayKey)
+            lastUserInteractionAt = Date()
+        }
     }
 
     /// Alerta de maré para quem pratica Surf / Kitesurf (no máximo 1×/dia).

@@ -93,7 +93,14 @@ service cloud.firestore {
     }
 
     match /users/{userId}/duoMemberships/{teamId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Dono do vínculo OU membro atual da equipe (para adicionar alguém pelo app).
+      allow create, update: if request.auth != null
+        && (request.auth.uid == userId
+            || request.auth.uid in get(/databases/$(database)/documents/duoTeams/$(teamId)).data.get('memberUids', []));
+      allow delete: if request.auth != null
+        && (request.auth.uid == userId
+            || request.auth.uid in get(/databases/$(database)/documents/duoTeams/$(teamId)).data.get('memberUids', []));
     }
 
     // Diretório mínimo (nome + como quer ser chamado) para convites em dupla/equipe.
@@ -110,6 +117,13 @@ service cloud.firestore {
       allow update, delete: if request.auth != null
         && (request.auth.uid == userId
             || request.auth.uid == resource.data.fromUid);
+    }
+
+    // Notificações de dupla/equipe (ex.: “você foi adicionado a um grupo”).
+    match /users/{userId}/duoNotifications/{notificationId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.resource.data.fromUid == request.auth.uid;
     }
   }
 }

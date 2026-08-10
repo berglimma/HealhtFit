@@ -16,8 +16,15 @@
     "·" : {
 
     },
-    "“%@” — este treino entra no relatório do grupo" : {
-
+    "“%@” · conta só: %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "“%1$@” · conta só: %2$@"
+          }
+        }
+      }
     },
     "“%@” será removido permanentemente." : {
 
@@ -80,16 +87,6 @@
     "%@ · encerre quando a luta acabar" : {
 
     },
-    "%@ · no app · %@" : {
-      "localizations" : {
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · no app · %2$@"
-          }
-        }
-      }
-    },
     "%@ / %@" : {
       "localizations" : {
         "pt-BR" : {
@@ -123,12 +120,15 @@
     "%@ convidou você" : {
 
     },
-    "%@, %@" : {
+    "%@ em tela cheia" : {
+
+    },
+    "%@: %@" : {
       "localizations" : {
         "pt-BR" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$@, %2$@"
+            "value" : "%1$@: %2$@"
           }
         }
       }
@@ -183,9 +183,6 @@
       }
     },
     "%lld doses" : {
-
-    },
-    "%lld equipe(s) · chat para marcar treinos" : {
 
     },
     "%lld etapas guiadas" : {
@@ -517,6 +514,9 @@
     "A partir do %@" : {
 
     },
+    "A pessoa recebe o convite e precisa aceitar ou recusar. Você vê o status (pendente, aceito ou recusado)." : {
+
+    },
     "A senha deve conter:" : {
 
     },
@@ -701,7 +701,7 @@
     "Ativa" : {
 
     },
-    "Ativar: próximos treinos contam para a equipe" : {
+    "Ativar: próximos treinos das modalidades do grupo" : {
 
     },
     "Ativas" : {
@@ -713,7 +713,7 @@
     "Ative o GPS para reportar com localização." : {
 
     },
-    "Ative o modo equipe antes de iniciar o treino. Só esses treinos aparecem no ranking — os individuais ficam de fora." : {
+    "Ative o modo equipe e treine uma das modalidades do grupo (%@). Só assim conta no ranking e gera o card em grupo." : {
 
     },
     "Atividade (minutos)" : {
@@ -1505,10 +1505,7 @@
     "Buscar sensores" : {
 
     },
-    "Busque no app, envie SMS ou e-mail com um convite motivador. O HealthFit espera por quem ainda não entrou. Sem localização em tempo real." : {
-
-    },
-    "Busque pelo nome ou “Como você gostaria de ser chamado”. Também dá para convidar por SMS, e-mail motivador ou código." : {
+    "Busque no app e envie o convite. A pessoa precisa aceitar ou recusar. Você acompanha o status (pendente, aceito ou recusado). Também dá para SMS, e-mail ou código. Sem localização em tempo real." : {
 
     },
     "Cada ficha inclui demos em vídeo/GIF dos exercícios durante o treino." : {
@@ -1570,12 +1567,6 @@
 
     },
     "Cancelar" : {
-
-    },
-    "Card de postagem de %@" : {
-
-    },
-    "Card de postagem em tela cheia" : {
 
     },
     "Card pronto para Stories e status — WhatsApp ou Instagram." : {
@@ -1959,7 +1950,7 @@
     "Convidar por SMS" : {
 
     },
-    "Convide parceiros, chat e SMS — sem localização ao vivo" : {
+    "Convites deste grupo" : {
 
     },
     "Convites enviados" : {
@@ -2146,7 +2137,7 @@
     "Diários de natação, bike e surf/kite ficam dentro de cada modalidade." : {
 
     },
-    "Digite pelo menos 2 letras." : {
+    "Digite pelo menos 2 letras do nome, apelido ou e-mail." : {
 
     },
     "Diminuir pausa 15 segundos" : {
@@ -2374,6 +2365,9 @@
     "Escolha um tópico e a duração da sessão" : {
 
     },
+    "Escolha uma imagem para a capa da equipe." : {
+
+    },
     "Escolha uma opção para cada refeição do dia" : {
 
     },
@@ -2549,10 +2543,16 @@
     "Fonte atual" : {
 
     },
+    "Foto da capa" : {
+
+    },
     "Foto da refeição" : {
 
     },
     "Foto de fundo" : {
+
+    },
+    "Foto do grupo" : {
 
     },
     "Foto do perfil" : {
@@ -3055,10 +3055,16 @@
     "Modalidade" : {
 
     },
+    "Modalidades do grupo" : {
+
+    },
     "Modalidades que pratico" : {
 
     },
     "Modo" : {
+
+    },
+    "Modo ativo para: %@. Outras modalidades ficam individuais (sem card/ranking de grupo)." : {
 
     },
     "Modo de velejo" : {
@@ -3128,9 +3134,6 @@
 
     },
     "Nenhum" : {
-
-    },
-    "Nenhum card gerado ainda. Finalize um treino para criar o card de postagem." : {
 
     },
     "Nenhum cardápio ativo. Gere seu plano em Nutrição." : {
@@ -3211,10 +3214,16 @@
     "Neste treino" : {
 
     },
-    "Ninguém encontrado com esse nome." : {
+    "Ninguém encontrado. A pessoa precisa ter aberto o app pelo menos uma vez (com esta versão) para aparecer na busca. Enquanto isso, use SMS, e-mail ou código." : {
 
     },
     "Nível do mar via Open-Meteo Marine (estimado — não é tábua de porto)." : {
+
+    },
+    "No app" : {
+
+    },
+    "No app · %@" : {
 
     },
     "No treino: altura de saltos via giroscópio Apple Watch + iPhone, pontos no mapa, gráficos e relatório PDF." : {
@@ -3250,7 +3259,7 @@
     "Nome do treino" : {
 
     },
-    "Nome ou como quer ser chamado" : {
+    "Nome, apelido ou e-mail" : {
 
     },
     "Nota (opcional)" : {
@@ -3456,6 +3465,9 @@
     "Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit (estilo Stories)." : {
 
     },
+    "Opcional — aparece no card da equipe." : {
+
+    },
     "Open-Meteo (vento + Marine): altura real estimada com sua localização." : {
 
     },
@@ -3463,9 +3475,6 @@
 
     },
     "Orientações" : {
-
-    },
-    "Os próximos treinos que você iniciar (força, cardio, etc.) entram no relatório desta equipe. Treinos individuais não entram." : {
 
     },
     "Ótimo! Menos cafeína ajuda no sono e na recuperação muscular." : {
@@ -4310,10 +4319,16 @@
     "Selecione um ou mais grupos musculares. Os exercícios do catálogo são carregados automaticamente — remova os que não quiser." : {
 
     },
+    "Selecione uma ou mais. Só treinos dessas modalidades contam no ranking e geram o card de postagem em grupo." : {
+
+    },
     "Sem Apple Watch · 0 kcal" : {
 
     },
     "Sem dados suficientes." : {
+
+    },
+    "Sem foto ainda" : {
 
     },
     "Sem localização em tempo real" : {
@@ -4483,6 +4498,12 @@
     "Sistema" : {
 
     },
+    "SMS / código" : {
+
+    },
+    "SMS / código · %@" : {
+
+    },
     "SMS indisponível" : {
 
     },
@@ -4493,6 +4514,9 @@
 
     },
     "Só para marcar atividades físicas. A mensagem expira em 24 horas. Sem mapa e sem localização ao vivo." : {
+
+    },
+    "Só treinos dessas modalidades entram no ranking e geram o card de postagem em grupo." : {
 
     },
     "Sobre" : {
@@ -4520,6 +4544,9 @@
 
     },
     "Status" : {
+
+    },
+    "Status dos convites" : {
 
     },
     "Stroke rate em remadas por minuto. Split /500 m (quanto menor, melhor) e eficiência saem da distância, remadas e sensores." : {
@@ -4818,9 +4845,6 @@
     "Toque para recolher o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos." : {
 
     },
-    "Toque para saber como funciona (sem mapa em tempo real)" : {
-
-    },
     "Total" : {
 
     },
@@ -4894,9 +4918,6 @@
 
     },
     "Última série · Finalizar" : {
-
-    },
-    "Último card de postagem" : {
 
     },
     "Último treino: %@" : {
@@ -5009,12 +5030,6 @@
 
     },
     "Você consome muito doce?" : {
-
-    },
-    "Você deixa de ver o chat e os convites desta equipe. Os demais membros continuam." : {
-
-    },
-    "Você é o único membro. Ao sair, a equipe será encerrada." : {
 
     },
     "Você não concluiu o treino, mas cada sessão conta — card pronto para Stories e status." : {

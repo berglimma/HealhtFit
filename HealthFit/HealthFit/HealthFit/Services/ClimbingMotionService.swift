@@ -44,7 +44,7 @@ final class ClimbingMotionService: ObservableObject {
         let queue = OperationQueue()
         queue.name = "com.healthfit.climbing.motion"
         queue.maxConcurrentOperationCount = 1
-        queue.qualityOfService = .userInitiated
+        queue.qualityOfService = .utility
         return queue
     }()
 
@@ -73,9 +73,13 @@ final class ClimbingMotionService: ObservableObject {
 
         resetCounters()
         isRunning = true
+        isPaused = false
         phaseStartedAt = Date()
+        startHardware()
+    }
 
-        motionManager.deviceMotionUpdateInterval = 0.1
+    private func startHardware() {
+        motionManager.deviceMotionUpdateInterval = 0.12 // ~8 Hz
         motionManager.startDeviceMotionUpdates(to: processingQueue) { [weak self] data, _ in
             guard let data else { return }
             let accel = data.userAcceleration
@@ -96,17 +100,24 @@ final class ClimbingMotionService: ObservableObject {
         motionManager.stopDeviceMotionUpdates()
         flushPhaseTimer()
         isRunning = false
+        isPaused = false
         phase = .idle
         phaseStartedAt = nil
         motionIntensity = 0
     }
 
-    /// Pausa manual da sessão — congela os cronômetros sem descartar o acumulado.
+    /// Pausa manual da sessão — congela os cronômetros e desliga o hardware.
     func setPaused(_ paused: Bool) {
         guard paused != isPaused else { return }
         flushPhaseTimer()
         isPaused = paused
         phaseStartedAt = paused ? nil : Date()
+        if paused {
+            motionManager.stopDeviceMotionUpdates()
+            motionIntensity = 0
+        } else if isRunning {
+            startHardware()
+        }
     }
 
     func exportSnapshotValues() -> (active: Int, rest: Int, attempts: Int) {

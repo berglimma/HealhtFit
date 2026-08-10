@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import FirebaseFirestore
+import UIKit
 
 @MainActor
 final class DuoTeamService: ObservableObject {
@@ -18,10 +19,13 @@ final class DuoTeamService: ObservableObject {
     private var boundCountryCode: String?
     private var boundPhotoURL: String?
     private var listeners: [String: ListenerRegistration] = [:]
+    private var inboxListener: ListenerRegistration?
+    private var deliveringInboxIds: Set<String> = []
 
     private enum ScopedKey {
         static let teams = "duo_teams"
         static let invites = "duo_invites"
+        static let notifiedPendingInvites = "duo_notified_pending_invites"
     }
 
     private init() {}
@@ -100,9 +104,13 @@ final class DuoTeamService: ObservableObject {
         do {
             receivedInvites = try await DuoTeamFirestoreService.fetchPendingInvites(forUserId: userId)
                 .filter { !$0.isExpired && $0.status == .pending }
+            notifyNewPendingInvitesIfNeeded(receivedInvites, userId: userId)
         } catch {
             print("[HealthFit] Duo pending invites sync: \(error.localizedDescription)")
         }
+
+        await deliverInboxNotificationsIfNeeded(userId: userId)
+        startInboxListenerIfNeeded(userId: userId)
 
         await refreshMyMemberProfileAcrossTeams()
         persistLocal()
@@ -125,20 +133,33 @@ final class DuoTeamService: ObservableObject {
     }
 
     func searchAppUsers(query: String) async -> [UserDirectoryEntry] {
+        lastError = nil
         do {
             return try await ProfileFirestoreService.searchUsers(
                 query: query,
                 excludingUserId: boundUserId
             )
         } catch {
-            lastError = "Não foi possível buscar usuários."
+            print("[HealthFit] Duo user search: \(error.localizedDescription)")
+            lastError = "Não foi possível buscar usuários. Verifique a conexão e se as regras do Firestore estão publicadas."
             return []
+        }
+    }
+
+    /// Garante que o usuário logado aparece no diretório de busca.
+    func ensureDirectorySynced(profile: UserProfile?) async {
+        guard let profile else { return }
+        do {
+            try await ProfileFirestoreService.syncUserDirectory(profile, photoURL: boundPhotoURL)
+        } catch {
+            print("[HealthFit] Duo directory sync: \(error.localizedDescription)")
+            lastError = "Não foi possível publicar seu perfil no diretório de busca."
         }
     }
 
     // MARK: - Create / invite / join
 
-    func createTeam(name: String, modality: DuoTeamModality) async -> DuoTeam? {
+    func createTeam(name: String, modalities: [DuoTeamModality]) async -> DuoTeam? {
         guard hasPrivacyConsent else {
             lastError = "Confirme o aviso de privacidade antes de continuar."
             return nil
@@ -152,11 +173,16 @@ final class DuoTeamService: ObservableObject {
             lastError = "Informe um nome para a dupla/equipe."
             return nil
         }
+        let selected = modalities.filter { $0 != .mixed }
+        guard !selected.isEmpty else {
+            lastError = "Selecione pelo menos uma modalidade para o grupo."
+            return nil
+        }
 
         let team = DuoTeam(
             id: UUID().uuidString,
             name: trimmed,
-            modality: modality,
+            modalities: selected,
             createdByUid: userId,
             createdByName: boundUserName,
             members: [
@@ -256,7 +282,55 @@ final class DuoTeamService: ObservableObject {
         )
     }
 
-    /// Convida alguém já cadastrado no HealthFit (busca por nome / como quer ser chamado).
+    /// Atualiza a foto de capa do grupo (opcional).
+    @discardableResult
+    func updateTeamPhoto(teamId: String, image: UIImage) async -> Bool {
+        guard teams.contains(where: { $0.id == teamId }) else {
+            lastError = "Equipe não encontrada."
+            return false
+        }
+        guard let data = image.jpegData(compressionQuality: 0.82) else {
+            lastError = "Não foi possível preparar a foto."
+            return false
+        }
+        do {
+            let url = try await ProfilePhotoStorageService.uploadDuoTeamCoverJPEG(
+                data: data,
+                teamId: teamId
+            )
+            guard let index = teams.firstIndex(where: { $0.id == teamId }) else { return false }
+            teams[index].photoURL = url.absoluteString
+            teams[index].updatedAt = .now
+            persistLocal()
+            try await DuoTeamFirestoreService.saveTeam(teams[index])
+            return true
+        } catch {
+            lastError = "Não foi possível enviar a foto do grupo."
+            return false
+        }
+    }
+
+    /// Remove a foto de capa do grupo.
+    @discardableResult
+    func removeTeamPhoto(teamId: String) async -> Bool {
+        guard let index = teams.firstIndex(where: { $0.id == teamId }) else {
+            lastError = "Equipe não encontrada."
+            return false
+        }
+        do {
+            try await ProfilePhotoStorageService.deleteDuoTeamCover(teamId: teamId)
+            teams[index].photoURL = nil
+            teams[index].updatedAt = .now
+            persistLocal()
+            try await DuoTeamFirestoreService.saveTeam(teams[index])
+            return true
+        } catch {
+            lastError = "Não foi possível remover a foto do grupo."
+            return false
+        }
+    }
+
+    /// Convida alguém do app; a pessoa precisa aceitar ou recusar.
     @discardableResult
     func inviteAppUser(team: DuoTeam, user: UserDirectoryEntry) async -> Bool {
         if team.members.contains(where: { $0.uid == user.uid }) {
@@ -266,26 +340,42 @@ final class DuoTeamService: ObservableObject {
         if sentInvites.contains(where: {
             $0.teamId == team.id && $0.toUid == user.uid && $0.status == .pending && !$0.isExpired
         }) {
-            lastError = "Já existe um convite pendente para essa pessoa."
+            lastError = "Já existe um convite pendente para \(user.shownName)."
             return false
         }
+
         guard let result = await makeInvite(
             team: team,
             toName: user.shownName,
             toPhoneE164: "",
             toEmail: nil,
             toUid: user.uid,
-            notifyBody: "Convite enviado para \(user.shownName). O HealthFit espera pela resposta."
+            notifyBody: "Convite enviado para \(user.shownName). Aguardando resposta."
         ) else { return false }
 
         do {
             try await DuoTeamFirestoreService.savePendingInvite(forUserId: user.uid, invite: result.invite)
         } catch {
-            lastError = "Convite criado, mas a pessoa pode precisar do código \(result.invite.code)."
+            lastError = "Convite criado, mas \(user.shownName) pode precisar do código \(result.invite.code)."
         }
+
+        let inbox = DuoInboxNotification(
+            id: UUID().uuidString,
+            kind: "invitedToTeam",
+            title: "Convite para um grupo",
+            body: "\(boundUserName) convidou você para “\(team.name)” · \(team.modalitiesLabel). Abra Dupla / equipe para aceitar ou recusar.",
+            teamId: team.id,
+            teamName: team.name,
+            fromUid: result.invite.fromUid,
+            fromName: boundUserName,
+            createdAt: .now,
+            delivered: false
+        )
+        try? await DuoTeamFirestoreService.saveInboxNotification(forUserId: user.uid, notification: inbox)
+
         NotificationService.shared.deliverDuoTeamNotification(
-            title: "Convite no HealthFit",
-            body: "\(user.shownName) recebeu o convite para “\(team.name)”. Também pode usar o código \(result.invite.code)."
+            title: "Convite pendente",
+            body: "Aguardando \(user.shownName) aceitar o convite para “\(team.name)”."
         )
         return true
     }
@@ -296,6 +386,11 @@ final class DuoTeamService: ObservableObject {
         if joined != nil, let userId = boundUserId {
             try? await DuoTeamFirestoreService.deletePendingInvite(forUserId: userId, inviteId: invite.id)
             receivedInvites.removeAll { $0.id == invite.id }
+            await notifyInviteResponse(
+                invite: invite,
+                accepted: true,
+                responderName: boundUserName
+            )
         }
         return joined
     }
@@ -308,9 +403,60 @@ final class DuoTeamService: ObservableObject {
             try await DuoTeamFirestoreService.saveInvite(updated)
             try await DuoTeamFirestoreService.deletePendingInvite(forUserId: userId, inviteId: invite.id)
             receivedInvites.removeAll { $0.id == invite.id }
+            await notifyInviteResponse(
+                invite: updated,
+                accepted: false,
+                responderName: boundUserName
+            )
         } catch {
             lastError = "Não foi possível recusar o convite."
         }
+    }
+
+    /// Avisa quem convidou sobre aceite/recusa.
+    private func notifyInviteResponse(
+        invite: DuoTeamInvite,
+        accepted: Bool,
+        responderName: String
+    ) async {
+        let name = responderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "Alguém"
+            : responderName
+        let inbox = DuoInboxNotification(
+            id: UUID().uuidString,
+            kind: accepted ? "inviteAccepted" : "inviteDeclined",
+            title: accepted ? "Convite aceito" : "Convite recusado",
+            body: accepted
+                ? "\(name) aceitou o convite para “\(invite.teamName)”."
+                : "\(name) recusou o convite para “\(invite.teamName)”.",
+            teamId: invite.teamId,
+            teamName: invite.teamName,
+            fromUid: boundUserId ?? "",
+            fromName: name,
+            createdAt: .now,
+            delivered: false
+        )
+        try? await DuoTeamFirestoreService.saveInboxNotification(
+            forUserId: invite.fromUid,
+            notification: inbox
+        )
+    }
+
+    /// Convites pendentes enviados para um UID nesta equipe.
+    func pendingInvite(forUserId userId: String, teamId: String) -> DuoTeamInvite? {
+        sentInvites.first {
+            $0.teamId == teamId
+                && $0.toUid == userId
+                && $0.status == .pending
+                && !$0.isExpired
+        }
+    }
+
+    /// Convites enviados desta equipe (para status na UI).
+    func sentInvites(forTeamId teamId: String) -> [DuoTeamInvite] {
+        sentInvites
+            .filter { $0.teamId == teamId }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     private func makeInvite(
@@ -386,7 +532,7 @@ final class DuoTeamService: ObservableObject {
         let body = """
         Oi, \(who)!
 
-        \(fromName) te convidou para treinar em dupla/equipe no HealthFit — equipe “\(team.name)” (\(team.modality.rawValue)).
+        \(fromName) te convidou para treinar em dupla/equipe no HealthFit — equipe “\(team.name)” (\(team.modalitiesLabel)).
 
         Treinar junto muda o jogo: vocês combinam horários no chat, se motivam de verdade e acompanham o desempenho no ranking da equipe.
 
@@ -420,8 +566,10 @@ final class DuoTeamService: ObservableObject {
         }
         guard let userId = boundUserId else { return nil }
 
-        // Só treinos iniciados em dupla/equipe desta equipe — individuais ficam de fora.
-        let duoSessions = sessions.filter { $0.duoTeamId == teamId }
+        // Só treinos desta equipe cuja modalidade está nas modalidades do grupo.
+        let duoSessions = sessions.filter {
+            $0.duoTeamId == teamId && team.allows(session: $0)
+        }
         let myStats = Self.performance(
             uid: userId,
             displayName: boundUserName,
@@ -649,7 +797,7 @@ final class DuoTeamService: ObservableObject {
 
             NotificationService.shared.deliverDuoTeamNotification(
                 title: "Você entrou na equipe",
-                body: "“\(team.name)” · \(team.modality.rawValue). Combinem o treino no chat."
+                body: "“\(team.name)” · \(team.modalitiesLabel). Combinem o treino no chat."
             )
             return team
         } catch {
@@ -861,6 +1009,130 @@ final class DuoTeamService: ObservableObject {
     private func tearDownListeners() {
         for (_, reg) in listeners { reg.remove() }
         listeners.removeAll()
+        pauseInboxListener()
+        deliveringInboxIds.removeAll()
+    }
+
+    /// Em background: remove o listener da inbox (Firestore) para não manter conexão ociosa.
+    func handleAppEnteredBackground() {
+        pauseInboxListener()
+    }
+
+    /// Ao voltar: busca pendências uma vez e reativa o listener.
+    func handleAppBecameActive() {
+        guard let userId = boundUserId else { return }
+        Task {
+            await deliverInboxNotificationsIfNeeded(userId: userId)
+            startInboxListenerIfNeeded(userId: userId)
+        }
+    }
+
+    private func pauseInboxListener() {
+        inboxListener?.remove()
+        inboxListener = nil
+    }
+
+    private func startInboxListenerIfNeeded(userId: String) {
+        guard inboxListener == nil else { return }
+        inboxListener = DuoTeamFirestoreService.listenInboxNotifications(userId: userId) { [weak self] notes in
+            Task { @MainActor [weak self] in
+                await self?.deliverInboxNotifications(notes, userId: userId)
+            }
+        }
+    }
+
+    private func deliverInboxNotificationsIfNeeded(userId: String) async {
+        do {
+            let notes = try await DuoTeamFirestoreService.fetchUndeliveredNotifications(forUserId: userId)
+            await deliverInboxNotifications(notes, userId: userId)
+        } catch {
+            print("[HealthFit] Duo inbox fetch: \(error.localizedDescription)")
+        }
+    }
+
+    private func deliverInboxNotifications(_ notes: [DuoInboxNotification], userId: String) async {
+        for note in notes where !note.delivered {
+            guard !deliveringInboxIds.contains(note.id) else { continue }
+            deliveringInboxIds.insert(note.id)
+            NotificationService.shared.deliverDuoTeamNotification(
+                title: note.title,
+                body: note.body
+            )
+            do {
+                try await DuoTeamFirestoreService.markNotificationDelivered(forUserId: userId, id: note.id)
+            } catch {
+                print("[HealthFit] Duo inbox mark delivered: \(error.localizedDescription)")
+            }
+            // Se a pessoa foi adicionada, recarrega equipes para aparecer na lista.
+            if note.kind == "addedToTeam" {
+                do {
+                    let remoteTeams = try await DuoTeamFirestoreService.fetchTeams(forUserId: userId)
+                    teams = await mergeTeamsPreferringCloud(local: teams, remote: remoteTeams)
+                    persistLocal()
+                } catch {
+                    print("[HealthFit] Duo reload after add: \(error.localizedDescription)")
+                }
+            }
+            // Atualiza status dos convites enviados (aceito / recusado).
+            if note.kind == "inviteAccepted" || note.kind == "inviteDeclined" {
+                do {
+                    let remoteInvites = try await DuoTeamFirestoreService.fetchInvitesSent(byUserId: userId)
+                    if !remoteInvites.isEmpty {
+                        sentInvites = remoteInvites
+                        persistLocal()
+                    } else if let idx = sentInvites.firstIndex(where: {
+                        $0.teamId == note.teamId
+                            && ($0.toUid == note.fromUid || $0.toName.caseInsensitiveCompare(note.fromName) == .orderedSame)
+                            && $0.status == .pending
+                    }) {
+                        sentInvites[idx].status = note.kind == "inviteAccepted" ? .accepted : .declined
+                        persistLocal()
+                    }
+                } catch {
+                    print("[HealthFit] Duo reload invites after response: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    /// Convites pendentes (SMS/código) também geram aviso local uma vez.
+    private func notifyNewPendingInvitesIfNeeded(_ invites: [DuoTeamInvite], userId: String) {
+        var notified = loadNotifiedPendingInviteIds(userId: userId)
+        var changed = false
+        for invite in invites {
+            guard !notified.contains(invite.id) else { continue }
+            NotificationService.shared.deliverDuoTeamNotification(
+                title: "Convite para um grupo",
+                body: "\(invite.fromName) convidou você para “\(invite.teamName)”. Abra Dupla / equipe para aceitar."
+            )
+            notified.insert(invite.id)
+            changed = true
+        }
+        if changed {
+            saveNotifiedPendingInviteIds(notified, userId: userId)
+        }
+    }
+
+    private func loadNotifiedPendingInviteIds(userId: String) -> Set<String> {
+        guard let data = UserScopedDefaults.data(
+            forLogicalKey: ScopedKey.notifiedPendingInvites,
+            uid: userId,
+            legacyKey: nil
+        ),
+        let decoded = try? JSONDecoder().decode([String].self, from: data) else {
+            return []
+        }
+        return Set(decoded)
+    }
+
+    private func saveNotifiedPendingInviteIds(_ ids: Set<String>, userId: String) {
+        guard let data = try? JSONEncoder().encode(Array(ids)) else { return }
+        UserScopedDefaults.setData(
+            data,
+            forLogicalKey: ScopedKey.notifiedPendingInvites,
+            uid: userId,
+            legacyKey: nil
+        )
     }
 
     /// Junta equipes locais e do Firestore; sobe para o banco as que só existem no aparelho.

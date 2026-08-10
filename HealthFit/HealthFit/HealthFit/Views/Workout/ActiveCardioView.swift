@@ -13,6 +13,7 @@ struct ActiveCardioView: View {
     @EnvironmentObject var authService: AuthService
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.scenePhase) private var scenePhase
 
     let config: CardioWorkoutConfig
     var onReturnToWorkoutList: (() -> Void)? = nil
@@ -312,8 +313,11 @@ struct ActiveCardioView: View {
             }
 
             let minimized = workoutStore.isActiveWorkoutMinimized
-            // When minimized (opacity 0 but still mounted), run heavy UI/Watch work less often.
-            let runHeavyWork = !minimized || clockTickCount % 5 == 0
+            let inBackground = scenePhase != .active
+            // Minimizado ou em background: trabalho pesado bem menos frequente (GPS/sensores seguem ativos).
+            let runHeavyWork = (!minimized && !inBackground)
+                || (inBackground && clockTickCount % 15 == 0)
+                || (!inBackground && minimized && clockTickCount % 5 == 0)
 
             if runHeavyWork {
                 syncWithWatch()
@@ -1685,6 +1689,9 @@ struct ActiveCardioView: View {
         if isOutdoorGPS {
             runTracker.setPaused(true)
         }
+        if isWaterSport {
+            jumpMetrics.setPaused(true)
+        }
         if isRowing {
             rowingMetrics.setPaused(true)
         }
@@ -1702,6 +1709,9 @@ struct ActiveCardioView: View {
         isPaused = false
         if isOutdoorGPS {
             runTracker.setPaused(false)
+        }
+        if isWaterSport {
+            jumpMetrics.setPaused(false)
         }
         if isRowing {
             rowingMetrics.setPaused(false)

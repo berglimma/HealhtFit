@@ -39,6 +39,11 @@ struct HealthChatView: View {
         let todayConsumed = AssistantImprovementAnalysisEngine.todayConsumedCalories(
             from: mealPlanService.weeklyPlan
         )
+        let routineSnapshot = AssistantRoutineStore.load(userId: user?.id)
+        let routineProfile = AssistantRoutineProfileEngine.buildProfile(
+            sessions: workoutStore.sessionHistory,
+            snapshot: routineSnapshot
+        )
 
         return HealthAssistantContext(
             user: user,
@@ -71,7 +76,8 @@ struct HealthChatView: View {
             todayHealthKitActiveCalories: Int(HealthKitManager.shared.todayCalories.rounded()),
             supplementsLoggedToday: wellnessService.todaySupplementIntakes.count,
             latestHRVMs: latestHRVMs,
-            climbingGear: ClimbingGearService.shared.items
+            climbingGear: ClimbingGearService.shared.items,
+            routineProfile: routineProfile
         )
     }
 
@@ -159,6 +165,7 @@ struct HealthChatView: View {
                     context: context,
                     sessions: workoutStore.sessionHistory
                 )
+                assistant.checkRoutineInsightsIfNeeded(context: context)
                 assistant.deliverPendingSupplementAcknowledgmentIfNeeded()
             }
             .task(id: "climbing-hrv") {
@@ -199,6 +206,7 @@ struct HealthChatView: View {
                         context: context,
                         sessions: workoutStore.sessionHistory
                     )
+                    assistant.checkRoutineInsightsIfNeeded(context: context)
                 } else if phase == .background || phase == .inactive {
                     dismissChatKeyboard()
                 }
@@ -214,7 +222,10 @@ struct HealthChatView: View {
             }
             .task {
                 while !Task.isCancelled {
-                    try? await Task.sleep(for: .seconds(30))
+                    try? await Task.sleep(for: .seconds(60))
+                    guard !Task.isCancelled else { break }
+                    // Só roda em foreground — em background o onChange(scenePhase) já cobre.
+                    guard scenePhase == .active else { continue }
                     assistant.refreshGuidedCheckInsIfNeeded(context: context)
                     assistant.checkInactivityFollowUpIfNeeded(
                         context: context,
@@ -233,6 +244,7 @@ struct HealthChatView: View {
                         context: context,
                         sessions: workoutStore.sessionHistory
                     )
+                    assistant.checkRoutineInsightsIfNeeded(context: context)
                 }
             }
             .onChange(of: draft) { _, newValue in

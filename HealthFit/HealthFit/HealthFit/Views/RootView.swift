@@ -63,6 +63,7 @@ struct RootView: View {
                 KeyboardDismiss.hide()
                 if authService.isAuthenticated {
                     prepareWelcomeIfAuthenticated(trigger: .returnFromBackground)
+                    DuoTeamService.shared.handleAppBecameActive()
                     Task { await runForegroundRefreshPipeline() }
                 } else {
                     WorkoutLiveActivitySync.end()
@@ -72,6 +73,8 @@ struct RootView: View {
                 if phase == .background {
                     workoutStore.handleAppEnteredBackground()
                     timerService.handleAppEnteredBackground()
+                    DuoTeamService.shared.handleAppEnteredBackground()
+                    BluetoothHeartRateService.shared.stopScanning()
                     authService.flushProfileToCloudIfNeeded()
                     AppIconInactivityService.shared.handleAppEnteredBackground()
                 }

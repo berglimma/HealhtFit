@@ -7,6 +7,8 @@ struct CardioSetupView: View {
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var authService: AuthService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let exercise: CardioExercise
     @State private var selectedIntensity: CardioIntensity = .medium
@@ -1644,10 +1646,11 @@ struct CardioSetupView: View {
     }
 
     private func runningWindCompass(directionDegrees: Double, speedKmh: Double) -> some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
+        let paused = reduceMotion || scenePhase != .active
+        return TimelineView(.animation(minimumInterval: 1.0 / 10.0, paused: paused)) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
-            let pulse = 0.92 + 0.08 * sin(t * (1.4 + min(speedKmh, 40) / 35.0))
-            let spinBoost = sin(t * 2.2) * 6
+            let pulse = paused ? 1.0 : (0.92 + 0.08 * sin(t * (1.4 + min(speedKmh, 40) / 35.0)))
+            let spinBoost = paused ? 0.0 : (sin(t * 2.2) * 6)
 
             ZStack {
                 Circle()
@@ -2101,7 +2104,7 @@ final class SpotLocationHelper: NSObject, ObservableObject, CLLocationManagerDel
         super.init()
         nonisolatedWeakSelf = self
         manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
     }
 
     func requestLocation() {

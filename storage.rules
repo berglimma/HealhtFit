@@ -18,5 +18,19 @@ service firebase.storage {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // Capa do grupo (dupla/equipe): membros leem/escrevem.
+    match /duoTeams/{teamId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && (
+          request.auth.uid in firestore.get(
+            /databases/(default)/documents/duoTeams/$(teamId)
+          ).data.get('memberUids', [])
+          || firestore.exists(
+            /databases/(default)/documents/users/$(request.auth.uid)/duoMemberships/$(teamId)
+          )
+        );
+    }
   }
 }

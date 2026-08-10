@@ -379,6 +379,16 @@ struct WorkoutShareCardView: View {
                     .foregroundStyle(.white)
                     .tracking(0.6)
             }
+            if session.isDuoTeamSession {
+                Text(duoTeamBadgeLabel)
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.black.opacity(0.85))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color("AccentGreen").opacity(0.95))
+                    .clipShape(Capsule())
+                    .lineLimit(1)
+            }
             Spacer(minLength: 8)
             Text(formattedDate)
                 .font(.system(size: 9, weight: .semibold, design: .rounded))
@@ -386,6 +396,13 @@ struct WorkoutShareCardView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
+    }
+
+    private var duoTeamBadgeLabel: String {
+        let name = session.duoTeamName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if name.isEmpty { return "EQUIPE" }
+        if name.count <= 16 { return name.uppercased() }
+        return String(name.prefix(14)).uppercased() + "…"
     }
 
     private var achievementBadge: some View {
@@ -1039,34 +1056,39 @@ enum WorkoutShareCardRenderer {
         let who = name.isEmpty ? "Hoje" : "\(name) hoje"
         let duration = DurationFormatting.format(seconds: Int(session.duration))
         let modality = session.completedModalityTitle
+        let teamName = session.duoTeamName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let teamPart = session.isDuoTeamSession
+            ? (teamName.isEmpty ? " · treino em equipe" : " · equipe \(teamName)")
+            : ""
+        let teamTags = session.isDuoTeamSession ? " #TreinoEmEquipe #Dupla" : ""
         if session.isOutdoorGPSCardio {
             let km = session.displayDistanceKm
             let kmPart = km > 0 ? String(format: " · %.2f km", km) : ""
             let (noun, verb, tag) = outdoorShareCopy(for: session)
             if session.endedEarly || session.autoEndedByInactivity {
                 return """
-                \(who) \(verb) (não concluiu): \(modality) · \(duration)\(kmPart)
+                \(who) \(verb) (não concluiu): \(modality) · \(duration)\(kmPart)\(teamPart)
                 Cada sessão conta — HealthFit 💪
-                #HealthFit \(tag) #Treino
+                #HealthFit \(tag) #Treino\(teamTags)
                 """
             }
             return """
-            \(who) finalizou \(noun): \(modality) · \(duration)\(kmPart)
+            \(who) finalizou \(noun): \(modality) · \(duration)\(kmPart)\(teamPart)
             Treinei com HealthFit 💪
-            #HealthFit \(tag) #Treino
+            #HealthFit \(tag) #Treino\(teamTags)
             """
         }
         if session.endedEarly || session.autoEndedByInactivity {
             return """
-            \(who) treinou (não concluiu): \(modality) · \(duration)
+            \(who) treinou (não concluiu): \(modality) · \(duration)\(teamPart)
             Cada sessão conta — HealthFit 💪
-            #HealthFit #Treino #Evolucao
+            #HealthFit #Treino #Evolucao\(teamTags)
             """
         }
         return """
-        \(who) finalizou: \(modality) · \(duration)
+        \(who) finalizou: \(modality) · \(duration)\(teamPart)
         Treinei com HealthFit 💪
-        #HealthFit #Treino #Evolucao
+        #HealthFit #Treino #Evolucao\(teamTags)
         """
     }
 

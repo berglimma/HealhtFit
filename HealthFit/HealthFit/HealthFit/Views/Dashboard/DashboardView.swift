@@ -20,8 +20,8 @@ struct DashboardView: View {
     @State private var isSyncingWatch = false
     @State private var watchSyncResult: WatchSyncResult?
     @State private var showWatchSyncAlert = false
-    @State private var isShareCardExpanded = false
-    @State private var showFullscreenShareCard = false
+    @State private var expandedShareSlot: WorkoutShareCardSlot?
+    @State private var fullscreenShareSlot: WorkoutShareCardSlot?
     @State private var suppressShareCardTapAfterLongPress = false
     @State private var isSavingShareCard = false
     @State private var shareCardSaveAlertTitle = ""
@@ -45,10 +45,9 @@ struct DashboardView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     headerSection
-                    DuoTeamCard()
                     weeklyReportBanner
                     monthlyReportBanner
-                    lastShareCardSection
+                    shareCardsSection
                     metricsRow
                     if showHealthCharts {
                         HealthChartsView()
@@ -87,8 +86,8 @@ struct DashboardView: View {
             } message: {
                 Text(watchSyncResult?.message ?? "")
             }
-            .fullScreenCover(isPresented: $showFullscreenShareCard) {
-                shareCardFullscreenCover
+            .fullScreenCover(item: $fullscreenShareSlot) { slot in
+                shareCardFullscreenCover(for: slot)
                     .alert(shareCardSaveAlertTitle, isPresented: $showShareCardSaveAlert) {
                         Button("OK", role: .cancel) {}
                     } message: {
@@ -214,154 +213,171 @@ struct DashboardView: View {
         .buttonStyle(.plain)
     }
 
-    private var lastShareCardSection: some View {
-        Group {
-            if let card = shareCardStore.lastCard {
-                VStack(alignment: .leading, spacing: 8) {
-                    Button {
-                        if suppressShareCardTapAfterLongPress {
-                            suppressShareCardTapAfterLongPress = false
-                            return
-                        }
-                        withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
-                            isShareCardExpanded.toggle()
-                        }
-                    } label: {
-                        VStack(alignment: .leading, spacing: isShareCardExpanded ? 16 : 0) {
-                            // Same rectangular language as `weeklyReportBanner` when collapsed.
-                            HStack(spacing: 14) {
-                                let modalityIcon = WorkoutShareCardView.modalitySystemImage(for: card.makeSession())
-                                ZStack {
-                                    // Foto do atleta (mantém) + badge com ícone da modalidade.
-                                    if let profileImage = authService.profileImage {
-                                        Image(uiImage: profileImage)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 48, height: 48)
-                                            .clipShape(Circle())
-                                            .overlay(
-                                                Circle()
-                                                    .strokeBorder(AppTheme.accent.opacity(0.85), lineWidth: 1.5)
-                                            )
-
-                                        Image(systemName: modalityIcon)
-                                            .font(.system(size: 12, weight: .bold))
-                                            .foregroundStyle(AppTheme.accent)
-                                            .frame(width: 22, height: 22)
-                                            .background(Circle().fill(AppTheme.cardBackground))
-                                            .overlay(Circle().strokeBorder(AppTheme.accent.opacity(0.5), lineWidth: 1))
-                                            .offset(x: 16, y: 16)
-                                    } else {
-                                        Circle()
-                                            .fill(AppTheme.accent.opacity(0.2))
-                                            .frame(width: 48, height: 48)
-                                        Image(systemName: modalityIcon)
-                                            .font(.title3)
-                                            .foregroundStyle(AppTheme.accent)
-                                    }
-                                }
-                                .frame(width: 48, height: 48)
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Último card de postagem")
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(AppTheme.textPrimary)
-
-                                    Text("\(card.makeSession().completedModalityTitle) · \(formattedShareCardDate(card.displayDate))")
-                                        .font(.caption)
-                                        .foregroundStyle(AppTheme.textSecondary)
-                                        .lineLimit(2)
-                                }
-
-                                Spacer(minLength: 0)
-
-                                Image(systemName: isShareCardExpanded ? "chevron.up" : "chevron.down")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(AppTheme.textSecondary)
-                            }
-
-                            if isShareCardExpanded {
-                                shareCardPreview(for: card)
-                                    .transition(.opacity.combined(with: .move(edge: .top)))
-                            }
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(AppTheme.cardBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-                        .contentShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-                    }
-                    .buttonStyle(.plain)
-                    // simultaneousGesture keeps short-tap snappy; onLongPressGesture alone would delay taps by 1s.
-                    .simultaneousGesture(
-                        LongPressGesture(minimumDuration: 1)
-                            .onEnded { _ in
-                                suppressShareCardTapAfterLongPress = true
-                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                showFullscreenShareCard = true
-                            }
-                    )
-                    .accessibilityLabel("Card de postagem de \(card.makeSession().completedModalityTitle)")
-                    .accessibilityHint(
-                        isShareCardExpanded
-                            ? "Toque para recolher o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos."
-                            : "Toque para expandir o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos."
-                    )
-                    .accessibilityAction(named: "Abrir em tela cheia") {
-                        showFullscreenShareCard = true
-                    }
-                    .onChange(of: card.sessionId) { _, _ in
-                        isShareCardExpanded = false
-                        showFullscreenShareCard = false
-                    }
-
-                    Text("Pressione firmemente por 1s para salvar o card em Fotos")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .padding(.horizontal, 4)
-                }
-            } else {
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(AppTheme.accent.opacity(0.2))
-                            .frame(width: 48, height: 48)
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.title3)
-                            .foregroundStyle(AppTheme.accent)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Último card de postagem")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(AppTheme.textPrimary)
-                        Text("Nenhum card gerado ainda. Finalize um treino para criar o card de postagem.")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-
-                    Spacer(minLength: 0)
-                }
-                .padding()
-                .background(AppTheme.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-            }
+    private var shareCardsSection: some View {
+        VStack(spacing: 16) {
+            shareCardSlotSection(slot: .individual)
+            shareCardSlotSection(slot: .duoTeam)
         }
     }
 
-    private var shareCardFullscreenCover: some View {
+    @ViewBuilder
+    private func shareCardSlotSection(slot: WorkoutShareCardSlot) -> some View {
+        let isExpanded = expandedShareSlot == slot
+        if let card = shareCardStore.card(for: slot) {
+            VStack(alignment: .leading, spacing: 8) {
+                Button {
+                    if suppressShareCardTapAfterLongPress {
+                        suppressShareCardTapAfterLongPress = false
+                        return
+                    }
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
+                        expandedShareSlot = isExpanded ? nil : slot
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: isExpanded ? 16 : 0) {
+                        HStack(spacing: 14) {
+                            let modalityIcon = WorkoutShareCardView.modalitySystemImage(for: card.makeSession())
+                            ZStack {
+                                if let profileImage = authService.profileImage {
+                                    Image(uiImage: profileImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 48, height: 48)
+                                        .clipShape(Circle())
+                                        .overlay(
+                                            Circle()
+                                                .strokeBorder(AppTheme.accent.opacity(0.85), lineWidth: 1.5)
+                                        )
+
+                                    Image(systemName: modalityIcon)
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundStyle(AppTheme.accent)
+                                        .frame(width: 22, height: 22)
+                                        .background(Circle().fill(AppTheme.cardBackground))
+                                        .overlay(Circle().strokeBorder(AppTheme.accent.opacity(0.5), lineWidth: 1))
+                                        .offset(x: 16, y: 16)
+                                } else {
+                                    Circle()
+                                        .fill(AppTheme.accent.opacity(0.2))
+                                        .frame(width: 48, height: 48)
+                                    Image(systemName: slot == .duoTeam ? "person.3.fill" : modalityIcon)
+                                        .font(.title3)
+                                        .foregroundStyle(AppTheme.accent)
+                                }
+                            }
+                            .frame(width: 48, height: 48)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(slot.sectionTitle)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(AppTheme.textPrimary)
+
+                                Text(shareCardSubtitle(for: card, slot: slot))
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                                    .lineLimit(2)
+                            }
+
+                            Spacer(minLength: 0)
+
+                            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+
+                        if isExpanded {
+                            shareCardPreview(for: card, slot: slot)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+                    .contentShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+                }
+                .buttonStyle(.plain)
+                .simultaneousGesture(
+                    LongPressGesture(minimumDuration: 1)
+                        .onEnded { _ in
+                            suppressShareCardTapAfterLongPress = true
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            fullscreenShareSlot = slot
+                        }
+                )
+                .accessibilityLabel("\(slot.sectionTitle): \(card.makeSession().completedModalityTitle)")
+                .accessibilityHint(
+                    isExpanded
+                        ? "Toque para recolher o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos."
+                        : "Toque para expandir o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos."
+                )
+                .accessibilityAction(named: "Abrir em tela cheia") {
+                    fullscreenShareSlot = slot
+                }
+                .onChange(of: card.sessionId) { _, _ in
+                    if expandedShareSlot == slot { expandedShareSlot = nil }
+                    if fullscreenShareSlot == slot { fullscreenShareSlot = nil }
+                }
+
+                Text("Pressione firmemente por 1s para salvar o card em Fotos")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .padding(.horizontal, 4)
+            }
+        } else {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(AppTheme.accent.opacity(0.2))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: slot == .duoTeam ? "person.3.fill" : "square.and.arrow.up")
+                        .font(.title3)
+                        .foregroundStyle(AppTheme.accent)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(slot.sectionTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Text(slot.emptyHint)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding()
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        }
+    }
+
+    private func shareCardSubtitle(for card: LastWorkoutShareCard, slot: WorkoutShareCardSlot) -> String {
+        let modality = card.makeSession().completedModalityTitle
+        let date = formattedShareCardDate(card.displayDate)
+        if slot == .duoTeam {
+            let team = card.duoTeamName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if team.isEmpty {
+                return "\(modality) · \(date)"
+            }
+            return "\(modality) · \(team) · \(date)"
+        }
+        return "\(modality) · \(date)"
+    }
+
+    private func shareCardFullscreenCover(for slot: WorkoutShareCardSlot) -> some View {
         ZStack {
             Color.black.opacity(0.92)
                 .ignoresSafeArea()
                 .onTapGesture {
-                    showFullscreenShareCard = false
+                    fullscreenShareSlot = nil
                 }
 
             VStack(spacing: 20) {
                 HStack {
                     Spacer()
                     Button("Fechar") {
-                        showFullscreenShareCard = false
+                        fullscreenShareSlot = nil
                     }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
@@ -373,7 +389,7 @@ struct DashboardView: View {
                 Spacer(minLength: 0)
 
                 Group {
-                    if let image = shareCardStore.previewImage {
+                    if let image = shareCardStore.previewImage(for: slot) {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFit()
@@ -381,9 +397,9 @@ struct DashboardView: View {
                             .shadow(color: .black.opacity(0.45), radius: 24, y: 10)
                             .padding(.horizontal, 24)
                             .onTapGesture {
-                                showFullscreenShareCard = false
+                                fullscreenShareSlot = nil
                             }
-                    } else if let card = shareCardStore.lastCard {
+                    } else if let card = shareCardStore.card(for: slot) {
                         WorkoutShareCardView(
                             session: card.makeSession(),
                             athleteName: card.athleteName,
@@ -400,7 +416,7 @@ struct DashboardView: View {
                 Spacer(minLength: 0)
 
                 Button {
-                    Task { await saveShareCardToPhotos() }
+                    Task { await saveShareCardToPhotos(slot: slot) }
                 } label: {
                     HStack(spacing: 10) {
                         if isSavingShareCard {
@@ -418,20 +434,23 @@ struct DashboardView: View {
                     .background(AppTheme.accent)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
-                .disabled(isSavingShareCard || (shareCardStore.previewImage == nil && shareCardStore.lastCard == nil))
+                .disabled(
+                    isSavingShareCard
+                        || (shareCardStore.previewImage(for: slot) == nil && shareCardStore.card(for: slot) == nil)
+                )
                 .padding(.horizontal, 24)
                 .padding(.bottom, 28)
             }
         }
-        .accessibilityLabel("Card de postagem em tela cheia")
+        .accessibilityLabel("\(slot.sectionTitle) em tela cheia")
         .task {
-            await ensureShareCardPreviewImage()
+            await ensureShareCardPreviewImage(slot: slot)
         }
     }
 
     @ViewBuilder
-    private func shareCardPreview(for card: LastWorkoutShareCard) -> some View {
-        if let preview = shareCardStore.previewImage {
+    private func shareCardPreview(for card: LastWorkoutShareCard, slot: WorkoutShareCardSlot) -> some View {
+        if let preview = shareCardStore.previewImage(for: slot) {
             Image(uiImage: preview)
                 .resizable()
                 .scaledToFit()
@@ -453,23 +472,23 @@ struct DashboardView: View {
     }
 
     @MainActor
-    private func ensureShareCardPreviewImage() async {
-        guard shareCardStore.previewImage == nil,
-              let card = shareCardStore.lastCard else { return }
+    private func ensureShareCardPreviewImage(slot: WorkoutShareCardSlot) async {
+        guard shareCardStore.previewImage(for: slot) == nil,
+              let card = shareCardStore.card(for: slot) else { return }
         if let image = WorkoutShareCardRenderer.renderImage(
             session: card.makeSession(),
             athleteName: card.athleteName,
             motivationLine: card.motivationLine,
             profileImage: authService.profileImage
         ) {
-            shareCardStore.updatePreviewImage(image)
+            shareCardStore.updatePreviewImage(image, slot: slot)
         }
     }
 
     @MainActor
-    private func saveShareCardToPhotos() async {
-        await ensureShareCardPreviewImage()
-        guard let image = shareCardStore.previewImage else {
+    private func saveShareCardToPhotos(slot: WorkoutShareCardSlot) async {
+        await ensureShareCardPreviewImage(slot: slot)
+        guard let image = shareCardStore.previewImage(for: slot) else {
             presentShareCardSaveAlert(
                 title: "Não foi possível salvar",
                 message: "A imagem do card não está disponível."

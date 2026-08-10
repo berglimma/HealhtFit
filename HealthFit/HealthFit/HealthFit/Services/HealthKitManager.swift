@@ -275,7 +275,8 @@ final class HealthKitManager: ObservableObject {
         }
         workoutObserverQuery = query
         healthStore.execute(query)
-        healthStore.enableBackgroundDelivery(for: type, frequency: .immediate) { _, _ in }
+        // Horário (não immediate): evita acordar o app a cada amostra e poupa bateria.
+        healthStore.enableBackgroundDelivery(for: type, frequency: .hourly) { _, _ in }
     }
 
     /// Treinos de outros apps (exclui os gravados pelo próprio HealthFit).
@@ -342,7 +343,7 @@ final class HealthKitManager: ObservableObject {
         }
         querySlot = query
         healthStore.execute(query)
-        healthStore.enableBackgroundDelivery(for: type, frequency: .immediate) { _, _ in }
+        healthStore.enableBackgroundDelivery(for: type, frequency: .hourly) { _, _ in }
     }
 
     private func refreshTodayStepsAndCalories() async {
@@ -437,7 +438,8 @@ final class HealthKitManager: ObservableObject {
         }
         heartRateQuery = query
         healthStore.execute(query)
-        healthStore.enableBackgroundDelivery(for: heartRateType, frequency: .immediate) { _, _ in }
+        // FC em treino ativo vem do BLE / queries pontuais; background hourly basta para o painel.
+        healthStore.enableBackgroundDelivery(for: heartRateType, frequency: .hourly) { _, _ in }
     }
 
     private func fetchLatestHeartRate() async {

@@ -60,15 +60,24 @@ enum DailyMorningCheckInEngine {
         let dayGreeting = dayPartGreeting(for: now)
         let clock = formattedClockTime(now: now)
 
-        return """
+        var body = """
         \(dayGreeting), \(name)! ☀️
 
         Agora são \(clock) — momento ideal para alinhar corpo e mente.
+        """
+        if let note = AssistantRoutineProfileEngine.morningPersonalizationNote(
+            profile: context.routineProfile
+        ) {
+            body += "\n\n\(note)"
+        }
+        body += """
+
 
         Como você está se sentindo agora? Energia, humor e disposição — me conte com sinceridade.
 
         Depois te ajudo com meditação, treino ou um lembrete de cardio, conforme o seu dia.
         """
+        return body
     }
 
     static func classifyFeeling(_ text: String) -> DailyMorningFeeling {
