@@ -740,6 +740,9 @@
     "Atualizar Cardápio" : {
 
     },
+    "Atualizar convites" : {
+
+    },
     "Atualizar localização" : {
 
     },
@@ -2202,6 +2205,9 @@
     "Duração sugerida" : {
 
     },
+    "É necessário ter %lld anos ou mais para usar o HealthFit" : {
+
+    },
     "E-mail" : {
 
     },
@@ -2673,8 +2679,15 @@
     "Idade: %lld anos" : {
 
     },
-    "Idade: %lld anos · necessário entre 14 e 100" : {
-
+    "Idade: %lld anos · necessário entre %lld e %lld" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Idade: %1$lld anos · necessário entre %2$lld e %3$lld"
+          }
+        }
+      }
     },
     "Identidade confirmada" : {
 
@@ -3441,8 +3454,15 @@
     "Objetivo: %@" : {
 
     },
-    "Obrigatório · idade atual: %lld anos" : {
-
+    "Obrigatório · idade atual: %lld anos (mínimo %lld)" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Obrigatório · idade atual: %1$lld anos (mínimo %2$lld)"
+          }
+        }
+      }
     },
     "Observação (opcional)" : {
 
@@ -3950,6 +3970,9 @@
 
     },
     "Pular Descanso" : {
+
+    },
+    "Puxe para atualizar ou use o botão ↻. Convites expirados saem da lista." : {
 
     },
     "Qtd" : {

@@ -203,7 +203,7 @@ struct ProfileView: View {
                 .labelsHidden()
                 .padding()
 
-                Text("Idade: \(UserProfile.age(from: dateOfBirth)) anos · necessário entre 14 e 100")
+                Text("Idade: \(UserProfile.age(from: dateOfBirth)) anos · necessário entre \(UserProfile.minimumAgeYears) e \(UserProfile.maximumAgeYears)")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
 
@@ -1306,16 +1306,16 @@ struct ProfileView: View {
         selectedGender = user.gender
     }
 
-    /// Youngest allowed birth date (must be ≥ 14 years old) — aligned with `UserProfile.isValidDateOfBirth`.
+    /// Youngest allowed birth date (must be ≥ minimumAgeYears) — aligned with `UserProfile.isValidDateOfBirth`.
     private static func maximumDateOfBirth(now: Date = .now) -> Date {
-        Calendar.current.date(byAdding: .year, value: -14, to: now)
-            ?? now.addingTimeInterval(-14 * 365.25 * 24 * 3600)
+        Calendar.current.date(byAdding: .year, value: -UserProfile.minimumAgeYears, to: now)
+            ?? now.addingTimeInterval(-Double(UserProfile.minimumAgeYears) * 365.25 * 24 * 3600)
     }
 
-    /// Oldest allowed birth date (≤ 100 years) — same bounds as validation.
+    /// Oldest allowed birth date (≤ maximumAgeYears) — same bounds as validation.
     private static func minimumDateOfBirth(now: Date = .now) -> Date {
-        Calendar.current.date(byAdding: .year, value: -100, to: now)
-            ?? now.addingTimeInterval(-100 * 365.25 * 24 * 3600)
+        Calendar.current.date(byAdding: .year, value: -UserProfile.maximumAgeYears, to: now)
+            ?? now.addingTimeInterval(-Double(UserProfile.maximumAgeYears) * 365.25 * 24 * 3600)
     }
 
     private static func clampedDateOfBirth(from user: UserProfile, now: Date = .now) -> Date {
@@ -1323,7 +1323,7 @@ struct ProfileView: View {
             if let dob = user.dateOfBirth {
                 return dob
             }
-            let safeAge = min(max(user.age, 14), 100)
+            let safeAge = min(max(user.age, UserProfile.minimumAgeYears), UserProfile.maximumAgeYears)
             return Calendar.current.date(byAdding: .year, value: -safeAge, to: now)
                 ?? maximumDateOfBirth(now: now)
         }()
@@ -1467,7 +1467,7 @@ struct ProfileView: View {
               let height = Double(heightText.replacingOccurrences(of: ",", with: ".")),
               isBodyDataValid else {
             if !UserProfile.isValidDateOfBirth(dateOfBirth) {
-                bodyDataSaveError = "A data de nascimento é obrigatória (14 a 100 anos)."
+                bodyDataSaveError = "A data de nascimento é obrigatória (\(UserProfile.minimumAgeYears) a \(UserProfile.maximumAgeYears) anos)."
             }
             return
         }

@@ -116,6 +116,70 @@ final class DuoTeamService: ObservableObject {
         persistLocal()
     }
 
+    /// Atualiza convites (recebidos/enviados), remove expirados e limpa a lista.
+    func refreshInvites() async {
+        guard let userId = boundUserId else { return }
+        isLoading = true
+        lastError = nil
+        defer { isLoading = false }
+
+        do {
+            let remoteSent = try await DuoTeamFirestoreService.fetchInvitesSent(byUserId: userId)
+            if !remoteSent.isEmpty {
+                sentInvites = remoteSent
+            }
+        } catch {
+            print("[HealthFit] Duo refresh sent invites: \(error.localizedDescription)")
+        }
+
+        do {
+            let remoteReceived = try await DuoTeamFirestoreService.fetchPendingInvites(forUserId: userId)
+            receivedInvites = remoteReceived.filter { !$0.isExpired && $0.status == .pending }
+        } catch {
+            print("[HealthFit] Duo refresh received invites: \(error.localizedDescription)")
+        }
+
+        await purgeExpiredInvites(userId: userId)
+        persistLocal()
+    }
+
+    /// Pull-to-refresh da tela Dupla / equipe.
+    func refreshAll() async {
+        await loadIfNeeded()
+        await purgeExpiredInvites(userId: boundUserId)
+    }
+
+    private func purgeExpiredInvites(userId: String?) async {
+        guard let userId else { return }
+
+        let expiredReceived = receivedInvites.filter(\.isExpired)
+        for invite in expiredReceived {
+            try? await DuoTeamFirestoreService.deletePendingInvite(forUserId: userId, inviteId: invite.id)
+            try? await DuoTeamFirestoreService.deleteJoinAccess(forUserId: userId, teamId: invite.teamId)
+        }
+        if !expiredReceived.isEmpty {
+            receivedInvites.removeAll { $0.isExpired }
+        }
+
+        // Enviados: marca expirados localmente e some da lista pendente.
+        var sentChanged = false
+        for index in sentInvites.indices where sentInvites[index].status == .pending && sentInvites[index].isExpired {
+            sentInvites[index].status = .expired
+            sentChanged = true
+            var updated = sentInvites[index]
+            updated.status = .expired
+            try? await DuoTeamFirestoreService.saveInvite(updated)
+            if let toUid = updated.toUid, !toUid.isEmpty {
+                try? await DuoTeamFirestoreService.deletePendingInvite(forUserId: toUid, inviteId: updated.id)
+                try? await DuoTeamFirestoreService.deleteJoinAccess(forUserId: toUid, teamId: updated.teamId)
+            }
+        }
+        if sentChanged {
+            // Dispara @Published.
+            sentInvites = sentInvites
+        }
+    }
+
     func clearAllLocalData() {
         tearDownListeners()
         if let uid = boundUserId {
@@ -797,6 +861,8 @@ final class DuoTeamService: ObservableObject {
 
         do {
             if remainingAfterLeave.isEmpty {
+                // Capa do grupo: apagar no Storage ainda como membro (regra exige membership).
+                try? await ProfilePhotoStorageService.deleteDuoTeamCover(teamId: teamId)
                 // Último membro: apaga a equipe enquanto ainda consta em memberUids.
                 try await DuoTeamFirestoreService.deleteTeam(id: teamId)
                 try? await DuoTeamFirestoreService.removeMembership(userId: userId, teamId: teamId)
@@ -814,6 +880,7 @@ final class DuoTeamService: ObservableObject {
                 )
                 try? await DuoTeamFirestoreService.saveMessage(system)
 
+                // Remove o membro inteiro (inclui foto de perfil e bandeira no grupo).
                 team.members = remainingAfterLeave
                 team.updatedAt = .now
                 if team.createdByUid == userId, let nextOwner = remainingAfterLeave.compactMap(\.uid).first {
@@ -826,6 +893,7 @@ final class DuoTeamService: ObservableObject {
                 // Só o doc da equipe (sem reescrever memberships alheios — isso bloqueava o leave).
                 try await DuoTeamFirestoreService.updateTeamDocumentOnly(team)
                 try await DuoTeamFirestoreService.removeMembership(userId: userId, teamId: teamId)
+                try? await DuoTeamFirestoreService.deleteMemberPerformance(teamId: teamId, userId: userId)
             }
         } catch {
             lastError = "Não foi possível sair da equipe. Verifique a conexão e tente de novo."
@@ -892,7 +960,7 @@ final class DuoTeamService: ObservableObject {
 
         do {
             guard var team = try await DuoTeamFirestoreService.fetchTeam(id: invite.teamId) else {
-                lastError = "Equipe não encontrada."
+                lastError = "Equipe não encontrada. Peça um novo convite."
                 return nil
             }
             if team.members.contains(where: { $0.uid == userId }) {
@@ -901,6 +969,8 @@ final class DuoTeamService: ObservableObject {
                     persistLocal()
                 }
                 try? await DuoTeamFirestoreService.deleteJoinAccess(forUserId: userId, teamId: team.id)
+                try? await DuoTeamFirestoreService.deletePendingInvite(forUserId: userId, inviteId: invite.id)
+                lastError = nil
                 return team
             }
 
@@ -911,8 +981,11 @@ final class DuoTeamService: ObservableObject {
             var updatedInvite = invite
             updatedInvite.status = .accepted
 
-            // Membership primeiro libera regras de mensagem / leitura estável.
-            try await DuoTeamFirestoreService.saveTeam(team)
+            // 1) Vínculo próprio (regra permite create do próprio uid).
+            try await DuoTeamFirestoreService.upsertOwnMembership(userId: userId, team: team)
+            // 2) Atualiza equipe sem reescrever memberships de terceiros.
+            try await DuoTeamFirestoreService.updateTeamDocumentOnly(team)
+            // 3) Marca convite aceito (índice de código é best-effort).
             try await DuoTeamFirestoreService.saveInvite(updatedInvite)
             try? await DuoTeamFirestoreService.deleteJoinAccess(forUserId: userId, teamId: team.id)
             try? await DuoTeamFirestoreService.deletePendingInvite(forUserId: userId, inviteId: invite.id)
@@ -922,6 +995,7 @@ final class DuoTeamService: ObservableObject {
             } else {
                 teams.insert(team, at: 0)
             }
+            receivedInvites.removeAll { $0.id == invite.id }
             persistLocal()
 
             let system = DuoChatMessage(
@@ -952,12 +1026,12 @@ final class DuoTeamService: ObservableObject {
     private static func joinFailureMessage(_ error: Error) -> String {
         let ns = error as NSError
         if ns.domain == "FIRFirestoreErrorDomain", ns.code == 7 {
-            return "Sem permissão para entrar nesta equipe. Peça um novo convite."
+            return "Não foi possível entrar nesta equipe agora. Atualize a lista e, se o convite expirou, peça um novo."
         }
         if ns.localizedDescription.localizedCaseInsensitiveContains("permission") {
-            return "Sem permissão para entrar nesta equipe. Peça um novo convite."
+            return "Não foi possível entrar nesta equipe agora. Atualize a lista e, se o convite expirou, peça um novo."
         }
-        return "Falha ao entrar na equipe. Verifique a conexão."
+        return "Falha ao entrar na equipe. Verifique a conexão e tente de novo."
     }
 
     // MARK: - Chat
@@ -1149,6 +1223,21 @@ final class DuoTeamService: ObservableObject {
 
     /// Busca foto e bandeira dos membros no diretório/perfil e atualiza a equipe.
     func enrichMembersFromDirectory(teamId: String) async {
+        // Membros do Firestore são a fonte da verdade — evita reintroduzir quem saiu (e a foto).
+        if let remote = try? await DuoTeamFirestoreService.fetchTeam(id: teamId),
+           let syncIndex = teams.firstIndex(where: { $0.id == teamId }) {
+            var synced = teams[syncIndex]
+            let localUids = Set(synced.members.compactMap(\.uid))
+            let remoteUids = Set(remote.members.compactMap(\.uid))
+            if localUids != remoteUids || synced.members.count != remote.members.count {
+                synced.members = remote.members
+                synced.updatedAt = max(synced.updatedAt, remote.updatedAt)
+                synced.photoURL = remote.photoURL
+                teams[syncIndex] = synced
+                persistLocal()
+            }
+        }
+
         guard let teamIndex = teams.firstIndex(where: { $0.id == teamId }) else { return }
         var team = teams[teamIndex]
         var changed = false
@@ -1175,7 +1264,8 @@ final class DuoTeamService: ObservableObject {
             team.updatedAt = .now
             teams[teamIndex] = team
             persistLocal()
-            try? await DuoTeamFirestoreService.saveTeam(team)
+            // Só o doc da equipe — não reescrever memberships (pode falhar / reintroduzir vínculos).
+            try? await DuoTeamFirestoreService.updateTeamDocumentOnly(team)
         }
     }
 
@@ -1339,10 +1429,12 @@ final class DuoTeamService: ObservableObject {
         for localTeam in local {
             if let remoteTeam = byId[localTeam.id] {
                 if localTeam.updatedAt > remoteTeam.updatedAt {
-                    // Local mais novo: tenta publicar; se falhar, fica com o remoto (fonte de verdade).
+                    // Local mais novo, mas a lista de membros do remoto manda (quem saiu não volta com a foto).
+                    var toPush = localTeam
+                    toPush.members = Self.mergeMemberProfiles(remote: remoteTeam.members, local: localTeam.members)
                     do {
-                        try await DuoTeamFirestoreService.saveTeam(localTeam)
-                        byId[localTeam.id] = localTeam
+                        try await DuoTeamFirestoreService.saveTeam(toPush)
+                        byId[localTeam.id] = toPush
                     } catch {
                         print("[HealthFit] Duo merge push newer local \(localTeam.id): \(error.localizedDescription)")
                         byId[localTeam.id] = remoteTeam
@@ -1371,6 +1463,35 @@ final class DuoTeamService: ObservableObject {
             }
         }
         return byId.values.sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    /// Mantém só quem ainda está no remoto; atualiza nome/foto/bandeira a partir do local quando houver.
+    private static func mergeMemberProfiles(
+        remote: [DuoTeamMember],
+        local: [DuoTeamMember]
+    ) -> [DuoTeamMember] {
+        let localByUid = Dictionary(
+            uniqueKeysWithValues: local.compactMap { member -> (String, DuoTeamMember)? in
+                guard let uid = member.uid else { return nil }
+                return (uid, member)
+            }
+        )
+        return remote.map { remoteMember in
+            guard let uid = remoteMember.uid, let localMember = localByUid[uid] else {
+                return remoteMember
+            }
+            var merged = remoteMember
+            if !localMember.name.isEmpty {
+                merged.name = localMember.name
+            }
+            if let photo = localMember.photoURL, !photo.isEmpty {
+                merged.photoURL = photo
+            }
+            if let country = localMember.countryCode, !country.isEmpty {
+                merged.countryCode = country.uppercased()
+            }
+            return merged
+        }
     }
 
     private static func isPermissionDenied(_ error: Error) -> Bool {

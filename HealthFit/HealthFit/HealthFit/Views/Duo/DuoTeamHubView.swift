@@ -8,6 +8,7 @@ struct DuoTeamHubView: View {
     @State private var newName = ""
     @State private var selectedModalities: Set<DuoTeamModality> = []
     @State private var isWorking = false
+    @State private var isRefreshing = false
 
     var body: some View {
         ScrollView {
@@ -62,11 +63,33 @@ struct DuoTeamHubView: View {
             }
             .padding(20)
         }
+        .refreshable {
+            await duoService.refreshAll()
+        }
         .background(AppTheme.background.ignoresSafeArea())
         .navigationTitle("Dupla / equipe")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task {
+                        isRefreshing = true
+                        await duoService.refreshAll()
+                        isRefreshing = false
+                    }
+                } label: {
+                    if isRefreshing || duoService.isLoading {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+                .accessibilityLabel("Atualizar")
+                .disabled(isRefreshing || duoService.isLoading)
+            }
+        }
         .task {
-            await duoService.loadIfNeeded()
+            await duoService.refreshAll()
         }
         .sheet(isPresented: $showCreate) {
             createSheet
@@ -135,6 +158,9 @@ struct DuoTeamHubView: View {
             Text("Convites recebidos")
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
+            Text("Puxe para atualizar ou use o botão ↻. Convites expirados saem da lista.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
             ForEach(duoService.receivedInvites) { invite in
                 VStack(alignment: .leading, spacing: 10) {
                     Text("\(invite.fromName) convidou você")

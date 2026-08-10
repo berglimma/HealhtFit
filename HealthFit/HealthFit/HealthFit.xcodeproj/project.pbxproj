@@ -47,6 +47,7 @@
 		B1000930 /* AssistantRoutineStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000930 /* AssistantRoutineStore.swift */; };
 		B1000931 /* AssistantRoutineProfileEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000931 /* AssistantRoutineProfileEngine.swift */; };
 		B1000932 /* ProfilePhotoStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000932 /* ProfilePhotoStorageService.swift */; };
+		B1000934 /* MarcoCivilAccessLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000934 /* MarcoCivilAccessLogService.swift */; };
 		B1000933 /* DuoMemberAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000933 /* DuoMemberAvatarView.swift */; };
 		B1000928 /* MessageComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000928 /* MessageComposeView.swift */; };
 		B1000010 /* RestTimerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000010 /* RestTimerService.swift */; };
@@ -383,6 +384,7 @@
 		F1000930 /* AssistantRoutineStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRoutineStore.swift; sourceTree = "<group>"; };
 		F1000931 /* AssistantRoutineProfileEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRoutineProfileEngine.swift; sourceTree = "<group>"; };
 		F1000932 /* ProfilePhotoStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoStorageService.swift; sourceTree = "<group>"; };
+		F1000934 /* MarcoCivilAccessLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarcoCivilAccessLogService.swift; sourceTree = "<group>"; };
 		F1000933 /* DuoMemberAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoMemberAvatarView.swift; sourceTree = "<group>"; };
 		F1000928 /* MessageComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposeView.swift; sourceTree = "<group>"; };
 		F1000010 /* RestTimerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerService.swift; sourceTree = "<group>"; };
@@ -1046,6 +1048,7 @@
 				F2000072 /* MealPhotoAnalysisFirestoreService.swift */,
 				F1000922 /* DuoTeamFirestoreService.swift */,
 				F1000932 /* ProfilePhotoStorageService.swift */,
+				F1000934 /* MarcoCivilAccessLogService.swift */,
 				F1000071 /* AuthErrorMapper.swift */,
 				F1000072 /* FirebaseAuthProvider.swift */,
 				F1000075 /* GoogleServiceInfo.swift */,
@@ -1466,6 +1469,7 @@
 				B1000927 /* DuoTeamChatView.swift in Sources */,
 				B1000929 /* DuoTeamReportView.swift in Sources */,
 				B1000932 /* ProfilePhotoStorageService.swift in Sources */,
+				B1000934 /* MarcoCivilAccessLogService.swift in Sources */,
 				B1000933 /* DuoMemberAvatarView.swift in Sources */,
 				B1000928 /* MessageComposeView.swift in Sources */,
 				B1000010 /* RestTimerService.swift in Sources */,

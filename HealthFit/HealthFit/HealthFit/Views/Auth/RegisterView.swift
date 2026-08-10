@@ -30,8 +30,8 @@ struct RegisterView: View {
         let now = Date()
         let min = calendar.date(byAdding: .year, value: -100, to: now)
             ?? now.addingTimeInterval(-100 * 365.25 * 24 * 3600)
-        let max = calendar.date(byAdding: .year, value: -14, to: now)
-            ?? now.addingTimeInterval(-14 * 365.25 * 24 * 3600)
+        let max = calendar.date(byAdding: .year, value: -UserProfile.minimumAgeYears, to: now)
+            ?? now.addingTimeInterval(-Double(UserProfile.minimumAgeYears) * 365.25 * 24 * 3600)
         return min <= max ? min...max : max...min
     }
     
@@ -120,7 +120,11 @@ struct RegisterView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(AppTheme.cardBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
-                        Text("Obrigatório · idade atual: \(UserProfile.age(from: dateOfBirth)) anos")
+                        Text(
+                            UserProfile.isValidDateOfBirth(dateOfBirth)
+                                ? "Obrigatório · idade atual: \(UserProfile.age(from: dateOfBirth)) anos (mínimo \(UserProfile.minimumAgeYears))"
+                                : "É necessário ter \(UserProfile.minimumAgeYears) anos ou mais para usar o HealthFit"
+                        )
                             .font(.caption)
                             .foregroundStyle(
                                 UserProfile.isValidDateOfBirth(dateOfBirth)

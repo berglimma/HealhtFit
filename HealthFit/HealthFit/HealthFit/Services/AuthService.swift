@@ -45,6 +45,9 @@ final class AuthService: ObservableObject {
             let authUser = try await FirebaseAuthProvider.signIn(email: normalizedEmail, password: password)
             applyAuthenticatedUser(authUser, fallbackName: nil)
             AppAnalytics.login(method: "password")
+            Task {
+                await MarcoCivilAccessLogService.record(event: .login, userId: authUser.uid)
+            }
             isLoading = false
         } catch {
             errorMessage = AuthErrorMapper.message(for: error)
@@ -76,7 +79,7 @@ final class AuthService: ObservableObject {
         }
 
         guard UserProfile.isValidDateOfBirth(dateOfBirth) else {
-            errorMessage = "Informe uma data de nascimento válida (14 a 100 anos)."
+            errorMessage = "Informe uma data de nascimento válida (\(UserProfile.minimumAgeYears) a \(UserProfile.maximumAgeYears) anos)."
             isLoading = false
             return
         }
@@ -100,6 +103,9 @@ final class AuthService: ObservableObject {
             )
             persistSession(with: profile)
             AppAnalytics.signUp(method: "password")
+            Task {
+                await MarcoCivilAccessLogService.record(event: .register, userId: profile.id)
+            }
             isLoading = false
             syncProfileToCloud(profile)
         } catch {
@@ -144,6 +150,9 @@ final class AuthService: ObservableObject {
             let authUser = try await SocialSignInService.signInWithGoogle()
             applyAuthenticatedUser(authUser, fallbackName: authUser.displayName)
             AppAnalytics.login(method: "google")
+            Task {
+                await MarcoCivilAccessLogService.record(event: .login, userId: authUser.uid)
+            }
             isLoading = false
         } catch let error as SocialSignInError where error == .cancelled {
             isLoading = false
@@ -176,6 +185,9 @@ final class AuthService: ObservableObject {
                 )
                 applyAuthenticatedUser(signInResult.user, fallbackName: signInResult.suggestedName)
                 AppAnalytics.login(method: "apple")
+                Task {
+                    await MarcoCivilAccessLogService.record(event: .login, userId: signInResult.user.uid)
+                }
                 isLoading = false
             } catch let error as SocialSignInError where error == .cancelled {
                 isLoading = false
@@ -220,6 +232,14 @@ final class AuthService: ObservableObject {
 
         evolutionService?.resetForAccountSwitch()
         ClimbingGearService.shared.bind(userId: nil)
+
+        // Melhor esforço: grava o log de saída enquanto o Auth ainda pode estar ativo.
+        if !uid.isEmpty {
+            Task {
+                await MarcoCivilAccessLogService.record(event: .logout, userId: uid)
+            }
+            MarcoCivilAccessLogService.rotateSessionId()
+        }
 
         if FirebaseBootstrap.isConfigured {
             try? FirebaseAuthProvider.signOut()
@@ -563,6 +583,8 @@ final class AuthService: ObservableObject {
             await DuoTeamService.shared.refreshMyMemberProfileAcrossTeams(
                 countryCode: profile.countryCode
             )
+            // Marco Civil: registro de acesso com retenção de 6 meses (no máx. 1x/dia).
+            await MarcoCivilAccessLogService.recordSessionStartIfNeeded(userId: profile.id)
         }
         NotificationService.shared.refreshRecurringNotifications()
         NotificationService.shared.refreshWorkoutInactivityReminder(

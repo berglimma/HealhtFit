@@ -576,10 +576,15 @@ struct UserProfile: Codable, Identifiable, Equatable {
             && !nutritionistEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// Idade mínima de uso do App (anos completos).
+    static let minimumAgeYears = 16
+    /// Idade máxima aceita no cadastro/perfil.
+    static let maximumAgeYears = 100
+
     var hasValidDateOfBirth: Bool {
         guard let dateOfBirth else { return false }
         let years = Self.age(from: dateOfBirth)
-        return years >= 14 && years <= 100
+        return years >= Self.minimumAgeYears && years <= Self.maximumAgeYears
     }
 
     var countryFlagEmoji: String {
@@ -603,7 +608,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
 
     static func isValidDateOfBirth(_ date: Date, now: Date = .now) -> Bool {
         let years = age(from: date, now: now)
-        return years >= 14 && years <= 100 && date <= now
+        return years >= minimumAgeYears && years <= maximumAgeYears && date <= now
     }
 
     /// Nome usado em saudações e mensagens do app.

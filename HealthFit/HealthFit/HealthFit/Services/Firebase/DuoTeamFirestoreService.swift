@@ -209,15 +209,37 @@ enum DuoTeamFirestoreService {
             data["toEmail"] = toEmail
         }
         try await invitesCollection().document(invite.id).setData(data, merge: true)
-        // Índice por código (get simples) — evita query composta + falha de rules.
-        try await db.collection("duoInviteCodes").document(code).setData([
-            "inviteId": invite.id,
-            "code": code,
-            "teamId": invite.teamId,
-            "fromUid": invite.fromUid,
-            "status": invite.status.rawValue,
-            "expiresAt": Timestamp(date: invite.expiresAt),
+        // Índice por código — quem aceita/recusa pode não ser o fromUid; não pode falhar o aceite.
+        do {
+            try await db.collection("duoInviteCodes").document(code).setData([
+                "inviteId": invite.id,
+                "code": code,
+                "teamId": invite.teamId,
+                "fromUid": invite.fromUid,
+                "status": invite.status.rawValue,
+                "expiresAt": Timestamp(date: invite.expiresAt),
+                "updatedAt": Timestamp(date: .now),
+            ], merge: true)
+        } catch {
+            print("[HealthFit] Duo invite code index: \(error.localizedDescription)")
+        }
+    }
+
+    /// Cria/atualiza só o vínculo do próprio usuário (seguro no aceite de convite).
+    static func upsertOwnMembership(userId: String, team: DuoTeam) async throws {
+        guard isAvailable else { throw DuoTeamFirestoreError.unavailable }
+        guard let member = team.members.first(where: { $0.uid == userId }) else {
+            throw DuoTeamFirestoreError.encodeFailed
+        }
+        try await membershipDoc(userId: userId, teamId: team.id).setData([
+            "teamId": team.id,
+            "teamName": team.name,
+            "modality": team.modality.rawValue,
+            "modalities": team.effectiveModalities.map(\.rawValue),
+            "createdByUid": team.createdByUid,
+            "memberCount": team.memberCount,
             "updatedAt": Timestamp(date: .now),
+            "joinedAt": Timestamp(date: member.joinedAt),
         ], merge: true)
     }
 
@@ -449,6 +471,11 @@ enum DuoTeamFirestoreService {
         guard isAvailable else { return [] }
         let snap = try await statsCollection(teamId: teamId).getDocuments()
         return snap.documents.compactMap { decode(DuoMemberPerformance.self, from: $0.data()) }
+    }
+
+    static func deleteMemberPerformance(teamId: String, userId: String) async throws {
+        guard isAvailable else { return }
+        try await statsCollection(teamId: teamId).document(userId).delete()
     }
 
     static func deleteMessages(teamId: String, messageIds: [String]) async throws {

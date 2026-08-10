@@ -210,9 +210,21 @@ struct DuoTeamInviteView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Fechar") { dismiss() }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { await duoService.refreshInvites() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .accessibilityLabel("Atualizar convites")
+                }
+            }
+            .refreshable {
+                await duoService.refreshInvites()
             }
             .task {
                 await duoService.ensureDirectorySynced(profile: authService.currentUser)
+                await duoService.refreshInvites()
             }
             .onChange(of: searchQuery) { _, newValue in
                 let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)

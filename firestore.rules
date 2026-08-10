@@ -111,8 +111,13 @@ service cloud.firestore {
         && (resource.data.status == 'pending'
             || resource.data.fromUid == request.auth.uid);
       allow list: if false;
-      allow create, update: if request.auth != null
+      allow create: if request.auth != null
         && request.auth.uid == request.resource.data.fromUid;
+      // Remetente ou quem responde um convite ainda pendente (aceite/recusa/retirada).
+      allow update: if request.auth != null
+        && (request.auth.uid == resource.data.fromUid
+            || (resource.data.status == 'pending'
+                && request.resource.data.status in ['accepted', 'declined', 'cancelled']));
       allow delete: if request.auth != null
         && request.auth.uid == resource.data.fromUid;
     }
@@ -140,6 +145,19 @@ service cloud.firestore {
     match /userDirectory/{userId} {
       allow read: if request.auth != null;
       allow create, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Registros de acesso (Marco Civil da Internet — Lei 12.965/2014, art. 15).
+    // Retenção de 6 meses; o app grava e remove apenas os próprios logs vencidos.
+    match /accessLogs/{logId} {
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasAll(['userId', 'event', 'createdAt', 'expiresAt']);
+      allow read: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow update: if false;
+      allow delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
     }
 
     match /users/{userId}/duoPendingInvites/{inviteId} {

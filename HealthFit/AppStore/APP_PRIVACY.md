@@ -26,6 +26,7 @@ Marque apenas o que o app realmente coleta. Base: `privacy_notes.txt` + Firebase
 | Tipo | Coleta | Vinculado | Tracking | Finalidade |
 |------|--------|-----------|----------|------------|
 | User ID | Sim (Firebase Auth uid) | Sim | Não | App Functionality |
+| Device ID / session (logs Marco Civil) | Sim (sessionId + IP quando disponível) | Sim | Não | App Functionality (obrigação legal — retenção 6 meses) |
 
 ### Diagnostics (Firebase Analytics / Crashlytics ativos no app)
 | Tipo | Coleta | Vinculado | Tracking | Finalidade |

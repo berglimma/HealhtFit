@@ -694,7 +694,7 @@ struct MealPlanView: View {
         guard let user = authService.currentUser else { return false }
         return user.weight >= 30 && user.weight <= 300
             && user.height >= 100 && user.height <= 250
-            && user.age >= 14 && user.age <= 100
+            && user.age >= UserProfile.minimumAgeYears && user.age <= UserProfile.maximumAgeYears
     }
 
     private func sendNutritionReport(to user: UserProfile) {
