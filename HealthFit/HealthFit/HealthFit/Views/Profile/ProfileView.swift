@@ -10,6 +10,8 @@ struct ProfileView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var evolutionService: BodyEvolutionService
     @EnvironmentObject var subscriptions: SubscriptionService
+    @ObservedObject private var nutritionNotifPrefs = NutritionNotificationPreferences.shared
+    @ObservedObject private var bleHeartRate = BluetoothHeartRateService.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showLogoutAlert = false
     @State private var showDeleteAccountSheet = false
@@ -158,6 +160,7 @@ struct ProfileView: View {
                     }
                     bodyEvolutionSection
                     integrationsSection
+                    nutritionNotificationsSection
                     restTimerSection
                     aboutSection
                     Section("Legal") {
@@ -718,7 +721,7 @@ struct ProfileView: View {
 
     @ViewBuilder
     private var integrationsSection: some View {
-        Section("Integrações") {
+        Section {
             HStack {
                 Label("HealthKit", systemImage: "heart.text.square.fill")
                 Spacer()
@@ -735,6 +738,18 @@ struct ProfileView: View {
                     .foregroundStyle(.secondary)
             }
 
+            NavigationLink {
+                BluetoothHeartRateSettingsView()
+            } label: {
+                HStack {
+                    Label("Sensor Bluetooth", systemImage: "wave.3.right.circle.fill")
+                    Spacer()
+                    Text(bluetoothIntegrationSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             HStack {
                 Label("Notificações", systemImage: "bell.fill")
                 Spacer()
@@ -742,6 +757,69 @@ struct ProfileView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+        } header: {
+            Text("Integrações")
+        } footer: {
+            Text("Passos e calorias de outros relógios entram pelo Apple Saúde. Bluetooth é para batimentos ao vivo (cintas / sensores HR).")
+        }
+    }
+
+    private var bluetoothIntegrationSubtitle: String {
+        if bleHeartRate.isConnected {
+            return bleHeartRate.connectedDevice?.displayName ?? "Conectado"
+        }
+        if bleHeartRate.preferredPeripheralId != nil {
+            return "Salvo"
+        }
+        return "Conectar"
+    }
+
+    @ViewBuilder
+    private var nutritionNotificationsSection: some View {
+        Section {
+            Toggle(
+                "Notificações de suplementos",
+                isOn: Binding(
+                    get: { nutritionNotifPrefs.supplementRemindersEnabled },
+                    set: { enabled in
+                        if enabled { NotificationService.shared.requestAuthorization() }
+                        nutritionNotifPrefs.supplementRemindersEnabled = enabled
+                    }
+                )
+            )
+
+            Toggle(
+                "Notificações de alimentação",
+                isOn: Binding(
+                    get: { nutritionNotifPrefs.mealRemindersEnabled },
+                    set: { enabled in
+                        if enabled { NotificationService.shared.requestAuthorization() }
+                        nutritionNotifPrefs.mealRemindersEnabled = enabled
+                    }
+                )
+            )
+
+            if nutritionNotifPrefs.mealRemindersEnabled {
+                ForEach(MealType.allCases) { meal in
+                    DatePicker(
+                        meal.rawValue,
+                        selection: Binding(
+                            get: { nutritionNotifPrefs.mealDate(for: meal) },
+                            set: { nutritionNotifPrefs.setMealTime(for: meal, date: $0) }
+                        ),
+                        displayedComponents: .hourAndMinute
+                    )
+                }
+
+                Button("Restaurar horários padrão") {
+                    nutritionNotifPrefs.resetToDefaults()
+                }
+                .font(.subheadline)
+            }
+        } header: {
+            Text("Notificações de Nutrição")
+        } footer: {
+            Text("Suplementos: lembretes a cada 3h (06h–21h) para registrar o que tomou. Alimentação: alertas no horário que você cadastrar (café, lanches, almoço, jantar e ceia).")
         }
     }
 

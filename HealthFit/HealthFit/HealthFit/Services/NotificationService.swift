@@ -79,12 +79,13 @@ enum SupplementReminderConfiguration {
     }
 }
 
-/// Horários padrão das refeições do cardápio e disparo 5 min antes.
+/// Horários das refeições: padrão + preferência do usuário; alerta no horário cadastrado.
 enum MealReminderConfiguration {
-    static let minutesBeforeMeal = 5
+    /// Disparo no horário da refeição (não antecipado).
+    static let minutesBeforeMeal = 0
 
-    /// (hora, minuto) do horário da refeição.
-    static func mealClock(for mealType: MealType) -> (hour: Int, minute: Int) {
+    /// Padrões quando o usuário ainda não personalizou.
+    static func defaultMealClock(for mealType: MealType) -> (hour: Int, minute: Int) {
         switch mealType {
         case .breakfast: return (7, 0)
         case .morningSnack: return (10, 0)
@@ -95,19 +96,21 @@ enum MealReminderConfiguration {
         }
     }
 
-    /// Horário do alerta = refeição − 5 minutos.
-    static func reminderClock(for mealType: MealType) -> (hour: Int, minute: Int) {
-        let meal = mealClock(for: mealType)
-        var totalMinutes = meal.hour * 60 + meal.minute - minutesBeforeMeal
-        if totalMinutes < 0 {
-            totalMinutes += 24 * 60
-        }
-        return (totalMinutes / 60, totalMinutes % 60)
+    /// Horário efetivo da refeição (cadastro do usuário ou padrão).
+    @MainActor
+    static func mealClock(for mealType: MealType) -> (hour: Int, minute: Int) {
+        NutritionNotificationPreferences.shared.mealClock(for: mealType)
     }
 
+    /// Horário do alerta = horário cadastrado da refeição.
+    @MainActor
+    static func reminderClock(for mealType: MealType) -> (hour: Int, minute: Int) {
+        mealClock(for: mealType)
+    }
+
+    @MainActor
     static func formattedMealTime(for mealType: MealType) -> String {
-        let clock = mealClock(for: mealType)
-        return String(format: "%02d:%02d", clock.hour, clock.minute)
+        NutritionNotificationPreferences.shared.formattedMealTime(for: mealType)
     }
 }
 
@@ -235,21 +238,31 @@ final class NotificationService {
         scheduleDailyAssistantCheckIn()
         scheduleDailyEveningAssistantCheckIn()
         scheduleWaterReminders()
-        scheduleSupplementReminders()
-        if mealRemindersEnabled {
+        refreshSupplementRemindersFromPreferences()
+        refreshMealRemindersFromPreferences()
+    }
+
+    /// Respeita a preferência em Perfil (cardápio não força mais o agendamento).
+    func updateMealReminders(hasMealPlan: Bool) {
+        _ = hasMealPlan
+        refreshMealRemindersFromPreferences()
+    }
+
+    func refreshMealRemindersFromPreferences() {
+        let enabled = NutritionNotificationPreferences.shared.mealRemindersEnabled
+        mealRemindersEnabled = enabled
+        if enabled {
             scheduleMealReminders()
         } else {
             cancelMealReminders()
         }
     }
 
-    /// Ativa/desativa alertas 5 min antes de cada refeição conforme o usuário tenha cardápio.
-    func updateMealReminders(hasMealPlan: Bool) {
-        mealRemindersEnabled = hasMealPlan
-        if hasMealPlan {
-            scheduleMealReminders()
+    func refreshSupplementRemindersFromPreferences() {
+        if NutritionNotificationPreferences.shared.supplementRemindersEnabled {
+            scheduleSupplementReminders()
         } else {
-            cancelMealReminders()
+            cancelSupplementReminders()
         }
     }
 
@@ -288,7 +301,7 @@ final class NotificationService {
 
         scheduleOnPhone(
             title: "Como foi seu dia? 🌙",
-            body: "Bom descanso! O assistente quer saber como foi seu dia e te ajudar a preparar o sono.",
+            body: "Bom descanso! O IAssistente compara calorias gastas × ingeridas e sua hidratação — abra o chat para ver o balanço.",
             category: "DAILY_EVENING_ASSISTANT_CHECKIN",
             identifier: dailyEveningAssistantCheckInIdentifier,
             trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
@@ -410,7 +423,7 @@ final class NotificationService {
             let components = localTimeComponents(hour: clock.hour, minute: clock.minute)
 
             scheduleOnPhone(
-                title: "Refeição em 5 minutos 🍽️",
+                title: "Hora do \(mealType.rawValue) 🍽️",
                 body: MotivationMessages.mealReminderMessage(for: mealType),
                 category: "MEAL_REMINDER",
                 identifier: mealReminderIdentifier(for: mealType),
@@ -427,6 +440,10 @@ final class NotificationService {
 
     /// Lembretes locais a cada 3h (06:00–21:00) para registrar suplementação.
     func scheduleSupplementReminders() {
+        guard NutritionNotificationPreferences.shared.supplementRemindersEnabled else {
+            cancelSupplementReminders()
+            return
+        }
         // Remoção síncrona por IDs conhecidos — evita corrida com getPending assíncrono no refresh.
         cancelSupplementReminders()
 

@@ -399,7 +399,7 @@ struct SubscriptionPlanView: View {
             Text("""
             1. Criar grupo “HealthFit Plans” e os 8 product IDs (4 mensais + 4 anuais) na App Store Connect.
             2. Em Xcode: Scheme → Options → StoreKit Configuration → Products.storekit.
-            3. Ativar featureGatesEnabled quando for bloquear IA, Nutrição e Relatórios.
+            3. Feature gates estão OFF por padrão (testes). Ligar em DEBUG → Meu plano quando for cobrar.
             """)
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)

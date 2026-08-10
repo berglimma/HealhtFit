@@ -15,8 +15,9 @@ final class SubscriptionModelsTests: XCTestCase {
     }
 
     func testFeatureGatesRespectTiersWhenEnabled() {
-        XCTAssertTrue(FeatureGate.canAccess(.mealPlan, tier: .fit, gatesEnabled: true))
-        XCTAssertFalse(FeatureGate.canAccess(.mealPlan, tier: .basic, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.mealPlan, tier: .free, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.shoppingList, tier: .free, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.nutritionCoach, tier: .basic, gatesEnabled: true))
         XCTAssertTrue(FeatureGate.canAccess(.aiChatUnlimited, tier: .ai, gatesEnabled: true))
         XCTAssertFalse(FeatureGate.canAccess(.aiChatUnlimited, tier: .fit, gatesEnabled: true))
         XCTAssertTrue(FeatureGate.canAccess(.completePriority, tier: .complete, gatesEnabled: true))

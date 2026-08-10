@@ -17,14 +17,16 @@ final class WorkoutStore: ObservableObject {
     @Published private(set) var activeMeditationConfig: MeditationWorkoutConfig?
     /// Sessão iniciada no Apple Watch (espelhada no iPhone).
     @Published private(set) var sessionOriginatedFromWatch = false
-    /// Vision AI / câmera aberta — o banner minimizado some para não cobrir os controles.
-    @Published private(set) var isVisionCameraPresented = false
+    /// Scanner de ficha / câmera em tela cheia — o banner minimizado some para não cobrir os controles.
+    @Published private(set) var isFullscreenCameraPresented = false
     /// Evita repetir a tela de motivação ao retomar o mesmo treino.
     @Published private(set) var hasShownStartMotivation = false
     /// Evita resetar o RestTimer ao reabrir a tela do treino minimizado.
     @Published private(set) var hasBoundActiveWorkoutUI = false
     /// Mutações do cronômetro (1s) não publicam para não travar abas que observam o store.
     private(set) var exerciseRecords: [ExerciseSessionRecord] = []
+    /// Lista de exercícios da sessão ativa (cópia da ficha + extras adicionados ao finalizar recomendados).
+    @Published private(set) var activeSessionExercises: [Exercise] = []
     /// Tick leve para a tela de treino ativo atualizar o cronômetro.
     let exerciseElapsedTick = PassthroughSubject<Int, Never>()
     /// Emitido quando o treino é encerrado automaticamente por inatividade (2h30).
@@ -36,6 +38,7 @@ final class WorkoutStore: ObservableObject {
     private let historyKey = "healthfit_session_history"
     private let activeSessionKey = "healthfit_active_session"
     private let activeRecordsKey = "healthfit_active_exercise_records"
+    private let activeSessionExercisesKey = "healthfit_active_session_exercises"
     private let activeExerciseIndexKey = "healthfit_active_exercise_index"
     private let activeMinimizedKey = "healthfit_active_minimized"
     private let activePausedKey = "healthfit_exercise_timer_paused"
@@ -72,6 +75,7 @@ final class WorkoutStore: ObservableObject {
         activeSession = nil
         currentExerciseIndex = 0
         exerciseRecords = []
+        activeSessionExercises = []
         sessionHistory = []
         workoutSheets = []
         isActiveWorkoutMinimized = false
@@ -79,7 +83,7 @@ final class WorkoutStore: ObservableObject {
         activeCardioConfig = nil
         activeMeditationConfig = nil
         sessionOriginatedFromWatch = false
-        isVisionCameraPresented = false
+        isFullscreenCameraPresented = false
         hasShownStartMotivation = false
         hasBoundActiveWorkoutUI = false
         UserScopedDefaults.remove(logicalKey: ScopedKey.sheets, uid: uid, legacyKey: storageKey)
@@ -164,7 +168,7 @@ final class WorkoutStore: ObservableObject {
             let historyData = UserScopedDefaults.data(forLogicalKey: "session_history", uid: uid, legacyKey: historyKey)
             if let data = historyData,
                let parsed = try? JSONDecoder().decode([WorkoutSession].self, from: data) {
-                history = Array(parsed.prefix(WorkoutStore.maxLocalHistorySessions))
+                history = await Array(parsed.prefix(WorkoutStore.maxLocalHistorySessions))
             }
             return (sheets, history)
         }.value
@@ -193,14 +197,52 @@ final class WorkoutStore: ObservableObject {
             // First install: only standard sample programs (not the full guided catalog).
             // Building sampleWorkouts is expensive — keep after first frames.
             workoutSheets = Self.sampleWorkouts
+            _ = RecommendedWorkoutCatalog.ensureAnchor()
+            RecommendedWorkoutCatalog.setAppliedCohort(0)
             saveData()
             _ = autoEndStaleActiveSessionIfNeeded()
         } else {
             // Returning users: sample merge can wait — don't hitch first tab switches.
             try? await Task.sleep(nanoseconds: 1_200_000_000)
             refreshSampleWorkoutsIfNeeded()
+            refreshRecommendedRotationIfNeeded()
             _ = autoEndStaleActiveSessionIfNeeded()
         }
+    }
+
+    /// Troca as fichas Recomendados (M/F) a cada 30 dias pela próxima coorte.
+    @discardableResult
+    func refreshRecommendedRotationIfNeeded(now: Date = .now) -> Bool {
+        let anchor = RecommendedWorkoutCatalog.ensureAnchor()
+        let desired = RecommendedWorkoutCatalog.cohortIndex(at: now, anchor: anchor)
+        let applied = RecommendedWorkoutCatalog.appliedCohort()
+        guard desired != applied || !hasCurrentRecommendedCohort(desired) else {
+            return false
+        }
+
+        replaceRecommendedCohort(desired)
+        RecommendedWorkoutCatalog.setAppliedCohort(desired)
+        saveData()
+        return true
+    }
+
+    private func hasCurrentRecommendedCohort(_ cohort: Int) -> Bool {
+        let maleTitles = RecommendedWorkoutCatalog.titles(for: .male, cohort: cohort)
+        let femaleTitles = RecommendedWorkoutCatalog.titles(for: .female, cohort: cohort)
+        let existing = Set(workoutSheets.map(\.title))
+        return maleTitles.isSubset(of: existing) && femaleTitles.isSubset(of: existing)
+    }
+
+    private func replaceRecommendedCohort(_ cohort: Int) {
+        let obsolete = RecommendedWorkoutCatalog.allRecommendedTitles
+        workoutSheets.removeAll { sheet in
+            !sheet.isUserCreated && obsolete.contains(sheet.title)
+        }
+
+        let incoming =
+            RecommendedWorkoutCatalog.sheets(for: .male, cohort: cohort)
+            + RecommendedWorkoutCatalog.sheets(for: .female, cohort: cohort)
+        workoutSheets.append(contentsOf: incoming)
     }
 
     /// Verifica se o treino ativo ultrapassou 2h30 e encerra automaticamente.
@@ -323,12 +365,11 @@ final class WorkoutStore: ObservableObject {
     }
 
     func recommendedStandardWorkouts(for gender: Gender?) -> [WorkoutSheet] {
-        switch gender {
-        case .female:
-            return femaleStandardWorkoutSheets
-        case .male, .none:
-            return maleStandardWorkoutSheets
-        }
+        let resolved = gender ?? .male
+        let anchor = RecommendedWorkoutCatalog.ensureAnchor()
+        let cohort = RecommendedWorkoutCatalog.cohortIndex(at: .now, anchor: anchor)
+        let titles = RecommendedWorkoutCatalog.titles(for: resolved, cohort: cohort)
+        return workoutSheets.filter { titles.contains($0.title) }
     }
 
     func customWorkoutSheets(for gender: Gender) -> [WorkoutSheet] {
@@ -341,39 +382,6 @@ final class WorkoutStore: ObservableObject {
         workoutSheets.filter { !isStandardWorkout($0) }
     }
 
-    private static let sampleWorkoutTitles: Set<String> = [
-        "Masculino A — Peito e Tríceps",
-        "Masculino B — Costas e Bíceps",
-        "Masculino C — Pernas",
-        "Masculino D — Ombros e Trapézio",
-        "Feminino A — Glúteos e Posteriores",
-        "Feminino B — Pernas e Core",
-        "Feminino C — Costas e Postura",
-        "Feminino D — Full Body e Ombros",
-        "Casa A — Full Body",
-        "Casa B — Core e Abdômen",
-        "Casa C — HIIT Em Casa",
-        "Casa D — Pernas e Glúteos",
-        "Casa E — Superiores",
-        "Casa F — Mobilidade e Postura",
-        "Mobilidade A — Aquecimento Geral",
-        "Mobilidade B — Ombros e Peito",
-        "Mobilidade C — Quadril e Posterior",
-        "Mobilidade D — Torácica e Escápulas",
-        "Mobilidade E — Pós-treino",
-    ]
-    private static let maleSampleTitles: Set<String> = [
-        "Masculino A — Peito e Tríceps",
-        "Masculino B — Costas e Bíceps",
-        "Masculino C — Pernas",
-        "Masculino D — Ombros e Trapézio",
-    ]
-    private static let femaleSampleTitles: Set<String> = [
-        "Feminino A — Glúteos e Posteriores",
-        "Feminino B — Pernas e Core",
-        "Feminino C — Costas e Postura",
-        "Feminino D — Full Body e Ombros",
-    ]
     private static let homeSampleTitles: Set<String> = [
         "Casa A — Full Body",
         "Casa B — Core e Abdômen",
@@ -384,11 +392,15 @@ final class WorkoutStore: ObservableObject {
     ]
     private static let mobilitySampleTitles: Set<String> = [
         "Mobilidade A — Aquecimento Geral",
-        "Mobilidade B — Ombros e Peito",
-        "Mobilidade C — Quadril e Posterior",
-        "Mobilidade D — Torácica e Escápulas",
         "Mobilidade E — Pós-treino",
     ]
+    private static let maleSampleTitles: Set<String> = RecommendedWorkoutCatalog.allMaleTitles
+    private static let femaleSampleTitles: Set<String> = RecommendedWorkoutCatalog.allFemaleTitles
+    private static let sampleWorkoutTitles: Set<String> = {
+        RecommendedWorkoutCatalog.allRecommendedTitles
+            .union(homeSampleTitles)
+            .union(mobilitySampleTitles)
+    }()
 
     func musculacaoProgram(for session: WorkoutSession) -> MusculacaoProgram? {
         let sheet = workoutSheets.first { $0.id == session.workoutSheetId }
@@ -444,6 +456,7 @@ final class WorkoutStore: ObservableObject {
             clampedStart = min(max(0, startingExerciseIndex), sheet.exercises.count - 1)
         }
         currentExerciseIndex = clampedStart
+        activeSessionExercises = sheet.exercises
         replaceExerciseRecords(sheet.exercises.map {
             ExerciseSessionRecord(
                 exerciseId: $0.id,
@@ -476,8 +489,8 @@ final class WorkoutStore: ObservableObject {
         persistActiveSession()
     }
 
-    func setVisionCameraPresented(_ presented: Bool) {
-        isVisionCameraPresented = presented
+    func setFullscreenCameraPresented(_ presented: Bool) {
+        isFullscreenCameraPresented = presented
     }
 
     func markStartMotivationShown() {
@@ -576,6 +589,7 @@ final class WorkoutStore: ObservableObject {
         activeMeditationConfig = nil
         sessionOriginatedFromWatch = false
         currentExerciseIndex = 0
+        activeSessionExercises = []
         replaceExerciseRecords([
             ExerciseSessionRecord(
                 exerciseId: config.exercise.id,
@@ -607,6 +621,7 @@ final class WorkoutStore: ObservableObject {
         activeMeditationConfig = config
         sessionOriginatedFromWatch = false
         currentExerciseIndex = 0
+        activeSessionExercises = []
         replaceExerciseRecords([
             ExerciseSessionRecord(
                 exerciseId: config.topic.id,
@@ -832,8 +847,7 @@ final class WorkoutStore: ObservableObject {
         mutateExerciseRecords { records in
             records[idx].isCompleted = true
             // Garante contagem cheia ao concluir o exercício manualmente.
-            if let sheet = activeStrengthSheet(),
-               let exercise = sheet.exercises.first(where: { $0.id == records[idx].exerciseId }) {
+            if let exercise = activeSessionExercises.first(where: { $0.id == records[idx].exerciseId }) {
                 records[idx].completedSets = max(records[idx].completedSets, exercise.sets)
             }
         }
@@ -1011,6 +1025,46 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
+    /// Importa treino concluído vindo do Apple Saúde / Fitness (não mexe na sessão ativa).
+    @discardableResult
+    func importExternalCompletedSession(_ session: WorkoutSession) -> Bool {
+        guard session.endedAt != nil else { return false }
+        if let hk = session.healthKitUUID,
+           sessionHistory.contains(where: { $0.healthKitUUID == hk }) {
+            return false
+        }
+        if sessionHistory.contains(where: { $0.id == session.id }) {
+            return false
+        }
+
+        var imported = session
+        imported.source = .appleHealthExternal
+        sessionHistory.insert(imported, at: 0)
+        if sessionHistory.count > Self.maxLocalHistorySessions {
+            sessionHistory = Array(sessionHistory.prefix(Self.maxLocalHistorySessions))
+        }
+        saveHistory()
+
+        if let userId = cloudUserId {
+            Task {
+                do {
+                    try await WorkoutFirestoreService.saveSession(imported, userId: userId)
+                } catch {
+                    print("[HealthFit] Falha ao salvar treino externo no Firebase: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        if let endedAt = imported.endedAt {
+            NotificationService.shared.recordWorkoutCompleted(at: endedAt)
+            if WeeklyProgressAnalyzer.isCardioSession(imported) {
+                NotificationService.shared.recordCardioCompleted(at: endedAt)
+            }
+            WorkoutCalendarService.registerCompletedSession(imported)
+        }
+        return true
+    }
+
     func endSession(persisting persistedSession: WorkoutSession? = nil) {
         stopExerciseTimer()
 
@@ -1040,9 +1094,10 @@ final class WorkoutStore: ObservableObject {
         sessionOriginatedFromWatch = false
         currentExerciseIndex = 0
         exerciseRecords = []
+        activeSessionExercises = []
         isExerciseTimerPaused = false
         isActiveWorkoutMinimized = false
-        isVisionCameraPresented = false
+        isFullscreenCameraPresented = false
         hasShownStartMotivation = false
         hasBoundActiveWorkoutUI = false
         clearPersistedActiveSession()
@@ -1095,6 +1150,9 @@ final class WorkoutStore: ObservableObject {
         if let recordsData = try? JSONEncoder().encode(exerciseRecords) {
             UserDefaults.standard.set(recordsData, forKey: activeRecordsKey)
         }
+        if let exercisesData = try? JSONEncoder().encode(activeSessionExercises) {
+            UserDefaults.standard.set(exercisesData, forKey: activeSessionExercisesKey)
+        }
         UserDefaults.standard.set(currentExerciseIndex, forKey: activeExerciseIndexKey)
         UserDefaults.standard.set(isActiveWorkoutMinimized, forKey: activeMinimizedKey)
         UserDefaults.standard.set(isExerciseTimerPaused, forKey: activePausedKey)
@@ -1115,6 +1173,7 @@ final class WorkoutStore: ObservableObject {
     private func clearPersistedActiveSession() {
         UserDefaults.standard.removeObject(forKey: activeSessionKey)
         UserDefaults.standard.removeObject(forKey: activeRecordsKey)
+        UserDefaults.standard.removeObject(forKey: activeSessionExercisesKey)
         UserDefaults.standard.removeObject(forKey: activeExerciseIndexKey)
         UserDefaults.standard.removeObject(forKey: activeMinimizedKey)
         UserDefaults.standard.removeObject(forKey: activePausedKey)
@@ -1134,6 +1193,16 @@ final class WorkoutStore: ObservableObject {
         if let recordsData = UserDefaults.standard.data(forKey: activeRecordsKey),
            let records = try? JSONDecoder().decode([ExerciseSessionRecord].self, from: recordsData) {
             exerciseRecords = records
+        }
+        if let exercisesData = UserDefaults.standard.data(forKey: activeSessionExercisesKey),
+           let exercises = try? JSONDecoder().decode([Exercise].self, from: exercisesData),
+           !exercises.isEmpty {
+            activeSessionExercises = exercises
+        } else if let sheet = workoutSheets.first(where: { $0.id == session.workoutSheetId }) {
+            // Compat: sessões antigas sem lista persistida.
+            activeSessionExercises = sheet.exercises
+        } else {
+            activeSessionExercises = []
         }
         if let cardioData = UserDefaults.standard.data(forKey: activeCardioConfigKey),
            let config = try? JSONDecoder().decode(CardioWorkoutConfig.self, from: cardioData) {
@@ -1192,10 +1261,53 @@ final class WorkoutStore: ObservableObject {
     }
 
     var currentExercise: Exercise? {
-        guard let session = activeSession,
-              let sheet = workoutSheets.first(where: { $0.id == session.workoutSheetId }),
-              currentExerciseIndex < sheet.exercises.count else { return nil }
-        return sheet.exercises[currentExerciseIndex]
+        guard activeSession != nil,
+              currentExerciseIndex < activeSessionExercises.count else { return nil }
+        return activeSessionExercises[currentExerciseIndex]
+    }
+
+    /// True quando a sessão ativa é uma ficha Recomendados (masculino/feminino).
+    var isActiveSessionRecommendedWorkout: Bool {
+        guard let session = activeSession else { return false }
+        return RecommendedWorkoutCatalog.allRecommendedTitles.contains(session.workoutTitle)
+            || RecommendedWorkoutCatalog.allRecommendedTitles.contains(activeStrengthSheet()?.title ?? "")
+    }
+
+    /// Acrescenta um exercício à sessão ativa (sem alterar a ficha recomendada no catálogo).
+    @discardableResult
+    func appendExerciseToActiveSession(_ template: Exercise) -> Exercise? {
+        guard activeSession != nil else { return nil }
+        let exercise = Self.copyExerciseForWorkout(template)
+        activeSessionExercises.append(exercise)
+        mutateExerciseRecords { records in
+            records.append(
+                ExerciseSessionRecord(
+                    exerciseId: exercise.id,
+                    exerciseName: exercise.name,
+                    recommendedWeight: exercise.recommendedWeight,
+                    performedWeight: exercise.recommendedWeight
+                )
+            )
+        }
+        if var session = activeSession {
+            session.totalExercises = activeSessionExercises.count
+            activeSession = session
+        }
+        currentExerciseIndex = activeSessionExercises.count - 1
+        isExerciseTimerPaused = false
+        exerciseLastProgressAt = Date()
+        persistActiveSession()
+        objectWillChange.send()
+        return exercise
+    }
+
+    static func allCatalogExercises() -> [Exercise] {
+        var seen = Set<String>()
+        return (sampleWorkouts + catalogOnlyWorkouts)
+            .flatMap(\.exercises)
+            .filter { $0.notes != GuidedWorkoutCatalog.warmupNote }
+            .filter { seen.insert($0.name).inserted }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     private func saveData() {
@@ -1245,7 +1357,10 @@ final class WorkoutStore: ObservableObject {
         // Remove fichas padrão antigas (A/B/C/D genéricas) substituídas pelos programas por sexo.
         let beforeCount = workoutSheets.count
         workoutSheets.removeAll { sheet in
-            !sheet.isUserCreated && Self.legacySampleTitles.contains(sheet.title)
+            !sheet.isUserCreated && (
+                Self.legacySampleTitles.contains(sheet.title)
+                || Self.retiredMobilityTitles.contains(sheet.title)
+            )
         }
         if workoutSheets.count != beforeCount {
             didUpdate = true
@@ -1306,7 +1421,15 @@ final class WorkoutStore: ObservableObject {
         if didUpdate {
             saveData()
         }
+
+        refreshRecommendedRotationIfNeeded()
     }
+
+    private static let retiredMobilityTitles: Set<String> = [
+        "Mobilidade B — Ombros e Peito",
+        "Mobilidade C — Quadril e Posterior",
+        "Mobilidade D — Torácica e Escápulas",
+    ]
 
     private static let legacySampleTitles: Set<String> = [
         "Treino A - Peito e Tríceps",
@@ -1377,138 +1500,11 @@ final class WorkoutStore: ObservableObject {
     static let sampleWorkouts: [WorkoutSheet] =
         maleSampleWorkouts + femaleSampleWorkouts + homeSampleWorkouts + mobilitySampleWorkouts
 
-    /// Programa padrão masculino — hipertrofia clássica com ênfase em peito, costas e força.
-    static let maleSampleWorkouts: [WorkoutSheet] = [
-        WorkoutSheet(
-            title: "Masculino A — Peito e Tríceps",
-            description: "Hipertrofia de peitoral e tríceps — perfil masculino",
-            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
-                Exercise(name: "Supino Reto", sets: 4, reps: 8, weight: 70, restSeconds: 90, muscleGroup: .chest),
-                Exercise(name: "Supino Inclinado", sets: 4, reps: 10, weight: 55, restSeconds: 90, muscleGroup: .chest),
-                Exercise(name: "Supino Declinado", sets: 3, reps: 10, weight: 60, restSeconds: 75, muscleGroup: .chest),
-                Exercise(name: "Crucifixo Reto", sets: 3, reps: 12, weight: 16, restSeconds: 60, muscleGroup: .chest),
-                Exercise(name: "Crossover", sets: 3, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .chest),
-                Exercise(name: "Flexão de Braços", sets: 3, reps: 15, restSeconds: 60, muscleGroup: .chest),
-                Exercise(name: "Tríceps Pulley", sets: 4, reps: 10, weight: 30, restSeconds: 60, muscleGroup: .arms),
-                Exercise(name: "Tríceps Testa", sets: 3, reps: 10, weight: 25, restSeconds: 60, muscleGroup: .arms),
-                Exercise(name: "Tríceps Francês", sets: 3, reps: 12, weight: 16, restSeconds: 60, muscleGroup: .arms),
-                Exercise(name: "Mergulho no Banco", sets: 3, reps: 12, restSeconds: 60, muscleGroup: .arms)
-            ], level: .intermediate, warmup: .upper, abs: .plankCrunch),
-            targetGender: .male
-        ),
-        WorkoutSheet(
-            title: "Masculino B — Costas e Bíceps",
-            description: "Largura dorsal e bíceps — perfil masculino",
-            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
-                Exercise(name: "Barra Fixa", sets: 4, reps: 8, restSeconds: 90, muscleGroup: .back),
-                Exercise(name: "Remada Curvada", sets: 4, reps: 8, weight: 60, restSeconds: 90, muscleGroup: .back),
-                Exercise(name: "Puxada Frontal", sets: 4, reps: 10, weight: 50, restSeconds: 75, muscleGroup: .back),
-                Exercise(name: "Remada Unilateral", sets: 3, reps: 10, weight: 26, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Pulldown Triângulo", sets: 3, reps: 12, weight: 45, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Levantamento Terra", sets: 3, reps: 6, weight: 90, restSeconds: 120, muscleGroup: .fullBody),
-                Exercise(name: "Rosca Direta", sets: 4, reps: 10, weight: 16, restSeconds: 60, muscleGroup: .arms),
-                Exercise(name: "Rosca Martelo", sets: 3, reps: 10, weight: 14, restSeconds: 60, muscleGroup: .arms),
-                Exercise(name: "Rosca Scott", sets: 3, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .arms),
-                Exercise(name: "Rosca Concentrada", sets: 3, reps: 12, weight: 10, restSeconds: 45, muscleGroup: .arms)
-            ], level: .intermediate, warmup: .upper, abs: .legsBicycle),
-            targetGender: .male
-        ),
-        WorkoutSheet(
-            title: "Masculino C — Pernas",
-            description: "Força e volume de membros inferiores — perfil masculino",
-            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
-                Exercise(name: "Agachamento Livre", sets: 4, reps: 8, weight: 90, restSeconds: 120, muscleGroup: .legs),
-                Exercise(name: "Leg Press 45°", sets: 4, reps: 10, weight: 180, restSeconds: 90, muscleGroup: .legs),
-                Exercise(name: "Hack Squat", sets: 3, reps: 10, weight: 120, restSeconds: 90, muscleGroup: .legs),
-                Exercise(name: "Cadeira Extensora", sets: 3, reps: 12, weight: 45, restSeconds: 60, muscleGroup: .legs),
-                Exercise(name: "Mesa Flexora", sets: 4, reps: 10, weight: 40, restSeconds: 60, muscleGroup: .legs),
-                Exercise(name: "Stiff", sets: 3, reps: 10, weight: 60, restSeconds: 75, muscleGroup: .legs),
-                Exercise(name: "Afundo", sets: 3, reps: 10, weight: 24, restSeconds: 75, muscleGroup: .legs),
-                Exercise(name: "Panturrilha em Pé", sets: 4, reps: 15, weight: 90, restSeconds: 45, muscleGroup: .legs),
-                Exercise(name: "Panturrilha Sentado", sets: 4, reps: 15, weight: 55, restSeconds: 45, muscleGroup: .legs)
-            ], level: .intermediate, warmup: .lower, abs: .plankOblique),
-            targetGender: .male
-        ),
-        WorkoutSheet(
-            title: "Masculino D — Ombros e Trapézio",
-            description: "Deltoides e trapézio para estrutura — perfil masculino",
-            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
-                Exercise(name: "Desenvolvimento Militar", sets: 4, reps: 8, weight: 45, restSeconds: 90, muscleGroup: .shoulders),
-                Exercise(name: "Desenvolvimento com Halteres", sets: 3, reps: 10, weight: 20, restSeconds: 75, muscleGroup: .shoulders),
-                Exercise(name: "Elevação Lateral", sets: 4, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .shoulders),
-                Exercise(name: "Elevação Frontal", sets: 3, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .shoulders),
-                Exercise(name: "Remada Alta", sets: 4, reps: 10, weight: 35, restSeconds: 75, muscleGroup: .shoulders),
-                Exercise(name: "Encolhimento com Barra", sets: 4, reps: 12, weight: 70, restSeconds: 75, muscleGroup: .back),
-                Exercise(name: "Encolhimento com Halteres", sets: 3, reps: 15, weight: 26, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Face Pull", sets: 3, reps: 15, weight: 22, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Crucifixo Inverso", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .shoulders)
-            ], level: .intermediate, warmup: .upper, abs: .infraBicycle),
-            targetGender: .male
-        )
-    ]
+    /// Programa padrão masculino — coorte 0 (as demais rotacionam a cada 30 dias).
+    static let maleSampleWorkouts: [WorkoutSheet] = RecommendedWorkoutCatalog.baselineMaleSheets
 
-    /// Programa padrão feminino — ênfase em glúteos, posteriores, core e postura.
-    static let femaleSampleWorkouts: [WorkoutSheet] = [
-        WorkoutSheet(
-            title: "Feminino A — Glúteos e Posteriores",
-            description: "Ativação e hipertrofia de glúteos e cadeia posterior — perfil feminino",
-            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
-                Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 4, reps: 12, weight: 40, restSeconds: 75, muscleGroup: .legs),
-                Exercise(name: "Agachamento Sumô", sets: 4, reps: 12, weight: 40, restSeconds: 90, muscleGroup: .legs),
-                Exercise(name: "Stiff", sets: 4, reps: 12, weight: 30, restSeconds: 75, muscleGroup: .legs),
-                Exercise(name: "Afundo Búlgaro", sets: 3, reps: 12, weight: 12, restSeconds: 75, muscleGroup: .legs),
-                Exercise(name: "Cadeira Abdutora", sets: 4, reps: 15, weight: 40, restSeconds: 45, muscleGroup: .legs),
-                Exercise(name: "Coice na Polia", sets: 3, reps: 15, weight: 15, restSeconds: 45, muscleGroup: .legs),
-                Exercise(name: "Mesa Flexora", sets: 3, reps: 12, weight: 25, restSeconds: 60, muscleGroup: .legs),
-                Exercise(name: "Panturrilha em Pé", sets: 3, reps: 15, weight: 40, restSeconds: 45, muscleGroup: .legs)
-            ], level: .intermediate, warmup: .femaleMobility, abs: .plankCrunch),
-            targetGender: .female
-        ),
-        WorkoutSheet(
-            title: "Feminino B — Pernas e Core",
-            description: "Quadríceps, adutores e abdômen — perfil feminino",
-            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
-                Exercise(name: "Agachamento Livre", sets: 4, reps: 12, weight: 35, restSeconds: 90, muscleGroup: .legs),
-                Exercise(name: "Leg Press 45°", sets: 4, reps: 15, weight: 80, restSeconds: 75, muscleGroup: .legs),
-                Exercise(name: "Cadeira Extensora", sets: 4, reps: 15, weight: 30, restSeconds: 60, muscleGroup: .legs),
-                Exercise(name: "Cadeira Adutora", sets: 3, reps: 15, weight: 40, restSeconds: 45, muscleGroup: .legs),
-                Exercise(name: "Afundo", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .legs),
-                Exercise(name: "Panturrilha Sentado", sets: 3, reps: 20, weight: 30, restSeconds: 45, muscleGroup: .legs)
-            ], level: .intermediate, warmup: .femaleMobility, abs: .infraBicycle),
-            targetGender: .female
-        ),
-        WorkoutSheet(
-            title: "Feminino C — Costas e Postura",
-            description: "Costas, ombros posteriores e braços leves — perfil feminino",
-            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
-                Exercise(name: "Puxada Frontal", sets: 4, reps: 12, weight: 30, restSeconds: 75, muscleGroup: .back),
-                Exercise(name: "Remada Unilateral", sets: 3, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Pulldown Triângulo", sets: 3, reps: 12, weight: 25, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Remada Curvada", sets: 3, reps: 12, weight: 25, restSeconds: 75, muscleGroup: .back),
-                Exercise(name: "Face Pull", sets: 3, reps: 15, weight: 12, restSeconds: 45, muscleGroup: .back),
-                Exercise(name: "Crucifixo Inverso", sets: 3, reps: 15, weight: 6, restSeconds: 45, muscleGroup: .shoulders),
-                Exercise(name: "Elevação Lateral", sets: 3, reps: 15, weight: 6, restSeconds: 45, muscleGroup: .shoulders),
-                Exercise(name: "Rosca Direta", sets: 3, reps: 12, weight: 8, restSeconds: 45, muscleGroup: .arms),
-                Exercise(name: "Tríceps Pulley", sets: 3, reps: 12, weight: 15, restSeconds: 45, muscleGroup: .arms)
-            ], level: .intermediate, warmup: .femaleMobility, abs: .plankOblique),
-            targetGender: .female
-        ),
-        WorkoutSheet(
-            title: "Feminino D — Full Body e Ombros",
-            description: "Corpo inteiro com ênfase em ombros e core — perfil feminino",
-            exercises: GuidedWorkoutCatalog.withWarmupAndAbs([
-                Exercise(name: "Agachamento Livre", sets: 3, reps: 12, weight: 30, restSeconds: 75, muscleGroup: .legs),
-                Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 3, reps: 12, weight: 35, restSeconds: 60, muscleGroup: .legs),
-                Exercise(name: "Puxada Frontal", sets: 3, reps: 12, weight: 25, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Desenvolvimento com Halteres", sets: 3, reps: 12, weight: 8, restSeconds: 60, muscleGroup: .shoulders),
-                Exercise(name: "Elevação Lateral", sets: 3, reps: 15, weight: 5, restSeconds: 45, muscleGroup: .shoulders),
-                Exercise(name: "Flexão de Braços", sets: 3, reps: 10, restSeconds: 60, muscleGroup: .chest),
-                Exercise(name: "Remada Unilateral", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .back),
-                Exercise(name: "Kettlebell Swing", sets: 3, reps: 15, weight: 12, restSeconds: 60, muscleGroup: .fullBody)
-            ], level: .intermediate, warmup: .femaleMobility, abs: .crunchBicycle),
-            targetGender: .female
-        )
-    ]
+    /// Programa padrão feminino — coorte 0 (as demais rotacionam a cada 30 dias).
+    static let femaleSampleWorkouts: [WorkoutSheet] = RecommendedWorkoutCatalog.baselineFemaleSheets
 
     /// Programa em casa — peso corporal com demos em vídeo/GIF durante o treino.
     static let homeSampleWorkouts: [WorkoutSheet] = [
@@ -1598,7 +1594,7 @@ final class WorkoutStore: ObservableObject {
         )
     ]
 
-    /// Mobilidade voltada à musculação — aquecimento, articulações e pós-treino.
+    /// Mobilidade voltada à musculação — apenas aquecimento e pós-treino.
     static let mobilitySampleWorkouts: [WorkoutSheet] = [
         WorkoutSheet(
             title: "Mobilidade A — Aquecimento Geral",
@@ -1611,46 +1607,6 @@ final class WorkoutStore: ObservableObject {
                 Exercise(name: "Alongamento de Coluna", sets: 2, reps: 10, restSeconds: 25, muscleGroup: .back),
                 Exercise(name: "Alongamento de Costas Altas", sets: 2, reps: 10, restSeconds: 25, muscleGroup: .back),
                 Exercise(name: "Alongamento de Panturrilha", sets: 2, reps: 30, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .legs)
-            ]
-        ),
-        WorkoutSheet(
-            title: "Mobilidade B — Ombros e Peito",
-            description: "Preparo para supino, desenvolvimento e remadas",
-            exercises: [
-                Exercise(name: "Alongamento de Peito", sets: 3, reps: 30, restSeconds: 20, notes: "Segure · reps = segundos", muscleGroup: .chest),
-                Exercise(name: "Alongamento Peitoral Atrás da Cabeça", sets: 2, reps: 25, restSeconds: 20, notes: "reps = segundos", muscleGroup: .chest),
-                Exercise(name: "Alongamento de Deltoide Posterior", sets: 2, reps: 25, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .shoulders),
-                Exercise(name: "Alongamento de Tríceps", sets: 2, reps: 25, restSeconds: 20, notes: "Cada braço · reps = segundos", muscleGroup: .arms),
-                Exercise(name: "Alongamento de Dorsal", sets: 2, reps: 25, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .back),
-                Exercise(name: "Alongamento de Costas Altas", sets: 2, reps: 12, restSeconds: 25, muscleGroup: .back),
-                Exercise(name: "Alongamento de Pescoço", sets: 2, reps: 20, restSeconds: 15, notes: "Cada lado · suave · reps = segundos", muscleGroup: .shoulders)
-            ]
-        ),
-        WorkoutSheet(
-            title: "Mobilidade C — Quadril e Posterior",
-            description: "Preparo para agachamento, terra e afundos",
-            exercises: [
-                Exercise(name: "Alongamento Mundial", sets: 2, reps: 6, restSeconds: 25, notes: "3 por lado", muscleGroup: .fullBody),
-                Exercise(name: "Alongamento de Flexor de Quadril", sets: 2, reps: 30, restSeconds: 25, notes: "Cada lado · reps = segundos", muscleGroup: .legs),
-                Exercise(name: "Alongamento de Posterior", sets: 2, reps: 30, restSeconds: 25, notes: "Cada perna · reps = segundos", muscleGroup: .legs),
-                Exercise(name: "Alongamento de Glúteo", sets: 2, reps: 30, restSeconds: 25, notes: "Cada lado · reps = segundos", muscleGroup: .legs),
-                Exercise(name: "Alongamento de Piriforme", sets: 2, reps: 30, restSeconds: 25, notes: "Cada lado · reps = segundos", muscleGroup: .legs),
-                Exercise(name: "Borboleta (Addutores)", sets: 2, reps: 35, restSeconds: 25, notes: "reps = segundos", muscleGroup: .legs),
-                Exercise(name: "Círculos de Tornozelo", sets: 2, reps: 12, restSeconds: 20, notes: "Cada lado", muscleGroup: .legs),
-                Exercise(name: "Alongamento de Panturrilha", sets: 2, reps: 30, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .legs)
-            ]
-        ),
-        WorkoutSheet(
-            title: "Mobilidade D — Torácica e Escápulas",
-            description: "Abertura torácica e controle escapular para puxadas e presses",
-            exercises: [
-                Exercise(name: "Alongamento de Coluna", sets: 3, reps: 12, restSeconds: 25, muscleGroup: .back),
-                Exercise(name: "Alongamento de Costas Altas", sets: 3, reps: 12, restSeconds: 25, muscleGroup: .back),
-                Exercise(name: "Alongamento de Dorsal", sets: 2, reps: 30, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .back),
-                Exercise(name: "Alongamento de Peito", sets: 2, reps: 30, restSeconds: 20, notes: "reps = segundos", muscleGroup: .chest),
-                Exercise(name: "Alongamento de Deltoide Posterior", sets: 2, reps: 25, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .shoulders),
-                Exercise(name: "Escápula na Barra", sets: 3, reps: 10, restSeconds: 40, notes: "Só depressão/elevação das escápulas", muscleGroup: .back),
-                Exercise(name: "Inchworm", sets: 2, reps: 6, restSeconds: 30, muscleGroup: .fullBody)
             ]
         ),
         WorkoutSheet(
@@ -1668,6 +1624,7 @@ final class WorkoutStore: ObservableObject {
             ]
         )
     ]
+
 
     /// Fichas usadas apenas no catálogo de exercícios ao criar treino personalizado.
     private static let catalogOnlyWorkouts: [WorkoutSheet] = [

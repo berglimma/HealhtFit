@@ -8,7 +8,7 @@ struct WorkoutDetailView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
     @State var sheet: WorkoutSheet
-    @State private var showVision = false
+    @State private var showScanWorkout = false
     @State private var showPreWorkoutPrompt = false
     @State private var showStartingExercisePicker = false
     @State private var pendingTookPreWorkout: Bool?
@@ -96,8 +96,8 @@ struct WorkoutDetailView: View {
         } message: {
             Text(repeatedWorkoutAlertMessage)
         }
-        .fullScreenCover(isPresented: $showVision) {
-            VisionWorkoutView()
+        .sheet(isPresented: $showScanWorkout) {
+            ScanWorkoutSheetView(targetGender: sheet.resolvedProgramGender ?? .male)
         }
         .confirmationDialog(
             "Pré-treino",
@@ -185,9 +185,9 @@ struct WorkoutDetailView: View {
             .buttonStyle(PrimaryButtonStyle())
 
             Button {
-                showVision = true
+                showScanWorkout = true
             } label: {
-                Label("Câmera com Vision", systemImage: "camera.fill")
+                Label("Escanear ficha de treino", systemImage: "doc.text.viewfinder")
                     .font(.headline)
                     .foregroundStyle(AppTheme.accent)
                     .frame(maxWidth: .infinity)

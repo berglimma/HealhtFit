@@ -8,6 +8,7 @@ struct DashboardView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
+    @EnvironmentObject var liveMetrics: LiveMetricsHub
     @EnvironmentObject var weeklyReportService: WeeklyReportService
     @EnvironmentObject var monthlyReportService: MonthlyReportService
     @EnvironmentObject var wellnessService: DailyWellnessService
@@ -563,46 +564,86 @@ struct DashboardView: View {
     }
 
     private var dashboardSteps: Int {
-        max(healthKitManager.todaySteps, watchConnectivity.watchSteps)
+        liveMetrics.todaySteps
     }
 
     private var dashboardHeartRate: Double {
-        if watchConnectivity.watchHeartRate > 0 {
-            return watchConnectivity.watchHeartRate
-        }
-        return healthKitManager.displayedHeartRate
+        liveMetrics.heartRateBPM
     }
 
     private var watchSection: some View {
-        Button {
-            Task { await syncAppleWatch() }
-        } label: {
-            HStack {
-                Image(systemName: "applewatch")
-                    .font(.title2)
-                    .foregroundStyle(watchConnectivity.isWatchConnected ? AppTheme.accent : .gray)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Apple Watch")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppTheme.textPrimary)
-                    Text(watchStatusSubtitle)
-                        .font(.caption)
+        VStack(spacing: 10) {
+            Button {
+                Task { await syncAppleWatch() }
+            } label: {
+                HStack {
+                    Image(systemName: "applewatch")
+                        .font(.title2)
+                        .foregroundStyle(watchConnectivity.isWatchConnected ? AppTheme.accent : .gray)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Apple Watch")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text(watchStatusSubtitle)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    Spacer()
+                    if isSyncingWatch {
+                        ProgressView()
+                    } else {
+                        Circle()
+                            .fill(watchConnectivity.isWatchConnected ? AppTheme.accent : .gray)
+                            .frame(width: 10, height: 10)
+                    }
+                }
+                .cardStyle()
+            }
+            .buttonStyle(.plain)
+            .disabled(isSyncingWatch)
+            .accessibilityHint("Toca para sincronizar com o Apple Watch")
+
+            NavigationLink {
+                BluetoothHeartRateSettingsView()
+            } label: {
+                HStack {
+                    Image(systemName: "wave.3.right.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(
+                            BluetoothHeartRateService.shared.isConnected ? .red : AppTheme.accentSecondary
+                        )
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Sensor Bluetooth")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text(bluetoothStatusSubtitle)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(AppTheme.textSecondary)
                 }
-                Spacer()
-                if isSyncingWatch {
-                    ProgressView()
-                } else {
-                    Circle()
-                        .fill(watchConnectivity.isWatchConnected ? AppTheme.accent : .gray)
-                        .frame(width: 10, height: 10)
-                }
+                .cardStyle()
             }
-            .cardStyle()
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
-        .disabled(isSyncingWatch)
-        .accessibilityHint("Toca para sincronizar com o Apple Watch")
+    }
+
+    private var bluetoothStatusSubtitle: String {
+        let ble = BluetoothHeartRateService.shared
+        if ble.isConnected {
+            let name = ble.connectedDevice?.displayName ?? "Sensor"
+            let bpm = liveMetrics.heartRateSource == .bluetooth && liveMetrics.heartRateBPM > 0
+                ? " · \(Int(liveMetrics.heartRateBPM)) BPM"
+                : ""
+            return "Conectado · \(name)\(bpm)"
+        }
+        if liveMetrics.heartRateSource == .healthKit {
+            return "Passos/kcal via Apple Saúde · toque para parear BPM"
+        }
+        return "Cintas e relógios com HR BLE · passos via Saúde"
     }
 
     private var watchStatusSubtitle: String {

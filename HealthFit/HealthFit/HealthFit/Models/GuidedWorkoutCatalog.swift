@@ -161,11 +161,10 @@ enum GuidedWorkoutCatalog {
     static let warmupNote = "Aquecimento"
 
     enum WarmupStyle {
-        case full
+        /// Aquecimento de membros superiores (2 exercícios).
         case upper
+        /// Aquecimento de membros inferiores (2 exercícios).
         case lower
-        /// Variante mais móvel — usada nas fichas recomendadas femininas.
-        case femaleMobility
     }
 
     enum AbsPair {
@@ -181,7 +180,7 @@ enum GuidedWorkoutCatalog {
     static func withWarmupAndAbs(
         _ main: [Exercise],
         level: WorkoutLevel?,
-        warmup: WarmupStyle = .full,
+        warmup: WarmupStyle = .upper,
         abs: AbsPair = .plankCrunch
     ) -> [Exercise] {
         let mainWork = main.filter { $0.muscleGroup != .core && $0.notes != warmupNote }
@@ -191,28 +190,13 @@ enum GuidedWorkoutCatalog {
     static func warmupBlock(style: WarmupStyle, level: WorkoutLevel?) -> [Exercise] {
         let volume = warmupVolume(for: level)
         switch style {
-        case .full:
-            return [
-                Exercise(name: "Polichinelo", sets: volume.sets, reps: 20, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .fullBody),
-                Exercise(name: "Círculos de Braços", sets: volume.sets, reps: 15, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .shoulders),
-                Exercise(name: "Agachamento Corporal", sets: volume.sets, reps: 12, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .legs)
-            ]
         case .upper:
             return [
                 Exercise(name: "Polichinelo", sets: volume.sets, reps: 20, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .fullBody),
-                Exercise(name: "Círculos de Braços", sets: volume.sets, reps: 15, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .shoulders),
-                Exercise(name: "Rotação de Ombros", sets: volume.sets, reps: 12, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .shoulders)
+                Exercise(name: "Círculos de Braços", sets: volume.sets, reps: 15, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .shoulders)
             ]
         case .lower:
             return [
-                Exercise(name: "Polichinelo", sets: volume.sets, reps: 20, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .fullBody),
-                Exercise(name: "Abertura de Quadril", sets: volume.sets, reps: 12, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .legs),
-                Exercise(name: "Agachamento Corporal", sets: volume.sets, reps: 12, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .legs)
-            ]
-        case .femaleMobility:
-            return [
-                Exercise(name: "Marcha no Lugar", sets: volume.sets, reps: 30, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .fullBody),
-                Exercise(name: "Círculos de Braços", sets: volume.sets, reps: 15, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .shoulders),
                 Exercise(name: "Abertura de Quadril", sets: volume.sets, reps: 12, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .legs),
                 Exercise(name: "Agachamento Corporal", sets: volume.sets, reps: 12, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .legs)
             ]
@@ -289,7 +273,7 @@ enum GuidedWorkoutCatalog {
                 Exercise(name: "Desenvolvimento com Halteres", sets: 3, reps: 12, weight: 10, restSeconds: 75, muscleGroup: .shoulders),
                 Exercise(name: "Rosca Direta", sets: 2, reps: 12, weight: 8, restSeconds: 60, muscleGroup: .arms),
                 Exercise(name: "Tríceps Pulley", sets: 2, reps: 12, weight: 15, restSeconds: 60, muscleGroup: .arms)
-            ], level: .beginner, warmup: .full, abs: .plankCrunch)
+            ], level: .beginner, warmup: .upper, abs: .plankCrunch)
         ),
         GuidedWorkoutTemplate(
             id: uuid("g-lvl-beg-upper"),
@@ -352,7 +336,7 @@ enum GuidedWorkoutCatalog {
                 Exercise(name: "Desenvolvimento Militar", sets: 4, reps: 6, weight: 55, restSeconds: 150, muscleGroup: .shoulders),
                 Exercise(name: "Barra Fixa", sets: 4, reps: 6, restSeconds: 120, muscleGroup: .back),
                 Exercise(name: "Remada Curvada", sets: 4, reps: 6, weight: 80, restSeconds: 120, muscleGroup: .back)
-            ], level: .advanced, warmup: .full, abs: .plankLegs)
+            ], level: .advanced, warmup: .upper, abs: .plankLegs)
         ),
         GuidedWorkoutTemplate(
             id: uuid("g-lvl-adv-hyper"),
@@ -369,7 +353,7 @@ enum GuidedWorkoutCatalog {
                 Exercise(name: "Elevação Lateral", sets: 4, reps: 15, weight: 12, restSeconds: 45, muscleGroup: .shoulders),
                 Exercise(name: "Rosca Scott", sets: 3, reps: 12, weight: 16, restSeconds: 60, muscleGroup: .arms),
                 Exercise(name: "Tríceps Francês", sets: 3, reps: 12, weight: 18, restSeconds: 60, muscleGroup: .arms)
-            ], level: .advanced, warmup: .full, abs: .legsBicycle)
+            ], level: .advanced, warmup: .upper, abs: .legsBicycle)
         )
     ]
 
@@ -405,7 +389,7 @@ enum GuidedWorkoutCatalog {
                 Exercise(name: "Elevação Lateral", sets: 4, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .shoulders),
                 Exercise(name: "Arnold Press", sets: 3, reps: 10, weight: 14, restSeconds: 60, muscleGroup: .shoulders),
                 Exercise(name: "Panturrilha Sentado", sets: 4, reps: 15, weight: 50, restSeconds: 45, muscleGroup: .legs)
-            ], level: .intermediate, warmup: .full, abs: .legsBicycle)
+            ], level: .intermediate, warmup: .upper, abs: .legsBicycle)
         ),
         GuidedWorkoutTemplate(
             id: uuid("g-foc-fat-a"),
@@ -420,7 +404,7 @@ enum GuidedWorkoutCatalog {
                 Exercise(name: "Afundo", sets: 3, reps: 12, weight: 12, restSeconds: 40, muscleGroup: .legs),
                 Exercise(name: "Elevação Lateral", sets: 3, reps: 15, weight: 6, restSeconds: 35, muscleGroup: .shoulders),
                 Exercise(name: "Kettlebell Swing", sets: 3, reps: 20, weight: 16, restSeconds: 45, muscleGroup: .fullBody)
-            ], level: .intermediate, warmup: .full, abs: .infraBicycle)
+            ], level: .intermediate, warmup: .upper, abs: .infraBicycle)
         ),
         GuidedWorkoutTemplate(
             id: uuid("g-foc-fat-b"),
@@ -435,7 +419,7 @@ enum GuidedWorkoutCatalog {
                 Exercise(name: "Desenvolvimento na Máquina", sets: 3, reps: 15, weight: 30, restSeconds: 45, muscleGroup: .shoulders),
                 Exercise(name: "Cadeira Extensora", sets: 3, reps: 15, weight: 30, restSeconds: 40, muscleGroup: .legs),
                 Exercise(name: "Tríceps Pulley", sets: 3, reps: 15, weight: 18, restSeconds: 40, muscleGroup: .arms)
-            ], level: .beginner, warmup: .full, abs: .plankOblique)
+            ], level: .beginner, warmup: .upper, abs: .plankOblique)
         ),
         GuidedWorkoutTemplate(
             id: uuid("g-foc-legs-a"),
@@ -481,7 +465,7 @@ enum GuidedWorkoutCatalog {
                 Exercise(name: "Levantamento Terra Romeno", sets: 4, reps: 3, weight: 130, restSeconds: 180, muscleGroup: .back),
                 Exercise(name: "Desenvolvimento Militar", sets: 4, reps: 5, weight: 50, restSeconds: 150, muscleGroup: .shoulders),
                 Exercise(name: "Barra Fixa", sets: 4, reps: 5, restSeconds: 120, muscleGroup: .back)
-            ], level: .advanced, warmup: .full, abs: .plankCrunch)
+            ], level: .advanced, warmup: .upper, abs: .plankCrunch)
         ),
         GuidedWorkoutTemplate(
             id: uuid("g-foc-comp-b"),
@@ -496,7 +480,7 @@ enum GuidedWorkoutCatalog {
                 Exercise(name: "Desenvolvimento com Halteres", sets: 3, reps: 8, weight: 22, restSeconds: 90, muscleGroup: .shoulders),
                 Exercise(name: "Afundo", sets: 3, reps: 8, weight: 28, restSeconds: 75, muscleGroup: .legs),
                 Exercise(name: "Face Pull", sets: 3, reps: 15, weight: 20, restSeconds: 45, muscleGroup: .back)
-            ], level: .advanced, warmup: .full, abs: .legsBicycle)
+            ], level: .advanced, warmup: .upper, abs: .legsBicycle)
         ),
         GuidedWorkoutTemplate(
             id: uuid("g-foc-arms-a"),

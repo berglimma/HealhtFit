@@ -1,5 +1,5 @@
 /* Permission usage descriptions */
-"NSCameraUsageDescription" = "HealthFit usa la cámara para reconocer repeticiones y analizar tu postura durante los ejercicios.";
+"NSCameraUsageDescription" = "HealthFit usa la cámara para fotos de perfil y evolución corporal, y para escanear fichas de entrenamiento impresas.";
 "NSMicrophoneUsageDescription" = "HealthFit usa el micrófono al grabar vídeo del entrenamiento para compartir con la leyenda de la sesión.";
 "NSHealthShareUsageDescription" = "HealthFit necesita acceder a tus datos de salud para mostrar métricas de rendimiento y sincronizar entrenos.";
 "NSHealthUpdateUsageDescription" = "HealthFit guarda tus entrenos y calorías quemadas en la app Salud.";
@@ -8,3 +8,5 @@
 "NSCalendarsFullAccessUsageDescription" = "HealthFit registra en el Calendario los entrenos completados del día para seguir tu historial.";
 "NSCalendarsUsageDescription" = "HealthFit registra en el Calendario los entrenos completados del día para seguir tu historial.";
 "NSCalendarsWriteOnlyAccessUsageDescription" = "HealthFit registra en el Calendario los entrenos completados del día para seguir tu historial.";
+"NSBluetoothAlwaysUsageDescription" = "HealthFit usa Bluetooth para conectar sensores y relojes compatibles y recibir pulsaciones en vivo durante el entrenamiento.";
+"NSBluetoothPeripheralUsageDescription" = "HealthFit usa Bluetooth para conectar sensores y relojes compatibles y recibir pulsaciones en vivo durante el entrenamiento.";

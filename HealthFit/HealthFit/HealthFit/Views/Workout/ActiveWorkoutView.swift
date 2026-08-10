@@ -6,6 +6,7 @@ struct ActiveWorkoutView: View {
     @EnvironmentObject var timerService: RestTimerService
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
+    @EnvironmentObject var liveMetrics: LiveMetricsHub
     @EnvironmentObject var authService: AuthService
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -29,7 +30,8 @@ struct ActiveWorkoutView: View {
     /// fullScreenCover is not blocked by the justification sheet still dismissing.
     @State private var pendingEarlyEndJustification: String?
     @State private var liveExerciseElapsedSeconds = 0
-    @State private var showVision = false
+    @State private var showAddExercisePrompt = false
+    @State private var showAddExercisePicker = false
     /// Side-effects only (watch sync / auto-end). Display clocks use TimelineView + wall clock.
     private let workoutClock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private let watchSyncClock = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
@@ -40,6 +42,20 @@ struct ActiveWorkoutView: View {
 
     private func setsDone(for exerciseId: UUID) -> Int {
         workoutStore.completedSets(for: exerciseId)
+    }
+
+    private var sessionExercises: [Exercise] {
+        workoutStore.activeSessionExercises.isEmpty ? sheet.exercises : workoutStore.activeSessionExercises
+    }
+
+    private var isRecommendedSession: Bool {
+        workoutStore.isActiveSessionRecommendedWorkout
+            || RecommendedWorkoutCatalog.allRecommendedTitles.contains(sheet.title)
+    }
+
+    /// Só permite trocar de exercício enquanto a tela "Começar exercício" estiver ativa.
+    private var canSelectOtherExercises: Bool {
+        isShowingExerciseDemo
     }
 
     var body: some View {
@@ -143,9 +159,6 @@ struct ActiveWorkoutView: View {
                 )
                 .presentationDetents([.medium])
             }
-            .fullScreenCover(isPresented: $showVision) {
-                VisionWorkoutView()
-            }
         }
         .onAppear {
             if !workoutStore.hasBoundActiveWorkoutUI {
@@ -216,8 +229,42 @@ struct ActiveWorkoutView: View {
             syncWatchData()
         }
         .onChange(of: workoutStore.allExercisesCompleted) { _, allDone in
-            if allDone && !isFinishing {
+            if allDone && !isFinishing && !showAddExercisePrompt && !showAddExercisePicker {
+                if isRecommendedSession {
+                    showAddExercisePrompt = true
+                } else {
+                    finishWorkout()
+                }
+            }
+        }
+        .confirmationDialog(
+            "Adicionar exercício?",
+            isPresented: $showAddExercisePrompt,
+            titleVisibility: .visible
+        ) {
+            Button("Sim, adicionar") {
+                showAddExercisePicker = true
+            }
+            Button("Não, finalizar treino", role: .cancel) {
                 finishWorkout()
+            }
+        } message: {
+            Text("Você concluiu a ficha recomendada. Deseja incluir mais algum exercício nesta sessão?")
+        }
+        .sheet(isPresented: $showAddExercisePicker, onDismiss: {
+            if workoutStore.allExercisesCompleted && !isFinishing && finishedSession == nil {
+                showAddExercisePrompt = true
+            }
+        }) {
+            AddExerciseDuringWorkoutView(
+                excludeNames: Set(sessionExercises.map(\.name))
+            ) { exercise in
+                if let added = workoutStore.appendExerciseToActiveSession(exercise) {
+                    prepareDemoForCurrentExercise(force: true)
+                    ensurePerformedWeightText(for: added)
+                    syncWatchWorkoutState()
+                    syncLockScreenLiveActivity()
+                }
             }
         }
         .fullScreenCover(item: $finishedSession) { session in
@@ -254,12 +301,12 @@ struct ActiveWorkoutView: View {
         VStack(spacing: 8) {
             ProgressView(
                 value: Double(workoutStore.exerciseRecords.filter(\.isCompleted).count),
-                total: Double(sheet.exercises.count)
+                total: Double(max(sessionExercises.count, 1))
             )
             .tint(AppTheme.accent)
 
             HStack {
-                Label("\(Int(watchConnectivity.watchHeartRate)) BPM", systemImage: "heart.fill")
+                Label("\(Int(liveHeartRateBPM)) BPM", systemImage: "heart.fill")
                     .foregroundStyle(.red)
                 Spacer()
                 Label("\(Int(watchConnectivity.watchCalories)) kcal", systemImage: "flame.fill")
@@ -535,13 +582,17 @@ struct ActiveWorkoutView: View {
 
     private var exerciseListContent: some View {
         LazyVStack(spacing: 8) {
-            Text("Toque em um exercício para treiná-lo agora (sem precisar seguir a ordem).")
+            Text(
+                canSelectOtherExercises
+                    ? "Toque em um exercício para treiná-lo agora (sem precisar seguir a ordem)."
+                    : "Finalize ou conclua o exercício atual para trocar. A troca só fica disponível na tela Começar exercício."
+            )
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
 
-            ForEach(Array(sheet.exercises.enumerated()), id: \.element.id) { index, exercise in
+            ForEach(Array(sessionExercises.enumerated()), id: \.element.id) { index, exercise in
                 ExerciseTrackingRow(
                     exercise: exercise,
                     index: index,
@@ -549,6 +600,7 @@ struct ActiveWorkoutView: View {
                     isCurrent: index == workoutStore.currentExerciseIndex,
                     isPaused: index == workoutStore.currentExerciseIndex && timerService.isRunning,
                     completedSets: setsDone(for: exercise.id),
+                    selectionEnabled: canSelectOtherExercises,
                     onSelect: {
                         selectExercise(at: index)
                     },
@@ -577,17 +629,6 @@ struct ActiveWorkoutView: View {
             .accessibilityHint("Encerra o treino antes de concluir todos os exercícios e pede uma justificativa")
 
             HStack(spacing: 16) {
-                Button {
-                    showVision = true
-                } label: {
-                    Label("Vision", systemImage: "camera.fill")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(AppTheme.accent)
-                }
-                .accessibilityHint("Abre a câmera com Vision AI")
-
-                Spacer()
-
                 if timerService.isRunning {
                     Label("Descanso: \(timerService.formattedTime)", systemImage: "timer")
                         .font(.caption)
@@ -597,6 +638,8 @@ struct ActiveWorkoutView: View {
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
+
+                Spacer()
             }
         }
         .padding()
@@ -656,7 +699,7 @@ struct ActiveWorkoutView: View {
     }
 
     private func markExerciseComplete(_ exercise: Exercise) {
-        guard let index = sheet.exercises.firstIndex(where: { $0.id == exercise.id }) else { return }
+        guard let index = sessionExercises.firstIndex(where: { $0.id == exercise.id }) else { return }
         workoutStore.markExerciseCompleted(at: index)
         prepareDemoForCurrentExercise(force: true)
         syncWatchWorkoutState()
@@ -664,7 +707,8 @@ struct ActiveWorkoutView: View {
     }
 
     private func selectExercise(at index: Int) {
-        guard sheet.exercises.indices.contains(index) else { return }
+        guard canSelectOtherExercises else { return }
+        guard sessionExercises.indices.contains(index) else { return }
         guard workoutStore.selectExercise(at: index) else { return }
         prepareDemoForCurrentExercise(force: true)
         syncLiveExerciseElapsed()
@@ -697,11 +741,17 @@ struct ActiveWorkoutView: View {
         liveExerciseElapsedSeconds = workoutStore.liveExerciseElapsedSeconds()
     }
 
+    /// Prioridade: Apple Watch → Bluetooth → HealthKit (via LiveMetricsHub).
+    private var liveHeartRateBPM: Double {
+        liveMetrics.heartRateBPM
+    }
+
     private func syncWatchData() {
-        if watchConnectivity.watchHeartRate > 0 {
-            workoutStore.addHeartRateSample(watchConnectivity.watchHeartRate)
+        if liveHeartRateBPM > 0 {
+            workoutStore.addHeartRateSample(liveHeartRateBPM)
         }
-        workoutStore.updateCalories(watchConnectivity.watchCalories)
+        let calories = max(watchConnectivity.watchCalories, liveMetrics.liveCalories)
+        workoutStore.updateCalories(calories)
     }
 
     private func finishWorkout(endedEarly: Bool = false, justification: String? = nil) {
@@ -817,11 +867,16 @@ struct ExerciseTrackingRow: View {
     let isCurrent: Bool
     let isPaused: Bool
     let completedSets: Int
+    var selectionEnabled: Bool = true
     var onSelect: (() -> Void)? = nil
     let onMarkComplete: () -> Void
 
     private var isCompleted: Bool {
         record?.isCompleted ?? false
+    }
+
+    private var canSelect: Bool {
+        selectionEnabled && !isCurrent && !isCompleted
     }
 
     var body: some View {
@@ -875,12 +930,20 @@ struct ExerciseTrackingRow: View {
         .background(isCurrent ? AppTheme.accent.opacity(0.08) : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .contentShape(Rectangle())
+        .opacity(canSelect || isCurrent || isCompleted ? 1 : 0.55)
         .onTapGesture {
-            guard !isCurrent else { return }
+            guard canSelect else { return }
             onSelect?()
         }
         .accessibilityAddTraits(isCurrent ? .isSelected : [])
-        .accessibilityHint(isCurrent ? "Exercício atual" : "Toque para treinar este exercício agora")
+        .accessibilityHint(accessibilityHintText)
+    }
+
+    private var accessibilityHintText: String {
+        if isCurrent { return "Exercício atual" }
+        if isCompleted { return "Exercício concluído" }
+        if selectionEnabled { return "Toque para treinar este exercício agora" }
+        return "Disponível para troca apenas na tela Começar exercício"
     }
 
     private var statusIcon: String {

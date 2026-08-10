@@ -244,10 +244,11 @@ enum AppFeature: String, CaseIterable, Identifiable {
     /// Menor plano que libera a feature.
     var minimumTier: PlanTier {
         switch self {
+        case .mealPlan, .shoppingList, .nutritionCoach:
+            return .free
         case .fullWorkouts, .appleWatchSync:
             return .basic
-        case .customWorkouts, .advancedModalities, .mealPlan, .shoppingList,
-             .nutritionCoach, .aiChatLimited:
+        case .customWorkouts, .advancedModalities, .aiChatLimited:
             return .fit
         case .advancedSportAnalytics, .aiChatUnlimited, .monthlyReport,
              .bodyEvolutionExport, .liveActivityPremium:
@@ -304,17 +305,19 @@ enum SubscriptionConfiguration {
     static let subscriptionGroupName = "HealthFit Plans"
     static let subscriptionGroupIDPlaceholder = "COLE_O_GROUP_ID_DA_CONNECT"
 
-    /// Bloqueios por plano ativos. Ligado por padrão; a chave só existe se alguém
-    /// desligar manualmente (DEBUG → Meu plano) para testar tudo liberado.
+    /// Bloqueios por plano. **Desligados por padrão** (soft launch / testes).
+    /// Reative em DEBUG → Meu plano → “Ativar feature gates”, ou mude o default abaixo
+    /// quando for cobrar assinatura de novo.
     static var featureGatesEnabled: Bool {
         get {
-            guard UserDefaults.standard.object(forKey: gatesKey) != nil else { return true }
+            guard UserDefaults.standard.object(forKey: gatesKey) != nil else { return false }
             return UserDefaults.standard.bool(forKey: gatesKey)
         }
         set { UserDefaults.standard.set(newValue, forKey: gatesKey) }
     }
 
-    private static let gatesKey = "healthfit.subscription.gatesEnabled"
+    /// Chave nova para ignorar valor antigo que deixava os gates ligados.
+    private static let gatesKey = "healthfit.subscription.gatesEnabled.testingOff"
 
     #if DEBUG
     /// Em DEBUG, permite simular plano sem compra (Perfil → Meu plano).
@@ -350,15 +353,19 @@ struct PlanMarketingCopy: Identifiable, Hashable {
     var bulletPoints: [String] {
         switch tier {
         case .free:
-            return ["Dashboard básico", "Check-ins e treinos limitados", "Sem cartão"]
+            return [
+                "Dashboard básico",
+                "Cardápio, metas calóricas e lista de compras",
+                "Check-ins e treinos limitados",
+                "Sem cartão"
+            ]
         case .basic:
-            return ["Treinos guiados e cardio", "Apple Watch", "Metas de treino"]
+            return ["Treinos guiados e cardio", "Apple Watch", "Metas de treino", "Nutrição incluída"]
         case .fit:
             return [
                 "Tudo do Básico",
                 "Surf, Kitesurf, Remo, Escalada e Luta",
                 "Criar treinos personalizados",
-                "Cardápio, metas calóricas e lista de compras",
                 "IAssistente com 5 mensagens por dia"
             ]
         case .ai:

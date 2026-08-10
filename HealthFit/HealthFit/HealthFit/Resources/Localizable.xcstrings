@@ -10,6 +10,9 @@
     "-%lld%%" : {
 
     },
+    "—" : {
+
+    },
     "·" : {
 
     },
@@ -411,7 +414,7 @@
     "1 unidade" : {
 
     },
-    "1. Criar grupo “HealthFit Plans” e os 8 product IDs (4 mensais + 4 anuais) na App Store Connect.\n2. Em Xcode: Scheme → Options → StoreKit Configuration → Products.storekit.\n3. Ativar featureGatesEnabled quando for bloquear IA, Nutrição e Relatórios." : {
+    "1. Criar grupo “HealthFit Plans” e os 8 product IDs (4 mensais + 4 anuais) na App Store Connect.\n2. Em Xcode: Scheme → Options → StoreKit Configuration → Products.storekit.\n3. Feature gates estão OFF por padrão (testes). Ligar em DEBUG → Meu plano quando for cobrar." : {
 
     },
     "1. Tipo de equipamento (kite)" : {
@@ -450,6 +453,9 @@
     "A demonstração fica em loop. O cronômetro só começa quando você toca em Começar exercício." : {
 
     },
+    "A ficha será salva em Personalizados deste programa." : {
+
+    },
     "A mídia recebe duração, kcal e outros dados da sessão com a marca HealthFit. Opcional — não impede fechar o treino." : {
 
     },
@@ -457,9 +463,6 @@
 
     },
     "A senha deve conter:" : {
-
-    },
-    "Abre a câmera com Vision AI" : {
 
     },
     "Abrir em tela cheia" : {
@@ -501,6 +504,12 @@
     "Adicionar equipamento" : {
 
     },
+    "Adicionar exercício" : {
+
+    },
+    "Adicionar exercício?" : {
+
+    },
     "Adicionar foto" : {
 
     },
@@ -537,7 +546,16 @@
     "Alerta OMS" : {
 
     },
+    "Alimentos identificados" : {
+
+    },
     "Alterar fundo" : {
+
+    },
+    "Análise" : {
+
+    },
+    "Análise de refeição" : {
 
     },
     "Antes × Depois" : {
@@ -1357,6 +1375,9 @@
     "Aviso" : {
 
     },
+    "Batimentos ao vivo vêm de sensores Bluetooth com Heart Rate Service (cintas e alguns relógios). Passos e calorias do dia continuam vindo do Apple Saúde — ative a sincronização do app do seu relógio para o Saúde." : {
+
+    },
     "Beber 1 copo agora" : {
 
     },
@@ -1370,6 +1391,12 @@
 
     },
     "Bloqueios de plano ainda desativados — o paywall e a loja já estão prontos." : {
+
+    },
+    "Bluetooth" : {
+
+    },
+    "BPM ao vivo" : {
 
     },
     "Buscando condições do tempo…" : {
@@ -1390,10 +1417,16 @@
     "Buscar áreas próximas no mapa" : {
 
     },
+    "Buscar exercício" : {
+
+    },
     "Buscar prancha…" : {
 
     },
     "Buscar proteínas, vegetais, frutas..." : {
+
+    },
+    "Buscar sensores" : {
 
     },
     "Cada ficha inclui demos em vídeo/GIF dos exercícios durante o treino." : {
@@ -1433,6 +1466,9 @@
     "Calorias ao vivo via Watch ou estimativa MET × peso × tempo." : {
 
     },
+    "Calorias ativas (Saúde)" : {
+
+    },
     "Calorias em tempo real via Apple Watch" : {
 
     },
@@ -1440,9 +1476,6 @@
 
     },
     "Câmera" : {
-
-    },
-    "Câmera com Vision" : {
 
     },
     "Câmera, galeria ou vídeo · overlay com duração, km, kcal e HealthFit" : {
@@ -1461,6 +1494,9 @@
 
     },
     "Card pronto para Stories e status — WhatsApp ou Instagram." : {
+
+    },
+    "Cardápio" : {
 
     },
     "Cardápio alinhado ao treino" : {
@@ -1484,6 +1520,9 @@
     "Carregando..." : {
 
     },
+    "Catálogo (%lld)" : {
+
+    },
     "Categoria" : {
 
     },
@@ -1500,9 +1539,6 @@
 
     },
     "Com o Apple Watch, as voltas são contadas automaticamente. Uma volta = comprimento da piscina (%lld m). Sem Watch, você pode ajustar manualmente." : {
-
-    },
-    "Com o cardápio ativo, você recebe alerta e notificação 5 minutos antes de cada refeição (horários padrão do dia)." : {
 
     },
     "Com o setor definido, eu busco chuva, vento e risco de raios durante a sessão." : {
@@ -1697,6 +1733,9 @@
     "Como adicionar: toque em cada ângulo (até 6). É opcional e privado — só você vê.\nFluxo: salve o lote inicial → aguarde 30 dias → adicione um novo lote e compare.\nDepois da comparação, as fotos antigas são excluídas. Você pode salvar uma cópia em Fotos ou Arquivos. Os PDFs das 4 últimas avaliações ficam na sua conta." : {
 
     },
+    "Como deseja importar a ficha?" : {
+
+    },
     "Como saber se você é %@" : {
 
     },
@@ -1766,7 +1805,16 @@
     "Conectado" : {
 
     },
+    "Conectar" : {
+
+    },
+    "Conexão" : {
+
+    },
     "Confiança: %lld%%" : {
+
+    },
+    "Configure em Perfil se deseja notificações de alimentação e os horários habituais de cada refeição. Os alertas disparam no horário cadastrado." : {
 
     },
     "Configure seu perfil de atleta" : {
@@ -1825,6 +1873,9 @@
 
     },
     "Criar Conta" : {
+
+    },
+    "Criar ficha personalizada" : {
 
     },
     "Cronômetro de Descanso" : {
@@ -1902,6 +1953,9 @@
     "Descanso: %@" : {
 
     },
+    "Desconectar" : {
+
+    },
     "Descrição" : {
 
     },
@@ -1924,6 +1978,9 @@
 
     },
     "Destaques do mês" : {
+
+    },
+    "Destino" : {
 
     },
     "Detalhes" : {
@@ -1991,6 +2048,9 @@
     "Disponível a partir do plano %@." : {
 
     },
+    "Dispositivos encontrados" : {
+
+    },
     "Distância da meta" : {
 
     },
@@ -1998,6 +2058,9 @@
 
     },
     "Documento indisponível" : {
+
+    },
+    "Duas rotinas: aquecimento geral e pós-treino, com GIFs na execução" : {
 
     },
     "Duração" : {
@@ -2130,6 +2193,9 @@
     "Escale em rocha com o app aberto para eu gravar temperatura e umidade de cada sessão." : {
 
     },
+    "Escanear ficha de treino" : {
+
+    },
     "Escolha a modalidade" : {
 
     },
@@ -2172,10 +2238,16 @@
     "Escolher no mapa de áreas" : {
 
     },
+    "Escolher outra origem" : {
+
+    },
     "Escolher outro" : {
 
     },
     "Esq. %lld%%" : {
+
+    },
+    "Esquecer sensor" : {
 
     },
     "Esqueceu de finalizar o treino" : {
@@ -2251,7 +2323,7 @@
     "Excluir treino?" : {
 
     },
-    "Exercício atual" : {
+    "Exercício" : {
 
     },
     "Exercício Atual" : {
@@ -2314,10 +2386,22 @@
     "Finalizar Pedal" : {
 
     },
+    "Finalize ou conclua o exercício atual para trocar. A troca só fica disponível na tela Começar exercício." : {
+
+    },
     "Firebase não configurado. Substitua o GoogleService-Info.plist pelo arquivo do Firebase Console." : {
 
     },
+    "Fonte atual" : {
+
+    },
+    "Foto da refeição" : {
+
+    },
     "Foto de fundo" : {
+
+    },
+    "Foto descartada · salvo no Firebase" : {
 
     },
     "Foto do perfil" : {
@@ -2450,6 +2534,9 @@
     "IMC: %@" : {
 
     },
+    "Importar de novo" : {
+
+    },
     "Inativa" : {
 
     },
@@ -2556,6 +2643,9 @@
 
     },
     "Legal" : {
+
+    },
+    "Lendo a ficha…" : {
 
     },
     "Li e aceito os Termos de Uso e a Política de Privacidade" : {
@@ -2817,9 +2907,6 @@
     "Modo: %@" : {
 
     },
-    "Montar Cardápio" : {
-
-    },
     "Mudar de plano" : {
 
     },
@@ -2844,6 +2931,9 @@
     "Não foi possível gerar o PDF" : {
 
     },
+    "Não foi possível ler a ficha" : {
+
+    },
     "Não foi possível salvar" : {
 
     },
@@ -2851,6 +2941,9 @@
 
     },
     "Não usou" : {
+
+    },
+    "Não, finalizar treino" : {
 
     },
     "Nascimento" : {
@@ -2865,7 +2958,13 @@
     "Nenhum cardápio ativo. Gere seu plano em Nutrição." : {
 
     },
+    "Nenhum exercício encontrado." : {
+
+    },
     "Nenhum exercício nesta ficha. Selecione ao menos um grupo muscular." : {
+
+    },
+    "Nenhum exercício reconhecido. Importe novamente." : {
 
     },
     "Nenhum item na lista" : {
@@ -2892,10 +2991,16 @@
     "Nenhum treino realizado ainda." : {
 
     },
+    "Nenhuma análise registrada hoje." : {
+
+    },
     "Nenhuma atividade registrada nesta semana." : {
 
     },
     "Nenhuma atividade registrada neste período." : {
+
+    },
+    "Nenhuma foto selecionada" : {
 
     },
     "Nenhuma medida cadastrada. Atualize em Perfil → Medidas / Evolução Corporal." : {
@@ -2964,7 +3069,16 @@
     "Notificações" : {
 
     },
+    "Notificações de alimentação" : {
+
+    },
     "Notificações de descanso" : {
+
+    },
+    "Notificações de Nutrição" : {
+
+    },
+    "Notificações de suplementos" : {
 
     },
     "Nova Ficha" : {
@@ -3161,6 +3275,16 @@
     "Outras modalidades de cardio ficam em Perfil → Modalidades que pratico." : {
 
     },
+    "P %lldg · C %lldg · G %lldg · %lld kcal" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "P %1$lldg · C %2$lldg · G %3$lldg · %4$lld kcal"
+          }
+        }
+      }
+    },
     "P:%lldg C:%lldg" : {
       "localizations" : {
         "pt-BR" : {
@@ -3197,7 +3321,19 @@
         }
       }
     },
+    "Parar busca" : {
+
+    },
     "Parcial" : {
+
+    },
+    "Passos (hoje)" : {
+
+    },
+    "Passos e calorias" : {
+
+    },
+    "Passos e calorias de outros relógios entram pelo Apple Saúde. Bluetooth é para batimentos ao vivo (cintas / sensores HR)." : {
 
     },
     "Pausa" : {
@@ -3280,6 +3416,9 @@
         }
       }
     },
+    "Plano" : {
+
+    },
     "Plano atual" : {
 
     },
@@ -3290,9 +3429,6 @@
 
     },
     "Plano para %@" : {
-
-    },
-    "Plano Semanal" : {
 
     },
     "pontos" : {
@@ -3338,6 +3474,9 @@
 
     },
     "Pressione firmemente por 1s para salvar o card em Fotos" : {
+
+    },
+    "Prioridade de batimentos no treino: Apple Watch → Bluetooth → Apple Saúde." : {
 
     },
     "Problema" : {
@@ -3575,6 +3714,9 @@
         }
       }
     },
+    "Programa" : {
+
+    },
     "Projeções com este ritmo" : {
 
     },
@@ -3632,10 +3774,16 @@
     "Recomendamos beber %lld ml agora para despertar o metabolismo e iniciar a hidratação." : {
 
     },
+    "Reconectar último sensor" : {
+
+    },
     "Recorde anterior" : {
 
     },
     "Redefinir senha" : {
+
+    },
+    "Refeição" : {
 
     },
     "Refeições: %lld/%lld concluídas" : {
@@ -3660,6 +3808,9 @@
     "Registrar" : {
 
     },
+    "Registrar e descartar foto" : {
+
+    },
     "Registrar ingestão" : {
 
     },
@@ -3682,6 +3833,9 @@
 
     },
     "Registros" : {
+
+    },
+    "Registros de hoje" : {
 
     },
     "Relatório de compras da semana" : {
@@ -3726,9 +3880,6 @@
     "Remover item" : {
 
     },
-    "Repetições" : {
-
-    },
     "Reportar" : {
 
     },
@@ -3738,7 +3889,7 @@
     "Reps" : {
 
     },
-    "Resetar" : {
+    "Reps: %lld" : {
 
     },
     "Responda antes de montar o cardápio." : {
@@ -3756,7 +3907,13 @@
     "Restaurar compras" : {
 
     },
+    "Restaurar horários padrão" : {
+
+    },
     "Resultado" : {
+
+    },
+    "Resultado da análise" : {
 
     },
     "Resumo" : {
@@ -3772,6 +3929,9 @@
 
     },
     "Retomar treino em andamento" : {
+
+    },
+    "Revise os nomes e volumes antes de salvar. Você poderá editar depois em Personalizados." : {
 
     },
     "Ritmo alvo" : {
@@ -3811,9 +3971,6 @@
 
     },
     "Rotas" : {
-
-    },
-    "Rotinas de mobilidade voltadas à musculação, com GIFs na execução" : {
 
     },
     "s/100m" : {
@@ -3945,6 +4102,12 @@
     "Senha atual" : {
 
     },
+    "Sensor" : {
+
+    },
+    "Sensor Bluetooth" : {
+
+    },
     "Sensores do iPhone e Apple Watch medem oscilações, equilíbrio do barco e simetria E/D." : {
 
     },
@@ -3961,6 +4124,9 @@
 
     },
     "SÉRIES POR EXERCÍCIO" : {
+
+    },
+    "Séries: %lld" : {
 
     },
     "SESSÃO" : {
@@ -4025,6 +4191,9 @@
     "Sim" : {
 
     },
+    "Sim, adicionar" : {
+
+    },
     "Sim, excluir conta" : {
 
     },
@@ -4032,6 +4201,9 @@
 
     },
     "Simetria · esquerda × direita" : {
+
+    },
+    "Sinal: %lld dBm" : {
 
     },
     "Sincronização ativa" : {
@@ -4073,6 +4245,9 @@
     "SPOT: %@ · aguardando pontos GPS da sessão" : {
 
     },
+    "Status" : {
+
+    },
     "Stroke rate em remadas por minuto. Split /500 m (quanto menor, melhor) e eficiência saem da distância, remadas e sensores." : {
 
     },
@@ -4093,6 +4268,9 @@
 
     },
     "Suplementos de hoje" : {
+
+    },
+    "Suplementos: lembretes a cada 3h (06h–21h) para registrar o que tomou. Alimentação: alertas no horário que você cadastrar (café, lanches, almoço, jantar e ceia)." : {
 
     },
     "Suporte" : {
@@ -4303,10 +4481,16 @@
     "Tipo" : {
 
     },
+    "Tipo de alimento" : {
+
+    },
     "Tipo de perigo" : {
 
     },
     "Tipo de prancha" : {
+
+    },
+    "Tire ou escolha uma foto do prato. O app estima proteína, carbo e gordura; os dados vão para o Firebase e a foto é descartada." : {
 
     },
     "Título" : {
@@ -4357,9 +4541,6 @@
     "Toque para recolher o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos." : {
 
     },
-    "Toque para treinar este exercício agora" : {
-
-    },
     "Total" : {
 
     },
@@ -4408,6 +4589,9 @@
     "Treinos Recentes" : {
 
     },
+    "Trocar foto" : {
+
+    },
     "Trocar mídia" : {
 
     },
@@ -4436,6 +4620,9 @@
 
     },
     "Use + e − para ajustar a quantidade. O número aparece ao lado e entra na lista de compras." : {
+
+    },
+    "Use a câmera, uma foto/print da galeria ou um arquivo PDF, JPEG ou PNG. Depois revise e salve em Personalizados." : {
 
     },
     "Use os resultados abaixo para adicionar à lista de compras." : {
@@ -4523,10 +4710,7 @@
     "Vídeo" : {
 
     },
-    "Vision" : {
-
-    },
-    "Vision AI" : {
+    "Você concluiu a ficha recomendada. Deseja incluir mais algum exercício nesta sessão?" : {
 
     },
     "Você consome muito doce?" : {

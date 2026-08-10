@@ -78,6 +78,8 @@ enum DailyEveningCheckInEngine {
         let greeting = dayPartGreeting(for: now)
         let clock = formattedClockTime(now: now)
 
+        let energyHydration = energyAndHydrationComparison(context: context)
+
         if todaySessions.isEmpty {
             return """
             \(greeting), \(name)! 🌙
@@ -85,6 +87,8 @@ enum DailyEveningCheckInEngine {
             Agora são \(clock) — hora de fechar o dia com calma e honestidade.
 
             Não vi treinos registrados hoje, e tudo bem: nem todo dia precisa ser de academia. O descanso também faz parte do progresso.
+
+            \(energyHydration)
 
             Como foi seu dia de uma forma geral? Energia, humor, conquistas e desafios — quero ouvir você.
             """
@@ -98,8 +102,100 @@ enum DailyEveningCheckInEngine {
 
         \(summary)
 
+        \(energyHydration)
+
         Como foi seu dia além dos treinos? Humor, energia e sensações — me conta com sinceridade.
         """
+    }
+
+    /// Comparação fim de dia: calorias gastas × ingeridas + hidratação.
+    static func energyAndHydrationComparison(context: HealthAssistantContext) -> String {
+        let burnedWorkouts = Int(
+            context.todayWorkoutSessions.reduce(0) { $0 + $1.caloriesBurned }.rounded()
+        )
+        let burnedHealth = max(context.todayHealthKitActiveCalories, 0)
+        let burned = max(burnedWorkouts, burnedHealth)
+        let consumed = max(context.todayCaloriesConsumed, 0)
+        let mealsDone = context.todayMealsCompleted
+        let mealsTotal = context.todayMealsTotal
+        let target = max(context.dailyCalorieTarget, 0)
+        let hasMealData = context.hasMealPlan && mealsDone > 0 && consumed > 0
+
+        var lines: [String] = ["📊 **Balanço do dia (calorias e hidratação)**"]
+
+        if burned > 0 {
+            if burnedHealth > burnedWorkouts, burnedWorkouts > 0 {
+                let active = burnedHealth
+                lines.append("• Gasto ativo (Health/treinos): ~\(active) kcal (treinos no app: ~\(burnedWorkouts) kcal)")
+            } else if burnedHealth > 0, burnedWorkouts == 0 {
+                lines.append("• Gasto ativo registrado: ~\(burnedHealth) kcal")
+            } else {
+                lines.append("• Calorias queimadas nos treinos: ~\(burnedWorkouts) kcal")
+            }
+        } else {
+            lines.append("• Calorias queimadas: ainda sem registro claro de gasto ativo hoje.")
+        }
+
+        if hasMealData {
+            lines.append("• Calorias ingeridas (refeições marcadas): ~\(consumed) kcal (\(mealsDone)/\(max(mealsTotal, mealsDone)) refeições)")
+            if target > 0 {
+                let vsTarget = consumed - target
+                if abs(vsTarget) <= 100 {
+                    lines.append("• Em relação à meta de \(target) kcal: bem perto do alvo. 🎯")
+                } else if vsTarget > 0 {
+                    lines.append("• Em relação à meta de \(target) kcal: cerca de \(vsTarget) kcal acima.")
+                } else {
+                    lines.append("• Em relação à meta de \(target) kcal: cerca de \(-vsTarget) kcal abaixo.")
+                }
+            }
+            if burned > 0 {
+                let balance = consumed - burned
+                if balance > 150 {
+                    lines.append("• Comparando gasto × ingestão: você ingeriu cerca de \(balance) kcal a mais do que o gasto ativo registrado.")
+                } else if balance < -150 {
+                    lines.append("• Comparando gasto × ingestão: o gasto ativo ficou cerca de \(-balance) kcal acima do que você marcou como ingerido.")
+                } else {
+                    lines.append("• Comparando gasto × ingestão: valores bem próximos hoje — bom equilíbrio aparente.")
+                }
+            }
+        } else if !context.hasMealPlan {
+            lines.append(
+                "• Refeições: ainda sem cardápio ativo. Para o IAssistente comparar ingestão e gasto, monte o cardápio em Nutrição e marque o que comeu."
+            )
+        } else if mealsTotal > 0, mealsDone == 0 {
+            lines.append(
+                "• Refeições: você tem cardápio hoje, mas nenhuma refeição foi marcada como feita. Para eu te ajudar de verdade na comparação calórica, registre em Nutrição o que ingeriu ao longo do dia."
+            )
+        } else {
+            lines.append(
+                "• Refeições: ainda sem calorias ingeridas registradas. Marque as refeições feitas no cardápio para eu comparar com o que você gastou."
+            )
+        }
+
+        lines.append(hydrationComparisonLine(context: context))
+        return lines.joined(separator: "\n")
+    }
+
+    private static func hydrationComparisonLine(context: HealthAssistantContext) -> String {
+        let intake = max(context.waterIntakeMl, 0)
+        let goal = max(context.user?.recommendedDailyWaterML ?? 0, 0)
+
+        if intake <= 0 {
+            return "• Hidratação: sem registro de água hoje. Atualize no Perfil — isso ajuda o IAssistente a orientar sua recuperação e o balanço do dia. 💧"
+        }
+        if goal <= 0 {
+            return "• Hidratação: \(intake) ml registrados hoje. 💧"
+        }
+
+        let percent = min(Int((Double(intake) / Double(goal) * 100).rounded()), 999)
+        if intake >= goal {
+            return "• Hidratação: \(intake) ml de \(goal) ml (\(percent)%) — meta batida. 💧✅"
+        }
+        if intake >= goal / 2 {
+            let missing = goal - intake
+            return "• Hidratação: \(intake) ml de \(goal) ml (\(percent)%). Faltam ~\(missing) ml para a meta — um pouco de água ainda ajuda, sem exagerar perto do sono. 💧"
+        }
+        return "• Hidratação: \(intake) ml de \(goal) ml (\(percent)%) — abaixo da metade da meta. Vale registrar e completar o que puder com calma. 💧"
     }
 
     static func classifyDayFeeling(_ text: String) -> DailyEveningDayFeeling {
@@ -381,11 +477,19 @@ enum DailyEveningCheckInEngine {
             tips.append("⚠️ Você registrou pouco sono recentemente — priorize descanso hoje, \(name).")
         }
 
-        if context.waterIntakeMl > 0, let user = context.user {
+        if context.waterIntakeMl <= 0 {
+            tips.append("💧 Sem água registrada hoje — anote no Perfil amanhã; hidratação completa o balanço do dia.")
+        } else if let user = context.user {
             let goal = user.recommendedDailyWaterML
             if goal > 0, context.waterIntakeMl < goal / 2 {
                 tips.append("💧 Hidratação baixa hoje — um gole de água agora, sem exagero antes de dormir.")
             }
+        }
+
+        if context.hasMealPlan, context.todayMealsCompleted == 0, context.todayMealsTotal > 0 {
+            tips.append(
+                "🍽️ Lembrete: marque as refeições feitas em Nutrição. Assim, no próximo check-in eu comparo melhor calorias ingeridas × gastas."
+            )
         }
 
         return tips.joined(separator: "\n\n")

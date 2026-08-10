@@ -523,19 +523,20 @@ enum MotivationMessages {
         return waterReminderMessages[index]
     }
 
+    @MainActor
     static func mealReminderMessage(for mealType: MealType) -> String {
         let time = MealReminderConfiguration.formattedMealTime(for: mealType)
         let tips = mealReminderTips
         let tip = tips[abs(mealType.rawValue.hashValue) % tips.count]
-        return "Em 5 minutos: \(mealType.rawValue) (\(time)). \(tip)"
+        return "\(mealType.rawValue) às \(time). \(tip)"
     }
 
     static let mealReminderTips = [
-        "Separe o prato do cardápio e hidrate-se um pouco antes. 🥗",
+        "Separe o prato do cardápio e hidrate-se. 🥗",
         "Alerta do cardápio: prepare a refeição com calma e aproveite cada mordida.",
         "Lembrete nutricional: comer no horário ajuda energia, foco e resultados. 💪",
         "Seu cardápio te espera — organize a porção e evite pular esta refeição.",
-        "5 minutos para se organizar: água, prato e atenção plena na comida. 🌿",
+        "Água, prato e atenção plena na comida. 🌿",
         "Constância no cardápio = evolução. Não deixe esta refeição passar!",
     ]
 }

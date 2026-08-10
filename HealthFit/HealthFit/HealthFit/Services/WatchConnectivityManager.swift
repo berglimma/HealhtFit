@@ -356,9 +356,10 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         refreshConnectionStatus()
     }
 
-    /// BPM e kcal vêm apenas do Apple Watch; sem Watch pareado/alcançável ficam zerados.
+    /// BPM/kcal ao vivo do Watch — mantém última leitura mesmo se a reachability oscilar.
     var hasLiveWatchMetrics: Bool {
-        isWatchConnected && (session?.isReachable == true)
+        if watchHeartRate > 0 || watchCalories > 0 { return true }
+        return isWatchConnected && (session?.isReachable == true)
     }
 
     private func clearWatchMetrics() {
@@ -367,6 +368,21 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         watchSwimLapCount = 0
         watchSwimDistanceMeters = 0
         // Passos do dia permanecem; vêm do HealthKit/Watch ao longo do dia.
+    }
+
+    /// WCSession muitas vezes entrega `NSNumber` em vez de `Double` (transferUserInfo).
+    private static func double(from message: [String: Any], key: String) -> Double? {
+        if let value = message[key] as? Double { return value }
+        if let value = message[key] as? NSNumber { return value.doubleValue }
+        if let value = message[key] as? Int { return Double(value) }
+        return nil
+    }
+
+    private static func int(from message: [String: Any], key: String) -> Int? {
+        if let value = message[key] as? Int { return value }
+        if let value = message[key] as? NSNumber { return value.intValue }
+        if let value = message[key] as? Double { return Int(value) }
+        return nil
     }
 
     private func refreshConnectionStatus() {
@@ -522,10 +538,9 @@ extension WatchConnectivityManager: WCSessionDelegate {
         Task { @MainActor in
             let manager = WatchConnectivityManager.shared
             manager.refreshConnectionStatus()
-            // Sem Watch alcançável, não mantém métricas simuladas/antigas.
-            if !session.isReachable {
-                manager.clearWatchMetrics()
-            }
+            // Não zera BPM/kcal aqui: a reachability oscila com frequência e
+            // apagar a última leitura deixa a UI em 0 BPM durante o treino.
+            // Métricas são limpas em stopWorkoutOnWatch / watchStoppedSession.
         }
     }
 
@@ -564,29 +579,27 @@ extension WatchConnectivityManager: WCSessionDelegate {
         var calories: Double?
         var steps: Int?
 
-        if let value = message["heartRate"] as? Double {
-            watchHeartRate = max(0, value)
-            heartRate = watchHeartRate
+        if let value = Self.double(from: message, key: "heartRate") {
+            // Ignora 0 transitório para não apagar a última leitura válida do sensor.
+            if value > 0 {
+                watchHeartRate = value
+                heartRate = watchHeartRate
+            }
         }
-        if let value = message["calories"] as? Double {
+        if let value = Self.double(from: message, key: "calories") {
             watchCalories = max(0, value)
             calories = watchCalories
         }
-        if let value = message["steps"] as? Int {
+        if let value = Self.int(from: message, key: "steps") {
             watchSteps = max(0, value)
-            steps = watchSteps
-        } else if let value = message["steps"] as? Double {
-            watchSteps = max(0, Int(value))
             steps = watchSteps
         }
 
         let action = message["action"] as? String
 
         // Natação: voltas e distância vindas do Watch (HK ou métricas de sessão).
-        let swimLaps = (message["swimLapCount"] as? Int)
-            ?? (message["swimLapCount"] as? NSNumber)?.intValue
-        let swimDistance = (message["swimDistanceMeters"] as? Double)
-            ?? (message["swimDistanceMeters"] as? NSNumber)?.doubleValue
+        let swimLaps = Self.int(from: message, key: "swimLapCount")
+        let swimDistance = Self.double(from: message, key: "swimDistanceMeters")
         if action == "swimMetrics" || swimLaps != nil || swimDistance != nil {
             if let swimLaps {
                 let next = max(0, swimLaps)
@@ -603,14 +616,14 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
 
         if action == "waterSportJump" {
-            let height = (message["heightMeters"] as? Double) ?? (message["heightMeters"] as? NSNumber)?.doubleValue ?? 1
-            let peakG = (message["peakG"] as? Double) ?? (message["peakG"] as? NSNumber)?.doubleValue ?? 1.5
-            let airtime = message["airtimeSeconds"] as? Double
+            let height = Self.double(from: message, key: "heightMeters") ?? 1
+            let peakG = Self.double(from: message, key: "peakG") ?? 1.5
+            let airtime = Self.double(from: message, key: "airtimeSeconds")
             lastWatchJumpEvent = (height, peakG, airtime)
             watchJumpTick += 1
         }
         if action == "waterSportAccel" || message["accelG"] != nil {
-            if let g = message["accelG"] as? Double ?? (message["accelG"] as? NSNumber)?.doubleValue {
+            if let g = Self.double(from: message, key: "accelG") {
                 lastWatchAccelG = g
             }
         }

@@ -29,20 +29,31 @@ final class NotificationServiceTests: XCTestCase {
         XCTAssertTrue(red.contains("🚨") || red.contains("❤️"))
     }
 
-    func testMealReminderFiresFiveMinutesBeforeMeal() {
-        XCTAssertEqual(MealReminderConfiguration.minutesBeforeMeal, 5)
+    @MainActor
+    func testMealReminderFiresAtRegisteredMealTime() {
+        XCTAssertEqual(MealReminderConfiguration.minutesBeforeMeal, 0)
 
+        let breakfastDefault = MealReminderConfiguration.defaultMealClock(for: .breakfast)
+        XCTAssertEqual(breakfastDefault.hour, 7)
+        XCTAssertEqual(breakfastDefault.minute, 0)
+
+        let lunchDefault = MealReminderConfiguration.defaultMealClock(for: .lunch)
+        XCTAssertEqual(lunchDefault.hour, 12)
+        XCTAssertEqual(lunchDefault.minute, 30)
+
+        let prefs = NutritionNotificationPreferences.shared
+        prefs.resetToDefaults()
         let breakfast = MealReminderConfiguration.reminderClock(for: .breakfast)
-        XCTAssertEqual(breakfast.hour, 6)
-        XCTAssertEqual(breakfast.minute, 55)
+        XCTAssertEqual(breakfast.hour, 7)
+        XCTAssertEqual(breakfast.minute, 0)
 
         let lunch = MealReminderConfiguration.reminderClock(for: .lunch)
         XCTAssertEqual(lunch.hour, 12)
-        XCTAssertEqual(lunch.minute, 25)
+        XCTAssertEqual(lunch.minute, 30)
 
         let supper = MealReminderConfiguration.reminderClock(for: .supper)
         XCTAssertEqual(supper.hour, 21)
-        XCTAssertEqual(supper.minute, 25)
+        XCTAssertEqual(supper.minute, 30)
     }
 
     func testDailyMotivationSchedulesAtSixAM() {
@@ -51,10 +62,12 @@ final class NotificationServiceTests: XCTestCase {
         XCTAssertEqual(DailyMotivationConfiguration.scheduledDayCount, 14)
     }
 
-    func testMealReminderMessageMentionsMealAndLeadTime() {
+    @MainActor
+    func testMealReminderMessageMentionsMealAndTime() {
+        NutritionNotificationPreferences.shared.resetToDefaults()
         let message = MotivationMessages.mealReminderMessage(for: .lunch)
         XCTAssertTrue(message.contains("Almoço"))
-        XCTAssertTrue(message.contains("5 minutos") || message.contains("12:30"))
+        XCTAssertTrue(message.contains("12:30"))
     }
 
     func testWeekdayDailyMotivationMessages() {

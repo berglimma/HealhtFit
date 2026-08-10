@@ -14,11 +14,30 @@ final class HealthKitManager: ObservableObject {
     @Published var currentHeartRate: Double = 0
     @Published var restingHeartRate: Double = 0
 
+    /// Snapshot de treino externo (Fitness / outros apps) lido do Apple Saúde.
+    struct ExternalWorkoutSample: Identifiable, Equatable {
+        var id: UUID { healthKitUUID }
+        let healthKitUUID: UUID
+        let startedAt: Date
+        let endedAt: Date
+        let durationSeconds: TimeInterval
+        let calories: Double
+        let averageHeartRate: Double
+        let activityType: HKWorkoutActivityType
+        let sourceName: String
+        let sourceBundleId: String
+    }
+
+    nonisolated static let healthFitOriginMetadataKey = "HealthFitOrigin"
+
     private let healthStore = HKHealthStore()
     private var heartRateQuery: HKQuery?
     private var stepsObserverQuery: HKQuery?
     private var caloriesObserverQuery: HKQuery?
+    private var workoutObserverQuery: HKQuery?
     private var isRefreshing = false
+    /// Callback disparado quando novos treinos aparecem no Saúde (background/foreground).
+    var onExternalWorkoutsChanged: (() -> Void)?
 
     /// BPM preferindo valor ao vivo (Watch/HealthKit); fallback para FC de repouso.
     var displayedHeartRate: Double {
@@ -211,9 +230,11 @@ final class HealthKitManager: ObservableObject {
                 try await builder.addSamples(samples)
             }
 
+            var metadata: [String: Any] = [Self.healthFitOriginMetadataKey: true]
             if heartRate > 0 {
-                try await builder.addMetadata(["averageHeartRate": heartRate])
+                metadata["averageHeartRate"] = heartRate
             }
+            try await builder.addMetadata(metadata)
 
             try await builder.endCollection(at: endDate)
             _ = try await builder.finishWorkout()
@@ -230,6 +251,7 @@ final class HealthKitManager: ObservableObject {
 
     private func startMetricObservers() {
         startHeartRateObserver()
+        startWorkoutObserver()
         startQuantityObserver(for: .stepCount, storingIn: &stepsObserverQuery) {
             await HealthKitManager.shared.refreshTodayStepsAndCalories()
         }
@@ -237,6 +259,71 @@ final class HealthKitManager: ObservableObject {
             await HealthKitManager.shared.refreshTodayStepsAndCalories()
         }
         Task { await fetchLatestHeartRate() }
+    }
+
+    private func startWorkoutObserver() {
+        let type = HKObjectType.workoutType()
+        if let existing = workoutObserverQuery {
+            healthStore.stop(existing)
+        }
+        let query = HKObserverQuery(sampleType: type, predicate: nil) { _, completionHandler, error in
+            defer { completionHandler() }
+            guard error == nil else { return }
+            Task { @MainActor in
+                HealthKitManager.shared.onExternalWorkoutsChanged?()
+            }
+        }
+        workoutObserverQuery = query
+        healthStore.execute(query)
+        healthStore.enableBackgroundDelivery(for: type, frequency: .immediate) { _, _ in }
+    }
+
+    /// Treinos de outros apps (exclui os gravados pelo próprio HealthFit).
+    func fetchExternalWorkouts(since start: Date, limit: Int = 40) async -> [ExternalWorkoutSample] {
+        guard isHealthKitAvailable, isAuthorized else { return [] }
+        let ourBundle = Bundle.main.bundleIdentifier ?? "luan.com.healthfit.app"
+        let end = Date()
+
+        return await withCheckedContinuation { continuation in
+            let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictEndDate)
+            let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+            let query = HKSampleQuery(
+                sampleType: .workoutType(),
+                predicate: predicate,
+                limit: limit,
+                sortDescriptors: [sort]
+            ) { _, samples, _ in
+                let workouts = (samples as? [HKWorkout]) ?? []
+                let mapped: [ExternalWorkoutSample] = workouts.compactMap { workout in
+                    let bundleId = workout.sourceRevision.source.bundleIdentifier
+                    if bundleId == ourBundle { return nil }
+                    if (workout.metadata?[Self.healthFitOriginMetadataKey] as? Bool) == true { return nil }
+                    if (workout.metadata?[Self.healthFitOriginMetadataKey] as? NSNumber)?.boolValue == true {
+                        return nil
+                    }
+                    guard workout.duration >= 90 else { return nil }
+
+                    let calories = workout.totalEnergyBurned?.doubleValue(for: .kilocalorie()) ?? 0
+                    let avgHR = (workout.metadata?["HKAverageHeartRate"] as? Double)
+                        ?? (workout.metadata?["averageHeartRate"] as? Double)
+                        ?? 0
+                    let sourceName = workout.sourceRevision.source.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return ExternalWorkoutSample(
+                        healthKitUUID: workout.uuid,
+                        startedAt: workout.startDate,
+                        endedAt: workout.endDate,
+                        durationSeconds: workout.duration,
+                        calories: calories,
+                        averageHeartRate: avgHR,
+                        activityType: workout.workoutActivityType,
+                        sourceName: sourceName.isEmpty ? "Apple Saúde" : sourceName,
+                        sourceBundleId: bundleId
+                    )
+                }
+                continuation.resume(returning: mapped)
+            }
+            healthStore.execute(query)
+        }
     }
 
     private func startQuantityObserver(

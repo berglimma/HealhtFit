@@ -46,7 +46,7 @@ struct MainTabView: View {
     private var showsMinimizedWorkoutBanner: Bool {
         workoutStore.activeSession != nil
             && workoutStore.isActiveWorkoutMinimized
-            && !workoutStore.isVisionCameraPresented
+            && !workoutStore.isFullscreenCameraPresented
     }
 
     private var canEndFromMinimizedBanner: Bool {

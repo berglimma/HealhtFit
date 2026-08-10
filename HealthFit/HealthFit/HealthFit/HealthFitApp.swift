@@ -32,6 +32,8 @@ struct HealthFitApp: App {
                 .environmentObject(mealPlanService)
                 .environmentObject(timerService)
                 .environmentObject(watchConnectivity)
+                .environmentObject(LiveMetricsHub.shared)
+                .environmentObject(BluetoothHeartRateService.shared)
                 .environmentObject(weeklyReportService)
                 .environmentObject(monthlyReportService)
                 .environmentObject(wellnessService)

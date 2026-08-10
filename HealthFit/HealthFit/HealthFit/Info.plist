@@ -137,6 +137,10 @@
 	<string>HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando, correndo ou pedalando e contar passos.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>HealthFit usa Bluetooth para conectar sensores e relógios compatíveis e receber batimentos cardíacos ao vivo durante o treino.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>HealthFit usa Bluetooth para conectar sensores e relógios compatíveis e receber batimentos cardíacos ao vivo durante o treino.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.</string>
 	<key>NSCalendarsUsageDescription</key>

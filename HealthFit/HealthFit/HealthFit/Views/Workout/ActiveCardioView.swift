@@ -9,6 +9,7 @@ struct ActiveCardioView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var liveMetrics: LiveMetricsHub
     @EnvironmentObject var authService: AuthService
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -121,7 +122,10 @@ struct ActiveCardioView: View {
     }
 
     private var hasWatchMetrics: Bool {
-        watchConnectivity.hasLiveWatchMetrics || watchConnectivity.watchCalories > 0 || watchConnectivity.watchHeartRate > 0
+        watchConnectivity.hasLiveWatchMetrics
+            || watchConnectivity.watchCalories > 0
+            || liveMetrics.heartRateBPM > 0
+            || BluetoothHeartRateService.shared.isConnected
     }
 
     private var calorieProgress: Double {
@@ -1335,7 +1339,7 @@ struct ActiveCardioView: View {
         HStack(spacing: 12) {
             CardioMetricTile(
                 icon: "heart.fill",
-                value: "\(Int(watchConnectivity.watchHeartRate))",
+                value: "\(Int(liveHeartRateBPM))",
                 label: "BPM",
                 color: .red
             )
@@ -1751,9 +1755,14 @@ struct ActiveCardioView: View {
         }
     }
 
+    /// Prioridade: Apple Watch → Bluetooth → HealthKit (via LiveMetricsHub).
+    private var liveHeartRateBPM: Double {
+        liveMetrics.heartRateBPM
+    }
+
     private func syncWatchData() {
-        if watchConnectivity.watchHeartRate > 0 {
-            workoutStore.addHeartRateSample(watchConnectivity.watchHeartRate)
+        if liveHeartRateBPM > 0 {
+            workoutStore.addHeartRateSample(liveHeartRateBPM)
         }
         workoutStore.updateCalories(liveCalories)
     }

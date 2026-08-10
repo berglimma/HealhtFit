@@ -100,6 +100,7 @@ struct RootView: View {
                 workoutStore.configureCloudSync(userId: nil)
                 wellnessService.configureCloudSync(userId: nil)
                 mealPlanService.bind(userId: nil)
+                MealPhotoAnalysisService.shared.bind(userId: nil)
                 ClimbingGearService.shared.bind(userId: nil)
                 WorkoutLiveActivitySync.end()
                 EveningTrainingNudgeService.cancelAll()
@@ -138,10 +139,14 @@ struct RootView: View {
 
         // Phase 2 — meal plan + light reminders (decode can hitch main; after first interaction window)
         mealPlanService.bind(userId: authService.currentUser?.id)
+        MealPhotoAnalysisService.shared.bind(userId: authService.currentUser?.id)
         ClimbingGearService.shared.bind(userId: authService.currentUser?.id)
         mealPlanService.loadSavedData()
         if mealPlanService.weeklyPlan.isEmpty, let user = authService.currentUser {
             mealPlanService.generatePlan(for: user)
+        }
+        if let userId = authService.currentUser?.id {
+            await MealPhotoAnalysisService.shared.loadIfNeeded(userId: userId)
         }
         refreshInactivityReminder()
         EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
@@ -160,6 +165,11 @@ struct RootView: View {
         NotificationService.shared.refreshRecurringNotifications()
         // Espelha treinos de hoje no Calendário (uma vez por sessão; pede permissão se necessário).
         WorkoutCalendarService.syncTodaysCompletedSessions(workoutStore.sessionHistory)
+        ExternalWorkoutSyncService.shared.bind(
+            workoutStore: workoutStore,
+            athleteName: authService.currentUser?.greetingName
+        )
+        await ExternalWorkoutSyncService.shared.syncRecentExternalWorkouts(reason: .startup)
 
         try? await Task.sleep(nanoseconds: 700_000_000)
 
@@ -200,6 +210,11 @@ struct RootView: View {
         try? await Task.sleep(nanoseconds: 400_000_000)
         await exerciseVideoRepository.bootstrapRemoteCatalog()
         await healthKitManager.refreshFromHealthKit()
+        ExternalWorkoutSyncService.shared.bind(
+            workoutStore: workoutStore,
+            athleteName: authService.currentUser?.greetingName
+        )
+        await ExternalWorkoutSyncService.shared.syncRecentExternalWorkouts(reason: .foreground)
     }
 
     private func syncWorkoutCloudHistory() {

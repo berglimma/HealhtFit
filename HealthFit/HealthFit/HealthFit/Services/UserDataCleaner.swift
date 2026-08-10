@@ -14,6 +14,12 @@ enum UserDataCleaner {
         "healthfit_exercise_last_progress_at",
         "healthfit_active_cardio_config",
         "healthfit_meal_plan",
+        "healthfit_meal_reminders_enabled",
+        "healthfit.nutrition.notif.supplementsEnabled",
+        "healthfit.nutrition.notif.mealsEnabled",
+        "healthfit.nutrition.notif.mealTimes",
+        "healthfit.recommendedRotation.anchor",
+        "healthfit.recommendedRotation.appliedCohort",
         "healthfit_shopping_list",
         "healthfit_custom_menu",
         "healthfit_shopping_purchase_stats",
@@ -53,6 +59,8 @@ enum UserDataCleaner {
         "healthfit.subscription.debugTier",
         "bodyEvolution.pendingAssistantMessage",
         "healthfit.pr.pending_assistant",
+        "healthfit.externalWorkouts.processedUUIDs",
+        "healthfit.externalWorkouts.pendingAssistantMessage",
     ]
 
     static func clearAllLocalData(uid: String, email: String) {

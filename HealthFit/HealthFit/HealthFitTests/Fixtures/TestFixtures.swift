@@ -44,6 +44,8 @@ enum TestFixtures {
         todayMealsTotal: Int = 0,
         weekMealsCompleted: Int = 0,
         weekMealsTotal: Int = 0,
+        todayCaloriesConsumed: Int = 0,
+        todayHealthKitActiveCalories: Int = 0,
         supplementsLoggedToday: Int = 0
     ) -> HealthAssistantContext {
         HealthAssistantContext(
@@ -65,6 +67,8 @@ enum TestFixtures {
             todayMealsTotal: todayMealsTotal,
             weekMealsCompleted: weekMealsCompleted,
             weekMealsTotal: weekMealsTotal,
+            todayCaloriesConsumed: todayCaloriesConsumed,
+            todayHealthKitActiveCalories: todayHealthKitActiveCalories,
             supplementsLoggedToday: supplementsLoggedToday
         )
     }

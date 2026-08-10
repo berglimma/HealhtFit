@@ -167,15 +167,18 @@ struct MealPlanView: View {
     @ViewBuilder
     private var nutritionModeContent: some View {
         Picker("Modo", selection: $nutritionTab) {
-            Text("Plano Semanal").tag(0)
-            Text("Montar Cardápio").tag(1)
+            Text("Plano").tag(0)
+            Text("Cardápio").tag(1)
             Text("Suplementos").tag(2)
+            Text("Análise").tag(3)
         }
         .pickerStyle(.segmented)
         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
 
         if nutritionTab == 2 {
             SupplementsLogView()
+        } else if nutritionTab == 3 {
+            MealPhotoAnalysisView()
         } else if mealPlanService.customMenuSelection.isReadyToBuild {
             if nutritionTab == 0 {
                 weeklyPlanSection
@@ -910,7 +913,7 @@ struct MealPlanView: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "bell.badge.fill")
                 .foregroundStyle(AppTheme.accentSecondary)
-            Text("Com o cardápio ativo, você recebe alerta e notificação 5 minutos antes de cada refeição (horários padrão do dia).")
+            Text("Configure em Perfil se deseja notificações de alimentação e os horários habituais de cada refeição. Os alertas disparam no horário cadastrado.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
         }

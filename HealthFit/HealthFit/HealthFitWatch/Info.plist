@@ -14,5 +14,9 @@
 	<string>HealthFit no Apple Watch lê passos, batimentos e calorias para sincronizar com o iPhone e o app Saúde.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>HealthFit no Apple Watch salva treinos e calorias no app Saúde.</string>
+	<key>WKBackgroundModes</key>
+	<array>
+		<string>workout-processing</string>
+	</array>
 </dict>
 </plist>

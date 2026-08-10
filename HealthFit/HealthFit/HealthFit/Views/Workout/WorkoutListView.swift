@@ -477,7 +477,7 @@ struct MobilityProgramHeroCard: View {
     var body: some View {
         WorkoutProgramHeroCard(
             title: L10n.Workout.mobility,
-            subtitle: "Aquecimento, quadril, ombros e pós-treino com demos",
+            subtitle: "Aquecimento e pós-treino com demos",
             accent: accent,
             imageName: "WorkoutProgramMobility",
             systemImage: "figure.flexibility",
@@ -515,7 +515,7 @@ struct MobilityWorkoutHubView: View {
                         Text("Recomendados")
                             .font(.headline)
                             .foregroundStyle(AppTheme.textPrimary)
-                        Text("Rotinas de mobilidade voltadas à musculação, com GIFs na execução")
+                        Text("Duas rotinas: aquecimento geral e pós-treino, com GIFs na execução")
                             .font(.caption)
                             .foregroundStyle(AppTheme.textSecondary)
                     }
@@ -624,6 +624,7 @@ struct GenderWorkoutHubView: View {
     @State private var sheetToEdit: WorkoutSheet?
     @State private var sheetPendingDeletion: WorkoutSheet?
     @State private var selectedRecentSession: WorkoutSession?
+    @State private var showScanWorkout = false
 
     private var title: String {
         gender == .female ? "Programa Feminino" : "Programa Masculino"
@@ -650,19 +651,19 @@ struct GenderWorkoutHubView: View {
             VStack(spacing: 20) {
                 hubHeader
 
-                GuidedWorkoutSections(gender: gender)
-
-                workoutGroupSection(
-                    title: "Recomendados",
-                    subtitle: "Fichas padrão do programa \(gender == .female ? "feminino" : "masculino")",
-                    sheets: recommendedSheets
-                )
-
                 workoutGroupSection(
                     title: "Personalizados",
                     subtitle: "Treinos criados para este programa",
                     sheets: customSheets,
-                    emptyMessage: "Nenhum personalizado ainda. Toque em + para criar."
+                    emptyMessage: "Nenhum personalizado ainda. Toque em + para criar ou importe uma ficha (câmera, foto ou PDF)."
+                )
+
+                GuidedWorkoutSections(gender: gender)
+
+                workoutGroupSection(
+                    title: "Recomendados",
+                    subtitle: recommendedSubtitle,
+                    sheets: recommendedSheets
                 )
 
                 RecentCompletedWorkoutsSection(
@@ -676,15 +677,32 @@ struct GenderWorkoutHubView: View {
         .background(AppTheme.background)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            _ = workoutStore.refreshRecommendedRotationIfNeeded()
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    onCreateCustom(gender)
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(AppTheme.accent)
+                HStack(spacing: 12) {
+                    Button {
+                        showScanWorkout = true
+                    } label: {
+                        Image(systemName: "doc.text.viewfinder")
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .accessibilityLabel("Escanear ficha de treino")
+
+                    Button {
+                        onCreateCustom(gender)
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .accessibilityLabel("Criar ficha personalizada")
                 }
             }
+        }
+        .sheet(isPresented: $showScanWorkout) {
+            ScanWorkoutSheetView(targetGender: gender)
         }
         .sheet(item: $sheetToEdit) { sheet in
             CreateWorkoutView(editingSheet: sheet)
@@ -735,6 +753,15 @@ struct GenderWorkoutHubView: View {
         .padding()
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private var recommendedSubtitle: String {
+        let days = RecommendedWorkoutCatalog.daysUntilNextRotation()
+        let base = "Fichas do programa \(gender == .female ? "feminino" : "masculino")"
+        if days >= RecommendedWorkoutCatalog.rotationIntervalDays {
+            return "\(base) · novas opções a cada 30 dias"
+        }
+        return "\(base) · novas opções em \(days) dia\(days == 1 ? "" : "s")"
     }
 
     private var deletionAlertBinding: Binding<Bool> {

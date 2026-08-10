@@ -1,10 +1,12 @@
 /* Permission usage descriptions */
-"NSCameraUsageDescription" = "HealthFit usa a câmera para reconhecer repetições e analisar sua postura durante os exercícios.";
+"NSCameraUsageDescription" = "HealthFit usa a câmera para fotos de perfil e evolução corporal, e para escanear fichas de treino impressas.";
 "NSMicrophoneUsageDescription" = "HealthFit usa o microfone ao gravar vídeo do treino para compartilhar com a legenda da sessão.";
 "NSHealthShareUsageDescription" = "HealthFit precisa acessar seus dados de saúde para exibir métricas de desempenho e sincronizar treinos.";
 "NSHealthUpdateUsageDescription" = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
-"NSPhotoLibraryUsageDescription" = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal e anexar foto ou vídeo ao compartilhar o resultado do treino.";
+"NSPhotoLibraryUsageDescription" = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal, importar fichas de treino e anexar foto ou vídeo ao compartilhar o resultado do treino.";
 "NSPhotoLibraryAddUsageDescription" = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
 "NSCalendarsFullAccessUsageDescription" = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
 "NSCalendarsUsageDescription" = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
 "NSCalendarsWriteOnlyAccessUsageDescription" = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
+"NSBluetoothAlwaysUsageDescription" = "HealthFit usa Bluetooth para conectar sensores e relógios compatíveis e receber batimentos cardíacos ao vivo durante o treino.";
+"NSBluetoothPeripheralUsageDescription" = "HealthFit usa Bluetooth para conectar sensores e relógios compatíveis e receber batimentos cardíacos ao vivo durante o treino.";

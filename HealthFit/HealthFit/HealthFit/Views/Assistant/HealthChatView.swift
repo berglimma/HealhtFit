@@ -36,6 +36,9 @@ struct HealthChatView: View {
         let mealAdherence = AssistantImprovementAnalysisEngine.mealAdherence(
             from: mealPlanService.weeklyPlan
         )
+        let todayConsumed = AssistantImprovementAnalysisEngine.todayConsumedCalories(
+            from: mealPlanService.weeklyPlan
+        )
 
         return HealthAssistantContext(
             user: user,
@@ -64,6 +67,8 @@ struct HealthChatView: View {
             todayMealsTotal: mealAdherence.todayTotal,
             weekMealsCompleted: mealAdherence.weekCompleted,
             weekMealsTotal: mealAdherence.weekTotal,
+            todayCaloriesConsumed: todayConsumed,
+            todayHealthKitActiveCalories: Int(HealthKitManager.shared.todayCalories.rounded()),
             supplementsLoggedToday: wellnessService.todaySupplementIntakes.count,
             latestHRVMs: latestHRVMs,
             climbingGear: ClimbingGearService.shared.items
@@ -262,6 +267,7 @@ struct HealthChatView: View {
             assistant.bootstrap(context: context)
             assistant.deliverPendingBodyEvolutionAnnouncementIfNeeded()
             assistant.deliverPendingSupplementAcknowledgmentIfNeeded()
+            assistant.deliverPendingExternalWorkoutAnnouncementIfNeeded()
         }
     }
 

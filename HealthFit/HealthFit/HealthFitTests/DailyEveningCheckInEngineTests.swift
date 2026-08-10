@@ -28,6 +28,38 @@ final class DailyEveningCheckInEngineTests: XCTestCase {
 
         XCTAssertTrue(message.contains("Não vi treinos registrados hoje"))
         XCTAssertTrue(message.contains("descanso"))
+        XCTAssertTrue(message.contains("Balanço do dia"))
+    }
+
+    func testEnergyComparisonAsksForMealsWhenNoneLogged() {
+        let context = TestFixtures.assistantContext(
+            hasMealPlan: true,
+            todayMealsCompleted: 0,
+            todayMealsTotal: 4,
+            todayCaloriesConsumed: 0
+        )
+        let block = DailyEveningCheckInEngine.energyAndHydrationComparison(context: context)
+        XCTAssertTrue(block.contains("nenhuma refeição") || block.contains("registre"))
+        XCTAssertTrue(block.localizedCaseInsensitiveContains("hidrata"))
+    }
+
+    func testEnergyComparisonComparesBurnedAndConsumed() {
+        var session = TestFixtures.completedWorkoutSession(workoutTitle: "Treino Peito")
+        session.caloriesBurned = 400
+        let context = TestFixtures.assistantContext(
+            waterIntakeMl: 2000,
+            todayWorkoutSessions: [session],
+            hasMealPlan: true,
+            todayMealsCompleted: 3,
+            todayMealsTotal: 4,
+            todayCaloriesConsumed: 1800,
+            todayHealthKitActiveCalories: 500
+        )
+        let block = DailyEveningCheckInEngine.energyAndHydrationComparison(context: context)
+        XCTAssertTrue(block.contains("1800"))
+        XCTAssertTrue(block.contains("500") || block.contains("400"))
+        XCTAssertTrue(block.contains("2000") && block.contains("ml"))
+        XCTAssertTrue(block.contains("Comparando") || block.contains("meta"))
     }
 
     func testClassifySkippedWorkoutFeeling() {
@@ -112,6 +144,41 @@ private extension HealthAssistantContext {
             todayMealsTotal: todayMealsTotal,
             weekMealsCompleted: weekMealsCompleted,
             weekMealsTotal: weekMealsTotal,
+            todayCaloriesConsumed: todayCaloriesConsumed,
+            todayHealthKitActiveCalories: todayHealthKitActiveCalories,
+            supplementsLoggedToday: supplementsLoggedToday
+        )
+    }
+
+    func withNutrition(
+        hasMealPlan: Bool,
+        mealsCompleted: Int,
+        mealsTotal: Int,
+        consumed: Int,
+        healthKitCalories: Int = 0,
+        waterIntakeMl: Int? = nil
+    ) -> HealthAssistantContext {
+        HealthAssistantContext(
+            user: user,
+            waterIntakeMl: waterIntakeMl ?? self.waterIntakeMl,
+            sleepHours: sleepHours,
+            weeklyWorkoutCount: weeklyWorkoutCount,
+            hoursSinceLastWorkout: hoursSinceLastWorkout,
+            todayWorkoutSessions: todayWorkoutSessions,
+            recentWorkoutSessions: recentWorkoutSessions,
+            dailyCalorieTarget: dailyCalorieTarget,
+            basalMetabolicRate: basalMetabolicRate,
+            estimatedTDEE: estimatedTDEE,
+            caloricDeficit: caloricDeficit,
+            sweetConsumption: sweetConsumption,
+            lactoseTolerance: lactoseTolerance,
+            hasMealPlan: hasMealPlan,
+            todayMealsCompleted: mealsCompleted,
+            todayMealsTotal: mealsTotal,
+            weekMealsCompleted: weekMealsCompleted,
+            weekMealsTotal: weekMealsTotal,
+            todayCaloriesConsumed: consumed,
+            todayHealthKitActiveCalories: healthKitCalories,
             supplementsLoggedToday: supplementsLoggedToday
         )
     }

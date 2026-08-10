@@ -626,6 +626,7 @@ final class AuthService: ObservableObject {
         await BodyEvolutionStorageService.deleteAllUserData(userId: userId, knownPaths: bodyPaths)
         try await DailyWellnessFirestoreService.deleteAllEntries(userId: userId)
         try await MealPlanFirestoreService.deleteAllUserData(userId: userId)
+        try await MealPhotoAnalysisFirestoreService.deleteAllUserData(userId: userId)
         try await WorkoutFirestoreService.deleteAllUserData(userId: userId)
         try await WorkoutFirestoreService.deleteUserDocument(userId: userId)
     }
@@ -652,6 +653,8 @@ final class AuthService: ObservableObject {
 
         workoutStore.clearAllLocalData()
         mealPlanService.clearAllLocalData()
+        MealPhotoAnalysisService.shared.clearAllLocalData()
+        ExternalWorkoutSyncService.shared.clearAllLocalData()
         wellnessService.clearAllLocalData()
         TrainingNutritionSyncService.shared.clear()
         WeeklyReportService.shared.reset()

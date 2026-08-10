@@ -406,6 +406,12 @@ struct ExerciseSessionRecord: Identifiable, Codable, Hashable {
     }
 }
 
+/// Origem da sessão no histórico (HealthFit vs importada do Apple Saúde / Fitness).
+enum WorkoutSessionSource: String, Codable, Equatable {
+    case healthFit
+    case appleHealthExternal
+}
+
 struct WorkoutSession: Identifiable, Codable {
     var id: UUID
     var workoutSheetId: UUID
@@ -418,6 +424,12 @@ struct WorkoutSession: Identifiable, Codable {
     var totalExercises: Int
     var exerciseRecords: [ExerciseSessionRecord]
     var tookPreWorkout: Bool?
+    /// Proveniência: app HealthFit ou treino externo (Fitness / outro app via Saúde).
+    var source: WorkoutSessionSource
+    /// UUID do `HKWorkout` quando importado do Apple Saúde (dedupe).
+    var healthKitUUID: UUID?
+    /// Nome do app de origem (ex.: Fitness, Nike Run Club).
+    var externalSourceName: String?
     var targetDistanceKm: Double?
     var completedDistanceKm: Double?
     var averagePaceSecondsPerKm: Int?
@@ -479,7 +491,10 @@ struct WorkoutSession: Identifiable, Codable {
         climbing: ClimbingSessionSnapshot? = nil,
         endedEarly: Bool = false,
         earlyEndJustification: String? = nil,
-        autoEndedByInactivity: Bool = false
+        autoEndedByInactivity: Bool = false,
+        source: WorkoutSessionSource = .healthFit,
+        healthKitUUID: UUID? = nil,
+        externalSourceName: String? = nil
     ) {
         self.id = id
         self.workoutSheetId = workoutSheetId
@@ -492,6 +507,9 @@ struct WorkoutSession: Identifiable, Codable {
         self.totalExercises = totalExercises
         self.exerciseRecords = exerciseRecords
         self.tookPreWorkout = tookPreWorkout
+        self.source = source
+        self.healthKitUUID = healthKitUUID
+        self.externalSourceName = externalSourceName
         self.targetDistanceKm = targetDistanceKm
         self.completedDistanceKm = completedDistanceKm
         self.averagePaceSecondsPerKm = averagePaceSecondsPerKm
@@ -525,6 +543,9 @@ struct WorkoutSession: Identifiable, Codable {
         totalExercises = try container.decodeIfPresent(Int.self, forKey: .totalExercises) ?? 0
         exerciseRecords = try container.decodeIfPresent([ExerciseSessionRecord].self, forKey: .exerciseRecords) ?? []
         tookPreWorkout = try container.decodeIfPresent(Bool.self, forKey: .tookPreWorkout)
+        source = try container.decodeIfPresent(WorkoutSessionSource.self, forKey: .source) ?? .healthFit
+        healthKitUUID = try container.decodeIfPresent(UUID.self, forKey: .healthKitUUID)
+        externalSourceName = try container.decodeIfPresent(String.self, forKey: .externalSourceName)
         targetDistanceKm = try container.decodeIfPresent(Double.self, forKey: .targetDistanceKm)
         completedDistanceKm = try container.decodeIfPresent(Double.self, forKey: .completedDistanceKm)
         averagePaceSecondsPerKm = try container.decodeIfPresent(Int.self, forKey: .averagePaceSecondsPerKm)
@@ -558,6 +579,9 @@ struct WorkoutSession: Identifiable, Codable {
         try container.encode(totalExercises, forKey: .totalExercises)
         try container.encode(exerciseRecords, forKey: .exerciseRecords)
         try container.encodeIfPresent(tookPreWorkout, forKey: .tookPreWorkout)
+        try container.encode(source, forKey: .source)
+        try container.encodeIfPresent(healthKitUUID, forKey: .healthKitUUID)
+        try container.encodeIfPresent(externalSourceName, forKey: .externalSourceName)
         try container.encodeIfPresent(targetDistanceKm, forKey: .targetDistanceKm)
         try container.encodeIfPresent(completedDistanceKm, forKey: .completedDistanceKm)
         try container.encodeIfPresent(averagePaceSecondsPerKm, forKey: .averagePaceSecondsPerKm)
@@ -586,11 +610,16 @@ struct WorkoutSession: Identifiable, Codable {
         case id, workoutSheetId, workoutTitle, startedAt, endedAt
         case heartRateSamples, caloriesBurned, completedExercises, totalExercises
         case exerciseRecords, tookPreWorkout
+        case source, healthKitUUID, externalSourceName
         case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel
         case targetCalories, routePoints, stepCount, pausedDurationSeconds
         case poolLengthMeters, swimLapCount, targetSwimLaps, swimPaceSecondsPer100m
         case waterSport, rowing, climbing
         case endedEarly, earlyEndJustification, autoEndedByInactivity
+    }
+
+    var isExternalHealthKitSession: Bool {
+        source == .appleHealthExternal || healthKitUUID != nil
     }
 
     var duration: TimeInterval {

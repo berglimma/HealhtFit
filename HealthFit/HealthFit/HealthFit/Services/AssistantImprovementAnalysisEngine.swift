@@ -473,6 +473,18 @@ enum AssistantImprovementAnalysisEngine {
         return (true, todayCompleted, todayTotal, weekCompleted, weekTotal)
     }
 
+    /// Kcal das refeições marcadas como feitas no cardápio do dia.
+    static func todayConsumedCalories(
+        from weeklyPlan: [DailyMealPlan],
+        referenceDate: Date = .now
+    ) -> Int {
+        guard !weeklyPlan.isEmpty else { return 0 }
+        let dayIndex = mealPlanDayIndex(for: referenceDate)
+        guard weeklyPlan.indices.contains(dayIndex) else { return 0 }
+        let meals = weeklyPlan[dayIndex].options.first?.meals ?? []
+        return meals.filter(\.isCompleted).reduce(0) { $0 + $1.calories }
+    }
+
     private static func normalize(_ text: String) -> String {
         text.lowercased()
             .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))

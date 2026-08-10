@@ -37,6 +37,10 @@ struct HealthAssistantContext {
     let todayMealsTotal: Int
     let weekMealsCompleted: Int
     let weekMealsTotal: Int
+    /// Soma das kcal das refeições marcadas como feitas no cardápio de hoje.
+    let todayCaloriesConsumed: Int
+    /// Energia ativa do dia no HealthKit (kcal), se disponível.
+    let todayHealthKitActiveCalories: Int
     let supplementsLoggedToday: Int
     /// HRV SDNN mais recente (ms), do Apple Watch via HealthKit.
     var latestHRVMs: Double?
@@ -215,6 +219,8 @@ enum HealthAssistantEngine {
             todayMealsTotal: 0,
             weekMealsCompleted: 0,
             weekMealsTotal: 0,
+            todayCaloriesConsumed: 0,
+            todayHealthKitActiveCalories: 0,
             supplementsLoggedToday: 0
         ))
     }
@@ -1827,12 +1833,20 @@ final class HealthAssistantService: ObservableObject {
         )
         deliverPendingBodyEvolutionAnnouncementIfNeeded()
         deliverPendingSupplementAcknowledgmentIfNeeded()
+        deliverPendingExternalWorkoutAnnouncementIfNeeded()
         lastUserInteractionAt = Date()
     }
 
     /// Entrega anúncio de evolução corporal gerado após uma comparação.
     func deliverPendingBodyEvolutionAnnouncementIfNeeded() {
         guard let message = BodyEvolutionService.shared.consumePendingAssistantMessage() else { return }
+        deliverAssistantMessage(message)
+    }
+
+    /// Entrega aviso quando um treino do Fitness / outro app foi importado do Apple Saúde.
+    func deliverPendingExternalWorkoutAnnouncementIfNeeded() {
+        guard let message = ExternalWorkoutSyncService.shared.consumePendingAssistantMessage() else { return }
+        if let last = messages.last, !last.isUser, last.text == message { return }
         deliverAssistantMessage(message)
     }
 
@@ -1873,6 +1887,8 @@ final class HealthAssistantService: ObservableObject {
             todayMealsTotal: 0,
             weekMealsCompleted: 0,
             weekMealsTotal: 0,
+            todayCaloriesConsumed: 0,
+            todayHealthKitActiveCalories: 0,
             supplementsLoggedToday: 0
         ))
     }
@@ -2874,6 +2890,8 @@ final class HealthAssistantService: ObservableObject {
             todayMealsTotal: 0,
             weekMealsCompleted: 0,
             weekMealsTotal: 0,
+            todayCaloriesConsumed: 0,
+            todayHealthKitActiveCalories: 0,
             supplementsLoggedToday: 0
         ))
     }

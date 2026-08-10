@@ -227,6 +227,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isCardioWorkout = false
         isMeditationWorkout = false
         isActive = true
+        startLiveWorkoutSession(activityType: .traditionalStrengthTraining, locationType: .indoor)
         startHeartRateMonitoring()
         startWorkoutClock()
     }
@@ -316,13 +317,20 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         waterSetupModeName = setupModeName
         waterSetupBoardName = setupBoardName
         isActive = true
+        startLiveWorkoutSession(
+            activityType: cardioActivityType(
+                exerciseName: exerciseName,
+                swimmingMode: swimmingMode,
+                waterSportMode: waterSportMode,
+                isKitesurf: isKitesurf
+            ),
+            locationType: swimmingMode || waterSportMode ? .outdoor : .indoor,
+            swimmingMode: swimmingMode
+        )
         startHeartRateMonitoring()
         startWorkoutClock()
         if waterSportMode {
             startWaterSportMotion()
-        }
-        if swimmingMode {
-            startSwimmingWorkoutSession()
         }
     }
 
@@ -377,6 +385,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         meditationPromptIndex = max(promptIndex, 0)
         meditationTotalPrompts = max(totalPrompts, 1)
         isActive = true
+        startLiveWorkoutSession(activityType: .mindAndBody, locationType: .indoor)
         startHeartRateMonitoring()
         startWorkoutClock()
     }
@@ -394,6 +403,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isPaused.toggle()
         if isPaused {
             resetAirborneJumpState()
+            hkWorkoutSession?.pause()
             WKInterfaceDevice.current().play(.stop)
             sendToPhone([
                 "action": "watchPausedSession",
@@ -401,6 +411,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             ])
             watchSyncStatus = "Pausado"
         } else {
+            hkWorkoutSession?.resume()
             WKInterfaceDevice.current().play(.start)
             sendToPhone([
                 "action": "watchResumedSession",
@@ -427,7 +438,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         meditationOwnedByWatch = false
         localMeditationPrompts = []
         stopWaterSportMotion()
-        stopSwimmingWorkoutSession()
+        stopLiveWorkoutSession()
         heartRateTimer?.invalidate()
         heartRateTimer = nil
         workoutClockTimer?.invalidate()
@@ -848,10 +859,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     private func startHeartRateMonitoring() {
         requestHealthKitAuthorizationIfNeeded()
-        workoutStartedAt = Date()
+        if workoutStartedAt == nil {
+            workoutStartedAt = Date()
+        }
         fetchTodaySteps()
+        heartRateTimer?.invalidate()
         let metricsBox = WeakMainActorBox(self)
-        heartRateTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
+        let timer = Timer(timeInterval: 2, repeats: true) { _ in
             metricsBox.run { this in
                 this.fetchHeartRate()
                 this.fetchActiveCalories()
@@ -860,6 +874,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 this.sendMetricsToPhone()
             }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        heartRateTimer = timer
     }
 
     /// No simulador não há sensor óptico — gera BPM/kcal realistas para testar o sync.
@@ -929,7 +945,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return }
 
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        let start = workoutStartedAt ?? Date().addingTimeInterval(-60 * 30)
+        // Janela um pouco antes do start: o sensor pode entregar a 1ª amostra com atraso.
+        let workoutStart = workoutStartedAt ?? Date()
+        let start = workoutStart.addingTimeInterval(-120)
         let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictEndDate)
         let query = HKSampleQuery(
             sampleType: type,
@@ -939,7 +957,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         ) { [box = WeakMainActorBox(self)] _, samples, _ in
             box.run { this in
                 if let sample = samples?.first as? HKQuantitySample {
-                    this.heartRate = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
+                    let bpm = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
+                    if bpm > 0 {
+                        this.heartRate = bpm
+                    }
                 }
             }
         }
@@ -1023,9 +1044,15 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
-    // MARK: - Natação (HKWorkoutSession + voltas)
+    // MARK: - HKWorkoutSession (batimentos ópticos + kcal ao vivo)
 
-    private func startSwimmingWorkoutSession() {
+    /// Sessão HealthKit em todos os treinos — necessária para o sensor óptico gerar BPM contínuo.
+    private func startLiveWorkoutSession(
+        activityType: HKWorkoutActivityType,
+        locationType: HKWorkoutSessionLocationType,
+        swimmingMode: Bool = false
+    ) {
+        stopLiveWorkoutSession()
         guard HKHealthStore.isHealthDataAvailable() else {
             watchSyncStatus = "HealthKit indisponível"
             return
@@ -1033,18 +1060,27 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         requestHealthKitAuthorizationIfNeeded()
 
         let configuration = HKWorkoutConfiguration()
-        configuration.activityType = .swimming
-        configuration.locationType = .indoor
-        configuration.swimmingLocationType = .pool
-        configuration.lapLength = HKQuantity(unit: .meter(), doubleValue: max(poolLengthMeters, 1))
+        configuration.activityType = activityType
+        configuration.locationType = locationType
+        if swimmingMode {
+            configuration.swimmingLocationType = .pool
+            configuration.lapLength = HKQuantity(unit: .meter(), doubleValue: max(poolLengthMeters, 1))
+        }
 
         do {
             let hkSession = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
             let builder = hkSession.associatedWorkoutBuilder()
-            builder.dataSource = HKLiveWorkoutDataSource(
+            let dataSource = HKLiveWorkoutDataSource(
                 healthStore: healthStore,
                 workoutConfiguration: configuration
             )
+            if let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate) {
+                dataSource.enableCollection(for: heartRateType, predicate: nil)
+            }
+            if let energyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
+                dataSource.enableCollection(for: energyType, predicate: nil)
+            }
+            builder.dataSource = dataSource
             hkSession.delegate = self
             builder.delegate = self
 
@@ -1055,15 +1091,19 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
             hkWorkoutSession = hkSession
             hkLiveBuilder = builder
-            watchSyncStatus = "Natação · voltas automáticas"
-            sendSwimMetricsToPhone(force: true)
+            watchSyncStatus = swimmingMode ? "Natação · voltas automáticas" : "Watch · batimentos ativos"
+            if swimmingMode {
+                sendSwimMetricsToPhone(force: true)
+            } else {
+                sendMetricsToPhone()
+            }
         } catch {
-            watchSyncStatus = "Falha ao iniciar natação HK"
-            // Continua com contagem estimada / manual no iPhone.
+            watchSyncStatus = "Falha ao iniciar sessão HK"
+            // Fallback: timer continua consultando amostras do HealthKit.
         }
     }
 
-    private func stopSwimmingWorkoutSession() {
+    private func stopLiveWorkoutSession() {
         guard let hkSession = hkWorkoutSession else {
             hkLiveBuilder = nil
             return
@@ -1077,6 +1117,28 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
         hkWorkoutSession = nil
         hkLiveBuilder = nil
+    }
+
+    private func cardioActivityType(
+        exerciseName: String,
+        swimmingMode: Bool,
+        waterSportMode: Bool,
+        isKitesurf: Bool
+    ) -> HKWorkoutActivityType {
+        if swimmingMode { return .swimming }
+        if isKitesurf { return .paddleSports }
+        if waterSportMode { return .surfingSports }
+
+        let name = exerciseName.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+        if name.contains("corrida") || name.contains("run") { return .running }
+        if name.contains("caminh") || name.contains("walk") { return .walking }
+        if name.contains("bike") || name.contains("cicl") || name.contains("cycling") { return .cycling }
+        if name.contains("escal") || name.contains("climb") { return .climbing }
+        if name.contains("remo") || name.contains("row") { return .rowing }
+        if name.contains("luta") || name.contains("fight") || name.contains("box") { return .martialArts }
+        if name.contains("surf") { return .surfingSports }
+        if name.contains("kite") { return .paddleSports }
+        return .other
     }
 
     private func applySwimLapCount(_ laps: Int, distanceMeters: Double?, source: String) {
@@ -1510,7 +1572,7 @@ extension WatchWorkoutManager: HKWorkoutSessionDelegate {
 
     nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
         mainActorBox?.run { manager in
-            manager.watchSyncStatus = "Erro na sessão de natação"
+            manager.watchSyncStatus = "Erro na sessão HealthKit"
         }
     }
 }
@@ -1545,15 +1607,15 @@ extension WatchWorkoutManager: HKLiveWorkoutBuilderDelegate {
         let energySnapshot = energyKcal
         let bpmSnapshot = bpm
         mainActorBox?.run { manager in
-            guard manager.isSwimmingMode else { return }
-            if let distanceSnapshot {
+            guard manager.isActive else { return }
+            if manager.isSwimmingMode, let distanceSnapshot {
                 manager.applySwimDistanceMeters(distanceSnapshot)
             }
-            if let energySnapshot {
+            if let energySnapshot, energySnapshot >= manager.calories {
                 manager.calories = energySnapshot
                 manager.updateCalorieSuperation()
             }
-            if let bpmSnapshot {
+            if let bpmSnapshot, bpmSnapshot > 0 {
                 manager.heartRate = bpmSnapshot
             }
             manager.sendMetricsToPhone()
