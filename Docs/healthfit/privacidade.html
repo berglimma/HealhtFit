@@ -39,78 +39,88 @@
 <body>
   <h1>Política de Privacidade</h1>
   <p class="updated">Última atualização: 10 de agosto de 2026</p>
-  <p>Esta Política de Privacidade descreve como o aplicativo <strong>HealthFit</strong> (“App”), desenvolvido por <strong>Berg Limma e Luan Chiminelli</strong> (“nós”), coleta, usa e protege seus dados pessoais.</p>
+  <p>Esta Política de Privacidade descreve como o aplicativo <strong>HealthFit</strong> (“App”), desenvolvido por <strong>Berg Limma e Luan Chiminelli</strong> (“nós”, “Controladores”), coleta, usa, armazena e protege dados pessoais, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD) e o Marco Civil da Internet (Lei nº 12.965/2014), quando aplicáveis.</p>
 
-  <h2>1. Dados que coletamos</h2>
+  <h2>1. Escopo e elegibilidade</h2>
+  <p>O App é destinado exclusivamente a usuários com <strong>16 (dezesseis) anos ou mais</strong>. Ao criar conta, você declara ter atingido essa idade. Não coletamos intencionalmente dados de menores de 16 anos; se identificarmos cadastro irregular, excluiremos a conta e os dados associados.</p>
+
+  <h2>2. Dados que coletamos</h2>
   <ul>
-    <li><strong>Conta:</strong> nome, e-mail e foto de perfil (opcional), ao criar conta ou entrar com Apple, Google ou e-mail/senha.</li>
-    <li><strong>Perfil de treino:</strong> biotipo, objetivo, peso, altura, idade, gênero e preferências de alimentação.</li>
-    <li><strong>Medidas e evolução corporal:</strong> medições que você registrar e, se optar, fotos de evolução (frente, lado, costas ou outras posições que o App solicitar).</li>
-    <li><strong>Atividade:</strong> treinos registrados, histórico de sessões, sono, hidratação e check-ins do assistente.</li>
+    <li><strong>Conta e identificação:</strong> nome, e-mail, data de nascimento, país, foto de perfil (opcional) e identificador da conta (Firebase Auth).</li>
+    <li><strong>Perfil de treino e nutrição:</strong> biotipo, objetivo, peso, altura, gênero, preferências alimentares e dados de planos.</li>
+    <li><strong>Medidas e evolução corporal:</strong> medições e, se optar, fotos de evolução (privadas).</li>
+    <li><strong>Atividade física:</strong> sessões de musculação, cardio, meditação, escalada, lutas e demais modalidades, incluindo métricas, diários e relatórios.</li>
     <li><strong>Apple Health (HealthKit):</strong> dados de saúde e fitness que você autorizar (ex.: frequência cardíaca, calorias, passos).</li>
-    <li><strong>Câmera e galeria:</strong> usadas somente quando você iniciar funções que as solicitam (foto de perfil, evolução corporal, mídia de treino, exercícios com visão computacional etc.).</li>
-    <li><strong>Notificações:</strong> lembretes de treino, água, check-ins e descanso, mediante sua permissão.</li>
-    <li><strong>Registros de acesso (Marco Civil da Internet):</strong> data e hora de uso, identificador da conta, endereço IP (quando disponível), versão do App e dados técnicos do aparelho, gerados em login, abertura de sessão e saída.</li>
+    <li><strong>Treino em dupla / equipe:</strong> nome da equipe, modalidades, membros, convites (código, status, destinatário), mensagens do chat (somente para combinar atividades físicas), ranking de desempenho e notificações relacionadas. <strong>Não coletamos nem exibimos localização em tempo real</strong> nesse recurso.</li>
+    <li><strong>Foto de perfil na equipe:</strong> URL da foto e bandeira do país podem ser sincronizadas aos membros da equipe para identificação visual.</li>
+    <li><strong>Câmera e galeria:</strong> apenas quando você iniciar funções que as solicitam.</li>
+    <li><strong>Notificações:</strong> lembretes e avisos (treino, água, check-ins, chat de equipe, convites), mediante permissão do sistema.</li>
+    <li><strong>Assinaturas:</strong> status de compra processado pela Apple (StoreKit); não armazenamos dados completos de cartão.</li>
+    <li><strong>Registros de acesso (Marco Civil):</strong> data e hora de uso, identificador da conta, endereço IP (quando disponível), versão do App, modelo/sistema do aparelho e identificador de sessão — em login, abertura de sessão e saída.</li>
+    <li><strong>Diagnósticos:</strong> dados técnicos de falha/desempenho (ex.: Firebase Analytics/Crashlytics), quando habilitados, para estabilidade do App.</li>
   </ul>
 
-  <h2>2. Como usamos os dados</h2>
+  <h2>3. Finalidades do tratamento</h2>
   <ul>
-    <li>Personalizar treinos, plano alimentar e mensagens do IAssistente.</li>
-    <li>Sincronizar histórico de treinos e dados da conta na nuvem (Firebase) vinculado à sua conta.</li>
-    <li>Exibir gráficos de progresso, comparações de evolução e relatórios (incluindo PDF em sua conta, quando aplicável).</li>
-    <li>Enviar notificações locais configuradas por você.</li>
-    <li>Melhorar a experiência e corrigir problemas técnicos.</li>
+    <li>Prestar e personalizar os serviços de treino, nutrição, bem-estar e IAssistente.</li>
+    <li>Autenticar a conta e sincronizar dados na nuvem (Firebase) entre aparelhos em que você estiver logado.</li>
+    <li>Operar treino em dupla/equipe: convites, chat com prazo de expiração, ranking e avisos aos membros.</li>
+    <li>Enviar notificações locais e permitir abertura do chat ao tocar em aviso de mensagem.</li>
+    <li>Cumprir obrigações legais, inclusive retenção de registros de acesso.</li>
+    <li>Melhorar segurança, prevenir abuso e corrigir falhas técnicas.</li>
   </ul>
+  <p><strong>Bases legais (LGPD), conforme o caso:</strong> execução de contrato / prestação do serviço; consentimento (ex.: HealthKit, notificações, foto); legítimo interesse (segurança e melhoria do produto, sem prevalecer sobre direitos do titular); e cumprimento de obrigação legal (Marco Civil).</p>
 
-  <h2>3. Confidencialidade de fotos e imagens</h2>
-  <p>Fotos e imagens que você adiciona ao HealthFit são tratadas como conteúdo <strong>privado e confidencial</strong>. Em especial:</p>
+  <h2>4. Treino em dupla / equipe e chat</h2>
   <ul>
-    <li><strong>Fotos de evolução corporal</strong> destinam-se exclusivamente ao seu acompanhamento (comparação entre períodos, laudos/PDF em sua conta e visualização no App). Não criamos um feed público nem publicamos suas fotos em redes sociais em nosso nome.</li>
-    <li><strong>Acesso:</strong> o acesso às suas fotos de evolução é restrito à sua conta (você como titular). Não vendemos, alugamos nem cedemos suas fotos a anunciantes, redes de parceiros de publicidade ou a terceiros para marketing.</li>
-    <li><strong>Personal trainer, nutricionista ou contatos:</strong> se o App permitir compartilhar relatórios, resumos ou check-ins com profissionais ou contatos que você cadastrar, isso <strong>não inclui automaticamente</strong> o envio das suas fotos de evolução. O compartilhamento de imagens exige ação sua (por exemplo, exportar, salvar na galeria do aparelho ou usar o compartilhamento do sistema operacional).</li>
-    <li><strong>Armazenamento:</strong> fotos de evolução e de perfil relacionadas à conta podem ser guardadas no seu dispositivo e/ou em armazenamento na nuvem autenticado (Firebase Storage), em caminho vinculado ao seu usuário, com transmissão protegida por HTTPS/TLS. O armazenamento tem por objetivo permitir que você continue vendo e comparando suas imagens em aparelhos em que sua conta estiver autenticada.</li>
-    <li><strong>Exclusão e rotação de ciclos:</strong> quando o App concluir um ciclo de avaliação de evolução e passar a um novo ciclo, fotos do ciclo anterior podem ser <strong>excluídas automaticamente</strong> do armazenamento, conforme a lógica do recurso, restando apenas o que for necessário aos laudos/avaliações retidos na sua conta (por exemplo, PDFs de avaliações recentes). Ao excluir a conta, buscamos remover fotos e dados associados, nos prazos da seção “Retenção”.</li>
-    <li><strong>Galeria e exportação:</strong> salvar imagem na Fotos do iOS, compartilhar card de treino ou exportar PDF só ocorre por iniciativa sua. Depois da exportação, o arquivo passa a seguir as regras do aparelho, do app receptor ou do serviço que você escolher.</li>
-    <li><strong>Foto de perfil:</strong> opcional; usada para personalizar a interface da conta. Não é tratada como material de marketing nosso.</li>
-    <li><strong>Câmera em exercícios com visão computacional:</strong> o uso da câmera ocorre para a função ativa naquele momento (contagem/feedback de movimento). Não utilizamos essas capturas para criar ou divulgar repositórios públicos de imagens de usuários nem as vendemos a terceiros.</li>
-    <li><strong>IA e treinamento de modelos:</strong> não usamos suas fotos de evolução corporal nem imagens sensíveis do corpo para treinar modelos de inteligência artificial de terceiros nem para fins publicitários. O assistente do App utiliza regras e contexto que você fornece no app; análises de evolução baseiam-se em medidas e nos dados de progresso que o App processa em relação à sua conta.</li>
+    <li>O chat destina-se <strong>exclusivamente a marcar atividades físicas</strong>. As mensagens <strong>expiram em 12 (doze) horas</strong> e são removidas após esse prazo.</li>
+    <li><strong>Não há mapa nem localização em tempo real</strong> dos membros da equipe.</li>
+    <li>Ao sair da equipe, seus dados de membro (incluindo foto de perfil exibida no grupo) deixam de constar naquele grupo; se for o último membro, a equipe e a capa associada podem ser encerradas/removidas.</li>
+    <li>Convites podem usar nome, código, SMS, e-mail ou busca no diretório interno (nome/apelido, país e foto públicos mínimos para o recurso).</li>
   </ul>
-  <p>Você controla se e quando captura, substitui ou remove fotos nos fluxos do App e pode revogar permissões de câmera e de galeria nas Configurações do iOS.</p>
 
-  <h2>4. Compartilhamento</h2>
-  <p>Não vendemos seus dados. Compartilhamos informações apenas com:</p>
+  <h2>5. Confidencialidade de fotos e imagens</h2>
+  <p>Fotos e imagens que você adiciona ao HealthFit são tratadas como conteúdo <strong>privado e confidencial</strong>.</p>
   <ul>
-    <li><strong>Firebase (Google):</strong> autenticação, armazenamento de treinos e, quando você usa o recurso, arquivos privados da conta (incluindo fotos de evolução, se houver).</li>
-    <li><strong>Apple:</strong> Sign in with Apple, HealthKit, notificações do sistema e frameworks do iOS que processam permissões de câmera/fotos.</li>
-    <li><strong>Google:</strong> login com Google, quando você escolher essa opção.</li>
-    <li><strong>CDN de exercícios:</strong> carregamento de GIFs demonstrativos (sem dados pessoais seus).</li>
-    <li><strong>Serviços que você aciona:</strong> apps e canais escolhidos por você ao compartilhar ou exportar conteúdo (e-mail, Mensagens, redes sociais etc.).</li>
+    <li><strong>Evolução corporal:</strong> uso exclusivo do seu acompanhamento; sem feed público e sem venda a anunciantes.</li>
+    <li><strong>Foto de perfil:</strong> opcional; pode ser sincronizada à equipe e ao diretório de busca do App para identificação entre membros.</li>
+    <li><strong>Compartilhamento externo:</strong> exportar, salvar na Galeria ou enviar a terceiros só ocorre por ação sua.</li>
+    <li><strong>IA:</strong> não usamos fotos de evolução para treinar modelos de terceiros nem para publicidade.</li>
   </ul>
 
-  <h2>5. Armazenamento e segurança</h2>
-  <p>Dados locais ficam no seu dispositivo. Dados de conta, treinos e arquivos da conta (incluindo fotos privadas, quando existentes) podem ser armazenados no Firebase com criptografia em trânsito (HTTPS/TLS). Adotamos medidas técnicas razoáveis para proteger suas informações, inclusive o isolamento por usuário no armazenamento de fotos.</p>
-
-  <h2>6. Seus direitos</h2>
-  <p>Você pode:</p>
+  <h2>6. Compartilhamento com terceiros</h2>
+  <p>Não vendemos seus dados pessoais. Podemos compartilhar informações com:</p>
   <ul>
-    <li>Acessar e editar seu perfil no App.</li>
-    <li>Revogar permissões de HealthKit, câmera, fotos e notificações nas Configurações do iOS.</li>
-    <li>Remover ou substituir fotos nos fluxos de perfil e de evolução corporal, quando disponíveis.</li>
-    <li><strong>Excluir sua conta</strong> em Perfil → Excluir Conta, o que remove dados locais e na nuvem vinculados à conta, inclusive fotos associadas à conta, na medida tecnicamente possível.</li>
-    <li>Solicitar informações pelo e-mail <a href="mailto:berg.limma@gmail.com">berg.limma@gmail.com</a>.</li>
+    <li><strong>Firebase (Google):</strong> autenticação, Firestore, Storage e, quando aplicável, Analytics/Crashlytics.</li>
+    <li><strong>Apple:</strong> Sign in with Apple, HealthKit, StoreKit, notificações e permissões do iOS.</li>
+    <li><strong>Google:</strong> login com Google, se você escolher essa opção.</li>
+    <li><strong>Membros da sua equipe:</strong> nome, foto de perfil (se houver), bandeira/país e conteúdo do chat/ranking da equipe.</li>
+    <li><strong>CDN de exercícios:</strong> mídias demonstrativas sem dados pessoais seus.</li>
+    <li><strong>Serviços que você aciona:</strong> e-mail, SMS, compartilhamento do sistema etc.</li>
+    <li><strong>Autoridades:</strong> quando houver obrigação legal ou ordem judicial válida.</li>
   </ul>
 
-  <h2>7. Retenção</h2>
-  <p>Mantemos os dados enquanto sua conta estiver ativa, ressalvadas exclusões automáticas de fotos de ciclos concluídos e a política de retenção de laudos/avaliações no próprio recurso de evolução. Após exclusão da conta, removemos dados associados em até 30 dias, salvo obrigação legal de retenção.</p>
-  <p>Em conformidade com o <strong>Marco Civil da Internet (Lei nº 12.965/2014, art. 15)</strong>, os <strong>registros de acesso à aplicação</strong> são mantidos sob sigilo, em ambiente controlado e de segurança, pelo prazo de <strong>6 (seis) meses</strong>, contados da data do registro. Após esse prazo, os logs são excluídos automaticamente. Esses registros destinam-se ao cumprimento de obrigações legais e a eventuais ordens judiciais; não são usados para publicidade.</p>
+  <h2>7. Armazenamento e segurança</h2>
+  <p>Dados podem permanecer no dispositivo e/ou na nuvem autenticada (Firebase), com transmissão protegida por HTTPS/TLS e isolamento por usuário sempre que tecnicamente aplicável. Adotamos medidas razoáveis de segurança; nenhum sistema é absolutamente isento de riscos.</p>
 
-  <h2>8. Menores</h2>
-  <p>O App é destinado exclusivamente a usuários com <strong>16 (dezesseis) anos ou mais</strong>. Não coletamos intencionalmente dados de menores de 16 anos. Se tomarmos conhecimento de cadastro abaixo dessa idade, excluiremos a conta e os dados associados.</p>
+  <h2>8. Retenção</h2>
+  <ul>
+    <li><strong>Conta e dados de uso:</strong> enquanto a conta estiver ativa, ressalvadas exclusões automáticas de ciclos de evolução e mensagens de chat expiradas.</li>
+    <li><strong>Chat de equipe:</strong> até 12 horas após o envio.</li>
+    <li><strong>Registros de acesso (Marco Civil, art. 15):</strong> mantidos sob sigilo, em ambiente controlado, por <strong>6 (seis) meses</strong>; após esse prazo, são excluídos. Não são usados para publicidade.</li>
+    <li><strong>Exclusão de conta:</strong> removemos dados associados em até 30 dias, na medida tecnicamente possível, salvo retenção legal.</li>
+  </ul>
 
-  <h2>9. Alterações</h2>
-  <p>Podemos atualizar esta política. A data da versão vigente aparecerá no topo desta página.</p>
+  <h2>9. Direitos do titular (LGPD)</h2>
+  <p>Você pode solicitar confirmação de tratamento, acesso, correção, anonimização, portabilidade (quando aplicável), eliminação de dados desnecessários, informação sobre compartilhamentos e revogação de consentimentos. No App: editar perfil, revogar permissões do iOS e <strong>excluir a conta</strong> em Perfil → Excluir Conta. Contato: <a href="mailto:berg.limma@gmail.com">berg.limma@gmail.com</a>.</p>
 
-  <h2>10. Contato</h2>
+  <h2>10. Transferência internacional</h2>
+  <p>Provedores como Google/Firebase e Apple podem processar dados em servidores fora do Brasil. Nesses casos, observamos as salvaguardas previstas na legislação aplicável e nas políticas desses provedores.</p>
+
+  <h2>11. Alterações</h2>
+  <p>Podemos atualizar esta política para refletir novas funcionalidades ou exigências legais. A data da versão vigente constará no topo desta página.</p>
+
+  <h2>12. Contato</h2>
   <p><strong>Berg Limma e Luan Chiminelli</strong><br>
   E-mail: <a href="mailto:berg.limma@gmail.com">berg.limma@gmail.com</a></p>
 </body>

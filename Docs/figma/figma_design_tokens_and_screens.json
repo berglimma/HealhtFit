@@ -1,7 +1,7 @@
 {
   "product": "HealthFit",
   "version": "1.0.0",
-  "generatedAt": "25/07/2026",
+  "generatedAt": "10/08/2026",
   "company": "BERG / LUAN",
   "designTokens": {
     "colors": {
@@ -27,7 +27,8 @@
   "figmaPages": [
     "01 Cover · Foundations · Auth · Onboarding",
     "02 App · Início · Treinos · Nutrição · IAssistente · Perfil",
-    "03 Watch · Flows · Health Icon Sync"
+    "03 Watch · Flows · Health Icon Sync",
+    "04 Duo · Equipe · Chat · Ranking"
   ],
   "screens": [
     {
@@ -358,6 +359,77 @@
       "device": "iPhone 15 Pro / 393×852"
     },
     {
+      "id": "duo-hub",
+      "area": "Dupla / equipe",
+      "title": "Hub de equipes",
+      "swiftFile": "DuoTeamHubView.swift",
+      "purpose": "Listar equipes, convites e criar grupo sem GPS ao vivo.",
+      "actions": [
+        "Criar equipe",
+        "Aceitar/recusar convite",
+        "Abrir detalhe",
+        "Atualizar"
+      ],
+      "figmaFrame": "Duo / 01 Hub",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "duo-detail",
+      "area": "Dupla / equipe",
+      "title": "Detalhe da equipe",
+      "swiftFile": "DuoTeamHubView.swift",
+      "purpose": "Membros com foto/bandeira, modalidades, sair do grupo.",
+      "actions": [
+        "Convidar",
+        "Chat",
+        "Ranking",
+        "Sair do grupo"
+      ],
+      "figmaFrame": "Duo / 02 Detalhe",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "duo-invite",
+      "area": "Dupla / equipe",
+      "title": "Convidar pessoas",
+      "swiftFile": "DuoTeamInviteView.swift",
+      "purpose": "Busca no app, SMS, e-mail ou código.",
+      "actions": [
+        "Buscar",
+        "SMS",
+        "E-mail",
+        "Gerar código"
+      ],
+      "figmaFrame": "Duo / 03 Convite",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "duo-chat",
+      "area": "Dupla / equipe",
+      "title": "Chat da equipe",
+      "swiftFile": "DuoTeamChatView.swift",
+      "purpose": "Mensageiro verde/cinza; só atividades; TTL 12h.",
+      "actions": [
+        "Enviar",
+        "Propor treino",
+        "Deep link por notificação"
+      ],
+      "figmaFrame": "Duo / 04 Chat",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
+      "id": "duo-report",
+      "area": "Dupla / equipe",
+      "title": "Ranking da equipe",
+      "swiftFile": "DuoTeamReportView.swift",
+      "purpose": "Relatório e ranking 7/30 dias.",
+      "actions": [
+        "Atualizar ranking"
+      ],
+      "figmaFrame": "Duo / 05 Ranking",
+      "device": "iPhone 15 Pro / 393×852"
+    },
+    {
       "id": "vision",
       "area": "Experimental",
       "title": "Vision AI",
@@ -388,6 +460,8 @@
     "Login → ForgotPassword",
     "Login → Welcome → MainTab",
     "MainTab/Treinos → Detail → Active → Summary",
+    "MainTab/Treinos → Duo Hub → Detalhe → Chat",
+    "Notificação duoChatMessage → Duo Chat",
     "MainTab/Nutrição → ShoppingList",
     "MainTab/IAssistente → Check-ins",
     "MainTab/Perfil → Measurements / DeleteAccount"
@@ -397,6 +471,8 @@
     "Health icon sync: Dashboard + Profile + AppIcon via DailyWellnessService.healthIconStatus",
     "Water reminders every 2h 08-20",
     "IAssistente is rule-based (no cloud LLM)",
-    "Starter plan limited to 3 Figma pages"
+    "Duo chat: AccentGreen bubbles + light gray; message TTL 12h; no live GPS",
+    "Minimum age 16+; Marco Civil access logs retained 6 months",
+    "Page 04 covers Dupla/equipe screens"
   ]
 }

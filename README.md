@@ -1,6 +1,6 @@
 # HealthFit
 
-Aplicativo iOS + watchOS de saúde e fitness desenvolvido em **Swift** e **SwiftUI**. O HealthFit integra treinos de musculação, cardio (incluindo corrida por distância e meta calórica), meditação, nutrição personalizada, assistente de dúvidas, métricas do Apple Health, sincronização com Apple Watch, relatório semanal de progresso, preparação para maratona e ícone dinâmico por inatividade.
+Aplicativo iOS + watchOS de saúde e fitness desenvolvido em **Swift** e **SwiftUI**. O HealthFit integra treinos de musculação, cardio (corrida, bike, surf, kite, escalada e outras modalidades), meditação, nutrição personalizada, IAssistente, **treino em dupla/equipe** (convites, chat e ranking), métricas do Apple Health, sincronização com Apple Watch, assinaturas App Store, relatórios de progresso e ícone dinâmico por inatividade. Idade mínima de uso: **16 anos**.
 
 | Plataforma | Versão mínima | Bundle ID |
 |------------|---------------|-----------|
@@ -82,11 +82,13 @@ Ao abrir o app, `AppIconInactivityService` restaura o ícone verde padrão. Ao i
 | Visão | AVFoundation + Vision (detecção de postura e repetições) |
 | Notificações | UserNotifications (motivação diária, inatividade, início/fim de treino) |
 | Background | BGTaskScheduler (atualização do ícone alternativo) |
-| E-mail | MessageUI (`MFMailComposeViewController`) |
-| Armazenamento | UserDefaults + FileManager (foto de perfil) |
+| E-mail / SMS | MessageUI (`MFMailComposeViewController`) |
+| Nuvem | Firebase Auth, Firestore, Storage (perfil, treinos, dupla/equipe, logs) |
+| Assinaturas | StoreKit 2 |
+| Armazenamento local | UserDefaults / UserScopedDefaults + FileManager |
 | Layout adaptativo | `DeviceLayout`, `horizontalSizeClass` |
 
-Não há backend remoto: autenticação, histórico de treinos e planos alimentares são persistidos localmente no dispositivo.
+Autenticação e sincronização usam **Firebase**. Parte dos dados permanece também em cache local no dispositivo.
 
 ---
 
@@ -103,13 +105,14 @@ O projeto segue uma organização **MVVM simplificada** com serviços singleton 
 ┌─────────────────────────▼───────────────────────────────┐
 │                        Services                          │
 │  WorkoutStore · AuthService · HealthKitManager            │
+│  DuoTeamService · DuoNavigationRouter · SubscriptionService │
 │  WatchConnectivityManager · WeeklyReportService           │
 │  HealthAssistantService · AppIconInactivityService        │
-│  MarathonReportBuilder · DailyWellnessService             │
+│  DailyWellnessService · MarcoCivilAccessLogService        │
 └─────────────────────────┬───────────────────────────────┘
                           │
 ┌─────────────────────────▼───────────────────────────────┐
-│              Models + UserDefaults / HealthKit           │
+│     Models + UserDefaults / HealthKit / Firebase         │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -230,6 +233,17 @@ HealhtFit/
 - Prompts rotacionam ao longo da sessão
 - Sincronização Watch com cor do tópico, anel de progresso e texto guiado
 
+### Treino em dupla / equipe
+
+- Criação de equipes com uma ou mais modalidades
+- Convites por busca no app, SMS, e-mail motivador ou código compartilhável (aceite/recusa)
+- Chat estilo mensageiro (verde HealthFit + cinza claro) **só para marcar atividades**; mensagens expiram em **12h**
+- Sem mapa e sem localização em tempo real
+- Membros com foto de perfil e bandeira do país sincronizados
+- Ranking / relatório de desempenho da equipe
+- Notificação de nova mensagem abre direto no chat
+- Ao sair do grupo, a foto deixa de aparecer nos membros da equipe
+
 ### Assistente de dúvidas (aba Dúvidas)
 
 - Chat local com respostas sobre dieta, IMC, biotipos, sono, treinos e personal
@@ -262,6 +276,18 @@ HealhtFit/
 
 - Plano alimentar semanal gerado com base no perfil (biotipo + objetivo)
 - Lista de compras derivada do plano
+
+### Conta, legal e conformidade
+
+- Idade mínima **16+** (validação no cadastro e no perfil)
+- Política de Privacidade e Termos de Uso no App e em GitHub Pages
+- Registros de acesso (Marco Civil da Internet) com retenção de **6 meses**
+- Exclusão de conta com limpeza Firebase + dados locais
+
+### Assinaturas
+
+- Planos via StoreKit 2 (Básico, Fit, IA Plus, Completo)
+- Paywall, restore e gestão nativos da App Store
 
 ### Apple Watch
 

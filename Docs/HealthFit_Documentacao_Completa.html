@@ -249,8 +249,38 @@
           <td>Treinos</td>
           <td><strong>Treinos (Hub)</strong><br/><span class="muted">Treinos / 01 Hub</span></td>
           <td><code>WorkoutListView.swift</code></td>
-          <td>Hub Musculação / Cardio / Meditação.</td>
-          <td><div>• Abrir gênero</div><div>• Abrir cardio</div><div>• Abrir meditação</div><div>• Criar ficha</div></td>
+          <td>Hub Musculação / Cardio / Meditação / Dupla.</td>
+          <td><div>• Abrir gênero</div><div>• Abrir cardio</div><div>• Abrir meditação</div><div>• Abrir Dupla/equipe</div><div>• Criar ficha</div></td>
+        </tr><tr>
+          <td>Dupla / equipe</td>
+          <td><strong>Consentimento e Hub</strong><br/><span class="muted">Duo / 01 Hub</span></td>
+          <td><code>DuoTeamHubView.swift</code></td>
+          <td>Lista de equipes, convites recebidos e criação de grupo. Sem GPS ao vivo.</td>
+          <td><div>• Criar equipe</div><div>• Aceitar/recusar convite</div><div>• Abrir detalhe</div><div>• Pull-to-refresh</div></td>
+        </tr><tr>
+          <td>Dupla / equipe</td>
+          <td><strong>Detalhe da equipe</strong><br/><span class="muted">Duo / 02 Detalhe</span></td>
+          <td><code>DuoTeamDetailView</code> em <code>DuoTeamHubView.swift</code></td>
+          <td>Membros (foto + bandeira), modalidades, convites pendentes, sair do grupo.</td>
+          <td><div>• Convidar</div><div>• Retirar convite</div><div>• Chat</div><div>• Ranking</div><div>• Sair</div></td>
+        </tr><tr>
+          <td>Dupla / equipe</td>
+          <td><strong>Convidar pessoas</strong><br/><span class="muted">Duo / 03 Convite</span></td>
+          <td><code>DuoTeamInviteView.swift</code></td>
+          <td>Busca no app, SMS, e-mail motivador ou código compartilhável.</td>
+          <td><div>• Buscar usuário</div><div>• Enviar SMS/e-mail</div><div>• Gerar código</div></td>
+        </tr><tr>
+          <td>Dupla / equipe</td>
+          <td><strong>Chat da equipe</strong><br/><span class="muted">Duo / 04 Chat</span></td>
+          <td><code>DuoTeamChatView.swift</code></td>
+          <td>Mensageiro verde/cinza; só atividades; TTL 12h; deep link por notificação.</td>
+          <td><div>• Enviar texto</div><div>• Propor horário</div><div>• Tempo real</div></td>
+        </tr><tr>
+          <td>Dupla / equipe</td>
+          <td><strong>Relatório e ranking</strong><br/><span class="muted">Duo / 05 Ranking</span></td>
+          <td><code>DuoTeamReportView.swift</code></td>
+          <td>Desempenho 7/30 dias publicado por membro.</td>
+          <td><div>• Atualizar ranking</div></td>
         </tr><tr>
           <td>Treinos</td>
           <td><strong>Hub Masculino / Feminino</strong><br/><span class="muted">Treinos / 02 Gender Hub</span></td>
@@ -437,8 +467,12 @@
     <tr><td>Wellness</td><td><code>users/{uid}/dailyWellness</code> + <code>wellnessMeta</code></td><td>Merge local/remoto</td></tr>
     <tr><td>Vídeos</td><td>Firestore + Storage</td><td>Catálogo remoto de demos</td></tr>
     <tr><td>Exclusão</td><td>Todos acima</td><td>Wipe remoto + purge local</td></tr>
+    <tr><td>Dupla / equipes</td><td><code>duoTeams</code>, <code>duoInvites</code>, memberships, inbox</td><td>Grupos, convites, chat 12h, ranking</td></tr>
+    <tr><td>Diretório</td><td><code>userDirectory/{uid}</code></td><td>Nome, apelido, país, foto (busca)</td></tr>
+    <tr><td>Foto perfil</td><td>Storage <code>users/{uid}/profile</code></td><td>Avatar sync com equipes</td></tr>
+    <tr><td>Logs Marco Civil</td><td><code>accessLogs</code></td><td>Retenção 6 meses; purge automático</td></tr>
   </table>
-  <p class="muted">Locais (não Firestore): fichas custom, plano alimentar/compras, chat, foto de perfil, preferências de descanso.</p>
+  <p class="muted">Locais (além do Firestore): fichas custom, plano alimentar/compras, preferências de descanso e caches.</p>
 </section>
 
 <section id="s10">
@@ -452,6 +486,8 @@
     <tr><td>Inatividade treino/cardio/meditação</td><td>48h</td></tr>
     <tr><td>Ícone de saúde amarelo/vermelho</td><td>Mudança de status</td></tr>
     <tr><td>Descanso encerrado</td><td>Fim do timer entre séries</td></tr>
+    <tr><td>Dupla / mensagem ou proposta</td><td>Inbox + banner; toque abre o chat da equipe</td></tr>
+    <tr><td>Dupla / convite</td><td>Convite pendente para aceitar/recusar</td></tr>
   </table>
 </section>
 
@@ -467,8 +503,11 @@
   <h1 class="chapter">12. Segurança, privacidade e exclusão</h1>
   <ul>
     <li>Autenticação Firebase com providers sociais e e-mail</li>
+    <li>Idade mínima <strong>16 anos</strong> (cadastro e perfil)</li>
     <li>Política de senha forte no registro</li>
-    <li>Documentos legais (Termos e Privacidade) embutidos</li>
+    <li>Documentos legais (Termos e Privacidade) embutidos e em GitHub Pages</li>
+    <li>Registros de acesso (Marco Civil) com retenção de <strong>6 meses</strong></li>
+    <li>Dupla/equipe: sem localização em tempo real; chat com TTL 12h</li>
     <li>Exclusão de conta com reautenticação e limpeza remota/local</li>
     <li>IAssistente com disclaimer de saúde (não substitui profissional)</li>
   </ul>
