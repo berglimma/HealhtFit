@@ -33,7 +33,7 @@ struct DuoTeamInviteView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("Busque no app e envie o convite. A pessoa precisa aceitar ou recusar. Você acompanha o status (pendente, aceito ou recusado). Também dá para SMS, e-mail ou código. Sem localização em tempo real.")
+                    Text("Busque no app e envie o convite. A pessoa precisa aceitar ou recusar. Só ficam listados os pendentes — arraste para retirar. Também dá para SMS, e-mail ou código. Sem localização em tempo real.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -74,49 +74,55 @@ struct DuoTeamInviteView: View {
                     ForEach(searchResults) { user in
                         let isMember = team.members.contains(where: { $0.uid == user.uid })
                         let pending = duoService.pendingInvite(forUserId: user.uid, teamId: team.id)
-                        Button {
-                            Task { await inviteUser(user) }
-                        } label: {
-                            HStack(spacing: 12) {
-                                DuoMemberAvatarView(
-                                    name: user.shownName,
-                                    photoURL: user.photoURL,
-                                    countryCode: user.countryCode,
-                                    size: 48
-                                )
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack(spacing: 6) {
-                                        Text(user.shownName)
-                                            .font(.subheadline.weight(.semibold))
-                                            .foregroundStyle(AppTheme.textPrimary)
-                                        if user.flagEmoji != "🏳️" {
-                                            Text(user.flagEmoji)
-                                                .font(.subheadline)
-                                        }
+                        HStack(spacing: 12) {
+                            DuoMemberAvatarView(
+                                name: user.shownName,
+                                photoURL: user.photoURL,
+                                countryCode: user.countryCode,
+                                size: 48
+                            )
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(spacing: 6) {
+                                    Text(user.shownName)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.textPrimary)
+                                    if user.flagEmoji != "🏳️" {
+                                        Text(user.flagEmoji)
+                                            .font(.subheadline)
                                     }
-                                    Text(user.detailLine)
-                                        .font(.caption)
-                                        .foregroundStyle(AppTheme.textSecondary)
-                                        .lineLimit(2)
                                 }
-                                Spacer()
-                                if invitingUid == user.uid {
-                                    ProgressView()
-                                } else if isMember {
-                                    Text("Na equipe")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                } else if pending != nil {
-                                    Text("Pendente")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.orange)
-                                } else {
+                                Text(user.detailLine)
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                                    .lineLimit(2)
+                            }
+                            Spacer()
+                            if invitingUid == user.uid {
+                                ProgressView()
+                            } else if isMember {
+                                Text("Na equipe")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else if pending != nil {
+                                Text("Pendente")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.orange)
+                            } else {
+                                Button {
+                                    Task { await inviteUser(user) }
+                                } label: {
                                     Image(systemName: "person.badge.plus")
                                         .foregroundStyle(AppTheme.accent)
                                 }
+                                .disabled(invitingUid != nil)
+                                .buttonStyle(.plain)
                             }
                         }
-                        .disabled(invitingUid != nil || isMember || pending != nil)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard !isMember, pending == nil, invitingUid == nil else { return }
+                            Task { await inviteUser(user) }
+                        }
                     }
                 }
 
@@ -310,10 +316,10 @@ struct DuoTeamInviteView: View {
 
     @ViewBuilder
     private var teamInvitesStatusSection: some View {
-        let invites = duoService.sentInvites(forTeamId: team.id)
+        let invites = duoService.pendingSentInvites(forTeamId: team.id)
         if !invites.isEmpty {
-            Section("Status dos convites") {
-                ForEach(invites.prefix(10)) { invite in
+            Section {
+                ForEach(invites) { invite in
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(invite.toName)
@@ -323,23 +329,28 @@ struct DuoTeamInviteView: View {
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Text(invite.isExpired && invite.status == .pending
-                             ? DuoInviteStatus.expired.displayLabel
-                             : invite.status.displayLabel)
+                        Text(DuoInviteStatus.pending.displayLabel)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(inviteStatusColor(invite))
+                            .foregroundStyle(.orange)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            Task {
+                                let ok = await duoService.cancelSentInvite(invite)
+                                statusMessage = ok
+                                    ? "Convite para \(invite.toName) retirado."
+                                    : (duoService.lastError ?? "Não foi possível retirar.")
+                            }
+                        } label: {
+                            Label("Retirar", systemImage: "trash")
+                        }
                     }
                 }
+            } header: {
+                Text("Convites pendentes")
+            } footer: {
+                Text("Arraste o card para a esquerda para retirar.")
             }
-        }
-    }
-
-    private func inviteStatusColor(_ invite: DuoTeamInvite) -> Color {
-        if invite.isExpired && invite.status == .pending { return .secondary }
-        switch invite.status {
-        case .pending: return .orange
-        case .accepted: return .green
-        case .declined, .cancelled, .expired: return .secondary
         }
     }
 

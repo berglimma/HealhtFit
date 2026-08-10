@@ -106,6 +106,49 @@ enum DuoTeamFirestoreService {
         }
     }
 
+    /// Atualiza só o documento da equipe (sem reescrever memberships de outros).
+    /// Usado ao sair do grupo — evita falha de permissão após o próprio uid sair de `memberUids`.
+    static func updateTeamDocumentOnly(_ team: DuoTeam) async throws {
+        guard isAvailable else { throw DuoTeamFirestoreError.unavailable }
+        let payload = try encoder.encode(team)
+        guard let json = String(data: payload, encoding: .utf8) else {
+            throw DuoTeamFirestoreError.encodeFailed
+        }
+        let memberUids = team.members.compactMap(\.uid)
+        let memberSummaries: [[String: Any]] = team.members.map { member in
+            var row: [String: Any] = [
+                "name": member.name,
+                "joinedAt": Timestamp(date: member.joinedAt),
+            ]
+            if let uid = member.uid { row["uid"] = uid }
+            if let country = member.countryCode { row["countryCode"] = country }
+            if let photo = member.photoURL { row["photoURL"] = photo }
+            if let phone = member.phoneE164 { row["phoneE164"] = phone }
+            return row
+        }
+
+        var teamData: [String: Any] = [
+            "payload": json,
+            "name": team.name,
+            "modality": team.modality.rawValue,
+            "modalities": team.effectiveModalities.map(\.rawValue),
+            "createdByUid": team.createdByUid,
+            "createdByName": team.createdByName,
+            "memberUids": memberUids,
+            "memberCount": team.memberCount,
+            "members": memberSummaries,
+            "updatedAt": Timestamp(date: team.updatedAt),
+            "createdAt": Timestamp(date: team.createdAt),
+            "privacyAcknowledged": true,
+        ]
+        if let photoURL = team.photoURL, !photoURL.isEmpty {
+            teamData["photoURL"] = photoURL
+        } else {
+            teamData["photoURL"] = FieldValue.delete()
+        }
+        try await teamsCollection().document(team.id).setData(teamData, merge: true)
+    }
+
     static func fetchTeam(id: String) async throws -> DuoTeam? {
         guard isAvailable else { return nil }
         let snap = try await teamsCollection().document(id).getDocument()
@@ -148,9 +191,10 @@ enum DuoTeamFirestoreService {
         guard isAvailable else { return }
         let payload = try encoder.encode(invite)
         guard let json = String(data: payload, encoding: .utf8) else { return }
+        let code = invite.code.uppercased()
         var data: [String: Any] = [
             "payload": json,
-            "code": invite.code.uppercased(),
+            "code": code,
             "teamId": invite.teamId,
             "fromUid": invite.fromUid,
             "toPhoneE164": invite.toPhoneE164,
@@ -165,6 +209,16 @@ enum DuoTeamFirestoreService {
             data["toEmail"] = toEmail
         }
         try await invitesCollection().document(invite.id).setData(data, merge: true)
+        // Índice por código (get simples) — evita query composta + falha de rules.
+        try await db.collection("duoInviteCodes").document(code).setData([
+            "inviteId": invite.id,
+            "code": code,
+            "teamId": invite.teamId,
+            "fromUid": invite.fromUid,
+            "status": invite.status.rawValue,
+            "expiresAt": Timestamp(date: invite.expiresAt),
+            "updatedAt": Timestamp(date: .now),
+        ], merge: true)
     }
 
     private static func pendingInviteDoc(userId: String, inviteId: String) -> DocumentReference {
@@ -202,6 +256,62 @@ enum DuoTeamFirestoreService {
     static func deletePendingInvite(forUserId userId: String, inviteId: String) async throws {
         guard isAvailable else { return }
         try await pendingInviteDoc(userId: userId, inviteId: inviteId).delete()
+    }
+
+    static func fetchInvite(id: String) async throws -> DuoTeamInvite? {
+        guard isAvailable else { return nil }
+        let snap = try await invitesCollection().document(id).getDocument()
+        return decode(DuoTeamInvite.self, from: snap.data())
+    }
+
+    static func fetchInvite(code: String) async throws -> DuoTeamInvite? {
+        guard isAvailable else { return nil }
+        let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let codeSnap = try await db.collection("duoInviteCodes").document(normalized).getDocument()
+        if let inviteId = codeSnap.data()?["inviteId"] as? String,
+           let invite = try await fetchInvite(id: inviteId) {
+            return invite
+        }
+        // Fallback legado (convites antigos sem duoInviteCodes).
+        let snap = try await invitesCollection()
+            .whereField("code", isEqualTo: normalized)
+            .whereField("status", isEqualTo: DuoInviteStatus.pending.rawValue)
+            .limit(to: 1)
+            .getDocuments()
+        return decode(DuoTeamInvite.self, from: snap.documents.first?.data())
+    }
+
+    static func saveJoinAccess(forUserId userId: String, teamId: String, invite: DuoTeamInvite) async throws {
+        guard isAvailable else { return }
+        try await db.collection("users").document(userId)
+            .collection("duoJoinAccess").document(teamId)
+            .setData([
+                "teamId": teamId,
+                "inviteId": invite.id,
+                "fromUid": invite.fromUid,
+                "code": invite.code.uppercased(),
+                "expiresAt": Timestamp(date: invite.expiresAt),
+                "createdAt": Timestamp(date: .now),
+            ], merge: true)
+    }
+
+    static func deleteJoinAccess(forUserId userId: String, teamId: String) async throws {
+        guard isAvailable else { return }
+        try await db.collection("users").document(userId)
+            .collection("duoJoinAccess").document(teamId)
+            .delete()
+    }
+
+    static func fetchInvitesSent(byUserId userId: String) async throws -> [DuoTeamInvite] {
+        guard isAvailable else { return [] }
+        // where + orderBy exige índice composto; ordenamos no app.
+        let snap = try await invitesCollection()
+            .whereField("fromUid", isEqualTo: userId)
+            .limit(to: 40)
+            .getDocuments()
+        return snap.documents
+            .compactMap { decode(DuoTeamInvite.self, from: $0.data()) }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     // MARK: - Inbox notifications (adicionado ao grupo, etc.)
@@ -271,34 +381,6 @@ enum DuoTeamFirestoreService {
                 } ?? []
                 onChange(notes)
             }
-    }
-
-    static func fetchInvite(id: String) async throws -> DuoTeamInvite? {
-        guard isAvailable else { return nil }
-        let snap = try await invitesCollection().document(id).getDocument()
-        return decode(DuoTeamInvite.self, from: snap.data())
-    }
-
-    static func fetchInvite(code: String) async throws -> DuoTeamInvite? {
-        guard isAvailable else { return nil }
-        let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        let snap = try await invitesCollection()
-            .whereField("code", isEqualTo: normalized)
-            .limit(to: 1)
-            .getDocuments()
-        return decode(DuoTeamInvite.self, from: snap.documents.first?.data())
-    }
-
-    static func fetchInvitesSent(byUserId userId: String) async throws -> [DuoTeamInvite] {
-        guard isAvailable else { return [] }
-        // where + orderBy exige índice composto; ordenamos no app.
-        let snap = try await invitesCollection()
-            .whereField("fromUid", isEqualTo: userId)
-            .limit(to: 40)
-            .getDocuments()
-        return snap.documents
-            .compactMap { decode(DuoTeamInvite.self, from: $0.data()) }
-            .sorted { $0.createdAt > $1.createdAt }
     }
 
     // MARK: - Messages

@@ -101,8 +101,9 @@ struct WorkoutListView: View {
 
                     // Global minimized banner lives on MainTabView; avoid a duplicate card here.
 
-                    // Se musculação não está nas modalidades, o card duo fica no topo.
-                    if !availableSections.contains(.strength) {
+                    // Se musculação e cardio não estão nas modalidades, o card duo fica no topo
+                    // (nas seções de musculação/cardio o card já aparece dentro da lista).
+                    if !availableSections.contains(.strength), !availableSections.contains(.cardio) {
                         DuoTeamCard()
                     }
 
@@ -328,6 +329,8 @@ struct WorkoutListView: View {
 
     private var cardioSection: some View {
         VStack(alignment: .leading, spacing: 16) {
+            DuoTeamCard()
+
             Text("Escolha um exercício e defina a intensidade")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)

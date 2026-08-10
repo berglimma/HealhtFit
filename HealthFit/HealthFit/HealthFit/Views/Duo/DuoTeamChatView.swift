@@ -102,7 +102,7 @@ struct DuoTeamChatView: View {
                         TextField("Observação (opcional)", text: $scheduleNote)
                     }
                     Section {
-                        Text("Só para marcar atividades físicas. A mensagem expira em 24 horas. Sem mapa e sem localização ao vivo.")
+                        Text("Só para marcar atividades físicas. A mensagem expira em 12 horas. Sem mapa e sem localização ao vivo.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

@@ -77,8 +77,8 @@ enum DuoInviteStatus: String, Codable, Equatable {
         case .pending: return "Pendente"
         case .accepted: return "Aceito"
         case .declined: return "Recusado"
-        case .cancelled: return "Cancelado"
-        case .expired: return "Expirado"
+                    case .cancelled: return "Retirado"
+                    case .expired: return "Expirado"
         }
     }
 
@@ -413,17 +413,17 @@ struct DuoChatMessage: Identifiable, Codable, Equatable, Hashable {
 
     var isSchedule: Bool { kind == .scheduleProposal }
 
-    /// Mensagens do chat de equipe expiram após 24 horas.
+    /// Mensagens do chat de equipe expiram após 12 horas.
     var isExpired: Bool {
         Date().timeIntervalSince(createdAt) >= DuoTeamChatPolicy.messageTTL
     }
 }
 
 enum DuoTeamChatPolicy {
-    static let messageTTL: TimeInterval = 24 * 60 * 60
+    static let messageTTL: TimeInterval = 12 * 60 * 60
 
     static let purposeNotice =
-        "O chat é só para marcar atividades físicas. As mensagens expiram em 24 horas."
+        "O chat é só para marcar atividades físicas. As mensagens expiram em 12 horas."
 }
 
 enum DuoTeamPrivacy {
@@ -447,7 +447,7 @@ enum DuoTeamPrivacy {
 
     Treino em dupla/equipe serve para convidar parceiros, combinar horários no chat e acompanhar a evolução juntos — sem expor sua posição.
 
-    O chat é exclusivo para marcar atividades físicas. As mensagens ficam disponíveis por 24 horas e depois expiram.
+    O chat é exclusivo para marcar atividades físicas. As mensagens ficam disponíveis por 12 horas e depois expiram.
 
     Você precisa confirmar isso antes de continuar.
     """

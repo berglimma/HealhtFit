@@ -44,18 +44,37 @@ struct LibraryImagePicker: UIViewControllerRepresentable {
         }
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            guard let provider = results.first?.itemProvider,
-                  provider.canLoadObject(ofClass: UIImage.self) else {
+            guard let provider = results.first?.itemProvider else {
                 DispatchQueue.main.async { self.onPick(nil) }
                 return
             }
 
             let onPick = self.onPick
-            provider.loadObject(ofClass: UIImage.self) { object, _ in
-                let image = object as? UIImage
-                DispatchQueue.main.async {
-                    onPick(image)
+            if provider.canLoadObject(ofClass: UIImage.self) {
+                provider.loadObject(ofClass: UIImage.self) { object, _ in
+                    if let image = object as? UIImage {
+                        DispatchQueue.main.async { onPick(image) }
+                    } else {
+                        Self.loadImageData(from: provider, onPick: onPick)
+                    }
                 }
+            } else {
+                Self.loadImageData(from: provider, onPick: onPick)
+            }
+        }
+
+        private static func loadImageData(
+            from provider: NSItemProvider,
+            onPick: @escaping (UIImage?) -> Void
+        ) {
+            let typeIds = [UTType.image.identifier, UTType.jpeg.identifier, UTType.heic.identifier, UTType.png.identifier]
+            guard let typeId = typeIds.first(where: { provider.hasItemConformingToTypeIdentifier($0) }) else {
+                DispatchQueue.main.async { onPick(nil) }
+                return
+            }
+            provider.loadDataRepresentation(forTypeIdentifier: typeId) { data, _ in
+                let image = data.flatMap(UIImage.init(data:))
+                DispatchQueue.main.async { onPick(image) }
             }
         }
     }

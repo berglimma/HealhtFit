@@ -514,7 +514,7 @@
     "A partir do %@" : {
 
     },
-    "A pessoa recebe o convite e precisa aceitar ou recusar. Você vê o status (pendente, aceito ou recusado)." : {
+    "A pessoa recebe o convite e precisa aceitar ou recusar. Arraste um convite pendente para retirá-lo." : {
 
     },
     "A senha deve conter:" : {
@@ -659,6 +659,12 @@
 
     },
     "Áreas de escalada" : {
+
+    },
+    "Arraste o card para a esquerda para retirar o convite." : {
+
+    },
+    "Arraste o card para a esquerda para retirar." : {
 
     },
     "As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal." : {
@@ -1505,7 +1511,7 @@
     "Buscar sensores" : {
 
     },
-    "Busque no app e envie o convite. A pessoa precisa aceitar ou recusar. Você acompanha o status (pendente, aceito ou recusado). Também dá para SMS, e-mail ou código. Sem localização em tempo real." : {
+    "Busque no app e envie o convite. A pessoa precisa aceitar ou recusar. Só ficam listados os pendentes — arraste para retirar. Também dá para SMS, e-mail ou código. Sem localização em tempo real." : {
 
     },
     "Cada ficha inclui demos em vídeo/GIF dos exercícios durante o treino." : {
@@ -1950,10 +1956,7 @@
     "Convidar por SMS" : {
 
     },
-    "Convites deste grupo" : {
-
-    },
-    "Convites enviados" : {
+    "Convites pendentes" : {
 
     },
     "Convites recebidos" : {
@@ -1996,7 +1999,7 @@
     "Criar ficha personalizada" : {
 
     },
-    "Crie uma dupla/equipe, busque pessoas pelo nome no app (ou SMS) e use o chat só para marcar atividades físicas (mensagens expiram em 24h)." : {
+    "Crie uma dupla/equipe, busque pessoas pelo nome no app (ou SMS) e use o chat só para marcar atividades físicas (mensagens expiram em 12h)." : {
 
     },
     "Cronômetro de Descanso" : {
@@ -2365,9 +2368,6 @@
     "Escolha um tópico e a duração da sessão" : {
 
     },
-    "Escolha uma imagem para a capa da equipe." : {
-
-    },
     "Escolha uma opção para cada refeição do dia" : {
 
     },
@@ -2543,16 +2543,10 @@
     "Fonte atual" : {
 
     },
-    "Foto da capa" : {
-
-    },
     "Foto da refeição" : {
 
     },
     "Foto de fundo" : {
-
-    },
-    "Foto do grupo" : {
 
     },
     "Foto do perfil" : {
@@ -3118,7 +3112,7 @@
     "Não foi possível salvar" : {
 
     },
-    "Não há mapa ao vivo. O chat é só para marcar atividades físicas e as mensagens duram 24 horas." : {
+    "Não há mapa ao vivo. O chat é só para marcar atividades físicas e as mensagens duram 12 horas." : {
 
     },
     "Não tomei" : {
@@ -3463,9 +3457,6 @@
 
     },
     "Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit (estilo Stories)." : {
-
-    },
-    "Opcional — aparece no card da equipe." : {
 
     },
     "Open-Meteo (vento + Marine): altura real estimada com sua localização." : {
@@ -4172,6 +4163,9 @@
     "Resumo dos últimos %lld dias" : {
 
     },
+    "Retirar" : {
+
+    },
     "Retomar" : {
 
     },
@@ -4326,9 +4320,6 @@
 
     },
     "Sem dados suficientes." : {
-
-    },
-    "Sem foto ainda" : {
 
     },
     "Sem localização em tempo real" : {
@@ -4513,7 +4504,7 @@
     "Só musculação" : {
 
     },
-    "Só para marcar atividades físicas. A mensagem expira em 24 horas. Sem mapa e sem localização ao vivo." : {
+    "Só para marcar atividades físicas. A mensagem expira em 12 horas. Sem mapa e sem localização ao vivo." : {
 
     },
     "Só treinos dessas modalidades entram no ranking e geram o card de postagem em grupo." : {
@@ -4544,9 +4535,6 @@
 
     },
     "Status" : {
-
-    },
-    "Status dos convites" : {
 
     },
     "Stroke rate em remadas por minuto. Split /500 m (quanto menor, melhor) e eficiência saem da distância, remadas e sensores." : {

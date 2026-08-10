@@ -49,8 +49,8 @@ struct DuoTeamHubView: View {
                     }
                 }
 
-                if !duoService.sentInvites.isEmpty {
-                    invitesSection
+                if !duoService.pendingSentInvites().isEmpty {
+                    pendingSentInvitesSection
                 }
 
                 if let error = duoService.lastError {
@@ -81,7 +81,7 @@ struct DuoTeamHubView: View {
             Label("Sem localização em tempo real", systemImage: "location.slash.fill")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.orange)
-            Text("Não há mapa ao vivo. O chat é só para marcar atividades físicas e as mensagens duram 24 horas.")
+            Text("Não há mapa ao vivo. O chat é só para marcar atividades físicas e as mensagens duram 12 horas.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
         }
@@ -99,7 +99,7 @@ struct DuoTeamHubView: View {
             Text("Nenhuma equipe ainda")
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
-            Text("Crie uma dupla/equipe, busque pessoas pelo nome no app (ou SMS) e use o chat só para marcar atividades físicas (mensagens expiram em 24h).")
+            Text("Crie uma dupla/equipe, busque pessoas pelo nome no app (ou SMS) e use o chat só para marcar atividades físicas (mensagens expiram em 12h).")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -163,46 +163,59 @@ struct DuoTeamHubView: View {
         }
     }
 
-    private var invitesSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Convites enviados")
+    private var pendingSentInvitesSection: some View {
+        let invites = duoService.pendingSentInvites()
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Convites pendentes")
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
-            ForEach(duoService.sentInvites.prefix(8)) { invite in
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(invite.toName) · \(invite.code)")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(AppTheme.textPrimary)
-                        Text(
-                            invite.toUid == nil
-                                ? invite.teamName
-                                : "\(invite.teamName) · no app"
-                        )
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    Spacer(minLength: 8)
-                    Text(invite.isExpired && invite.status == .pending
-                         ? DuoInviteStatus.expired.displayLabel
-                         : invite.status.displayLabel)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(statusColor(for: invite))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(statusColor(for: invite).opacity(0.12), in: Capsule())
-                }
-                .cardStyle()
-            }
-        }
-    }
+            Text("Arraste o card para a esquerda para retirar.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
 
-    private func statusColor(for invite: DuoTeamInvite) -> Color {
-        if invite.isExpired && invite.status == .pending { return .secondary }
-        switch invite.status {
-        case .pending: return .orange
-        case .accepted: return .green
-        case .declined, .cancelled, .expired: return .secondary
+            List {
+                ForEach(invites) { invite in
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(invite.toName) · \(invite.code)")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(AppTheme.textPrimary)
+                            Text(
+                                invite.toUid == nil
+                                    ? invite.teamName
+                                    : "\(invite.teamName) · no app"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                        }
+                        Spacer(minLength: 8)
+                        Text(DuoInviteStatus.pending.displayLabel)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.orange.opacity(0.12), in: Capsule())
+                    }
+                    .padding(.vertical, 4)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            Task { _ = await duoService.cancelSentInvite(invite) }
+                        } label: {
+                            Label("Retirar", systemImage: "trash")
+                        }
+                    }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(AppTheme.cardBackground)
+                            .padding(.vertical, 2)
+                    )
+                }
+            }
+            .listStyle(.plain)
+            .scrollDisabled(true)
+            .frame(height: CGFloat(invites.count) * 76)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
     }
 
@@ -323,10 +336,6 @@ struct DuoTeamDetailView: View {
     @State private var showInvite = false
     @State private var showLeaveConfirm = false
     @State private var isLeaving = false
-    @State private var showPhotoSource = false
-    @State private var showLibraryPicker = false
-    @State private var showCameraPicker = false
-    @State private var isUpdatingPhoto = false
 
     private var team: DuoTeam? {
         duoService.teams.first(where: { $0.id == teamId })
@@ -350,7 +359,6 @@ struct DuoTeamDetailView: View {
     private func detailList(for team: DuoTeam) -> some View {
         List {
             privacySection
-            photoSection(for: team)
             membersSection(for: team)
             inviteSection
             pendingInvitesSection(for: team)
@@ -365,33 +373,6 @@ struct DuoTeamDetailView: View {
         .sheet(isPresented: $showInvite) {
             DuoTeamInviteView(team: team)
                 .environmentObject(authService)
-        }
-        .confirmationDialog(
-            "Foto do grupo",
-            isPresented: $showPhotoSource,
-            titleVisibility: .visible
-        ) {
-            Button("Galeria") { showLibraryPicker = true }
-            if PhotoCaptureAvailability.isCameraAvailable {
-                Button("Câmera") { showCameraPicker = true }
-            }
-            Button("Cancelar", role: .cancel) {}
-        } message: {
-            Text("Escolha uma imagem para a capa da equipe.")
-        }
-        .sheet(isPresented: $showLibraryPicker) {
-            LibraryImagePicker { image in
-                showLibraryPicker = false
-                guard let image else { return }
-                Task { await applyTeamPhoto(image) }
-            }
-        }
-        .fullScreenCover(isPresented: $showCameraPicker) {
-            CameraImagePicker { image in
-                showCameraPicker = false
-                guard let image else { return }
-                Task { await applyTeamPhoto(image) }
-            }
         }
         .confirmationDialog(
             "Sair do grupo?",
@@ -424,47 +405,6 @@ struct DuoTeamDetailView: View {
     }
 
     @ViewBuilder
-    private func photoSection(for team: DuoTeam) -> some View {
-        Section("Foto do grupo") {
-            HStack(spacing: 14) {
-                DuoTeamCoverThumb(
-                    photoURL: team.photoURL,
-                    modality: team.effectiveModalities.first,
-                    size: 72
-                )
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(team.photoURL == nil ? "Sem foto ainda" : "Foto da capa")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Opcional — aparece no card da equipe.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    HStack(spacing: 12) {
-                        Button(team.photoURL == nil ? "Adicionar foto" : "Trocar foto") {
-                            showPhotoSource = true
-                        }
-                        .disabled(isUpdatingPhoto)
-                        if team.photoURL != nil {
-                            Button("Remover", role: .destructive) {
-                                Task {
-                                    isUpdatingPhoto = true
-                                    _ = await duoService.removeTeamPhoto(teamId: team.id)
-                                    isUpdatingPhoto = false
-                                }
-                            }
-                            .disabled(isUpdatingPhoto)
-                        }
-                    }
-                    .font(.caption.weight(.semibold))
-                }
-                Spacer(minLength: 0)
-                if isUpdatingPhoto {
-                    ProgressView()
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
     private func membersSection(for team: DuoTeam) -> some View {
         let currentUid = authService.currentUser?.id
         let profileImage = authService.profileImage
@@ -493,7 +433,7 @@ struct DuoTeamDetailView: View {
             } label: {
                 Label("Buscar no app, SMS, e-mail ou código", systemImage: "person.badge.plus")
             }
-            Text("A pessoa recebe o convite e precisa aceitar ou recusar. Você vê o status (pendente, aceito ou recusado).")
+            Text("A pessoa recebe o convite e precisa aceitar ou recusar. Arraste um convite pendente para retirá-lo.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -501,10 +441,10 @@ struct DuoTeamDetailView: View {
 
     @ViewBuilder
     private func pendingInvitesSection(for team: DuoTeam) -> some View {
-        let invites = duoService.sentInvites(forTeamId: team.id)
+        let invites = duoService.pendingSentInvites(forTeamId: team.id)
         if !invites.isEmpty {
-            Section("Convites deste grupo") {
-                ForEach(invites.prefix(12)) { invite in
+            Section {
+                ForEach(invites) { invite in
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(invite.toName)
@@ -514,23 +454,23 @@ struct DuoTeamDetailView: View {
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Text(invite.isExpired && invite.status == .pending
-                             ? DuoInviteStatus.expired.displayLabel
-                             : invite.status.displayLabel)
+                        Text(DuoInviteStatus.pending.displayLabel)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(inviteStatusColor(invite))
+                            .foregroundStyle(.orange)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            Task { _ = await duoService.cancelSentInvite(invite) }
+                        } label: {
+                            Label("Retirar", systemImage: "trash")
+                        }
                     }
                 }
+            } header: {
+                Text("Convites pendentes")
+            } footer: {
+                Text("Arraste o card para a esquerda para retirar o convite.")
             }
-        }
-    }
-
-    private func inviteStatusColor(_ invite: DuoTeamInvite) -> Color {
-        if invite.isExpired && invite.status == .pending { return .secondary }
-        switch invite.status {
-        case .pending: return .orange
-        case .accepted: return .green
-        case .declined, .cancelled, .expired: return .secondary
         }
     }
 
@@ -641,43 +581,20 @@ struct DuoTeamDetailView: View {
         isLeaving = false
         if ok { dismiss() }
     }
-
-    private func applyTeamPhoto(_ image: UIImage) async {
-        isUpdatingPhoto = true
-        _ = await duoService.updateTeamPhoto(teamId: teamId, image: image)
-        isUpdatingPhoto = false
-    }
 }
 
-/// Miniatura da capa do grupo (foto ou ícone da modalidade).
+/// Miniatura da capa do grupo (ícone da modalidade).
 struct DuoTeamCoverThumb: View {
     var photoURL: String?
     var modality: DuoTeamModality?
     var size: CGFloat = 52
 
     var body: some View {
-        Group {
-            if let photoURL, let url = URL(string: photoURL) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    case .failure:
-                        placeholder
-                    case .empty:
-                        ZStack {
-                            AppTheme.accent.opacity(0.12)
-                            ProgressView()
-                        }
-                    @unknown default:
-                        placeholder
-                    }
-                }
-            } else {
-                placeholder
-            }
+        ZStack {
+            AppTheme.accent.opacity(0.15)
+            Image(systemName: modality?.icon ?? DuoTeamModality.mixed.icon)
+                .font(.system(size: size * 0.38, weight: .semibold))
+                .foregroundStyle(AppTheme.accent)
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -685,14 +602,5 @@ struct DuoTeamCoverThumb: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(AppTheme.accent.opacity(0.25), lineWidth: 1)
         )
-    }
-
-    private var placeholder: some View {
-        ZStack {
-            AppTheme.accent.opacity(0.15)
-            Image(systemName: modality?.icon ?? DuoTeamModality.mixed.icon)
-                .font(.system(size: size * 0.38, weight: .semibold))
-                .foregroundStyle(AppTheme.accent)
-        }
     }
 }

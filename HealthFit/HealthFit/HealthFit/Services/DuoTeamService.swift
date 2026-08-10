@@ -201,7 +201,7 @@ final class DuoTeamService: ObservableObject {
                 teamId: team.id,
                 senderUid: userId,
                 senderName: "HealthFit",
-                text: "Equipe criada. O chat é só para marcar atividades físicas; mensagens expiram em 24h. Sem localização em tempo real.",
+                text: "Equipe criada. O chat é só para marcar atividades físicas; mensagens expiram em 12h. Sem localização em tempo real.",
                 kind: .system,
                 createdAt: .now,
                 proposedAt: nil
@@ -285,11 +285,11 @@ final class DuoTeamService: ObservableObject {
     /// Atualiza a foto de capa do grupo (opcional).
     @discardableResult
     func updateTeamPhoto(teamId: String, image: UIImage) async -> Bool {
-        guard teams.contains(where: { $0.id == teamId }) else {
+        guard teams.firstIndex(where: { $0.id == teamId }) != nil else {
             lastError = "Equipe não encontrada."
             return false
         }
-        guard let data = image.jpegData(compressionQuality: 0.82) else {
+        guard let data = Self.jpegDataForUpload(image) else {
             lastError = "Não foi possível preparar a foto."
             return false
         }
@@ -298,14 +298,20 @@ final class DuoTeamService: ObservableObject {
                 data: data,
                 teamId: teamId
             )
-            guard let index = teams.firstIndex(where: { $0.id == teamId }) else { return false }
-            teams[index].photoURL = url.absoluteString
-            teams[index].updatedAt = .now
+            guard let freshIndex = teams.firstIndex(where: { $0.id == teamId }) else { return false }
+            var updated = teams[freshIndex]
+            updated.photoURL = url.absoluteString
+            updated.updatedAt = .now
+            // Reatribuir o array dispara @Published (mutação in-place não redesenha a UI).
+            var next = teams
+            next[freshIndex] = updated
+            teams = next
             persistLocal()
-            try await DuoTeamFirestoreService.saveTeam(teams[index])
+            try await DuoTeamFirestoreService.saveTeam(updated)
+            lastError = nil
             return true
         } catch {
-            lastError = "Não foi possível enviar a foto do grupo."
+            lastError = "Não foi possível enviar a foto do grupo. Verifique a conexão e tente de novo."
             return false
         }
     }
@@ -319,15 +325,36 @@ final class DuoTeamService: ObservableObject {
         }
         do {
             try await ProfilePhotoStorageService.deleteDuoTeamCover(teamId: teamId)
-            teams[index].photoURL = nil
-            teams[index].updatedAt = .now
+            var updated = teams[index]
+            updated.photoURL = nil
+            updated.updatedAt = .now
+            var next = teams
+            next[index] = updated
+            teams = next
             persistLocal()
-            try await DuoTeamFirestoreService.saveTeam(teams[index])
+            try await DuoTeamFirestoreService.saveTeam(updated)
+            lastError = nil
             return true
         } catch {
             lastError = "Não foi possível remover a foto do grupo."
             return false
         }
+    }
+
+    /// PHPicker às vezes devolve UIImage sem bitmap pronto para `jpegData`.
+    private static func jpegDataForUpload(_ image: UIImage, quality: CGFloat = 0.82) -> Data? {
+        if let data = image.jpegData(compressionQuality: quality), !data.isEmpty {
+            return data
+        }
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = min(image.scale, 2)
+        let size = image.size
+        guard size.width > 1, size.height > 1 else { return nil }
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        let rendered = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
+        return rendered.jpegData(compressionQuality: quality)
     }
 
     /// Convida alguém do app; a pessoa precisa aceitar ou recusar.
@@ -355,6 +382,11 @@ final class DuoTeamService: ObservableObject {
 
         do {
             try await DuoTeamFirestoreService.savePendingInvite(forUserId: user.uid, invite: result.invite)
+            try await DuoTeamFirestoreService.saveJoinAccess(
+                forUserId: user.uid,
+                teamId: team.id,
+                invite: result.invite
+            )
         } catch {
             lastError = "Convite criado, mas \(user.shownName) pode precisar do código \(result.invite.code)."
         }
@@ -382,9 +414,13 @@ final class DuoTeamService: ObservableObject {
 
     @discardableResult
     func acceptReceivedInvite(_ invite: DuoTeamInvite) async -> DuoTeam? {
-        let joined = await joinTeam(withCode: invite.code)
+        if !hasPrivacyConsent {
+            acknowledgePrivacy()
+        }
+        let joined = await joinTeam(accepting: invite)
         if joined != nil, let userId = boundUserId {
             try? await DuoTeamFirestoreService.deletePendingInvite(forUserId: userId, inviteId: invite.id)
+            try? await DuoTeamFirestoreService.deleteJoinAccess(forUserId: userId, teamId: invite.teamId)
             receivedInvites.removeAll { $0.id == invite.id }
             await notifyInviteResponse(
                 invite: invite,
@@ -402,6 +438,7 @@ final class DuoTeamService: ObservableObject {
         do {
             try await DuoTeamFirestoreService.saveInvite(updated)
             try await DuoTeamFirestoreService.deletePendingInvite(forUserId: userId, inviteId: invite.id)
+            try? await DuoTeamFirestoreService.deleteJoinAccess(forUserId: userId, teamId: invite.teamId)
             receivedInvites.removeAll { $0.id == invite.id }
             await notifyInviteResponse(
                 invite: updated,
@@ -410,6 +447,55 @@ final class DuoTeamService: ObservableObject {
             )
         } catch {
             lastError = "Não foi possível recusar o convite."
+        }
+    }
+
+    /// Quem convidou pode retirar um convite ainda pendente.
+    @discardableResult
+    func cancelSentInvite(_ invite: DuoTeamInvite) async -> Bool {
+        guard invite.status == .pending, !invite.isExpired else {
+            lastError = "Só é possível retirar convites pendentes."
+            return false
+        }
+        guard boundUserId == invite.fromUid else {
+            lastError = "Apenas quem enviou o convite pode retirá-lo."
+            return false
+        }
+
+        var updated = invite
+        updated.status = .cancelled
+        do {
+            try await DuoTeamFirestoreService.saveInvite(updated)
+            if let toUid = invite.toUid, !toUid.isEmpty {
+                try? await DuoTeamFirestoreService.deletePendingInvite(forUserId: toUid, inviteId: invite.id)
+                try? await DuoTeamFirestoreService.deleteJoinAccess(forUserId: toUid, teamId: invite.teamId)
+                let inbox = DuoInboxNotification(
+                    id: UUID().uuidString,
+                    kind: "inviteCancelled",
+                    title: "Convite retirado",
+                    body: "\(boundUserName) retirou o convite para “\(invite.teamName)”.",
+                    teamId: invite.teamId,
+                    teamName: invite.teamName,
+                    fromUid: boundUserId ?? invite.fromUid,
+                    fromName: boundUserName,
+                    createdAt: .now,
+                    delivered: false
+                )
+                try? await DuoTeamFirestoreService.saveInboxNotification(forUserId: toUid, notification: inbox)
+            }
+            if let idx = sentInvites.firstIndex(where: { $0.id == invite.id }) {
+                var next = sentInvites
+                next[idx] = updated
+                sentInvites = next
+            }
+            // Remove da lista de recebidos se ainda estiver no aparelho do convidado (mesmo usuário raro).
+            receivedInvites.removeAll { $0.id == invite.id }
+            persistLocal()
+            lastError = nil
+            return true
+        } catch {
+            lastError = "Não foi possível retirar o convite."
+            return false
         }
     }
 
@@ -452,11 +538,20 @@ final class DuoTeamService: ObservableObject {
         }
     }
 
-    /// Convites enviados desta equipe (para status na UI).
-    func sentInvites(forTeamId teamId: String) -> [DuoTeamInvite] {
+    /// Só convites ainda aguardando resposta (sem histórico aceito/recusado/retirado).
+    func pendingSentInvites(forTeamId teamId: String? = nil) -> [DuoTeamInvite] {
         sentInvites
-            .filter { $0.teamId == teamId }
+            .filter {
+                $0.status == .pending
+                    && !$0.isExpired
+                    && (teamId == nil || $0.teamId == teamId)
+            }
             .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    /// Convites pendentes enviados desta equipe.
+    func sentInvites(forTeamId teamId: String) -> [DuoTeamInvite] {
+        pendingSentInvites(forTeamId: teamId)
     }
 
     private func makeInvite(
@@ -541,7 +636,7 @@ final class DuoTeamService: ObservableObject {
         Se já tiver o app: abra Dupla / equipe e use o código \(code).
         Se ainda não tiver: baixe o HealthFit e entre com o mesmo código.
 
-        Lembrete: o chat é só para marcar atividades físicas (mensagens duram 24 horas). Por segurança, o HealthFit não usa localização em tempo real.
+        Lembrete: o chat é só para marcar atividades físicas (mensagens duram 12 horas). Por segurança, o HealthFit não usa localização em tempo real.
 
         Te esperamos no time — o app já está pronto quando você chegar!
         """
@@ -670,40 +765,43 @@ final class DuoTeamService: ObservableObject {
             lastError = "Faça login para sair da equipe."
             return false
         }
+
+        // Preferir estado fresco do banco para não sobrescrever membros com dados locais antigos.
         let resolvedTeam: DuoTeam?
-        if let local = teams.first(where: { $0.id == teamId }) {
-            resolvedTeam = local
+        if let remote = try? await DuoTeamFirestoreService.fetchTeam(id: teamId) {
+            resolvedTeam = remote
         } else {
-            resolvedTeam = try? await DuoTeamFirestoreService.fetchTeam(id: teamId)
+            resolvedTeam = teams.first(where: { $0.id == teamId })
         }
         guard var team = resolvedTeam else {
-            lastError = "Equipe não encontrada."
-            return false
-        }
-        guard team.members.contains(where: { $0.uid == userId }) else {
+            // Sem doc remoto: limpa só o local.
             teams.removeAll { $0.id == teamId }
             persistLocal()
+            lastError = nil
+            return true
+        }
+
+        guard team.members.contains(where: { $0.uid == userId }) else {
+            try? await DuoTeamFirestoreService.removeMembership(userId: userId, teamId: teamId)
+            teams.removeAll { $0.id == teamId }
+            persistLocal()
+            lastError = nil
             return true
         }
 
         stopListening(teamId: teamId)
         messagesByTeam[teamId] = nil
-        team.members.removeAll { $0.uid == userId }
-        team.updatedAt = .now
+
+        let teamName = team.name
+        let remainingAfterLeave = team.members.filter { $0.uid != userId }
 
         do {
-            try await DuoTeamFirestoreService.removeMembership(userId: userId, teamId: teamId)
-
-            if team.members.isEmpty {
+            if remainingAfterLeave.isEmpty {
+                // Último membro: apaga a equipe enquanto ainda consta em memberUids.
                 try await DuoTeamFirestoreService.deleteTeam(id: teamId)
+                try? await DuoTeamFirestoreService.removeMembership(userId: userId, teamId: teamId)
             } else {
-                if team.createdByUid == userId, let nextOwner = team.members.compactMap(\.uid).first {
-                    team.createdByUid = nextOwner
-                    if let ownerName = team.members.first(where: { $0.uid == nextOwner })?.name {
-                        team.createdByName = ownerName
-                    }
-                }
-                try await DuoTeamFirestoreService.saveTeam(team)
+                // Aviso no chat ainda como membro.
                 let system = DuoChatMessage(
                     id: UUID().uuidString,
                     teamId: teamId,
@@ -715,18 +813,33 @@ final class DuoTeamService: ObservableObject {
                     proposedAt: nil
                 )
                 try? await DuoTeamFirestoreService.saveMessage(system)
+
+                team.members = remainingAfterLeave
+                team.updatedAt = .now
+                if team.createdByUid == userId, let nextOwner = remainingAfterLeave.compactMap(\.uid).first {
+                    team.createdByUid = nextOwner
+                    if let ownerName = remainingAfterLeave.first(where: { $0.uid == nextOwner })?.name {
+                        team.createdByName = ownerName
+                    }
+                }
+
+                // Só o doc da equipe (sem reescrever memberships alheios — isso bloqueava o leave).
+                try await DuoTeamFirestoreService.updateTeamDocumentOnly(team)
+                try await DuoTeamFirestoreService.removeMembership(userId: userId, teamId: teamId)
             }
         } catch {
-            lastError = "Não foi possível sair da equipe. Tente de novo."
+            lastError = "Não foi possível sair da equipe. Verifique a conexão e tente de novo."
+            print("[HealthFit] Duo leaveTeam: \(error.localizedDescription)")
             return false
         }
 
         teams.removeAll { $0.id == teamId }
         sentInvites.removeAll { $0.teamId == teamId }
         persistLocal()
+        lastError = nil
         NotificationService.shared.deliverDuoTeamNotification(
             title: "Você saiu da equipe",
-            body: "“\(team.name)” não aparece mais na sua lista."
+            body: "“\(teamName)” não aparece mais na sua lista."
         )
         return true
     }
@@ -736,10 +849,6 @@ final class DuoTeamService: ObservableObject {
             lastError = "Confirme o aviso de privacidade antes de continuar."
             return nil
         }
-        guard let userId = boundUserId else {
-            lastError = "Faça login para entrar na equipe."
-            return nil
-        }
         let code = rawCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard code.count >= 4 else {
             lastError = "Código inválido."
@@ -747,14 +856,41 @@ final class DuoTeamService: ObservableObject {
         }
 
         do {
-            guard var invite = try await DuoTeamFirestoreService.fetchInvite(code: code) else {
+            guard let invite = try await DuoTeamFirestoreService.fetchInvite(code: code) else {
                 lastError = "Convite não encontrado."
                 return nil
             }
-            if invite.isExpired || invite.status != .pending {
-                lastError = "Este convite não está mais disponível."
-                return nil
-            }
+            return await completeJoin(invite: invite)
+        } catch {
+            lastError = Self.joinFailureMessage(error)
+            print("[HealthFit] Duo join by code: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// Aceita um convite já carregado (inbox / pendentes) sem depender só da query por código.
+    func joinTeam(accepting invite: DuoTeamInvite) async -> DuoTeam? {
+        guard hasPrivacyConsent else {
+            lastError = "Confirme o aviso de privacidade antes de continuar."
+            return nil
+        }
+        // Preferir versão fresca do Firestore; fallback para o convite local.
+        let remote = try? await DuoTeamFirestoreService.fetchInvite(id: invite.id)
+        let resolved = remote ?? invite
+        return await completeJoin(invite: resolved)
+    }
+
+    private func completeJoin(invite: DuoTeamInvite) async -> DuoTeam? {
+        guard let userId = boundUserId else {
+            lastError = "Faça login para entrar na equipe."
+            return nil
+        }
+        if invite.isExpired || invite.status != .pending {
+            lastError = "Este convite não está mais disponível."
+            return nil
+        }
+
+        do {
             guard var team = try await DuoTeamFirestoreService.fetchTeam(id: invite.teamId) else {
                 lastError = "Equipe não encontrada."
                 return nil
@@ -764,6 +900,7 @@ final class DuoTeamService: ObservableObject {
                     teams.insert(team, at: 0)
                     persistLocal()
                 }
+                try? await DuoTeamFirestoreService.deleteJoinAccess(forUserId: userId, teamId: team.id)
                 return team
             }
 
@@ -771,10 +908,14 @@ final class DuoTeamService: ObservableObject {
                 makeSelfMember(uid: userId, phoneE164: invite.toPhoneE164)
             )
             team.updatedAt = .now
-            invite.status = .accepted
+            var updatedInvite = invite
+            updatedInvite.status = .accepted
 
+            // Membership primeiro libera regras de mensagem / leitura estável.
             try await DuoTeamFirestoreService.saveTeam(team)
-            try await DuoTeamFirestoreService.saveInvite(invite)
+            try await DuoTeamFirestoreService.saveInvite(updatedInvite)
+            try? await DuoTeamFirestoreService.deleteJoinAccess(forUserId: userId, teamId: team.id)
+            try? await DuoTeamFirestoreService.deletePendingInvite(forUserId: userId, inviteId: invite.id)
 
             if let idx = teams.firstIndex(where: { $0.id == team.id }) {
                 teams[idx] = team
@@ -793,17 +934,30 @@ final class DuoTeamService: ObservableObject {
                 createdAt: .now,
                 proposedAt: nil
             )
-            try await DuoTeamFirestoreService.saveMessage(system)
+            try? await DuoTeamFirestoreService.saveMessage(system)
 
             NotificationService.shared.deliverDuoTeamNotification(
                 title: "Você entrou na equipe",
                 body: "“\(team.name)” · \(team.modalitiesLabel). Combinem o treino no chat."
             )
+            lastError = nil
             return team
         } catch {
-            lastError = "Falha ao entrar na equipe. Verifique a conexão."
+            lastError = Self.joinFailureMessage(error)
+            print("[HealthFit] Duo completeJoin: \(error.localizedDescription)")
             return nil
         }
+    }
+
+    private static func joinFailureMessage(_ error: Error) -> String {
+        let ns = error as NSError
+        if ns.domain == "FIRFirestoreErrorDomain", ns.code == 7 {
+            return "Sem permissão para entrar nesta equipe. Peça um novo convite."
+        }
+        if ns.localizedDescription.localizedCaseInsensitiveContains("permission") {
+            return "Sem permissão para entrar nesta equipe. Peça um novo convite."
+        }
+        return "Falha ao entrar na equipe. Verifique a conexão."
     }
 
     // MARK: - Chat
@@ -851,6 +1005,7 @@ final class DuoTeamService: ObservableObject {
         appendLocal(message)
         do {
             try await DuoTeamFirestoreService.saveMessage(message)
+            await notifyTeamMembersOfChatMessage(message)
         } catch {
             lastError = "Mensagem não sincronizou com o Firebase."
         }
@@ -881,12 +1036,50 @@ final class DuoTeamService: ObservableObject {
         appendLocal(message)
         do {
             try await DuoTeamFirestoreService.saveMessage(message)
-            NotificationService.shared.deliverDuoTeamNotification(
-                title: "Treino marcado na equipe",
-                body: body
-            )
+            await notifyTeamMembersOfChatMessage(message)
         } catch {
             lastError = "Proposta salva localmente; falha no Firebase."
+        }
+    }
+
+    /// Avisa os outros membros (inbox + notificação local no aparelho deles).
+    private func notifyTeamMembersOfChatMessage(_ message: DuoChatMessage) async {
+        guard message.kind != .system else { return }
+        let team: DuoTeam?
+        if let local = teams.first(where: { $0.id == message.teamId }) {
+            team = local
+        } else {
+            team = try? await DuoTeamFirestoreService.fetchTeam(id: message.teamId)
+        }
+        guard let team else { return }
+
+        let preview: String
+        if message.kind == .scheduleProposal {
+            preview = message.text
+        } else {
+            let trimmed = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            preview = trimmed.count > 120 ? String(trimmed.prefix(117)) + "…" : trimmed
+        }
+
+        let title = message.kind == .scheduleProposal
+            ? "Proposta de treino · \(team.name)"
+            : "Nova mensagem · \(team.name)"
+
+        for member in team.members {
+            guard let uid = member.uid, uid != message.senderUid else { continue }
+            let inbox = DuoInboxNotification(
+                id: UUID().uuidString,
+                kind: message.kind == .scheduleProposal ? "duoChatSchedule" : "duoChatMessage",
+                title: title,
+                body: "\(message.senderName): \(preview)",
+                teamId: team.id,
+                teamName: team.name,
+                fromUid: message.senderUid,
+                fromName: message.senderName,
+                createdAt: .now,
+                delivered: false
+            )
+            try? await DuoTeamFirestoreService.saveInboxNotification(forUserId: uid, notification: inbox)
         }
     }
 
@@ -1013,12 +1206,12 @@ final class DuoTeamService: ObservableObject {
         deliveringInboxIds.removeAll()
     }
 
-    /// Em background: remove o listener da inbox (Firestore) para não manter conexão ociosa.
+    /// Em background: mantém a inbox ativa para avisos de chat/convite; o chat listener de mensagens já é por tela.
     func handleAppEnteredBackground() {
-        pauseInboxListener()
+        // Inbox permanece — notifica mensagens de chat e respostas de convite.
     }
 
-    /// Ao voltar: busca pendências uma vez e reativa o listener.
+    /// Ao voltar: busca pendências e garante o listener.
     func handleAppBecameActive() {
         guard let userId = boundUserId else { return }
         Task {
@@ -1135,30 +1328,55 @@ final class DuoTeamService: ObservableObject {
         )
     }
 
-    /// Junta equipes locais e do Firestore; sobe para o banco as que só existem no aparelho.
+    /// Junta equipes locais e do Firestore; sobe para o banco só o que ainda faz sentido.
     private func mergeTeamsPreferringCloud(local: [DuoTeam], remote: [DuoTeam]) async -> [DuoTeam] {
         var byId: [String: DuoTeam] = [:]
         for team in remote {
             byId[team.id] = team
         }
+
+        let userId = boundUserId
         for localTeam in local {
             if let remoteTeam = byId[localTeam.id] {
                 if localTeam.updatedAt > remoteTeam.updatedAt {
-                    byId[localTeam.id] = localTeam
-                    try? await DuoTeamFirestoreService.saveTeam(localTeam)
+                    // Local mais novo: tenta publicar; se falhar, fica com o remoto (fonte de verdade).
+                    do {
+                        try await DuoTeamFirestoreService.saveTeam(localTeam)
+                        byId[localTeam.id] = localTeam
+                    } catch {
+                        print("[HealthFit] Duo merge push newer local \(localTeam.id): \(error.localizedDescription)")
+                        byId[localTeam.id] = remoteTeam
+                    }
                 }
-            } else {
-                // Equipe só no aparelho → grava no banco.
-                do {
-                    try await DuoTeamFirestoreService.saveTeam(localTeam)
+                continue
+            }
+
+            // Só no aparelho (sem membership remoto).
+            let stillMember = userId.map { uid in localTeam.members.contains(where: { $0.uid == uid }) } ?? false
+            guard stillMember else {
+                // Fantasma local (saiu / removido) — não reenvia nem mantém na lista.
+                print("[HealthFit] Duo drop stale local team \(localTeam.id)")
+                continue
+            }
+
+            do {
+                try await DuoTeamFirestoreService.saveTeam(localTeam)
+                byId[localTeam.id] = localTeam
+            } catch {
+                // Permissão/rede: não assusta a UI; tenta de novo na próxima sync.
+                print("[HealthFit] Duo merge upload \(localTeam.id): \(error.localizedDescription)")
+                if !Self.isPermissionDenied(error) {
                     byId[localTeam.id] = localTeam
-                } catch {
-                    byId[localTeam.id] = localTeam
-                    lastError = "Algumas equipes ainda não sincronizaram com o banco."
                 }
             }
         }
         return byId.values.sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    private static func isPermissionDenied(_ error: Error) -> Bool {
+        let ns = error as NSError
+        if ns.domain == "FIRFirestoreErrorDomain", ns.code == 7 { return true }
+        return ns.localizedDescription.localizedCaseInsensitiveContains("permission")
     }
 
     private func loadLocal() {
