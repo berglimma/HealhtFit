@@ -1698,12 +1698,6 @@ private struct ProfileAvatarView: View {
         .overlay(alignment: .topLeading) {
             Text(countryFlag)
                 .font(.system(size: 20))
-                .padding(2)
-                .background(
-                    Circle()
-                        .fill(Color.white)
-                        .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
-                )
                 .offset(x: -4, y: -6)
         }
     }

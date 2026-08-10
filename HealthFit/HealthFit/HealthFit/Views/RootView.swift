@@ -102,6 +102,7 @@ struct RootView: View {
                 mealPlanService.bind(userId: nil)
                 MealPhotoAnalysisService.shared.bind(userId: nil)
                 ClimbingGearService.shared.bind(userId: nil)
+                DuoTeamService.shared.bind(userId: nil, userName: nil)
                 WorkoutLiveActivitySync.end()
                 EveningTrainingNudgeService.cancelAll()
             }
@@ -141,12 +142,19 @@ struct RootView: View {
         mealPlanService.bind(userId: authService.currentUser?.id)
         MealPhotoAnalysisService.shared.bind(userId: authService.currentUser?.id)
         ClimbingGearService.shared.bind(userId: authService.currentUser?.id)
+        DuoTeamService.shared.bind(
+            userId: authService.currentUser?.id,
+            userName: authService.currentUser?.greetingName,
+            countryCode: authService.currentUser?.countryCode
+        )
         mealPlanService.loadSavedData()
         if mealPlanService.weeklyPlan.isEmpty, let user = authService.currentUser {
             mealPlanService.generatePlan(for: user)
         }
         if let userId = authService.currentUser?.id {
             await MealPhotoAnalysisService.shared.loadIfNeeded(userId: userId)
+            authService.syncProfilePhotoToCloudIfNeeded()
+            await DuoTeamService.shared.loadIfNeeded()
         }
         refreshInactivityReminder()
         EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
@@ -199,10 +207,19 @@ struct RootView: View {
 
         mealPlanService.bind(userId: authService.currentUser?.id)
         ClimbingGearService.shared.bind(userId: authService.currentUser?.id)
+        DuoTeamService.shared.bind(
+            userId: authService.currentUser?.id,
+            userName: authService.currentUser?.greetingName,
+            countryCode: authService.currentUser?.countryCode
+        )
         mealPlanService.loadSavedData()
         refreshInactivityReminder()
         EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
         syncWellnessCloudHistory()
+        if authService.currentUser?.id != nil {
+            authService.syncProfilePhotoToCloudIfNeeded()
+            await DuoTeamService.shared.loadIfNeeded()
+        }
 
         try? await Task.sleep(nanoseconds: 250_000_000)
         NotificationService.shared.refreshRecurringNotifications()

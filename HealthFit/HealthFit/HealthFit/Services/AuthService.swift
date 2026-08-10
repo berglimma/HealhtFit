@@ -319,6 +319,11 @@ final class AuthService: ObservableObject {
         markProfileDirty(true, userId: profile.id)
         NotificationService.shared.refreshRecurringNotifications()
         syncProfileToCloud(profile)
+        Task {
+            await DuoTeamService.shared.refreshMyMemberProfileAcrossTeams(
+                countryCode: profile.countryCode
+            )
+        }
     }
 
     /// Garante envio pendente ao Firebase (ex.: ao ir para background).
@@ -333,9 +338,46 @@ final class AuthService: ObservableObject {
         if let image {
             Self.saveImage(image, for: uid)
             profileImage = image
+            syncProfilePhotoToCloud(userId: uid)
         } else {
             Self.deleteImage(for: uid)
             profileImage = nil
+            Task {
+                try? await ProfilePhotoStorageService.deletePhoto(userId: uid)
+                try? await ProfileFirestoreService.updateDirectoryPhotoURL(userId: uid, photoURL: nil)
+                await DuoTeamService.shared.refreshMyMemberProfileAcrossTeams(photoURL: "")
+            }
+        }
+    }
+
+    /// Envia a foto local ao Storage e atualiza o diretório / equipes.
+    func syncProfilePhotoToCloudIfNeeded() {
+        guard let uid = currentUser?.id, profileImage != nil else { return }
+        syncProfilePhotoToCloud(userId: uid)
+    }
+
+    private func syncProfilePhotoToCloud(userId: String) {
+        Task {
+            let data: Data?
+            if let image = profileImage {
+                data = image.resizedForProfile(maxSide: 400).jpegData(compressionQuality: 0.85)
+            } else {
+                data = try? Data(contentsOf: Self.profileImageURL(for: userId))
+            }
+            guard let data, !data.isEmpty else { return }
+            do {
+                let url = try await ProfilePhotoStorageService.uploadJPEG(data: data, userId: userId)
+                try await ProfileFirestoreService.updateDirectoryPhotoURL(userId: userId, photoURL: url.absoluteString)
+                if let user = currentUser, user.id == userId {
+                    try? await ProfileFirestoreService.syncUserDirectory(user, photoURL: url.absoluteString)
+                }
+                await DuoTeamService.shared.refreshMyMemberProfileAcrossTeams(
+                    photoURL: url.absoluteString,
+                    countryCode: currentUser?.countryCode
+                )
+            } catch {
+                print("[HealthFit] Falha ao sincronizar foto de perfil: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -476,6 +518,7 @@ final class AuthService: ObservableObject {
                         persistSession(with: kept)
                     }
                 } else {
+                    try? await ProfileFirestoreService.syncUserDirectory(remoteProfile)
                     await MainActor.run {
                         markProfileDirty(false, userId: userId)
                         persistSession(with: remoteProfile)
@@ -513,6 +556,14 @@ final class AuthService: ObservableObject {
         AppAnalytics.setUserID(profile.id)
         saveCachedProfile(profile)
         loadProfileImage()
+        syncProfilePhotoToCloudIfNeeded()
+        // Garante país/bandeira no diretório público (dupla/equipe).
+        Task {
+            try? await ProfileFirestoreService.syncUserDirectory(profile)
+            await DuoTeamService.shared.refreshMyMemberProfileAcrossTeams(
+                countryCode: profile.countryCode
+            )
+        }
         NotificationService.shared.refreshRecurringNotifications()
         NotificationService.shared.refreshWorkoutInactivityReminder(
             lastWorkoutAt: nil,
@@ -627,6 +678,9 @@ final class AuthService: ObservableObject {
         try await DailyWellnessFirestoreService.deleteAllEntries(userId: userId)
         try await MealPlanFirestoreService.deleteAllUserData(userId: userId)
         try await MealPhotoAnalysisFirestoreService.deleteAllUserData(userId: userId)
+        try await DuoTeamFirestoreService.deleteAllUserData(userId: userId)
+        try? await ProfilePhotoStorageService.deletePhoto(userId: userId)
+        try await ProfileFirestoreService.deleteUserDirectory(userId: userId)
         try await WorkoutFirestoreService.deleteAllUserData(userId: userId)
         try await WorkoutFirestoreService.deleteUserDocument(userId: userId)
     }
@@ -654,6 +708,7 @@ final class AuthService: ObservableObject {
         workoutStore.clearAllLocalData()
         mealPlanService.clearAllLocalData()
         MealPhotoAnalysisService.shared.clearAllLocalData()
+        DuoTeamService.shared.clearAllLocalData()
         ExternalWorkoutSyncService.shared.clearAllLocalData()
         wellnessService.clearAllLocalData()
         TrainingNutritionSyncService.shared.clear()

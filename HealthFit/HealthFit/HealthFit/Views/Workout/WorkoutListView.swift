@@ -68,6 +68,31 @@ struct WorkoutListView: View {
         NavigationStack {
             ScrollView {
                 LazyVStack(spacing: 16) {
+                    DuoTeamCard()
+
+                    if let duoName = workoutStore.activeDuoTeamName ?? workoutStore.activeDuoTeamId {
+                        HStack(spacing: 10) {
+                            Image(systemName: "person.3.fill")
+                                .foregroundStyle(AppTheme.accent)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Treino em equipe ativo")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                Text("“\(duoName)” — este treino entra no relatório do grupo")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+                            Spacer()
+                            Button("Desligar") {
+                                workoutStore.clearDuoTeamWorkoutContext()
+                            }
+                            .font(.caption.weight(.semibold))
+                        }
+                        .padding(12)
+                        .background(AppTheme.accent.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
                     if availableSections.count > 1 {
                         sectionPicker
                     }

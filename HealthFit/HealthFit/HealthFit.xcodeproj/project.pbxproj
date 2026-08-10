@@ -35,6 +35,18 @@
 		B1000915 /* WorkoutSheetOCRParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000915 /* WorkoutSheetOCRParser.swift */; };
 		B1000916 /* WorkoutSheetDocumentScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000916 /* WorkoutSheetDocumentScanner.swift */; };
 		B1000917 /* ScanWorkoutSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000917 /* ScanWorkoutSheetView.swift */; };
+		B1000920 /* DuoTeamModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000920 /* DuoTeamModels.swift */; };
+		B1000921 /* DuoTeamService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000921 /* DuoTeamService.swift */; };
+		B1000922 /* DuoTeamFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000922 /* DuoTeamFirestoreService.swift */; };
+		B1000923 /* DuoTeamCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000923 /* DuoTeamCard.swift */; };
+		B1000924 /* DuoTeamConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000924 /* DuoTeamConsentView.swift */; };
+		B1000925 /* DuoTeamHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000925 /* DuoTeamHubView.swift */; };
+		B1000926 /* DuoTeamInviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000926 /* DuoTeamInviteView.swift */; };
+		B1000927 /* DuoTeamChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000927 /* DuoTeamChatView.swift */; };
+		B1000929 /* DuoTeamReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000929 /* DuoTeamReportView.swift */; };
+		B1000931 /* DuoMemberAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000931 /* DuoMemberAvatarView.swift */; };
+		B1000930 /* ProfilePhotoStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000930 /* ProfilePhotoStorageService.swift */; };
+		B1000928 /* MessageComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000928 /* MessageComposeView.swift */; };
 		B1000010 /* RestTimerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000010 /* RestTimerService.swift */; };
 		B1000011 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000011 /* WatchConnectivityManager.swift */; };
 		B1000013 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000013 /* AppTheme.swift */; };
@@ -357,6 +369,18 @@
 		F1000915 /* WorkoutSheetOCRParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSheetOCRParser.swift; sourceTree = "<group>"; };
 		F1000916 /* WorkoutSheetDocumentScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSheetDocumentScanner.swift; sourceTree = "<group>"; };
 		F1000917 /* ScanWorkoutSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanWorkoutSheetView.swift; sourceTree = "<group>"; };
+		F1000920 /* DuoTeamModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoTeamModels.swift; sourceTree = "<group>"; };
+		F1000921 /* DuoTeamService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoTeamService.swift; sourceTree = "<group>"; };
+		F1000922 /* DuoTeamFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoTeamFirestoreService.swift; sourceTree = "<group>"; };
+		F1000923 /* DuoTeamCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoTeamCard.swift; sourceTree = "<group>"; };
+		F1000924 /* DuoTeamConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoTeamConsentView.swift; sourceTree = "<group>"; };
+		F1000925 /* DuoTeamHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoTeamHubView.swift; sourceTree = "<group>"; };
+		F1000926 /* DuoTeamInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoTeamInviteView.swift; sourceTree = "<group>"; };
+		F1000927 /* DuoTeamChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoTeamChatView.swift; sourceTree = "<group>"; };
+		F1000929 /* DuoTeamReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoTeamReportView.swift; sourceTree = "<group>"; };
+		F1000931 /* DuoMemberAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoMemberAvatarView.swift; sourceTree = "<group>"; };
+		F1000930 /* ProfilePhotoStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoStorageService.swift; sourceTree = "<group>"; };
+		F1000928 /* MessageComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposeView.swift; sourceTree = "<group>"; };
 		F1000010 /* RestTimerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerService.swift; sourceTree = "<group>"; };
 		F1000011 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		F1000013 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
@@ -726,6 +750,7 @@
 				F1000420 /* RunTrackingModels.swift */,
 				F1000004 /* MealModels.swift */,
 				F1000352 /* MealPhotoAnalysisModels.swift */,
+				F1000920 /* DuoTeamModels.swift */,
 				F1000059 /* MealCatalog.swift */,
 				F1000046 /* WeeklyProgressModels.swift */,
 				F1000050 /* MeditationModels.swift */,
@@ -757,6 +782,7 @@
 				F1000360 /* ExternalWorkoutAssistantEngine.swift */,
 				F1000341 /* TrainingNutritionSyncService.swift */,
 				F1000009 /* NotificationService.swift */,
+				F1000921 /* DuoTeamService.swift */,
 				F1000914 /* NutritionNotificationPreferences.swift */,
 				F1000918 /* RecommendedWorkoutCatalog.swift */,
 				F1000915 /* WorkoutSheetOCRParser.swift */,
@@ -846,6 +872,7 @@
 				G1000017 /* Assistant */,
 				G1000015 /* Profile */,
 				G1000060 /* Subscription */,
+				G1000018 /* Duo */,
 				G1000016 /* Shared */,
 			);
 			path = Views;
@@ -946,10 +973,25 @@
 			path = Profile;
 			sourceTree = "<group>";
 		};
+		G1000018 /* Duo */ = {
+			isa = PBXGroup;
+			children = (
+				F1000923 /* DuoTeamCard.swift */,
+				F1000924 /* DuoTeamConsentView.swift */,
+				F1000925 /* DuoTeamHubView.swift */,
+				F1000926 /* DuoTeamInviteView.swift */,
+				F1000927 /* DuoTeamChatView.swift */,
+				F1000929 /* DuoTeamReportView.swift */,
+				F1000931 /* DuoMemberAvatarView.swift */,
+			);
+			path = Duo;
+			sourceTree = "<group>";
+		};
 		G1000016 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
 				F1000041 /* MailComposeView.swift */,
+				F1000928 /* MessageComposeView.swift */,
 				F1000055 /* DailyWellnessCheckInView.swift */,
 				F1000058 /* PulsingHeartIconView.swift */,
 				F1000203 /* KeyboardDismiss.swift */,
@@ -996,6 +1038,8 @@
 				F2000070 /* AppAnalytics.swift */,
 				F2000071 /* MealPlanFirestoreService.swift */,
 				F2000072 /* MealPhotoAnalysisFirestoreService.swift */,
+				F1000922 /* DuoTeamFirestoreService.swift */,
+				F1000930 /* ProfilePhotoStorageService.swift */,
 				F1000071 /* AuthErrorMapper.swift */,
 				F1000072 /* FirebaseAuthProvider.swift */,
 				F1000075 /* GoogleServiceInfo.swift */,
@@ -1406,6 +1450,18 @@
 				B1000915 /* WorkoutSheetOCRParser.swift in Sources */,
 				B1000916 /* WorkoutSheetDocumentScanner.swift in Sources */,
 				B1000917 /* ScanWorkoutSheetView.swift in Sources */,
+				B1000920 /* DuoTeamModels.swift in Sources */,
+				B1000921 /* DuoTeamService.swift in Sources */,
+				B1000922 /* DuoTeamFirestoreService.swift in Sources */,
+				B1000923 /* DuoTeamCard.swift in Sources */,
+				B1000924 /* DuoTeamConsentView.swift in Sources */,
+				B1000925 /* DuoTeamHubView.swift in Sources */,
+				B1000926 /* DuoTeamInviteView.swift in Sources */,
+				B1000927 /* DuoTeamChatView.swift in Sources */,
+				B1000929 /* DuoTeamReportView.swift in Sources */,
+				B1000930 /* ProfilePhotoStorageService.swift in Sources */,
+				B1000931 /* DuoMemberAvatarView.swift in Sources */,
+				B1000928 /* MessageComposeView.swift in Sources */,
 				B1000010 /* RestTimerService.swift in Sources */,
 				B1000306 /* WorkoutLiveActivityAttributes.swift in Sources */,
 				B1000307 /* WorkoutLiveActivityController.swift in Sources */,

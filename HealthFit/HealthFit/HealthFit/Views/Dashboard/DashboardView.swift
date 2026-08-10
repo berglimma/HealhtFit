@@ -45,6 +45,7 @@ struct DashboardView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     headerSection
+                    DuoTeamCard()
                     weeklyReportBanner
                     monthlyReportBanner
                     lastShareCardSection

@@ -618,6 +618,18 @@ final class NotificationService {
         WatchConnectivityManager.shared.cancelDailyMotivationOnWatch()
     }
 
+    /// Notificação de treino em dupla/equipe (convite, chat, marcação).
+    func deliverDuoTeamNotification(title: String, body: String) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        deliverImmediately(
+            title: title,
+            body: trimmed,
+            category: "DUO_TEAM",
+            identifier: "duo_team_\(UUID().uuidString)"
+        )
+    }
+
     /// Alerta local quando o IAssistente entrega uma mensagem completa ao usuário.
     func deliverAssistantMessageNotification(body: String) {
         let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)

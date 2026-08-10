@@ -16,6 +16,9 @@
     "·" : {
 
     },
+    "“%@” — este treino entra no relatório do grupo" : {
+
+    },
     "“%@” será removido permanentemente." : {
 
     },
@@ -77,6 +80,16 @@
     "%@ · encerre quando a luta acabar" : {
 
     },
+    "%@ · no app · %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · no app · %2$@"
+          }
+        }
+      }
+    },
     "%@ / %@" : {
       "localizations" : {
         "pt-BR" : {
@@ -103,6 +116,19 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ → %2$@"
+          }
+        }
+      }
+    },
+    "%@ convidou você" : {
+
+    },
+    "%@, %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
           }
         }
       }
@@ -157,6 +183,9 @@
       }
     },
     "%lld doses" : {
+
+    },
+    "%lld equipe(s) · chat para marcar treinos" : {
 
     },
     "%lld etapas guiadas" : {
@@ -269,6 +298,16 @@
         }
       }
     },
+    "%lld treinos · %lld min · %lld kcal" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld treinos · %2$lld min · %3$lld kcal"
+          }
+        }
+      }
+    },
     "%lld un na lista de compras" : {
 
     },
@@ -338,6 +377,9 @@
       }
     },
     "%lld×" : {
+
+    },
+    "%lldº" : {
 
     },
     "%lldº grau" : {
@@ -447,10 +489,23 @@
     "12h" : {
 
     },
+    "30 dias: %lld treinos · %lld min · %lld kcal" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "30 dias: %1$lld treinos · %2$lld min · %3$lld kcal"
+          }
+        }
+      }
+    },
     "A assinatura renova automaticamente até cancelar. Gerencie em Ajustes → Apple ID." : {
 
     },
     "A demonstração fica em loop. O cronômetro só começa quando você toca em Começar exercício." : {
+
+    },
+    "A equipe será encerrada porque não haverá mais membros." : {
 
     },
     "A ficha será salva em Personalizados deste programa." : {
@@ -468,6 +523,9 @@
     "Abrir em tela cheia" : {
 
     },
+    "Aceitar" : {
+
+    },
     "Aceleração e saltos" : {
 
     },
@@ -475,6 +533,9 @@
 
     },
     "Acelerômetro e giroscópio separam tempo em parede, pausas e número de tentativas." : {
+
+    },
+    "Ações" : {
 
     },
     "Acompanhe a queima em tempo real — dados do relógio quando conectado." : {
@@ -520,6 +581,9 @@
 
     },
     "Adicionar mídia do treino" : {
+
+    },
+    "Adicionar pessoas" : {
 
     },
     "Agora não" : {
@@ -637,6 +701,9 @@
     "Ativa" : {
 
     },
+    "Ativar: próximos treinos contam para a equipe" : {
+
+    },
     "Ativas" : {
 
     },
@@ -644,6 +711,9 @@
 
     },
     "Ative o GPS para reportar com localização." : {
+
+    },
+    "Ative o modo equipe antes de iniciar o treino. Só esses treinos aparecem no ranking — os individuais ficam de fora." : {
 
     },
     "Atividade (minutos)" : {
@@ -1420,6 +1490,12 @@
     "Buscar exercício" : {
 
     },
+    "Buscar no app, SMS, e-mail ou código" : {
+
+    },
+    "Buscar no HealthFit" : {
+
+    },
     "Buscar prancha…" : {
 
     },
@@ -1429,7 +1505,16 @@
     "Buscar sensores" : {
 
     },
+    "Busque no app, envie SMS ou e-mail com um convite motivador. O HealthFit espera por quem ainda não entrou. Sem localização em tempo real." : {
+
+    },
+    "Busque pelo nome ou “Como você gostaria de ser chamado”. Também dá para convidar por SMS, e-mail motivador ou código." : {
+
+    },
     "Cada ficha inclui demos em vídeo/GIF dos exercícios durante o treino." : {
+
+    },
+    "Cada membro publica o próprio desempenho ao abrir o relatório. Sem localização em tempo real." : {
 
     },
     "Cadastrar" : {
@@ -1526,6 +1611,9 @@
     "Categoria" : {
 
     },
+    "Chat" : {
+
+    },
     "Check-in da manhã" : {
 
     },
@@ -1533,6 +1621,9 @@
 
     },
     "Cobrança" : {
+
+    },
+    "Código do convite" : {
 
     },
     "Com base no seu peso (%@ kg), beba:" : {
@@ -1769,6 +1860,9 @@
     "Compartilhar conquista" : {
 
     },
+    "Compartilhar convite" : {
+
+    },
     "Compartilhar o que você fez hoje" : {
 
     },
@@ -1820,6 +1914,9 @@
     "Configure seu perfil de atleta" : {
 
     },
+    "Configure uma conta de e-mail no aparelho ou compartilhe o convite de outra forma." : {
+
+    },
     "Configure uma conta de e-mail no iPhone ou cadastre o e-mail do nutricionista no Perfil." : {
 
     },
@@ -1856,6 +1953,24 @@
     "Continuar mesmo assim" : {
 
     },
+    "Convidar por e-mail" : {
+
+    },
+    "Convidar por SMS" : {
+
+    },
+    "Convide parceiros, chat e SMS — sem localização ao vivo" : {
+
+    },
+    "Convites enviados" : {
+
+    },
+    "Convites recebidos" : {
+
+    },
+    "Copiar código" : {
+
+    },
     "Copo registrado (+ %lld ml)" : {
 
     },
@@ -1872,10 +1987,25 @@
     "Corrida livre — encerre quando quiser · Ritmo ref. %@" : {
 
     },
+    "Criando…" : {
+
+    },
+    "Criar" : {
+
+    },
     "Criar Conta" : {
 
     },
+    "Criar e enviar e-mail" : {
+
+    },
+    "Criar e enviar SMS" : {
+
+    },
     "Criar ficha personalizada" : {
+
+    },
+    "Crie uma dupla/equipe, busque pessoas pelo nome no app (ou SMS) e use o chat só para marcar atividades físicas (mensagens expiram em 24h)." : {
 
     },
     "Cronômetro de Descanso" : {
@@ -1971,6 +2101,9 @@
     "Desempenho Semanal" : {
 
     },
+    "Desligar" : {
+
+    },
     "Deslize para a esquerda ou toque no ícone de lixeira para remover um exercício." : {
 
     },
@@ -2011,6 +2144,9 @@
 
     },
     "Diários de natação, bike e surf/kite ficam dentro de cada modalidade." : {
+
+    },
+    "Digite pelo menos 2 letras." : {
 
     },
     "Diminuir pausa 15 segundos" : {
@@ -2061,6 +2197,9 @@
 
     },
     "Duas rotinas: aquecimento geral e pós-treino, com GIFs na execução" : {
+
+    },
+    "Dupla / equipe" : {
 
     },
     "Duração" : {
@@ -2150,7 +2289,13 @@
     "Entendo que não poderei recuperar minha conta" : {
 
     },
+    "Entrar" : {
+
+    },
     "Entrar com Apple" : {
+
+    },
+    "Entrar com código" : {
 
     },
     "Entrar com Google" : {
@@ -2175,6 +2320,9 @@
 
     },
     "Equipamento para inspecionar" : {
+
+    },
+    "Equipe não encontrada" : {
 
     },
     "Equivale a cerca de %lld copos de %lld ml ou %lld garrafas de %lld ml." : {
@@ -2262,6 +2410,9 @@
     "Esta ação é permanente. Sua conta, treinos na nuvem, perfil e dados locais serão removidos." : {
 
     },
+    "Este aparelho não pode enviar SMS. Use e-mail ou compartilhe o código." : {
+
+    },
     "Estilo" : {
 
     },
@@ -2303,6 +2454,9 @@
 
     },
     "Ex: 40" : {
+
+    },
+    "Ex.: AB12CD" : {
 
     },
     "Ex.: buraco profundo na direita" : {
@@ -2401,9 +2555,6 @@
     "Foto de fundo" : {
 
     },
-    "Foto descartada · salvo no Firebase" : {
-
-    },
     "Foto do perfil" : {
 
     },
@@ -2448,6 +2599,12 @@
 
     },
     "Gerar Cardápio" : {
+
+    },
+    "Gerar código" : {
+
+    },
+    "Gerar outro código" : {
 
     },
     "Gerar PDF do relatório" : {
@@ -2651,6 +2808,9 @@
     "Li e aceito os Termos de Uso e a Política de Privacidade" : {
 
     },
+    "Li e concordo — continuar" : {
+
+    },
     "Liberar com o plano %@" : {
 
     },
@@ -2725,6 +2885,9 @@
 
     },
     "Marcar todas" : {
+
+    },
+    "Marcar treino" : {
 
     },
     "Maré" : {
@@ -2809,6 +2972,9 @@
           }
         }
       }
+    },
+    "Membros (%lld)" : {
+
     },
     "Meta %@ km" : {
 
@@ -2901,13 +3067,22 @@
     "Modo do mapa — 2D ou 3D com percurso" : {
 
     },
+    "Modo equipe ativo — toque para desligar" : {
+
+    },
     "Modo perda de gordura: opções restritivas com baixo carboidrato e sem frituras." : {
 
     },
     "Modo: %@" : {
 
     },
+    "Montando ranking…" : {
+
+    },
     "Mudar de plano" : {
+
+    },
+    "Na equipe" : {
 
     },
     "Na meta" : {
@@ -2935,6 +3110,9 @@
 
     },
     "Não foi possível salvar" : {
+
+    },
+    "Não há mapa ao vivo. O chat é só para marcar atividades físicas e as mensagens duram 24 horas." : {
 
     },
     "Não tomei" : {
@@ -3000,6 +3178,9 @@
     "Nenhuma atividade registrada neste período." : {
 
     },
+    "Nenhuma equipe ainda" : {
+
+    },
     "Nenhuma foto selecionada" : {
 
     },
@@ -3030,10 +3211,16 @@
     "Neste treino" : {
 
     },
+    "Ninguém encontrado com esse nome." : {
+
+    },
     "Nível do mar via Open-Meteo Marine (estimado — não é tábua de porto)." : {
 
     },
     "No treino: altura de saltos via giroscópio Apple Watch + iPhone, pontos no mapa, gráficos e relatório PDF." : {
+
+    },
+    "Nome" : {
 
     },
     "Nome  Completo" : {
@@ -3063,6 +3250,9 @@
     "Nome do treino" : {
 
     },
+    "Nome ou como quer ser chamado" : {
+
+    },
     "Nota (opcional)" : {
 
     },
@@ -3079,6 +3269,9 @@
 
     },
     "Notificações de suplementos" : {
+
+    },
+    "Nova dupla / equipe" : {
 
     },
     "Nova Ficha" : {
@@ -3248,6 +3441,9 @@
     "Obrigatório · idade atual: %lld anos" : {
 
     },
+    "Observação (opcional)" : {
+
+    },
     "Observações" : {
 
     },
@@ -3263,13 +3459,22 @@
     "Open-Meteo (vento + Marine): altura real estimada com sua localização." : {
 
     },
+    "Ordem: treinos + minutos ativos + calorias da equipe." : {
+
+    },
     "Orientações" : {
+
+    },
+    "Os próximos treinos que você iniciar (força, cardio, etc.) entram no relatório desta equipe. Treinos individuais não entram." : {
 
     },
     "Ótimo! Menos cafeína ajuda no sono e na recuperação muscular." : {
 
     },
     "Ou escolha uma distância:" : {
+
+    },
+    "Ou gerar código para compartilhar" : {
 
     },
     "Outras modalidades de cardio ficam em Perfil → Modalidades que pratico." : {
@@ -3346,6 +3551,9 @@
 
     },
     "Pausar treino" : {
+
+    },
+    "Peça o código a quem te convidou (também chega por SMS se a pessoa usou o convite)." : {
 
     },
     "Pedal livre — encerre quando quiser" : {
@@ -3434,10 +3642,16 @@
     "pontos" : {
 
     },
+    "Pontuação %lld" : {
+
+    },
     "Por favor, preencha as medidas para salvar." : {
 
     },
     "Por que você está encerrando o treino antes de concluir todos os exercícios?" : {
+
+    },
+    "Por segurança o HealthFit não usa localização em tempo real." : {
 
     },
     "Possui nutricionista?" : {
@@ -3720,6 +3934,12 @@
     "Projeções com este ritmo" : {
 
     },
+    "Propor horário de treino" : {
+
+    },
+    "Propor treino" : {
+
+    },
     "Próximas horas" : {
 
     },
@@ -3733,6 +3953,9 @@
 
     },
     "Qtd" : {
+
+    },
+    "Quando" : {
 
     },
     "Quantas horas você dormiu?" : {
@@ -3759,6 +3982,12 @@
     "Rajadas" : {
 
     },
+    "Ranking de desempenho · %@" : {
+
+    },
+    "Ranking do grupo" : {
+
+    },
     "Reativar" : {
 
     },
@@ -3778,6 +4007,9 @@
 
     },
     "Recorde anterior" : {
+
+    },
+    "Recusar" : {
 
     },
     "Redefinir senha" : {
@@ -3838,13 +4070,22 @@
     "Registros de hoje" : {
 
     },
+    "Relatório da equipe" : {
+
+    },
     "Relatório de compras da semana" : {
+
+    },
+    "Relatório e ranking da equipe" : {
 
     },
     "Relatório enviado com sucesso. Agora você pode compartilhar o card da conquista." : {
 
     },
     "Relatório enviado para %@. Agora você pode compartilhar o card da conquista." : {
+
+    },
+    "Relatório indisponível" : {
 
     },
     "Relatório Mensal" : {
@@ -3976,6 +4217,9 @@
     "s/100m" : {
 
     },
+    "Saindo…" : {
+
+    },
     "Sair" : {
 
     },
@@ -3983,6 +4227,12 @@
 
     },
     "Sair da conta?" : {
+
+    },
+    "Sair do grupo" : {
+
+    },
+    "Sair do grupo?" : {
 
     },
     "Saltos" : {
@@ -4064,6 +4314,18 @@
 
     },
     "Sem dados suficientes." : {
+
+    },
+    "Sem localização em tempo real" : {
+
+    },
+    "Sem localização em tempo real." : {
+
+    },
+    "Sem mapa em tempo real e sem compartilhar sua posição ao vivo." : {
+
+    },
+    "Sem mapa ou localização em tempo real" : {
 
     },
     "Sem meta de km" : {
@@ -4221,10 +4483,22 @@
     "Sistema" : {
 
     },
+    "SMS indisponível" : {
+
+    },
+    "Só atividades físicas…" : {
+
+    },
     "Só musculação" : {
 
     },
+    "Só para marcar atividades físicas. A mensagem expira em 24 horas. Sem mapa e sem localização ao vivo." : {
+
+    },
     "Sobre" : {
+
+    },
+    "Somente treinos iniciados em dupla/equipe. Treinos individuais não entram." : {
 
     },
     "Sono" : {
@@ -4436,6 +4710,9 @@
     "TDEE: %lld kcal" : {
 
     },
+    "Telefone com DDD" : {
+
+    },
     "tempo" : {
 
     },
@@ -4541,6 +4818,9 @@
     "Toque para recolher o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos." : {
 
     },
+    "Toque para saber como funciona (sem mapa em tempo real)" : {
+
+    },
     "Total" : {
 
     },
@@ -4568,6 +4848,15 @@
     "Treino em andamento: %@" : {
 
     },
+    "Treino em dupla / equipe" : {
+
+    },
+    "Treino em equipe" : {
+
+    },
+    "Treino em equipe ativo" : {
+
+    },
     "Treino Encerrado" : {
 
     },
@@ -4584,6 +4873,9 @@
 
     },
     "Treinos com peso corporal — sem academia" : {
+
+    },
+    "Treinos combinados" : {
 
     },
     "Treinos Recentes" : {
@@ -4605,6 +4897,9 @@
 
     },
     "Último card de postagem" : {
+
+    },
+    "Último treino: %@" : {
 
     },
     "Últimos treinos" : {
@@ -4716,7 +5011,16 @@
     "Você consome muito doce?" : {
 
     },
+    "Você deixa de ver o chat e os convites desta equipe. Os demais membros continuam." : {
+
+    },
+    "Você é o único membro. Ao sair, a equipe será encerrada." : {
+
+    },
     "Você não concluiu o treino, mas cada sessão conta — card pronto para Stories e status." : {
+
+    },
+    "Você poderá entrar de novo só com um novo convite/código." : {
 
     },
     "Você tolera lactose?" : {

@@ -61,6 +61,7 @@ enum UserDataCleaner {
         "healthfit.pr.pending_assistant",
         "healthfit.externalWorkouts.processedUUIDs",
         "healthfit.externalWorkouts.pendingAssistantMessage",
+        "healthfit.duoTeam.privacyConsent.v1",
     ]
 
     static func clearAllLocalData(uid: String, email: String) {

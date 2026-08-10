@@ -17,6 +17,9 @@ final class WorkoutStore: ObservableObject {
     @Published private(set) var activeMeditationConfig: MeditationWorkoutConfig?
     /// Sessão iniciada no Apple Watch (espelhada no iPhone).
     @Published private(set) var sessionOriginatedFromWatch = false
+    /// Próximos treinos iniciados contam para esta dupla/equipe (relatório do grupo).
+    @Published private(set) var activeDuoTeamId: String?
+    @Published private(set) var activeDuoTeamName: String?
     /// Scanner de ficha / câmera em tela cheia — o banner minimizado some para não cobrir os controles.
     @Published private(set) var isFullscreenCameraPresented = false
     /// Evita repetir a tela de motivação ao retomar o mesmo treino.
@@ -44,6 +47,8 @@ final class WorkoutStore: ObservableObject {
     private let activePausedKey = "healthfit_exercise_timer_paused"
     private let exerciseLastProgressKey = "healthfit_exercise_last_progress_at"
     private let activeCardioConfigKey = "healthfit_active_cardio_config"
+    private let activeDuoTeamIdKey = "healthfit_active_duo_team_id"
+    private let activeDuoTeamNameKey = "healthfit_active_duo_team_name"
     /// Após 2h30 sem finalizar, o treino é encerrado automaticamente.
     static let autoEndInactivityLimit: TimeInterval = 2.5 * 60 * 60
     static let autoEndJustification =
@@ -83,6 +88,7 @@ final class WorkoutStore: ObservableObject {
         activeCardioConfig = nil
         activeMeditationConfig = nil
         sessionOriginatedFromWatch = false
+        clearDuoTeamWorkoutContext()
         isFullscreenCameraPresented = false
         hasShownStartMotivation = false
         hasBoundActiveWorkoutUI = false
@@ -184,6 +190,7 @@ final class WorkoutStore: ObservableObject {
         }
 
         restorePersistedActiveSessionIfNeeded()
+        restoreDuoTeamWorkoutContextIfNeeded()
         await performDeferredCatalogBootstrap()
     }
 
@@ -431,6 +438,45 @@ final class WorkoutStore: ObservableObject {
         return last
     }
 
+    /// Ativa/desativa o modo “treino em dupla/equipe” para os próximos inícios de sessão.
+    func setDuoTeamWorkoutContext(teamId: String?, teamName: String?) {
+        let id = teamId?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = teamName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let id, !id.isEmpty {
+            activeDuoTeamId = id
+            activeDuoTeamName = (name?.isEmpty == false) ? name : nil
+            UserDefaults.standard.set(id, forKey: activeDuoTeamIdKey)
+            if let activeDuoTeamName {
+                UserDefaults.standard.set(activeDuoTeamName, forKey: activeDuoTeamNameKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: activeDuoTeamNameKey)
+            }
+        } else {
+            clearDuoTeamWorkoutContext()
+        }
+    }
+
+    func clearDuoTeamWorkoutContext() {
+        activeDuoTeamId = nil
+        activeDuoTeamName = nil
+        UserDefaults.standard.removeObject(forKey: activeDuoTeamIdKey)
+        UserDefaults.standard.removeObject(forKey: activeDuoTeamNameKey)
+    }
+
+    func restoreDuoTeamWorkoutContextIfNeeded() {
+        guard let id = UserDefaults.standard.string(forKey: activeDuoTeamIdKey), !id.isEmpty else {
+            activeDuoTeamId = nil
+            activeDuoTeamName = nil
+            return
+        }
+        activeDuoTeamId = id
+        activeDuoTeamName = UserDefaults.standard.string(forKey: activeDuoTeamNameKey)
+    }
+
+    private func duoContextForNewSession() -> (id: String?, name: String?) {
+        (activeDuoTeamId, activeDuoTeamName)
+    }
+
     @discardableResult
     func startSession(
         for sheet: WorkoutSheet,
@@ -439,11 +485,14 @@ final class WorkoutStore: ObservableObject {
     ) -> Bool {
         guard ensureCanStartNewSession() else { return false }
 
+        let duo = duoContextForNewSession()
         let session = WorkoutSession(
             workoutSheetId: sheet.id,
             workoutTitle: sheet.title,
             totalExercises: sheet.exercises.count,
-            tookPreWorkout: tookPreWorkout
+            tookPreWorkout: tookPreWorkout,
+            duoTeamId: duo.id,
+            duoTeamName: duo.name
         )
         activeSession = session
         activeCardioConfig = nil
@@ -563,6 +612,7 @@ final class WorkoutStore: ObservableObject {
         guard ensureCanStartNewSession() else { return false }
 
         stopExerciseTimer()
+        let duo = duoContextForNewSession()
         let session = WorkoutSession(
             workoutSheetId: config.exercise.id,
             workoutTitle: config.title,
@@ -582,7 +632,9 @@ final class WorkoutStore: ObservableObject {
                 $0.snapshot(isKitesurf: config.isKitesurfSession)
             },
             rowing: config.rowingSetup?.snapshot(),
-            climbing: config.climbingSetup?.snapshot()
+            climbing: config.climbingSetup?.snapshot(),
+            duoTeamId: duo.id,
+            duoTeamName: duo.name
         )
         activeSession = session
         activeCardioConfig = config
@@ -611,10 +663,13 @@ final class WorkoutStore: ObservableObject {
         guard ensureCanStartNewSession() else { return false }
 
         stopExerciseTimer()
+        let duo = duoContextForNewSession()
         let session = WorkoutSession(
             workoutSheetId: config.topic.id,
             workoutTitle: config.title,
-            totalExercises: 1
+            totalExercises: 1,
+            duoTeamId: duo.id,
+            duoTeamName: duo.name
         )
         activeSession = session
         activeCardioConfig = nil

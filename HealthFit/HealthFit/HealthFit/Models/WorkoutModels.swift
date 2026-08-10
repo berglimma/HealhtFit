@@ -461,6 +461,14 @@ struct WorkoutSession: Identifiable, Codable {
     var earlyEndJustification: String?
     /// Encerrado automaticamente por inatividade (mais de 2h30 sem finalizar).
     var autoEndedByInactivity: Bool
+    /// Se preenchido, o treino foi iniciado em contexto de dupla/equipe (conta no relatório do grupo).
+    var duoTeamId: String?
+    var duoTeamName: String?
+
+    var isDuoTeamSession: Bool {
+        guard let duoTeamId else { return false }
+        return !duoTeamId.isEmpty
+    }
 
     init(
         id: UUID = UUID(),
@@ -494,7 +502,9 @@ struct WorkoutSession: Identifiable, Codable {
         autoEndedByInactivity: Bool = false,
         source: WorkoutSessionSource = .healthFit,
         healthKitUUID: UUID? = nil,
-        externalSourceName: String? = nil
+        externalSourceName: String? = nil,
+        duoTeamId: String? = nil,
+        duoTeamName: String? = nil
     ) {
         self.id = id
         self.workoutSheetId = workoutSheetId
@@ -528,6 +538,8 @@ struct WorkoutSession: Identifiable, Codable {
         self.endedEarly = endedEarly
         self.earlyEndJustification = earlyEndJustification
         self.autoEndedByInactivity = autoEndedByInactivity
+        self.duoTeamId = duoTeamId
+        self.duoTeamName = duoTeamName
     }
 
     init(from decoder: Decoder) throws {
@@ -564,6 +576,8 @@ struct WorkoutSession: Identifiable, Codable {
         endedEarly = try container.decodeIfPresent(Bool.self, forKey: .endedEarly) ?? false
         earlyEndJustification = try container.decodeIfPresent(String.self, forKey: .earlyEndJustification)
         autoEndedByInactivity = try container.decodeIfPresent(Bool.self, forKey: .autoEndedByInactivity) ?? false
+        duoTeamId = try container.decodeIfPresent(String.self, forKey: .duoTeamId)
+        duoTeamName = try container.decodeIfPresent(String.self, forKey: .duoTeamName)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -604,6 +618,8 @@ struct WorkoutSession: Identifiable, Codable {
         try container.encode(endedEarly, forKey: .endedEarly)
         try container.encodeIfPresent(earlyEndJustification, forKey: .earlyEndJustification)
         try container.encode(autoEndedByInactivity, forKey: .autoEndedByInactivity)
+        try container.encodeIfPresent(duoTeamId, forKey: .duoTeamId)
+        try container.encodeIfPresent(duoTeamName, forKey: .duoTeamName)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -616,6 +632,7 @@ struct WorkoutSession: Identifiable, Codable {
         case poolLengthMeters, swimLapCount, targetSwimLaps, swimPaceSecondsPer100m
         case waterSport, rowing, climbing
         case endedEarly, earlyEndJustification, autoEndedByInactivity
+        case duoTeamId, duoTeamName
     }
 
     var isExternalHealthKitSession: Bool {
