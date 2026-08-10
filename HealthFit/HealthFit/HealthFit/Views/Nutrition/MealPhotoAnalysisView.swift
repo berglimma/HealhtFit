@@ -283,9 +283,6 @@ struct MealPhotoAnalysisView: View {
                             Text("P \(entry.proteinGrams)g · C \(entry.carbsGrams)g · G \(entry.fatGrams)g · \(entry.calories) kcal")
                                 .font(.caption)
                                 .foregroundStyle(AppTheme.textSecondary)
-                            Text("Foto descartada · salvo no Firebase")
-                                .font(.caption2)
-                                .foregroundStyle(AppTheme.textSecondary.opacity(0.85))
                         }
                         Spacer(minLength: 0)
                     }
