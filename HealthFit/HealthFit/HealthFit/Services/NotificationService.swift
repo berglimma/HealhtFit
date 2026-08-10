@@ -619,14 +619,25 @@ final class NotificationService {
     }
 
     /// Notificação de treino em dupla/equipe (convite, chat, marcação).
-    func deliverDuoTeamNotification(title: String, body: String) {
+    func deliverDuoTeamNotification(
+        title: String,
+        body: String,
+        teamId: String? = nil,
+        teamName: String? = nil,
+        kind: String? = nil
+    ) {
         let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        var userInfo: [AnyHashable: Any] = [:]
+        if let teamId, !teamId.isEmpty { userInfo["teamId"] = teamId }
+        if let teamName, !teamName.isEmpty { userInfo["teamName"] = teamName }
+        if let kind, !kind.isEmpty { userInfo["kind"] = kind }
         deliverImmediately(
             title: title,
             body: trimmed,
             category: "DUO_TEAM",
-            identifier: "duo_team_\(UUID().uuidString)"
+            identifier: "duo_team_\(UUID().uuidString)",
+            userInfo: userInfo
         )
     }
 
@@ -1308,7 +1319,8 @@ final class NotificationService {
         category: String,
         identifier: String,
         exerciseName: String? = nil,
-        immediate: Bool = false
+        immediate: Bool = false,
+        userInfo: [AnyHashable: Any] = [:]
     ) {
         let trigger: UNNotificationTrigger? = immediate
             ? nil
@@ -1319,7 +1331,8 @@ final class NotificationService {
             body: body,
             category: category,
             identifier: identifier,
-            trigger: trigger
+            trigger: trigger,
+            userInfo: userInfo
         )
 
         WatchConnectivityManager.shared.deliverNotificationToWatch(
@@ -1336,7 +1349,8 @@ final class NotificationService {
         body: String,
         category: String,
         identifier: String,
-        trigger: UNNotificationTrigger?
+        trigger: UNNotificationTrigger?,
+        userInfo: [AnyHashable: Any] = [:]
     ) {
         let content = UNMutableNotificationContent()
         content.title = title
@@ -1344,6 +1358,9 @@ final class NotificationService {
         content.sound = .default
         content.categoryIdentifier = category
         content.interruptionLevel = .timeSensitive
+        if !userInfo.isEmpty {
+            content.userInfo = userInfo
+        }
 
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request) { error in
@@ -1376,10 +1393,18 @@ final class AppNotificationCenterDelegate: NSObject, UNUserNotificationCenterDel
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        if response.notification.request.content.categoryIdentifier
-            == EveningTrainingNudgeConfiguration.category {
+        let content = response.notification.request.content
+        if content.categoryIdentifier == EveningTrainingNudgeConfiguration.category {
             Task { @MainActor in
                 EveningTrainingNudgeService.handleNotificationWake()
+            }
+        }
+        if content.categoryIdentifier == "DUO_TEAM" {
+            Task { @MainActor in
+                DuoNavigationRouter.shared.handleNotificationUserInfo(
+                    content.userInfo,
+                    category: content.categoryIdentifier
+                )
             }
         }
         completionHandler()

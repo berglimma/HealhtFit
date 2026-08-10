@@ -1037,14 +1037,21 @@ final class DuoTeamService: ObservableObject {
     // MARK: - Chat
 
     func startListening(teamId: String) {
-        guard listeners[teamId] == nil else { return }
+        if listeners[teamId] != nil { return }
         listeners[teamId] = DuoTeamFirestoreService.listenMessages(teamId: teamId) { [weak self] messages in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.messagesByTeam[teamId] = Self.filterActiveMessages(messages)
-                await self.purgeExpiredMessages(teamId: teamId, from: messages)
+                self.applyRemoteMessages(messages, teamId: teamId)
+                // Purge fora do caminho crítico da UI.
+                Task { await self.purgeExpiredMessages(teamId: teamId, from: messages) }
             }
         }
+    }
+
+    /// Reinicia o listener (útil ao voltar para a tela do chat).
+    func restartListening(teamId: String) {
+        stopListening(teamId: teamId)
+        startListening(teamId: teamId)
     }
 
     func stopListening(teamId: String) {
@@ -1055,11 +1062,30 @@ final class DuoTeamService: ObservableObject {
     func loadMessages(teamId: String) async {
         do {
             let messages = try await DuoTeamFirestoreService.fetchMessages(teamId: teamId)
-            messagesByTeam[teamId] = Self.filterActiveMessages(messages)
-            await purgeExpiredMessages(teamId: teamId, from: messages)
+            applyRemoteMessages(messages, teamId: teamId)
+            Task { await purgeExpiredMessages(teamId: teamId, from: messages) }
         } catch {
             lastError = "Não foi possível carregar o chat."
         }
+    }
+
+    /// Aplica mensagens do Firebase sem apagar otimistas locais ainda não confirmadas.
+    private func applyRemoteMessages(_ remote: [DuoChatMessage], teamId: String) {
+        let remoteFiltered = Self.filterActiveMessages(remote)
+        let remoteIds = Set(remoteFiltered.map(\.id))
+        let pendingLocal = (messagesByTeam[teamId] ?? []).filter { message in
+            guard !remoteIds.contains(message.id), !message.isExpired else { return false }
+            // Mantém só envios recentes (ainda sincronizando).
+            return Date().timeIntervalSince(message.createdAt) < 90
+        }
+        setMessages(Self.filterActiveMessages(remoteFiltered + pendingLocal), for: teamId)
+    }
+
+    /// Reatribui o dicionário para o `@Published` disparar a UI de imediato.
+    private func setMessages(_ messages: [DuoChatMessage], for teamId: String) {
+        var next = messagesByTeam
+        next[teamId] = messages
+        messagesByTeam = next
     }
 
     func sendText(teamId: String, text: String) async {
@@ -1271,8 +1297,10 @@ final class DuoTeamService: ObservableObject {
 
     private func appendLocal(_ message: DuoChatMessage) {
         var list = messagesByTeam[message.teamId] ?? []
-        list.append(message)
-        messagesByTeam[message.teamId] = Self.filterActiveMessages(list)
+        if !list.contains(where: { $0.id == message.id }) {
+            list.append(message)
+        }
+        setMessages(Self.filterActiveMessages(list), for: message.teamId)
         if let idx = teams.firstIndex(where: { $0.id == message.teamId }) {
             teams[idx].updatedAt = .now
             persistLocal()
@@ -1339,7 +1367,10 @@ final class DuoTeamService: ObservableObject {
             deliveringInboxIds.insert(note.id)
             NotificationService.shared.deliverDuoTeamNotification(
                 title: note.title,
-                body: note.body
+                body: note.body,
+                teamId: note.teamId,
+                teamName: note.teamName,
+                kind: note.kind
             )
             do {
                 try await DuoTeamFirestoreService.markNotificationDelivered(forUserId: userId, id: note.id)
@@ -1354,6 +1385,13 @@ final class DuoTeamService: ObservableObject {
                     persistLocal()
                 } catch {
                     print("[HealthFit] Duo reload after add: \(error.localizedDescription)")
+                }
+            }
+            // Nova mensagem de chat: atualiza a conversa na hora (mesmo se o snapshot atrasar).
+            if note.kind == "duoChatMessage" || note.kind == "duoChatSchedule" {
+                await loadMessages(teamId: note.teamId)
+                if listeners[note.teamId] == nil {
+                    startListening(teamId: note.teamId)
                 }
             }
             // Atualiza status dos convites enviados (aceito / recusado).
@@ -1386,7 +1424,10 @@ final class DuoTeamService: ObservableObject {
             guard !notified.contains(invite.id) else { continue }
             NotificationService.shared.deliverDuoTeamNotification(
                 title: "Convite para um grupo",
-                body: "\(invite.fromName) convidou você para “\(invite.teamName)”. Abra Dupla / equipe para aceitar."
+                body: "\(invite.fromName) convidou você para “\(invite.teamName)”. Abra Dupla / equipe para aceitar.",
+                teamId: invite.teamId,
+                teamName: invite.teamName,
+                kind: "invitePending"
             )
             notified.insert(invite.id)
             changed = true

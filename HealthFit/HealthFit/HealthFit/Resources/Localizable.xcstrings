@@ -2983,6 +2983,9 @@
     "Membros (%lld)" : {
 
     },
+    "Mensagem" : {
+
+    },
     "Meta %@ km" : {
 
     },
@@ -4348,9 +4351,6 @@
     "Sem localização em tempo real" : {
 
     },
-    "Sem localização em tempo real." : {
-
-    },
     "Sem mapa em tempo real e sem compartilhar sua posição ao vivo." : {
 
     },
@@ -4521,7 +4521,7 @@
     "SMS indisponível" : {
 
     },
-    "Só atividades físicas…" : {
+    "Só atividades físicas · mensagens expiram em 12h" : {
 
     },
     "Só musculação" : {

@@ -10,6 +10,7 @@ struct MainTabView: View {
     @ObservedObject private var dailyMorningService = DailyMorningCheckInService.shared
     @ObservedObject private var dailyEveningService = DailyEveningCheckInService.shared
     @ObservedObject private var profileReminder = ProfileDataReminderService.shared
+    @ObservedObject private var duoNavigation = DuoNavigationRouter.shared
     @State private var selectedTab = 0
     /// Only mount heavy tab roots after first visit — TabView otherwise builds all 5 eagerly.
     @State private var loadedTabs: Set<Int> = [0]
@@ -117,6 +118,25 @@ struct MainTabView: View {
             }
             .onChange(of: selectedTab) { _, tab in
                 handleSelectedTabChange(tab)
+            }
+            .onChange(of: duoNavigation.focusWorkoutsTabTick) { _, _ in
+                loadedTabs.insert(workoutsTabTag)
+                selectedTab = workoutsTabTag
+            }
+            .sheet(item: $duoNavigation.presentedChat) { destination in
+                NavigationStack {
+                    DuoTeamChatView(teamId: destination.teamId, teamName: destination.teamName)
+                        .environmentObject(authService)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Fechar") {
+                                    duoNavigation.dismissChat()
+                                }
+                            }
+                        }
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
             .onChange(of: wellnessService.showSleepCheckIn) { _, isShowingSleep in
                 handleSleepCheckInChange(isShowingSleep)

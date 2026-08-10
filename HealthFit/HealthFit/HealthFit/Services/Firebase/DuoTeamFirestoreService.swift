@@ -438,11 +438,18 @@ enum DuoTeamFirestoreService {
         onChange: @escaping @Sendable ([DuoChatMessage]) -> Void
     ) -> ListenerRegistration? {
         guard isAvailable else { return nil }
+        // descending + limit = últimas N; depois ordena crescente para a UI.
         return messagesCollection(teamId: teamId)
-            .order(by: "createdAt", descending: false)
+            .order(by: "createdAt", descending: true)
             .limit(to: 80)
-            .addSnapshotListener { snapshot, _ in
-                let messages = snapshot?.documents.compactMap { decode(DuoChatMessage.self, from: $0.data()) } ?? []
+            .addSnapshotListener { snapshot, error in
+                if let error {
+                    print("[HealthFit] Duo chat listener: \(error.localizedDescription)")
+                    return
+                }
+                let messages = (snapshot?.documents.compactMap {
+                    decode(DuoChatMessage.self, from: $0.data())
+                } ?? []).sorted { $0.createdAt < $1.createdAt }
                 onChange(messages)
             }
     }
