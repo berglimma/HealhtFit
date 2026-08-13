@@ -11,6 +11,11 @@ struct MealPhotoAnalysisView: View {
     @State private var draft: MealPhotoAnalysisDraft?
     @State private var analysisNote: String?
     @State private var detectedFoods: [String] = []
+    @State private var fromNutritionLabel = false
+    @State private var baseProtein = 0
+    @State private var baseCarbs = 0
+    @State private var baseFat = 0
+    @State private var portionScale: Double = 1.0
     @State private var isAnalyzing = false
     @State private var showPhotoSource = false
     @State private var showGallery = false
@@ -88,7 +93,7 @@ struct MealPhotoAnalysisView: View {
             Text("Análise de refeição")
                 .font(.title3.weight(.bold))
                 .foregroundStyle(AppTheme.textPrimary)
-            Text("Tire ou escolha uma foto do prato. O app estima proteína, carbo e gordura; os dados vão para o Firebase e a foto é descartada.")
+            Text("Foto do prato ou do rótulo nutricional. O app lê o texto da embalagem quando houver tabela; senão estima pelo visual. Só macros são salvos — a foto é descartada.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
         }
@@ -205,8 +210,16 @@ struct MealPhotoAnalysisView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.textPrimary)
 
+            if fromNutritionLabel {
+                Label("Tabela nutricional lida na foto", systemImage: "text.viewfinder")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+            }
+
             TextField("Tipo de alimento", text: binding(\.foodLabel, draft: draft))
                 .textFieldStyle(.roundedBorder)
+
+            portionScaleRow
 
             HStack(spacing: 10) {
                 macroField(title: "Proteína (g)", value: binding(\.proteinGrams, draft: draft))
@@ -245,6 +258,34 @@ struct MealPhotoAnalysisView: View {
         .padding()
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private var portionScaleRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(fromNutritionLabel ? "Porção consumida" : "Ajuste de porção")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+            HStack(spacing: 8) {
+                ForEach(portionOptions, id: \.factor) { option in
+                    Button {
+                        applyPortionScale(option.factor)
+                    } label: {
+                        Text(option.title)
+                            .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .foregroundStyle(abs(portionScale - option.factor) < 0.01 ? AppTheme.background : AppTheme.textPrimary)
+                            .background(abs(portionScale - option.factor) < 0.01 ? AppTheme.accent : AppTheme.background.opacity(0.35))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var portionOptions: [(title: String, factor: Double)] {
+        [("½", 0.5), ("1×", 1.0), ("1½", 1.5), ("2×", 2.0)]
     }
 
     private func macroField(title: String, value: Binding<Int>) -> some View {
@@ -301,12 +342,19 @@ struct MealPhotoAnalysisView: View {
         previewImage = image
         draft = nil
         detectedFoods = []
-        analysisNote = "Identificando alimentos na foto…"
+        fromNutritionLabel = false
+        portionScale = 1.0
+        analysisNote = "Identificando alimentos e lendo rótulo…"
         isAnalyzing = true
 
         Task {
             do {
                 let estimate = try await MealPhotoAnalysisEngine.analyze(image: image)
+                baseProtein = estimate.proteinGrams
+                baseCarbs = estimate.carbsGrams
+                baseFat = estimate.fatGrams
+                portionScale = 1.0
+                fromNutritionLabel = estimate.fromNutritionLabel
                 draft = MealPhotoAnalysisDraft(
                     mealType: selectedMealType,
                     foodLabel: estimate.foodLabel,
@@ -322,9 +370,24 @@ struct MealPhotoAnalysisView: View {
                 infoMessage = error.localizedDescription
                 analysisNote = nil
                 detectedFoods = []
+                fromNutritionLabel = false
             }
             isAnalyzing = false
         }
+    }
+
+    private func applyPortionScale(_ factor: Double) {
+        guard draft != nil else { return }
+        portionScale = factor
+        let p = Int((Double(baseProtein) * factor).rounded())
+        let c = Int((Double(baseCarbs) * factor).rounded())
+        let f = Int((Double(baseFat) * factor).rounded())
+        guard var current = draft else { return }
+        current.proteinGrams = p
+        current.carbsGrams = c
+        current.fatGrams = f
+        current.calories = MealPhotoAnalysisEntry.estimatedCalories(protein: p, carbs: c, fat: f)
+        draft = current
     }
 
     private func registerAndDiscardPhoto() async {
@@ -343,6 +406,8 @@ struct MealPhotoAnalysisView: View {
         previewImage = nil
         self.draft = nil
         detectedFoods = []
+        fromNutritionLabel = false
+        portionScale = 1.0
         analysisNote = "\(saved.foodLabel) registrado. Foto descartada do aparelho."
         infoMessage = "Análise salva. A foto não fica armazenada — só proteína, carbo e gordura."
     }
@@ -369,6 +434,11 @@ struct MealPhotoAnalysisView: View {
                     carbs: current.carbsGrams,
                     fat: current.fatGrams
                 )
+                // Edição manual redefine a base da porção como 1×.
+                baseProtein = current.proteinGrams
+                baseCarbs = current.carbsGrams
+                baseFat = current.fatGrams
+                portionScale = 1.0
                 self.draft = current
             }
         )

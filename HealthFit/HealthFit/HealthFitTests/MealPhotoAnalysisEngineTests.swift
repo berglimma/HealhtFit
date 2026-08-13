@@ -46,6 +46,70 @@ final class MealPhotoAnalysisEngineTests: XCTestCase {
         XCTAssertEqual(merged.first(where: { $0.item.displayName == "Frango grelhado" })?.confidence, 0.8)
     }
 
+    func testMergeConsolidatesRiceAndBeans() {
+        let arroz = FoodMacroCatalog.item(matching: "arroz")!
+        let feijao = FoodMacroCatalog.item(matching: "feijao")!
+        let merged = MealPhotoAnalysisEngine.mergeHits([
+            .init(item: arroz, confidence: 0.7, source: "ocr"),
+            .init(item: feijao, confidence: 0.68, source: "ocr"),
+        ])
+        let names = merged.map(\.item.displayName)
+        XCTAssertTrue(names.contains("Arroz e feijão"))
+        XCTAssertFalse(names.contains("Arroz"))
+        XCTAssertFalse(names.contains("Feijão"))
+    }
+
+    func testMergeDropsPotatoWhenSweetPotatoPresent() {
+        let doce = FoodMacroCatalog.item(matching: "batata doce")!
+        let batata = FoodMacroCatalog.item(matching: "batata frita")!
+        let merged = MealPhotoAnalysisEngine.mergeHits([
+            .init(item: doce, confidence: 0.85, source: "ocr"),
+            .init(item: batata, confidence: 0.6, source: "ocr"),
+        ])
+        let names = merged.map(\.item.displayName)
+        XCTAssertTrue(names.contains("Batata doce"))
+        XCTAssertFalse(names.contains("Batata"))
+    }
+
+    func testShortKeywordRequiresWordBoundary() {
+        XCTAssertTrue(MealPhotoAnalysisEngine.textContainsKeyword("pao frances na mesa", keyword: "pao"))
+        XCTAssertFalse(MealPhotoAnalysisEngine.textContainsKeyword("paodeacucar", keyword: "pao"))
+        XCTAssertFalse(MealPhotoAnalysisEngine.textContainsKeyword("orangeade gelada", keyword: "orange"))
+    }
+
+    func testParseNutritionLabelPortuguese() {
+        let text = """
+        Informação Nutricional
+        Porção 100 g
+        Valor energético 220 kcal
+        Carboidratos 28 g
+        Proteínas 18 g
+        Gorduras totais 6 g
+        """
+        let reading = MealPhotoAnalysisEngine.parseNutritionLabel(from: text)
+        XCTAssertNotNil(reading)
+        XCTAssertEqual(reading?.proteinGrams, 18)
+        XCTAssertEqual(reading?.carbsGrams, 28)
+        XCTAssertEqual(reading?.fatGrams, 6)
+        XCTAssertEqual(reading?.calories, 220)
+        XCTAssertTrue(reading?.isPer100g == true)
+    }
+
+    func testParseNutritionLabelEnglish() {
+        let text = """
+        Nutrition Facts
+        Calories 150
+        Total Carbohydrate 12 g
+        Protein 20 g
+        Total Fat 4 g
+        """
+        let reading = MealPhotoAnalysisEngine.parseNutritionLabel(from: text)
+        XCTAssertNotNil(reading)
+        XCTAssertEqual(reading?.proteinGrams, 20)
+        XCTAssertEqual(reading?.carbsGrams, 12)
+        XCTAssertEqual(reading?.fatGrams, 4)
+    }
+
     func testComposeEstimateJoinsFoodNames() {
         let frango = FoodMacroCatalog.item(matching: "frango")!
         let arroz = FoodMacroCatalog.item(matching: "arroz")!
@@ -60,6 +124,7 @@ final class MealPhotoAnalysisEngineTests: XCTestCase {
         XCTAssertTrue(estimate.foodLabel.contains("Arroz"))
         XCTAssertEqual(estimate.detectedFoods.count, 2)
         XCTAssertGreaterThan(estimate.proteinGrams, 30)
+        XCTAssertFalse(estimate.fromNutritionLabel)
     }
 
     func testDraftRequiresFoodAndMacros() {
