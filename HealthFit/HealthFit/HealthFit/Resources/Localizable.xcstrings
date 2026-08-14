@@ -505,6 +505,9 @@
     "A equipe será encerrada porque não haverá mais membros." : {
 
     },
+    "A esteira tem elevação?" : {
+
+    },
     "A ficha será salva em Personalizados deste programa." : {
 
     },
@@ -596,6 +599,12 @@
 
     },
     "Aguardando Watch" : {
+
+    },
+    "Ajuste a inclinação conforme a esteira. O gasto calórico estimado acompanha a elevação." : {
+
+    },
+    "Ajuste de porção" : {
 
     },
     "Alerta após: %llds" : {
@@ -2238,6 +2247,9 @@
     "Eficiência e barco" : {
 
     },
+    "Elevação" : {
+
+    },
     "Em Perfil, marque as modalidades que você pratica para montar a lista de treinos." : {
 
     },
@@ -2368,6 +2380,9 @@
     "Escolha pelo menos um grupo muscular." : {
 
     },
+    "Escolha se o aparelho permite inclinar o tapete. Sem mapa GPS — treino indoor." : {
+
+    },
     "Escolha um exercício e defina a intensidade" : {
 
     },
@@ -2411,6 +2426,12 @@
 
     },
     "Este aparelho não pode enviar SMS. Use e-mail ou compartilhe o código." : {
+
+    },
+    "Esteira indoor" : {
+
+    },
+    "Esteira sem elevação — ritmo plano. Distância estimada pelo tempo e intensidade (sem GPS)." : {
 
     },
     "Estilo" : {
@@ -2556,6 +2577,9 @@
 
     },
     "Foto do perfil" : {
+
+    },
+    "Foto do prato ou do rótulo nutricional. O app lê o texto da embalagem quando houver tabela; senão estima pelo visual. Só macros são salvos — a foto é descartada." : {
 
     },
     "Foto ou vídeo do treino" : {
@@ -2704,7 +2728,13 @@
     "Inativa" : {
 
     },
+    "Inclinação inicial" : {
+
+    },
     "Indicadores na sessão" : {
+
+    },
+    "Indoor · sem mapa" : {
 
     },
     "Informações" : {
@@ -2729,6 +2759,9 @@
 
     },
     "Iniciar Corrida" : {
+
+    },
+    "Iniciar Esteira" : {
 
     },
     "Iniciar Kitesurf" : {
@@ -2834,6 +2867,9 @@
 
     },
     "Livre" : {
+
+    },
+    "Local" : {
 
     },
     "Luta" : {
@@ -3677,6 +3713,9 @@
     "Por segurança o HealthFit não usa localização em tempo real." : {
 
     },
+    "Porção consumida" : {
+
+    },
     "Possui nutricionista?" : {
 
     },
@@ -4354,6 +4393,9 @@
     "Sem mapa em tempo real e sem compartilhar sua posição ao vivo." : {
 
     },
+    "Sem mapa GPS" : {
+
+    },
     "Sem mapa ou localização em tempo real" : {
 
     },
@@ -4742,6 +4784,9 @@
         }
       }
     },
+    "Tabela nutricional lida na foto" : {
+
+    },
     "Tamanho da piscina" : {
 
     },
@@ -4803,9 +4848,6 @@
 
     },
     "Tipo de prancha" : {
-
-    },
-    "Tire ou escolha uma foto do prato. O app estima proteína, carbo e gordura; os dados vão para o Firebase e a foto é descartada." : {
 
     },
     "Título" : {
@@ -5044,6 +5086,9 @@
 
     },
     "Você não concluiu o treino, mas cada sessão conta — card pronto para Stories e status." : {
+
+    },
+    "Você pode mudar a elevação também durante o treino." : {
 
     },
     "Você poderá entrar de novo só com um novo convite/código." : {

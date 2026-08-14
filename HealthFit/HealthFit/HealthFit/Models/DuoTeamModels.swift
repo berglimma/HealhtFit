@@ -42,7 +42,7 @@ enum DuoTeamModality: String, CaseIterable, Codable, Identifiable, Hashable {
             || title.contains("bicicleta") {
             return .cycling
         }
-        if title.contains("corrida") || title.contains("run") { return .running }
+        if title.contains("corrida") || title.contains("run") || title.contains("esteira") { return .running }
         if title.hasPrefix("meditação") || title.hasPrefix("meditacao") { return nil }
         if session.isOutdoorGPSCardio { return .running }
         // Força / fichas / home / mobilidade.
@@ -60,7 +60,7 @@ enum DuoTeamModality: String, CaseIterable, Codable, Identifiable, Hashable {
         if lower.contains("bike") || lower.contains("bicicleta") || lower.contains("mountain") {
             return .cycling
         }
-        if lower.contains("corrida") { return .running }
+        if lower.contains("corrida") || lower.contains("esteira") { return .running }
         return nil
     }
 }

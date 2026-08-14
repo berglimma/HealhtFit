@@ -131,9 +131,9 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         name == "Corrida"
     }
 
-    /// Metas de km também em caminhada, bikes outdoor e remo.
+    /// Metas de km também em caminhada, bikes outdoor, remo e esteira (sem GPS).
     var supportsCustomDistanceGoals: Bool {
-        supportsDistanceGoals || isOutdoorWalking || isOutdoorCycling || isRowing
+        supportsDistanceGoals || isOutdoorWalking || isOutdoorCycling || isRowing || isTreadmill
     }
 
     /// Natação em piscina: comprimento, voltas e diário.
@@ -158,6 +158,11 @@ struct CardioExercise: Identifiable, Hashable, Codable {
 
     var isStationaryBike: Bool {
         name == "Bicicleta ergométrica"
+    }
+
+    /// Esteira ergométrica indoor (academia/casa) — sem mapa GPS.
+    var isTreadmill: Bool {
+        name == "Esteira Ergométrica" || name == "Esteira ergométrica"
     }
 
     var isSurf: Bool { name == "Surf" }
@@ -187,6 +192,8 @@ struct CardioExercise: Identifiable, Hashable, Codable {
             return [Color(red: 0.22, green: 0.55, blue: 0.92), Color(red: 0.08, green: 0.22, blue: 0.48)]
         case "Bicicleta ergométrica":
             return [Color(red: 0.40, green: 0.48, blue: 0.58), Color(red: 0.18, green: 0.22, blue: 0.30)]
+        case "Esteira Ergométrica", "Esteira ergométrica":
+            return [Color(red: 0.72, green: 0.18, blue: 0.28), Color(red: 0.12, green: 0.10, blue: 0.14)]
         case "Surf":
             return [Color(red: 0.15, green: 0.62, blue: 0.85), Color(red: 0.05, green: 0.22, blue: 0.48)]
         case "Kitesurf", "Kite Surf":
@@ -220,6 +227,7 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         case "Mountain bike": return "CardioCoverMountainBike"
         case "Bicicleta pedal": return "CardioCoverBicicletaPedal"
         case "Bicicleta ergométrica": return "CardioCoverBicicletaErgometrica"
+        case "Esteira Ergométrica", "Esteira ergométrica": return "CardioCoverEsteira"
         case "Surf": return "CardioCoverSurf"
         case "Kitesurf", "Kite Surf": return "CardioCoverKitesurf"
         case "Elíptico": return "CardioCoverEliptico"
@@ -254,7 +262,8 @@ struct CardioExercise: Identifiable, Hashable, Codable {
     ]
 
     static let catalog: [CardioExercise] = [
-        CardioExercise(name: "Corrida", description: "Corrida contínua em esteira ou ao ar livre", icon: "figure.run", caloriesPerMinute: 10),
+        CardioExercise(name: "Corrida", description: "Corrida ao ar livre com mapa GPS, ritmo e rota", icon: "figure.run", caloriesPerMinute: 10),
+        CardioExercise(name: "Esteira Ergométrica", description: "Indoor · configure se tem elevação · sem mapa GPS", icon: "figure.run.treadmill", caloriesPerMinute: 9),
         CardioExercise(name: "Caminhada", description: "Caminhada outdoor com mapa GPS, ritmo e passos", icon: "figure.walk", caloriesPerMinute: 6),
         CardioExercise(name: "Mountain bike", description: "Mountain bike em trilha ou terreno irregular", icon: "bicycle", caloriesPerMinute: 10),
         CardioExercise(name: "Bicicleta pedal", description: "Ciclismo outdoor em rua ou ciclovia", icon: "figure.outdoor.cycle", caloriesPerMinute: 9),
@@ -310,6 +319,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
     let rowingSetup: RowingSetup?
     /// Setup de escalada (modalidade, graduação, setor e detecção de movimento).
     let climbingSetup: ClimbingSetup?
+    /// Setup de esteira ergométrica (elevação / inclinação).
+    let treadmillSetup: TreadmillSetup?
 
     init(
         exercise: CardioExercise,
@@ -322,7 +333,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
         customTargetDistanceKm: Double? = nil,
         waterSportSetup: WaterSportSetup? = nil,
         rowingSetup: RowingSetup? = nil,
-        climbingSetup: ClimbingSetup? = nil
+        climbingSetup: ClimbingSetup? = nil,
+        treadmillSetup: TreadmillSetup? = nil
     ) {
         self.exercise = exercise
         self.intensity = intensity
@@ -335,6 +347,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
         self.waterSportSetup = waterSportSetup
         self.rowingSetup = rowingSetup
         self.climbingSetup = climbingSetup
+        self.treadmillSetup = treadmillSetup
     }
 
     /// Rebuilds a usable config from a persisted active session (app relaunch / stuck session).
@@ -357,6 +370,9 @@ struct CardioWorkoutConfig: Hashable, Codable {
             if lower.contains("bicicleta pedal") { return "Bicicleta pedal" }
             if lower.contains("bicicleta ergométrica") || lower.contains("bicicleta ergometrica") {
                 return "Bicicleta ergométrica"
+            }
+            if lower.contains("esteira") {
+                return "Esteira Ergométrica"
             }
             if let afterDash = title.components(separatedBy: " — ").dropFirst().first?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
@@ -451,7 +467,10 @@ struct CardioWorkoutConfig: Hashable, Codable {
                     areaLatitude: snap.areaLatitude,
                     areaLongitude: snap.areaLongitude
                 )
-            } ?? (exercise.isClimbing ? .default : nil)
+            } ?? (exercise.isClimbing ? .default : nil),
+            treadmillSetup: session.treadmill.map {
+                TreadmillSetup(hasElevation: $0.hasElevation, inclinePercent: $0.inclinePercent)
+            } ?? (exercise.isTreadmill ? .default : nil)
         )
     }
 
@@ -481,6 +500,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
     var isWaterSportSession: Bool { exercise.isWaterSport }
     var isRowingSession: Bool { exercise.isRowing }
     var isClimbingSession: Bool { exercise.isClimbing }
+    /// Esteira ergométrica indoor — sem mapa.
+    var isTreadmillSession: Bool { exercise.isTreadmill }
     /// Luta: só cronômetro de combate, sem meta de distância, ritmo ou GPS.
     var isFightSession: Bool { exercise.isFight }
     var fightModality: FightModality? { exercise.fightModality }
@@ -570,6 +591,21 @@ struct CardioWorkoutConfig: Hashable, Codable {
             }
             return "Cardio — Escalada · \(discipline)"
         }
+        if isTreadmillSession {
+            let elev: String
+            if let setup = treadmillSetup, setup.hasElevation {
+                let incline = setup.resolvedInclinePercent
+                elev = incline > 0.05
+                    ? String(format: "elevação %.0f%%", incline)
+                    : "com elevação"
+            } else {
+                elev = "sem elevação"
+            }
+            if hasDistanceTarget {
+                return "Cardio — Esteira · \(elev) · \(formattedTargetKm)"
+            }
+            return "Cardio — Esteira · \(elev)"
+        }
         if isFightSession {
             return "Luta — \(exercise.name)"
         }
@@ -642,7 +678,13 @@ struct CardioWorkoutConfig: Hashable, Codable {
 
     func estimatedCalories(for elapsedSeconds: Int) -> Double {
         let minutes = Double(elapsedSeconds) / 60.0
-        return exercise.caloriesPerMinute * intensity.multiplier * minutes
+        var kcal = exercise.caloriesPerMinute * intensity.multiplier * minutes
+        if isTreadmillSession, let setup = treadmillSetup, setup.hasElevation {
+            // Inclinação típica de esteira aumenta o gasto (~3% por ponto percentual).
+            let incline = setup.resolvedInclinePercent
+            kcal *= 1.0 + (incline * 0.03)
+        }
+        return kcal
     }
 
     /// Estimativa de kcal na natação por distância + intensidade (além do tempo).
@@ -733,4 +775,37 @@ enum PaceFormatting {
     static func projectedFinish(secondsPerKm: Int, distanceKm: Double) -> Int {
         Int((Double(secondsPerKm) * distanceKm).rounded())
     }
+}
+
+// MARK: - Esteira ergométrica
+
+/// Configuração da esteira: se possui elevação/inclinação e o % usado.
+struct TreadmillSetup: Hashable, Codable {
+    /// A esteira tem controle de elevação (incline).
+    var hasElevation: Bool
+    /// Inclinação em % (0–15). Ignorado quando `hasElevation` é falso.
+    var inclinePercent: Double
+
+    static let `default` = TreadmillSetup(hasElevation: false, inclinePercent: 0)
+
+    var resolvedInclinePercent: Double {
+        guard hasElevation else { return 0 }
+        return min(max(inclinePercent, 0), 15)
+    }
+
+    func snapshot(finalInclinePercent: Double? = nil) -> TreadmillSessionSnapshot {
+        let incline = hasElevation
+            ? min(max(finalInclinePercent ?? inclinePercent, 0), 15)
+            : 0
+        return TreadmillSessionSnapshot(
+            hasElevation: hasElevation,
+            inclinePercent: incline
+        )
+    }
+}
+
+/// Snapshot persistido da sessão de esteira.
+struct TreadmillSessionSnapshot: Codable, Hashable {
+    var hasElevation: Bool
+    var inclinePercent: Double
 }

@@ -670,6 +670,7 @@ final class WorkoutStore: ObservableObject {
             },
             rowing: config.rowingSetup?.snapshot(),
             climbing: config.climbingSetup?.snapshot(),
+            treadmill: config.treadmillSetup?.snapshot(),
             duoTeamId: duo.id,
             duoTeamName: duo.name
         )
@@ -891,7 +892,8 @@ final class WorkoutStore: ObservableObject {
             targetSwimLaps: nil,
             customTargetDistanceKm: nil,
             waterSportSetup: setup,
-            climbingSetup: exercise.isClimbing ? .default : nil
+            climbingSetup: exercise.isClimbing ? .default : nil,
+            treadmillSetup: exercise.isTreadmill ? .default : nil
         )
         guard startCardioSession(config: config) else { return false }
 

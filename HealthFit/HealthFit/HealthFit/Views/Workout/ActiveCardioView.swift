@@ -52,6 +52,7 @@ struct ActiveCardioView: View {
     @State private var alertedHazardIds = Set<UUID>()
     @State private var lastHazardCheckAt: Date = .distantPast
     @State private var clockTickCount = 0
+    @State private var treadmillInclinePercent: Double = 0
 
     /// Side-effects; display uses wall clock from session start minus pauses.
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -65,6 +66,8 @@ struct ActiveCardioView: View {
     private var isRowing: Bool { config.isRowingSession }
     private var isClimbing: Bool { config.isClimbingSession }
     private var isFight: Bool { config.isFightSession }
+    private var isTreadmill: Bool { config.isTreadmillSession }
+    private var treadmillHasElevation: Bool { config.treadmillSetup?.hasElevation == true }
     private var climbingSetup: ClimbingSetup { config.climbingSetup ?? .default }
     private var trackingModality: OutdoorCardioModality {
         config.outdoorTrackingModality
@@ -119,7 +122,15 @@ struct ActiveCardioView: View {
             let paceBased = config.estimatedCalories(for: elapsedSeconds)
             return max(estimated, paceBased * 0.85)
         }
-        return config.estimatedCalories(for: elapsedSeconds)
+        var indoor = config.estimatedCalories(for: elapsedSeconds)
+        if isTreadmill, treadmillHasElevation {
+            // `estimatedCalories` já inclui a inclinação inicial; reescala para o valor ao vivo.
+            let setupIncline = config.treadmillSetup?.resolvedInclinePercent ?? 0
+            let setupFactor = 1.0 + setupIncline * 0.03
+            let liveFactor = 1.0 + treadmillInclinePercent * 0.03
+            indoor = indoor / max(setupFactor, 0.01) * liveFactor
+        }
+        return indoor
     }
 
     private var hasWatchMetrics: Bool {
@@ -239,6 +250,9 @@ struct ActiveCardioView: View {
                         intensityBadge
                         if !isOutdoorGPS {
                             exerciseInfo
+                            if isTreadmill {
+                                treadmillLiveSection
+                            }
                             if isRowing {
                                 rowingLiveSection
                             }
@@ -392,6 +406,9 @@ struct ActiveCardioView: View {
             }
             if isClimbing {
                 Task { await startClimbingSupport() }
+            }
+            if isTreadmill {
+                treadmillInclinePercent = config.treadmillSetup?.resolvedInclinePercent ?? 0
             }
             if isSwimming {
                 Task {
@@ -1856,6 +1873,47 @@ struct ActiveCardioView: View {
         }
     }
 
+    private var treadmillLiveSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Esteira indoor", systemImage: "house.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                Text("Sem mapa GPS")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            if treadmillHasElevation {
+                HStack {
+                    Label("Elevação", systemImage: "arrow.up.right")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Spacer()
+                    Text(String(format: "%.0f%%", treadmillInclinePercent))
+                        .font(.title3.bold().monospacedDigit())
+                        .foregroundStyle(AppTheme.accent)
+                }
+
+                Slider(value: $treadmillInclinePercent, in: 0...15, step: 0.5)
+                    .tint(AppTheme.accent)
+                    .disabled(isPaused || isFinishing)
+
+                Text("Ajuste a inclinação conforme a esteira. O gasto calórico estimado acompanha a elevação.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            } else {
+                Text("Esteira sem elevação — ritmo plano. Distância estimada pelo tempo e intensidade (sem GPS).")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
     private var climbingLiveSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -2077,12 +2135,12 @@ struct ActiveCardioView: View {
 
         session.endedAt = .now
         session.caloriesBurned = liveCalories
-        session.completedDistanceKm = (config.hasDistanceTarget || config.isFreeRun || isOutdoorGPS || isSwimming)
+        session.completedDistanceKm = (config.hasDistanceTarget || config.isFreeRun || isOutdoorGPS || isSwimming || isTreadmill)
             ? distanceKm
             : nil
         session.averagePaceSecondsPerKm = {
             if isOutdoorCycling { return nil }
-            if config.hasDistanceTarget || config.isFreeRun || isOutdoorGPS { return pace }
+            if config.hasDistanceTarget || config.isFreeRun || isOutdoorGPS || isTreadmill { return pace }
             return nil
         }()
         if config.hasDistanceTarget {
@@ -2130,6 +2188,13 @@ struct ActiveCardioView: View {
         if isClimbing {
             session.climbing = buildClimbingSnapshot(session: session)
             ClimbingGearService.shared.registerSessionUse(discipline: climbingSetup.discipline)
+        }
+        if isTreadmill {
+            session.treadmill = config.treadmillSetup?.snapshot(finalInclinePercent: treadmillInclinePercent)
+                ?? TreadmillSessionSnapshot(
+                    hasElevation: treadmillHasElevation,
+                    inclinePercent: treadmillHasElevation ? treadmillInclinePercent : 0
+                )
         }
         session.exerciseRecords = [
             ExerciseSessionRecord(
@@ -2184,6 +2249,7 @@ struct ActiveCardioView: View {
                 return .other
             }
             if config.exercise.isStationaryBike { return .cycling }
+            if config.isTreadmillSession { return .running }
             return .walking
         }()
 

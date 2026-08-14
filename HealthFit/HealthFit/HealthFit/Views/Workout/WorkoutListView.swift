@@ -51,7 +51,21 @@ struct WorkoutListView: View {
         if user.practicedModalityIDs.isEmpty {
             return CardioExercise.catalog
         }
-        return user.practicedCardioExercises
+        var list = user.practicedCardioExercises
+        // Esteira é nova: se o usuário já pratica Corrida ou bike ergométrica, mostra o card.
+        if let esteira = CardioExercise.catalog.first(where: \.isTreadmill),
+           !list.contains(where: \.isTreadmill),
+           user.practicesCardio(named: "Corrida")
+            || user.practicesCardio(named: "Bicicleta ergométrica")
+            || user.practicesCardio(named: "Caminhada") {
+            // Insere após Corrida quando existir.
+            if let idx = list.firstIndex(where: { $0.name == "Corrida" }) {
+                list.insert(esteira, at: idx + 1)
+            } else {
+                list.insert(esteira, at: 0)
+            }
+        }
+        return list
     }
 
     /// Sem usuário ou preferência “todas” → Luta aparece; senão respeita o toggle do perfil.

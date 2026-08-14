@@ -455,6 +455,8 @@ struct WorkoutSession: Identifiable, Codable {
     var rowing: RowingSessionSnapshot?
     /// Snapshot escalada (vias, graus, tempo em parede, clima e saúde).
     var climbing: ClimbingSessionSnapshot?
+    /// Snapshot esteira ergométrica (elevação / inclinação).
+    var treadmill: TreadmillSessionSnapshot?
     /// Encerrado antes de concluir todos os exercícios.
     var endedEarly: Bool
     /// Motivo informado pelo aluno ao encerrar antecipadamente.
@@ -497,6 +499,7 @@ struct WorkoutSession: Identifiable, Codable {
         waterSport: WaterSportSessionSnapshot? = nil,
         rowing: RowingSessionSnapshot? = nil,
         climbing: ClimbingSessionSnapshot? = nil,
+        treadmill: TreadmillSessionSnapshot? = nil,
         endedEarly: Bool = false,
         earlyEndJustification: String? = nil,
         autoEndedByInactivity: Bool = false,
@@ -535,6 +538,7 @@ struct WorkoutSession: Identifiable, Codable {
         self.waterSport = waterSport
         self.rowing = rowing
         self.climbing = climbing
+        self.treadmill = treadmill
         self.endedEarly = endedEarly
         self.earlyEndJustification = earlyEndJustification
         self.autoEndedByInactivity = autoEndedByInactivity
@@ -573,6 +577,7 @@ struct WorkoutSession: Identifiable, Codable {
         waterSport = try container.decodeIfPresent(WaterSportSessionSnapshot.self, forKey: .waterSport)
         rowing = try container.decodeIfPresent(RowingSessionSnapshot.self, forKey: .rowing)
         climbing = try container.decodeIfPresent(ClimbingSessionSnapshot.self, forKey: .climbing)
+        treadmill = try container.decodeIfPresent(TreadmillSessionSnapshot.self, forKey: .treadmill)
         endedEarly = try container.decodeIfPresent(Bool.self, forKey: .endedEarly) ?? false
         earlyEndJustification = try container.decodeIfPresent(String.self, forKey: .earlyEndJustification)
         autoEndedByInactivity = try container.decodeIfPresent(Bool.self, forKey: .autoEndedByInactivity) ?? false
@@ -615,6 +620,7 @@ struct WorkoutSession: Identifiable, Codable {
         try container.encodeIfPresent(waterSport, forKey: .waterSport)
         try container.encodeIfPresent(rowing, forKey: .rowing)
         try container.encodeIfPresent(climbing, forKey: .climbing)
+        try container.encodeIfPresent(treadmill, forKey: .treadmill)
         try container.encode(endedEarly, forKey: .endedEarly)
         try container.encodeIfPresent(earlyEndJustification, forKey: .earlyEndJustification)
         try container.encode(autoEndedByInactivity, forKey: .autoEndedByInactivity)
@@ -630,7 +636,7 @@ struct WorkoutSession: Identifiable, Codable {
         case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel
         case targetCalories, routePoints, stepCount, pausedDurationSeconds
         case poolLengthMeters, swimLapCount, targetSwimLaps, swimPaceSecondsPer100m
-        case waterSport, rowing, climbing
+        case waterSport, rowing, climbing, treadmill
         case endedEarly, earlyEndJustification, autoEndedByInactivity
         case duoTeamId, duoTeamName
     }
@@ -662,7 +668,9 @@ struct WorkoutSession: Identifiable, Codable {
     }
 
     /// Sessão com mapa GPS outdoor (Corrida, caminhada, Bicicleta pedal, Mountain bike, Surf, Kite, Remo).
+    /// Esteira ergométrica é indoor e nunca entra aqui.
     var isOutdoorGPSCardio: Bool {
+        if isTreadmillSession { return false }
         if isRunningSession { return true }
         if isOutdoorWalkingSession { return true }
         if isOutdoorCyclingSession { return true }
@@ -670,6 +678,12 @@ struct WorkoutSession: Identifiable, Codable {
         if isRowingSession { return true }
         if !routePoints.isEmpty { return true }
         return false
+    }
+
+    var isTreadmillSession: Bool {
+        if treadmill != nil { return true }
+        let title = workoutTitle.lowercased()
+        return title.contains("esteira")
     }
 
     var isWaterSportSession: Bool {
@@ -713,6 +727,7 @@ struct WorkoutSession: Identifiable, Codable {
     /// Corrida (título ou heurística legado).
     var isRunningSession: Bool {
         if isSwimmingSession { return false }
+        if isTreadmillSession { return false }
         if isOutdoorWalkingSession || isOutdoorCyclingSession || isWaterSportSession || isRowingSession {
             return false
         }

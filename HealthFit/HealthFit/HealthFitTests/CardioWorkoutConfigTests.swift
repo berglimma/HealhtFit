@@ -127,4 +127,26 @@ final class CardioWorkoutConfigTests: XCTestCase {
         XCTAssertEqual(CardioWorkoutConfig.swimLaps(fromDistanceMeters: 1000, poolLengthMeters: 25), 40)
         XCTAssertEqual(CardioWorkoutConfig.swimLaps(fromDistanceMeters: 1500, poolLengthMeters: 50), 30)
     }
+
+    func testTreadmillConfigHasNoGPSAndElevationTitle() {
+        let treadmill = CardioExercise.catalog.first(where: { $0.isTreadmill })!
+        let withElev = CardioWorkoutConfig(
+            exercise: treadmill,
+            intensity: .medium,
+            isFreeRun: true,
+            treadmillSetup: TreadmillSetup(hasElevation: true, inclinePercent: 5)
+        )
+        XCTAssertTrue(withElev.isTreadmillSession)
+        XCTAssertFalse(withElev.isOutdoorGPSCardio)
+        XCTAssertTrue(withElev.title.contains("Esteira"))
+        XCTAssertTrue(withElev.title.contains("5%"))
+
+        let flat = CardioWorkoutConfig(
+            exercise: treadmill,
+            intensity: .low,
+            treadmillSetup: TreadmillSetup(hasElevation: false, inclinePercent: 8)
+        )
+        XCTAssertTrue(flat.title.contains("sem elevação"))
+        XCTAssertEqual(flat.treadmillSetup?.resolvedInclinePercent, 0)
+    }
 }

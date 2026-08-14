@@ -42,6 +42,8 @@ struct CardioSetupView: View {
     @State private var climbingAreaName = ""
     @State private var climbingUsesMotion = true
     @State private var showsClimbingMap = false
+    @State private var treadmillHasElevation = false
+    @State private var treadmillInclinePercent: Double = 1
     @Environment(\.dismiss) private var dismiss
     @StateObject private var spotLocator = SpotLocationHelper()
     @State private var showWindConditions = false
@@ -157,7 +159,8 @@ struct CardioSetupView: View {
             }(),
             waterSportSetup: makeWaterSetup(windSpeedKmh: speed, windDirectionDegrees: direction),
             rowingSetup: exercise.isRowing ? RowingSetup(boatType: selectedRowingBoat) : nil,
-            climbingSetup: climbingSetup
+            climbingSetup: climbingSetup,
+            treadmillSetup: treadmillSetup
         )
     }
 
@@ -166,6 +169,10 @@ struct CardioSetupView: View {
             VStack(spacing: 24) {
                 headerSection
                 modalityLogbookLink
+                // Elevação fica no topo — é a configuração principal da esteira.
+                if exercise.isTreadmill {
+                    treadmillSetupSection
+                }
                 if exercise.supportsCustomDistanceGoals {
                     outdoorDistanceSection
                 }
@@ -225,7 +232,7 @@ struct CardioSetupView: View {
             if exercise.supportsDistanceGoals {
                 distanceMode = .preset(.five)
             } else if exercise.supportsCustomDistanceGoals {
-                distanceMode = .custom
+                distanceMode = exercise.isTreadmill ? .free : .custom
                 customKmText = exercise.isOutdoorCycling ? "20" : "5"
             }
             if exercise.isSurf {
@@ -512,6 +519,7 @@ struct CardioSetupView: View {
     private var distanceSectionTitle: String {
         if exercise.isOutdoorCycling { return "Meta de pedal (km)" }
         if exercise.isOutdoorWalking { return "Meta de caminhada (km)" }
+        if exercise.isTreadmill { return "Meta na esteira (km)" }
         return "Modo da corrida"
     }
 
@@ -1158,6 +1166,139 @@ struct CardioSetupView: View {
             .padding(12)
             .background(AppTheme.accentSecondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
         }
+    }
+
+    // MARK: - Esteira
+
+    private var treadmillSetupSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("A esteira tem elevação?")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(AppTheme.textPrimary)
+
+            Text("Escolha se o aparelho permite inclinar o tapete. Sem mapa GPS — treino indoor.")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            VStack(spacing: 10) {
+                treadmillOptionRow(
+                    title: "Sim, tem elevação",
+                    subtitle: "Incline o tapete (ex.: 1% a 15%)",
+                    icon: "arrow.up.forward.circle.fill",
+                    selected: treadmillHasElevation
+                ) {
+                    treadmillHasElevation = true
+                    if treadmillInclinePercent < 0.5 {
+                        treadmillInclinePercent = 1
+                    }
+                }
+
+                treadmillOptionRow(
+                    title: "Não, esteira plana",
+                    subtitle: "Sem controle de incline",
+                    icon: "minus.circle.fill",
+                    selected: !treadmillHasElevation
+                ) {
+                    treadmillHasElevation = false
+                }
+            }
+
+            if treadmillHasElevation {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Label("Inclinação inicial", systemImage: "chart.line.uptrend.xyaxis")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Spacer()
+                        Text(String(format: "%.0f%%", treadmillInclinePercent))
+                            .font(.title2.bold().monospacedDigit())
+                            .foregroundStyle(AppTheme.accent)
+                    }
+
+                    Slider(value: $treadmillInclinePercent, in: 0...15, step: 0.5)
+                        .tint(AppTheme.accent)
+
+                    // Atalhos rápidos de %
+                    HStack(spacing: 8) {
+                        ForEach([1.0, 3.0, 5.0, 8.0, 12.0], id: \.self) { pct in
+                            Button {
+                                treadmillInclinePercent = pct
+                            } label: {
+                                Text("\(Int(pct))%")
+                                    .font(.caption.weight(.bold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .foregroundStyle(abs(treadmillInclinePercent - pct) < 0.01 ? AppTheme.background : AppTheme.textPrimary)
+                                    .background(abs(treadmillInclinePercent - pct) < 0.01 ? AppTheme.accent : AppTheme.background.opacity(0.4))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    Text("Você pode mudar a elevação também durante o treino.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .padding()
+                .background(AppTheme.accent.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.cardBackground)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .stroke(AppTheme.accent.opacity(0.45), lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private func treadmillOptionRow(
+        title: String,
+        subtitle: String,
+        icon: String,
+        selected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundStyle(selected ? AppTheme.accent : AppTheme.textSecondary)
+                    .frame(width: 36)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(selected ? AppTheme.accent : AppTheme.textPrimary)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                Spacer()
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(selected ? AppTheme.accent : AppTheme.textSecondary.opacity(0.5))
+            }
+            .padding(14)
+            .background(selected ? AppTheme.accent.opacity(0.16) : AppTheme.background.opacity(0.45))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(selected ? AppTheme.accent : Color.clear, lineWidth: 2)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private var treadmillSetup: TreadmillSetup? {
+        guard exercise.isTreadmill else { return nil }
+        return TreadmillSetup(
+            hasElevation: treadmillHasElevation,
+            inclinePercent: treadmillHasElevation ? treadmillInclinePercent : 0
+        )
     }
 
     private var climbingSetup: ClimbingSetup? {
@@ -1893,6 +2034,26 @@ struct CardioSetupView: View {
                         .foregroundStyle(AppTheme.accent)
                 }
             }
+            if exercise.isTreadmill {
+                HStack {
+                    Label("Local", systemImage: "house.fill")
+                    Spacer()
+                    Text("Indoor · sem mapa")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
+                HStack {
+                    Label("Elevação", systemImage: treadmillHasElevation ? "arrow.up.right" : "minus")
+                    Spacer()
+                    Text(
+                        treadmillHasElevation
+                        ? String(format: "Sim · %.0f%%", treadmillInclinePercent)
+                        : "Não"
+                    )
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+                }
+            }
             if exercise.isWaterSport {
                 HStack {
                     Label("Calorias", systemImage: "flame.fill")
@@ -1967,6 +2128,7 @@ struct CardioSetupView: View {
                     if config.isOutdoorWalkingSession { return "Iniciar Caminhada" }
                     if config.isKitesurfSession { return "Iniciar Kitesurf" }
                     if config.isSurfSession { return "Iniciar Surf" }
+                    if config.isTreadmillSession { return "Iniciar Esteira" }
                     return "Iniciar Cardio"
                 }(),
                 systemImage: "play.fill"
@@ -2008,6 +2170,7 @@ struct CardioExerciseCard: View {
     private var featureLabel: String {
         if exercise.supportsDistanceGoals { return "Livre ou 5–40 km" }
         if exercise.supportsSwimmingPool { return "Piscina e voltas" }
+        if exercise.isTreadmill { return "Elevação: sim ou não" }
         if exercise.supportsOutdoorGPS { return "Mapa GPS" }
         if exercise.isStationaryBike { return "Indoor · sem GPS" }
         if exercise.isWaterSport { return "Spot e condições" }
@@ -2015,6 +2178,7 @@ struct CardioExerciseCard: View {
     }
 
     private var featureIcon: String {
+        if exercise.isTreadmill { return "arrow.up.forward" }
         if exercise.supportsDistanceGoals || exercise.supportsCustomDistanceGoals { return "map" }
         if exercise.supportsSwimmingPool { return "figure.pool.swim" }
         if exercise.supportsOutdoorGPS || exercise.isWaterSport { return "location.fill" }
