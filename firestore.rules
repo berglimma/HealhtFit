@@ -31,9 +31,10 @@ service cloud.firestore {
     }
 
     match /exerciseVideos/{videoId} {
+      // Catálogo compartilhado: clientes só leem.
+      // Seed/update via Admin SDK / console (rules não se aplicam ao Admin).
       allow read: if request.auth != null;
-      allow create, update: if request.auth != null;
-      allow delete: if false;
+      allow create, update, delete: if false;
     }
 
     // Treino em dupla/equipe — grupos em duoTeams + vínculo em users/{uid}/duoMemberships.
@@ -148,7 +149,7 @@ service cloud.firestore {
     }
 
     // Registros de acesso (Marco Civil da Internet — Lei 12.965/2014, art. 15).
-    // Retenção de 6 meses; o app grava e remove apenas os próprios logs vencidos.
+    // Retenção 6 meses via campo expiresAt (TTL nativo + Function purgeExpiredAccessLogs).
     match /accessLogs/{logId} {
       allow create: if request.auth != null
         && request.resource.data.userId == request.auth.uid
@@ -158,6 +159,11 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if request.auth != null
         && resource.data.userId == request.auth.uid;
+    }
+
+    // Tokens FCM para push Duo (Cloud Functions).
+    match /users/{userId}/fcmTokens/{tokenId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /users/{userId}/duoPendingInvites/{inviteId} {

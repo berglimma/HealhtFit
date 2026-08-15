@@ -48,6 +48,8 @@
 		B1000931 /* AssistantRoutineProfileEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000931 /* AssistantRoutineProfileEngine.swift */; };
 		B1000932 /* ProfilePhotoStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000932 /* ProfilePhotoStorageService.swift */; };
 		B1000934 /* MarcoCivilAccessLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000934 /* MarcoCivilAccessLogService.swift */; };
+		B1000936 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000936 /* PushNotificationService.swift */; };
+		B1000937 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD008 /* FirebaseMessaging */; };
 		B1000935 /* DuoNavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000935 /* DuoNavigationRouter.swift */; };
 		B1000933 /* DuoMemberAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000933 /* DuoMemberAvatarView.swift */; };
 		B1000928 /* MessageComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000928 /* MessageComposeView.swift */; };
@@ -386,6 +388,7 @@
 		F1000931 /* AssistantRoutineProfileEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRoutineProfileEngine.swift; sourceTree = "<group>"; };
 		F1000932 /* ProfilePhotoStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoStorageService.swift; sourceTree = "<group>"; };
 		F1000934 /* MarcoCivilAccessLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarcoCivilAccessLogService.swift; sourceTree = "<group>"; };
+		F1000936 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		F1000935 /* DuoNavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoNavigationRouter.swift; sourceTree = "<group>"; };
 		F1000933 /* DuoMemberAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoMemberAvatarView.swift; sourceTree = "<group>"; };
 		F1000928 /* MessageComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposeView.swift; sourceTree = "<group>"; };
@@ -638,6 +641,7 @@
 				B1000082 /* FirebaseCore in Frameworks */,
 				B1000083 /* FirebaseFirestore in Frameworks */,
 				B1000088 /* FirebaseStorage in Frameworks */,
+				B1000937 /* FirebaseMessaging in Frameworks */,
 				B2000089 /* FirebaseCrashlytics in Frameworks */,
 				B2000090 /* FirebaseAnalytics in Frameworks */,
 				B1000080 /* GoogleSignIn in Frameworks */,
@@ -1052,6 +1056,7 @@
 				F1000922 /* DuoTeamFirestoreService.swift */,
 				F1000932 /* ProfilePhotoStorageService.swift */,
 				F1000934 /* MarcoCivilAccessLogService.swift */,
+				F1000936 /* PushNotificationService.swift */,
 				F1000071 /* AuthErrorMapper.swift */,
 				F1000072 /* FirebaseAuthProvider.swift */,
 				F1000075 /* GoogleServiceInfo.swift */,
@@ -1217,6 +1222,7 @@
 				PKGPROD002 /* FirebaseCore */,
 				PKGPROD004 /* FirebaseFirestore */,
 				PKGPROD005 /* FirebaseStorage */,
+				PKGPROD008 /* FirebaseMessaging */,
 				PKGPROD006 /* FirebaseCrashlytics */,
 				PKGPROD007 /* FirebaseAnalytics */,
 				PKGPROD003 /* GoogleSignIn */,
@@ -1473,6 +1479,7 @@
 				B1000929 /* DuoTeamReportView.swift in Sources */,
 				B1000932 /* ProfilePhotoStorageService.swift in Sources */,
 				B1000934 /* MarcoCivilAccessLogService.swift in Sources */,
+				B1000936 /* PushNotificationService.swift in Sources */,
 				B1000935 /* DuoNavigationRouter.swift in Sources */,
 				B1000933 /* DuoMemberAvatarView.swift in Sources */,
 				B1000928 /* MessageComposeView.swift in Sources */,
@@ -2319,6 +2326,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = PKGREF001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseAnalytics;
+		};
+		PKGPROD008 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PKGREF001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

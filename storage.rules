@@ -2,10 +2,11 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Vídeos de demonstração: qualquer usuário autenticado.
+    // Vídeos de demonstração: clientes só leem.
+    // Upload inicial via Admin SDK / ferramenta interna (não no startup do app).
     match /exerciseVideos/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
 
     // Evolução corporal: somente o próprio usuário (fotos e PDFs privados).

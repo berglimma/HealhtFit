@@ -3,6 +3,7 @@ import UserNotifications
 
 @main
 struct HealthFitApp: App {
+    @UIApplicationDelegateAdaptor(HealthFitAppDelegate.self) private var appDelegate
     @StateObject private var authService = AuthService()
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var workoutStore = WorkoutStore()

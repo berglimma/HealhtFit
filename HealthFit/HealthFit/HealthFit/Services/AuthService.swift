@@ -586,6 +586,7 @@ final class AuthService: ObservableObject {
             // Marco Civil: registro de acesso com retenção de 6 meses (no máx. 1x/dia).
             await MarcoCivilAccessLogService.recordSessionStartIfNeeded(userId: profile.id)
         }
+        PushNotificationService.shared.bind(userId: profile.id)
         NotificationService.shared.refreshRecurringNotifications()
         NotificationService.shared.refreshWorkoutInactivityReminder(
             lastWorkoutAt: nil,
@@ -602,6 +603,7 @@ final class AuthService: ObservableObject {
     }
 
     private func clearLocalSession() {
+        PushNotificationService.shared.clearBinding()
         currentUser = nil
         profileImage = nil
         profileBackgroundImage = nil

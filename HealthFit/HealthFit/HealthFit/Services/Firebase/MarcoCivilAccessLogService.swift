@@ -64,14 +64,23 @@ enum MarcoCivilAccessLogService {
         await purgeExpiredLogs(forUserId: userId)
     }
 
-    /// Remove registros com `expiresAt` anterior a agora (próprios do usuário).
+    /// Remove registros vencidos do próprio usuário (best-effort local).
+    /// A limpeza principal é TTL Firestore + Function `purgeExpiredAccessLogs`.
     static func purgeExpiredLogs(forUserId userId: String) async {
         guard isAvailable, !userId.isEmpty else { return }
+
+        // No máximo 1 tentativa de purge local por dia (reduz reads em escala).
+        let throttleKey = "healthfit.marco_civil.last_purge." + userId
+        if let last = UserDefaults.standard.object(forKey: throttleKey) as? Date,
+           Calendar.current.isDateInToday(last) {
+            return
+        }
+        UserDefaults.standard.set(Date(), forKey: throttleKey)
+
         do {
-            // Filtro de expiração no cliente — evita índice composto obrigatório.
             let snap = try await collection()
                 .whereField("userId", isEqualTo: userId)
-                .limit(to: 80)
+                .limit(to: 40)
                 .getDocuments()
             let now = Date()
             let expired = snap.documents.filter { doc in
@@ -82,7 +91,7 @@ enum MarcoCivilAccessLogService {
             }
             guard !expired.isEmpty else { return }
             let batch = db.batch()
-            for doc in expired.prefix(50) {
+            for doc in expired.prefix(25) {
                 batch.deleteDocument(doc.reference)
             }
             try await batch.commit()

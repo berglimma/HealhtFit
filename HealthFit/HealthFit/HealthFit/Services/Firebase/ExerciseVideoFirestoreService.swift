@@ -40,21 +40,15 @@ enum ExerciseVideoFirestoreService {
         FirebaseBootstrap.isConfigured
     }
 
-    static func syncCatalog() async -> ExerciseVideoUploadSummary {
-        guard isAvailable else {
-            return ExerciseVideoUploadSummary(uploaded: 0, skipped: 0, failed: 0, missingLocal: 0)
-        }
-
-        let summary = await ExerciseVideoStorageService.uploadBundledVideosIfNeeded(force: false)
-        await syncFirestoreCatalog()
-        return summary
-    }
-
-    static func syncFirestoreCatalog() async {
-        guard isAvailable else { return }
+    /// Publica o seed local no Firestore (operação admin / one-shot).
+    /// Clientes em produção **não** devem chamar isso no startup.
+    @discardableResult
+    static func publishSeedCatalog() async -> Bool {
+        guard isAvailable else { return false }
 
         do {
             let records = ExerciseVideoCatalog.seedRecords()
+            // Firestore batch limit = 500; catálogo atual ~63.
             let batch = db.batch()
 
             for record in records {
@@ -70,9 +64,17 @@ enum ExerciseVideoFirestoreService {
             }
 
             try await batch.commit()
+            return true
         } catch {
-            print("[HealthFit] Falha ao sincronizar vídeos no Firestore: \(error.localizedDescription)")
+            print("[HealthFit] Falha ao publicar seed de vídeos: \(error.localizedDescription)")
+            return false
         }
+    }
+
+    /// Alias legado — preferir `publishSeedCatalog()`.
+    @available(*, deprecated, renamed: "publishSeedCatalog")
+    static func syncFirestoreCatalog() async {
+        _ = await publishSeedCatalog()
     }
 
     static func fetchAllVideos() async throws -> [ExerciseVideoRecord] {
