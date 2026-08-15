@@ -116,19 +116,19 @@ extension PushNotificationService: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
+        let kind = (userInfo["kind"] as? String) ?? ""
+        let type = (userInfo["type"] as? String) ?? ""
+        let teamId = (userInfo["teamId"] as? String) ?? ""
+        let teamName = (userInfo["teamName"] as? String) ?? ""
         Task { @MainActor in
-            routeDuoPushIfNeeded(userInfo: userInfo)
+            routeDuoPushIfNeeded(kind: kind, type: type, teamId: teamId, teamName: teamName)
             completionHandler()
         }
     }
 
     @MainActor
-    private func routeDuoPushIfNeeded(userInfo: [AnyHashable: Any]) {
-        let kind = (userInfo["kind"] as? String) ?? ""
-        let type = (userInfo["type"] as? String) ?? ""
+    private func routeDuoPushIfNeeded(kind: String, type: String, teamId: String, teamName: String) {
         guard kind == "DUO_TEAM" || type.hasPrefix("duoChat") else { return }
-        let teamId = (userInfo["teamId"] as? String) ?? ""
-        let teamName = (userInfo["teamName"] as? String) ?? ""
         guard !teamId.isEmpty else { return }
         DuoNavigationRouter.shared.openChat(teamId: teamId, teamName: teamName)
     }

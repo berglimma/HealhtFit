@@ -36,6 +36,13 @@ enum MarcoCivilAccessLogService {
         let ip = await resolvePublicIP()
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
+        let (deviceModel, systemName, systemVersion) = await MainActor.run {
+            (
+                UIDevice.current.model,
+                UIDevice.current.systemName,
+                UIDevice.current.systemVersion
+            )
+        }
 
         var data: [String: Any] = [
             "userId": userId,
@@ -46,9 +53,9 @@ enum MarcoCivilAccessLogService {
             "legalBasis": "Marco Civil da Internet — Lei 12.965/2014, art. 15",
             "appVersion": appVersion,
             "appBuild": build,
-            "deviceModel": UIDevice.current.model,
-            "systemName": UIDevice.current.systemName,
-            "systemVersion": UIDevice.current.systemVersion,
+            "deviceModel": deviceModel,
+            "systemName": systemName,
+            "systemVersion": systemVersion,
             "sessionId": currentSessionId(),
         ]
         if let ip, !ip.isEmpty {
