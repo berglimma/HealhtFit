@@ -25,8 +25,8 @@ struct MealPhotoAnalysisView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             header
-            mealTypePicker
             photoCard
+            mealTypePicker
             if let draft {
                 if !detectedFoods.isEmpty {
                     detectedFoodsRow
@@ -93,7 +93,7 @@ struct MealPhotoAnalysisView: View {
             Text("Análise de refeição")
                 .font(.title3.weight(.bold))
                 .foregroundStyle(AppTheme.textPrimary)
-            Text("Foto do prato ou do rótulo nutricional. O app lê o texto da embalagem quando houver tabela; senão estima pelo visual. Só macros são salvos — a foto é descartada.")
+            Text("Recurso do plano IA Plus. Foto do prato ou do rótulo nutricional — o app lê a tabela quando houver; senão estima pelo visual. Só macros são salvos; a foto é descartada.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
         }

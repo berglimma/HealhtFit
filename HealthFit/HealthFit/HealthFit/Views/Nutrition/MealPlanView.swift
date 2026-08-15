@@ -124,9 +124,20 @@ struct MealPlanView: View {
                         .padding(.top, 8)
                         .adaptiveContentWidth()
                 }
-                bodyMetricsSection
-                menuPreferencesSection
-                nutritionModeContent
+
+                nutritionTabPicker
+
+                if nutritionTab == 3 {
+                    // Plano IA: foto de análise no topo (acima de biotipo/preferências).
+                    MealPhotoAnalysisView()
+                        .requiresSubscription(.mealPhotoAnalysis)
+                    bodyMetricsSection
+                    menuPreferencesSection
+                } else {
+                    bodyMetricsSection
+                    menuPreferencesSection
+                    nutritionTabBody
+                }
             }
         }
     }
@@ -164,8 +175,7 @@ struct MealPlanView: View {
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
-    @ViewBuilder
-    private var nutritionModeContent: some View {
+    private var nutritionTabPicker: some View {
         Picker("Modo", selection: $nutritionTab) {
             Text("Plano").tag(0)
             Text("Cardápio").tag(1)
@@ -174,11 +184,12 @@ struct MealPlanView: View {
         }
         .pickerStyle(.segmented)
         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+    }
 
+    @ViewBuilder
+    private var nutritionTabBody: some View {
         if nutritionTab == 2 {
             SupplementsLogView()
-        } else if nutritionTab == 3 {
-            MealPhotoAnalysisView()
         } else if mealPlanService.customMenuSelection.isReadyToBuild {
             if nutritionTab == 0 {
                 weeklyPlanSection

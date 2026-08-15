@@ -2579,9 +2579,6 @@
     "Foto do perfil" : {
 
     },
-    "Foto do prato ou do rótulo nutricional. O app lê o texto da embalagem quando houver tabela; senão estima pelo visual. Só macros são salvos — a foto é descartada." : {
-
-    },
     "Foto ou vídeo do treino" : {
 
     },
@@ -4072,6 +4069,9 @@
 
     },
     "Recorde anterior" : {
+
+    },
+    "Recurso do plano IA Plus. Foto do prato ou do rótulo nutricional — o app lê a tabela quando houver; senão estima pelo visual. Só macros são salvos; a foto é descartada." : {
 
     },
     "Recusar" : {

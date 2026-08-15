@@ -54,6 +54,7 @@ struct SwimmingLogbookView: View {
         .background(AppTheme.background)
         .navigationTitle("Diário de natação")
         .navigationBarTitleDisplayMode(.large)
+        .requiresSubscription(.advancedSportAnalytics)
     }
 
     private var headerBanner: some View {

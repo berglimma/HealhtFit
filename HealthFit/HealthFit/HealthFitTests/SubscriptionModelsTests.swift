@@ -15,16 +15,38 @@ final class SubscriptionModelsTests: XCTestCase {
     }
 
     func testFeatureGatesRespectTiersWhenEnabled() {
-        XCTAssertTrue(FeatureGate.canAccess(.mealPlan, tier: .free, gatesEnabled: true))
-        XCTAssertTrue(FeatureGate.canAccess(.shoppingList, tier: .free, gatesEnabled: true))
-        XCTAssertTrue(FeatureGate.canAccess(.nutritionCoach, tier: .basic, gatesEnabled: true))
-        XCTAssertTrue(FeatureGate.canAccess(.aiChatUnlimited, tier: .ai, gatesEnabled: true))
+        // Free: só o essencial (sem cardápio)
+        XCTAssertFalse(FeatureGate.canAccess(.mealPlan, tier: .free, gatesEnabled: true))
+        XCTAssertFalse(FeatureGate.canAccess(.shoppingList, tier: .free, gatesEnabled: true))
+        XCTAssertFalse(FeatureGate.canAccess(.fullWorkouts, tier: .free, gatesEnabled: true))
+
+        // Básico: treinos + Watch
+        XCTAssertTrue(FeatureGate.canAccess(.fullWorkouts, tier: .basic, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.appleWatchSync, tier: .basic, gatesEnabled: true))
+        XCTAssertFalse(FeatureGate.canAccess(.mealPlan, tier: .basic, gatesEnabled: true))
+
+        // Fit: cardápio + modalidades + IA limitada
+        XCTAssertTrue(FeatureGate.canAccess(.mealPlan, tier: .fit, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.shoppingList, tier: .fit, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.customWorkouts, tier: .fit, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.advancedModalities, tier: .fit, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.aiChatLimited, tier: .fit, gatesEnabled: true))
+        XCTAssertFalse(FeatureGate.canAccess(.mealPhotoAnalysis, tier: .fit, gatesEnabled: true))
         XCTAssertFalse(FeatureGate.canAccess(.aiChatUnlimited, tier: .fit, gatesEnabled: true))
+
+        // IA Plus: foto de nutrição + análises
+        XCTAssertTrue(FeatureGate.canAccess(.mealPhotoAnalysis, tier: .ai, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.nutritionCoach, tier: .ai, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.aiChatUnlimited, tier: .ai, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.monthlyReport, tier: .ai, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.advancedSportAnalytics, tier: .ai, gatesEnabled: true))
+
         XCTAssertTrue(FeatureGate.canAccess(.completePriority, tier: .complete, gatesEnabled: true))
     }
 
     func testFeatureGatesOpenWhenDisabled() {
         XCTAssertTrue(FeatureGate.canAccess(.mealPlan, tier: .free, gatesEnabled: false))
+        XCTAssertTrue(FeatureGate.canAccess(.mealPhotoAnalysis, tier: .free, gatesEnabled: false))
         XCTAssertTrue(FeatureGate.canAccess(.completePriority, tier: .free, gatesEnabled: false))
     }
 

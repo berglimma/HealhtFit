@@ -95,6 +95,7 @@ struct SurfKiteLogbookView: View {
         .background(AppTheme.background)
         .navigationTitle(modalityTitle)
         .navigationBarTitleDisplayMode(.large)
+        .requiresSubscription(.advancedSportAnalytics)
     }
 
     private var headerBanner: some View {

@@ -42,6 +42,7 @@ struct ClimbingLogbookView: View {
         .background(AppTheme.background.ignoresSafeArea())
         .navigationTitle("Diário de escalada")
         .navigationBarTitleDisplayMode(.inline)
+        .requiresSubscription(.advancedSportAnalytics)
         .sheet(isPresented: $showsAddGear) {
             ClimbingGearEditorView(item: nil)
         }

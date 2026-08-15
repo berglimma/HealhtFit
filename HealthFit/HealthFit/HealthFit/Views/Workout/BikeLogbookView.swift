@@ -31,6 +31,7 @@ struct BikeLogbookView: View {
         .background(AppTheme.background)
         .navigationTitle("Diário da bike")
         .navigationBarTitleDisplayMode(.large)
+        .requiresSubscription(.advancedSportAnalytics)
         .sheet(isPresented: $showProblemSheet) {
             logFormSheet(
                 title: "Registrar problema",

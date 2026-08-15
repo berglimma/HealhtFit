@@ -178,6 +178,7 @@ enum AppFeature: String, CaseIterable, Identifiable {
     case mealPlan
     case shoppingList
     case nutritionCoach
+    case mealPhotoAnalysis
     case aiChatLimited
     case advancedSportAnalytics
     case aiChatUnlimited
@@ -197,6 +198,7 @@ enum AppFeature: String, CaseIterable, Identifiable {
         case .mealPlan: return "Cardápio e nutrição"
         case .shoppingList: return "Lista de compras"
         case .nutritionCoach: return "Orientação nutricional assistida"
+        case .mealPhotoAnalysis: return "Análise de refeição por foto"
         case .aiChatLimited: return "Assistente IA (limitado)"
         case .advancedSportAnalytics: return "Diários e análise por modalidade"
         case .aiChatUnlimited: return "Assistente IA ilimitado"
@@ -224,6 +226,8 @@ enum AppFeature: String, CaseIterable, Identifiable {
             return "Lista de compras gerada a partir do seu cardápio."
         case .nutritionCoach:
             return "Orientação nutricional assistida dentro do app."
+        case .mealPhotoAnalysis:
+            return "Tire foto do prato ou do rótulo e estime macros com IA — recurso do plano IA Plus."
         case .aiChatLimited:
             return "Converse com o IAssistente sobre treino, sono e recuperação."
         case .advancedSportAnalytics:
@@ -241,17 +245,15 @@ enum AppFeature: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Menor plano que libera a feature.
+    /// Menor plano que libera a feature (alinhado ao ROADMAP).
     var minimumTier: PlanTier {
         switch self {
-        case .mealPlan, .shoppingList, .nutritionCoach:
-            return .free
         case .fullWorkouts, .appleWatchSync:
             return .basic
-        case .customWorkouts, .advancedModalities, .aiChatLimited:
+        case .customWorkouts, .advancedModalities, .mealPlan, .shoppingList, .aiChatLimited:
             return .fit
-        case .advancedSportAnalytics, .aiChatUnlimited, .monthlyReport,
-             .bodyEvolutionExport, .liveActivityPremium:
+        case .nutritionCoach, .mealPhotoAnalysis, .advancedSportAnalytics, .aiChatUnlimited,
+             .monthlyReport, .bodyEvolutionExport, .liveActivityPremium:
             return .ai
         case .completePriority:
             return .complete
@@ -355,23 +357,24 @@ struct PlanMarketingCopy: Identifiable, Hashable {
         case .free:
             return [
                 "Dashboard básico",
-                "Cardápio, metas calóricas e lista de compras",
                 "Check-ins e treinos limitados",
                 "Sem cartão"
             ]
         case .basic:
-            return ["Treinos guiados e cardio", "Apple Watch", "Metas de treino", "Nutrição incluída"]
+            return ["Treinos guiados e cardio", "Apple Watch", "Metas de treino"]
         case .fit:
             return [
                 "Tudo do Básico",
                 "Surf, Kitesurf, Remo, Escalada e Luta",
                 "Criar treinos personalizados",
+                "Cardápio, metas e lista de compras",
                 "IAssistente com 5 mensagens por dia"
             ]
         case .ai:
             return [
                 "Tudo do Fit",
                 "IAssistente ilimitado",
+                "Análise de refeição por foto",
                 "Diários e evolução por modalidade",
                 "Relatório mensal e evolução corporal em PDF"
             ]

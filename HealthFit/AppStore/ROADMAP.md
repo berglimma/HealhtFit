@@ -32,8 +32,8 @@ Visão: app completo de treino + nutrição + esportes avançados, com planos qu
 |-------|--------|
 | Gratuito | Dashboard, check-ins, treinos limitados |
 | Básico | Treinos guiados + cardio clássico + Apple Watch |
-| Fit | Modalidades avançadas (Surf/Kite/Remo/Escalada/Luta), treinos custom, cardápio, IA 5 msgs/dia |
-| IA Plus | IA ilimitada, diários/análises por modalidade, relatório mensal, evolução corporal/PDF |
+| Fit | Modalidades avançadas (Surf/Kite/Remo/Escalada/Luta), treinos custom, cardápio + lista, IA 5 msgs/dia |
+| IA Plus | IA ilimitada, análise de refeição por foto, diários/análises por modalidade, relatório mensal, evolução corporal/PDF |
 | Completo | Tudo + prioridade |
 
 ---

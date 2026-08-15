@@ -129,6 +129,7 @@ struct CreateWorkoutView: View {
                 }
             }
         }
+        .requiresSubscription(.customWorkouts)
     }
 
     private var selectedGroupsSummary: String {

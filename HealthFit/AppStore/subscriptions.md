@@ -66,7 +66,7 @@ Ative os locks na **v1.1** (ver `ROADMAP.md`) após aprovação:
 if subscriptions.canAccess(.aiChatUnlimited) { ... }
 ```
 
-Locks recomendados v1.1: `.advancedModalities`, `.mealPlan`, `.aiChatUnlimited`, `.monthlyReport`, `.advancedSportAnalytics`.
+Locks recomendados v1.1: `.advancedModalities`, `.mealPlan`, `.mealPhotoAnalysis`, `.aiChatUnlimited`, `.monthlyReport`, `.advancedSportAnalytics`, `.customWorkouts`.
 
 ## Firebase (fase 4 — ainda não implementado)
 
