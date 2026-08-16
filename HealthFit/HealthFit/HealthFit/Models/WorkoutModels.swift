@@ -249,12 +249,19 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
     var exercises: [Exercise]
     var assignedTo: String?
     var createdAt: Date
+    /// Usado no merge iPhone↔iPad (Firestore).
+    var updatedAt: Date
     var isActive: Bool
     var isUserCreated: Bool
     /// Perfil do programa (masculino/feminino). Padrões e personalizados filtrados por isso.
     var targetGender: Gender?
     /// Ficha gerada pelo IAssistente (não criada manualmente em Nova Ficha).
     var createdByAssistant: Bool
+
+    /// Fichas personalizadas / IA — sincronizam na nuvem. Catálogo local fica no device.
+    var isCloudSyncable: Bool {
+        isUserCreated || createdByAssistant
+    }
 
     init(
         id: UUID = UUID(),
@@ -263,6 +270,7 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         exercises: [Exercise] = [],
         assignedTo: String? = nil,
         createdAt: Date = .now,
+        updatedAt: Date? = nil,
         isActive: Bool = true,
         isUserCreated: Bool = false,
         targetGender: Gender? = nil,
@@ -274,6 +282,7 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         self.exercises = exercises
         self.assignedTo = assignedTo
         self.createdAt = createdAt
+        self.updatedAt = updatedAt ?? createdAt
         self.isActive = isActive
         self.isUserCreated = isUserCreated
         self.targetGender = targetGender ?? Self.inferredGender(from: title)
@@ -281,7 +290,7 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, title, description, exercises, assignedTo, createdAt, isActive, isUserCreated, targetGender, createdByAssistant
+        case id, title, description, exercises, assignedTo, createdAt, updatedAt, isActive, isUserCreated, targetGender, createdByAssistant
     }
 
     init(from decoder: Decoder) throws {
@@ -292,6 +301,7 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         exercises = try container.decode([Exercise].self, forKey: .exercises)
         assignedTo = try container.decodeIfPresent(String.self, forKey: .assignedTo)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
         isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
         isUserCreated = try container.decodeIfPresent(Bool.self, forKey: .isUserCreated) ?? false
         targetGender = try container.decodeIfPresent(Gender.self, forKey: .targetGender)
@@ -307,6 +317,7 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         try container.encode(exercises, forKey: .exercises)
         try container.encodeIfPresent(assignedTo, forKey: .assignedTo)
         try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(updatedAt, forKey: .updatedAt)
         try container.encode(isActive, forKey: .isActive)
         try container.encode(isUserCreated, forKey: .isUserCreated)
         try container.encodeIfPresent(targetGender, forKey: .targetGender)

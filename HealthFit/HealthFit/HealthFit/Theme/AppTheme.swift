@@ -26,11 +26,6 @@ enum AppTheme {
 }
 
 enum AppInfo {
-    static let developerName = AppLegalConfiguration.developerNames
-    static let developerPeople = AppLegalConfiguration.developerNames
-    static let developerCredit =
-        "Desenvolvido por \(AppLegalConfiguration.developerNames)"
-
     /// Versão exibida na aba Sobre (Marketing + build).
     static var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -84,16 +79,6 @@ struct PrimaryButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .opacity(isEnabled ? 1 : 0.6)
             .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
-    }
-}
-
-struct DeveloperCreditView: View {
-    var body: some View {
-        Text(AppInfo.developerCredit)
-            .font(.caption2)
-            .foregroundStyle(AppTheme.textSecondary)
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
     }
 }
 

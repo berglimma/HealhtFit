@@ -131,10 +131,6 @@ struct LoginView: View {
 
                     LegalLinksView()
                         .padding(.horizontal, AppTheme.padding)
-                        .padding(.bottom, 8)
-                    
-                    DeveloperCreditView()
-                        .padding(.horizontal, AppTheme.padding)
                         .padding(.bottom, 32)
                 }
                 

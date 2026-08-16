@@ -246,6 +246,7 @@ struct RootView: View {
         workoutStore.configureCloudSync(userId: userId)
         Task {
             await workoutStore.loadCloudHistory(userId: userId)
+            await workoutStore.loadCloudSheets(userId: userId)
             EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
         }
     }

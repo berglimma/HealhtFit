@@ -228,9 +228,6 @@ struct RegisterView: View {
                     .opacity(authService.isLoading ? 0.6 : 1)
                     .disabled(!isValid || authService.isLoading)
                     
-                    DeveloperCreditView()
-                        .padding(.top, 8)
-                    
                     if authService.isLoading {
                         Color.black.opacity(0.4).ignoresSafeArea()
                         ProgressView().tint(AppTheme.accent).scaleEffect(1.5)

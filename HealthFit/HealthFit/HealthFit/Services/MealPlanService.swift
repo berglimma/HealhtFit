@@ -22,6 +22,7 @@ final class MealPlanService: ObservableObject {
         static let shopping = "shopping_list"
         static let customMenu = "custom_menu"
         static let purchaseStats = "shopping_purchase_stats"
+        static let cloudUpdatedAt = "meal_plan_cloud_updated_at"
     }
 
     @Published private(set) var purchaseStats: [ShoppingPurchaseStat] = []
@@ -48,6 +49,7 @@ final class MealPlanService: ObservableObject {
         UserScopedDefaults.remove(logicalKey: ScopedKey.shopping, uid: boundUserId, legacyKey: shoppingKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.purchaseStats, uid: boundUserId, legacyKey: purchaseStatsKey)
+        UserScopedDefaults.remove(logicalKey: ScopedKey.cloudUpdatedAt, uid: boundUserId)
         boundUserId = nil
         syncMealReminders()
     }
@@ -389,36 +391,60 @@ final class MealPlanService: ObservableObject {
         if let data = try? JSONEncoder().encode(customMenuSelection) {
             UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey)
         }
+        let now = Date()
+        setLocalMealPlanUpdatedAt(now)
         Task {
-            await pushToCloudIfNeeded()
+            await pushToCloudIfNeeded(updatedAt: now)
         }
     }
 
     private func syncFromCloudIfNeeded() async {
         guard let userId = boundUserId, MealPlanFirestoreService.isAvailable else { return }
-        guard weeklyPlan.isEmpty else { return }
-        if let remote = try? await MealPlanFirestoreService.fetchPlan(userId: userId) {
-            weeklyPlan = remote.weeklyPlan
-            shoppingList = remote.shoppingList
-            customMenuSelection = remote.customMenuSelection
-            basalMetabolicRate = remote.basalMetabolicRate
-            dailyCalorieTarget = remote.dailyCalorieTarget
-            estimatedTDEE = remote.estimatedTDEE
-            caloricDeficit = remote.caloricDeficit
-            if let data = try? JSONEncoder().encode(weeklyPlan) {
-                UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.plan, uid: boundUserId, legacyKey: planKey)
+
+        guard let remote = try? await MealPlanFirestoreService.fetchPlan(userId: userId) else {
+            if !weeklyPlan.isEmpty {
+                await pushToCloudIfNeeded(updatedAt: localMealPlanUpdatedAt())
             }
-            if let data = try? JSONEncoder().encode(shoppingList) {
-                UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.shopping, uid: boundUserId, legacyKey: shoppingKey)
-            }
-            if let data = try? JSONEncoder().encode(customMenuSelection) {
-                UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey)
-            }
-            syncMealReminders()
+            return
+        }
+
+        let localUpdated = localMealPlanUpdatedAt()
+        let localHasPlan = !weeklyPlan.isEmpty || !shoppingList.isEmpty
+
+        // Remoto mais novo, ou device sem plano local: aplica nuvem (iPhone ↔ iPad).
+        if !localHasPlan || remote.updatedAt > localUpdated {
+            applyCloudSnapshot(remote.snapshot)
+            setLocalMealPlanUpdatedAt(remote.updatedAt)
+            return
+        }
+
+        // Local mais novo (ou igual com conteúdo): empurra para o outro device.
+        if localHasPlan {
+            await pushToCloudIfNeeded(updatedAt: localUpdated == .distantPast ? Date() : localUpdated)
         }
     }
 
-    private func pushToCloudIfNeeded() async {
+    private func applyCloudSnapshot(_ remote: MealPlanCloudSnapshot) {
+        weeklyPlan = remote.weeklyPlan
+        shoppingList = remote.shoppingList
+        customMenuSelection = remote.customMenuSelection
+        basalMetabolicRate = remote.basalMetabolicRate
+        dailyCalorieTarget = remote.dailyCalorieTarget
+        estimatedTDEE = remote.estimatedTDEE
+        caloricDeficit = remote.caloricDeficit
+        if let data = try? JSONEncoder().encode(weeklyPlan) {
+            UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.plan, uid: boundUserId, legacyKey: planKey)
+        }
+        if let data = try? JSONEncoder().encode(shoppingList) {
+            UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.shopping, uid: boundUserId, legacyKey: shoppingKey)
+        }
+        if let data = try? JSONEncoder().encode(customMenuSelection) {
+            UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey)
+        }
+        syncMealReminders()
+    }
+
+    private func pushToCloudIfNeeded(updatedAt: Date = .now) async {
         guard let userId = boundUserId, MealPlanFirestoreService.isAvailable else { return }
         let snapshot = MealPlanCloudSnapshot(
             weeklyPlan: weeklyPlan,
@@ -430,6 +456,20 @@ final class MealPlanService: ObservableObject {
             caloricDeficit: caloricDeficit
         )
         try? await MealPlanFirestoreService.savePlan(snapshot, userId: userId)
+        setLocalMealPlanUpdatedAt(updatedAt)
+    }
+
+    private func localMealPlanUpdatedAt() -> Date {
+        guard let data = UserScopedDefaults.data(forLogicalKey: ScopedKey.cloudUpdatedAt, uid: boundUserId),
+              let interval = try? JSONDecoder().decode(TimeInterval.self, from: data) else {
+            return .distantPast
+        }
+        return Date(timeIntervalSince1970: interval)
+    }
+
+    private func setLocalMealPlanUpdatedAt(_ date: Date) {
+        let data = try? JSONEncoder().encode(date.timeIntervalSince1970)
+        UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.cloudUpdatedAt, uid: boundUserId)
     }
 
     private func ensureDefaultSelections(goal: FitnessGoal = .maintenance) {

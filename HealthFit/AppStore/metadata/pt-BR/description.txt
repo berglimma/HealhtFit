@@ -1,28 +1,64 @@
 HealthFit — Seu personal trainer inteligente
 
-Treine com inteligência, acompanhe sua evolução e cuide da sua saúde em um só lugar.
+Treine com inteligência, acompanhe sua evolução e cuide da sua saúde em um só lugar. O HealthFit une musculação, cardio, esportes avançados, nutrição e orientação por IA no iPhone — com companion no Apple Watch.
 
 RECURSOS PRINCIPAIS
 • Treinos personalizados por biotipo e objetivo (hipertrofia, emagrecimento, manutenção)
-• GIFs demonstrativos para cada exercício
+• Demonstrações visuais para cada exercício
 • Cardio: corrida, caminhada, bike, natação e mais
 • Modalidades avançadas: Surf, Kitesurf, Remo, Escalada e Luta (cronômetro de combate)
 • IAssistente com check-ins, dicas e motivação diária
+• Análise de refeição por foto (planos com IA)
 • Plano alimentar com lista de compras
-• Integração com Apple Health (frequência cardíaca, calorias, passos, sono/HRV quando autorizado)
+• Duo: treine em dupla com chat e metas compartilhadas
+• Integração com Apple Saúde (frequência cardíaca, calorias, passos, sono/HRV quando autorizado)
 • Cronômetro de descanso entre séries
 • Relatórios de progresso e evolução corporal
 • Companion Apple Watch
 • Lembretes de água, treino e descanso
 • Planos opcionais (Básico, Fit, IA Plus, Completo) em Perfil → Meu plano
 
+COMO FUNCIONA
+1. Crie sua conta e complete o perfil (idade mínima 16+)
+2. Defina objetivos e preferências de treino
+3. Siga fichas guiadas, registre séries e acompanhe o progresso
+4. Use o IAssistente para check-ins e orientação no dia a dia
+5. Conecte o Apple Saúde e, se quiser, o Apple Watch
+6. Evolua de graça ou desbloqueie mais com assinatura
+
+PLANOS (OPCIONAIS)
+• Gratuito: dashboard, check-ins e treinos limitados
+• Básico: treinos guiados, cardio clássico e Apple Watch
+• Fit: modalidades avançadas, cardápio, lista de compras e IA limitada
+• IA Plus: IA ampliada, análise de refeição por foto e relatórios avançados
+• Completo: acesso amplo a todos os recursos premium
+
 PARA QUEM É
-Atletas iniciantes e intermediários que querem treinar com orientação, registrar evolução e manter consistência — com ou sem personal trainer.
+Iniciantes e intermediários que querem treinar com orientação, registrar evolução e manter consistência — com ou sem personal trainer. Ideal para quem busca musculação, cardio, luta, escalada ou esportes aquáticos em um único app.
+
+PRIVACIDADE E SEGURANÇA
+Seus dados de saúde e treino ficam sob seu controle. Você pode excluir a conta pelo app. Conteúdo gerado por usuários no Duo pode ser denunciado. Idade mínima: 16 anos.
 
 IMPORTANTE
-O HealthFit oferece orientação informativa. Não substitui avaliação médica, nutricionista ou acompanhamento profissional. Consulte um médico antes de iniciar qualquer programa de exercícios.
+O HealthFit oferece orientação informativa para fitness e bem-estar. Não substitui avaliação médica, nutricionista ou acompanhamento profissional. Consulte um médico antes de iniciar qualquer programa de exercícios.
 
-Privacidade: https://berglimma.github.io/HealhtFit/privacidade/
-Suporte: https://berglimma.github.io/HealhtFit/suporte/
+Privacidade: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
+Suporte: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/suporte/index.html
+Termos: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/termos/index.html
 
-Desenvolvido por Berg Limma e Luan Chiminelli.
+DETALHES DE TREINO
+Monte sua rotina com séries, repetições e cargas. Use o timer de descanso para manter o ritmo. Acompanhe histórico de treinos e veja sua evolução ao longo das semanas. No cardio outdoor, registre percursos e desempenho. Nas modalidades avançadas, use diários e ferramentas específicas para luta, escalada, surf, kitesurf e remo.
+
+NUTRIÇÃO E HÁBITOS
+Organize refeições, gere lista de compras e, nos planos com IA, analise fotos de pratos para ter uma leitura rápida do que você comeu. Lembretes de água e descanso ajudam a manter hábitos saudáveis sem complicação.
+
+IASSISTENTE E DUO
+O IAssistente traz check-ins e orientação prática. No Duo, você e um parceiro compartilham motivação, metas e conversas — com ferramentas para denunciar conteúdo inadequado e sair da dupla quando quiser.
+
+APPLE WATCH E SAÚDE
+No pulso, acompanhe treinos e métricas sincronizadas com o iPhone e o app Saúde. Autorizações são pedidas de forma transparente e você decide o que compartilhar.
+
+COMECE HOJE
+Baixe o HealthFit, complete o onboarding e faça seu primeiro treino. Comece no plano gratuito e evolua quando fizer sentido para você.
+
+Suporte e atualizações contínuas para melhorar treinos, nutrição e experiência no iPhone e no Apple Watch.

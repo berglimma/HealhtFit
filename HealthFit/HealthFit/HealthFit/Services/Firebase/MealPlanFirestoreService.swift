@@ -46,15 +46,17 @@ enum MealPlanFirestoreService {
         ], merge: true)
     }
 
-    static func fetchPlan(userId: String) async throws -> MealPlanCloudSnapshot? {
+    static func fetchPlan(userId: String) async throws -> (snapshot: MealPlanCloudSnapshot, updatedAt: Date)? {
         guard isAvailable else { return nil }
         let snapshot = try await planDocument(userId: userId).getDocument()
         guard let data = snapshot.data(),
               let json = data["payload"] as? String,
-              let payload = json.data(using: .utf8) else {
+              let payload = json.data(using: .utf8),
+              let decoded = try? decoder.decode(MealPlanCloudSnapshot.self, from: payload) else {
             return nil
         }
-        return try? decoder.decode(MealPlanCloudSnapshot.self, from: payload)
+        let updatedAt = (data["updatedAt"] as? Timestamp)?.dateValue() ?? .distantPast
+        return (decoded, updatedAt)
     }
 
     static func deleteAllUserData(userId: String) async throws {

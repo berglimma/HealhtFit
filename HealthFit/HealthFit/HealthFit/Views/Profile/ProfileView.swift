@@ -877,13 +877,6 @@ struct ProfileView: View {
             Button("Excluir Conta", role: .destructive) {
                 showDeleteAccountSheet = true
             }
-        } footer: {
-            Text(AppInfo.developerCredit)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .multilineTextAlignment(.center)
-                .padding(.top, 10)
         }
     }
 

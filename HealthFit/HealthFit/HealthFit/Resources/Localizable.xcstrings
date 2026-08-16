@@ -1478,9 +1478,6 @@
     "Biotipo" : {
 
     },
-    "Bloqueios de plano ainda desativados — o paywall e a loja já estão prontos." : {
-
-    },
     "Bluetooth" : {
 
     },
@@ -1974,6 +1971,9 @@
     "Convites recebidos" : {
 
     },
+    "Copiar" : {
+
+    },
     "Copiar código" : {
 
     },
@@ -2069,6 +2069,12 @@
 
     },
     "Demonstração indisponível" : {
+
+    },
+    "Denunciar conversa" : {
+
+    },
+    "Denunciar mensagem" : {
 
     },
     "Depois" : {
@@ -2896,6 +2902,9 @@
           }
         }
       }
+    },
+    "Mais opções" : {
+
     },
     "Mais popular" : {
 
@@ -4563,7 +4572,7 @@
     "SMS indisponível" : {
 
     },
-    "Só atividades físicas · mensagens expiram em 12h" : {
+    "Só atividades físicas · mensagens ~12h · denuncie com toque longo" : {
 
     },
     "Só musculação" : {

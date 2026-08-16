@@ -24,5 +24,3 @@ HealthFit provides informational guidance only. It does not replace medical eval
 
 Privacy: https://berglimma.github.io/HealhtFit/privacidade/
 Support: https://berglimma.github.io/HealhtFit/suporte/
-
-Developed by Berg Limma and Luan Chiminelli.

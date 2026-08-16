@@ -145,6 +145,45 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
+    /// Mescla fichas personalizadas / IA do Firestore (iPhone ↔ iPad).
+    func loadCloudSheets(userId: String) async {
+        guard WorkoutFirestoreService.isAvailable else { return }
+
+        do {
+            let remoteSheets = try await WorkoutFirestoreService.fetchSheets(userId: userId)
+            let merged = mergeSheets(local: workoutSheets, remote: remoteSheets)
+            if merged != workoutSheets {
+                workoutSheets = merged
+                saveDataLocalOnly()
+            }
+
+            // Empurra fichas locais que ainda não existem (ou estão mais novas) na nuvem.
+            let remoteById = Dictionary(uniqueKeysWithValues: remoteSheets.map { ($0.id, $0) })
+            for sheet in workoutSheets where sheet.isCloudSyncable {
+                if let remote = remoteById[sheet.id], remote.updatedAt >= sheet.updatedAt {
+                    continue
+                }
+                try? await WorkoutFirestoreService.saveSheet(sheet, userId: userId)
+            }
+        } catch {
+            print("[HealthFit] Falha ao carregar fichas do Firebase: \(error.localizedDescription)")
+        }
+    }
+
+    private func mergeSheets(local: [WorkoutSheet], remote: [WorkoutSheet]) -> [WorkoutSheet] {
+        var byId = Dictionary(uniqueKeysWithValues: local.map { ($0.id, $0) })
+        for remoteSheet in remote where remoteSheet.isCloudSyncable {
+            if let existing = byId[remoteSheet.id] {
+                if remoteSheet.updatedAt > existing.updatedAt {
+                    byId[remoteSheet.id] = remoteSheet
+                }
+            } else {
+                byId[remoteSheet.id] = remoteSheet
+            }
+        }
+        return Array(byId.values).sorted { $0.createdAt < $1.createdAt }
+    }
+
     init() {
         // Keep init cheap so the first frame (login / splash) can paint.
         // History/sheets decode runs after a yield so cold install/login isn't blocked.
@@ -297,15 +336,21 @@ final class WorkoutStore: ObservableObject {
     }
 
     func addWorkoutSheet(_ sheet: WorkoutSheet) {
-        workoutSheets.append(sheet)
+        var stamped = sheet
+        stamped.updatedAt = .now
+        workoutSheets.append(stamped)
         saveData()
+        pushSheetToCloud(stamped)
     }
 
     func updateWorkoutSheet(_ sheet: WorkoutSheet) {
         guard canModify(sheet) else { return }
         if let index = workoutSheets.firstIndex(where: { $0.id == sheet.id }) {
-            workoutSheets[index] = sheet
+            var stamped = sheet
+            stamped.updatedAt = .now
+            workoutSheets[index] = stamped
             saveData()
+            pushSheetToCloud(stamped)
         }
     }
 
@@ -313,6 +358,7 @@ final class WorkoutStore: ObservableObject {
         guard canModify(sheet) else { return }
         workoutSheets.removeAll { $0.id == sheet.id }
         saveData()
+        deleteSheetFromCloud(sheet.id)
     }
 
     func canModify(_ sheet: WorkoutSheet) -> Bool {
@@ -333,16 +379,18 @@ final class WorkoutStore: ObservableObject {
                 exercises: sheet.exercises,
                 assignedTo: existing.assignedTo,
                 createdAt: existing.createdAt,
+                updatedAt: existing.updatedAt,
                 isActive: existing.isActive,
                 isUserCreated: false,
                 targetGender: gender,
                 createdByAssistant: false
             )
             workoutSheets[index] = refreshed
-            saveData()
+            saveDataLocalOnly()
             return refreshed
         }
-        addWorkoutSheet(sheet)
+        workoutSheets.append(sheet)
+        saveDataLocalOnly()
         return sheet
     }
 
@@ -1409,8 +1457,26 @@ final class WorkoutStore: ObservableObject {
     }
 
     private func saveData() {
+        saveDataLocalOnly()
+    }
+
+    private func saveDataLocalOnly() {
         if let data = try? JSONEncoder().encode(workoutSheets) {
             UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.sheets, uid: cloudUserId, legacyKey: storageKey)
+        }
+    }
+
+    private func pushSheetToCloud(_ sheet: WorkoutSheet) {
+        guard let userId = cloudUserId, sheet.isCloudSyncable, WorkoutFirestoreService.isAvailable else { return }
+        Task {
+            try? await WorkoutFirestoreService.saveSheet(sheet, userId: userId)
+        }
+    }
+
+    private func deleteSheetFromCloud(_ id: UUID) {
+        guard let userId = cloudUserId, WorkoutFirestoreService.isAvailable else { return }
+        Task {
+            try? await WorkoutFirestoreService.deleteSheet(id: id, userId: userId)
         }
     }
 

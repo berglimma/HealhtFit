@@ -1,1 +1,1 @@
-treino,fitness,academia,hipertrofia,saúde,dieta,healthkit,personal,exercício,musculação,cardio
+treino,fitness,academia,hipertrofia,saude,dieta,musculacao,cardio,nutricao,watch,exercicio
