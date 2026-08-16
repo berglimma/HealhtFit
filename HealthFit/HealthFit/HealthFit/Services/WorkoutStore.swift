@@ -1314,6 +1314,7 @@ final class WorkoutStore: ObservableObject {
             UserDefaults.standard.removeObject(forKey: activeCardioConfigKey)
         }
         lastActivePersistAt = Date()
+        pushActiveWorkoutToCloudIfNeeded(force: false)
     }
 
     private func clearPersistedActiveSession() {
@@ -1327,6 +1328,88 @@ final class WorkoutStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: activeCardioConfigKey)
         exerciseLastProgressAt = nil
         lastActivePersistAt = nil
+        clearActiveWorkoutFromCloud()
+    }
+
+    private func pushActiveWorkoutToCloudIfNeeded(force: Bool) {
+        guard let userId = cloudUserId, CrossDeviceSyncFirestoreService.isAvailable else { return }
+        guard CrossDeviceSyncCoordinator.shouldPushActiveWorkout(force: force) else { return }
+        let snapshot = ActiveWorkoutCloudSnapshot(
+            session: activeSession,
+            exerciseRecords: exerciseRecords,
+            activeSessionExercises: activeSessionExercises,
+            currentExerciseIndex: currentExerciseIndex,
+            isMinimized: isActiveWorkoutMinimized,
+            isPaused: isExerciseTimerPaused,
+            lastProgressAt: exerciseLastProgressAt,
+            cardioConfig: activeCardioConfig,
+            updatedAt: .now,
+            deviceId: CrossDeviceSyncFirestoreService.deviceId
+        )
+        CrossDeviceSyncCoordinator.markActiveWorkoutPushed()
+        Task {
+            if snapshot.session == nil {
+                try? await CrossDeviceSyncFirestoreService.clearActiveWorkout(userId: userId)
+            } else {
+                try? await CrossDeviceSyncFirestoreService.saveActiveWorkout(snapshot, userId: userId)
+            }
+        }
+    }
+
+    private func clearActiveWorkoutFromCloud() {
+        guard let userId = cloudUserId, CrossDeviceSyncFirestoreService.isAvailable else { return }
+        Task {
+            try? await CrossDeviceSyncFirestoreService.clearActiveWorkout(userId: userId)
+        }
+    }
+
+    /// Retoma treino em andamento salvo noutro device (iPhone ↔ iPad).
+    func syncActiveWorkoutFromCloud(userId: String) async {
+        guard CrossDeviceSyncFirestoreService.isAvailable else { return }
+        guard let remote = try? await CrossDeviceSyncFirestoreService.fetchActiveWorkout(userId: userId),
+              let session = remote.session else {
+            return
+        }
+
+        // Já há sessão local mais recente neste device — mantém.
+        if let local = activeSession {
+            let localProgress = exerciseLastProgressAt ?? local.startedAt
+            let remoteProgress = remote.lastProgressAt ?? remote.updatedAt
+            if localProgress >= remoteProgress { return }
+        }
+
+        activeSession = session
+        exerciseRecords = remote.exerciseRecords
+        activeSessionExercises = remote.activeSessionExercises
+        currentExerciseIndex = remote.currentExerciseIndex
+        isActiveWorkoutMinimized = remote.isMinimized
+        isExerciseTimerPaused = remote.isPaused
+        exerciseLastProgressAt = remote.lastProgressAt
+        activeCardioConfig = remote.cardioConfig
+        persistActiveSessionLocalOnly()
+    }
+
+    private func persistActiveSessionLocalOnly() {
+        guard let session = activeSession else { return }
+        if let data = try? JSONEncoder().encode(session) {
+            UserDefaults.standard.set(data, forKey: activeSessionKey)
+        }
+        if let recordsData = try? JSONEncoder().encode(exerciseRecords) {
+            UserDefaults.standard.set(recordsData, forKey: activeRecordsKey)
+        }
+        if let exercisesData = try? JSONEncoder().encode(activeSessionExercises) {
+            UserDefaults.standard.set(exercisesData, forKey: activeSessionExercisesKey)
+        }
+        UserDefaults.standard.set(currentExerciseIndex, forKey: activeExerciseIndexKey)
+        UserDefaults.standard.set(isActiveWorkoutMinimized, forKey: activeMinimizedKey)
+        UserDefaults.standard.set(isExerciseTimerPaused, forKey: activePausedKey)
+        if let exerciseLastProgressAt {
+            UserDefaults.standard.set(exerciseLastProgressAt.timeIntervalSince1970, forKey: exerciseLastProgressKey)
+        }
+        if let activeCardioConfig,
+           let cardioData = try? JSONEncoder().encode(activeCardioConfig) {
+            UserDefaults.standard.set(cardioData, forKey: activeCardioConfigKey)
+        }
     }
 
     private func restorePersistedActiveSessionIfNeeded() {

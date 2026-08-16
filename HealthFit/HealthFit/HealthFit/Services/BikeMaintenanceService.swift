@@ -143,5 +143,33 @@ final class BikeMaintenanceService: ObservableObject {
         if let data = try? JSONEncoder().encode(raw) {
             UserDefaults.standard.set(data, forKey: wearKey)
         }
+        CrossDeviceSyncCoordinator.pushBikeNow()
+    }
+
+    func makeCloudSnapshot(updatedAt: Date) -> BikeCloudSnapshot {
+        let raw = Dictionary(uniqueKeysWithValues: wearByPart.map { ($0.key.rawValue, $0.value) })
+        return BikeCloudSnapshot(
+            entries: entries,
+            wearByPart: raw,
+            lifetimeKm: lifetimeKm,
+            updatedAt: updatedAt
+        )
+    }
+
+    func applyCloudSnapshot(_ remote: BikeCloudSnapshot) {
+        entries = remote.entries
+        lifetimeKm = remote.lifetimeKm
+        var map: [BikeWearPart: BikeWearState] = [:]
+        for part in BikeWearPart.allCases {
+            map[part] = remote.wearByPart[part.rawValue] ?? .fresh
+        }
+        wearByPart = map
+        UserDefaults.standard.set(lifetimeKm, forKey: totalKmKey)
+        if let data = try? JSONEncoder().encode(entries) {
+            UserDefaults.standard.set(data, forKey: logKey)
+        }
+        if let data = try? JSONEncoder().encode(remote.wearByPart) {
+            UserDefaults.standard.set(data, forKey: wearKey)
+        }
     }
 }

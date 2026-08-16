@@ -247,6 +247,12 @@ struct RootView: View {
         Task {
             await workoutStore.loadCloudHistory(userId: userId)
             await workoutStore.loadCloudSheets(userId: userId)
+            await CrossDeviceSyncCoordinator.syncAll(
+                userId: userId,
+                workoutStore: workoutStore,
+                timerService: timerService
+            )
+            await authService.syncProfileBackgroundFromCloud(userId: userId)
             EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
         }
     }

@@ -407,9 +407,40 @@ final class AuthService: ObservableObject {
         if let image {
             Self.saveBackgroundImage(image, for: uid)
             profileBackgroundImage = image
+            syncProfileBackgroundToCloud(userId: uid, image: image)
         } else {
             Self.deleteBackgroundImage(for: uid)
             profileBackgroundImage = nil
+            Task {
+                try? await ProfilePhotoStorageService.deleteBackground(userId: uid)
+            }
+        }
+    }
+
+    func syncProfileBackgroundFromCloud(userId: String) async {
+        // Se já há fundo local, só sobe; senão baixa da nuvem.
+        if let local = Self.loadBackgroundImage(for: userId) {
+            profileBackgroundImage = local
+            syncProfileBackgroundToCloud(userId: userId, image: local)
+            return
+        }
+        guard let data = await ProfilePhotoStorageService.downloadBackgroundJPEG(userId: userId),
+              let image = UIImage(data: data) else {
+            return
+        }
+        Self.saveBackgroundImage(image, for: userId)
+        profileBackgroundImage = image
+    }
+
+    private func syncProfileBackgroundToCloud(userId: String, image: UIImage) {
+        guard ProfilePhotoStorageService.isAvailable else { return }
+        guard let data = image.jpegData(compressionQuality: 0.85) else { return }
+        Task {
+            do {
+                _ = try await ProfilePhotoStorageService.uploadBackgroundJPEG(data: data, userId: userId)
+            } catch {
+                print("[HealthFit] Falha ao sincronizar fundo do perfil: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -704,6 +735,8 @@ final class AuthService: ObservableObject {
         try await MealPhotoAnalysisFirestoreService.deleteAllUserData(userId: userId)
         try await DuoTeamFirestoreService.deleteAllUserData(userId: userId)
         try? await ProfilePhotoStorageService.deletePhoto(userId: userId)
+        try? await ProfilePhotoStorageService.deleteBackground(userId: userId)
+        try? await CrossDeviceSyncFirestoreService.deleteAllUserData(userId: userId)
         try await ProfileFirestoreService.deleteUserDirectory(userId: userId)
         try await WorkoutFirestoreService.deleteAllUserData(userId: userId)
         try await WorkoutFirestoreService.deleteUserDocument(userId: userId)

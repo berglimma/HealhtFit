@@ -32,11 +32,21 @@ final class WeeklyReportService: ObservableObject {
     func markReportViewed() {
         lastViewedAt = .now
         UserDefaults.standard.set(lastViewedAt, forKey: lastViewedKey)
+        CrossDeviceSyncCoordinator.pushPreferencesNow()
     }
 
     func reset() {
         lastViewedAt = nil
         UserDefaults.standard.removeObject(forKey: lastViewedKey)
+    }
+
+    func applyFromCloud(lastViewedAt: Date?) {
+        self.lastViewedAt = lastViewedAt
+        if let lastViewedAt {
+            UserDefaults.standard.set(lastViewedAt, forKey: lastViewedKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: lastViewedKey)
+        }
     }
 
     func buildReport(

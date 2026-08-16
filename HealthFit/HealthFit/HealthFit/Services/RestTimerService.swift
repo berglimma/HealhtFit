@@ -75,6 +75,21 @@ final class RestTimerService: ObservableObject {
             remainingSeconds = configuredRestSeconds
             activeRestDurationSeconds = configuredRestSeconds
         }
+        CrossDeviceSyncCoordinator.pushPreferencesNow(timerService: self)
+    }
+
+    /// Aplica preferências vindas do Firestore sem reenviar imediatamente.
+    func applyCloudConfiguration(restSeconds: Int, maxRest: Int, notifications: Bool) {
+        configuredRestSeconds = Self.clampRest(restSeconds)
+        maxRestSeconds = max(configuredRestSeconds, maxRest)
+        notificationEnabled = notifications
+        UserDefaults.standard.set(configuredRestSeconds, forKey: restSecondsKey)
+        UserDefaults.standard.set(maxRestSeconds, forKey: maxRestKey)
+        UserDefaults.standard.set(notificationEnabled, forKey: notificationsKey)
+        if !isRunning {
+            remainingSeconds = configuredRestSeconds
+            activeRestDurationSeconds = configuredRestSeconds
+        }
     }
 
     /// Ajusta o tempo padrão e, se a pausa estiver rodando, reaplica no cronômetro/notificação.

@@ -103,6 +103,12 @@ final class DailyWellnessService: ObservableObject {
                 try await pushMetaToCloud()
             }
 
+            // Histórico recente para desempenho semanal/mensal nos outros devices.
+            let recent = try await DailyWellnessFirestoreService.fetchRecentEntries(userId: userId, limit: 21)
+            if !recent.isEmpty {
+                MonthlyReportService.shared.cacheWellnessEntries(recent)
+            }
+
             evaluateMorningCheckInPresentation()
             refreshHealthIconNotifications()
         } catch {

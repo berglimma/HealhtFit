@@ -54,6 +54,60 @@ enum ProfilePhotoStorageService {
         }
     }
 
+    static func backgroundPath(userId: String) -> String {
+        "users/\(userId)/profile/background.jpg"
+    }
+
+    static func uploadBackgroundJPEG(data: Data, userId: String) async throws -> URL {
+        guard isAvailable else {
+            throw ProfilePhotoStorageError.unavailable
+        }
+        let reference = storage.reference(withPath: backgroundPath(userId: userId))
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        try await putData(data, to: reference, metadata: metadata)
+        return try await downloadURL(for: reference)
+    }
+
+    static func deleteBackground(userId: String) async throws {
+        guard isAvailable else { return }
+        let reference = storage.reference(withPath: backgroundPath(userId: userId))
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            reference.delete { error in
+                if let error {
+                    let ns = error as NSError
+                    if ns.domain == StorageErrorDomain, ns.code == StorageErrorCode.objectNotFound.rawValue {
+                        continuation.resume()
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+
+    static func downloadBackgroundJPEG(userId: String) async -> Data? {
+        guard isAvailable else { return nil }
+        let reference = storage.reference(withPath: backgroundPath(userId: userId))
+        do {
+            return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
+                reference.getData(maxSize: 8 * 1024 * 1024) { data, error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else if let data {
+                        continuation.resume(returning: data)
+                    } else {
+                        continuation.resume(throwing: ProfilePhotoStorageError.unavailable)
+                    }
+                }
+            }
+        } catch {
+            return nil
+        }
+    }
+
     // MARK: - Foto do grupo (duo/equipe)
 
     static func duoTeamCoverPath(teamId: String) -> String {

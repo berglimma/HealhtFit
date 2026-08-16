@@ -219,6 +219,8 @@
 		B2000045 /* ExternalWorkoutAssistantEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000045 /* ExternalWorkoutAssistantEngineTests.swift */; };
 		B2000044 /* BluetoothHeartRateServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000044 /* BluetoothHeartRateServiceTests.swift */; };
 		B2000072 /* MealPhotoAnalysisFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000072 /* MealPhotoAnalysisFirestoreService.swift */; };
+		B2000080 /* CrossDeviceSyncFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000080 /* CrossDeviceSyncFirestoreService.swift */; };
+		B2000081 /* CrossDeviceSyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000081 /* CrossDeviceSyncCoordinator.swift */; };
 		B2000043 /* MealPhotoAnalysisEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000043 /* MealPhotoAnalysisEngineTests.swift */; };
 		B1000400 /* EveningTrainingNudgeAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000400 /* EveningTrainingNudgeAttributes.swift */; };
 		B1000401 /* EveningTrainingNudgeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000401 /* EveningTrainingNudgeController.swift */; };
@@ -559,6 +561,8 @@
 		F2000045 /* ExternalWorkoutAssistantEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalWorkoutAssistantEngineTests.swift; sourceTree = "<group>"; };
 		F2000044 /* BluetoothHeartRateServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothHeartRateServiceTests.swift; sourceTree = "<group>"; };
 		F2000072 /* MealPhotoAnalysisFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPhotoAnalysisFirestoreService.swift; sourceTree = "<group>"; };
+		F2000080 /* CrossDeviceSyncFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossDeviceSyncFirestoreService.swift; sourceTree = "<group>"; };
+		F2000081 /* CrossDeviceSyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossDeviceSyncCoordinator.swift; sourceTree = "<group>"; };
 		F2000043 /* MealPhotoAnalysisEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPhotoAnalysisEngineTests.swift; sourceTree = "<group>"; };
 		F1000400 /* EveningTrainingNudgeAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeAttributes.swift; sourceTree = "<group>"; };
 		F1000401 /* EveningTrainingNudgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeController.swift; sourceTree = "<group>"; };
@@ -1053,6 +1057,8 @@
 				F2000070 /* AppAnalytics.swift */,
 				F2000071 /* MealPlanFirestoreService.swift */,
 				F2000072 /* MealPhotoAnalysisFirestoreService.swift */,
+				F2000080 /* CrossDeviceSyncFirestoreService.swift */,
+				F2000081 /* CrossDeviceSyncCoordinator.swift */,
 				F1000922 /* DuoTeamFirestoreService.swift */,
 				F1000932 /* ProfilePhotoStorageService.swift */,
 				F1000934 /* MarcoCivilAccessLogService.swift */,
@@ -1586,6 +1592,8 @@
 				B1000359 /* ExternalWorkoutSyncService.swift in Sources */,
 				B1000360 /* ExternalWorkoutAssistantEngine.swift in Sources */,
 				B2000072 /* MealPhotoAnalysisFirestoreService.swift in Sources */,
+				B2000080 /* CrossDeviceSyncFirestoreService.swift in Sources */,
+				B2000081 /* CrossDeviceSyncCoordinator.swift in Sources */,
 				B1000205 /* AssistantCardioMeditationNudgeEngine.swift in Sources */,
 				B1000117 /* AppLegalConfiguration.swift in Sources */,
 				B1000118 /* LegalLinksView.swift in Sources */,

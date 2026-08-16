@@ -47,10 +47,14 @@ enum AppLanguage: String, CaseIterable, Identifiable, Hashable {
 final class AppLanguageStore: ObservableObject {
     static let shared = AppLanguageStore()
 
+    private var isHydrating = false
+
     @Published var language: AppLanguage {
         didSet {
             guard oldValue != language else { return }
             UserDefaults.standard.set(language.rawValue, forKey: AppLanguage.storageKey)
+            guard !isHydrating else { return }
+            CrossDeviceSyncCoordinator.pushPreferencesNow()
         }
     }
 
@@ -65,5 +69,12 @@ final class AppLanguageStore: ObservableObject {
             // didSet não roda no init — grava o padrão pt-BR explicitamente.
             userDefaults.set(AppLanguage.defaultLanguage.rawValue, forKey: AppLanguage.storageKey)
         }
+    }
+
+    func applyFromCloud(_ language: AppLanguage) {
+        guard self.language != language else { return }
+        isHydrating = true
+        self.language = language
+        isHydrating = false
     }
 }

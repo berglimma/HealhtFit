@@ -16,6 +16,7 @@ final class NutritionNotificationPreferences: ObservableObject {
             guard !isHydrating else { return }
             UserDefaults.standard.set(supplementRemindersEnabled, forKey: supplementKey)
             NotificationService.shared.refreshSupplementRemindersFromPreferences()
+            CrossDeviceSyncCoordinator.pushPreferencesNow()
         }
     }
 
@@ -24,6 +25,7 @@ final class NutritionNotificationPreferences: ObservableObject {
             guard !isHydrating else { return }
             UserDefaults.standard.set(mealRemindersEnabled, forKey: mealEnabledKey)
             NotificationService.shared.refreshMealRemindersFromPreferences()
+            CrossDeviceSyncCoordinator.pushPreferencesNow()
         }
     }
 
@@ -37,6 +39,7 @@ final class NutritionNotificationPreferences: ObservableObject {
             if mealRemindersEnabled {
                 NotificationService.shared.refreshMealRemindersFromPreferences()
             }
+            CrossDeviceSyncCoordinator.pushPreferencesNow()
         }
     }
 
@@ -104,5 +107,20 @@ final class NutritionNotificationPreferences: ObservableObject {
 
     func resetToDefaults() {
         mealMinutesFromMidnight = Self.defaultMealMinutes()
+    }
+
+    func applyFromCloud(supplements: Bool, meals: Bool, mealTimes: [String: Int]) {
+        isHydrating = true
+        supplementRemindersEnabled = supplements
+        mealRemindersEnabled = meals
+        mealMinutesFromMidnight = mealTimes.isEmpty ? Self.defaultMealMinutes() : mealTimes
+        UserDefaults.standard.set(supplementRemindersEnabled, forKey: supplementKey)
+        UserDefaults.standard.set(mealRemindersEnabled, forKey: mealEnabledKey)
+        if let data = try? JSONEncoder().encode(mealMinutesFromMidnight) {
+            UserDefaults.standard.set(data, forKey: mealTimesKey)
+        }
+        isHydrating = false
+        NotificationService.shared.refreshSupplementRemindersFromPreferences()
+        NotificationService.shared.refreshMealRemindersFromPreferences()
     }
 }

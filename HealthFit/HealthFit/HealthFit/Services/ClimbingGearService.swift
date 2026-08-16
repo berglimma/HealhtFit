@@ -20,6 +20,31 @@ final class ClimbingGearService: ObservableObject {
         guard boundUserId != userId else { return }
         boundUserId = userId
         load()
+        if let userId {
+            Task { await syncFromCloud(userId: userId) }
+        }
+    }
+
+    func syncFromCloud(userId: String) async {
+        guard CrossDeviceSyncFirestoreService.isAvailable else { return }
+        let key = "healthfit.climbing.cloud_updated_at"
+        let localUpdated: Date = {
+            let interval = UserDefaults.standard.double(forKey: key)
+            return interval > 0 ? Date(timeIntervalSince1970: interval) : .distantPast
+        }()
+
+        if let remote = try? await CrossDeviceSyncFirestoreService.fetchClimbingGear(userId: userId),
+           remote.updatedAt > localUpdated {
+            items = remote.items
+            saveLocalOnly()
+            UserDefaults.standard.set(remote.updatedAt.timeIntervalSince1970, forKey: key)
+            return
+        }
+
+        let now = Date()
+        let snapshot = ClimbingGearCloudSnapshot(items: items, updatedAt: now)
+        UserDefaults.standard.set(now.timeIntervalSince1970, forKey: key)
+        try? await CrossDeviceSyncFirestoreService.saveClimbingGear(snapshot, userId: userId)
     }
 
     // MARK: - Consulta
@@ -177,6 +202,17 @@ final class ClimbingGearService: ObservableObject {
     }
 
     private func save() {
+        saveLocalOnly()
+        guard let userId = boundUserId, CrossDeviceSyncFirestoreService.isAvailable else { return }
+        let now = Date()
+        UserDefaults.standard.set(now.timeIntervalSince1970, forKey: "healthfit.climbing.cloud_updated_at")
+        let snapshot = ClimbingGearCloudSnapshot(items: items, updatedAt: now)
+        Task {
+            try? await CrossDeviceSyncFirestoreService.saveClimbingGear(snapshot, userId: userId)
+        }
+    }
+
+    private func saveLocalOnly() {
         guard let data = try? JSONEncoder().encode(items) else { return }
         UserScopedDefaults.setData(
             data,
