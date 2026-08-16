@@ -1,1 +1,1 @@
-https://berglimma.github.io/HealhtFit/privacidade/
+https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
