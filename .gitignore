@@ -43,3 +43,6 @@ fastlane/test_output
 
 # Venv local (geração de Docs/PDF/vídeos)
 .venv-docs/
+
+.pages-deploy/
+_stash_tmp/

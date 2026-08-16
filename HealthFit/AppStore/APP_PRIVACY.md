@@ -43,7 +43,7 @@ Declare Crash Data + Product Interaction. **Não** marque como tracking (sem IDF
 - Purchases history as sold to third parties
 
 ## Privacy Policy URL
-`https://berglimma.github.io/HealhtFit/privacidade/`
+`https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html`
 
 ## Account deletion
 Disponível em **Perfil → Excluir conta** (obrigatório Guideline 5.1.1(v)). Apaga Auth, Firestore (perfil, treinos, wellness, meal plan, evolução corporal) e Storage do usuário.

@@ -57,6 +57,6 @@ Companion app for live heart rate / calories / session control. Pair Apple Watch
 
 CONTACT
 berg.limma@gmail.com
-Support: https://berglimma.github.io/HealhtFit/suporte/
-Privacy: https://berglimma.github.io/HealhtFit/privacidade/
-Terms: https://berglimma.github.io/HealhtFit/termos/
+Support: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/suporte/index.html
+Privacy: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
+Terms: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/termos/index.html

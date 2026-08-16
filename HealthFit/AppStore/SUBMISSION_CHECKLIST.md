@@ -15,6 +15,10 @@ Versão alvo: **1.0.0 (Build 1)** · Bundle `luan.com.healthfit.app`
 
 ## Ainda depende de você (Connect / Apple / captura)
 
+> Passo a passo detalhado: [`CONNECT_FILL_GUIDE.md`](./CONNECT_FILL_GUIDE.md)
+
+> Privacidade 16+ estável: `https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html`
+
 - [ ] **Push do workflow / Pages ligado** e validar no Safari:
     - https://berglimma.github.io/HealhtFit/privacidade/ → deve dizer **16 anos**
     - https://berglimma.github.io/HealhtFit/termos/
@@ -22,7 +26,7 @@ Versão alvo: **1.0.0 (Build 1)** · Bundle `luan.com.healthfit.app`
 - [ ] **Paid Applications Agreement** + banking/tax no App Store Connect
 - [ ] **Assinaturas criadas** (8 Product IDs de `subscriptions.md`)
 - [ ] **Sign In with Apple** + **HealthKit** no App ID (Developer Portal)
-- [ ] **Screenshots** iPhone 6.7" (ver `SCREENSHOTS_GUIDE.md`) — ainda sem PNG
+- [x] **Screenshots** iPhone 6.7" gerados em `AppStore/screenshots/` (substituir por capturas reais se possível)
 - [ ] Preencher **App Privacy** (`APP_PRIVACY.md`) e **Age Rating** (`AGE_RATING.md`)
 - [ ] Archive com `GoogleService-Info.plist` real → TestFlight → Submit
 - [ ] Colar `review_notes.txt` em App Review Information

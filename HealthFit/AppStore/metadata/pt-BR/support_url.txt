@@ -1,1 +1,1 @@
-https://berglimma.github.io/HealhtFit/suporte/
+https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/suporte/index.html
