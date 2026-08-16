@@ -10,32 +10,44 @@ No pre-seeded account required. On the review device:
 1) Tap Criar conta (email + password), OR
 2) Use Sign in with Apple.
 Complete the short profile prompts, then use the flows below.
-If the review team prefers a fixed account, contact berg.limma@gmail.com and we will provide credentials within a few hours.
+Minimum age: 16+. If the review team prefers a fixed account, contact berg.limma@gmail.com and we will provide credentials within a few hours.
 
 HOW TO TEST CORE FLOWS
 1. Onboarding → complete profile (gender, goal, modalities).
 2. Workouts tab → start a guided strength workout OR Cardio → Corrida / Luta.
-3. Nutrition tab → view meal plan; shopping list via cart icon.
+3. Nutrition tab → view meal plan; shopping list via cart icon; Análise for meal photo (IA Plus feature).
 4. Assistant tab → ask a simple question (e.g. “Como melhorar meu sono?”).
-5. Profile → Meu plano → Restore purchases / view subscription tiers.
-6. Profile → Excluir conta is available (Guideline 5.1.1(v)).
+5. Workouts → Dupla/equipe → create/join team → chat (long-press a message to Report; leave team from hub).
+6. Profile → Meu plano → Restore purchases / view subscription tiers.
+7. Profile → Excluir conta is available (Guideline 5.1.1(v)).
 
 SUBSCRIPTIONS (StoreKit 2)
 - Group: HealthFit Plans
-- Product IDs:
+- Product IDs (monthly):
   healthfit.plan.basic.monthly
   healthfit.plan.fit.monthly
   healthfit.plan.ai.monthly
   healthfit.plan.complete.monthly
+- Product IDs (yearly):
+  healthfit.plan.basic.yearly
+  healthfit.plan.fit.yearly
+  healthfit.plan.ai.yearly
+  healthfit.plan.complete.yearly
 - Restore: Profile → Meu plano → Restaurar compras
 - Manage: Profile → Meu plano → Gerenciar na App Store
 - Terms & Privacy links are shown on the paywall.
 
 HEALTHKIT / LOCATION / MOTION
 - HealthKit: metrics and workout sync (user must grant permission).
-- Location: outdoor run/walk/bike/surf/kite maps only while using the app.
+- Location: used for outdoor cardio/sports maps (run/walk/bike/surf/kite). Background location only while an active outdoor session is tracking; purpose strings explain Always if requested by the system for continuous tracking.
 - Motion: pedometer / activity state / climbing motion assist.
 - No third-party advertising; no cross-app tracking.
+
+USER-GENERATED CONTENT (DUO CHAT)
+- Private team chat to coordinate workouts only (no public feed).
+- Messages expire (~12 hours).
+- Users can report a message (mailto support) and leave the team.
+- Contact for moderation: berg.limma@gmail.com
 
 CONTENT DISCLAIMER
 HealthFit provides informational fitness and nutrition guidance only. It does not provide medical diagnosis or replace a licensed professional.
@@ -45,4 +57,6 @@ Companion app for live heart rate / calories / session control. Pair Apple Watch
 
 CONTACT
 berg.limma@gmail.com
-Support page: https://berglimma.github.io/HealhtFit/suporte/
+Support: https://berglimma.github.io/HealhtFit/suporte/
+Privacy: https://berglimma.github.io/HealhtFit/privacidade/
+Terms: https://berglimma.github.io/HealhtFit/termos/

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct DuoTeamChatView: View {
     let teamId: String
@@ -62,6 +63,20 @@ struct DuoTeamChatView: View {
         .background(iMessageBackground.ignoresSafeArea())
         .navigationTitle(teamName)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        reportConversation()
+                    } label: {
+                        Label("Denunciar conversa", systemImage: "flag")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel("Mais opções")
+            }
+        }
         .onAppear {
             duoService.restartListening(teamId: teamId)
         }
@@ -92,7 +107,7 @@ struct DuoTeamChatView: View {
     // MARK: - Banner
 
     private var policyBanner: some View {
-        Text("Só atividades físicas · mensagens expiram em 12h")
+        Text("Só atividades físicas · mensagens ~12h · denuncie com toque longo")
             .font(.caption2.weight(.medium))
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
@@ -131,6 +146,20 @@ struct DuoTeamChatView: View {
                         .padding(.vertical, 9)
                         .background(bubbleFill(for: message, isMine: isMine))
                         .clipShape(iMessageBubbleShape(isMine: isMine))
+                        .contextMenu {
+                            if !isMine {
+                                Button {
+                                    reportMessage(message)
+                                } label: {
+                                    Label("Denunciar mensagem", systemImage: "flag")
+                                }
+                            }
+                            Button {
+                                UIPasteboard.general.string = message.text
+                            } label: {
+                                Label("Copiar", systemImage: "doc.on.doc")
+                            }
+                        }
 
                     if shouldShowTimestamp(at: index) {
                         Text(message.createdAt, format: .dateTime.hour().minute())
@@ -287,6 +316,41 @@ struct DuoTeamChatView: View {
         Task {
             await duoService.sendText(teamId: teamId, text: text)
         }
+    }
+
+    private func reportMessage(_ message: DuoChatMessage) {
+        openAbuseReportMail(
+            subject: "HealthFit — Denúncia de mensagem (Dupla)",
+            body: """
+            Equipe: \(teamName) (\(teamId))
+            Mensagem ID: \(message.id)
+            Remetente: \(message.senderName) (\(message.senderUid))
+            Texto:
+            \(message.text)
+            """
+        )
+    }
+
+    private func reportConversation() {
+        openAbuseReportMail(
+            subject: "HealthFit — Denúncia de conversa (Dupla)",
+            body: """
+            Equipe: \(teamName) (\(teamId))
+            Motivo: (descreva o problema)
+            """
+        )
+    }
+
+    private func openAbuseReportMail(subject: String, body: String) {
+        var comps = URLComponents()
+        comps.scheme = "mailto"
+        comps.path = AppLegalConfiguration.supportEmail
+        comps.queryItems = [
+            .init(name: "subject", value: subject),
+            .init(name: "body", value: body),
+        ]
+        guard let url = comps.url else { return }
+        UIApplication.shared.open(url)
     }
 
     // MARK: - Background

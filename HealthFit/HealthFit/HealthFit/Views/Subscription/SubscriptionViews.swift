@@ -308,11 +308,13 @@ struct SubscriptionPlanView: View {
             Text(subscriptions.currentTier.tagline)
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
+            #if DEBUG
             if !SubscriptionConfiguration.featureGatesEnabled {
                 Text("Bloqueios de plano ainda desativados — o paywall e a loja já estão prontos.")
                     .font(.caption)
                     .foregroundStyle(.orange)
             }
+            #endif
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()

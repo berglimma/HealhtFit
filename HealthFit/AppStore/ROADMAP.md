@@ -21,10 +21,10 @@ Visão: app completo de treino + nutrição + esportes avançados, com planos qu
 | Exclusão de conta | Pronto |
 | Privacy Manifest | Pronto |
 | Metadados 4 idiomas | Pronto |
-| Páginas legais públicas | Em ativação (GitHub Pages) |
+| Páginas legais públicas | Pronto no repo (`Docs/privacidade|termos|suporte` + template Pages em Docs/github); publicar/push para atualizar o GitHub Pages ao vivo |
 | Screenshots App Store | Pendente (manual) |
 | Product IDs na Connect | Pendente (conta Apple) |
-| Feature gates ligados na UI | Parcial (infra pronta; locks de tela a finalizar no envio) |
+| Feature gates ligados na UI | Soft launch: gates off; aviso Release removido |
 
 ### Planos (liberação progressiva)
 

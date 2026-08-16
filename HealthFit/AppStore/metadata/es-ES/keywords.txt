@@ -1,1 +1,1 @@
-entrenamiento,fitness,gimnasio,hipertrofia,salud,dieta,nutricion,healthkit,entrenador,ejercicio,musculacion,cardio,bienestar
+entrenamiento,fitness,gimnasio,salud,dieta,nutricion,healthkit,entrenador,ejercicio,cardio

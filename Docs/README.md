@@ -26,12 +26,26 @@ Guia de importação: [`figma/FIGMA_IMPORT_GUIDE.md`](./figma/FIGMA_IMPORT_GUIDE
 
 Capítulos: sumário executivo, stack, arquitetura, catálogo de telas (incluindo Dupla/equipe), design system, Firebase, notificações, Watch/HealthKit, privacidade (16+, Marco Civil 6 meses) e Figma.
 
+## Guia do usuário + vídeos
+
+- PDF passo a passo: [`HealthFit_Guia_do_Usuario.pdf`](./HealthFit_Guia_do_Usuario.pdf)
+- Vídeos explicativos (slides MP4): [`videos/`](./videos/)
+  - `01_visao_geral.mp4` · `02_treinos.mp4` · `03_nutricao.mp4`
+  - `04_iassistente.mp4` · `05_dupla_equipe.mp4` · `06_planos.mp4`
+- Roteiros para gravação real no iPhone: [`videos/ROTEIROS.md`](./videos/ROTEIROS.md)
+
 ### Regenerar
 
 ```bash
 python3 Docs/generate_docs.py
 # ou, se disponível:
 python3 Docs/generate_professional_pdf.py
+
+# Guia do usuário + vídeos (venv do Docs):
+python3 -m venv .venv-docs
+.venv-docs/bin/pip install reportlab pillow imageio imageio-ffmpeg numpy
+.venv-docs/bin/python Docs/generate_user_guide_pdf.py
+.venv-docs/bin/python Docs/generate_explainer_videos.py
 ```
 
 ## Apresentação comercial
@@ -47,7 +61,7 @@ python3 Docs/generate_professional_pdf.py
 | Termos | https://berglimma.github.io/HealhtFit/termos/ | `Resources/Legal/terms-of-use.html` |
 | Suporte | https://berglimma.github.io/HealhtFit/suporte/ | — |
 
-Espelhos em `Docs/healthfit/` para deploy Pages (`/docs`).
+Espelhos em `Docs/healthfit/` e URLs públicas em `Docs/privacidade|termos|suporte` (deploy via `Docs/github/pages.workflow.yml`).
 
 ## Fatos críticos (código atual)
 

@@ -40,3 +40,6 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Venv local (geração de Docs/PDF/vídeos)
+.venv-docs/

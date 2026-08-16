@@ -24,8 +24,10 @@ Responda **Nenhuma / None** para quase tudo. Ajustes abaixo:
 
 **Faixa etária esperada:** 4+ ou 9+ (se Medical Information = Infrequent/Mild, a Apple pode classificar 9+ / 12+ conforme a matriz atual). Aceite a classificação gerada pelo Connect.
 
-## In-App Controls
+## In-App Controls / UGC
 
 - Conta: login e-mail, Apple, Google
 - Compras: assinaturas auto-renováveis
-- Sem UGC público / sem chat entre usuários
+- **UGC / chat:** existe chat **privado** em Dupla/equipe (somente membros do grupo; sem feed público)
+- Controles: usuário pode **denunciar mensagem** (e-mail ao suporte), **sair do grupo** e mensagens expiram (~12h)
+- Idade mínima no app: **16 anos** (independente da faixa gerada pelo questionário Age Rating)

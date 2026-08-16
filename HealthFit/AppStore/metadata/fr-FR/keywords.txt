@@ -1,1 +1,1 @@
-entrainement,fitness,salle,hypertrophie,sante,regime,nutrition,healthkit,coach,exercice,musculation,cardio,bienetre
+entrainement,fitness,salle,sante,regime,nutrition,healthkit,coach,exercice,cardio
