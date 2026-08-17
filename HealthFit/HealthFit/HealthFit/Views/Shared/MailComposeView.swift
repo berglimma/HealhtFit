@@ -21,6 +21,9 @@ struct MailComposeView: UIViewControllerRepresentable {
         MFMailComposeViewController.canSendMail()
     }
 
+    /// Limite prático de `mailto:` (URLs muito longas falham no iOS / Gmail).
+    static let mailtoBodyCharacterLimit = 1_800
+
     static func mailtoURL(recipients: [String], subject: String, body: String) -> URL? {
         guard let recipient = recipients.first?
             .trimmingCharacters(in: .whitespacesAndNewlines),
@@ -29,6 +32,9 @@ struct MailComposeView: UIViewControllerRepresentable {
             return nil
         }
 
+        // Corpo grande demais → não gera mailto (caller deve usar share sheet).
+        guard body.count <= mailtoBodyCharacterLimit else { return nil }
+
         var components = URLComponents()
         components.scheme = "mailto"
         components.path = recipient
@@ -36,7 +42,30 @@ struct MailComposeView: UIViewControllerRepresentable {
             URLQueryItem(name: "subject", value: subject),
             URLQueryItem(name: "body", value: body)
         ]
-        return components.url
+        guard let url = components.url, url.absoluteString.count < 8_000 else {
+            return nil
+        }
+        return url
+    }
+
+    /// Grava o corpo do relatório em arquivo temporário para compartilhar (Mail / Gmail / etc.).
+    static func writeShareableReportFile(
+        subject: String,
+        body: String,
+        fileNamePrefix: String = "HealthFit-Relatorio"
+    ) -> URL? {
+        let safeName = fileNamePrefix
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(safeName)-\(UUID().uuidString.prefix(8)).txt")
+        let content = "\(subject)\n\n\(body)"
+        do {
+            try content.write(to: url, atomically: true, encoding: .utf8)
+            return url
+        } catch {
+            return nil
+        }
     }
 
     func makeUIViewController(context: Context) -> MailComposeHostingController {

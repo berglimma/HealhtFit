@@ -3,60 +3,42 @@ import PDFKit
 import UIKit
 
 enum BodyMeasurementsPDFBuilder {
-    static func build(
+    @MainActor static func build(
         evaluation: BodyEvolutionEvaluation,
         athleteName: String
     ) -> Data {
-        let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let pageRect = HealthFitPDFChrome.pageRect
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
 
         return renderer.pdfData { context in
-            context.beginPage()
-            let cg = context.cgContext
-
-            let titleFont = UIFont.systemFont(ofSize: 22, weight: .bold)
-            let headingFont = UIFont.systemFont(ofSize: 14, weight: .semibold)
-            let bodyFont = UIFont.systemFont(ofSize: 11, weight: .regular)
-            let smallFont = UIFont.systemFont(ofSize: 9, weight: .regular)
-
-            var y: CGFloat = 40
-            let left: CGFloat = 40
-            let width = pageRect.width - 80
-
-            func draw(_ text: String, font: UIFont, color: UIColor = .black, maxWidth: CGFloat = width) {
-                let attributes: [NSAttributedString.Key: Any] = [
-                    .font: font,
-                    .foregroundColor: color,
-                ]
-                let rect = CGRect(x: left, y: y, width: maxWidth, height: 800)
-                let bounding = (text as NSString).boundingRect(
-                    with: CGSize(width: maxWidth, height: 800),
-                    options: [.usesLineFragmentOrigin, .usesFontLeading],
-                    attributes: attributes,
-                    context: nil
-                )
-                (text as NSString).draw(in: rect, withAttributes: attributes)
-                y += ceil(bounding.height) + 8
-            }
-
-            draw("HealthFit — Evolução Corporal", font: titleFont)
-            draw("Atleta: \(athleteName)", font: headingFont)
-            draw(
-                "Avaliação em \(formatted(evaluation.createdAt)) · \(evaluation.periodDays) dia(s)",
-                font: bodyFont,
-                color: .darkGray
+            let layout = HealthFitPDFPageLayout(
+                context: context,
+                documentTitle: "Evolução Corporal"
             )
-            y += 8
+            layout.beginPage()
 
-            draw("Resumo", font: headingFont)
-            draw(evaluation.summaryText, font: bodyFont)
-            y += 12
+            layout.draw("Evolução Corporal", attrs: HealthFitPDFChrome.titleAttributes())
+            layout.draw("Atleta: \(athleteName)", attrs: HealthFitPDFChrome.headingAttributes())
+            layout.draw(
+                "Avaliação em \(formatted(evaluation.createdAt)) · \(evaluation.periodDays) dia(s)",
+                attrs: HealthFitPDFChrome.metaAttributes(),
+                spacingAfter: 12
+            )
 
-            draw("Medidas corporais (cm)", font: headingFont)
+            layout.draw("Resumo", attrs: HealthFitPDFChrome.accentHeadingAttributes())
+            layout.draw(evaluation.summaryText, attrs: HealthFitPDFChrome.bodyAttributes(), spacingAfter: 14)
 
-            let headerY = y
-            drawTableHeader(at: headerY, left: left, width: width, font: smallFont, context: cg)
-            y = headerY + 22
+            layout.draw("Medidas corporais (cm)", attrs: HealthFitPDFChrome.accentHeadingAttributes())
+
+            let cg = context.cgContext
+            drawTableHeader(
+                at: layout.y,
+                left: layout.left,
+                width: layout.width,
+                font: HealthFitPDFChrome.captionFont(),
+                context: cg
+            )
+            layout.y += 22
 
             let labels = evaluation.currentMeasurements.labeledValues.map(\.label)
             for label in labels {
@@ -64,14 +46,7 @@ enum BodyMeasurementsPDFBuilder {
                 let current = value(for: label, in: evaluation.currentMeasurements)
                 guard previous != nil || current != nil else { continue }
 
-                if y > pageRect.height - 60 {
-                    context.beginPage()
-                    y = 40
-                    draw("HealthFit — Evolução Corporal (cont.)", font: headingFont)
-                    y += 4
-                    drawTableHeader(at: y, left: left, width: width, font: smallFont, context: cg)
-                    y += 22
-                }
+                layout.ensureSpace(22)
 
                 let delta: Double? = {
                     guard let previous, let current else { return nil }
@@ -83,24 +58,22 @@ enum BodyMeasurementsPDFBuilder {
                     previous: previous.map(BodyMeasurements.formatCm) ?? "—",
                     current: current.map(BodyMeasurements.formatCm) ?? "—",
                     delta: delta.map(BodyMeasurements.formatDelta) ?? "—",
-                    at: y,
-                    left: left,
-                    width: width,
-                    font: smallFont
+                    at: layout.y,
+                    left: layout.left,
+                    width: layout.width,
+                    font: HealthFitPDFChrome.captionFont()
                 )
-                y += 18
+                layout.y += 18
             }
 
-            y += 16
-            draw(
+            layout.addVerticalSpace(16)
+            layout.draw(
                 "Fotos de evolução são opcionais e privadas (somente o titular da conta). Fotos antigas são excluídas após cada comparação. Este PDF permanece entre as últimas \(BodyEvolutionEvaluation.maxRetainedEvaluations) avaliações da sua conta.",
-                font: smallFont,
-                color: .darkGray
+                attrs: HealthFitPDFChrome.metaAttributes()
             )
-            draw(
+            layout.draw(
                 "Documento gerado pelo HealthFit. Em caso de dúvida sobre saúde, procure um profissional habilitado.",
-                font: smallFont,
-                color: .gray
+                attrs: HealthFitPDFChrome.metaAttributes()
             )
         }
     }
@@ -117,7 +90,7 @@ enum BodyMeasurementsPDFBuilder {
         measurements.labeledValues.first { $0.label == label }?.value
     }
 
-    private static func drawTableHeader(
+    @MainActor private static func drawTableHeader(
         at y: CGFloat,
         left: CGFloat,
         width: CGFloat,
@@ -126,7 +99,7 @@ enum BodyMeasurementsPDFBuilder {
     ) {
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: UIColor.darkGray,
+            .foregroundColor: HealthFitPDFChrome.textSecondary,
         ]
         let col1 = left
         let col2 = left + width * 0.40
@@ -137,14 +110,14 @@ enum BodyMeasurementsPDFBuilder {
         ("Depois" as NSString).draw(at: CGPoint(x: col3, y: y), withAttributes: attrs)
         ("Delta" as NSString).draw(at: CGPoint(x: col4, y: y), withAttributes: attrs)
 
-        context.setStrokeColor(UIColor.lightGray.cgColor)
-        context.setLineWidth(0.5)
+        context.setStrokeColor(HealthFitPDFChrome.accentGreen.withAlphaComponent(0.45).cgColor)
+        context.setLineWidth(0.8)
         context.move(to: CGPoint(x: left, y: y + 16))
         context.addLine(to: CGPoint(x: left + width, y: y + 16))
         context.strokePath()
     }
 
-    private static func drawRow(
+    @MainActor private static func drawRow(
         label: String,
         previous: String,
         current: String,
@@ -156,7 +129,7 @@ enum BodyMeasurementsPDFBuilder {
     ) {
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: UIColor.black,
+            .foregroundColor: HealthFitPDFChrome.textPrimary,
         ]
         let col1 = left
         let col2 = left + width * 0.40

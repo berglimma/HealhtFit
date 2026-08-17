@@ -204,6 +204,9 @@
 		B1000349 /* MonthlyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000349 /* MonthlyReportService.swift */; };
 		B100034A /* PhotoLibrarySaver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034A /* PhotoLibrarySaver.swift */; };
 		B100034B /* WorkoutSessionPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034B /* WorkoutSessionPDFBuilder.swift */; };
+		B100034D /* HealthFitPDFChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034D /* HealthFitPDFChrome.swift */; };
+		B100034F /* MonthlyReportPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034F /* MonthlyReportPDFBuilder.swift */; };
+		B100034E /* WeeklyReportPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034E /* WeeklyReportPDFBuilder.swift */; };
 		B100034C /* WorkoutCalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100034C /* WorkoutCalendarService.swift */; };
 		B1000350 /* MonthlyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000350 /* MonthlyReportView.swift */; };
 		B1000351 /* AssistantImprovementAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000351 /* AssistantImprovementAnalysisEngine.swift */; };
@@ -546,6 +549,9 @@
 		F1000349 /* MonthlyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportService.swift; sourceTree = "<group>"; };
 		F100034A /* PhotoLibrarySaver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibrarySaver.swift; sourceTree = "<group>"; };
 		F100034B /* WorkoutSessionPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSessionPDFBuilder.swift; sourceTree = "<group>"; };
+		F100034D /* HealthFitPDFChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitPDFChrome.swift; sourceTree = "<group>"; };
+		F100034F /* MonthlyReportPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportPDFBuilder.swift; sourceTree = "<group>"; };
+		F100034E /* WeeklyReportPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportPDFBuilder.swift; sourceTree = "<group>"; };
 		F100034C /* WorkoutCalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCalendarService.swift; sourceTree = "<group>"; };
 		F1000350 /* MonthlyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportView.swift; sourceTree = "<group>"; };
 		F1000351 /* AssistantImprovementAnalysisEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantImprovementAnalysisEngine.swift; sourceTree = "<group>"; };
@@ -828,6 +834,9 @@
 				F1000903 /* ClimbingAnalytics.swift */,
 				F1000702 /* SurfKiteReportBuilder.swift */,
 				F100034B /* WorkoutSessionPDFBuilder.swift */,
+				F100034D /* HealthFitPDFChrome.swift */,
+				F100034F /* MonthlyReportPDFBuilder.swift */,
+				F100034E /* WeeklyReportPDFBuilder.swift */,
 				F1000706 /* OpenMeteoWindService.swift */,
 				F1000710 /* AssistantTideAlertEngine.swift */,
 				F1000601 /* SubscriptionService.swift */,
@@ -1528,6 +1537,9 @@
 				B1000036 /* MotivationMessages.swift in Sources */,
 				B1000037 /* WorkoutReportBuilder.swift in Sources */,
 				B100034B /* WorkoutSessionPDFBuilder.swift in Sources */,
+				B100034D /* HealthFitPDFChrome.swift in Sources */,
+				B100034F /* MonthlyReportPDFBuilder.swift in Sources */,
+				B100034E /* WeeklyReportPDFBuilder.swift in Sources */,
 				B100034A /* PhotoLibrarySaver.swift in Sources */,
 				B100034C /* WorkoutCalendarService.swift in Sources */,
 				B1000044 /* WeeklyProgressModels.swift in Sources */,

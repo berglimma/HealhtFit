@@ -199,68 +199,71 @@ enum SurfKiteReportBuilder {
         return lines
     }
 
-    /// PDF simples (UIKit) com métricas e comparativo.
+    /// PDF com identidade HealthFit (logo, marca d'água, cabeçalho/rodapé).
     @MainActor
     static func makePDF(
         report: SurfKiteComparisonReport,
         athleteName: String
     ) -> URL? {
-        let page = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let page = HealthFitPDFChrome.pageRect
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("HealthFit-SurfKite-\(UUID().uuidString.prefix(8)).pdf")
 
         let renderer = UIGraphicsPDFRenderer(bounds: page)
         do {
             try renderer.writePDF(to: url) { context in
-                context.beginPage()
-                let titleAttrs: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.boldSystemFont(ofSize: 20),
-                    .foregroundColor: UIColor.label
-                ]
-                let bodyAttrs: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 12),
-                    .foregroundColor: UIColor.secondaryLabel
-                ]
-                var y: CGFloat = 48
-                let draw: (String, [NSAttributedString.Key: Any]) -> Void = { text, attrs in
-                    (text as NSString).draw(at: CGPoint(x: 48, y: y), withAttributes: attrs)
-                    y += 22
-                }
-                draw("HealthFit — Relatório Surf / Kitesurf", titleAttrs)
-                y += 8
-                draw("Atleta: \(athleteName)", bodyAttrs)
-                draw(report.session.workoutTitle, bodyAttrs)
+                let layout = HealthFitPDFPageLayout(
+                    context: context,
+                    documentTitle: "Relatório Surf / Kitesurf"
+                )
+                layout.beginPage()
+
+                let body = HealthFitPDFChrome.bodyAttributes(size: 12)
+                let title = HealthFitPDFChrome.titleAttributes()
+                let accent = HealthFitPDFChrome.accentHeadingAttributes()
+
+                layout.draw("Surf / Kitesurf", attrs: title)
+                layout.draw("Atleta: \(athleteName)", attrs: body)
+                layout.draw(report.session.workoutTitle, attrs: HealthFitPDFChrome.headingAttributes())
+
                 let df = DateFormatter()
                 df.locale = Locale(identifier: "pt_BR")
                 df.dateStyle = .long
                 df.timeStyle = .short
-                draw("Data: \(df.string(from: report.session.startedAt))", bodyAttrs)
-                y += 10
-                draw(String(format: "Saltos: %d", report.jumpCount), bodyAttrs)
-                draw(String(format: "Maior salto: %.2f m", report.maxJumpMeters), bodyAttrs)
-                draw(String(format: "Salto médio: %.2f m", report.avgJumpMeters), bodyAttrs)
-                draw(String(format: "Pico aceleração: %.2f g", report.maxAccelerationG), bodyAttrs)
-                draw(String(format: "Distância: %.2f km", report.distanceKm), bodyAttrs)
-                draw("Duração ativa: \(DurationFormatting.format(seconds: report.durationSeconds))", bodyAttrs)
-                if let board = report.boardLabel { draw("Prancha: \(board)", bodyAttrs) }
-                if let eq = report.equipmentLabel { draw("Kite: \(eq)", bodyAttrs) }
-                if let mode = report.ridingModeLabel { draw("Modo: \(mode)", bodyAttrs) }
-                if let spot = report.spotName { draw("Spot: \(spot)", bodyAttrs) }
-                if let wind = report.windSummary { draw("Vento: \(wind)", bodyAttrs) }
-                if let tide = report.tideSummary { draw("Maré: \(tide)", bodyAttrs) }
-                y += 12
-                draw("Comparativo", titleAttrs)
+                layout.draw(
+                    "Data: \(df.string(from: report.session.startedAt))",
+                    attrs: HealthFitPDFChrome.metaAttributes(),
+                    spacingAfter: 12
+                )
+
+                layout.draw("Métricas da sessão", attrs: accent)
+                layout.draw(String(format: "Saltos: %d", report.jumpCount), attrs: body)
+                layout.draw(String(format: "Maior salto: %.2f m", report.maxJumpMeters), attrs: body)
+                layout.draw(String(format: "Salto médio: %.2f m", report.avgJumpMeters), attrs: body)
+                layout.draw(String(format: "Pico aceleração: %.2f g", report.maxAccelerationG), attrs: body)
+                layout.draw(String(format: "Distância: %.2f km", report.distanceKm), attrs: body)
+                layout.draw(
+                    "Duração ativa: \(DurationFormatting.format(seconds: report.durationSeconds))",
+                    attrs: body
+                )
+                if let board = report.boardLabel { layout.draw("Prancha: \(board)", attrs: body) }
+                if let eq = report.equipmentLabel { layout.draw("Kite: \(eq)", attrs: body) }
+                if let mode = report.ridingModeLabel { layout.draw("Modo: \(mode)", attrs: body) }
+                if let spot = report.spotName { layout.draw("Spot: \(spot)", attrs: body) }
+                if let wind = report.windSummary { layout.draw("Vento: \(wind)", attrs: body) }
+                if let tide = report.tideSummary { layout.draw("Maré: \(tide)", attrs: body) }
+
+                layout.addVerticalSpace(10)
+                layout.draw("Comparativo", attrs: accent)
                 if let prev = report.previousBestJumpMeters {
-                    draw(String(format: "Recorde anterior: %.2f m", prev), bodyAttrs)
+                    layout.draw(String(format: "Recorde anterior: %.2f m", prev), attrs: body)
                 } else {
-                    draw("Primeira sessão com saltos registrados.", bodyAttrs)
+                    layout.draw("Primeira sessão com saltos registrados.", attrs: body)
                 }
                 if let delta = report.jumpDeltaVsBest {
-                    draw(String(format: "Delta vs recorde: %+.2f m", delta), bodyAttrs)
+                    layout.draw(String(format: "Delta vs recorde: %+.2f m", delta), attrs: body)
                 }
-                draw("Sessões na modalidade: \(report.sessionsCompared)", bodyAttrs)
-                y += 20
-                draw("HealthFit · BERG / LUAN", bodyAttrs)
+                layout.draw("Sessões na modalidade: \(report.sessionsCompared)", attrs: body)
             }
             return url
         } catch {

@@ -291,7 +291,7 @@ struct WorkoutSummaryView: View {
                 focusShareCard()
             }
         } message: {
-            Text("Configure uma conta de e-mail no iPhone ou cadastre o e-mail do personal no Perfil. Você ainda pode compartilhar o card.")
+            Text("Configure uma conta no app Mail (Ajustes → Mail → Contas) ou use Compartilhar para enviar o relatório por Gmail/Outlook. Você também pode compartilhar o card.")
         }
     }
 
@@ -871,7 +871,7 @@ struct WorkoutSummaryView: View {
                 attachments: mapAttachment.map { [$0] } ?? []
             )
         } else {
-            // Fallback mailto: corpo em texto sem imagem; avisa que o mapa está no app.
+            // Fallback: mailto (corpo curto) ou share sheet (arquivo .txt) se Mail não estiver configurado.
             let plainBody = WorkoutReportBuilder.emailBody(
                 session: session,
                 athlete: user,
@@ -890,12 +890,30 @@ struct WorkoutSummaryView: View {
                             focusShareCard()
                         }
                     } else {
-                        showMailUnavailableAlert = true
+                        shareReportAsFile(subject: subject, body: plainBody, to: recipient)
                     }
                 }
             } else {
-                showMailUnavailableAlert = true
+                shareReportAsFile(subject: subject, body: plainBody, to: recipient)
             }
+        }
+    }
+
+    private func shareReportAsFile(subject: String, body: String, to recipient: String) {
+        let enriched = """
+        Para: \(recipient)
+
+        \(body)
+        """
+        if let fileURL = MailComposeView.writeShareableReportFile(
+            subject: subject,
+            body: enriched,
+            fileNamePrefix: "HealthFit-Treino"
+        ) {
+            shareItems = [fileURL]
+            showShareSheet = true
+        } else {
+            showMailUnavailableAlert = true
         }
     }
 

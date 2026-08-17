@@ -27,6 +27,9 @@ struct MealPlanView: View {
     @State private var showEmailFailedAlert = false
     @State private var emailWasSent = false
     @State private var showMealPlanUpdatedAlert = false
+    @State private var shareItems: [Any] = []
+    @State private var showShareSheet = false
+    @State private var showShareHintAlert = false
 
     private var selectedGoal: FitnessGoal {
         authService.currentUser?.goal ?? .muscleGain
@@ -86,12 +89,22 @@ struct MealPlanView: View {
             .alert("E-mail indisponível", isPresented: $showMailUnavailableAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Configure uma conta de e-mail no iPhone ou cadastre o e-mail do nutricionista no Perfil.")
+                Text("Configure uma conta de e-mail no iPhone (Ajustes → Mail → Contas) ou use Compartilhar para enviar o relatório por outro app.")
+            }
+            .alert("Compartilhar relatório", isPresented: $showShareHintAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("O app Mail não está configurado (ou o relatório é grande demais para mailto). Escolha Gmail, Outlook ou outro app na tela de compartilhar e envie para o nutricionista.")
             }
             .alert("Cardápio atualizado", isPresented: $showMealPlanUpdatedAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("Seu cardápio semanal foi atualizado com base nas suas preferências e metas.")
+            }
+            .sheet(isPresented: $showShareSheet) {
+                ActivityShareSheet(items: shareItems) {
+                    showShareSheet = false
+                }
             }
     }
 
@@ -739,10 +752,32 @@ struct MealPlanView: View {
         ) {
             UIApplication.shared.open(url) { accepted in
                 if accepted {
-                    emailWasSent = true
+                    // mailto não confirma envio — só abre o app de e-mail.
+                    showShareHintAlert = false
                 } else {
-                    showMailUnavailableAlert = true
+                    shareNutritionReportAsFile(subject: subject, body: body, to: recipient)
                 }
+            }
+        } else {
+            shareNutritionReportAsFile(subject: subject, body: body, to: recipient)
+        }
+    }
+
+    private func shareNutritionReportAsFile(subject: String, body: String, to recipient: String) {
+        let enriched = """
+        Para: \(recipient)
+
+        \(body)
+        """
+        if let fileURL = MailComposeView.writeShareableReportFile(
+            subject: subject,
+            body: enriched,
+            fileNamePrefix: "HealthFit-Nutricao"
+        ) {
+            shareItems = [fileURL]
+            showShareHintAlert = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                showShareSheet = true
             }
         } else {
             showMailUnavailableAlert = true

@@ -740,6 +740,9 @@
     "Ativo: %@" : {
 
     },
+    "Atleta: %@" : {
+
+    },
     "Atual" : {
 
     },
@@ -1872,6 +1875,9 @@
     "Compartilhar o que você fez hoje" : {
 
     },
+    "Compartilhar relatório" : {
+
+    },
     "Complete Seus Dados no Perfil (peso, altura, idade e sexo) para montar o cardápio." : {
 
     },
@@ -1923,10 +1929,10 @@
     "Configure uma conta de e-mail no aparelho ou compartilhe o convite de outra forma." : {
 
     },
-    "Configure uma conta de e-mail no iPhone ou cadastre o e-mail do nutricionista no Perfil." : {
+    "Configure uma conta de e-mail no iPhone (Ajustes → Mail → Contas) ou use Compartilhar para enviar o relatório por outro app." : {
 
     },
-    "Configure uma conta de e-mail no iPhone ou cadastre o e-mail do personal no Perfil. Você ainda pode compartilhar o card." : {
+    "Configure uma conta no app Mail (Ajustes → Mail → Contas) ou use Compartilhar para enviar o relatório por Gmail/Outlook. Você também pode compartilhar o card." : {
 
     },
     "Confirmação" : {
@@ -3471,6 +3477,9 @@
           }
         }
       }
+    },
+    "O app Mail não está configurado (ou o relatório é grande demais para mailto). Escolha Gmail, Outlook ou outro app na tela de compartilhar e envie para o nutricionista." : {
+
     },
     "O cronômetro abre na hora, já contando o tempo de luta." : {
 

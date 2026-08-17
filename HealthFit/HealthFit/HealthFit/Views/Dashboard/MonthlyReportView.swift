@@ -10,6 +10,10 @@ struct MonthlyReportView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
 
+    @State private var pdfURL: URL?
+    @State private var showPDFShare = false
+    @State private var pdfFailed = false
+
     private var report: MonthlyProgressReport {
         monthlyReportService.buildReport(
             sessions: workoutStore.sessionHistory,
@@ -18,6 +22,12 @@ struct MonthlyReportView: View {
             weeklyPlan: mealPlanService.weeklyPlan,
             goal: authService.currentUser?.goal ?? .maintenance
         )
+    }
+
+    private var athleteName: String {
+        authService.currentUser?.greetingName
+            ?? authService.currentUser?.name
+            ?? "Atleta"
     }
 
     var body: some View {
@@ -33,6 +43,18 @@ struct MonthlyReportView: View {
                     workoutChartSection
                     if !report.highlights.isEmpty {
                         highlightsSection
+                    }
+
+                    Button {
+                        exportPDF()
+                    } label: {
+                        Label("Gerar PDF do relatório", systemImage: "doc.richtext")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(AppTheme.accent)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
                 .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
@@ -62,8 +84,27 @@ struct MonthlyReportView: View {
                 )
                 monthlyReportService.markReportViewed()
             }
+            .sheet(isPresented: $showPDFShare) {
+                if let pdfURL {
+                    ActivityShareSheet(items: [pdfURL]) {
+                        showPDFShare = false
+                    }
+                }
+            }
+            .alert("Não foi possível gerar o PDF", isPresented: $pdfFailed) {
+                Button("OK", role: .cancel) {}
+            }
         }
         .requiresSubscription(.monthlyReport)
+    }
+
+    private func exportPDF() {
+        guard let url = MonthlyReportPDFBuilder.makePDF(report: report, athleteName: athleteName) else {
+            pdfFailed = true
+            return
+        }
+        pdfURL = url
+        showPDFShare = true
     }
 
     // MARK: - Score

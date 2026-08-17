@@ -52,8 +52,9 @@ final class RunTrackingService: NSObject, ObservableObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = 5
         locationManager.activityType = .fitness
-        // Permite o sistema pausar GPS quando parado — grande ganho de bateria em pausas/estacionário.
-        locationManager.pausesLocationUpdatesAutomatically = true
+        // Em treino ativo o GPS não pode auto-pausar: senão a rota e a distância
+        // ficam zeradas até o usuário pausar/retomar (que “acorda” o Core Location).
+        locationManager.pausesLocationUpdatesAutomatically = false
         authorizationStatus = locationManager.authorizationStatus
         isPedometerAvailable = CMPedometer.isStepCountingAvailable()
         motionActivityAvailable = CMMotionActivityManager.isActivityAvailable()
@@ -91,6 +92,7 @@ final class RunTrackingService: NSObject, ObservableObject {
         isTracking = true
 
         locationManager.activityType = .fitness
+        locationManager.pausesLocationUpdatesAutomatically = false
         requestLocationPermissionIfNeeded()
         startLocationUpdatesIfAuthorized()
         if self.modality.usesFootTracking {
@@ -116,9 +118,13 @@ final class RunTrackingService: NSObject, ObservableObject {
             // Na pausa do treino: precisão menor + filtro maior (menos ciclos GPS/rádio).
             locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
             locationManager.distanceFilter = 25
+            locationManager.pausesLocationUpdatesAutomatically = true
         } else {
             locationManager.desiredAccuracy = kCLLocationAccuracyBest
             locationManager.distanceFilter = 5
+            locationManager.pausesLocationUpdatesAutomatically = false
+            // Reativa entrega de localizações (auto-pause do sistema pode ter parado o stream).
+            startLocationUpdatesIfAuthorized()
             // Exclui passos acumulados só durante a pausa.
             if let rawAtPause = pedometerRawWhenPaused {
                 pedometerOffset += max(0, latestPedometerRaw - rawAtPause)
@@ -153,6 +159,7 @@ final class RunTrackingService: NSObject, ObservableObject {
         guard isTracking else { return }
         isTracking = false
         isPaused = false
+        locationManager.pausesLocationUpdatesAutomatically = true
         locationManager.stopUpdatingLocation()
         locationManager.allowsBackgroundLocationUpdates = false
         pedometer.stopUpdates()
@@ -287,7 +294,9 @@ final class RunTrackingService: NSObject, ObservableObject {
 
     private func accept(_ location: CLLocation) {
         // Filtra leituras ruins / saltos GPS.
-        guard location.horizontalAccuracy >= 0, location.horizontalAccuracy <= 40 else { return }
+        // Primeiro ponto: aceita precisão mais frouxa para ancorar a rota cedo (GPS frio).
+        let maxAccuracy: CLLocationAccuracy = lastAcceptedLocation == nil ? 100 : 40
+        guard location.horizontalAccuracy >= 0, location.horizontalAccuracy <= maxAccuracy else { return }
         if let last = lastAcceptedLocation {
             let delta = location.distance(from: last)
             let dt = location.timestamp.timeIntervalSince(last.timestamp)
