@@ -85,9 +85,12 @@ enum HealthAssistantEngine {
 
     /// Sugestões de escalada só aparecem para quem escala — senão a lista vira ruído.
     static func suggestedQuestions(context: HealthAssistantContext) -> [String] {
+        let cycle = MenstrualCycleAssistantEngine.suggestedQuestions(context: context)
         let climbs = context.recentWorkoutSessions.contains { $0.climbing != nil }
-        guard climbs || !context.climbingGear.isEmpty else { return suggestedQuestions }
-        return ClimbingAssistantEngine.suggestedQuestions + suggestedQuestions
+        guard climbs || !context.climbingGear.isEmpty else {
+            return cycle + suggestedQuestions
+        }
+        return cycle + ClimbingAssistantEngine.suggestedQuestions + suggestedQuestions
     }
 
     static func welcomeMessage(context: HealthAssistantContext) -> String {
@@ -203,6 +206,10 @@ enum HealthAssistantEngine {
             alerts.append(tideWelcome)
         }
 
+        if let cycleWelcome = MenstrualCycleAssistantEngine.welcomeAlert(context: context) {
+            alerts.append(cycleWelcome)
+        }
+
         return WelcomeAlertSummary(
             messages: alerts,
             hasSleepIssue: hasSleepIssue,
@@ -238,6 +245,14 @@ enum HealthAssistantEngine {
     }
 
     static func answer(for question: String, context: HealthAssistantContext) -> String {
+        if AssistantGratitudeEngine.matches(question) {
+            return AssistantGratitudeEngine.answer(context: context)
+        }
+
+        if let cycleAnswer = MenstrualCycleAssistantEngine.answer(for: question, context: context) {
+            return cycleAnswer
+        }
+
         if AssistantImprovementAnalysisEngine.matches(question) {
             return AssistantImprovementAnalysisEngine.answer(context: context)
         }
@@ -450,11 +465,11 @@ enum HealthAssistantEngine {
                 "prohormona", "pro-hormona", "designer steroid", "esteroides orais", "esteroides injetaveis",
                 "esteroides injetáveis", "stack de esteroides", "stack anabolico", "stack anabólico"
             ],
-            respond: { _ in anabolicSteroidsWarning() }
+            respond: { ctx in anabolicSteroidsWarning(for: ctx.user?.gender) }
         ),
     ]
 
-    private static func anabolicSteroidsWarning() -> String {
+    private static func anabolicSteroidsWarning(for gender: Gender? = nil) -> String {
         """
         ⚠️ ALERTA DE SAÚDE — ESTERÓIDES ANABOLIZANTES
 
@@ -493,7 +508,7 @@ enum HealthAssistantEngine {
         • Hormônios — queda da produção natural de testosterona, infertilidade, ginecomastia
         • Pele e cabelo — acne severa, queda de cabelo, estrias
         • Psique — agressividade, ansiedade, depressão, dependência
-        • Sistema reprodutor — atrofia testicular, queda de libido, alterações menstruais
+        • Sistema reprodutor — atrofia testicular, queda de libido\(gender == .female ? ", alterações menstruais" : "")
         • Crescimento — fechamento precoce de placa óssea em jovens
         • Infecções — abscessos e contaminação por agulhas compartilhadas
         • Legal e esportivo — sanções, doping, prisão

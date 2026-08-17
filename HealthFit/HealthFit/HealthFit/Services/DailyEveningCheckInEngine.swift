@@ -225,6 +225,7 @@ enum DailyEveningCheckInEngine {
     }
 
     static func isDayFeelingReply(_ text: String) -> Bool {
+        if AssistantGratitudeEngine.matches(text) { return false }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
 
@@ -261,6 +262,7 @@ enum DailyEveningCheckInEngine {
     }
 
     static func isRestReadinessReply(_ text: String) -> Bool {
+        if AssistantGratitudeEngine.matches(text) { return false }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
 

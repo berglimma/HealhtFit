@@ -17,6 +17,7 @@
 		B1000905 /* ClimbingWeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000905 /* ClimbingWeatherService.swift */; };
 		B1000906 /* ClimbingGearService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000906 /* ClimbingGearService.swift */; };
 		B1000907 /* ClimbingAssistantEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000907 /* ClimbingAssistantEngine.swift */; };
+		B1000942 /* AssistantGratitudeAndCycleEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000942 /* AssistantGratitudeAndCycleEngine.swift */; };
 		B1000908 /* ClimbingAreaCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000908 /* ClimbingAreaCatalog.swift */; };
 		B1000909 /* ClimbingMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000909 /* ClimbingMapView.swift */; };
 		B1000910 /* ClimbingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000910 /* ClimbingLogbookView.swift */; };
@@ -362,6 +363,7 @@
 		F1000905 /* ClimbingWeatherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingWeatherService.swift; sourceTree = "<group>"; };
 		F1000906 /* ClimbingGearService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingGearService.swift; sourceTree = "<group>"; };
 		F1000907 /* ClimbingAssistantEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAssistantEngine.swift; sourceTree = "<group>"; };
+		F1000942 /* AssistantGratitudeAndCycleEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantGratitudeAndCycleEngine.swift; sourceTree = "<group>"; };
 		F1000908 /* ClimbingAreaCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAreaCatalog.swift; sourceTree = "<group>"; };
 		F1000909 /* ClimbingMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingMapView.swift; sourceTree = "<group>"; };
 		F1000910 /* ClimbingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingLogbookView.swift; sourceTree = "<group>"; };
@@ -828,6 +830,7 @@
 				F1000802 /* RowingMetricsService.swift */,
 				F1000908 /* ClimbingAreaCatalog.swift */,
 				F1000907 /* ClimbingAssistantEngine.swift */,
+				F1000942 /* AssistantGratitudeAndCycleEngine.swift */,
 				F1000906 /* ClimbingGearService.swift */,
 				F1000905 /* ClimbingWeatherService.swift */,
 				F1000904 /* ClimbingMotionService.swift */,
@@ -1463,6 +1466,7 @@
 				B1000802 /* RowingMetricsService.swift in Sources */,
 				B1000908 /* ClimbingAreaCatalog.swift in Sources */,
 				B1000907 /* ClimbingAssistantEngine.swift in Sources */,
+				B1000942 /* AssistantGratitudeAndCycleEngine.swift in Sources */,
 				B1000906 /* ClimbingGearService.swift in Sources */,
 				B1000905 /* ClimbingWeatherService.swift in Sources */,
 				B1000904 /* ClimbingMotionService.swift in Sources */,

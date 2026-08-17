@@ -50,6 +50,11 @@ struct ProfileView: View {
     @State private var dateOfBirth = Calendar.current.date(byAdding: .year, value: -28, to: .now) ?? .now
     @State private var selectedCountryCode = CountryOption.defaultCode()
     @State private var selectedGender: Gender = .male
+    @State private var tracksMenstrualCycle = false
+    @State private var lastPeriodStart = Calendar.current.startOfDay(for: .now)
+    @State private var cycleLengthDays = 28
+    @State private var periodLengthDays = 5
+    @State private var showLastPeriodSheet = false
     @State private var showBodyDataSavedAlert = false
     @State private var showEmptyMeasurementsAlert = false
     @State private var bodyDataSaveError: String?
@@ -84,6 +89,9 @@ struct ProfileView: View {
                 .sheet(isPresented: $showDateOfBirthSheet) {
                     dateOfBirthPickerSheet
                 }
+                .sheet(isPresented: $showLastPeriodSheet) {
+                    lastPeriodPickerSheet
+                }
                 .profilePhotoPickers(
                     showPhotoSourceDialog: $showPhotoSourceDialog,
                     showBackgroundSourceDialog: $showBackgroundSourceDialog,
@@ -110,8 +118,10 @@ struct ProfileView: View {
                     showSaveFailedAlert: $showSaveFailedAlert,
                     measurementsSaveError: measurementsSaveError,
                     bodyDataSaveError: bodyDataSaveError,
+                    includesMenstrualCycleInSaveMessage: selectedGender == .female,
                     showMeasurementComparison: $showMeasurementComparison,
                     measurementComparison: measurementComparison,
+                    cycleAdvice: measurementCycleAdvice,
                     showDeleteAccountSheet: $showDeleteAccountSheet,
                     usesPasswordProvider: authService.usesPasswordProvider,
                     usesAppleProvider: authService.usesAppleProvider,
@@ -166,6 +176,7 @@ struct ProfileView: View {
                     Section("Legal") {
                         LegalLinksView(style: .list, showsSupportLink: true)
                     }
+                    AppFeedbackFormSections()
                 } else {
                     Section {
                         HStack {
@@ -225,6 +236,58 @@ struct ProfileView: View {
         .onAppear {
             dateOfBirth = Self.clampedDate(dateOfBirth)
         }
+    }
+
+    private var lastPeriodPickerSheet: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                DatePicker(
+                    "Primeiro dia da última menstruação",
+                    selection: $lastPeriodStart,
+                    in: Self.lastPeriodDateRange,
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                .padding()
+
+                Text("Informe o primeiro dia de sangramento do ciclo mais recente.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                Spacer()
+            }
+            .background(AppTheme.background.ignoresSafeArea())
+            .navigationTitle("Última menstruação")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") {
+                        lastPeriodStart = Calendar.current.startOfDay(for: lastPeriodStart)
+                        showLastPeriodSheet = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private static var lastPeriodDateRange: ClosedRange<Date> {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let oldest = calendar.date(byAdding: .day, value: -400, to: today) ?? today
+        return oldest...today
+    }
+
+    private var measurementCycleAdvice: MenstrualCycleMeasurementAdvice? {
+        guard let user = authService.currentUser else { return nil }
+        let hasChanges = measurementComparison?.hasChanges == true
+        return user.bodyMeasurementCycleAdvice(
+            measurementDate: measurementComparison?.current.measuredAt ?? .now,
+            hasMeasurementChanges: hasChanges
+        )
     }
 
     /// Clamped two-way binding so UIDatePicker never receives out-of-range values.
@@ -1297,6 +1360,11 @@ struct ProfileView: View {
         dateOfBirth = Self.clampedDateOfBirth(from: user)
         selectedCountryCode = CountryOption.resolvedCode(user.countryCode)
         selectedGender = user.gender
+        tracksMenstrualCycle = user.menstrualCycle.tracksCycle
+        lastPeriodStart = user.menstrualCycle.lastPeriodStart
+            ?? Calendar.current.startOfDay(for: .now)
+        cycleLengthDays = user.menstrualCycle.cycleLengthDays
+        periodLengthDays = user.menstrualCycle.periodLengthDays
     }
 
     /// Youngest allowed birth date (must be ≥ minimumAgeYears) — aligned with `UserProfile.isValidDateOfBirth`.
@@ -1394,6 +1462,10 @@ struct ProfileView: View {
             .pickerStyle(.segmented)
         }
 
+        if selectedGender == .female {
+            menstrualCycleSection
+        }
+
         LabeledContent("IMC", value: String(format: "%.1f", previewBMI(for: user)))
         LabeledContent("Metabolismo Basal", value: "\(previewBMR(for: user)) kcal")
         LabeledContent("Meta Calórica", value: "\(previewCalorieTarget(for: user)) kcal")
@@ -1410,6 +1482,80 @@ struct ProfileView: View {
         .disabled(!isBodyDataValid)
     }
 
+    @ViewBuilder
+    private var menstrualCycleSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: $tracksMenstrualCycle) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Acompanhar ciclo menstrual")
+                    Text("Opcional e privado — só na sua conta.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .tint(AppTheme.accent)
+
+            if tracksMenstrualCycle {
+                Button {
+                    lastPeriodStart = min(max(lastPeriodStart, Self.lastPeriodDateRange.lowerBound), Self.lastPeriodDateRange.upperBound)
+                    showLastPeriodSheet = true
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Primeiro dia da última menstruação")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(lastPeriodStart.formatted(date: .long, time: .omitted))
+                                .foregroundStyle(AppTheme.textPrimary)
+                        }
+                        Spacer()
+                        Image(systemName: "calendar")
+                            .foregroundStyle(Color(red: 0.86, green: 0.45, blue: 0.58))
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(ListSafeButtonStyle())
+
+                Button {
+                    lastPeriodStart = Calendar.current.startOfDay(for: .now)
+                } label: {
+                    Label("A menstruação começou hoje", systemImage: "drop.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(ListSafeButtonStyle())
+                .foregroundStyle(Color(red: 0.86, green: 0.45, blue: 0.58))
+
+                Stepper(value: $cycleLengthDays, in: MenstrualCycleProfile.minCycleLength...MenstrualCycleProfile.maxCycleLength) {
+                    Text("Duração do ciclo: \(cycleLengthDays) dias")
+                }
+
+                Stepper(value: $periodLengthDays, in: MenstrualCycleProfile.minPeriodLength...MenstrualCycleProfile.maxPeriodLength) {
+                    Text("Duração do fluxo: \(periodLengthDays) dias")
+                }
+
+                if let snapshot = MenstrualCycleCalendar.snapshot(currentFormMenstrualCycle()) {
+                    let next = MenstrualCycleCalendar.nextPeriodStart(from: snapshot)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Agora: \(snapshot.phase.displayName) · dia \(snapshot.cycleDay) de \(snapshot.cycleLengthDays)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Próxima menstruação estimada: \(next.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                        if snapshot.phase.isUnfavorableForBodyMeasurements {
+                            Text("Nesta fase o corpo retém mais líquido — evite usar as medidas para comparar evolução.")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.accentSecondary)
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+            }
+        }
+    }
+
     private func previewProfile(from user: UserProfile) -> UserProfile {
         var preview = user
         if let weight = Double(weightText.replacingOccurrences(of: ",", with: ".")) {
@@ -1421,7 +1567,18 @@ struct ProfileView: View {
         preview.applyDateOfBirth(dateOfBirth)
         preview.countryCode = CountryOption.resolvedCode(selectedCountryCode)
         preview.gender = selectedGender
+        preview.menstrualCycle = currentFormMenstrualCycle()
         return preview
+    }
+
+    private func currentFormMenstrualCycle() -> MenstrualCycleProfile {
+        guard selectedGender == .female else { return .inactive }
+        return MenstrualCycleProfile(
+            tracksCycle: tracksMenstrualCycle,
+            lastPeriodStart: tracksMenstrualCycle ? Calendar.current.startOfDay(for: lastPeriodStart) : nil,
+            cycleLengthDays: cycleLengthDays,
+            periodLengthDays: periodLengthDays
+        ).clamped()
     }
 
     private func previewBMI(for user: UserProfile) -> Double {
@@ -1470,6 +1627,11 @@ struct ProfileView: View {
         user.applyDateOfBirth(dateOfBirth)
         user.countryCode = CountryOption.resolvedCode(selectedCountryCode)
         user.gender = selectedGender
+        user.menstrualCycle = currentFormMenstrualCycle()
+        user.prepareMenstrualCycleForPersistence()
+        if selectedGender != .female {
+            tracksMenstrualCycle = false
+        }
 
         // Medidas corporais são opcionais aqui; se houver valores no formulário, persiste também.
         applyMeasurementFields(to: &user)
@@ -1546,6 +1708,12 @@ struct ProfileView: View {
         Text("Informe as circunferências em centímetros. Os campos vazios não entram no relatório.")
             .font(.caption)
             .foregroundStyle(.secondary)
+
+        if let advice = user.bodyMeasurementCycleAdvice(
+            hasMeasurementChanges: user.latestMeasurementComparison?.hasChanges == true
+        ) {
+            MenstrualCycleAdviceCard(advice: advice)
+        }
 
         if let measuredAt = user.bodyMeasurements.measuredAt {
             Text("Última atualização: \(measuredAt.formatted(date: .abbreviated, time: .shortened))")
@@ -1699,6 +1867,7 @@ private struct ProfileAvatarView: View {
 private struct BodyMeasurementComparisonView: View {
     @Environment(\.dismiss) private var dismiss
     let comparison: BodyMeasurementComparison
+    var cycleAdvice: MenstrualCycleMeasurementAdvice? = nil
 
     var body: some View {
         NavigationStack {
@@ -1711,6 +1880,10 @@ private struct BodyMeasurementComparisonView: View {
                     Text("Após atualizar as medidas, estas são as que variaram no período.")
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.textSecondary)
+
+                    if let cycleAdvice {
+                        MenstrualCycleAdviceCard(advice: cycleAdvice)
+                    }
 
                     if let from = comparison.previous.measuredAt,
                        let to = comparison.current.measuredAt {
@@ -1858,8 +2031,10 @@ private extension View {
         showSaveFailedAlert: Binding<Bool>,
         measurementsSaveError: String?,
         bodyDataSaveError: String?,
+        includesMenstrualCycleInSaveMessage: Bool,
         showMeasurementComparison: Binding<Bool>,
         measurementComparison: BodyMeasurementComparison?,
+        cycleAdvice: MenstrualCycleMeasurementAdvice?,
         showDeleteAccountSheet: Binding<Bool>,
         usesPasswordProvider: Bool,
         usesAppleProvider: Bool,
@@ -1879,7 +2054,9 @@ private extension View {
             .alert("Dados salvos", isPresented: showBodyDataSavedAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Peso, altura, data de nascimento e sexo foram sincronizados com o Firebase.")
+                Text(includesMenstrualCycleInSaveMessage
+                     ? "Peso, altura, data de nascimento, sexo e ciclo menstrual foram sincronizados com a sua conta."
+                     : "Peso, altura, data de nascimento e sexo foram sincronizados com a sua conta.")
             }
             .alert("Medidas necessárias", isPresented: showEmptyMeasurementsAlert) {
                 Button("OK", role: .cancel) {}
@@ -1888,7 +2065,7 @@ private extension View {
             }
             .sheet(isPresented: showMeasurementComparison) {
                 if let comparison = measurementComparison {
-                    BodyMeasurementComparisonView(comparison: comparison)
+                    BodyMeasurementComparisonView(comparison: comparison, cycleAdvice: cycleAdvice)
                 }
             }
             .alert("Não foi possível salvar", isPresented: showSaveFailedAlert) {
@@ -1902,6 +2079,29 @@ private extension View {
                     requiresAppleReauthentication: usesAppleProvider
                 )
             }
+    }
+}
+
+private struct MenstrualCycleAdviceCard: View {
+    let advice: MenstrualCycleMeasurementAdvice
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(advice.title, systemImage: "drop.triangle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.accentSecondary)
+            Text("\(advice.phaseLabel) · dia \(advice.cycleDay) do ciclo")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+            Text(advice.message)
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.accentSecondary.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

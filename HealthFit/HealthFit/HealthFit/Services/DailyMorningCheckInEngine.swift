@@ -104,6 +104,7 @@ enum DailyMorningCheckInEngine {
     }
 
     static func isFeelingReply(_ text: String) -> Bool {
+        if AssistantGratitudeEngine.matches(text) { return false }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
 

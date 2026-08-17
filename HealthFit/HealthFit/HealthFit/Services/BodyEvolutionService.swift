@@ -130,7 +130,8 @@ final class BodyEvolutionService: ObservableObject {
         athleteName: String,
         imagesBySlot: [BodyPhotoSlot: UIImage],
         previousMeasurements: BodyMeasurements?,
-        currentMeasurements: BodyMeasurements
+        currentMeasurements: BodyMeasurements,
+        cycleNote: String? = nil
     ) async throws -> BodyEvolutionComparisonResult {
         guard let previousSet = meta.activePhotoSet else {
             throw BodyEvolutionError.noBaseline
@@ -189,7 +190,7 @@ final class BodyEvolutionService: ObservableObject {
             comparison: comparison,
             photoCountPrevious: previousSet.filledCount,
             photoCountCurrent: newSet.filledCount
-        )
+        ) + (cycleNote.map { " \($0)" } ?? "")
 
         var evaluation = BodyEvolutionEvaluation(
             id: evaluationId,
@@ -208,7 +209,8 @@ final class BodyEvolutionService: ObservableObject {
 
         let pdfData = BodyMeasurementsPDFBuilder.build(
             evaluation: evaluation,
-            athleteName: athleteName
+            athleteName: athleteName,
+            cycleNote: cycleNote
         )
         if BodyEvolutionStorageService.isAvailable {
             evaluation.pdfStoragePath = try await BodyEvolutionStorageService.uploadPDF(

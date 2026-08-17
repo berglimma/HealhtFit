@@ -80,7 +80,11 @@ struct BodyEvolutionView: View {
             BodyEvolutionResultView(
                 result: result,
                 userId: authService.currentUser?.id,
-                evolutionService: evolutionService
+                evolutionService: evolutionService,
+                cycleAdvice: authService.currentUser?.bodyMeasurementCycleAdvice(
+                    measurementDate: result.measurementComparison?.current.measuredAt ?? .now,
+                    hasMeasurementChanges: result.measurementComparison?.hasChanges == true
+                )
             )
         }
         .alert(
@@ -416,7 +420,13 @@ struct BodyEvolutionView: View {
                 athleteName: user.greetingName,
                 imagesBySlot: draftImages,
                 previousMeasurements: user.previousBodyMeasurements ?? user.bodyMeasurements,
-                currentMeasurements: user.bodyMeasurements
+                currentMeasurements: user.bodyMeasurements,
+                cycleNote: {
+                    guard let advice = user.bodyMeasurementCycleAdvice(hasMeasurementChanges: true) else {
+                        return nil
+                    }
+                    return "\(advice.title) (\(advice.phaseLabel), dia \(advice.cycleDay) do ciclo). \(MenstrualCycleMeasurementAdvice.bodyMeasurementExplanation)"
+                }()
             )
             draftImages = result.currentImages
             showResult = result
@@ -453,6 +463,7 @@ private struct BodyEvolutionResultView: View {
     let result: BodyEvolutionComparisonResult
     let userId: String?
     @ObservedObject var evolutionService: BodyEvolutionService
+    var cycleAdvice: MenstrualCycleMeasurementAdvice? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var showSavePrompt = false
@@ -485,6 +496,25 @@ private struct BodyEvolutionResultView: View {
                     Text(result.evaluation.summaryText)
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.textSecondary)
+
+                    if let cycleAdvice {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label(cycleAdvice.title, systemImage: "drop.triangle.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(AppTheme.accentSecondary)
+                            Text("\(cycleAdvice.phaseLabel) · dia \(cycleAdvice.cycleDay) do ciclo")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(AppTheme.textSecondary)
+                            Text(cycleAdvice.message)
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(AppTheme.accentSecondary.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
 
                     if let comparison = result.measurementComparison, !comparison.changes.isEmpty {
                         Text("Medidas que variaram")

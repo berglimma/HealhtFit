@@ -73,4 +73,83 @@ final class UserProfileTests: XCTestCase {
         profile.setPractices(PracticeModalityID.meditation, enabled: false)
         XCTAssertTrue(profile.practices(PracticeModalityID.meditation))
     }
+
+    func testMenstrualCycleDayOneIsMenstrualPhase() {
+        let start = Calendar.current.startOfDay(for: .now)
+        let cycle = MenstrualCycleProfile(
+            tracksCycle: true,
+            lastPeriodStart: start,
+            cycleLengthDays: 28,
+            periodLengthDays: 5
+        )
+        let snapshot = MenstrualCycleCalendar.snapshot(cycle, on: start)
+        XCTAssertEqual(snapshot?.cycleDay, 1)
+        XCTAssertEqual(snapshot?.phase, .menstrual)
+        XCTAssertTrue(snapshot?.phase.isUnfavorableForBodyMeasurements == true)
+    }
+
+    func testMenstrualCycleMidFollicularIsFavorable() {
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: .now)
+        components.hour = 12
+        let today = Calendar.current.date(from: components) ?? .now
+        let start = Calendar.current.date(byAdding: .day, value: -8, to: today) ?? today
+        let cycle = MenstrualCycleProfile(
+            tracksCycle: true,
+            lastPeriodStart: start,
+            cycleLengthDays: 28,
+            periodLengthDays: 5
+        )
+        let snapshot = MenstrualCycleCalendar.snapshot(cycle, on: today)
+        XCTAssertEqual(snapshot?.cycleDay, 9)
+        XCTAssertEqual(snapshot?.phase, .follicular)
+        XCTAssertFalse(snapshot?.phase.isUnfavorableForBodyMeasurements == true)
+    }
+
+    func testMenstrualCycleLateLutealWarnsOnMeasurementChanges() {
+        let today = Calendar.current.startOfDay(for: .now)
+        let start = Calendar.current.date(byAdding: .day, value: -24, to: today) ?? today
+        var profile = TestFixtures.userProfile(gender: .female)
+        profile.menstrualCycle = MenstrualCycleProfile(
+            tracksCycle: true,
+            lastPeriodStart: start,
+            cycleLengthDays: 28,
+            periodLengthDays: 5
+        )
+        let advice = profile.bodyMeasurementCycleAdvice(measurementDate: today, hasMeasurementChanges: true)
+        XCTAssertNotNil(advice)
+        XCTAssertEqual(advice?.phaseLabel, MenstrualCyclePhase.luteal.displayName)
+        XCTAssertTrue(advice?.message.contains("retenção") == true || advice?.message.contains("líquido") == true)
+        XCTAssertNil(
+            TestFixtures.userProfile(gender: .male).bodyMeasurementCycleAdvice(hasMeasurementChanges: true)
+        )
+    }
+
+    func testMenstrualCycleDecodesMissingAsInactive() throws {
+        var profile = TestFixtures.userProfile(gender: .female)
+        profile.menstrualCycle = MenstrualCycleProfile(
+            tracksCycle: true,
+            lastPeriodStart: Calendar.current.startOfDay(for: .now),
+            cycleLengthDays: 30,
+            periodLengthDays: 4
+        )
+        let data = try JSONEncoder().encode(profile)
+        let decoded = try JSONDecoder().decode(UserProfile.self, from: data)
+        XCTAssertEqual(decoded.menstrualCycle.cycleLengthDays, 30)
+        XCTAssertEqual(decoded.menstrualCycle.periodLengthDays, 4)
+        XCTAssertTrue(decoded.menstrualCycle.tracksCycle)
+    }
+
+    func testMaleProfileClearsMenstrualCycleBeforePersistence() {
+        var profile = TestFixtures.userProfile(gender: .male)
+        profile.menstrualCycle = MenstrualCycleProfile(
+            tracksCycle: true,
+            lastPeriodStart: Calendar.current.startOfDay(for: .now),
+            cycleLengthDays: 28,
+            periodLengthDays: 5
+        )
+        profile.prepareMenstrualCycleForPersistence()
+        XCTAssertEqual(profile.menstrualCycle, .inactive)
+        XCTAssertFalse(profile.menstrualCycle.tracksCycle)
+        XCTAssertNil(profile.menstrualCycle.lastPeriodStart)
+    }
 }

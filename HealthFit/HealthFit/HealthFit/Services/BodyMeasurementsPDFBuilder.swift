@@ -5,7 +5,8 @@ import UIKit
 enum BodyMeasurementsPDFBuilder {
     @MainActor static func build(
         evaluation: BodyEvolutionEvaluation,
-        athleteName: String
+        athleteName: String,
+        cycleNote: String? = nil
     ) -> Data {
         let pageRect = HealthFitPDFChrome.pageRect
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
@@ -67,6 +68,10 @@ enum BodyMeasurementsPDFBuilder {
             }
 
             layout.addVerticalSpace(16)
+            if let cycleNote, !cycleNote.isEmpty {
+                layout.draw("Ciclo menstrual", attrs: HealthFitPDFChrome.accentHeadingAttributes())
+                layout.draw(cycleNote, attrs: HealthFitPDFChrome.bodyAttributes(), spacingAfter: 14)
+            }
             layout.draw(
                 "Fotos de evolução são opcionais e privadas (somente o titular da conta). Fotos antigas são excluídas após cada comparação. Este PDF permanece entre as últimas \(BodyEvolutionEvaluation.maxRetainedEvaluations) avaliações da sua conta.",
                 attrs: HealthFitPDFChrome.metaAttributes()

@@ -88,6 +88,189 @@ enum Gender: String, CaseIterable, Codable, Identifiable, Hashable {
     var id: String { rawValue }
 }
 
+// MARK: - Ciclo menstrual (perfil feminino)
+
+/// Dados informados pela usuária para estimar a fase do ciclo.
+/// Ficam só no perfil da conta — não entram no diretório público.
+struct MenstrualCycleProfile: Codable, Equatable {
+    var tracksCycle: Bool
+    var lastPeriodStart: Date?
+    var cycleLengthDays: Int
+    var periodLengthDays: Int
+
+    static let inactive = MenstrualCycleProfile(
+        tracksCycle: false,
+        lastPeriodStart: nil,
+        cycleLengthDays: 28,
+        periodLengthDays: 5
+    )
+
+    static let minCycleLength = 21
+    static let maxCycleLength = 45
+    static let minPeriodLength = 2
+    static let maxPeriodLength = 10
+
+    var isConfigured: Bool {
+        tracksCycle && lastPeriodStart != nil
+    }
+
+    func clamped() -> MenstrualCycleProfile {
+        var copy = self
+        copy.cycleLengthDays = min(max(cycleLengthDays, Self.minCycleLength), Self.maxCycleLength)
+        copy.periodLengthDays = min(max(periodLengthDays, Self.minPeriodLength), Self.maxPeriodLength)
+        if let start = lastPeriodStart {
+            copy.lastPeriodStart = Calendar.current.startOfDay(for: start)
+        }
+        return copy
+    }
+}
+
+enum MenstrualCyclePhase: String, Equatable {
+    case menstrual
+    case follicular
+    case ovulation
+    case luteal
+    case unknown
+
+    var displayName: String {
+        switch self {
+        case .menstrual: return "Menstruação"
+        case .follicular: return "Fase folicular"
+        case .ovulation: return "Ovulação"
+        case .luteal: return "Fase lútea"
+        case .unknown: return "Não informado"
+        }
+    }
+
+    /// Menstruação e fase lútea concentram retenção de líquido e inchaço.
+    var isUnfavorableForBodyMeasurements: Bool {
+        self == .menstrual || self == .luteal || self == .ovulation
+    }
+}
+
+struct MenstrualCycleSnapshot: Equatable {
+    let cycleDay: Int
+    let cycleLengthDays: Int
+    let phase: MenstrualCyclePhase
+    let projectedPeriodStart: Date
+}
+
+enum MenstrualCycleCalendar {
+    /// Dia 1 = primeiro dia da menstruação (início do ciclo).
+    static func snapshot(
+        _ cycle: MenstrualCycleProfile,
+        on date: Date = .now,
+        calendar: Calendar = .current
+    ) -> MenstrualCycleSnapshot? {
+        let cycle = cycle.clamped()
+        guard cycle.isConfigured, let lastStart = cycle.lastPeriodStart else { return nil }
+        let length = cycle.cycleLengthDays
+        let dayStart = calendar.startOfDay(for: date)
+        let recorded = calendar.startOfDay(for: lastStart)
+        let projected = projectedPeriodStart(
+            lastRecorded: recorded,
+            cycleLengthDays: length,
+            on: dayStart,
+            calendar: calendar
+        )
+        let elapsed = calendar.dateComponents([.day], from: projected, to: dayStart).day ?? 0
+        let cycleDay = min(max(elapsed + 1, 1), length)
+        let phase = phase(
+            cycleDay: cycleDay,
+            cycleLengthDays: length,
+            periodLengthDays: cycle.periodLengthDays
+        )
+        return MenstrualCycleSnapshot(
+            cycleDay: cycleDay,
+            cycleLengthDays: length,
+            phase: phase,
+            projectedPeriodStart: projected
+        )
+    }
+
+    static func projectedPeriodStart(
+        lastRecorded: Date,
+        cycleLengthDays: Int,
+        on date: Date,
+        calendar: Calendar = .current
+    ) -> Date {
+        let day = calendar.startOfDay(for: date)
+        let start = calendar.startOfDay(for: lastRecorded)
+        guard start <= day else { return start }
+        let days = calendar.dateComponents([.day], from: start, to: day).day ?? 0
+        let elapsedCycles = days / max(cycleLengthDays, 1)
+        return calendar.date(byAdding: .day, value: elapsedCycles * cycleLengthDays, to: start) ?? start
+    }
+
+    static func phase(
+        cycleDay: Int,
+        cycleLengthDays: Int,
+        periodLengthDays: Int
+    ) -> MenstrualCyclePhase {
+        let periodEnd = max(periodLengthDays, 1)
+        if cycleDay <= periodEnd { return .menstrual }
+        let ovulationDay = max(periodEnd + 2, cycleLengthDays - 14)
+        if abs(cycleDay - ovulationDay) <= 1 { return .ovulation }
+        if cycleDay < ovulationDay { return .follicular }
+        return .luteal
+    }
+
+    static func nextPeriodStart(
+        from snapshot: MenstrualCycleSnapshot,
+        calendar: Calendar = .current
+    ) -> Date {
+        calendar.date(
+            byAdding: .day,
+            value: snapshot.cycleLengthDays,
+            to: snapshot.projectedPeriodStart
+        ) ?? snapshot.projectedPeriodStart
+    }
+}
+
+struct MenstrualCycleMeasurementAdvice: Equatable {
+    let title: String
+    let message: String
+    let phaseLabel: String
+    let cycleDay: Int
+    let hasMeasurementChanges: Bool
+
+    /// Texto educativo (não é diagnóstico). Baseado em retenção de líquido na fase lútea e na menstruação.
+    static let bodyMeasurementExplanation = """
+    Na menstruação e na fase lútea (depois da ovulação até o próximo ciclo), estrogênio e progesterona alteram o equilíbrio de sódio e água. O corpo retém líquido — inchaço em abdômen, cintura, quadril e mamas é comum — e o intestino pode ficar mais lento. Isso costuma subir o peso e as circunferências em cerca de 0,5 a 2 kg (às vezes um pouco mais), sem ser ganho de gordura ou músculo.
+
+    A variação tende a recuar quando os hormônios se estabilizam, em geral na fase folicular, alguns dias após o fim do fluxo. Por isso esta não é a melhor época para uma avaliação comparativa: a diferença pode ser retenção de líquido, não evolução real. Prefira repetir as medidas depois da menstruação, sempre na mesma fase do ciclo.
+
+    Esta informação é educativa e não substitui orientação médica.
+    """
+
+    static func make(
+        gender: Gender,
+        cycle: MenstrualCycleProfile,
+        measurementDate: Date = .now,
+        hasMeasurementChanges: Bool
+    ) -> MenstrualCycleMeasurementAdvice? {
+        guard gender == .female else { return nil }
+        guard let snapshot = MenstrualCycleCalendar.snapshot(cycle, on: measurementDate) else { return nil }
+        guard snapshot.phase.isUnfavorableForBodyMeasurements else { return nil }
+
+        let title = hasMeasurementChanges
+            ? "Não é a melhor época para avaliar estas mudanças"
+            : "Não é a melhor época para avaliar medidas"
+
+        let lead = hasMeasurementChanges
+            ? "As circunferências variaram, mas você está no dia \(snapshot.cycleDay) do ciclo (\(snapshot.phase.displayName.lowercased()))."
+            : "Hoje é o dia \(snapshot.cycleDay) do ciclo (\(snapshot.phase.displayName.lowercased()))."
+
+        return MenstrualCycleMeasurementAdvice(
+            title: title,
+            message: "\(lead) \(Self.bodyMeasurementExplanation)",
+            phaseLabel: snapshot.phase.displayName,
+            cycleDay: snapshot.cycleDay,
+            hasMeasurementChanges: hasMeasurementChanges
+        )
+    }
+}
+
 // MARK: - Modalidades praticadas
 
 /// IDs estáveis das modalidades que o usuário pode marcar no perfil.
@@ -376,6 +559,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var bodyMeasurements: BodyMeasurements
     /// Snapshot da medição anterior (usado no comparativo de 30 dias).
     var previousBodyMeasurements: BodyMeasurements?
+    /// Ciclo menstrual — só usado no perfil feminino.
+    var menstrualCycle: MenstrualCycleProfile
     /// IDs das modalidades que o usuário pratica (`PracticeModalityID`).
     /// Vazio = todas (compatível com contas antigas).
     var practicedModalityIDs: [String]
@@ -407,6 +592,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         caloricDeficit: Int = 400,
         bodyMeasurements: BodyMeasurements = .empty,
         previousBodyMeasurements: BodyMeasurements? = nil,
+        menstrualCycle: MenstrualCycleProfile = .inactive,
         practicedModalityIDs: [String] = [],
         createdAt: Date = .now,
         updatedAt: Date? = nil
@@ -436,6 +622,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         self.caloricDeficit = caloricDeficit
         self.bodyMeasurements = bodyMeasurements
         self.previousBodyMeasurements = previousBodyMeasurements
+        self.menstrualCycle = menstrualCycle.clamped()
         self.practicedModalityIDs = practicedModalityIDs
         self.createdAt = createdAt
         self.updatedAt = updatedAt ?? createdAt
@@ -479,6 +666,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         caloricDeficit = try container.decodeIfPresent(Int.self, forKey: .caloricDeficit) ?? 400
         bodyMeasurements = try container.decodeIfPresent(BodyMeasurements.self, forKey: .bodyMeasurements) ?? .empty
         previousBodyMeasurements = try container.decodeIfPresent(BodyMeasurements.self, forKey: .previousBodyMeasurements)
+        menstrualCycle = (try container.decodeIfPresent(MenstrualCycleProfile.self, forKey: .menstrualCycle) ?? .inactive).clamped()
         practicedModalityIDs = try container.decodeIfPresent([String].self, forKey: .practicedModalityIDs) ?? []
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
@@ -488,7 +676,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         case id, name, displayName, email, personalTrainerName, personalTrainerEmail, usesPersonalTrainer
         case nutritionistName, nutritionistEmail, usesNutritionist
         case biotype, goal, gender, weight, height, age, dateOfBirth, countryCode, caloricDeficit
-        case bodyMeasurements, previousBodyMeasurements, practicedModalityIDs, createdAt, updatedAt
+        case bodyMeasurements, previousBodyMeasurements, menstrualCycle, practicedModalityIDs, createdAt, updatedAt
     }
 
     /// Conjunto efetivo: lista salva ou todas as modalidades (perfil sem preferência).
@@ -564,6 +752,32 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var latestMeasurementComparison: BodyMeasurementComparison? {
         guard let previous = previousBodyMeasurements else { return nil }
         return BodyMeasurementComparison.make(previous: previous, current: bodyMeasurements)
+    }
+
+    func bodyMeasurementCycleAdvice(
+        measurementDate: Date = .now,
+        hasMeasurementChanges: Bool
+    ) -> MenstrualCycleMeasurementAdvice? {
+        MenstrualCycleMeasurementAdvice.make(
+            gender: gender,
+            cycle: menstrualCycle,
+            measurementDate: measurementDate,
+            hasMeasurementChanges: hasMeasurementChanges
+        )
+    }
+
+    var currentMenstrualSnapshot: MenstrualCycleSnapshot? {
+        guard gender == .female else { return nil }
+        return MenstrualCycleCalendar.snapshot(menstrualCycle)
+    }
+
+    /// Perfil masculino não guarda ciclo menstrual (nem no payload local, nem no Firebase).
+    mutating func prepareMenstrualCycleForPersistence() {
+        if gender != .female {
+            menstrualCycle = .inactive
+        } else {
+            menstrualCycle = menstrualCycle.clamped()
+        }
     }
 
     var hasPersonalTrainer: Bool {

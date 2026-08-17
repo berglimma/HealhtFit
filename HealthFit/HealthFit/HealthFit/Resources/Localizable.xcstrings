@@ -84,6 +84,16 @@
         }
       }
     },
+    "%@ · dia %lld do ciclo" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · dia %2$lld do ciclo"
+          }
+        }
+      }
+    },
     "%@ · encerre quando a luta acabar" : {
 
     },
@@ -511,6 +521,9 @@
     "A ficha será salva em Personalizados deste programa." : {
 
     },
+    "A menstruação começou hoje" : {
+
+    },
     "A mídia recebe duração, kcal e outros dados da sessão com a marca HealthFit. Opcional — não impede fechar o treino." : {
 
     },
@@ -539,6 +552,9 @@
 
     },
     "Ações" : {
+
+    },
+    "Acompanhar ciclo menstrual" : {
 
     },
     "Acompanhe a queima em tempo real — dados do relógio quando conectado." : {
@@ -592,6 +608,16 @@
     "Agora não" : {
 
     },
+    "Agora: %@ · dia %lld de %lld" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Agora: %1$@ · dia %2$lld de %3$lld"
+          }
+        }
+      }
+    },
     "Água recomendada" : {
 
     },
@@ -644,6 +670,9 @@
 
     },
     "Ao iniciar um treino, sua resposta sobre pré-treino aparecerá aqui." : {
+
+    },
+    "Ao tocar em Enviar, a mensagem segue para a equipe HealthFit com o texto que você escreveu. O destinatário permanece oculto." : {
 
     },
     "Ao vivo" : {
@@ -2223,6 +2252,12 @@
     "Duração" : {
 
     },
+    "Duração do ciclo: %lld dias" : {
+
+    },
+    "Duração do fluxo: %lld dias" : {
+
+    },
     "Duração sugerida" : {
 
     },
@@ -2325,13 +2360,7 @@
     "Entrar com Google" : {
 
     },
-    "Entre em contato para dúvidas, sugestões ou problemas com o HealthFit." : {
-
-    },
     "Enviar" : {
-
-    },
-    "Enviar e-mail" : {
 
     },
     "Enviar link de redefinição" : {
@@ -2417,6 +2446,9 @@
 
     },
     "Escolher outro" : {
+
+    },
+    "Escreva sua reclamação, sugestão, melhoria ou dúvida…" : {
 
     },
     "Esq. %lld%%" : {
@@ -2531,6 +2563,9 @@
     "Faixas de SPM (Stroke Rate)" : {
 
     },
+    "Fale com a equipe HealthFit sobre a sua conta, treinos ou o funcionamento do aplicativo." : {
+
+    },
     "Falha no envio" : {
 
     },
@@ -2538,6 +2573,12 @@
 
     },
     "Fechar teclado" : {
+
+    },
+    "Feedback do aplicativo" : {
+
+    },
+    "Feedback enviado" : {
 
     },
     "Feminino" : {
@@ -2755,6 +2796,9 @@
     "Informe as circunferências em centímetros. Os campos vazios não entram no relatório." : {
 
     },
+    "Informe o primeiro dia de sangramento do ciclo mais recente." : {
+
+    },
     "Informe seu sono da noite passada para acompanharmos sua recuperação." : {
 
     },
@@ -2891,6 +2935,9 @@
 
     },
     "m" : {
+
+    },
+    "Mail não configurado" : {
 
     },
     "Maior salto (m)" : {
@@ -3161,6 +3208,9 @@
     "Não foi possível carregar a mídia" : {
 
     },
+    "Não foi possível enviar" : {
+
+    },
     "Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas)." : {
 
     },
@@ -3267,6 +3317,9 @@
 
     },
     "Nenhuma via registrada ainda. Toque em Registrar ao terminar cada tentativa." : {
+
+    },
+    "Nesta fase o corpo retém mais líquido — evite usar as medidas para comparar evolução." : {
 
     },
     "Neste treino" : {
@@ -3484,6 +3537,9 @@
     "O cronômetro abre na hora, já contando o tempo de luta." : {
 
     },
+    "O destino da mensagem fica só com o app — o endereço de e-mail não é exibido." : {
+
+    },
     "O ícone do app na tela inicial usa a mesma cor." : {
 
     },
@@ -3506,6 +3562,9 @@
 
     },
     "Objetivo: %@" : {
+
+    },
+    "Obrigado. Sua mensagem foi enviada para a equipe HealthFit." : {
 
     },
     "Obrigatório · idade atual: %lld anos (mínimo %lld)" : {
@@ -3531,6 +3590,9 @@
 
     },
     "Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit (estilo Stories)." : {
+
+    },
+    "Opcional e privado — só na sua conta." : {
 
     },
     "Open-Meteo (vento + Marine): altura real estimada com sua localização." : {
@@ -3585,6 +3647,9 @@
       }
     },
     "País" : {
+
+    },
+    "Para enviar o feedback, adicione uma conta no app Mail (Ajustes → Mail → Contas) e toque em Enviar novamente." : {
 
     },
     "Para: %@" : {
@@ -3669,7 +3734,10 @@
     "Personalizar km" : {
 
     },
-    "Peso, altura, data de nascimento e sexo foram sincronizados com o Firebase." : {
+    "Peso, altura, data de nascimento e sexo foram sincronizados com a sua conta." : {
+
+    },
+    "Peso, altura, data de nascimento, sexo e ciclo menstrual foram sincronizados com a sua conta." : {
 
     },
     "Pesquise no catálogo ou toque em + para criar um item personalizado e escolher a categoria." : {
@@ -3765,6 +3833,9 @@
 
     },
     "Pressione firmemente por 1s para salvar o card em Fotos" : {
+
+    },
+    "Primeiro dia da última menstruação" : {
 
     },
     "Prioridade de batimentos no treino: Apple Watch → Bluetooth → Apple Saúde." : {
@@ -4015,6 +4086,9 @@
 
     },
     "Propor treino" : {
+
+    },
+    "Próxima menstruação estimada: %@" : {
 
     },
     "Próximas horas" : {
@@ -4853,6 +4927,9 @@
     "Tentativas" : {
 
     },
+    "Tente de novo em instantes. Se o problema continuar, configure o app Mail em Ajustes." : {
+
+    },
     "Tente outra foto ou vídeo da galeria." : {
 
     },
@@ -4986,6 +5063,9 @@
 
     },
     "Última atualização: %@" : {
+
+    },
+    "Última menstruação" : {
 
     },
     "Última série · Finalizar" : {

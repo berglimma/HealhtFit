@@ -27,6 +27,9 @@ enum ProfileFirestoreService {
     static func saveProfile(_ profile: UserProfile) async throws {
         guard isAvailable else { return }
 
+        var profile = profile
+        profile.prepareMenstrualCycleForPersistence()
+
         let payload = try encoder.encode(profile)
         guard let json = String(data: payload, encoding: .utf8) else { return }
 
@@ -46,6 +49,7 @@ enum ProfileFirestoreService {
             "updatedAt": Timestamp(date: profile.updatedAt),
             "createdAt": Timestamp(date: profile.createdAt),
         ]
+        applyMenstrualCycleFields(from: profile, to: &data)
         if let dateOfBirth = profile.dateOfBirth {
             data["dateOfBirth"] = Timestamp(date: dateOfBirth)
         } else {
@@ -75,6 +79,24 @@ enum ProfileFirestoreService {
 
         try await userDocument(userId: profile.id).setData(data, merge: true)
         try await syncUserDirectory(profile)
+    }
+
+    /// Ciclo menstrual só no documento da conta feminina — nunca no diretório público.
+    private static func applyMenstrualCycleFields(from profile: UserProfile, to data: inout [String: Any]) {
+        if profile.gender == .female {
+            let cycle = profile.menstrualCycle.clamped()
+            var cycleData: [String: Any] = [
+                "tracksCycle": cycle.tracksCycle,
+                "cycleLengthDays": cycle.cycleLengthDays,
+                "periodLengthDays": cycle.periodLengthDays,
+            ]
+            if let start = cycle.lastPeriodStart {
+                cycleData["lastPeriodStart"] = Timestamp(date: start)
+            }
+            data["menstrualCycle"] = cycleData
+        } else {
+            data["menstrualCycle"] = FieldValue.delete()
+        }
     }
 
     static func fetchProfile(userId: String) async throws -> UserProfile? {

@@ -113,4 +113,51 @@ final class HealthAssistantEngineTests: XCTestCase {
         let idleMessages = service.messages.filter { $0.text == HealthAssistantEngine.idleReturnMessage }
         XCTAssertEqual(idleMessages.count, 0)
     }
+
+    func testAnswersGratitudePhrases() {
+        for phrase in ["obrigado", "Obrigada!", "muito grato", "valeu", "agradecida"] {
+            let answer = HealthAssistantEngine.answer(for: phrase, context: TestFixtures.assistantContext())
+            XCTAssertTrue(answer.localizedCaseInsensitiveContains("de nada"), "Falhou para: \(phrase)")
+            XCTAssertTrue(answer.localizedCaseInsensitiveContains("IAssistente"), "Falhou para: \(phrase)")
+        }
+    }
+
+    func testGratitudeDoesNotOverrideHealthQuestion() {
+        let answer = HealthAssistantEngine.answer(
+            for: "Obrigado, qual é meu IMC?",
+            context: TestFixtures.assistantContext(user: TestFixtures.userProfile(weight: 80, height: 180))
+        )
+        XCTAssertTrue(answer.contains("IMC"))
+        XCTAssertFalse(answer.localizedCaseInsensitiveContains("de nada"))
+    }
+
+    func testFemaleCycleChangeAdvisesGynecologist() {
+        let user = TestFixtures.userProfile(name: "Ana Costa", gender: .female)
+        let answer = HealthAssistantEngine.answer(
+            for: "Meu ciclo menstrual atrasou",
+            context: TestFixtures.assistantContext(user: user)
+        )
+        XCTAssertTrue(answer.localizedCaseInsensitiveContains("ginecologista"))
+        XCTAssertTrue(answer.localizedCaseInsensitiveContains("alter"))
+    }
+
+    func testMaleDoesNotReceiveMenstrualCycleAdvice() {
+        let answer = HealthAssistantEngine.answer(
+            for: "Meu ciclo menstrual atrasou",
+            context: TestFixtures.assistantContext()
+        )
+        XCTAssertFalse(answer.localizedCaseInsensitiveContains("ginecologista"))
+        XCTAssertFalse(answer.localizedCaseInsensitiveContains("menstru"))
+    }
+
+    func testWelcomeIncludesGynecologistAdviceOnlyForFemale() {
+        let female = HealthAssistantEngine.welcomeMessage(
+            context: TestFixtures.assistantContext(user: TestFixtures.userProfile(gender: .female))
+        )
+        XCTAssertTrue(female.localizedCaseInsensitiveContains("ginecologista"))
+
+        let male = HealthAssistantEngine.welcomeMessage(context: TestFixtures.assistantContext())
+        XCTAssertFalse(male.localizedCaseInsensitiveContains("ginecologista"))
+        XCTAssertFalse(male.localizedCaseInsensitiveContains("ciclo menstrual"))
+    }
 }

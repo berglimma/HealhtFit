@@ -140,6 +140,7 @@ enum PostWorkoutCheckInEngine {
 
     /// Indica se o texto responde ao check-in de como o usuário está se sentindo.
     static func isFeelingReply(_ text: String) -> Bool {
+        if AssistantGratitudeEngine.matches(text) { return false }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
 

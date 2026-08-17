@@ -13,125 +13,136 @@ struct LoginView: View {
         NavigationStack {
             ZStack {
                 AppTheme.background.ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    Spacer(minLength: DeviceLayout.isPad ? 56 : 40)
 
-                    VStack(spacing: 12) {
-                        PulsingHeartIconView(size: DeviceLayout.isPad ? 88 : 72)
+                GeometryReader { geometry in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            Spacer(minLength: DeviceLayout.isPad ? 56 : 24)
 
-                        Text("HealthFit")
-                            .font(.system(size: DeviceLayout.isPad ? 42 : 36, weight: .bold, design: .rounded))
-                            .foregroundStyle(AppTheme.textPrimary)
+                            VStack(spacing: 12) {
+                                PulsingHeartIconView(size: DeviceLayout.isPad ? 88 : 72)
 
-                        Text(L10n.Auth.appTagline)
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    .padding(.top, DeviceLayout.isPad ? 48 : 36)
-                    .padding(.bottom, 48)
+                                Text("HealthFit")
+                                    .font(.system(size: DeviceLayout.isPad ? 42 : 36, weight: .bold, design: .rounded))
+                                    .foregroundStyle(AppTheme.textPrimary)
 
-                    VStack(spacing: 16) {
-                        SocialLoginButtonsView(style: .iconCards)
+                                Text(L10n.Auth.appTagline)
+                                    .font(.subheadline)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+                            .padding(.top, DeviceLayout.isPad ? 48 : 24)
+                            .padding(.bottom, DeviceLayout.isPad ? 48 : 28)
 
-                        HStack {
-                            Spacer()
-                            LanguagePickerControl(style: .compactMenu)
-                            Spacer()
-                        }
+                            VStack(spacing: 16) {
+                                SocialLoginButtonsView(style: .iconCards)
 
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(L10n.Auth.email)
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(AppTheme.textSecondary)
-
-                            ZStack(alignment: .leading) {
-                                if email.isEmpty {
-                                    Text(L10n.Auth.emailPlaceholder)
-                                        .font(.body.weight(.semibold))
-                                        .foregroundStyle(AppTheme.accent)
-                                        .padding(.horizontal, 16)
-                                        .allowsHitTesting(false)
+                                HStack {
+                                    Spacer()
+                                    LanguagePickerControl(style: .compactMenu)
+                                    Spacer()
                                 }
 
-                                TextField("", text: $email)
-                                    .textFieldStyle(HealthFitTextFieldStyle())
-                                    .textContentType(.emailAddress)
-                                    .keyboardType(.emailAddress)
-                                    .textInputAutocapitalization(.never)
-                                    .autocorrectionDisabled()
-                                    .tint(AppTheme.accent)
-                            }
-                        }
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(L10n.Auth.email)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(AppTheme.textSecondary)
 
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(L10n.Auth.password)
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(AppTheme.textSecondary)
+                                    ZStack(alignment: .leading) {
+                                        if email.isEmpty {
+                                            Text(L10n.Auth.emailPlaceholder)
+                                                .font(.body.weight(.semibold))
+                                                .foregroundStyle(AppTheme.accent)
+                                                .padding(.horizontal, 16)
+                                                .allowsHitTesting(false)
+                                        }
 
-                            ZStack(alignment: .leading) {
-                                if password.isEmpty {
-                                    Text(L10n.Auth.passwordPlaceholder)
-                                        .font(.body.weight(.semibold))
-                                        .foregroundStyle(AppTheme.accent.opacity(0.55))
-                                        .padding(.horizontal, 16)
-                                        .allowsHitTesting(false)
+                                        TextField("", text: $email)
+                                            .textFieldStyle(HealthFitTextFieldStyle())
+                                            .textContentType(.emailAddress)
+                                            .keyboardType(.emailAddress)
+                                            .textInputAutocapitalization(.never)
+                                            .autocorrectionDisabled()
+                                            .tint(AppTheme.accent)
+                                    }
                                 }
 
-                                SecureField("", text: $password)
-                                    .textFieldStyle(HealthFitTextFieldStyle())
-                                    .textContentType(.password)
-                                    .tint(AppTheme.accent)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(L10n.Auth.password)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(AppTheme.textSecondary)
+
+                                    ZStack(alignment: .leading) {
+                                        if password.isEmpty {
+                                            Text(L10n.Auth.passwordPlaceholder)
+                                                .font(.body.weight(.semibold))
+                                                .foregroundStyle(AppTheme.accent.opacity(0.55))
+                                                .padding(.horizontal, 16)
+                                                .allowsHitTesting(false)
+                                        }
+
+                                        SecureField("", text: $password)
+                                            .textFieldStyle(HealthFitTextFieldStyle())
+                                            .textContentType(.password)
+                                            .tint(AppTheme.accent)
+                                    }
+                                }
+
+                                Button(L10n.Auth.forgotPassword) {
+                                    showForgotPassword = true
+                                }
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(AppTheme.accent)
+                                .frame(maxWidth: .infinity, alignment: .center)
+
+                                if !authService.isFirebaseReady {
+                                    Text("Firebase não configurado. Substitua o GoogleService-Info.plist pelo arquivo do Firebase Console.")
+                                        .font(.caption)
+                                        .foregroundStyle(.orange)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+
+                                if let error = authService.errorMessage {
+                                    Text(error)
+                                        .font(.caption)
+                                        .foregroundStyle(.red)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                Button {
+                                    Task { await authService.login(email: email, password: password) }
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Text(L10n.Auth.signIn)
+                                        Image(systemName: "arrow.right")
+                                            .font(.subheadline.weight(.bold))
+                                    }
+                                }
+                                .buttonStyle(PrimaryButtonStyle(isEnabled: !email.isEmpty && password.count >= 6))
+                                .disabled(email.isEmpty || password.count < 6 || authService.isLoading)
+                                .padding(.top, 8)
+
+                                CreateAccountCard {
+                                    showRegister = true
+                                }
+                                .padding(.top, 4)
                             }
-                        }
+                            .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                            .frame(maxWidth: DeviceLayout.formMaxWidth(for: horizontalSizeClass))
+                            .frame(maxWidth: .infinity)
 
-                        Button(L10n.Auth.forgotPassword) {
-                            showForgotPassword = true
+                            Spacer(minLength: 16)
                         }
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(AppTheme.accent)
-                        .frame(maxWidth: .infinity, alignment: .center)
-
-                        if !authService.isFirebaseReady {
-                            Text("Firebase não configurado. Substitua o GoogleService-Info.plist pelo arquivo do Firebase Console.")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        
-                        if let error = authService.errorMessage {
-                            Text(error)
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        Button {
-                            Task { await authService.login(email: email, password: password) }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Text(L10n.Auth.signIn)
-                                Image(systemName: "arrow.right")
-                                    .font(.subheadline.weight(.bold))
-                            }
-                        }
-                        .buttonStyle(PrimaryButtonStyle(isEnabled: !email.isEmpty && password.count >= 6))
-                        .disabled(email.isEmpty || password.count < 6 || authService.isLoading)
-                        .padding(.top, 8)
-
-                        CreateAccountCard {
-                            showRegister = true
-                        }
-                        .padding(.top, 4)
+                        .frame(minHeight: geometry.size.height)
                     }
-                    .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                    .frame(maxWidth: DeviceLayout.formMaxWidth(for: horizontalSizeClass))
-                    .frame(maxWidth: .infinity)
-
-                    Spacer()
-
+                    .scrollIndicators(.hidden)
+                    .scrollBounceBehavior(.basedOnSize)
+                }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
                     LegalLinksView()
                         .padding(.horizontal, AppTheme.padding)
-                        .padding(.bottom, 32)
+                        .padding(.top, 8)
+                        .padding(.bottom, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(AppTheme.background)
                 }
                 
                 if authService.isLoading {

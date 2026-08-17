@@ -10,6 +10,7 @@ struct MailAttachment: Equatable {
 
 struct MailComposeView: UIViewControllerRepresentable {
     let recipients: [String]
+    var bccRecipients: [String] = []
     let subject: String
     let body: String
     /// Quando `true`, `body` é HTML (preferível com anexos de imagem).
@@ -73,6 +74,9 @@ struct MailComposeView: UIViewControllerRepresentable {
         controller.recipients = recipients
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
+        controller.bccRecipients = bccRecipients
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
         controller.subject = subject
         controller.body = body
         controller.isHTML = isHTML
@@ -86,6 +90,7 @@ struct MailComposeView: UIViewControllerRepresentable {
 
 final class MailComposeHostingController: UIViewController, MFMailComposeViewControllerDelegate {
     var recipients: [String] = []
+    var bccRecipients: [String] = []
     var subject = ""
     var body = ""
     var isHTML = false
@@ -115,7 +120,10 @@ final class MailComposeHostingController: UIViewController, MFMailComposeViewCon
 
         let composer = MFMailComposeViewController()
         composer.mailComposeDelegate = self
-        composer.setToRecipients(recipients)
+        composer.setToRecipients(recipients.isEmpty ? nil : recipients)
+        if !bccRecipients.isEmpty {
+            composer.setBccRecipients(bccRecipients)
+        }
         composer.setSubject(subject)
         composer.setMessageBody(body, isHTML: isHTML)
         for attachment in attachments {
