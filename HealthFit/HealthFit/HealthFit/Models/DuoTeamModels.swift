@@ -417,6 +417,10 @@ struct DuoChatMessage: Identifiable, Codable, Equatable, Hashable {
     var isExpired: Bool {
         Date().timeIntervalSince(createdAt) >= DuoTeamChatPolicy.messageTTL
     }
+
+    var countsAsUnreadChat: Bool {
+        kind != .system && !isExpired
+    }
 }
 
 enum DuoTeamChatPolicy {
@@ -424,6 +428,20 @@ enum DuoTeamChatPolicy {
 
     static let purposeNotice =
         "O chat é só para marcar atividades físicas. As mensagens expiram em 12 horas."
+
+    static func unreadCount(
+        in messages: [DuoChatMessage],
+        currentUserId: String?,
+        lastReadAt: Date?
+    ) -> Int {
+        guard let currentUserId, !currentUserId.isEmpty else { return 0 }
+        let cursor = lastReadAt ?? .distantPast
+        return messages.filter { message in
+            message.countsAsUnreadChat
+                && message.senderUid != currentUserId
+                && message.createdAt > cursor
+        }.count
+    }
 }
 
 enum DuoTeamPrivacy {

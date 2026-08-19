@@ -23,7 +23,7 @@ final class PushNotificationService: NSObject {
         guard FirebaseBootstrap.isConfigured else { return }
 
         Messaging.messaging().delegate = self
-        UNUserNotificationCenter.current().delegate = self
+        UNUserNotificationCenter.current().delegate = AppNotificationCenterDelegate.shared
 
         Task {
             await requestAuthorizationIfNeeded()
@@ -55,11 +55,16 @@ final class PushNotificationService: NSObject {
 
     private func refreshAndUploadToken(for userId: String) async {
         guard FirebaseBootstrap.isConfigured else { return }
-        do {
-            let token = try await Messaging.messaging().token()
-            try await saveToken(token, userId: userId)
-        } catch {
-            print("[HealthFit] FCM token refresh failed: \(error.localizedDescription)")
+        for attempt in 0..<5 {
+            do {
+                let token = try await Messaging.messaging().token()
+                try await saveToken(token, userId: userId)
+                return
+            } catch {
+                print("[HealthFit] FCM token refresh failed: \(error.localizedDescription)")
+                let delayNs = UInt64((attempt + 1) * 400_000_000)
+                try? await Task.sleep(nanoseconds: delayNs)
+            }
         }
     }
 
@@ -101,46 +106,16 @@ extension PushNotificationService: MessagingDelegate {
     }
 }
 
-extension PushNotificationService: UNUserNotificationCenterDelegate {
-    nonisolated func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
-        completionHandler([.banner, .sound, .badge])
-    }
-
-    nonisolated func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping () -> Void
-    ) {
-        let userInfo = response.notification.request.content.userInfo
-        let kind = (userInfo["kind"] as? String) ?? ""
-        let type = (userInfo["type"] as? String) ?? ""
-        let teamId = (userInfo["teamId"] as? String) ?? ""
-        let teamName = (userInfo["teamName"] as? String) ?? ""
-        Task { @MainActor in
-            routeDuoPushIfNeeded(kind: kind, type: type, teamId: teamId, teamName: teamName)
-            completionHandler()
-        }
-    }
-
-    @MainActor
-    private func routeDuoPushIfNeeded(kind: String, type: String, teamId: String, teamName: String) {
-        guard kind == "DUO_TEAM" || type.hasPrefix("duoChat") else { return }
-        guard !teamId.isEmpty else { return }
-        DuoNavigationRouter.shared.openChat(teamId: teamId, teamName: teamName)
-    }
-}
-
 /// Bridge UIKit para APNs device token.
 final class HealthFitAppDelegate: NSObject, UIApplicationDelegate {
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        true
+        FirebaseBootstrap.configure()
+        UNUserNotificationCenter.current().delegate = AppNotificationCenterDelegate.shared
+        application.registerForRemoteNotifications()
+        return true
     }
 
     func application(

@@ -100,6 +100,35 @@ enum WeeklyProgressAnalyzer {
             || session.workoutTitle.lowercased().hasPrefix("meditacao")
     }
 
+    /// Treino que conta para streak / alerta de 7 dias (meditação não entra).
+    static func isTrainingSession(_ session: WorkoutSession) -> Bool {
+        guard session.endedAt != nil else { return false }
+        return !isMeditationSession(session)
+    }
+
+    /// Dias consecutivos com treino (sem meditação), contando a partir de `through`.
+    static func consecutiveTrainingDays(
+        in sessions: [WorkoutSession],
+        through date: Date = .now,
+        calendar: Calendar = .current
+    ) -> Int {
+        let trainingDayKeys: Set<String> = Set(
+            sessions
+                .filter(isTrainingSession)
+                .map { DailyWellnessEntry.dayKey(for: $0.startedAt) }
+        )
+        guard !trainingDayKeys.isEmpty else { return 0 }
+
+        var count = 0
+        var cursor = calendar.startOfDay(for: date)
+        while trainingDayKeys.contains(DailyWellnessEntry.dayKey(for: cursor)) {
+            count += 1
+            guard let previous = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
+            cursor = previous
+        }
+        return count
+    }
+
     static func isCardioSession(_ session: WorkoutSession) -> Bool {
         let title = session.workoutTitle.lowercased()
         // Luta usa o mesmo cronômetro do cardio e conta como sessão de cardio nas estatísticas.

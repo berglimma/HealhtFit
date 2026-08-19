@@ -245,6 +245,9 @@
     "%lld m" : {
 
     },
+    "%lld mensagens não lidas" : {
+
+    },
     "%lld min" : {
 
     },
@@ -448,6 +451,12 @@
     "~%lld min" : {
 
     },
+    "🤔" : {
+
+    },
+    "🤔 Itens em laranja não estão no cardápio atual. Você ainda pode marcá-los, mas a dieta rende mais se for seguida à risca." : {
+
+    },
     "0" : {
 
     },
@@ -458,6 +467,9 @@
 
     },
     "1 dose" : {
+
+    },
+    "1 mensagem não lida" : {
 
     },
     "1 unidade" : {
@@ -506,6 +518,9 @@
         }
       }
     },
+    "99+" : {
+
+    },
     "A assinatura renova automaticamente até cancelar. Gerencie em Ajustes → Apple ID." : {
 
     },
@@ -531,6 +546,9 @@
 
     },
     "A pessoa recebe o convite e precisa aceitar ou recusar. Arraste um convite pendente para retirá-lo." : {
+
+    },
+    "A primeira ficha alinha o cardápio ao foco. Se você escolher outro treino, o cardápio alinhado some — monte um personalizado em Nutrição." : {
 
     },
     "A senha deve conter:" : {
@@ -651,6 +669,9 @@
     "Alterar fundo" : {
 
     },
+    "Aluno treina com o app. Personal e nutricionista usam como profissionais — dá para marcar os dois." : {
+
+    },
     "Análise" : {
 
     },
@@ -666,13 +687,7 @@
     "Anual com %lld%% de desconto" : {
 
     },
-    "Ao escolher uma ficha, ela entra nos seus treinos e o cardápio é alinhado ao foco." : {
-
-    },
     "Ao iniciar um treino, sua resposta sobre pré-treino aparecerá aqui." : {
-
-    },
-    "Ao tocar em Enviar, a mensagem segue para a equipe HealthFit com o texto que você escreveu. O destinatário permanece oculto." : {
 
     },
     "Ao vivo" : {
@@ -705,8 +720,15 @@
     "Arraste o card para a esquerda para retirar." : {
 
     },
-    "As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal." : {
-
+    "As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal. Para mandar o e-mail, o app Mail precisa estar configurado neste %@ (%@)." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal. Para mandar o e-mail, o app Mail precisa estar configurado neste %1$@ (%2$@)."
+          }
+        }
+      }
     },
     "Assinar %@ %@" : {
       "localizations" : {
@@ -1564,17 +1586,45 @@
     "Cadastrar" : {
 
     },
-    "Cadastre nome e e-mail do nutricionista no Perfil para enviar o relatório desta aba." : {
-
+    "Cadastre nome e e-mail do nutricionista no Perfil para enviar o relatório desta aba. O envio exige o app Mail configurado neste %@ (%@)." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cadastre nome e e-mail do nutricionista no Perfil para enviar o relatório desta aba. O envio exige o app Mail configurado neste %1$@ (%2$@)."
+          }
+        }
+      }
     },
-    "Cadastre o e-mail do personal no Perfil para enviar o relatório deste treino." : {
-
+    "Cadastre o e-mail do personal no Perfil para enviar o relatório deste treino. O envio exige o app Mail configurado neste %@ (%@)." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cadastre o e-mail do personal no Perfil para enviar o relatório deste treino. O envio exige o app Mail configurado neste %1$@ (%2$@)."
+          }
+        }
+      }
     },
-    "Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista." : {
-
+    "Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista. O envio usa o app Mail deste %@ — é preciso ter uma conta em %@." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista. O envio usa o app Mail deste %1$@ — é preciso ter uma conta em %2$@."
+          }
+        }
+      }
     },
-    "Cadastre o e-mail para enviar relatórios após cada treino." : {
-
+    "Cadastre o e-mail para enviar relatórios após cada treino. O envio usa o app Mail deste %@ — é preciso ter uma conta em %@." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cadastre o e-mail para enviar relatórios após cada treino. O envio usa o app Mail deste %1$@ — é preciso ter uma conta em %2$@."
+          }
+        }
+      }
     },
     "Cálculo: 35 ml por kg de peso corporal (%@ kg). Equivale a cerca de %lld copos (%lld ml) ou %lld garrafas (%lld ml)." : {
       "localizations" : {
@@ -1661,7 +1711,13 @@
     "Cobrança" : {
 
     },
+    "Código de cortesia" : {
+
+    },
     "Código do convite" : {
+
+    },
+    "Cole o código que você recebeu. Cada voucher libera 30 dias do plano, sem cobrança e sem renovação automática." : {
 
     },
     "Com base no seu peso (%@ kg), beba:" : {
@@ -1958,12 +2014,6 @@
     "Configure uma conta de e-mail no aparelho ou compartilhe o convite de outra forma." : {
 
     },
-    "Configure uma conta de e-mail no iPhone (Ajustes → Mail → Contas) ou use Compartilhar para enviar o relatório por outro app." : {
-
-    },
-    "Configure uma conta no app Mail (Ajustes → Mail → Contas) ou use Compartilhar para enviar o relatório por Gmail/Outlook. Você também pode compartilhar o card." : {
-
-    },
     "Confirmação" : {
 
     },
@@ -2028,10 +2078,26 @@
     "Corrida livre — encerre quando quiser · Ritmo ref. %@" : {
 
     },
+    "Cortesia" : {
+
+    },
+    "Cortesia %@ até %@. Sem renovação automática." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cortesia %1$@ até %2$@. Sem renovação automática."
+          }
+        }
+      }
+    },
     "Criando…" : {
 
     },
     "Criar" : {
+
+    },
+    "Criar cardápio personalizado" : {
 
     },
     "Criar Conta" : {
@@ -2122,6 +2188,9 @@
 
     },
     "Descanso padrão: %llds" : {
+
+    },
+    "Descanso registrado — o IAssistente envia orientações sobre recuperação e hipertrofia." : {
 
     },
     "Descanso total" : {
@@ -2430,9 +2499,6 @@
     "Escolha um tópico e a duração da sessão" : {
 
     },
-    "Escolha uma opção para cada refeição do dia" : {
-
-    },
     "Escolha WhatsApp ou Instagram na tela de compartilhar. Dados da sessão e HealthFit já vão na mídia." : {
 
     },
@@ -2460,7 +2526,7 @@
     "Esqueceu de finalizar o treino" : {
 
     },
-    "Essa justificativa será enviada no relatório ao personal." : {
+    "Essa justificativa entra no relatório ao personal. O envio por e-mail exige o app Mail configurado no iPhone ou iPad (Ajustes → Mail → Contas)." : {
 
     },
     "Esses dados alimentam o cálculo de calorias e o cardápio em Nutrição. A data de nascimento é obrigatória." : {
@@ -2684,6 +2750,9 @@
     "Gerar PDF do relatório" : {
 
     },
+    "Gere um cardápio pelo objetivo ou monte um personalizado refeição por refeição." : {
+
+    },
     "Gerenciar assinatura" : {
 
     },
@@ -2717,6 +2786,9 @@
     "HealthKit" : {
 
     },
+    "HF-BASIC-XXXXXX" : {
+
+    },
     "Hidratação" : {
 
     },
@@ -2730,6 +2802,9 @@
 
     },
     "Histórico recente" : {
+
+    },
+    "Hoje é dia de descanso" : {
 
     },
     "Hora de treinar!" : {
@@ -2856,10 +2931,19 @@
     "Ir para Nutrição" : {
 
     },
+    "Ir para o Plano" : {
+
+    },
     "Ir para Perfil" : {
 
     },
     "Item" : {
+
+    },
+    "Item fora da dieta" : {
+
+    },
+    "Item fora do cardápio. Ainda pode marcar como comprado." : {
 
     },
     "Itens marcados como comprados na lista são contabilizados aqui. Deslize para remover do histórico." : {
@@ -2937,7 +3021,10 @@
     "m" : {
 
     },
-    "Mail não configurado" : {
+    "Mail configurado neste %@" : {
+
+    },
+    "Mail não configurado neste %@" : {
 
     },
     "Maior salto (m)" : {
@@ -2977,6 +3064,9 @@
     "Maratona (42,2 km)" : {
 
     },
+    "Marcar como comprado" : {
+
+    },
     "Marcar como concluída" : {
 
     },
@@ -3011,6 +3101,9 @@
 
     },
     "Maré: %@" : {
+
+    },
+    "Marque a qualquer hora. Meditação não substitui um dia off de treino pesado." : {
 
     },
     "Marque o que você pratica. A lista de treinos mostra só as modalidades ativas." : {
@@ -3190,6 +3283,9 @@
     "Montando ranking…" : {
 
     },
+    "Monte um cardápio personalizado: escolha uma opção para cada refeição e salve no plano semanal." : {
+
+    },
     "Mudar de plano" : {
 
     },
@@ -3209,12 +3305,6 @@
 
     },
     "Não foi possível enviar" : {
-
-    },
-    "Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas)." : {
-
-    },
-    "Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas). Você ainda pode compartilhar o card." : {
 
     },
     "Não foi possível gerar o PDF" : {
@@ -3531,7 +3621,10 @@
         }
       }
     },
-    "O app Mail não está configurado (ou o relatório é grande demais para mailto). Escolha Gmail, Outlook ou outro app na tela de compartilhar e envie para o nutricionista." : {
+    "O app Mail não está configurado neste %@ (ou o relatório é grande demais para mailto). Escolha Gmail, Outlook ou outro app na tela de compartilhar e envie para o nutricionista." : {
+
+    },
+    "O cardápio montado substitui as opções recomendadas na aba Plano." : {
 
     },
     "O cronômetro abre na hora, já contando o tempo de luta." : {
@@ -3549,7 +3642,7 @@
     "O que melhorar" : {
 
     },
-    "O relatório de Nutrição é enviado apenas ao nutricionista. Treinos continuam indo só para o personal." : {
+    "O relatório de Nutrição é enviado apenas ao nutricionista (treinos vão só ao personal). O envio por e-mail exige o app Mail configurado neste %@." : {
 
     },
     "O relatório de nutrição foi enviado com sucesso." : {
@@ -3564,7 +3657,7 @@
     "Objetivo: %@" : {
 
     },
-    "Obrigado. Sua mensagem foi enviada para a equipe HealthFit." : {
+    "Obrigado. Sua mensagem foi enviada para %@." : {
 
     },
     "Obrigatório · idade atual: %lld anos (mínimo %lld)" : {
@@ -3647,9 +3740,6 @@
       }
     },
     "País" : {
-
-    },
-    "Para enviar o feedback, adicione uma conta no app Mail (Ajustes → Mail → Contas) e toque em Enviar novamente." : {
 
     },
     "Para: %@" : {
@@ -3843,6 +3933,151 @@
     },
     "Problema" : {
 
+    },
+    "profile.account_role" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You are"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tú eres"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous êtes"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você é"
+          }
+        }
+      }
+    },
+    "profile.account_role.nutritionist" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutritionist"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutricionista"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutritionniste"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutricionista"
+          }
+        }
+      }
+    },
+    "profile.account_role.personal" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trainer"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coach"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personal"
+          }
+        }
+      }
+    },
+    "profile.account_role.personal_and_nutrition" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trainer and nutrition"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personal y nutrición"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coach et nutrition"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personal e Nutrição"
+          }
+        }
+      }
+    },
+    "profile.account_role.student" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Student"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alumno"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Élève"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aluno"
+          }
+        }
+      }
     },
     "profile.has_nutritionist" : {
       "extractionState" : "stale",
@@ -4082,6 +4317,16 @@
     "Projeções com este ritmo" : {
 
     },
+    "Pronto: plano %@ até %@." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pronto: plano %1$@ até %2$@."
+          }
+        }
+      }
+    },
     "Propor horário de treino" : {
 
     },
@@ -4251,12 +4496,6 @@
     "Relatório Semanal" : {
 
     },
-    "Relatórios da aba Nutrição poderão ser enviados por e-mail" : {
-
-    },
-    "Relatórios de treino poderão ser enviados por e-mail" : {
-
-    },
     "Remo ao vivo" : {
 
     },
@@ -4290,7 +4529,13 @@
     "Reps: %lld" : {
 
     },
+    "Resgatar 30 dias" : {
+
+    },
     "Responda antes de montar o cardápio." : {
+
+    },
+    "Responda lactose e doces na aba Plano para montar um cardápio personalizado." : {
 
     },
     "Responda sobre lactose e doces para montar seu cardápio." : {
@@ -4425,6 +4670,9 @@
     "Salvar dados" : {
 
     },
+    "Salvar e substituir o recomendado" : {
+
+    },
     "Salvar em Arquivos" : {
 
     },
@@ -4447,9 +4695,6 @@
 
     },
     "Salvar na Galeria?" : {
-
-    },
-    "Salvar no Plano Semanal" : {
 
     },
     "Salvar PDF em Arquivos" : {
@@ -4918,6 +5163,9 @@
     "Tempo por Exercício" : {
 
     },
+    "Tenho um código de cortesia" : {
+
+    },
     "Tentar de novo" : {
 
     },
@@ -4925,9 +5173,6 @@
 
     },
     "Tentativas" : {
-
-    },
-    "Tente de novo em instantes. Se o problema continuar, configure o app Mail em Ajustes." : {
 
     },
     "Tente outra foto ou vídeo da galeria." : {

@@ -284,14 +284,14 @@ struct WorkoutSummaryView: View {
                 focusShareCard()
             }
         } message: {
-            Text("Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas). Você ainda pode compartilhar o card.")
+            Text(MailSetupGuidance.sendFailedMessage + " Você ainda pode compartilhar o card.")
         }
         .alert("E-mail indisponível", isPresented: $showMailUnavailableAlert) {
             Button("OK") {
                 focusShareCard()
             }
         } message: {
-            Text("Configure uma conta no app Mail (Ajustes → Mail → Contas) ou use Compartilhar para enviar o relatório por Gmail/Outlook. Você também pode compartilhar o card.")
+            Text(MailSetupGuidance.unavailableMessage + " Você também pode compartilhar o card.")
         }
     }
 
@@ -740,6 +740,9 @@ struct WorkoutSummaryView: View {
                         .foregroundStyle(.green)
                 }
 
+                MailAccountRequiredNotice(audience: .trainer)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
                 if !user.personalTrainerName.isEmpty {
                     Text("Para: \(user.personalTrainerName) · \(user.personalTrainerEmail)")
                         .font(.caption)
@@ -756,7 +759,7 @@ struct WorkoutSummaryView: View {
                     Label("E-mail do personal não cadastrado", systemImage: "person.crop.circle.badge.exclamationmark")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.orange)
-                    Text("Cadastre o e-mail do personal no Perfil para enviar o relatório deste treino.")
+                    Text("Cadastre o e-mail do personal no Perfil para enviar o relatório deste treino. O envio exige o app Mail configurado neste \(MailSetupGuidance.deviceName) (\(MailSetupGuidance.settingsPath)).")
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                         .multilineTextAlignment(.center)

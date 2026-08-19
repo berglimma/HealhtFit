@@ -342,6 +342,32 @@ enum DuoTeamFirestoreService {
         db.collection("users").document(userId).collection("duoNotifications").document(id)
     }
 
+    private static func readCursorDoc(userId: String, teamId: String) -> DocumentReference {
+        db.collection("users").document(userId).collection("duoReadCursors").document(teamId)
+    }
+
+    static func saveReadCursor(userId: String, teamId: String, lastReadAt: Date) async throws {
+        guard isAvailable else { return }
+        try await readCursorDoc(userId: userId, teamId: teamId).setData([
+            "lastReadAt": Timestamp(date: lastReadAt),
+            "updatedAt": FieldValue.serverTimestamp(),
+        ], merge: true)
+    }
+
+    static func fetchReadCursors(userId: String) async throws -> [String: Date] {
+        guard isAvailable else { return [:] }
+        let snap = try await db.collection("users").document(userId)
+            .collection("duoReadCursors")
+            .getDocuments()
+        var result: [String: Date] = [:]
+        for doc in snap.documents {
+            if let timestamp = doc.data()["lastReadAt"] as? Timestamp {
+                result[doc.documentID] = timestamp.dateValue()
+            }
+        }
+        return result
+    }
+
     static func saveInboxNotification(
         forUserId userId: String,
         notification: DuoInboxNotification
@@ -411,9 +437,15 @@ enum DuoTeamFirestoreService {
         guard isAvailable else { return }
         let payload = try encoder.encode(message)
         guard let json = String(data: payload, encoding: .utf8) else { return }
+        let trimmedText = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pushText = trimmedText.count <= 400
+            ? trimmedText
+            : String(trimmedText.prefix(397)) + "…"
         try await messagesCollection(teamId: message.teamId).document(message.id).setData([
             "payload": json,
             "senderUid": message.senderUid,
+            "senderName": message.senderName,
+            "text": pushText,
             "createdAt": Timestamp(date: message.createdAt),
             "kind": message.kind.rawValue,
         ], merge: true)
@@ -512,6 +544,12 @@ enum DuoTeamFirestoreService {
             .collection("duoNotifications")
             .getDocuments()
         for doc in notifications.documents {
+            try await doc.reference.delete()
+        }
+        let readCursors = try await db.collection("users").document(userId)
+            .collection("duoReadCursors")
+            .getDocuments()
+        for doc in readCursors.documents {
             try await doc.reference.delete()
         }
         let sent = try await invitesCollection().whereField("fromUid", isEqualTo: userId).getDocuments()

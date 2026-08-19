@@ -43,7 +43,7 @@ struct GuidedWorkoutSections: View {
 
             guidedSection(
                 title: "Foco do treino",
-                subtitle: "Ao selecionar uma ficha, o cardápio é ajustado ao objetivo"
+                subtitle: "A primeira ficha alinha o cardápio; outro treino ou objetivo remove esse alinhamento"
             ) {
                 LazyVStack(spacing: 10) {
                     ForEach(WorkoutFocus.allCases) { focus in
@@ -165,7 +165,7 @@ struct GuidedWorkoutCategoryView: View {
             VStack(spacing: 16) {
                 header
 
-                Text("Ao escolher uma ficha, ela entra nos seus treinos e o cardápio é alinhado ao foco.")
+                Text("A primeira ficha alinha o cardápio ao foco. Se você escolher outro treino, o cardápio alinhado some — monte um personalizado em Nutrição.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -195,7 +195,7 @@ struct GuidedWorkoutCategoryView: View {
         .navigationDestination(item: $sheetToOpen) { sheet in
             WorkoutDetailView(sheet: sheet)
         }
-        .alert("Cardápio atualizado", isPresented: $showNutritionAlert) {
+        .alert("Cardápio", isPresented: $showNutritionAlert) {
             Button("Ver treino") {
                 sheetToOpen = pendingSheet
             }

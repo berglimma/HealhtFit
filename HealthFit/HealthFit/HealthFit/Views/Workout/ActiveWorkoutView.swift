@@ -831,7 +831,7 @@ private struct EarlyEndJustificationSheet: View {
                             .stroke(AppTheme.textSecondary.opacity(0.25), lineWidth: 1)
                     )
 
-                Text("Essa justificativa será enviada no relatório ao personal.")
+                Text("Essa justificativa entra no relatório ao personal. O envio por e-mail exige o app Mail configurado no iPhone ou iPad (Ajustes → Mail → Contas).")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
 

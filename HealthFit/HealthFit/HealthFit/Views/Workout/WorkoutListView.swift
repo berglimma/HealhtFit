@@ -22,6 +22,8 @@ struct WorkoutListView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var subscriptions: SubscriptionService
+    @EnvironmentObject var mealPlanService: MealPlanService
+    @EnvironmentObject var trainingNutritionSync: TrainingNutritionSyncService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showCreateWorkout = false
     @State private var createTargetGender: Gender = .male
@@ -166,27 +168,34 @@ struct WorkoutListView: View {
             }
             .navigationDestination(for: CardioExercise.self) { exercise in
                 CardioSetupView(exercise: exercise)
+                    .onAppear { discardAlignedMealPlanForOtherWorkout() }
             }
             .navigationDestination(for: SwimmingLogbookRoute.self) { _ in
                 SwimmingLogbookView()
+                    .onAppear { discardAlignedMealPlanForOtherWorkout() }
             }
             .navigationDestination(for: BikeLogbookRoute.self) { _ in
                 BikeLogbookView()
+                    .onAppear { discardAlignedMealPlanForOtherWorkout() }
             }
             .navigationDestination(for: SurfKiteLogbookRoute.self) { route in
                 SurfKiteLogbookView(initialKitesurfOnly: route.kitesurfOnly)
+                    .onAppear { discardAlignedMealPlanForOtherWorkout() }
             }
             .navigationDestination(for: ClimbingLogbookRoute.self) { _ in
                 ClimbingLogbookView()
+                    .onAppear { discardAlignedMealPlanForOtherWorkout() }
             }
             .navigationDestination(for: ClimbingMapRoute.self) { _ in
                 ClimbingMapView()
             }
             .navigationDestination(for: FightHubRoute.self) { _ in
                 FightHubView()
+                    .onAppear { discardAlignedMealPlanForOtherWorkout() }
             }
             .navigationDestination(for: MeditationTopic.self) { topic in
                 MeditationSetupView(topic: topic)
+                    .onAppear { discardAlignedMealPlanForOtherWorkout() }
             }
             .navigationDestination(for: GuidedLevelRoute.self) { route in
                 GuidedWorkoutCategoryView(
@@ -425,6 +434,10 @@ struct WorkoutListView: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    private func discardAlignedMealPlanForOtherWorkout() {
+        trainingNutritionSync.clearAlignedPlan(using: mealPlanService)
     }
 }
 

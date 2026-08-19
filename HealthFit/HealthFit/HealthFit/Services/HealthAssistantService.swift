@@ -48,6 +48,10 @@ struct HealthAssistantContext {
     var climbingGear: [ClimbingGearItem] = []
     /// Rotina aprendida (horários de treino + humor dos check-ins).
     var routineProfile: AssistantRoutineProfile = .empty
+    /// Dia de descanso marcado hoje (Perfil → Sono e Hidratação).
+    var isTodayRestDay: Bool = false
+    /// Dias consecutivos com treino (meditação não conta).
+    var consecutiveTrainingDays: Int = 0
 }
 
 enum HealthAssistantEngine {
@@ -76,6 +80,7 @@ enum HealthAssistantEngine {
         "Cerveja zero álcool é liberada?",
         "Cerveja light faz mal?",
         "Treino, cardio ou meditação?",
+        "Por que descansar é importante?",
         "Quais suplementos devo tomar?",
         "Para que serve a creatina?",
         "Whey protein faz mal?",
@@ -210,6 +215,10 @@ enum HealthAssistantEngine {
             alerts.append(cycleWelcome)
         }
 
+        if let restWelcome = AssistantRestDayEngine.welcomeAlertIfNeeded(context: context) {
+            alerts.append(restWelcome)
+        }
+
         return WelcomeAlertSummary(
             messages: alerts,
             hasSleepIssue: hasSleepIssue,
@@ -260,6 +269,10 @@ enum HealthAssistantEngine {
         // Antes das palavras-chave gerais: "grau", "clima" e "equipamento" colidem com outros tópicos.
         if ClimbingAssistantEngine.matches(question) {
             return ClimbingAssistantEngine.answer(for: question, context: context)
+        }
+
+        if AssistantRestDayEngine.matches(question) {
+            return AssistantRestDayEngine.answer(for: question, context: context)
         }
 
         let normalized = normalize(question)
@@ -1455,8 +1468,10 @@ enum HealthAssistantEngine {
                 return """
                 Relatórios de treino no HealthFit:
 
-                • Ao finalizar musculação ou cardio, o app gera resumo
-                \(hasTrainer ? "• Seu personal (\(ctx.user?.personalTrainerName ?? "")) recebe por e-mail automaticamente" : "• Configure e-mail do personal em Perfil para envio automático")
+                • Ao finalizar musculação ou cardio, o app gera o resumo
+                \(hasTrainer ? "• Você envia o relatório para \(ctx.user?.personalTrainerName ?? "o personal") pelo app Mail deste aparelho" : "• Cadastre o e-mail do personal em Perfil")
+                • O iOS não envia e-mail sozinho: é preciso ter o Mail configurado (Ajustes → Mail → Contas) no iPhone ou iPad
+                • Sem o Mail, use Compartilhar (Gmail, Outlook ou outro app)
                 • Inclui exercícios, séries, cargas, cardio e uso de pré-treino
 
                 Relatório semanal em Início → Progresso Semanal.
@@ -1493,8 +1508,8 @@ enum HealthAssistantEngine {
 
                 4. Comunicação com o personal
                 \(hasTrainer
-                    ? "• Relatório enviado para \(trainerName) (\(ctx.user?.personalTrainerEmail ?? ""))\n                • Relatório semanal em Início consolida volume e evolução"
-                    : "• Cadastre nome e e-mail do personal em Perfil para envio automático\n                • Leve o histórico de treinos nas consultas")
+                    ? "• Na tela de resumo, envie o relatório para \(trainerName) (\(ctx.user?.personalTrainerEmail ?? ""))\n                • É preciso ter o Mail configurado no iPhone ou iPad (Ajustes → Mail → Contas)\n                • Relatório semanal em Início consolida volume e evolução"
+                    : "• Cadastre nome e e-mail do personal em Perfil\n                • Para enviar por e-mail, configure o Mail no iPhone ou iPad (Ajustes → Mail → Contas)\n                • Leve o histórico de treinos nas consultas")
 
                 O app complementa o acompanhamento — dúvidas técnicas ou dores persistentes, consulte sempre o profissional.
 
@@ -1742,6 +1757,7 @@ final class HealthAssistantService: ObservableObject {
     private var inactivityFollowUpDelivered = false
     private var cardioMeditationNudgeDelivered = false
     private var supplementNudgeDelivered = false
+    private var restDaySevenDayNudgeDelivered = false
     private var tideAlertDelivered = false
     private var activePostWorkoutCheckIn: PendingPostWorkoutCheckIn?
     private var isDailyMorningCheckInActive = false
@@ -1860,6 +1876,7 @@ final class HealthAssistantService: ObservableObject {
         )
         deliverPendingBodyEvolutionAnnouncementIfNeeded()
         deliverPendingSupplementAcknowledgmentIfNeeded()
+        deliverPendingRestDayMessageIfNeeded()
         deliverPendingExternalWorkoutAnnouncementIfNeeded()
         lastUserInteractionAt = Date()
     }
@@ -1875,6 +1892,22 @@ final class HealthAssistantService: ObservableObject {
         guard let message = ExternalWorkoutSyncService.shared.consumePendingAssistantMessage() else { return }
         if let last = messages.last, !last.isUser, last.text == message { return }
         deliverAssistantMessage(message)
+    }
+
+    /// Entrega mensagem após marcar dia de descanso no perfil.
+    func deliverPendingRestDayMessageIfNeeded() {
+        guard let message = AssistantRestDayEngine.consumePendingMessage() else { return }
+        if let last = messages.last, !last.isUser, last.text == message { return }
+        deliverAssistantMessage(message)
+    }
+
+    /// Reage imediatamente quando o usuário marca descanso com o chat aberto.
+    func deliverRestDayMarkedMessage(_ text: String) {
+        guard !text.isEmpty else { return }
+        if let last = messages.last, !last.isUser, last.text == text { return }
+        _ = AssistantRestDayEngine.consumePendingMessage()
+        deliverAssistantMessage(text)
+        lastUserInteractionAt = Date()
     }
 
     /// Entrega agradecimento após o usuário registrar um suplemento.
@@ -1929,6 +1962,7 @@ final class HealthAssistantService: ObservableObject {
         inactivityFollowUpDelivered = false
         cardioMeditationNudgeDelivered = false
         supplementNudgeDelivered = false
+        restDaySevenDayNudgeDelivered = false
         tideAlertDelivered = false
         replyTask?.cancel()
         messages.append(HealthChatMessage(text: trimmed, isUser: true))
@@ -2681,6 +2715,7 @@ final class HealthAssistantService: ObservableObject {
         inactivityFollowUpDelivered = false
         cardioMeditationNudgeDelivered = false
         supplementNudgeDelivered = false
+        restDaySevenDayNudgeDelivered = false
         tideAlertDelivered = false
         resetWorkoutBuilderDraft()
 
@@ -2846,6 +2881,31 @@ final class HealthAssistantService: ObservableObject {
         deliverAssistantMessage(text)
         AssistantSupplementNudgeEngine.markDailyNudgeDelivered()
         supplementNudgeDelivered = true
+        lastUserInteractionAt = Date()
+    }
+
+    func checkSevenDayTrainingStreakIfNeeded(context: HealthAssistantContext) {
+        guard !isTyping else { return }
+        guard !isInGuidedCheckIn else { return }
+        guard !restDaySevenDayNudgeDelivered else { return }
+        guard AssistantRestDayEngine.shouldDeliverSevenDayAlert(
+            consecutiveDays: context.consecutiveTrainingDays,
+            isRestDay: context.isTodayRestDay
+        ) else {
+            restDaySevenDayNudgeDelivered = true
+            return
+        }
+
+        let text = AssistantRestDayEngine.sevenDayStreakMessage(context: context)
+        if let last = messages.last, !last.isUser, last.text == text {
+            restDaySevenDayNudgeDelivered = true
+            AssistantRestDayEngine.markSevenDayAlertDelivered()
+            return
+        }
+
+        deliverAssistantMessage(text)
+        AssistantRestDayEngine.markSevenDayAlertDelivered()
+        restDaySevenDayNudgeDelivered = true
         lastUserInteractionAt = Date()
     }
 

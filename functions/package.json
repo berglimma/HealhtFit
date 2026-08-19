@@ -1,6 +1,6 @@
 {
   "name": "healthfit-functions",
-  "description": "Cloud Functions — TTL accessLogs + Duo FCM",
+  "description": "Cloud Functions — TTL accessLogs + Duo FCM + cortesia",
   "engines": {
     "node": "20"
   },
@@ -9,8 +9,9 @@
     "build": "tsc",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
-    "deploy": "firebase deploy --only functions",
-    "lint": "tsc --noEmit"
+    "deploy": "npm run build && firebase deploy --only functions",
+    "lint": "tsc --noEmit",
+    "seed:courtesy": "node scripts/seed-courtesy-vouchers.cjs"
   },
   "dependencies": {
     "firebase-admin": "^12.7.0",

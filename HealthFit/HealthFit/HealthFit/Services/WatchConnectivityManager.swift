@@ -140,9 +140,9 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
 
         // Aguarda reachability — no simulador o Watch precisa estar com o app aberto.
         if !session.isReachable {
-            for _ in 0..<40 {
+            for _ in 0..<8 {
                 if session.isReachable { break }
-                try? await Task.sleep(for: .milliseconds(150))
+                try? await Task.sleep(for: .milliseconds(80))
             }
         }
 
@@ -187,7 +187,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             )
 
             Task { @MainActor in
-                try? await Task.sleep(for: .seconds(4))
+                try? await Task.sleep(for: .seconds(2))
                 finish(false)
             }
         }

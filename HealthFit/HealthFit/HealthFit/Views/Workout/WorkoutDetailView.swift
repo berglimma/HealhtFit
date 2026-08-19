@@ -5,6 +5,8 @@ struct WorkoutDetailView: View {
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var wellnessService: DailyWellnessService
+    @EnvironmentObject var mealPlanService: MealPlanService
+    @EnvironmentObject var trainingNutritionSync: TrainingNutritionSyncService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
     @State var sheet: WorkoutSheet
@@ -47,6 +49,12 @@ struct WorkoutDetailView: View {
         .background(AppTheme.background)
         .navigationTitle(sheet.title)
         .navigationBarTitleDisplayMode(.large)
+        .onAppear {
+            trainingNutritionSync.discardAlignedPlanIfDifferentWorkout(
+                openedTitle: sheet.title,
+                mealPlanService: mealPlanService
+            )
+        }
         .toolbar {
             if canModify {
                 ToolbarItem(placement: .primaryAction) {

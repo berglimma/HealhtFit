@@ -18,6 +18,10 @@
 		B1000906 /* ClimbingGearService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000906 /* ClimbingGearService.swift */; };
 		B1000907 /* ClimbingAssistantEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000907 /* ClimbingAssistantEngine.swift */; };
 		B1000942 /* AssistantGratitudeAndCycleEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000942 /* AssistantGratitudeAndCycleEngine.swift */; };
+		B1000944 /* AppFeedbackFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000944 /* AppFeedbackFirestoreService.swift */; };
+		B1000945 /* CourtesyVoucher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000945 /* CourtesyVoucher.swift */; };
+		B1000946 /* CourtesyVoucherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000946 /* CourtesyVoucherService.swift */; };
+		B1000947 /* AssistantRestDayEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000947 /* AssistantRestDayEngine.swift */; };
 		B1000908 /* ClimbingAreaCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000908 /* ClimbingAreaCatalog.swift */; };
 		B1000909 /* ClimbingMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000909 /* ClimbingMapView.swift */; };
 		B1000910 /* ClimbingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000910 /* ClimbingLogbookView.swift */; };
@@ -294,6 +298,9 @@
 		B2000040 /* EveningTrainingNudgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000040 /* EveningTrainingNudgeTests.swift */; };
 		B2000041 /* AppLanguageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000041 /* AppLanguageTests.swift */; };
 		B2000042 /* RunTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000042 /* RunTrackingTests.swift */; };
+		B2000046 /* CourtesyVoucherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000046 /* CourtesyVoucherTests.swift */; };
+		B2000047 /* AssistantRestDayEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000047 /* AssistantRestDayEngineTests.swift */; };
+		B2000047 /* SubscriptionModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000047 /* SubscriptionModelsTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -364,6 +371,10 @@
 		F1000906 /* ClimbingGearService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingGearService.swift; sourceTree = "<group>"; };
 		F1000907 /* ClimbingAssistantEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAssistantEngine.swift; sourceTree = "<group>"; };
 		F1000942 /* AssistantGratitudeAndCycleEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantGratitudeAndCycleEngine.swift; sourceTree = "<group>"; };
+		F1000944 /* AppFeedbackFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeedbackFirestoreService.swift; sourceTree = "<group>"; };
+		F1000945 /* CourtesyVoucher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtesyVoucher.swift; sourceTree = "<group>"; };
+		F1000946 /* CourtesyVoucherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtesyVoucherService.swift; sourceTree = "<group>"; };
+		F1000947 /* AssistantRestDayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRestDayEngine.swift; sourceTree = "<group>"; };
 		F1000908 /* ClimbingAreaCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAreaCatalog.swift; sourceTree = "<group>"; };
 		F1000909 /* ClimbingMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingMapView.swift; sourceTree = "<group>"; };
 		F1000910 /* ClimbingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingLogbookView.swift; sourceTree = "<group>"; };
@@ -642,6 +653,9 @@
 		F2000040 /* EveningTrainingNudgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeTests.swift; sourceTree = "<group>"; };
 		F2000041 /* AppLanguageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguageTests.swift; sourceTree = "<group>"; };
 		F2000042 /* RunTrackingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingTests.swift; sourceTree = "<group>"; };
+		F2000046 /* CourtesyVoucherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtesyVoucherTests.swift; sourceTree = "<group>"; };
+		F2000047 /* AssistantRestDayEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRestDayEngineTests.swift; sourceTree = "<group>"; };
+		F2000047 /* SubscriptionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionModelsTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -771,6 +785,7 @@
 				F1000709 /* TideWindFavorability.swift */,
 				F1000704 /* CountryOption.swift */,
 				F1000600 /* SubscriptionModels.swift */,
+				F1000945 /* CourtesyVoucher.swift */,
 				F1000420 /* RunTrackingModels.swift */,
 				F1000004 /* MealModels.swift */,
 				F1000352 /* MealPhotoAnalysisModels.swift */,
@@ -857,6 +872,7 @@
 				F1000115 /* SupplementationGuideEngine.swift */,
 				F1000116 /* AssistantInactivityFollowUpEngine.swift */,
 				F1000205 /* AssistantCardioMeditationNudgeEngine.swift */,
+				F1000947 /* AssistantRestDayEngine.swift */,
 				F1000346 /* AssistantSupplementNudgeEngine.swift */,
 				F1000351 /* AssistantImprovementAnalysisEngine.swift */,
 				F1000930 /* AssistantRoutineStore.swift */,
@@ -1075,6 +1091,8 @@
 				F1000932 /* ProfilePhotoStorageService.swift */,
 				F1000934 /* MarcoCivilAccessLogService.swift */,
 				F1000936 /* PushNotificationService.swift */,
+				F1000944 /* AppFeedbackFirestoreService.swift */,
+				F1000946 /* CourtesyVoucherService.swift */,
 				F1000071 /* AuthErrorMapper.swift */,
 				F1000072 /* FirebaseAuthProvider.swift */,
 				F1000075 /* GoogleServiceInfo.swift */,
@@ -1195,6 +1213,9 @@
 				F2000033 /* BodyEvolutionModelsTests.swift */,
 				F2000034 /* MusculacaoProgramTests.swift */,
 				F2000035 /* AssistantImprovementAnalysisEngineTests.swift */,
+				F2000046 /* CourtesyVoucherTests.swift */,
+				F2000047 /* AssistantRestDayEngineTests.swift */,
+				F2000047 /* SubscriptionModelsTests.swift */,
 			);
 			path = HealthFitTests;
 			sourceTree = "<group>";
@@ -1467,6 +1488,10 @@
 				B1000908 /* ClimbingAreaCatalog.swift in Sources */,
 				B1000907 /* ClimbingAssistantEngine.swift in Sources */,
 				B1000942 /* AssistantGratitudeAndCycleEngine.swift in Sources */,
+				B1000944 /* AppFeedbackFirestoreService.swift in Sources */,
+				B1000945 /* CourtesyVoucher.swift in Sources */,
+				B1000946 /* CourtesyVoucherService.swift in Sources */,
+				B1000947 /* AssistantRestDayEngine.swift in Sources */,
 				B1000906 /* ClimbingGearService.swift in Sources */,
 				B1000905 /* ClimbingWeatherService.swift in Sources */,
 				B1000904 /* ClimbingMotionService.swift in Sources */,
@@ -1719,6 +1744,9 @@
 				B2000024 /* BodyEvolutionModelsTests.swift in Sources */,
 				B2000025 /* MusculacaoProgramTests.swift in Sources */,
 				B2000026 /* AssistantImprovementAnalysisEngineTests.swift in Sources */,
+				B2000046 /* CourtesyVoucherTests.swift in Sources */,
+				B2000047 /* AssistantRestDayEngineTests.swift in Sources */,
+				B2000047 /* SubscriptionModelsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

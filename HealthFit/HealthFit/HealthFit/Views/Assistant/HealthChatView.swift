@@ -77,7 +77,11 @@ struct HealthChatView: View {
             supplementsLoggedToday: wellnessService.todaySupplementIntakes.count,
             latestHRVMs: latestHRVMs,
             climbingGear: ClimbingGearService.shared.items,
-            routineProfile: routineProfile
+            routineProfile: routineProfile,
+            isTodayRestDay: wellnessService.todayEntry.isRestDay,
+            consecutiveTrainingDays: WeeklyProgressAnalyzer.consecutiveTrainingDays(
+                in: workoutStore.sessionHistory
+            )
         )
     }
 
@@ -161,18 +165,25 @@ struct HealthChatView: View {
                     context: context,
                     todayIntakes: wellnessService.todaySupplementIntakes
                 )
+                assistant.checkSevenDayTrainingStreakIfNeeded(context: context)
                 assistant.checkTideAlertIfNeeded(
                     context: context,
                     sessions: workoutStore.sessionHistory
                 )
                 assistant.checkRoutineInsightsIfNeeded(context: context)
                 assistant.deliverPendingSupplementAcknowledgmentIfNeeded()
+                assistant.deliverPendingRestDayMessageIfNeeded()
             }
             .task(id: "climbing-hrv") {
                 latestHRVMs = await HealthKitManager.shared.fetchLatestHRV()
             }
             .onDisappear {
                 dismissChatKeyboard()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .healthFitRestDayMarked)) { notification in
+                if let message = notification.userInfo?["message"] as? String {
+                    assistant.deliverRestDayMarkedMessage(message)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .healthFitSupplementLogged)) { notification in
                 if let message = notification.userInfo?["message"] as? String {
@@ -202,6 +213,7 @@ struct HealthChatView: View {
                         context: context,
                         todayIntakes: wellnessService.todaySupplementIntakes
                     )
+                    assistant.checkSevenDayTrainingStreakIfNeeded(context: context)
                     assistant.checkTideAlertIfNeeded(
                         context: context,
                         sessions: workoutStore.sessionHistory
@@ -240,6 +252,7 @@ struct HealthChatView: View {
                         context: context,
                         todayIntakes: wellnessService.todaySupplementIntakes
                     )
+                    assistant.checkSevenDayTrainingStreakIfNeeded(context: context)
                     assistant.checkTideAlertIfNeeded(
                         context: context,
                         sessions: workoutStore.sessionHistory

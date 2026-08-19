@@ -61,6 +61,11 @@ enum L10n {
         static var trainerEmail: String { tr("profile.trainer_email") }
         static var nutritionistName: String { tr("profile.nutritionist_name") }
         static var nutritionistEmail: String { tr("profile.nutritionist_email") }
+        static var accountRole: String { tr("profile.account_role") }
+        static var accountRoleStudent: String { tr("profile.account_role.student") }
+        static var accountRolePersonal: String { tr("profile.account_role.personal") }
+        static var accountRoleNutritionist: String { tr("profile.account_role.nutritionist") }
+        static var accountRolePersonalAndNutrition: String { tr("profile.account_role.personal_and_nutrition") }
     }
 
     enum Settings {

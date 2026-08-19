@@ -45,6 +45,7 @@ enum ProfileFirestoreService {
             "gender": profile.gender.rawValue,
             "goal": profile.goal.rawValue,
             "biotype": profile.biotype.rawValue,
+            "accountRole": profile.accountRole.rawValue,
             "hasBodyMeasurements": profile.bodyMeasurements.hasAnyValue,
             "updatedAt": Timestamp(date: profile.updatedAt),
             "createdAt": Timestamp(date: profile.createdAt),

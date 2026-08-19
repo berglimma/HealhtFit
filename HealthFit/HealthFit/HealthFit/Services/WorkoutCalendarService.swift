@@ -11,29 +11,31 @@ enum WorkoutCalendarService {
     /// Registra a sessão no calendário padrão (idempotente por `session.id`).
     static func registerCompletedSession(_ session: WorkoutSession) {
         Task {
-            await registerIfNeeded(session)
+            await registerIfNeeded(session, promptIfNeeded: true)
         }
     }
 
     /// Garante que as sessões de hoje já finalizadas apareçam no Calendário.
+    /// Não pede permissão no launch — só sincroniza se o acesso já existir.
     static func syncTodaysCompletedSessions(_ sessions: [WorkoutSession]) {
         Task {
+            guard hasExistingAccess else { return }
             let calendar = Calendar.current
             for session in sessions where session.endedAt != nil {
                 guard let end = session.endedAt, calendar.isDateInToday(end) else { continue }
-                await registerIfNeeded(session)
+                await registerIfNeeded(session, promptIfNeeded: false)
             }
         }
     }
 
     // MARK: - Private
 
-    private static func registerIfNeeded(_ session: WorkoutSession) async {
+    private static func registerIfNeeded(_ session: WorkoutSession, promptIfNeeded: Bool) async {
         guard session.endedAt != nil else { return }
         let sessionKey = session.id.uuidString
         if mappedEventIdentifier(for: sessionKey) != nil { return }
 
-        guard await requestAccess() else { return }
+        guard await requestAccess(promptIfNeeded: promptIfNeeded) else { return }
         guard let calendar = store.defaultCalendarForNewEvents ?? store.calendars(for: .event).first(where: \.allowsContentModifications) else {
             print("[HealthFit] Nenhum calendário disponível para gravar treinos.")
             return
@@ -79,16 +81,23 @@ enum WorkoutCalendarService {
         }
     }
 
-    private static func requestAccess() async -> Bool {
+    static var hasExistingAccess: Bool {
+        switch EKEventStore.authorizationStatus(for: .event) {
+        case .fullAccess, .authorized, .writeOnly:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private static func requestAccess(promptIfNeeded: Bool) async -> Bool {
+        if hasExistingAccess { return true }
+        guard promptIfNeeded else { return false }
         let status = EKEventStore.authorizationStatus(for: .event)
         switch status {
-        case .fullAccess, .authorized:
-            return true
         case .denied, .restricted:
             return false
-        case .notDetermined, .writeOnly:
-            break
-        @unknown default:
+        default:
             break
         }
 

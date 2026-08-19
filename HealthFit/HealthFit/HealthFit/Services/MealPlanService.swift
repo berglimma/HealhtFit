@@ -73,6 +73,14 @@ final class MealPlanService: ObservableObject {
         syncMealReminders()
     }
 
+    /// Remove o plano semanal persistido (cardápio alinhado ao treino ou gerado).
+    func clearWeeklyPlan() {
+        weeklyPlan = []
+        shoppingList = []
+        saveData()
+        syncMealReminders()
+    }
+
     func regeneratePlanIfNeeded(for profile: UserProfile) {
         guard !weeklyPlan.isEmpty else { return }
         generatePlan(for: profile)
@@ -95,6 +103,11 @@ final class MealPlanService: ObservableObject {
         } else {
             saveData()
         }
+    }
+
+    func setReplacesRecommended(_ value: Bool) {
+        customMenuSelection.replacesRecommended = value
+        saveData()
     }
 
     func updateEnergyDrinksPerWeek(_ count: Int, profile: UserProfile?) {
@@ -139,9 +152,9 @@ final class MealPlanService: ObservableObject {
             for option in day.options {
                 for meal in option.meals {
                     for ingredient in meal.ingredients {
-                        let parts = ingredient.split(separator: " ", maxSplits: 1)
-                        let name = String(parts.last ?? Substring(ingredient))
-                        let qty = parts.count > 1 ? String(parts[0]) : "1 un"
+                        let parsed = Self.shoppingNameAndQuantity(from: ingredient)
+                        let name = parsed.name
+                        let qty = parsed.quantity
 
                         if let existing = ingredientCounts[name] {
                             ingredientCounts[name] = (existing.quantity, existing.category)
@@ -314,6 +327,77 @@ final class MealPlanService: ObservableObject {
         return shoppingList.contains { normalizedIngredient($0.name) == normalized }
     }
 
+    /// Compara o item da lista com os alimentos do cardápio ativo (qualquer dieta).
+    func isItemInCurrentDiet(_ item: ShoppingItem) -> Bool {
+        let dietFoods = currentDietNormalizedFoods()
+        guard !dietFoods.isEmpty else { return true }
+        return dietContains(item.name, diet: dietFoods)
+    }
+
+    static let offDietShoppingMessage =
+        "Este item não faz parte da lista da sua dieta. Que tal seguí-la à risca e obter resultados incríveis?"
+
+    private func currentDietNormalizedFoods() -> Set<String> {
+        var foods = Set<String>()
+        for day in weeklyPlan {
+            for option in day.options {
+                for meal in option.meals {
+                    foods.insert(normalizedIngredient(meal.name))
+                    for ingredient in meal.ingredients {
+                        foods.insert(normalizedIngredient(ingredient))
+                        let parsed = Self.shoppingNameAndQuantity(from: ingredient)
+                        foods.insert(normalizedIngredient(parsed.name))
+                    }
+                }
+            }
+        }
+        return foods.filter { !$0.isEmpty }
+    }
+
+    private func dietContains(_ name: String, diet: Set<String>) -> Bool {
+        let item = normalizedIngredient(name)
+        guard !item.isEmpty else { return false }
+        if diet.contains(item) { return true }
+        for food in diet {
+            if food == item { return true }
+            let shorter = min(food.count, item.count)
+            if shorter >= 4, food.contains(item) || item.contains(food) {
+                return true
+            }
+            let foodStem = Self.pluralStem(food)
+            let itemStem = Self.pluralStem(item)
+            if foodStem.count >= 3, foodStem == itemStem {
+                return true
+            }
+        }
+        return false
+    }
+
+    private static func pluralStem(_ value: String) -> String {
+        if value.hasSuffix("s"), value.count > 3 {
+            return String(value.dropLast())
+        }
+        return value
+    }
+
+    private static func shoppingNameAndQuantity(from ingredient: String) -> (name: String, quantity: String) {
+        let trimmed = ingredient.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = trimmed.split(separator: " ", maxSplits: 1)
+        guard parts.count > 1 else {
+            return (trimmed, "1 un")
+        }
+        let first = String(parts[0])
+        let looksLikeQuantity = first.first?.isNumber == true
+            || first.lowercased().hasSuffix("g")
+            || first.lowercased().hasSuffix("kg")
+            || first.lowercased().hasSuffix("ml")
+            || first.lowercased().hasSuffix("un")
+        if looksLikeQuantity {
+            return (String(parts[1]), first)
+        }
+        return (trimmed, "1 un")
+    }
+
     func filteredShoppingList(query: String, category: ShoppingCategory?) -> [ShoppingItem] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         var items = shoppingList
@@ -482,7 +566,7 @@ final class MealPlanService: ObservableObject {
                     sweetLevel: customMenuSelection.sweetConsumption,
                     goal: goal,
                     lactoseTolerance: lactose,
-                    index: mealTypeCalorieOrder.firstIndex(of: mealType) ?? 0
+                    index: 0
                 )
                 customMenuSelection.setSelection(template.id, for: mealType)
             } else if let selectedID = customMenuSelection.selectedTemplateID(for: mealType),
@@ -628,19 +712,19 @@ final class MealPlanService: ObservableObject {
         let days = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
         let optionTemplates = goal == .fatLoss
             ? [
-                ("Opção 1", "Déficit proteico"),
+                ("Simples", "Alimentos básicos"),
                 ("Opção 2", "Low carb restrito"),
                 ("Opção 3", "Leve e saciante"),
             ]
             : [
-                ("Opção 1", "Foco proteico"),
+                ("Simples", "Alimentos básicos"),
                 ("Opção 2", "Equilibrado"),
                 ("Opção 3", "Prático e leve"),
             ]
 
         return days.enumerated().map { index, day in
             let options = optionTemplates.enumerated().map { optionIndex, template in
-                let variation = (index + optionIndex) % 3
+                let variation = optionIndex == 0 ? 0 : (index + optionIndex) % 3
                 let meals = mealsFromSelection(
                     calorieBase: calorieBase,
                     goal: goal,
@@ -667,10 +751,14 @@ final class MealPlanService: ObservableObject {
                 useCustomSelections: true
             )
             let customOption = MealPlanOption(
-                name: "Montado",
-                subtitle: "Suas escolhas",
+                name: "Meu Cardápio",
+                subtitle: "Montado por você",
                 meals: customMeals
             )
+
+            if customSelection.replacesRecommended {
+                return DailyMealPlan(dayOfWeek: day, options: [customOption])
+            }
 
             return DailyMealPlan(dayOfWeek: day, options: options + [customOption])
         }

@@ -151,13 +151,10 @@ struct RootView: View {
             countryCode: authService.currentUser?.countryCode
         )
         mealPlanService.loadSavedData()
-        if mealPlanService.weeklyPlan.isEmpty, let user = authService.currentUser {
-            mealPlanService.generatePlan(for: user)
-        }
         if let userId = authService.currentUser?.id {
-            await MealPhotoAnalysisService.shared.loadIfNeeded(userId: userId)
+            Task { await MealPhotoAnalysisService.shared.loadIfNeeded(userId: userId) }
             authService.syncProfilePhotoToCloudIfNeeded()
-            await DuoTeamService.shared.loadIfNeeded()
+            Task { await DuoTeamService.shared.loadIfNeeded() }
         }
         refreshInactivityReminder()
         EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
@@ -173,19 +170,19 @@ struct RootView: View {
 
         // Phase 4 — HealthKit + notifications (after tabs are interactive)
         await healthKitManager.requestAuthorization()
-        NotificationService.shared.refreshRecurringNotifications()
-        // Espelha treinos de hoje no Calendário (uma vez por sessão; pede permissão se necessário).
+        NotificationService.shared.refreshRecurringNotifications(force: true)
+        // Espelha treinos de hoje no Calendário só se a permissão já existir (não pede no launch).
         WorkoutCalendarService.syncTodaysCompletedSessions(workoutStore.sessionHistory)
         ExternalWorkoutSyncService.shared.bind(
             workoutStore: workoutStore,
             athleteName: authService.currentUser?.greetingName
         )
-        await ExternalWorkoutSyncService.shared.syncRecentExternalWorkouts(reason: .startup)
+        Task { await ExternalWorkoutSyncService.shared.syncRecentExternalWorkouts(reason: .startup) }
 
         try? await Task.sleep(nanoseconds: 700_000_000)
 
         // Phase 5 — exercise video/GIF Firebase catalog last
-        await exerciseVideoRepository.bootstrapRemoteCatalog()
+        Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
     }
 
     /// Foreground return: stagger the same heavy work that used to run synchronously in onChange.
@@ -221,20 +218,20 @@ struct RootView: View {
         syncWellnessCloudHistory()
         if authService.currentUser?.id != nil {
             authService.syncProfilePhotoToCloudIfNeeded()
-            await DuoTeamService.shared.loadIfNeeded()
+            Task { await DuoTeamService.shared.loadIfNeeded() }
         }
 
         try? await Task.sleep(nanoseconds: 250_000_000)
         NotificationService.shared.refreshRecurringNotifications()
 
         try? await Task.sleep(nanoseconds: 400_000_000)
-        await exerciseVideoRepository.bootstrapRemoteCatalog()
-        await healthKitManager.refreshFromHealthKit()
+        Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
+        Task { await healthKitManager.refreshFromHealthKit() }
         ExternalWorkoutSyncService.shared.bind(
             workoutStore: workoutStore,
             athleteName: authService.currentUser?.greetingName
         )
-        await ExternalWorkoutSyncService.shared.syncRecentExternalWorkouts(reason: .foreground)
+        Task { await ExternalWorkoutSyncService.shared.syncRecentExternalWorkouts(reason: .foreground) }
     }
 
     private func syncWorkoutCloudHistory() {

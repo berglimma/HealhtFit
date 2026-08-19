@@ -104,12 +104,6 @@ enum AppFeedbackKind: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-private struct AppFeedbackMailDraft: Identifiable {
-    let id = UUID()
-    let subject: String
-    let body: String
-}
-
 struct SupportContactView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -138,23 +132,24 @@ struct SupportContactView: View {
 }
 
 /// Formulário de reclamações, sugestões, melhorias e dúvidas.
-/// O destinatário vai em cópia oculta (BCC) e não aparece na tela.
+/// O destinatário vai em cópia oculta (BCC) e não aparece na tela do HealthFit.
 struct AppFeedbackFormSections: View {
     @EnvironmentObject private var authService: AuthService
 
     @State private var kind: AppFeedbackKind = .suggestion
     @State private var message = ""
     @State private var mailDraft: AppFeedbackMailDraft?
+    @State private var isSending = false
     @State private var showSentAlert = false
     @State private var showFailedAlert = false
-    @State private var showMailUnavailableAlert = false
+    @State private var failureMessage = "Tente de novo em instantes."
 
     private var trimmedMessage: String {
         message.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var canSend: Bool {
-        !trimmedMessage.isEmpty
+        !trimmedMessage.isEmpty && !isSending && mailDraft == nil
     }
 
     var body: some View {
@@ -165,6 +160,7 @@ struct AppFeedbackFormSections: View {
                 }
             }
             .pickerStyle(.menu)
+            .disabled(isSending)
 
             ZStack(alignment: .topLeading) {
                 if trimmedMessage.isEmpty {
@@ -178,35 +174,58 @@ struct AppFeedbackFormSections: View {
                 TextEditor(text: $message)
                     .frame(minHeight: 120)
                     .scrollContentBackground(.hidden)
+                    .disabled(isSending)
             }
 
             Button {
                 sendFeedback()
             } label: {
-                Label("Enviar", systemImage: "paperplane.fill")
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+                HStack {
+                    Spacer()
+                    if isSending {
+                        ProgressView()
+                            .tint(AppTheme.accent)
+                    } else {
+                        Label("Enviar", systemImage: "paperplane.fill")
+                    }
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
             }
             .disabled(!canSend)
             .tint(AppTheme.accent)
         } header: {
             Text("Feedback do aplicativo")
-        } footer: {
-            Text("Ao tocar em Enviar, a mensagem segue para a equipe HealthFit com o texto que você escreveu. O destinatário permanece oculto.")
         }
-        .sheet(item: $mailDraft) { draft in
+        .sheet(item: $mailDraft, onDismiss: {
+            isSending = false
+        }) { draft in
             MailComposeView(
-                recipients: [],
-                bccRecipients: [AppLegalConfiguration.supportEmail],
+                recipients: [AppLegalConfiguration.supportEmail],
                 subject: draft.subject,
                 body: draft.body
             ) { result in
                 mailDraft = nil
+                isSending = false
                 switch result {
                 case .sent:
+                    let sentKind = draft.kind
+                    let sentText = draft.message
+                    let sentName = draft.accountName
+                    let sentEmail = draft.accountEmail
                     message = ""
                     showSentAlert = true
+                    Task {
+                        await AppFeedbackFirestoreService.persistIfPossible(
+                            kind: sentKind,
+                            message: sentText,
+                            accountName: sentName,
+                            accountEmail: sentEmail
+                        )
+                    }
                 case .failed:
+                    failureMessage = MailSetupGuidance.sendFailedMessage
                     showFailedAlert = true
                 default:
                     break
@@ -216,48 +235,51 @@ struct AppFeedbackFormSections: View {
         .alert("Feedback enviado", isPresented: $showSentAlert) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Obrigado. Sua mensagem foi enviada para a equipe HealthFit.")
+            Text("Obrigado. Sua mensagem foi enviada para \(AppLegalConfiguration.supportEmail).")
         }
         .alert("Não foi possível enviar", isPresented: $showFailedAlert) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Tente de novo em instantes. Se o problema continuar, configure o app Mail em Ajustes.")
-        }
-        .alert("Mail não configurado", isPresented: $showMailUnavailableAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Para enviar o feedback, adicione uma conta no app Mail (Ajustes → Mail → Contas) e toque em Enviar novamente.")
+            Text(failureMessage)
         }
     }
 
     private func sendFeedback() {
         let text = trimmedMessage
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty, !isSending else { return }
 
         guard MailComposeView.canSendMail else {
-            showMailUnavailableAlert = true
+            failureMessage = MailSetupGuidance.unavailableMessage
+            showFailedAlert = true
             return
         }
 
-        mailDraft = AppFeedbackMailDraft(
-            subject: "HealthFit · \(kind.rawValue)",
-            body: composedBody(text: text)
-        )
-    }
-
-    private func composedBody(text: String) -> String {
         let user = authService.currentUser
         let name = user?.greetingName ?? user?.name ?? "—"
         let account = user?.email ?? "—"
-        return """
-        Tipo: \(kind.rawValue)
-
-        \(text)
-
-        —
-        App: HealthFit \(AppInfo.appVersion)
-        Conta: \(name)
-        E-mail da conta: \(account)
-        """
+        isSending = true
+        mailDraft = AppFeedbackMailDraft(
+            kind: kind.rawValue,
+            message: text,
+            accountName: name,
+            accountEmail: account,
+            subject: "HealthFit · \(kind.rawValue)",
+            body: AppFeedbackFirestoreService.composedBody(
+                kind: kind.rawValue,
+                message: text,
+                accountName: name,
+                accountEmail: account
+            )
+        )
     }
+}
+
+private struct AppFeedbackMailDraft: Identifiable {
+    let id = UUID()
+    let kind: String
+    let message: String
+    let accountName: String
+    let accountEmail: String
+    let subject: String
+    let body: String
 }

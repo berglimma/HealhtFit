@@ -11,6 +11,7 @@ final class DuoTeamService: ObservableObject {
     @Published private(set) var sentInvites: [DuoTeamInvite] = []
     @Published private(set) var receivedInvites: [DuoTeamInvite] = []
     @Published private(set) var messagesByTeam: [String: [DuoChatMessage]] = [:]
+    @Published private(set) var lastReadAtByTeam: [String: Date] = [:]
     @Published var lastError: String?
     @Published private(set) var isLoading = false
 
@@ -26,6 +27,7 @@ final class DuoTeamService: ObservableObject {
         static let teams = "duo_teams"
         static let invites = "duo_invites"
         static let notifiedPendingInvites = "duo_notified_pending_invites"
+        static let readCursors = "duo_read_cursors"
     }
 
     private init() {}
@@ -60,6 +62,8 @@ final class DuoTeamService: ObservableObject {
             teams = []
             sentInvites = []
             receivedInvites = []
+            messagesByTeam = [:]
+            lastReadAtByTeam = [:]
             boundCountryCode = nil
             boundPhotoURL = nil
             return
@@ -111,6 +115,9 @@ final class DuoTeamService: ObservableObject {
 
         await deliverInboxNotificationsIfNeeded(userId: userId)
         startInboxListenerIfNeeded(userId: userId)
+        await mergeCloudReadCursors(userId: userId)
+        await prefetchMessagesForJoinedTeams()
+        syncMessageListeners()
 
         await refreshMyMemberProfileAcrossTeams()
         persistLocal()
@@ -185,12 +192,14 @@ final class DuoTeamService: ObservableObject {
         if let uid = boundUserId {
             UserScopedDefaults.remove(logicalKey: ScopedKey.teams, uid: uid, legacyKey: nil)
             UserScopedDefaults.remove(logicalKey: ScopedKey.invites, uid: uid, legacyKey: nil)
+            UserScopedDefaults.remove(logicalKey: ScopedKey.readCursors, uid: uid, legacyKey: nil)
         }
         DuoTeamPrivacy.reset()
         teams = []
         sentInvites = []
         receivedInvites = []
         messagesByTeam = [:]
+        lastReadAtByTeam = [:]
         boundUserId = nil
         boundCountryCode = nil
         boundPhotoURL = nil
@@ -258,6 +267,7 @@ final class DuoTeamService: ObservableObject {
         )
         teams.insert(team, at: 0)
         persistLocal()
+        startListening(teamId: team.id)
         do {
             try await DuoTeamFirestoreService.saveTeam(team)
             let system = DuoChatMessage(
@@ -854,7 +864,13 @@ final class DuoTeamService: ObservableObject {
         }
 
         stopListening(teamId: teamId)
-        messagesByTeam[teamId] = nil
+        var nextMessages = messagesByTeam
+        nextMessages[teamId] = nil
+        messagesByTeam = nextMessages
+        var nextRead = lastReadAtByTeam
+        nextRead[teamId] = nil
+        lastReadAtByTeam = nextRead
+        persistReadCursors()
 
         let teamName = team.name
         let remainingAfterLeave = team.members.filter { $0.uid != userId }
@@ -997,6 +1013,8 @@ final class DuoTeamService: ObservableObject {
             }
             receivedInvites.removeAll { $0.id == invite.id }
             persistLocal()
+            startListening(teamId: team.id)
+            await loadMessages(teamId: team.id)
 
             let system = DuoChatMessage(
                 id: UUID().uuidString,
@@ -1189,6 +1207,38 @@ final class DuoTeamService: ObservableObject {
             .sorted { ($0.proposedAt ?? $0.createdAt) < ($1.proposedAt ?? $1.createdAt) }
     }
 
+    func unreadCount(for teamId: String) -> Int {
+        DuoTeamChatPolicy.unreadCount(
+            in: messagesByTeam[teamId] ?? [],
+            currentUserId: boundUserId,
+            lastReadAt: lastReadAtByTeam[teamId]
+        )
+    }
+
+    var totalUnreadChatCount: Int {
+        teams.reduce(0) { $0 + unreadCount(for: $1.id) }
+    }
+
+    /// Marca o chat como lido (abrir a conversa). Mensagens novas depois disso voltam a contar.
+    func markChatRead(teamId: String) {
+        let latestMessageAt = (messagesByTeam[teamId] ?? []).map(\.createdAt).max()
+        let cursor = max(Date(), latestMessageAt ?? .distantPast)
+        if let previous = lastReadAtByTeam[teamId], previous >= cursor { return }
+        var next = lastReadAtByTeam
+        next[teamId] = cursor
+        lastReadAtByTeam = next
+        persistReadCursors()
+        let userId = boundUserId
+        Task {
+            guard let userId else { return }
+            try? await DuoTeamFirestoreService.saveReadCursor(
+                userId: userId,
+                teamId: teamId,
+                lastReadAt: cursor
+            )
+        }
+    }
+
     // MARK: - Helpers
 
     static func normalizedPhone(_ raw: String) -> String {
@@ -1317,6 +1367,42 @@ final class DuoTeamService: ObservableObject {
         try? await DuoTeamFirestoreService.deleteMessages(teamId: teamId, messageIds: expiredIds)
     }
 
+    private func prefetchMessagesForJoinedTeams() async {
+        for team in teams {
+            await loadMessages(teamId: team.id)
+        }
+    }
+
+    private func syncMessageListeners() {
+        let joined = Set(teams.map(\.id))
+        let stale = listeners.keys.filter { !joined.contains($0) }
+        for teamId in stale {
+            stopListening(teamId: teamId)
+        }
+        for teamId in joined {
+            startListening(teamId: teamId)
+        }
+    }
+
+    private func mergeCloudReadCursors(userId: String) async {
+        let remote = (try? await DuoTeamFirestoreService.fetchReadCursors(userId: userId)) ?? [:]
+        guard !remote.isEmpty else { return }
+        var next = lastReadAtByTeam
+        for (teamId, date) in remote {
+            if let local = next[teamId] {
+                next[teamId] = max(local, date)
+            } else {
+                next[teamId] = date
+            }
+        }
+        lastReadAtByTeam = next
+        persistReadCursors()
+    }
+
+    private func persistReadCursors() {
+        persistLocal()
+    }
+
     private func tearDownListeners() {
         for (_, reg) in listeners { reg.remove() }
         listeners.removeAll()
@@ -1335,6 +1421,8 @@ final class DuoTeamService: ObservableObject {
         Task {
             await deliverInboxNotificationsIfNeeded(userId: userId)
             startInboxListenerIfNeeded(userId: userId)
+            await prefetchMessagesForJoinedTeams()
+            syncMessageListeners()
         }
     }
 
@@ -1555,6 +1643,12 @@ final class DuoTeamService: ObservableObject {
         } else {
             sentInvites = []
         }
+        if let data = UserScopedDefaults.data(forLogicalKey: ScopedKey.readCursors, uid: uid, legacyKey: nil),
+           let decoded = try? JSONDecoder().decode([String: Date].self, from: data) {
+            lastReadAtByTeam = decoded
+        } else {
+            lastReadAtByTeam = [:]
+        }
     }
 
     private func persistLocal() {
@@ -1564,6 +1658,9 @@ final class DuoTeamService: ObservableObject {
         }
         if let data = try? JSONEncoder().encode(sentInvites) {
             UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.invites, uid: uid, legacyKey: nil)
+        }
+        if let data = try? JSONEncoder().encode(lastReadAtByTeam) {
+            UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.readCursors, uid: uid, legacyKey: nil)
         }
     }
 }

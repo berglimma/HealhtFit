@@ -88,6 +88,55 @@ enum Gender: String, CaseIterable, Codable, Identifiable, Hashable {
     var id: String { rawValue }
 }
 
+/// Papel informado no perfil: aluno, personal, nutricionista ou os dois profissionais.
+enum UserAccountRole: String, CaseIterable, Codable, Identifiable {
+    case student = "Aluno"
+    case personal = "Personal"
+    case nutritionist = "Nutricionista"
+    case personalAndNutritionist = "Personal e Nutrição"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .student: return "figure.run"
+        case .personal: return "figure.strengthtraining.traditional"
+        case .nutritionist: return "leaf.fill"
+        case .personalAndNutritionist: return "person.2.fill"
+        }
+    }
+
+    var tintColor: Color {
+        switch self {
+        case .student:
+            return Color.green
+        case .personal:
+            return Color.blue
+        case .nutritionist:
+            return Color.orange
+        case .personalAndNutritionist:
+            return Color.red
+        }
+    }
+
+    var localizedTitle: String {
+        switch self {
+        case .student: return L10n.Profile.accountRoleStudent
+        case .personal: return L10n.Profile.accountRolePersonal
+        case .nutritionist: return L10n.Profile.accountRoleNutritionist
+        case .personalAndNutritionist: return L10n.Profile.accountRolePersonalAndNutrition
+        }
+    }
+
+    var isPersonalProfessional: Bool {
+        self == .personal || self == .personalAndNutritionist
+    }
+
+    var isNutritionProfessional: Bool {
+        self == .nutritionist || self == .personalAndNutritionist
+    }
+}
+
 // MARK: - Ciclo menstrual (perfil feminino)
 
 /// Dados informados pela usuária para estimar a fase do ciclo.
@@ -545,6 +594,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var nutritionistEmail: String
     /// Usuário declarou que possui nutricionista (libera edição dos campos).
     var usesNutritionist: Bool
+    var accountRole: UserAccountRole
     var biotype: Biotype
     var goal: FitnessGoal
     var gender: Gender
@@ -581,6 +631,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         nutritionistName: String = "",
         nutritionistEmail: String = "",
         usesNutritionist: Bool = false,
+        accountRole: UserAccountRole = .student,
         biotype: Biotype = .mesomorph,
         goal: FitnessGoal = .muscleGain,
         gender: Gender = .male,
@@ -607,6 +658,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         self.nutritionistName = nutritionistName
         self.nutritionistEmail = nutritionistEmail
         self.usesNutritionist = usesNutritionist
+        self.accountRole = accountRole
         self.biotype = biotype
         self.goal = goal
         self.gender = gender
@@ -643,6 +695,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
             ?? !personalTrainerEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         usesNutritionist = try container.decodeIfPresent(Bool.self, forKey: .usesNutritionist)
             ?? !nutritionistEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        accountRole = try container.decodeIfPresent(UserAccountRole.self, forKey: .accountRole) ?? .student
         biotype = try container.decode(Biotype.self, forKey: .biotype)
         goal = try container.decode(FitnessGoal.self, forKey: .goal)
         gender = try container.decodeIfPresent(Gender.self, forKey: .gender) ?? .male
@@ -674,7 +727,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case id, name, displayName, email, personalTrainerName, personalTrainerEmail, usesPersonalTrainer
-        case nutritionistName, nutritionistEmail, usesNutritionist
+        case nutritionistName, nutritionistEmail, usesNutritionist, accountRole
         case biotype, goal, gender, weight, height, age, dateOfBirth, countryCode, caloricDeficit
         case bodyMeasurements, previousBodyMeasurements, menstrualCycle, practicedModalityIDs, createdAt, updatedAt
     }

@@ -44,7 +44,6 @@ struct SupplementsLogView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            header
             pickerSection
             quantitySection
             logButton
@@ -56,17 +55,6 @@ struct SupplementsLogView: View {
         .adaptiveContentWidth()
         .onAppear {
             applyDefaults(for: selectedCatalogId)
-        }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Suplementos de hoje")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(AppTheme.textPrimary)
-            Text("Registre o que você ingeriu hoje. Os dados ficam salvos no dia atual.")
-                .font(.caption)
-                .foregroundStyle(AppTheme.textSecondary)
         }
     }
 
@@ -180,6 +168,15 @@ struct SupplementsLogView: View {
 
     private var todayListSection: some View {
         VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Suplementos de hoje")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("Registre o que você ingeriu hoje. Os dados ficam salvos no dia atual.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
             HStack {
                 Text("Registrados hoje")
                     .font(.subheadline.weight(.semibold))

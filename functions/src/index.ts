@@ -2,6 +2,7 @@ import {initializeApp} from "firebase-admin/app";
 import {getFirestore, Timestamp} from "firebase-admin/firestore";
 import {getMessaging} from "firebase-admin/messaging";
 import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {logger} from "firebase-functions";
 import {setGlobalOptions} from "firebase-functions/v2";
@@ -56,26 +57,63 @@ type DuoMessage = {
   senderName?: string;
   text?: string;
   kind?: string;
+  payload?: unknown;
 };
 
+function firstNonEmpty(...values: Array<string | undefined>): string {
+  for (const value of values) {
+    const trimmed = value?.trim() ?? "";
+    if (trimmed) return trimmed;
+  }
+  return "";
+}
+
+/** O iOS grava o corpo em `payload` (JSON); campos top-level são o caminho rápido. */
+function fieldsFromPayload(payload: unknown): DuoMessage {
+  if (typeof payload !== "string" || !payload.trim()) return {};
+  try {
+    const parsed = JSON.parse(payload) as Record<string, unknown>;
+    return {
+      senderUid: typeof parsed.senderUid === "string" ? parsed.senderUid : undefined,
+      senderName:
+        typeof parsed.senderName === "string" ? parsed.senderName : undefined,
+      text: typeof parsed.text === "string" ? parsed.text : undefined,
+      kind: typeof parsed.kind === "string" ? parsed.kind : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
 /**
- * Esqueleto Duo + FCM: ao criar mensagem no chat, envia push aos demais membros.
+ * Push FCM aos demais membros ao criar mensagem no chat.
  * Coexiste com inbox local (`duoNotifications`) no app.
+ * Instância mínima evita cold start > 15s; APNs priority 10 entrega alerta imediato.
  */
 export const onDuoChatMessageCreated = onDocumentCreated(
-  "duoTeams/{teamId}/messages/{messageId}",
+  {
+    document: "duoTeams/{teamId}/messages/{messageId}",
+    timeoutSeconds: 30,
+    memory: "256MiB",
+    concurrency: 20,
+  },
   async (event) => {
     const data = event.data?.data() as DuoMessage | undefined;
     if (!data) return;
 
-    const kind = data.kind ?? "text";
+    const nested = fieldsFromPayload(data.payload);
+    const kind = firstNonEmpty(data.kind, nested.kind) || "text";
     if (kind === "system") return;
 
     const teamId = event.params.teamId;
-    const senderUid = data.senderUid ?? "";
-    const senderName = (data.senderName ?? "Alguém").trim() || "Alguém";
-    const rawText = (data.text ?? "").trim();
-    if (!rawText) return;
+    const senderUid = firstNonEmpty(data.senderUid, nested.senderUid);
+    const senderName =
+      firstNonEmpty(data.senderName, nested.senderName) || "Alguém";
+    const rawText = firstNonEmpty(data.text, nested.text);
+    if (!rawText) {
+      logger.info("onDuoChatMessageCreated: empty text, skip", {teamId});
+      return;
+    }
 
     const teamSnap = await db.collection("duoTeams").doc(teamId).get();
     if (!teamSnap.exists) return;
@@ -93,15 +131,16 @@ export const onDuoChatMessageCreated = onDocumentCreated(
         ? `Proposta de treino · ${teamName}`
         : `Nova mensagem · ${teamName}`;
     const body = `${senderName}: ${preview}`;
+    const chatType =
+      kind === "scheduleProposal" ? "duoChatSchedule" : "duoChatMessage";
 
+    const tokenSnaps = await Promise.all(
+      recipients.map((uid) =>
+        db.collection("users").doc(uid).collection("fcmTokens").limit(8).get()
+      )
+    );
     const tokens: string[] = [];
-    for (const uid of recipients) {
-      const tokenSnap = await db
-        .collection("users")
-        .doc(uid)
-        .collection("fcmTokens")
-        .limit(8)
-        .get();
+    for (const tokenSnap of tokenSnaps) {
       for (const doc of tokenSnap.docs) {
         const token = doc.data().token as string | undefined;
         if (token && token.length > 20) tokens.push(token);
@@ -118,16 +157,24 @@ export const onDuoChatMessageCreated = onDocumentCreated(
       tokens: uniqueTokens,
       notification: {title, body},
       data: {
-        type: kind === "scheduleProposal" ? "duoChatSchedule" : "duoChatMessage",
+        type: chatType,
         teamId,
         teamName,
-        kind: "DUO_TEAM",
+        kind: chatType,
+        category: "DUO_TEAM",
       },
+      android: {priority: "high"},
       apns: {
+        headers: {
+          "apns-priority": "10",
+          "apns-push-type": "alert",
+        },
         payload: {
           aps: {
+            alert: {title, body},
             sound: "default",
             badge: 1,
+            category: "DUO_TEAM",
           },
         },
       },
@@ -165,4 +212,137 @@ export const onDuoChatMessageCreated = onDocumentCreated(
       failureCount: response.failureCount,
     });
   },
+);
+
+const COURTESY_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const COURTESY_PLAN_RANK: Record<string, number> = {
+  basic: 1,
+  fit: 2,
+  ai: 3,
+  complete: 4,
+};
+const COURTESY_PLAN_LABEL: Record<string, string> = {
+  basic: "Básico",
+  fit: "Fit",
+  ai: "IA Plus",
+  complete: "Completo",
+};
+
+function normalizeCourtesyCode(raw: string): string {
+  return raw
+    .trim()
+    .toUpperCase()
+    .replace(/[–—]/g, "-")
+    .replace(/[^A-Z0-9-]/g, "");
+}
+
+function isValidCourtesyCode(code: string): boolean {
+  const match = /^HF-(BASIC|FIT|AI|COMPLETE)-([A-Z2-9]{6})$/.exec(code);
+  if (!match) return false;
+  return [...match[2]].every((ch) => COURTESY_ALPHABET.includes(ch));
+}
+
+/**
+ * Resgata um voucher de cortesia (30 dias) para o usuário autenticado.
+ * Códigos são de uso único; o brinde fica em courtesyGrants/{uid}.
+ */
+export const redeemCourtesyVoucher = onCall(
+  {
+    cors: true,
+    invoker: "public",
+    timeoutSeconds: 15,
+    memory: "256MiB",
+  },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Entre na sua conta para resgatar o código."
+      );
+    }
+
+    const code = normalizeCourtesyCode(String(request.data?.code ?? ""));
+    if (!isValidCourtesyCode(code)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Código inválido. Confira e tente de novo."
+      );
+    }
+
+    const voucherRef = db.collection("courtesyVouchers").doc(code);
+    const grantRef = db.collection("courtesyGrants").doc(uid);
+
+    const result = await db.runTransaction(async (tx) => {
+      const voucherSnap = await tx.get(voucherRef);
+      if (!voucherSnap.exists) {
+        throw new HttpsError("not-found", "Código inválido ou inexistente.");
+      }
+
+      const voucher = voucherSnap.data() ?? {};
+      const redeemedBy = voucher.redeemedBy as string | undefined;
+      if (redeemedBy) {
+        if (redeemedBy === uid) {
+          throw new HttpsError(
+            "failed-precondition",
+            "Você já resgatou este código."
+          );
+        }
+        throw new HttpsError(
+          "failed-precondition",
+          "Este código já foi usado."
+        );
+      }
+
+      const plan = String(voucher.plan ?? "");
+      const planRank = COURTESY_PLAN_RANK[plan] ?? 0;
+      if (planRank < 1) {
+        throw new HttpsError("internal", "Plano do voucher inválido.");
+      }
+
+      const durationDays = Number(voucher.durationDays) || 30;
+      const grantSnap = await tx.get(grantRef);
+      if (grantSnap.exists) {
+        const existing = grantSnap.data() ?? {};
+        const existingExpires = existing.expiresAt as Timestamp | undefined;
+        const stillActive =
+          existingExpires != null && existingExpires.toMillis() > Date.now();
+        const existingRank = COURTESY_PLAN_RANK[String(existing.plan)] ?? 0;
+        if (stillActive && existingRank > planRank) {
+          const label =
+            COURTESY_PLAN_LABEL[String(existing.plan)] ?? String(existing.plan);
+          throw new HttpsError(
+            "failed-precondition",
+            `Você já tem cortesia do plano ${label} ativa.`
+          );
+        }
+      }
+
+      const now = Timestamp.now();
+      const expiresAt = Timestamp.fromMillis(
+        Date.now() + durationDays * 24 * 60 * 60 * 1000
+      );
+
+      tx.update(voucherRef, {
+        redeemedBy: uid,
+        redeemedAt: now,
+      });
+      tx.set(grantRef, {
+        plan,
+        durationDays,
+        code,
+        redeemedAt: now,
+        expiresAt,
+      });
+
+      return {
+        plan,
+        durationDays,
+        expiresAtMs: expiresAt.toMillis(),
+      };
+    });
+
+    logger.info("redeemCourtesyVoucher", {uid, code, plan: result.plan});
+    return result;
+  }
 );

@@ -142,6 +142,7 @@ final class NotificationService {
     private let assistantCardioNudgeKey = "healthfit_assistant_cardio_nudge_for"
     private let assistantMeditationNudgeKey = "healthfit_assistant_meditation_nudge_for"
     private let mealRemindersEnabledKey = "healthfit_meal_reminders_enabled"
+    private let lastRecurringRefreshDayKey = "healthfit.notifications.lastRecurringRefreshDay"
 
     static let inactivityThreshold: TimeInterval = 48 * 60 * 60
 
@@ -202,14 +203,14 @@ final class NotificationService {
                         // Defer bulk scheduling so first launch permission prompt does not freeze UI.
                         await Task.yield()
                         try? await Task.sleep(nanoseconds: 400_000_000)
-                        NotificationService.shared.refreshRecurringNotifications()
+                        NotificationService.shared.refreshRecurringNotifications(force: true)
                     }
                 }
             case .authorized, .provisional, .ephemeral:
                 Task { @MainActor in
                     await Task.yield()
                     try? await Task.sleep(nanoseconds: 400_000_000)
-                    NotificationService.shared.refreshRecurringNotifications()
+                    NotificationService.shared.refreshRecurringNotifications(force: true)
                 }
             case .denied:
                 print("[HealthFit] Notificações desativadas em Ajustes; reative para receber lembretes de refeição e motivação.")
@@ -219,7 +220,12 @@ final class NotificationService {
         }
     }
 
-    func refreshRecurringNotifications() {
+    func refreshRecurringNotifications(force: Bool = false) {
+        let today = Calendar.current.startOfDay(for: .now).timeIntervalSince1970
+        if !force {
+            let last = UserDefaults.standard.double(forKey: lastRecurringRefreshDayKey)
+            if last == today { return }
+        }
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             guard settings.authorizationStatus == .authorized
                     || settings.authorizationStatus == .provisional
@@ -228,6 +234,7 @@ final class NotificationService {
                 return
             }
             Task { @MainActor in
+                UserDefaults.standard.set(today, forKey: NotificationService.shared.lastRecurringRefreshDayKey)
                 NotificationService.shared.scheduleAuthorizedRecurringNotifications()
             }
         }
@@ -1399,13 +1406,11 @@ final class AppNotificationCenterDelegate: NSObject, UNUserNotificationCenterDel
                 EveningTrainingNudgeService.handleNotificationWake()
             }
         }
-        if content.categoryIdentifier == "DUO_TEAM" {
-            Task { @MainActor in
-                DuoNavigationRouter.shared.handleNotificationUserInfo(
-                    content.userInfo,
-                    category: content.categoryIdentifier
-                )
-            }
+        Task { @MainActor in
+            DuoNavigationRouter.shared.handleNotificationUserInfo(
+                content.userInfo,
+                category: content.categoryIdentifier
+            )
         }
         completionHandler()
     }

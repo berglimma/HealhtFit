@@ -84,17 +84,17 @@ struct MealPlanView: View {
             .alert("Falha no envio", isPresented: $showEmailFailedAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Não foi possível enviar o e-mail. Verifique se há uma conta de e-mail configurada no iPhone (Ajustes → Mail → Contas).")
+                Text(MailSetupGuidance.sendFailedMessage)
             }
             .alert("E-mail indisponível", isPresented: $showMailUnavailableAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Configure uma conta de e-mail no iPhone (Ajustes → Mail → Contas) ou use Compartilhar para enviar o relatório por outro app.")
+                Text(MailSetupGuidance.unavailableMessage)
             }
             .alert("Compartilhar relatório", isPresented: $showShareHintAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("O app Mail não está configurado (ou o relatório é grande demais para mailto). Escolha Gmail, Outlook ou outro app na tela de compartilhar e envie para o nutricionista.")
+                Text("O app Mail não está configurado neste \(MailSetupGuidance.deviceName) (ou o relatório é grande demais para mailto). Escolha Gmail, Outlook ou outro app na tela de compartilhar e envie para o nutricionista.")
             }
             .alert("Cardápio atualizado", isPresented: $showMealPlanUpdatedAlert) {
                 Button("OK", role: .cancel) {}
@@ -124,14 +124,15 @@ struct MealPlanView: View {
             .numericKeyboardDismiss()
             .background(AppTheme.background)
             .navigationTitle("Nutrição")
-            .toolbar { shoppingCartToolbar }
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar { shoppingListToolbar }
     }
 
     @ViewBuilder
     private var mealPlanContent: some View {
         ScrollView {
             VStack(spacing: 8) {
-                if trainingNutritionSync.hasActiveTrainingFocus {
+                if nutritionTab == 0, trainingNutritionSync.hasActiveTrainingFocus {
                     trainingFocusBanner
                         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                         .padding(.top, 8)
@@ -140,16 +141,17 @@ struct MealPlanView: View {
 
                 nutritionTabPicker
 
-                if nutritionTab == 3 {
-                    // Plano IA: foto de análise no topo (acima de biotipo/preferências).
-                    MealPhotoAnalysisView()
-                        .requiresSubscription(.mealPhotoAnalysis)
-                    bodyMetricsSection
-                    menuPreferencesSection
-                } else {
+                if nutritionTab == 0 {
                     bodyMetricsSection
                     menuPreferencesSection
                     nutritionTabBody
+                } else if nutritionTab == 1 {
+                    nutritionTabBody
+                } else if nutritionTab == 2 {
+                    SupplementsLogView()
+                } else {
+                    MealPhotoAnalysisView()
+                        .requiresSubscription(.mealPhotoAnalysis)
                 }
             }
         }
@@ -197,38 +199,62 @@ struct MealPlanView: View {
         }
         .pickerStyle(.segmented)
         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+        .padding(.top, 8)
     }
 
     @ViewBuilder
     private var nutritionTabBody: some View {
-        if nutritionTab == 2 {
-            SupplementsLogView()
-        } else if mealPlanService.customMenuSelection.isReadyToBuild {
+        if mealPlanService.customMenuSelection.isReadyToBuild {
             if nutritionTab == 0 {
                 weeklyPlanSection
+                nutritionistReportSection
+                    .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                    .padding(.bottom, 24)
+                    .adaptiveContentWidth()
             } else {
                 menuBuilderSection
             }
-
-            nutritionistReportSection
-                .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                .padding(.bottom, 24)
-                .adaptiveContentWidth()
+        } else if nutritionTab == 1 {
+            preferencesRequiredOnPlanHint
         } else {
             preferencesRequiredState
         }
     }
 
     @ToolbarContentBuilder
-    private var shoppingCartToolbar: some ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
+    private var shoppingListToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
             Button {
                 showShoppingList = true
             } label: {
-                Image(systemName: "cart.fill")
-                    .foregroundStyle(AppTheme.accent)
+                VStack(spacing: 2) {
+                    Image(systemName: "cart.fill")
+                        .font(.body.weight(.semibold))
+                    Text("Lista de Compras")
+                        .font(.system(size: 10, weight: .semibold))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .foregroundStyle(AppTheme.accent)
+                .frame(minWidth: 72)
             }
+            .accessibilityLabel("Lista de Compras")
         }
+    }
+
+    private func planInsetCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+            )
+            .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
     }
 
     private func nutritionistMailSheet(_ draft: NutritionistMailDraft) -> some View {
@@ -258,8 +284,8 @@ struct MealPlanView: View {
     }
 
     private var bodyMetricsSection: some View {
-        VStack(spacing: 16) {
-            HStack {
+        planInsetCard {
+            VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Plano para \(selectedBiotype.rawValue)")
                         .font(.subheadline.weight(.semibold))
@@ -268,88 +294,100 @@ struct MealPlanView: View {
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
-                Spacer()
-            }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Biotipo")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-                AdaptiveBiotypeRow {
-                    ForEach(Biotype.allCases) { biotype in
-                        BiotypeCard(
-                            biotype: biotype,
-                            isSelected: selectedBiotype == biotype
-                        ) {
-                            updateBiotype(biotype)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Biotipo")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    AdaptiveBiotypeRow {
+                        ForEach(Biotype.allCases) { biotype in
+                            BiotypeCard(
+                                biotype: biotype,
+                                isSelected: selectedBiotype == biotype
+                            ) {
+                                updateBiotype(biotype)
+                            }
+                        }
+                    }
+
+                    BiotypeIdentificationHint(biotype: selectedBiotype)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Objetivo")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    AdaptiveGoalGrid {
+                        ForEach(FitnessGoal.allCases) { goal in
+                            GoalCard(goal: goal, isSelected: selectedGoal == goal) {
+                                updateGoal(goal)
+                            }
                         }
                     }
                 }
 
-                BiotypeIdentificationHint(biotype: selectedBiotype)
-            }
+                if let profile = previewProfile {
+                    Text("Dados físicos vêm do Perfil (peso, altura, idade e sexo).")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Objetivo")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-                AdaptiveGoalGrid {
-                    ForEach(FitnessGoal.allCases) { goal in
-                        GoalCard(goal: goal, isSelected: selectedGoal == goal) {
-                            updateGoal(goal)
-                        }
+                    caloricDeficitSection(profile: profile)
+
+                    HStack(spacing: 12) {
+                        MetabolicCard(
+                            title: "Metabolismo Basal",
+                            subtitle: "TMB (repouso)",
+                            value: "\(profile.basalMetabolicRate)",
+                            unit: "kcal/dia",
+                            icon: "heart.fill",
+                            color: .red
+                        )
+                        MetabolicCard(
+                            title: "Meta Diária",
+                            subtitle: deficitSubtitle(for: profile),
+                            value: "\(profile.dailyCalorieTarget)",
+                            unit: "kcal/dia",
+                            icon: "flame.fill",
+                            color: AppTheme.accentSecondary
+                        )
+                    }
+
+                    HStack {
+                        Label("IMC: \(String(format: "%.1f", profile.bmi))", systemImage: "figure.stand")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                        Spacer(minLength: 8)
+                        Label("TDEE: \(profile.estimatedTDEE) kcal", systemImage: "bolt.fill")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                 }
-            }
 
-            if let profile = previewProfile {
-                Text("Dados físicos vêm do Perfil (peso, altura, idade e sexo).")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-
-                caloricDeficitSection(profile: profile)
-
-                HStack(spacing: 12) {
-                    MetabolicCard(
-                        title: "Metabolismo Basal",
-                        subtitle: "TMB (repouso)",
-                        value: "\(profile.basalMetabolicRate)",
-                        unit: "kcal/dia",
-                        icon: "heart.fill",
-                        color: .red
-                    )
-                    MetabolicCard(
-                        title: "Meta Diária",
-                        subtitle: deficitSubtitle(for: profile),
-                        value: "\(profile.dailyCalorieTarget)",
-                        unit: "kcal/dia",
-                        icon: "flame.fill",
-                        color: AppTheme.accentSecondary
-                    )
+                Button {
+                    mealPlanService.setReplacesRecommended(false)
+                    applyMetricsAndRegenerate()
+                } label: {
+                    Label("Atualizar Cardápio", systemImage: "arrow.triangle.2.circlepath")
                 }
+                .buttonStyle(PrimaryButtonStyle(isEnabled: hasProfileMetrics && mealPlanService.customMenuSelection.isReadyToBuild))
+                .disabled(!hasProfileMetrics || !mealPlanService.customMenuSelection.isReadyToBuild)
 
-                HStack {
-                    Label("IMC: \(String(format: "%.1f", profile.bmi))", systemImage: "figure.stand")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.textSecondary)
-                    Spacer()
-                    Label("TDEE: \(profile.estimatedTDEE) kcal", systemImage: "bolt.fill")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.textSecondary)
+                Button {
+                    nutritionTab = 1
+                } label: {
+                    Label("Criar cardápio personalizado", systemImage: "fork.knife.circle")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
                 }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppTheme.accent)
+                .background(AppTheme.background)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
-
-            Button {
-                applyMetricsAndRegenerate()
-            } label: {
-                Label("Atualizar Cardápio", systemImage: "arrow.triangle.2.circlepath")
-            }
-            .buttonStyle(PrimaryButtonStyle(isEnabled: hasProfileMetrics && mealPlanService.customMenuSelection.isReadyToBuild))
-            .disabled(!hasProfileMetrics || !mealPlanService.customMenuSelection.isReadyToBuild)
         }
-        .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-        .adaptiveContentWidth()
-        .background(AppTheme.cardBackground)
     }
 
     private var weeklyPlanSection: some View {
@@ -509,8 +547,15 @@ struct MealPlanView: View {
                     .foregroundStyle(AppTheme.accentSecondary)
             }
         }
-        .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-        .adaptiveContentWidth()
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
         .padding(.vertical, 8)
     }
 
@@ -539,6 +584,9 @@ struct MealPlanView: View {
                         .foregroundStyle(.green)
                 }
 
+                MailAccountRequiredNotice(audience: .nutritionist)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
                 if !user.nutritionistName.isEmpty {
                     Text("Para: \(user.nutritionistName) · \(user.nutritionistEmail)")
                         .font(.caption)
@@ -551,7 +599,7 @@ struct MealPlanView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                Text("O relatório de Nutrição é enviado apenas ao nutricionista. Treinos continuam indo só para o personal.")
+                Text("O relatório de Nutrição é enviado apenas ao nutricionista (treinos vão só ao personal). O envio por e-mail exige o app Mail configurado neste \(MailSetupGuidance.deviceName).")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
                     .multilineTextAlignment(.center)
@@ -560,7 +608,7 @@ struct MealPlanView: View {
                     Label("Nutricionista não cadastrado", systemImage: "person.crop.circle.badge.exclamationmark")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.orange)
-                    Text("Cadastre nome e e-mail do nutricionista no Perfil para enviar o relatório desta aba.")
+                    Text("Cadastre nome e e-mail do nutricionista no Perfil para enviar o relatório desta aba. O envio exige o app Mail configurado neste \(MailSetupGuidance.deviceName) (\(MailSetupGuidance.settingsPath)).")
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                         .multilineTextAlignment(.center)
@@ -589,12 +637,32 @@ struct MealPlanView: View {
         .padding(.vertical, 48)
     }
 
+    private var preferencesRequiredOnPlanHint: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "fork.knife.circle")
+                .font(.system(size: 52))
+                .foregroundStyle(AppTheme.textSecondary)
+            Text("Responda lactose e doces na aba Plano para montar um cardápio personalizado.")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            Button("Ir para o Plano") {
+                nutritionTab = 0
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .padding(.horizontal, 40)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
+    }
+
     private var menuBuilderSection: some View {
         VStack(spacing: 16) {
             if let profile = previewProfile {
                 macrosSummary(mealPlanService.builtMenuOption(for: profile))
 
-                Text("Escolha uma opção para cada refeição do dia")
+                Text("Monte um cardápio personalizado: escolha uma opção para cada refeição e salve no plano semanal.")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -604,17 +672,18 @@ struct MealPlanView: View {
                 }
 
                 Button {
-                    applyMetricsAndRegenerate()
-                    nutritionTab = 0
-                    if let dayCount = mealPlanService.weeklyPlan.first?.options.count {
-                        selectedOption = max(dayCount - 1, 0)
-                    }
+                    savePersonalizedMenu()
                 } label: {
-                    Label("Salvar no Plano Semanal", systemImage: "checkmark.circle.fill")
+                    Label("Salvar e substituir o recomendado", systemImage: "checkmark.circle.fill")
                 }
                 .buttonStyle(PrimaryButtonStyle(isEnabled: hasProfileMetrics))
                 .disabled(!hasProfileMetrics)
                 .padding(.top, 8)
+
+                Text("O cardápio montado substitui as opções recomendadas na aba Plano.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 Text("Complete Seus Dados no Perfil (peso, altura, idade e sexo) para montar o cardápio.")
                     .font(.subheadline)
@@ -662,6 +731,11 @@ struct MealPlanView: View {
                                         .font(.caption.weight(.bold))
                                         .lineLimit(2)
                                         .multilineTextAlignment(.leading)
+                                    if template.isSimpleBasic {
+                                        Image(systemName: "leaf.circle.fill")
+                                            .font(.caption2)
+                                            .foregroundStyle(.green)
+                                    }
                                     if template.isFatLossFocused {
                                         Image(systemName: "flame.fill")
                                             .font(.caption2)
@@ -938,7 +1012,11 @@ struct MealPlanView: View {
             caloricDeficit = 400
         }
         authService.updateProfile(user)
-        mealPlanService.regeneratePlanIfNeeded(for: user)
+        if trainingNutritionSync.hasActiveTrainingFocus {
+            trainingNutritionSync.clearAlignedPlan(using: mealPlanService)
+        } else {
+            mealPlanService.regeneratePlanIfNeeded(for: user)
+        }
         ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
     }
 
@@ -953,6 +1031,14 @@ struct MealPlanView: View {
         mealPlanService.generatePlan(for: user)
         ProfileDataReminderService.shared.markBodyDataUpdated(for: user.id)
         showMealPlanUpdatedAlert = true
+    }
+
+    private func savePersonalizedMenu() {
+        trainingNutritionSync.clear()
+        mealPlanService.setReplacesRecommended(true)
+        applyMetricsAndRegenerate()
+        nutritionTab = 0
+        selectedOption = 0
     }
 
     private var mealReminderNotice: some View {
@@ -997,28 +1083,57 @@ struct MealPlanView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.textPrimary)
 
-            HStack(spacing: 8) {
-                ForEach(Array(dayPlan.options.enumerated()), id: \.element.id) { index, option in
-                    Button {
-                        selectedOption = index
-                    } label: {
-                        VStack(spacing: 4) {
-                            Text(option.name)
-                                .font(.caption.weight(.bold))
-                            Text(option.subtitle)
-                                .font(.caption2)
-                                .lineLimit(1)
-                            Text("\(option.totalCalories) kcal")
-                                .font(.caption2.weight(.medium))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 6)
-                        .foregroundStyle(selected == index ? .white : AppTheme.textPrimary)
-                        .background(selected == index ? AppTheme.accent : AppTheme.cardBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+            if dayPlan.options.count == 1, let option = dayPlan.options.first {
+                Button {
+                    selectedOption = 0
+                } label: {
+                    VStack(spacing: 4) {
+                        Text(option.name)
+                            .font(.caption.weight(.bold))
+                        Text(option.subtitle)
+                            .font(.caption2)
+                        Text("\(option.totalCalories) kcal")
+                            .font(.caption2.weight(.medium))
                     }
-                    .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .foregroundStyle(.white)
+                    .background(AppTheme.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            } else {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 8),
+                        GridItem(.flexible(), spacing: 8),
+                    ],
+                    spacing: 8
+                ) {
+                    ForEach(Array(dayPlan.options.enumerated()), id: \.element.id) { index, option in
+                        Button {
+                            selectedOption = index
+                        } label: {
+                            VStack(spacing: 4) {
+                                Text(option.name)
+                                    .font(.caption.weight(.bold))
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.8)
+                                Text(option.subtitle)
+                                    .font(.caption2)
+                                    .lineLimit(1)
+                                Text("\(option.totalCalories) kcal")
+                                    .font(.caption2.weight(.medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 6)
+                            .foregroundStyle(selected == index ? .white : AppTheme.textPrimary)
+                            .background(selected == index ? AppTheme.accent : AppTheme.background)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }
@@ -1097,11 +1212,21 @@ struct MealPlanView: View {
                 .foregroundStyle(AppTheme.textSecondary)
             Text("Nenhum plano gerado")
                 .foregroundStyle(AppTheme.textSecondary)
+            Text("Gere um cardápio pelo objetivo ou monte um personalizado refeição por refeição.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
             Button("Gerar Cardápio") {
                 applyMetricsAndRegenerate()
             }
             .buttonStyle(PrimaryButtonStyle())
             .padding(.horizontal, 40)
+            Button("Criar cardápio personalizado") {
+                nutritionTab = 1
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(AppTheme.accent)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, AppTheme.padding)

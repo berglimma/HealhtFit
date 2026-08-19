@@ -79,24 +79,31 @@ struct DuoTeamChatView: View {
         }
         .onAppear {
             duoService.restartListening(teamId: teamId)
+            duoService.markChatRead(teamId: teamId)
         }
-        .onDisappear {
-            duoService.stopListening(teamId: teamId)
+        .onChange(of: messages.count) { _, _ in
+            duoService.markChatRead(teamId: teamId)
+        }
+        .onChange(of: lastMessageId) { _, _ in
+            duoService.markChatRead(teamId: teamId)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 duoService.restartListening(teamId: teamId)
                 Task { await duoService.loadMessages(teamId: teamId) }
+                duoService.markChatRead(teamId: teamId)
             }
         }
         .task(id: teamId) {
             duoService.restartListening(teamId: teamId)
             await duoService.loadMessages(teamId: teamId)
+            duoService.markChatRead(teamId: teamId)
             // Backup leve enquanto a tela está aberta (caso o snapshot atrase).
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled else { break }
                 await duoService.loadMessages(teamId: teamId)
+                duoService.markChatRead(teamId: teamId)
             }
         }
         .sheet(isPresented: $showSchedule) {

@@ -204,6 +204,12 @@ struct ShoppingListView: View {
                 Label("Relatório de compras da semana", systemImage: "doc.text.fill")
                     .font(.subheadline.weight(.medium))
             }
+
+            if mealPlanService.shoppingList.contains(where: { !mealPlanService.isItemInCurrentDiet($0) }) {
+                Text("🤔 Itens em laranja não estão no cardápio atual. Você ainda pode marcá-los, mas a dieta rende mais se for seguida à risca.")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
         }
     }
 
@@ -324,7 +330,10 @@ struct ShoppingListView: View {
         ForEach(groupedItems, id: \.0) { category, items in
             Section {
                 ForEach(items) { item in
-                    ShoppingItemRow(item: item) {
+                    ShoppingItemRow(
+                        item: item,
+                        isInDiet: mealPlanService.isItemInCurrentDiet(item)
+                    ) {
                         mealPlanService.togglePurchased(item)
                     }
                 }
@@ -402,24 +411,50 @@ private struct CatalogSearchResultRow: View {
 
 struct ShoppingItemRow: View {
     let item: ShoppingItem
+    var isInDiet: Bool = true
     let onToggle: () -> Void
+
+    private var nameColor: Color {
+        if !isInDiet { return .orange }
+        return item.isPurchased ? .secondary : .primary
+    }
 
     var body: some View {
         Button(action: onToggle) {
-            HStack {
+            HStack(alignment: .top, spacing: 10) {
                 Image(systemName: item.isPurchased ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(item.isPurchased ? AppTheme.accent : .gray)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.name)
-                        .strikethrough(item.isPurchased)
-                        .foregroundStyle(item.isPurchased ? .secondary : .primary)
+                    .foregroundStyle(item.isPurchased ? (isInDiet ? AppTheme.accent : .orange) : (isInDiet ? Color.gray : Color.orange))
+                    .padding(.top, 2)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(item.name)
+                            .strikethrough(item.isPurchased)
+                            .foregroundStyle(nameColor)
+                            .fontWeight(isInDiet ? .regular : .semibold)
+                        if !isInDiet {
+                            Text("🤔")
+                                .font(.body)
+                                .accessibilityLabel("Item fora da dieta")
+                        }
+                    }
+
                     Text(item.quantity)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    if !isInDiet {
+                        Text(MealPlanService.offDietShoppingMessage)
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-                Spacer()
+                Spacer(minLength: 0)
             }
         }
+        .buttonStyle(.plain)
+        .accessibilityHint(isInDiet ? "Marcar como comprado" : "Item fora do cardápio. Ainda pode marcar como comprado.")
     }
 }
 

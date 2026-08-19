@@ -146,6 +146,7 @@ struct DuoTeamHubView: View {
                     .lineLimit(2)
             }
             Spacer()
+            DuoUnreadBadge(count: duoService.unreadCount(for: team.id))
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppTheme.textSecondary)
@@ -553,6 +554,7 @@ struct DuoTeamDetailView: View {
             } label: {
                 Label("Chat", systemImage: "bubble.left.and.bubble.right.fill")
             }
+            .badge(duoService.unreadCount(for: team.id))
             NavigationLink {
                 DuoTeamReportView(teamId: team.id)
             } label: {

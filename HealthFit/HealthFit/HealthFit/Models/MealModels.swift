@@ -204,6 +204,7 @@ struct MealTemplate: Identifiable, Codable, Hashable {
     var isSweet: Bool
     var containsLactose: Bool
     var isFatLossFocused: Bool
+    var isSimpleBasic: Bool
 
     init(
         id: UUID = UUID(),
@@ -217,7 +218,8 @@ struct MealTemplate: Identifiable, Codable, Hashable {
         instructions: String,
         isSweet: Bool = false,
         containsLactose: Bool = false,
-        isFatLossFocused: Bool = false
+        isFatLossFocused: Bool = false,
+        isSimpleBasic: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -231,6 +233,7 @@ struct MealTemplate: Identifiable, Codable, Hashable {
         self.isSweet = isSweet
         self.containsLactose = containsLactose
         self.isFatLossFocused = isFatLossFocused
+        self.isSimpleBasic = isSimpleBasic
     }
 
     init(from decoder: Decoder) throws {
@@ -247,11 +250,12 @@ struct MealTemplate: Identifiable, Codable, Hashable {
         isSweet = try container.decodeIfPresent(Bool.self, forKey: .isSweet) ?? false
         containsLactose = try container.decodeIfPresent(Bool.self, forKey: .containsLactose) ?? false
         isFatLossFocused = try container.decodeIfPresent(Bool.self, forKey: .isFatLossFocused) ?? false
+        isSimpleBasic = try container.decodeIfPresent(Bool.self, forKey: .isSimpleBasic) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, mealType, calories, protein, carbs, fat, ingredients, instructions
-        case isSweet, containsLactose, isFatLossFocused
+        case isSweet, containsLactose, isFatLossFocused, isSimpleBasic
     }
 
     func scaled(to targetCalories: Int, proteinMultiplier: Int = 1) -> Meal {
@@ -275,13 +279,16 @@ struct CustomMenuSelection: Codable, Equatable {
     var selections: [String: UUID]
     var energyDrinksPerWeek: Int
     var energyDrinksPerDay: Int
+    /// Quando verdadeiro, o plano semanal usa só o cardápio montado (substitui as opções recomendadas).
+    var replacesRecommended: Bool
 
     static let `default` = CustomMenuSelection(
         sweetConsumption: .moderate,
         lactoseTolerance: nil,
         selections: [:],
         energyDrinksPerWeek: 0,
-        energyDrinksPerDay: 0
+        energyDrinksPerDay: 0,
+        replacesRecommended: false
     )
 
     var isReadyToBuild: Bool {
@@ -293,13 +300,15 @@ struct CustomMenuSelection: Codable, Equatable {
         lactoseTolerance: LactoseTolerance? = nil,
         selections: [String: UUID] = [:],
         energyDrinksPerWeek: Int = 0,
-        energyDrinksPerDay: Int = 0
+        energyDrinksPerDay: Int = 0,
+        replacesRecommended: Bool = false
     ) {
         self.sweetConsumption = sweetConsumption
         self.lactoseTolerance = lactoseTolerance
         self.selections = selections
         self.energyDrinksPerWeek = max(0, energyDrinksPerWeek)
         self.energyDrinksPerDay = max(0, energyDrinksPerDay)
+        self.replacesRecommended = replacesRecommended
     }
 
     init(from decoder: Decoder) throws {
@@ -309,10 +318,11 @@ struct CustomMenuSelection: Codable, Equatable {
         selections = try container.decodeIfPresent([String: UUID].self, forKey: .selections) ?? [:]
         energyDrinksPerWeek = max(0, try container.decodeIfPresent(Int.self, forKey: .energyDrinksPerWeek) ?? 0)
         energyDrinksPerDay = max(0, try container.decodeIfPresent(Int.self, forKey: .energyDrinksPerDay) ?? 0)
+        replacesRecommended = try container.decodeIfPresent(Bool.self, forKey: .replacesRecommended) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
-        case sweetConsumption, lactoseTolerance, selections, energyDrinksPerWeek, energyDrinksPerDay
+        case sweetConsumption, lactoseTolerance, selections, energyDrinksPerWeek, energyDrinksPerDay, replacesRecommended
     }
 
     func selectedTemplateID(for mealType: MealType) -> UUID? {

@@ -35,6 +35,7 @@ SUBSCRIPTIONS (StoreKit 2)
   healthfit.plan.complete.yearly
 - Restore: Profile → Meu plano → Restaurar compras
 - Manage: Profile → Meu plano → Gerenciar na App Store
+- Courtesy codes: Profile → Meu plano → Tenho um código de cortesia. These are developer complimentary 30-day grants (not sold, not an alternative to IAP). They do not auto-renew.
 - Terms & Privacy links are shown on the paywall.
 
 HEALTHKIT / LOCATION / MOTION

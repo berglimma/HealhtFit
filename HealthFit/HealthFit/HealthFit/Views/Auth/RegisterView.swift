@@ -12,6 +12,7 @@ struct RegisterView: View {
     @State private var confirmPassword = ""
     @State private var selectedBiotype: Biotype = .mesomorph
     @State private var selectedGoal: FitnessGoal = .muscleGain
+    @State private var selectedAccountRole: UserAccountRole = .student
     @State private var dateOfBirth = Calendar.current.date(byAdding: .year, value: -25, to: .now) ?? .now
     @State private var selectedCountryCode = CountryOption.defaultCode()
     @State private var acceptedTerms = false
@@ -144,6 +145,18 @@ struct RegisterView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 12) {
+                        Text(L10n.Profile.accountRole)
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.textPrimary)
+
+                        AccountRolePicker(selection: $selectedAccountRole)
+
+                        Text("Aluno treina com o app. Personal e nutricionista usam como profissionais — dá para marcar os dois.")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
                         Text("Biotipo")
                             .font(.headline)
                             .foregroundStyle(AppTheme.textPrimary)
@@ -201,7 +214,8 @@ struct RegisterView: View {
                                 biotype: selectedBiotype,
                                 goal: selectedGoal,
                                 dateOfBirth: dateOfBirth,
-                                countryCode: selectedCountryCode
+                                countryCode: selectedCountryCode,
+                                accountRole: selectedAccountRole
                             )
                             if authService.isAuthenticated { dismiss() }
                         }
@@ -272,15 +286,15 @@ struct BiotypeCard: View {
             .frame(maxWidth: .infinity, minHeight: 128)
             .padding(.horizontal, 6)
             .padding(.vertical, 10)
-            .background(isSelected ? biotype.color : AppTheme.cardBackground)
+            .background(isSelected ? biotype.color : AppTheme.background)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(
-                        isSelected ? biotype.color : biotype.color.opacity(0.20),
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(
+                        isSelected ? biotype.color : biotype.color.opacity(0.28),
                         lineWidth: 1.5
                     )
             )
-            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
@@ -329,8 +343,59 @@ struct GoalCard: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .foregroundStyle(isSelected ? .white : AppTheme.textSecondary)
-            .background(isSelected ? goal.color : AppTheme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .background(isSelected ? goal.color : AppTheme.background)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+    }
+}
+
+struct AccountRolePicker: View {
+    @Binding var selection: UserAccountRole
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+    ]
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 8) {
+            ForEach(UserAccountRole.allCases) { role in
+                Button {
+                    selection = role
+                } label: {
+                    let isSelected = selection == role
+                    VStack(spacing: 6) {
+                        Image(systemName: role.icon)
+                            .font(.title3.weight(.semibold))
+                        Text(role.localizedTitle)
+                            .font(.caption.weight(.semibold))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 64)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 6)
+                    .foregroundStyle(isSelected ? .white : role.tintColor)
+                    .background(role.tintColor.opacity(isSelected ? 0.82 : 0.18))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(
+                                role.tintColor,
+                                lineWidth: isSelected ? 2.5 : 1
+                            )
+                    )
+                    .shadow(
+                        color: isSelected ? role.tintColor.opacity(0.45) : .clear,
+                        radius: isSelected ? 8 : 0,
+                        y: isSelected ? 3 : 0
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(role.localizedTitle)
+                .accessibilityAddTraits(selection == role ? .isSelected : [])
+            }
         }
     }
 }

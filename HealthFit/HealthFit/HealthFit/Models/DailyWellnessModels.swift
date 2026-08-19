@@ -78,6 +78,10 @@ struct DailyWellnessEntry: Codable, Equatable {
     var sleepUpdatedAt: Date?
     /// Última vez que a água foi registrada neste dia.
     var waterUpdatedAt: Date?
+    /// Dia de descanso declarado pelo usuário (pode marcar a qualquer hora).
+    var isRestDay: Bool
+    /// Quando o descanso foi marcado (merge na nuvem).
+    var restDayMarkedAt: Date?
 
     static func empty(for date: Date = .now) -> DailyWellnessEntry {
         DailyWellnessEntry(
@@ -89,7 +93,9 @@ struct DailyWellnessEntry: Codable, Equatable {
             supplementIntakes: [],
             supplementsUpdatedAt: nil,
             sleepUpdatedAt: nil,
-            waterUpdatedAt: nil
+            waterUpdatedAt: nil,
+            isRestDay: false,
+            restDayMarkedAt: nil
         )
     }
 
@@ -110,7 +116,9 @@ struct DailyWellnessEntry: Codable, Equatable {
         supplementIntakes: [SupplementIntakeEntry] = [],
         supplementsUpdatedAt: Date? = nil,
         sleepUpdatedAt: Date? = nil,
-        waterUpdatedAt: Date? = nil
+        waterUpdatedAt: Date? = nil,
+        isRestDay: Bool = false,
+        restDayMarkedAt: Date? = nil
     ) {
         self.dayKey = dayKey
         self.sleepHours = sleepHours
@@ -121,6 +129,8 @@ struct DailyWellnessEntry: Codable, Equatable {
         self.supplementsUpdatedAt = supplementsUpdatedAt
         self.sleepUpdatedAt = sleepUpdatedAt
         self.waterUpdatedAt = waterUpdatedAt
+        self.isRestDay = isRestDay
+        self.restDayMarkedAt = restDayMarkedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -134,6 +144,8 @@ struct DailyWellnessEntry: Codable, Equatable {
         supplementsUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .supplementsUpdatedAt)
         sleepUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .sleepUpdatedAt)
         waterUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .waterUpdatedAt)
+        isRestDay = try container.decodeIfPresent(Bool.self, forKey: .isRestDay) ?? false
+        restDayMarkedAt = try container.decodeIfPresent(Date.self, forKey: .restDayMarkedAt)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -147,11 +159,14 @@ struct DailyWellnessEntry: Codable, Equatable {
         try container.encodeIfPresent(supplementsUpdatedAt, forKey: .supplementsUpdatedAt)
         try container.encodeIfPresent(sleepUpdatedAt, forKey: .sleepUpdatedAt)
         try container.encodeIfPresent(waterUpdatedAt, forKey: .waterUpdatedAt)
+        try container.encode(isRestDay, forKey: .isRestDay)
+        try container.encodeIfPresent(restDayMarkedAt, forKey: .restDayMarkedAt)
     }
 
     private enum CodingKeys: String, CodingKey {
         case dayKey, sleepHours, waterIntakeMl, energyDrinksCount, preWorkoutCount
         case supplementIntakes, supplementsUpdatedAt, sleepUpdatedAt, waterUpdatedAt
+        case isRestDay, restDayMarkedAt
     }
 }
 

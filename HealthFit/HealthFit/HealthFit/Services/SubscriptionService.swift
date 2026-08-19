@@ -11,19 +11,30 @@ final class SubscriptionService: ObservableObject {
     @Published private(set) var storeTier: PlanTier = .free
     /// Product ID ativo mais recente (mensal ou anual) — para UI de “já ativo”.
     @Published private(set) var activeProductID: String?
+    @Published private(set) var courtesyGrant: CourtesyGrant?
     @Published private(set) var isLoading = false
     @Published private(set) var purchaseInProgress = false
+    @Published private(set) var courtesyRedeemInProgress = false
     @Published var lastErrorMessage: String?
     @Published private(set) var isConfigured = false
 
-    /// Plano efetivo (StoreKit + override DEBUG opcional).
+    /// Plano efetivo (StoreKit + cortesia + override DEBUG opcional).
     var currentTier: PlanTier {
         #if DEBUG
         if let override = SubscriptionConfiguration.debugPlanOverride {
             return override
         }
         #endif
-        return storeTier
+        return PlanTier.highest(of: [storeTier, activeCourtesyTier])
+    }
+
+    var isCourtesyActive: Bool {
+        courtesyGrant?.isActive == true
+    }
+
+    private var activeCourtesyTier: PlanTier {
+        guard let grant = courtesyGrant, grant.isActive else { return .free }
+        return grant.plan
     }
 
     var isSubscribed: Bool { currentTier.isPaid }
@@ -113,11 +124,32 @@ final class SubscriptionService: ObservableObject {
             return period == (activeBillingPeriod ?? .monthly)
         }
         #endif
-        guard let activeProductID,
-              let product = SubscriptionProductID(rawValue: activeProductID) else {
+        if let activeProductID,
+           let product = SubscriptionProductID(rawValue: activeProductID),
+           product.tier == tier {
+            return product.billingPeriod == period
+        }
+        // Cortesia não tem período da loja — marca o plano nas duas abas.
+        return isCourtesyActive && activeCourtesyTier == tier
+    }
+
+    func redeemCourtesyCode(_ code: String) async -> Bool {
+        courtesyRedeemInProgress = true
+        lastErrorMessage = nil
+        defer { courtesyRedeemInProgress = false }
+        do {
+            let grant = try await CourtesyVoucherService.redeem(code: code)
+            courtesyGrant = grant.isActive ? grant : nil
+            return grant.isActive
+        } catch {
+            lastErrorMessage = error.localizedDescription
             return false
         }
-        return product.tier == tier && product.billingPeriod == period
+    }
+
+    func clearCourtesyState(userId: String?) {
+        CourtesyVoucherService.clearCache(userId: userId)
+        courtesyGrant = nil
     }
 
     func refresh() async {
@@ -128,6 +160,7 @@ final class SubscriptionService: ObservableObject {
 
         await loadProducts()
         await updateEntitlementsFromStore()
+        await refreshCourtesyGrant()
         isConfigured = true
     }
 
@@ -235,6 +268,17 @@ final class SubscriptionService: ObservableObject {
         }
         storeTier = PlanTier.highest(of: active)
         activeProductID = bestProductID
+    }
+
+    private func refreshCourtesyGrant() async {
+        guard let uid = FirebaseAuthProvider.currentUser?.uid else {
+            courtesyGrant = nil
+            return
+        }
+        if courtesyGrant == nil {
+            courtesyGrant = CourtesyVoucherService.cachedGrant(userId: uid)
+        }
+        courtesyGrant = await CourtesyVoucherService.fetchGrant(userId: uid)
     }
 
     private func apply(transaction: Transaction) async {

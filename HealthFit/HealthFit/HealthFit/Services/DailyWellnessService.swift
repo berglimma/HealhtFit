@@ -332,6 +332,29 @@ final class DailyWellnessService: ObservableObject {
         save(entry)
     }
 
+    /// Marca o dia atual como descanso (pode ser feito a qualquer hora).
+    func markRestDay(assistantContext: HealthAssistantContext) {
+        var entry = currentTodayEntry()
+        guard !entry.isRestDay else { return }
+        entry.isRestDay = true
+        entry.restDayMarkedAt = .now
+        todayEntry = entry
+        save(entry)
+        let message = AssistantRestDayEngine.restDayMarkedMessage(context: assistantContext)
+        AssistantRestDayEngine.queueRestDayMarkedMessage(message)
+    }
+
+    func clearRestDay() {
+        var entry = currentTodayEntry()
+        guard entry.isRestDay else { return }
+        entry.isRestDay = false
+        entry.restDayMarkedAt = nil
+        todayEntry = entry
+        save(entry)
+    }
+
+    var isTodayRestDay: Bool { todayEntry.isRestDay }
+
     var tookPreWorkoutAndEnergyDrinkToday: Bool {
         todayEntry.preWorkoutCount > 0 && todayEntry.energyDrinksCount > 0
     }
@@ -536,6 +559,19 @@ final class DailyWellnessService: ObservableObject {
                 merged.supplementsUpdatedAt = local.supplementsUpdatedAt ?? remote.supplementsUpdatedAt
             }
         }
+
+        switch (local.restDayMarkedAt, remote.restDayMarkedAt) {
+        case let (l?, r?) where r >= l:
+            merged.isRestDay = remote.isRestDay
+            merged.restDayMarkedAt = remote.restDayMarkedAt
+        case (nil, .some):
+            merged.isRestDay = remote.isRestDay
+            merged.restDayMarkedAt = remote.restDayMarkedAt
+        default:
+            merged.isRestDay = local.isRestDay
+            merged.restDayMarkedAt = local.restDayMarkedAt
+        }
+
         return merged
     }
 

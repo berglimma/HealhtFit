@@ -48,7 +48,11 @@ Região padrão: `southamerica-east1`.
 4. Ao enviar mensagem no chat Duo, a Function dispara o push.
 
 Inbox Firestore (`duoNotifications`) permanece para app em foreground;
-FCM cobre app em background / morto.
+FCM cobre app em background / morto. A Function lê `text`/`senderName` no
+documento (e faz fallback do JSON `payload`) e envia alerta APNs com
+`apns-priority: 10` para chegar em segundos mesmo com o app fechado.
+Para garantir menos de 15s após ociosidade longa, opcional: `minInstances: 1`
+na Function (custo de instância quente).
 
 ## 4. Custos / escala
 

@@ -14,6 +14,9 @@ final class HealthKitManager: ObservableObject {
     @Published var currentHeartRate: Double = 0
     @Published var restingHeartRate: Double = 0
 
+    private var lastWeeklyFetchAt: Date?
+    private static let weeklyFetchMinInterval: TimeInterval = 75
+
     /// Snapshot de treino externo (Fitness / outros apps) lido do Apple Saúde.
     struct ExternalWorkoutSample: Identifiable, Equatable {
         var id: UUID { healthKitUUID }
@@ -83,7 +86,7 @@ final class HealthKitManager: ObservableObject {
             try await healthStore.requestAuthorization(toShare: writeTypes, read: readTypes)
             isAuthorized = true
             authorizationError = nil
-            await fetchWeeklyMetrics()
+            await fetchWeeklyMetrics(force: true)
             startMetricObservers()
         } catch {
             authorizationError = error.localizedDescription
@@ -118,7 +121,7 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    func fetchWeeklyMetrics() async {
+    func fetchWeeklyMetrics(force: Bool = false) async {
         guard isHealthKitAvailable else {
             #if targetEnvironment(simulator)
             loadMockData()
@@ -127,36 +130,42 @@ final class HealthKitManager: ObservableObject {
         }
         guard isAuthorized else { return }
         guard !isRefreshing else { return }
+        if !force, let last = lastWeeklyFetchAt,
+           Date().timeIntervalSince(last) < Self.weeklyFetchMinInterval {
+            return
+        }
         isRefreshing = true
+        lastWeeklyFetchAt = Date()
         defer { isRefreshing = false }
 
-        var metrics: [DailyHealthMetric] = []
         let calendar = Calendar.current
-
+        var windows: [(date: Date, start: Date, end: Date)] = []
+        windows.reserveCapacity(7)
         for dayOffset in (0..<7).reversed() {
             guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: .now) else { continue }
             let start = calendar.startOfDay(for: date)
             guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { continue }
+            windows.append((start, start, end))
+        }
 
-            async let steps = fetchCumulativeSum(.stepCount, unit: .count(), from: start, to: end)
-            async let calories = fetchCumulativeSum(.activeEnergyBurned, unit: .kilocalorie(), from: start, to: end)
-            async let rhr = fetchDiscreteAverage(
-                .restingHeartRate,
-                unit: HKUnit.count().unitDivided(by: .minute()),
-                from: start,
-                to: end
-            )
-            async let workoutMinutes = fetchWorkoutMinutes(from: start, to: end)
-
-            let (stepsValue, caloriesValue, rhrValue, minutesValue) = await (steps, calories, rhr, workoutMinutes)
-
-            metrics.append(DailyHealthMetric(
-                date: start,
-                steps: Int(stepsValue),
-                activeCalories: caloriesValue,
-                restingHeartRate: rhrValue,
-                workoutMinutes: minutesValue
-            ))
+        let storeBox = UncheckedHKStore(store: healthStore)
+        let metrics = await withTaskGroup(of: DailyHealthMetric.self, returning: [DailyHealthMetric].self) { group in
+            for window in windows {
+                group.addTask {
+                    await HealthKitQueryClient.dayMetrics(
+                        store: storeBox.store,
+                        date: window.date,
+                        from: window.start,
+                        to: window.end
+                    )
+                }
+            }
+            var items: [DailyHealthMetric] = []
+            items.reserveCapacity(windows.count)
+            for await item in group {
+                items.append(item)
+            }
+            return items.sorted { $0.date < $1.date }
         }
 
         guard !metrics.isEmpty else { return }
@@ -238,7 +247,7 @@ final class HealthKitManager: ObservableObject {
 
             try await builder.endCollection(at: endDate)
             _ = try await builder.finishWorkout()
-            await fetchWeeklyMetrics()
+            await fetchWeeklyMetrics(force: true)
             if heartRate > 0 {
                 currentHeartRate = heartRate
             }
@@ -283,47 +292,29 @@ final class HealthKitManager: ObservableObject {
     func fetchExternalWorkouts(since start: Date, limit: Int = 40) async -> [ExternalWorkoutSample] {
         guard isHealthKitAvailable, isAuthorized else { return [] }
         let ourBundle = Bundle.main.bundleIdentifier ?? "luan.com.healthfit.app"
-        let end = Date()
+        let queried = await HealthKitQueryClient.workouts(
+            store: healthStore,
+            from: start,
+            to: Date(),
+            limit: limit
+        )
 
-        return await withCheckedContinuation { continuation in
-            let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictEndDate)
-            let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-            let query = HKSampleQuery(
-                sampleType: .workoutType(),
-                predicate: predicate,
-                limit: limit,
-                sortDescriptors: [sort]
-            ) { _, samples, _ in
-                let workouts = (samples as? [HKWorkout]) ?? []
-                let mapped: [ExternalWorkoutSample] = workouts.compactMap { workout in
-                    let bundleId = workout.sourceRevision.source.bundleIdentifier
-                    if bundleId == ourBundle { return nil }
-                    if (workout.metadata?[Self.healthFitOriginMetadataKey] as? Bool) == true { return nil }
-                    if (workout.metadata?[Self.healthFitOriginMetadataKey] as? NSNumber)?.boolValue == true {
-                        return nil
-                    }
-                    guard workout.duration >= 90 else { return nil }
-
-                    let calories = workout.totalEnergyBurned?.doubleValue(for: .kilocalorie()) ?? 0
-                    let avgHR = (workout.metadata?["HKAverageHeartRate"] as? Double)
-                        ?? (workout.metadata?["averageHeartRate"] as? Double)
-                        ?? 0
-                    let sourceName = workout.sourceRevision.source.name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    return ExternalWorkoutSample(
-                        healthKitUUID: workout.uuid,
-                        startedAt: workout.startDate,
-                        endedAt: workout.endDate,
-                        durationSeconds: workout.duration,
-                        calories: calories,
-                        averageHeartRate: avgHR,
-                        activityType: workout.workoutActivityType,
-                        sourceName: sourceName.isEmpty ? "Apple Saúde" : sourceName,
-                        sourceBundleId: bundleId
-                    )
-                }
-                continuation.resume(returning: mapped)
-            }
-            healthStore.execute(query)
+        return queried.compactMap { workout in
+            if workout.sourceBundleId == ourBundle { return nil }
+            if workout.hasHealthFitOrigin { return nil }
+            guard workout.duration >= 90 else { return nil }
+            let activityType = HKWorkoutActivityType(rawValue: workout.activityTypeRaw) ?? .other
+            return ExternalWorkoutSample(
+                healthKitUUID: workout.uuid,
+                startedAt: workout.startedAt,
+                endedAt: workout.endedAt,
+                durationSeconds: workout.duration,
+                calories: workout.calories,
+                averageHeartRate: workout.averageHeartRate,
+                activityType: activityType,
+                sourceName: workout.sourceName.isEmpty ? "Apple Saúde" : workout.sourceName,
+                sourceBundleId: workout.sourceBundleId
+            )
         }
     }
 
@@ -359,19 +350,7 @@ final class HealthKitManager: ObservableObject {
     }
 
     private func fetchWorkoutMinutes(from start: Date, to end: Date) async -> Int {
-        await withCheckedContinuation { continuation in
-            let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
-            let query = HKSampleQuery(
-                sampleType: .workoutType(),
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: nil
-            ) { _, samples, _ in
-                let total = (samples as? [HKWorkout])?.reduce(0.0) { $0 + $1.duration } ?? 0
-                continuation.resume(returning: Int(total / 60))
-            }
-            healthStore.execute(query)
-        }
+        await HealthKitQueryClient.workoutMinutes(store: healthStore, from: start, to: end)
     }
 
     private func fetchCumulativeSum(
@@ -380,9 +359,13 @@ final class HealthKitManager: ObservableObject {
         from start: Date,
         to end: Date
     ) async -> Double {
-        await fetchStatistic(identifier, unit: unit, from: start, to: end, options: .cumulativeSum) { result, unit in
-            result?.sumQuantity()?.doubleValue(for: unit) ?? 0
-        }
+        await HealthKitQueryClient.cumulativeSum(
+            store: healthStore,
+            identifier,
+            unit: unit,
+            from: start,
+            to: end
+        )
     }
 
     private func fetchDiscreteAverage(
@@ -391,36 +374,28 @@ final class HealthKitManager: ObservableObject {
         from start: Date,
         to end: Date
     ) async -> Double {
-        await fetchStatistic(identifier, unit: unit, from: start, to: end, options: .discreteAverage) { result, unit in
-            result?.averageQuantity()?.doubleValue(for: unit) ?? 0
-        }
+        await HealthKitQueryClient.discreteAverage(
+            store: healthStore,
+            identifier,
+            unit: unit,
+            from: start,
+            to: end
+        )
     }
 
-    private func fetchStatistic(
+    private func fetchDiscreteMax(
         _ identifier: HKQuantityTypeIdentifier,
         unit: HKUnit,
         from start: Date,
-        to end: Date,
-        options: HKStatisticsOptions,
-        extract: @escaping (HKStatistics?, HKUnit) -> Double
+        to end: Date
     ) async -> Double {
-        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return 0 }
-
-        return await withCheckedContinuation { continuation in
-            let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
-            let query = HKStatisticsQuery(
-                quantityType: type,
-                quantitySamplePredicate: predicate,
-                options: options
-            ) { _, result, error in
-                if error != nil {
-                    continuation.resume(returning: 0)
-                    return
-                }
-                continuation.resume(returning: extract(result, unit))
-            }
-            healthStore.execute(query)
-        }
+        await HealthKitQueryClient.discreteMax(
+            store: healthStore,
+            identifier,
+            unit: unit,
+            from: start,
+            to: end
+        )
     }
 
     private func startHeartRateObserver() {
@@ -443,26 +418,8 @@ final class HealthKitManager: ObservableObject {
     }
 
     private func fetchLatestHeartRate() async {
-        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return }
-        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            let query = HKSampleQuery(sampleType: type, predicate: nil, limit: 1, sortDescriptors: [sortDescriptor]) { _, samples, _ in
-                let bpm: Double?
-                if let sample = samples?.first as? HKQuantitySample {
-                    bpm = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
-                } else {
-                    bpm = nil
-                }
-                // Hop to MainActor without capturing instance `self` from this callback.
-                Task { @MainActor in
-                    if let bpm {
-                        HealthKitManager.shared.currentHeartRate = bpm
-                    }
-                    continuation.resume()
-                }
-            }
-            healthStore.execute(query)
+        if let bpm = await HealthKitQueryClient.latestHeartRate(store: healthStore) {
+            currentHeartRate = bpm
         }
     }
 
@@ -514,76 +471,15 @@ final class HealthKitManager: ObservableObject {
 
     /// HRV SDNN mais recente das últimas 24 h — a leitura que o Watch grava durante o sono.
     func fetchLatestHRV() async -> Double? {
-        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else { return nil }
-        let start = Date().addingTimeInterval(-24 * 3600)
-        let predicate = HKQuery.predicateForSamples(withStart: start, end: .now)
-        let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-
-        return await withCheckedContinuation { (continuation: CheckedContinuation<Double?, Never>) in
-            let query = HKSampleQuery(
-                sampleType: type,
-                predicate: predicate,
-                limit: 1,
-                sortDescriptors: [sort]
-            ) { _, samples, _ in
-                guard let sample = samples?.first as? HKQuantitySample else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                continuation.resume(returning: sample.quantity.doubleValue(for: .secondUnit(with: .milli)))
-            }
-            healthStore.execute(query)
-        }
+        await HealthKitQueryClient.latestHRV(store: healthStore)
     }
 
     /// Horas de sono da noite anterior, somando apenas as fases realmente adormecidas.
     func fetchLastNightSleepHours() async -> Double? {
-        guard let type = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return nil }
-
-        // Janela das 18h de ontem até agora, cobrindo quem dorme antes ou depois da meia-noite.
         let calendar = Calendar.current
         let startOfToday = calendar.startOfDay(for: .now)
         guard let windowStart = calendar.date(byAdding: .hour, value: -6, to: startOfToday) else { return nil }
-        let predicate = HKQuery.predicateForSamples(withStart: windowStart, end: .now)
-
-        return await withCheckedContinuation { (continuation: CheckedContinuation<Double?, Never>) in
-            let query = HKSampleQuery(
-                sampleType: type,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: nil
-            ) { _, samples, _ in
-                guard let samples = samples as? [HKCategorySample], !samples.isEmpty else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-
-                let asleepValues: Set<Int> = [
-                    HKCategoryValueSleepAnalysis.asleepCore.rawValue,
-                    HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
-                    HKCategoryValueSleepAnalysis.asleepREM.rawValue,
-                    HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue
-                ]
-
-                let seconds = samples
-                    .filter { asleepValues.contains($0.value) }
-                    .reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) }
-
-                continuation.resume(returning: seconds > 0 ? seconds / 3600 : nil)
-            }
-            healthStore.execute(query)
-        }
-    }
-
-    private func fetchDiscreteMax(
-        _ identifier: HKQuantityTypeIdentifier,
-        unit: HKUnit,
-        from start: Date,
-        to end: Date
-    ) async -> Double {
-        await fetchStatistic(identifier, unit: unit, from: start, to: end, options: .discreteMax) { result, unit in
-            result?.maximumQuantity()?.doubleValue(for: unit) ?? 0
-        }
+        return await HealthKitQueryClient.lastNightSleepHours(store: healthStore, from: windowStart, to: .now)
     }
 
     private func loadMockData() {
@@ -604,5 +500,297 @@ final class HealthKitManager: ObservableObject {
             restingHeartRate = today.restingHeartRate
             currentHeartRate = Double.random(in: 65...85)
         }
+    }
+}
+
+/// Queries HealthKit fora do MainActor, com timeout — evita freeze de 30–40s se o Saúde não responder.
+private enum HealthKitQueryClient {
+    static let timeout: TimeInterval = 3.5
+    static let workoutSampleLimit = 40
+    static let sleepSampleLimit = 200
+
+    static func dayMetrics(
+        store: HKHealthStore,
+        date: Date,
+        from start: Date,
+        to end: Date
+    ) async -> DailyHealthMetric {
+        async let steps = cumulativeSum(store: store, .stepCount, unit: .count(), from: start, to: end)
+        async let calories = cumulativeSum(store: store, .activeEnergyBurned, unit: .kilocalorie(), from: start, to: end)
+        async let rhr = discreteAverage(
+            store: store,
+            .restingHeartRate,
+            unit: HKUnit.count().unitDivided(by: .minute()),
+            from: start,
+            to: end
+        )
+        async let minutes = workoutMinutes(store: store, from: start, to: end)
+        let (stepsValue, caloriesValue, rhrValue, minutesValue) = await (steps, calories, rhr, minutes)
+        return DailyHealthMetric(
+            date: date,
+            steps: Int(stepsValue),
+            activeCalories: caloriesValue,
+            restingHeartRate: rhrValue,
+            workoutMinutes: minutesValue
+        )
+    }
+
+    static func cumulativeSum(
+        store: HKHealthStore,
+        _ identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        from start: Date,
+        to end: Date
+    ) async -> Double {
+        await statistic(store: store, identifier, unit: unit, from: start, to: end, kind: .sum)
+    }
+
+    static func discreteAverage(
+        store: HKHealthStore,
+        _ identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        from start: Date,
+        to end: Date
+    ) async -> Double {
+        await statistic(store: store, identifier, unit: unit, from: start, to: end, kind: .average)
+    }
+
+    static func discreteMax(
+        store: HKHealthStore,
+        _ identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        from start: Date,
+        to end: Date
+    ) async -> Double {
+        await statistic(store: store, identifier, unit: unit, from: start, to: end, kind: .max)
+    }
+
+    private enum StatisticKind: Sendable {
+        case sum
+        case average
+        case max
+
+        var options: HKStatisticsOptions {
+            switch self {
+            case .sum: return .cumulativeSum
+            case .average: return .discreteAverage
+            case .max: return .discreteMax
+            }
+        }
+
+        func value(from result: HKStatistics?, unit: HKUnit) -> Double {
+            switch self {
+            case .sum: return result?.sumQuantity()?.doubleValue(for: unit) ?? 0
+            case .average: return result?.averageQuantity()?.doubleValue(for: unit) ?? 0
+            case .max: return result?.maximumQuantity()?.doubleValue(for: unit) ?? 0
+            }
+        }
+    }
+
+    private static func statistic(
+        store: HKHealthStore,
+        _ identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        from start: Date,
+        to end: Date,
+        kind: StatisticKind
+    ) async -> Double {
+        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return 0 }
+
+        return await withTimeout(fallback: 0) { resume in
+            let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
+            let query = HKStatisticsQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: kind.options
+            ) { _, result, error in
+                if error != nil {
+                    resume(0)
+                    return
+                }
+                resume(kind.value(from: result, unit: unit))
+            }
+            store.execute(query)
+            return query
+        }
+    }
+
+    static func workoutMinutes(store: HKHealthStore, from start: Date, to end: Date) async -> Int {
+        let workouts = await sampleWorkouts(store: store, from: start, to: end, limit: workoutSampleLimit)
+        let total = workouts.reduce(0.0) { $0 + $1.duration }
+        return Int(total / 60)
+    }
+
+    struct QueriedWorkout: Sendable {
+        let uuid: UUID
+        let startedAt: Date
+        let endedAt: Date
+        let duration: TimeInterval
+        let calories: Double
+        let averageHeartRate: Double
+        let activityTypeRaw: UInt
+        let sourceName: String
+        let sourceBundleId: String
+        let hasHealthFitOrigin: Bool
+    }
+
+    static func workouts(
+        store: HKHealthStore,
+        from start: Date,
+        to end: Date,
+        limit: Int
+    ) async -> [QueriedWorkout] {
+        await sampleWorkouts(store: store, from: start, to: end, limit: limit)
+    }
+
+    static func latestHeartRate(store: HKHealthStore) async -> Double? {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return nil }
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        return await withTimeout(fallback: nil) { resume in
+            let query = HKSampleQuery(sampleType: type, predicate: nil, limit: 1, sortDescriptors: [sort]) { _, samples, _ in
+                guard let sample = samples?.first as? HKQuantitySample else {
+                    resume(nil)
+                    return
+                }
+                resume(sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute())))
+            }
+            store.execute(query)
+            return query
+        }
+    }
+
+    static func latestHRV(store: HKHealthStore) async -> Double? {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else { return nil }
+        let start = Date().addingTimeInterval(-24 * 3600)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: .now)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        return await withTimeout(fallback: nil) { resume in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: predicate,
+                limit: 1,
+                sortDescriptors: [sort]
+            ) { _, samples, _ in
+                guard let sample = samples?.first as? HKQuantitySample else {
+                    resume(nil)
+                    return
+                }
+                resume(sample.quantity.doubleValue(for: .secondUnit(with: .milli)))
+            }
+            store.execute(query)
+            return query
+        }
+    }
+
+    static func lastNightSleepHours(store: HKHealthStore, from start: Date, to end: Date) async -> Double? {
+        guard let type = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return nil }
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
+        return await withTimeout(fallback: nil) { resume in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: predicate,
+                limit: sleepSampleLimit,
+                sortDescriptors: nil
+            ) { _, samples, _ in
+                guard let samples = samples as? [HKCategorySample], !samples.isEmpty else {
+                    resume(nil)
+                    return
+                }
+                let asleepValues: Set<Int> = [
+                    HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+                    HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+                    HKCategoryValueSleepAnalysis.asleepREM.rawValue,
+                    HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue
+                ]
+                let seconds = samples
+                    .filter { asleepValues.contains($0.value) }
+                    .reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) }
+                resume(seconds > 0 ? seconds / 3600 : nil)
+            }
+            store.execute(query)
+            return query
+        }
+    }
+
+    private static func sampleWorkouts(
+        store: HKHealthStore,
+        from start: Date,
+        to end: Date,
+        limit: Int
+    ) async -> [QueriedWorkout] {
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictEndDate)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        return await withTimeout(fallback: []) { resume in
+            let query = HKSampleQuery(
+                sampleType: .workoutType(),
+                predicate: predicate,
+                limit: limit,
+                sortDescriptors: [sort]
+            ) { _, samples, _ in
+                let workouts = (samples as? [HKWorkout]) ?? []
+                let mapped = workouts.map { workout -> QueriedWorkout in
+                    let origin = (workout.metadata?[HealthKitManager.healthFitOriginMetadataKey] as? Bool) == true
+                        || (workout.metadata?[HealthKitManager.healthFitOriginMetadataKey] as? NSNumber)?.boolValue == true
+                    let calories = workout.totalEnergyBurned?.doubleValue(for: .kilocalorie()) ?? 0
+                    let avgHR = (workout.metadata?["HKAverageHeartRate"] as? Double)
+                        ?? (workout.metadata?["averageHeartRate"] as? Double)
+                        ?? 0
+                    let sourceName = workout.sourceRevision.source.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return QueriedWorkout(
+                        uuid: workout.uuid,
+                        startedAt: workout.startDate,
+                        endedAt: workout.endDate,
+                        duration: workout.duration,
+                        calories: calories,
+                        averageHeartRate: avgHR,
+                        activityTypeRaw: workout.workoutActivityType.rawValue,
+                        sourceName: sourceName,
+                        sourceBundleId: workout.sourceRevision.source.bundleIdentifier,
+                        hasHealthFitOrigin: origin
+                    )
+                }
+                resume(mapped)
+            }
+            store.execute(query)
+            return query
+        }
+    }
+
+    private static func withTimeout<T: Sendable>(
+        fallback: T,
+        startQuery: @escaping (@escaping @Sendable (T) -> Void) -> HKQuery
+    ) async -> T {
+        await withCheckedContinuation { continuation in
+            let box = OnceResume(continuation)
+            _ = startQuery { value in
+                box.resume(value)
+            }
+            Task.detached {
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                box.resume(fallback)
+            }
+        }
+    }
+}
+
+private struct UncheckedHKStore: @unchecked Sendable {
+    let store: HKHealthStore
+}
+
+private final class OnceResume<T: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var didResume = false
+    private let continuation: CheckedContinuation<T, Never>
+
+    init(_ continuation: CheckedContinuation<T, Never>) {
+        self.continuation = continuation
+    }
+
+    func resume(_ value: T) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !didResume else { return }
+        didResume = true
+        continuation.resume(returning: value)
     }
 }

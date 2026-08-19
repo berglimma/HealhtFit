@@ -149,6 +149,7 @@ struct ProfileView: View {
                 profileHeaderSection(for: user)
                 subscriptionPlanSection
                 displayNameSection(for: user)
+                accountRoleSection(for: user)
 
                 if showSecondarySections {
                     biotypeSection(for: user)
@@ -541,6 +542,28 @@ struct ProfileView: View {
         }
     }
 
+    private func accountRoleSection(for _: UserProfile) -> some View {
+        Section(L10n.Profile.accountRole) {
+            AccountRolePicker(selection: accountRoleBinding)
+            Text("Aluno treina com o app. Personal e nutricionista usam como profissionais — dá para marcar os dois.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var accountRoleBinding: Binding<UserAccountRole> {
+        Binding(
+            get: { authService.currentUser?.accountRole ?? .student },
+            set: { updateAccountRole($0) }
+        )
+    }
+
+    private func updateAccountRole(_ role: UserAccountRole) {
+        guard var user = authService.currentUser, user.accountRole != role else { return }
+        user.accountRole = role
+        authService.updateProfile(user)
+    }
+
     @ViewBuilder
     private func biotypeSection(for user: UserProfile) -> some View {
         Section("Biotipo") {
@@ -687,11 +710,9 @@ struct ProfileView: View {
                     }
 
                 if authService.currentUser?.hasPersonalTrainer == true {
-                    Label("Relatórios de treino poderão ser enviados por e-mail", systemImage: "envelope.fill")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.accent)
+                    MailAccountRequiredNotice(audience: .trainer)
                 } else {
-                    Text("Cadastre o e-mail para enviar relatórios após cada treino.")
+                    Text("Cadastre o e-mail para enviar relatórios após cada treino. O envio usa o app Mail deste \(MailSetupGuidance.deviceName) — é preciso ter uma conta em \(MailSetupGuidance.settingsPath).")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -736,11 +757,9 @@ struct ProfileView: View {
                     }
 
                 if authService.currentUser?.hasNutritionist == true {
-                    Label("Relatórios da aba Nutrição poderão ser enviados por e-mail", systemImage: "envelope.fill")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.accent)
+                    MailAccountRequiredNotice(audience: .nutritionist)
                 } else {
-                    Text("Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista.")
+                    Text("Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista. O envio usa o app Mail deste \(MailSetupGuidance.deviceName) — é preciso ter uma conta em \(MailSetupGuidance.settingsPath).")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -1083,6 +1102,66 @@ struct ProfileView: View {
             .font(.caption.weight(.semibold))
         }
         .padding(.vertical, 4)
+
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(
+                isOn: Binding(
+                    get: { wellnessService.todayEntry.isRestDay },
+                    set: { isRestDay in
+                        if isRestDay {
+                            wellnessService.markRestDay(
+                                assistantContext: restDayAssistantContext(for: user)
+                            )
+                        } else {
+                            wellnessService.clearRestDay()
+                        }
+                    }
+                )
+            ) {
+                Label("Hoje é dia de descanso", systemImage: "bed.double.fill")
+                    .font(.subheadline.weight(.medium))
+            }
+            .tint(AppTheme.accent)
+
+            Text(
+                wellnessService.todayEntry.isRestDay
+                    ? "Descanso registrado — o IAssistente envia orientações sobre recuperação e hipertrofia."
+                    : "Marque a qualquer hora. Meditação não substitui um dia off de treino pesado."
+            )
+            .font(.caption)
+            .foregroundStyle(AppTheme.textSecondary)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func restDayAssistantContext(for user: UserProfile) -> HealthAssistantContext {
+        HealthAssistantContext(
+            user: user,
+            waterIntakeMl: wellnessService.todayEntry.waterIntakeMl,
+            sleepHours: wellnessService.todayEntry.sleepHours,
+            weeklyWorkoutCount: 0,
+            hoursSinceLastWorkout: nil,
+            todayWorkoutSessions: [],
+            recentWorkoutSessions: workoutStore.sessionHistory,
+            dailyCalorieTarget: user.dailyCalorieTarget,
+            basalMetabolicRate: user.basalMetabolicRate,
+            estimatedTDEE: user.estimatedTDEE,
+            caloricDeficit: user.caloricDeficit,
+            sweetConsumption: mealPlanService.customMenuSelection.sweetConsumption,
+            lactoseTolerance: mealPlanService.customMenuSelection.lactoseTolerance,
+            hasMealPlan: false,
+            todayMealsCompleted: 0,
+            todayMealsTotal: 0,
+            weekMealsCompleted: 0,
+            weekMealsTotal: 0,
+            todayCaloriesConsumed: 0,
+            todayHealthKitActiveCalories: 0,
+            supplementsLoggedToday: wellnessService.todaySupplementIntakes.count,
+            isTodayRestDay: true,
+            consecutiveTrainingDays: WeeklyProgressAnalyzer.consecutiveTrainingDays(
+                in: workoutStore.sessionHistory
+            )
+        )
     }
 
     /// Compact `dd/MM` for today’s wellness day (updates when `todayEntry` rolls over).
@@ -2049,7 +2128,7 @@ private extension View {
             .alert("Medidas salvas", isPresented: showMeasurementsSavedAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal.")
+                Text("As medidas corporais foram salvas e sincronizadas com o Firebase. Elas entram no relatório enviado ao personal. Para mandar o e-mail, o app Mail precisa estar configurado neste \(MailSetupGuidance.deviceName) (\(MailSetupGuidance.settingsPath)).")
             }
             .alert("Dados salvos", isPresented: showBodyDataSavedAlert) {
                 Button("OK", role: .cancel) {}

@@ -68,6 +68,27 @@ if subscriptions.canAccess(.aiChatUnlimited) { ... }
 
 Locks recomendados v1.1: `.advancedModalities`, `.mealPlan`, `.mealPhotoAnalysis`, `.aiChatUnlimited`, `.monthlyReport`, `.advancedSportAnalytics`, `.customWorkouts`.
 
+## Cortesia (20 vouchers × 4 planos, 30 dias)
+
+Códigos de **brinde** do HealthFit (não passam pela App Store; não são venda). Uso único, 30 dias, sem renovação.
+
+- Resgate no app: **Perfil → Meu plano → Tenho um código de cortesia**
+- Formato: `HF-BASIC-XXXXXX`, `HF-FIT-…`, `HF-AI-…`, `HF-COMPLETE-…`
+- Lista local (não commitada): `HealthFit/AppStore/courtesy-vouchers.local.md`
+- Seed / reimpressão:
+
+```bash
+gcloud auth application-default login --project healthfit-30d87
+cd functions
+npm run seed:courtesy
+```
+
+Deploy da Function `redeemCourtesyVoucher` + regras:
+
+```bash
+firebase deploy --only functions:redeemCourtesyVoucher,firestore:rules
+```
+
 ## Firebase (fase 4 — ainda não implementado)
 
 Após compra estável: gravar `plan` + `expiresAt` no user Firestore; sempre revalidar com `Transaction.currentEntitlements` no cold start.

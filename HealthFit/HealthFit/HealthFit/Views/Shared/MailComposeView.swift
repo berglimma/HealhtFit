@@ -1,5 +1,75 @@
 import SwiftUI
 import MessageUI
+import UIKit
+
+/// Texto único sobre o requisito do app Mail (iPhone/iPad) para relatórios.
+enum MailSetupGuidance {
+    static var isConfigured: Bool {
+        MailComposeView.canSendMail
+    }
+
+    static var deviceName: String {
+        UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+    }
+
+    static let settingsPath = "Ajustes → Mail → Contas"
+
+    static var requiredMessage: String {
+        "O iOS não permite enviar e-mail em segundo plano. Para mandar relatórios ao personal ou nutricionista, configure uma conta no app Mail (\(settingsPath)) neste \(deviceName)."
+    }
+
+    static var trainerNotice: String {
+        if isConfigured {
+            return "Após o treino, toque em enviar: o relatório abre no Mail deste \(deviceName) para você confirmar. Sem o Mail configurado, o envio por e-mail não funciona."
+        }
+        return "Para enviar o relatório ao personal, é preciso ter o app Mail configurado neste \(deviceName) (\(settingsPath)). Sem isso, use Compartilhar para mandar por Gmail, Outlook ou outro app."
+    }
+
+    static var nutritionistNotice: String {
+        if isConfigured {
+            return "O relatório de nutrição abre no Mail deste \(deviceName) para você confirmar o envio ao nutricionista."
+        }
+        return "Para enviar o relatório ao nutricionista, configure uma conta no app Mail (\(settingsPath)) neste \(deviceName). Sem o Mail, use Compartilhar (Gmail, Outlook ou outro app)."
+    }
+
+    static var sendFailedMessage: String {
+        "Não foi possível enviar o e-mail. Verifique se há uma conta no app Mail (\(settingsPath)) neste \(deviceName)."
+    }
+
+    static var unavailableMessage: String {
+        "Configure uma conta no app Mail (\(settingsPath)) neste \(deviceName). Sem o Mail, use Compartilhar para enviar o relatório por Gmail, Outlook ou outro app."
+    }
+}
+
+/// Aviso visível: relatórios por e-mail exigem o Mail do aparelho.
+struct MailAccountRequiredNotice: View {
+    enum Audience {
+        case trainer
+        case nutritionist
+    }
+
+    var audience: Audience = .trainer
+
+    var body: some View {
+        let configured = MailSetupGuidance.isConfigured
+        VStack(alignment: .leading, spacing: 6) {
+            Label(
+                configured
+                    ? "Mail configurado neste \(MailSetupGuidance.deviceName)"
+                    : "Mail não configurado neste \(MailSetupGuidance.deviceName)",
+                systemImage: configured ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+            )
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(configured ? AppTheme.accent : Color.orange)
+
+            Text(audience == .trainer ? MailSetupGuidance.trainerNotice : MailSetupGuidance.nutritionistNotice)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
 
 /// Anexo opcional para `MFMailComposeViewController` (ex.: mapa da rota).
 struct MailAttachment: Equatable {

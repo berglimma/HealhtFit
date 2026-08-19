@@ -843,6 +843,21 @@ struct WorkoutSession: Identifiable, Codable {
         // Programas de força / casa / mobilidade — manter título do treino.
         return raw
     }
+
+    /// Cópia enxuta para JSON/UserDefaults. Rotas GPS longas travavam a UI ao serializar.
+    func compactedForPersistence(
+        maxRoutePoints: Int = 500,
+        maxHeartRateSamples: Int = 240
+    ) -> WorkoutSession {
+        var copy = self
+        copy.routePoints = routePoints.downsampledPreservingEnds(maxCount: maxRoutePoints)
+        copy.heartRateSamples = heartRateSamples.downsampledPreservingEnds(maxCount: maxHeartRateSamples)
+        return copy
+    }
+
+    var needsPersistenceCompaction: Bool {
+        routePoints.count > 500 || heartRateSamples.count > 240
+    }
 }
 
 enum DurationFormatting {
@@ -901,6 +916,26 @@ enum SetProgressFormatting {
     }
 }
 
+private extension Array {
+    func downsampledPreservingEnds(maxCount: Int) -> [Element] {
+        guard count > maxCount, maxCount >= 2 else { return self }
+        let step = Double(count - 1) / Double(maxCount - 1)
+        var result: [Element] = []
+        result.reserveCapacity(maxCount)
+        var lastIndex = -1
+        for i in 0..<maxCount {
+            let index = Swift.min(count - 1, Int((Double(i) * step).rounded()))
+            if index == lastIndex { continue }
+            result.append(self[index])
+            lastIndex = index
+        }
+        if lastIndex != count - 1 {
+            result.append(self[count - 1])
+        }
+        return result
+    }
+}
+
 struct HeartRateSample: Identifiable, Codable {
     var id: UUID
     var timestamp: Date
@@ -913,7 +948,7 @@ struct HeartRateSample: Identifiable, Codable {
     }
 }
 
-struct DailyHealthMetric: Identifiable, Codable {
+struct DailyHealthMetric: Identifiable, Codable, Sendable {
     var id: UUID
     var date: Date
     var steps: Int

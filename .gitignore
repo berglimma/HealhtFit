@@ -46,3 +46,7 @@ fastlane/test_output
 
 .pages-deploy/
 _stash_tmp/
+
+# Vouchers de cortesia (códigos reais — não publicar)
+**/courtesy-vouchers.local.md
+**/courtesy-vouchers.local.csv

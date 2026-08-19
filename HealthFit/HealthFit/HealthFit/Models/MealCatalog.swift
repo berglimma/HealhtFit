@@ -1,7 +1,8 @@
 import Foundation
 
 enum MealCatalog {
-    static let allTemplates: [MealTemplate] = breakfastOptions
+    static let allTemplates: [MealTemplate] = simpleOptions
+        + breakfastOptions
         + morningSnackOptions
         + lunchOptions
         + afternoonSnackOptions
@@ -21,10 +22,15 @@ enum MealCatalog {
             base = base.filter { !$0.containsLactose }
         }
 
+        let simple = base.filter(\.isSimpleBasic)
+        let rest = base.filter { !$0.isSimpleBasic }
+
         if goal == .fatLoss {
-            let fatLoss = base.filter { $0.isFatLossFocused }
-            let general = base.filter { !$0.isFatLossFocused }
-            base = fatLoss + general
+            let fatLoss = rest.filter(\.isFatLossFocused)
+            let general = rest.filter { !$0.isFatLossFocused }
+            base = simple + fatLoss + general
+        } else {
+            base = simple + rest
         }
 
         switch sweetLevel {
@@ -58,6 +64,71 @@ enum MealCatalog {
         }
         return options[index % options.count]
     }
+
+    // MARK: - Opção simples (alimentos básicos, serve todos os objetivos)
+
+    private static let simpleOptions: [MealTemplate] = [
+        MealTemplate(
+            id: UUID(uuidString: "B1000001-0000-4000-8000-000000000001")!,
+            name: "Simples — ovos, pão e banana",
+            mealType: .breakfast,
+            calories: 380, protein: 24, carbs: 42, fat: 12,
+            ingredients: ["2 ovos", "2 fatias pão", "1 banana", "Café ou chá"],
+            instructions: "Frite ou cozinhe os ovos e coma com pão e banana. As porções sobem no ganho de massa e descem na perda de gordura.",
+            isSweet: false,
+            isSimpleBasic: true
+        ),
+        MealTemplate(
+            id: UUID(uuidString: "B2000001-0000-4000-8000-000000000001")!,
+            name: "Simples — banana e ovos",
+            mealType: .morningSnack,
+            calories: 220, protein: 14, carbs: 24, fat: 8,
+            ingredients: ["1 banana", "2 ovos"],
+            instructions: "Lanche rápido com proteína e carboidrato. Ajuste a quantidade ao objetivo (massa, déficit, manutenção ou resistência).",
+            isSweet: false,
+            isSimpleBasic: true
+        ),
+        MealTemplate(
+            id: UUID(uuidString: "B3000001-0000-4000-8000-000000000001")!,
+            name: "Simples — arroz, feijão e frango",
+            mealType: .lunch,
+            calories: 560, protein: 46, carbs: 58, fat: 12,
+            ingredients: ["150g arroz", "1 concha feijão", "150g peito de frango", "Salada", "Azeite"],
+            instructions: "Prato básico: arroz, feijão, frango e salada. Mais arroz na resistência/ganho; menos arroz e mais salada na perda de gordura.",
+            isSweet: false,
+            isSimpleBasic: true
+        ),
+        MealTemplate(
+            id: UUID(uuidString: "B4000001-0000-4000-8000-000000000001")!,
+            name: "Simples — pão com ovo",
+            mealType: .afternoonSnack,
+            calories: 230, protein: 16, carbs: 26, fat: 8,
+            ingredients: ["2 fatias pão", "2 ovos", "Tomate"],
+            instructions: "Pão com ovos e tomate. Dobre o pão na resistência; priorize o ovo na perda de gordura.",
+            isSweet: false,
+            isSimpleBasic: true
+        ),
+        MealTemplate(
+            id: UUID(uuidString: "B5000001-0000-4000-8000-000000000001")!,
+            name: "Simples — arroz, frango e legumes",
+            mealType: .dinner,
+            calories: 480, protein: 42, carbs: 44, fat: 12,
+            ingredients: ["120g arroz", "150g peito de frango", "Legumes (cenoura, abobrinha ou brócolis)", "Azeite"],
+            instructions: "Jantar simples com arroz, frango e legumes. Aumente o arroz na resistência; reduza no déficit.",
+            isSweet: false,
+            isSimpleBasic: true
+        ),
+        MealTemplate(
+            id: UUID(uuidString: "B6000001-0000-4000-8000-000000000001")!,
+            name: "Simples — ovos e fruta",
+            mealType: .supper,
+            calories: 180, protein: 14, carbs: 16, fat: 8,
+            ingredients: ["2 ovos", "1 maçã ou banana"],
+            instructions: "Ceia leve com ovos e fruta. Serve manutenção, perda de gordura e recuperação.",
+            isSweet: false,
+            isSimpleBasic: true
+        ),
+    ]
 
   // MARK: - Café da Manhã
 

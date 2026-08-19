@@ -74,7 +74,7 @@ final class WorkoutStore: ObservableObject {
         let previous = cloudUserId
         cloudUserId = userId
         if previous != userId {
-            reloadScopedPersistedState()
+            Task { await reloadScopedPersistedState() }
         }
     }
 
@@ -198,10 +198,12 @@ final class WorkoutStore: ObservableObject {
         let historyKey = self.historyKey
         let sampleTitles = Self.sampleWorkoutTitles
         let uid = cloudUserId
+        let maxHistory = Self.maxLocalHistorySessions
 
-        let decoded = await Task.detached(priority: .userInitiated) { () -> (sheets: [WorkoutSheet]?, history: [WorkoutSession]?) in
+        let decoded = await Task.detached(priority: .userInitiated) { () -> (sheets: [WorkoutSheet]?, history: [WorkoutSession]?, compactedHistory: Bool) in
             var sheets: [WorkoutSheet]?
             var history: [WorkoutSession]?
+            var compactedHistory = false
             let sheetsData = UserScopedDefaults.data(forLogicalKey: "workout_sheets", uid: uid, legacyKey: storageKey)
             if let data = sheetsData,
                let parsed = try? JSONDecoder().decode([WorkoutSheet].self, from: data) {
@@ -216,9 +218,11 @@ final class WorkoutStore: ObservableObject {
             let historyData = UserScopedDefaults.data(forLogicalKey: "session_history", uid: uid, legacyKey: historyKey)
             if let data = historyData,
                let parsed = try? JSONDecoder().decode([WorkoutSession].self, from: data) {
-                history = await Array(parsed.prefix(WorkoutStore.maxLocalHistorySessions))
+                let limited = Array(parsed.prefix(maxHistory))
+                compactedHistory = limited.contains(where: \.needsPersistenceCompaction)
+                history = limited.map { $0.compactedForPersistence() }
             }
-            return (sheets, history)
+            return (sheets, history, compactedHistory)
         }.value
 
         if let sheets = decoded.sheets {
@@ -228,6 +232,9 @@ final class WorkoutStore: ObservableObject {
             sessionHistory = history
             if let latest = history.compactMap({ $0.endedAt ?? $0.startedAt }).max() {
                 NotificationService.shared.migrateLastWorkoutDateIfNeeded(latest)
+            }
+            if decoded.compactedHistory {
+                saveHistory()
             }
         }
 
@@ -1290,29 +1297,12 @@ final class WorkoutStore: ObservableObject {
             clearPersistedActiveSession()
             return
         }
-        if let data = try? JSONEncoder().encode(session) {
-            UserDefaults.standard.set(data, forKey: activeSessionKey)
-        }
-        if let recordsData = try? JSONEncoder().encode(exerciseRecords) {
-            UserDefaults.standard.set(recordsData, forKey: activeRecordsKey)
-        }
-        if let exercisesData = try? JSONEncoder().encode(activeSessionExercises) {
-            UserDefaults.standard.set(exercisesData, forKey: activeSessionExercisesKey)
-        }
-        UserDefaults.standard.set(currentExerciseIndex, forKey: activeExerciseIndexKey)
-        UserDefaults.standard.set(isActiveWorkoutMinimized, forKey: activeMinimizedKey)
-        UserDefaults.standard.set(isExerciseTimerPaused, forKey: activePausedKey)
-        if let exerciseLastProgressAt {
-            UserDefaults.standard.set(exerciseLastProgressAt.timeIntervalSince1970, forKey: exerciseLastProgressKey)
-        } else {
-            UserDefaults.standard.removeObject(forKey: exerciseLastProgressKey)
-        }
-        if let activeCardioConfig,
-           let cardioData = try? JSONEncoder().encode(activeCardioConfig) {
-            UserDefaults.standard.set(cardioData, forKey: activeCardioConfigKey)
-        } else {
-            UserDefaults.standard.removeObject(forKey: activeCardioConfigKey)
-        }
+        persistSessionSnapshot(
+            session.compactedForPersistence(),
+            records: exerciseRecords,
+            exercises: activeSessionExercises,
+            includeProgressTimestampCleanup: true
+        )
         lastActivePersistAt = Date()
         pushActiveWorkoutToCloudIfNeeded(force: false)
     }
@@ -1391,13 +1381,27 @@ final class WorkoutStore: ObservableObject {
 
     private func persistActiveSessionLocalOnly() {
         guard let session = activeSession else { return }
+        persistSessionSnapshot(
+            session.compactedForPersistence(),
+            records: exerciseRecords,
+            exercises: activeSessionExercises,
+            includeProgressTimestampCleanup: false
+        )
+    }
+
+    private func persistSessionSnapshot(
+        _ session: WorkoutSession,
+        records: [ExerciseSessionRecord],
+        exercises: [Exercise],
+        includeProgressTimestampCleanup: Bool
+    ) {
         if let data = try? JSONEncoder().encode(session) {
             UserDefaults.standard.set(data, forKey: activeSessionKey)
         }
-        if let recordsData = try? JSONEncoder().encode(exerciseRecords) {
+        if let recordsData = try? JSONEncoder().encode(records) {
             UserDefaults.standard.set(recordsData, forKey: activeRecordsKey)
         }
-        if let exercisesData = try? JSONEncoder().encode(activeSessionExercises) {
+        if let exercisesData = try? JSONEncoder().encode(exercises) {
             UserDefaults.standard.set(exercisesData, forKey: activeSessionExercisesKey)
         }
         UserDefaults.standard.set(currentExerciseIndex, forKey: activeExerciseIndexKey)
@@ -1405,10 +1409,14 @@ final class WorkoutStore: ObservableObject {
         UserDefaults.standard.set(isExerciseTimerPaused, forKey: activePausedKey)
         if let exerciseLastProgressAt {
             UserDefaults.standard.set(exerciseLastProgressAt.timeIntervalSince1970, forKey: exerciseLastProgressKey)
+        } else if includeProgressTimestampCleanup {
+            UserDefaults.standard.removeObject(forKey: exerciseLastProgressKey)
         }
         if let activeCardioConfig,
            let cardioData = try? JSONEncoder().encode(activeCardioConfig) {
             UserDefaults.standard.set(cardioData, forKey: activeCardioConfigKey)
+        } else if includeProgressTimestampCleanup {
+            UserDefaults.standard.removeObject(forKey: activeCardioConfigKey)
         }
     }
 
@@ -1564,34 +1572,54 @@ final class WorkoutStore: ObservableObject {
     }
 
     private func saveHistory() {
-        if let data = try? JSONEncoder().encode(sessionHistory) {
-            UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.history, uid: cloudUserId, legacyKey: historyKey)
+        let sessions = sessionHistory
+        let uid = cloudUserId
+        let historyKey = self.historyKey
+        Task.detached(priority: .utility) {
+            let compacted = sessions.map { $0.compactedForPersistence() }
+            guard let data = try? JSONEncoder().encode(compacted) else { return }
+            UserScopedDefaults.setData(data, forLogicalKey: "session_history", uid: uid, legacyKey: historyKey)
         }
     }
 
     /// Recarrega fichas/histórico do namespace do usuário autenticado.
-    private func reloadScopedPersistedState() {
-        let sheetsData = UserScopedDefaults.data(
-            forLogicalKey: ScopedKey.sheets,
-            uid: cloudUserId,
-            legacyKey: storageKey
-        )
-        if let data = sheetsData,
-           let parsed = try? JSONDecoder().decode([WorkoutSheet].self, from: data) {
-            workoutSheets = parsed
+    private func reloadScopedPersistedState() async {
+        let storageKey = self.storageKey
+        let historyKey = self.historyKey
+        let uid = cloudUserId
+        let maxHistory = Self.maxLocalHistorySessions
+
+        let decoded = await Task.detached(priority: .userInitiated) { () -> (sheets: [WorkoutSheet]?, history: [WorkoutSession]?, compactedHistory: Bool) in
+            var sheets: [WorkoutSheet]?
+            var history: [WorkoutSession]?
+            var compactedHistory = false
+            let sheetsData = UserScopedDefaults.data(forLogicalKey: "workout_sheets", uid: uid, legacyKey: storageKey)
+            if let data = sheetsData,
+               let parsed = try? JSONDecoder().decode([WorkoutSheet].self, from: data) {
+                sheets = parsed
+            }
+            let historyData = UserScopedDefaults.data(forLogicalKey: "session_history", uid: uid, legacyKey: historyKey)
+            if let data = historyData,
+               let parsed = try? JSONDecoder().decode([WorkoutSession].self, from: data) {
+                let limited = Array(parsed.prefix(maxHistory))
+                compactedHistory = limited.contains(where: \.needsPersistenceCompaction)
+                history = limited.map { $0.compactedForPersistence() }
+            }
+            return (sheets, history, compactedHistory)
+        }.value
+
+        if let sheets = decoded.sheets {
+            workoutSheets = sheets
         } else if cloudUserId != nil {
             workoutSheets = Self.sampleWorkouts
             saveData()
         }
 
-        let historyData = UserScopedDefaults.data(
-            forLogicalKey: ScopedKey.history,
-            uid: cloudUserId,
-            legacyKey: historyKey
-        )
-        if let data = historyData,
-           let parsed = try? JSONDecoder().decode([WorkoutSession].self, from: data) {
-            sessionHistory = Array(parsed.prefix(Self.maxLocalHistorySessions))
+        if let history = decoded.history {
+            sessionHistory = history
+            if decoded.compactedHistory {
+                saveHistory()
+            }
         } else if cloudUserId != nil {
             sessionHistory = []
         }

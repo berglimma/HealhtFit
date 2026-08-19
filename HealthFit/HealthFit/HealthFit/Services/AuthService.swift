@@ -62,7 +62,8 @@ final class AuthService: ObservableObject {
         biotype: Biotype,
         goal: FitnessGoal,
         dateOfBirth: Date,
-        countryCode: String = CountryOption.defaultCode()
+        countryCode: String = CountryOption.defaultCode(),
+        accountRole: UserAccountRole = .student
     ) async {
         guard ensureFirebaseReady() else { return }
 
@@ -96,6 +97,7 @@ final class AuthService: ObservableObject {
                 id: authUser.uid,
                 name: trimmedName,
                 email: normalizedEmail,
+                accountRole: accountRole,
                 biotype: biotype,
                 goal: goal,
                 dateOfBirth: dateOfBirth,
@@ -232,6 +234,7 @@ final class AuthService: ObservableObject {
 
         evolutionService?.resetForAccountSwitch()
         ClimbingGearService.shared.bind(userId: nil)
+        SubscriptionService.shared.clearCourtesyState(userId: uid.isEmpty ? nil : uid)
 
         // Melhor esforço: grava o log de saída enquanto o Auth ainda pode estar ativo.
         if !uid.isEmpty {
@@ -618,7 +621,7 @@ final class AuthService: ObservableObject {
             await MarcoCivilAccessLogService.recordSessionStartIfNeeded(userId: profile.id)
         }
         PushNotificationService.shared.bind(userId: profile.id)
-        NotificationService.shared.refreshRecurringNotifications()
+        NotificationService.shared.refreshRecurringNotifications(force: true)
         NotificationService.shared.refreshWorkoutInactivityReminder(
             lastWorkoutAt: nil,
             accountCreatedAt: profile.createdAt
@@ -682,7 +685,7 @@ final class AuthService: ObservableObject {
         currentUser = user
         isAuthenticated = true
         loadProfileImage()
-        NotificationService.shared.refreshRecurringNotifications()
+        NotificationService.shared.refreshRecurringNotifications(force: true)
     }
 
     @discardableResult
@@ -772,6 +775,7 @@ final class AuthService: ObservableObject {
         WeeklyReportService.shared.reset()
         MonthlyReportService.shared.reset()
         AssistantSupplementNudgeEngine.reset()
+        AssistantRestDayEngine.reset()
         WorkoutShareCardStore.shared.reset()
         PostWorkoutCheckInService.shared.resetForAccountDeletion()
         DailyMorningCheckInService.shared.resetForAccountDeletion()

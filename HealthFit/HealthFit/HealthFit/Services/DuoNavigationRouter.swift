@@ -39,16 +39,24 @@ final class DuoNavigationRouter: ObservableObject {
         presentedChat = nil
     }
 
-    /// Interpreta toque em notificação `DUO_TEAM` (mensagem / proposta de treino).
+    /// Interpreta toque em notificação local ou FCM de chat (app aberto, em background ou fechado).
     func handleNotificationUserInfo(_ userInfo: [AnyHashable: Any], category: String) {
-        guard category == "DUO_TEAM" else { return }
-        let kind = (userInfo["kind"] as? String) ?? ""
-        let teamId = (userInfo["teamId"] as? String) ?? ""
-        let teamName = (userInfo["teamName"] as? String) ?? "Equipe"
+        let kind = stringValue(userInfo["kind"])
+        let type = stringValue(userInfo["type"])
+        let teamId = stringValue(userInfo["teamId"])
+        let teamName = stringValue(userInfo["teamName"])
         guard !teamId.isEmpty else { return }
 
-        // Só mensagens / propostas de treino abrem o chat.
-        guard kind == "duoChatMessage" || kind == "duoChatSchedule" else { return }
-        openChat(teamId: teamId, teamName: teamName)
+        let isDuoChat =
+            kind == "duoChatMessage"
+            || kind == "duoChatSchedule"
+            || type.hasPrefix("duoChat")
+            || (category == "DUO_TEAM" && (kind == "duoChatMessage" || kind == "duoChatSchedule"))
+        guard isDuoChat else { return }
+        openChat(teamId: teamId, teamName: teamName.isEmpty ? "Equipe" : teamName)
+    }
+
+    private func stringValue(_ raw: Any?) -> String {
+        (raw as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 }

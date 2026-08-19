@@ -35,12 +35,20 @@ final class TrainingNutritionSyncService: ObservableObject {
     }
 
     /// Aplica o cardápio conforme o treino selecionado e regenera o plano se possível.
+    /// Trocar de ficha remove o cardápio alinhado ao treino anterior.
     @discardableResult
     func applySelection(
         template: GuidedWorkoutTemplate,
         authService: AuthService,
         mealPlanService: MealPlanService
     ) -> String {
+        let isSwitchingWorkout = hasActiveTrainingFocus
+            && normalizedTitle(activeWorkoutTitle) != normalizedTitle(template.title)
+        if isSwitchingWorkout {
+            clearAlignedPlan(using: mealPlanService)
+            return "O cardápio alinhado ao treino anterior foi removido. Monte um cardápio personalizado em Nutrição, na aba Cardápio."
+        }
+
         let plan = Self.nutritionPlan(for: template.focus, level: template.level)
         activeFocus = template.focus
         activeLevel = template.level
@@ -70,6 +78,27 @@ final class TrainingNutritionSyncService: ObservableObject {
         }
 
         return "Cardápio ajustado para \(plan.feedbackLabel)"
+    }
+
+    /// Remove o alinhamento treino ↔ cardápio e apaga o plano semanal gerado por ele.
+    func clearAlignedPlan(using mealPlanService: MealPlanService) {
+        guard hasActiveTrainingFocus else { return }
+        clear()
+        mealPlanService.clearWeeklyPlan()
+    }
+
+    /// Ao abrir outro treino (não a ficha que gerou o alinhamento), o cardápio alinhado some.
+    func discardAlignedPlanIfDifferentWorkout(openedTitle: String, mealPlanService: MealPlanService) {
+        guard hasActiveTrainingFocus else { return }
+        if normalizedTitle(activeWorkoutTitle) == normalizedTitle(openedTitle) { return }
+        clearAlignedPlan(using: mealPlanService)
+    }
+
+    private func normalizedTitle(_ title: String?) -> String {
+        (title ?? "")
+            .replacingOccurrences(of: "Guiado — ", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
     }
 
     func clear() {
