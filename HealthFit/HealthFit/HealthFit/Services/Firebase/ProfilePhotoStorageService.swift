@@ -108,6 +108,26 @@ enum ProfilePhotoStorageService {
         }
     }
 
+    static func downloadPhotoJPEG(userId: String) async -> Data? {
+        guard isAvailable else { return nil }
+        let reference = storage.reference(withPath: photoPath(userId: userId))
+        do {
+            return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
+                reference.getData(maxSize: 4 * 1024 * 1024) { data, error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else if let data {
+                        continuation.resume(returning: data)
+                    } else {
+                        continuation.resume(throwing: ProfilePhotoStorageError.unavailable)
+                    }
+                }
+            }
+        } catch {
+            return nil
+        }
+    }
+
     // MARK: - Foto do grupo (duo/equipe)
 
     static func duoTeamCoverPath(teamId: String) -> String {

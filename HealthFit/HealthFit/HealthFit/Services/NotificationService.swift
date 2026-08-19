@@ -508,6 +508,23 @@ final class NotificationService {
         )
     }
 
+    /// Estado local das notificações do ícone — sincronizado via `wellnessMeta`.
+    func healthIconNotificationStateForSync() -> (yellowDayKey: String?, redAnchor: Date?) {
+        (
+            UserDefaults.standard.string(forKey: healthIconYellowNotifiedDayKey),
+            UserDefaults.standard.object(forKey: healthIconRedNotifiedAnchorKey) as? Date
+        )
+    }
+
+    func applySyncedHealthIconNotificationState(yellowDayKey: String?, redAnchor: Date?) {
+        if let yellowDayKey {
+            UserDefaults.standard.set(yellowDayKey, forKey: healthIconYellowNotifiedDayKey)
+        }
+        if let redAnchor {
+            UserDefaults.standard.set(redAnchor, forKey: healthIconRedNotifiedAnchorKey)
+        }
+    }
+
     private func deliverHealthIconYellowIfNeeded(dayKey: String, detailMessage: String) {
         let notifiedDay = UserDefaults.standard.string(forKey: healthIconYellowNotifiedDayKey)
         guard notifiedDay != dayKey else { return }

@@ -153,7 +153,10 @@ struct RootView: View {
         mealPlanService.loadSavedData()
         if let userId = authService.currentUser?.id {
             Task { await MealPhotoAnalysisService.shared.loadIfNeeded(userId: userId) }
-            authService.syncProfilePhotoToCloudIfNeeded()
+            Task {
+                await authService.syncProfileFromCloudIfNeeded()
+                await authService.syncProfilePhotoFromCloud(userId: userId)
+            }
             Task { await DuoTeamService.shared.loadIfNeeded() }
         }
         refreshInactivityReminder()
@@ -216,8 +219,11 @@ struct RootView: View {
         refreshInactivityReminder()
         EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
         syncWellnessCloudHistory()
-        if authService.currentUser?.id != nil {
-            authService.syncProfilePhotoToCloudIfNeeded()
+        if let userId = authService.currentUser?.id {
+            Task {
+                await authService.syncProfileFromCloudIfNeeded()
+                await authService.syncProfilePhotoFromCloud(userId: userId)
+            }
             Task { await DuoTeamService.shared.loadIfNeeded() }
         }
 
@@ -250,6 +256,8 @@ struct RootView: View {
                 timerService: timerService
             )
             await authService.syncProfileBackgroundFromCloud(userId: userId)
+            await authService.syncProfilePhotoFromCloud(userId: userId)
+            await authService.syncProfileFromCloudIfNeeded()
             EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
         }
     }

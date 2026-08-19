@@ -71,14 +71,11 @@ struct ProfileView: View {
                 .scrollDismissesKeyboard(.immediately)
                 // No keyboard toolbar on this List — avoids TabView+List toolbar race that can abort the process.
                 .task { await handleProfileAppear() }
-                .onChange(of: authService.currentUser) { _, _ in
+                .onChange(of: authService.currentUser?.id) { _, _ in
                     syncTrainerFields()
                     syncDisplayNameField()
                     syncBodyMeasurementFields()
                     syncBodyDataFields()
-                }
-                .onChange(of: wellnessService.todayEntry) { _, _ in
-                    syncWellnessFields()
                 }
                 .onChange(of: measurementsSaveError) { _, error in
                     if error != nil { showSaveFailedAlert = true }
@@ -360,7 +357,7 @@ struct ProfileView: View {
 
         syncPreWorkoutFromWorkouts()
         if let userId = authService.currentUser?.id {
-            await evolutionService.loadIfNeeded(userId: userId)
+            Task { await evolutionService.loadIfNeeded(userId: userId) }
         }
     }
 
@@ -985,12 +982,14 @@ struct ProfileView: View {
 
     @ViewBuilder
     private func wellnessSection(for user: UserProfile) -> some View {
+        let displayedSleepHours = wellnessService.todaySleepHours ?? sleepHoursInput
+
         VStack(alignment: .leading, spacing: 12) {
             Text("Horas de sono (hoje)")
                 .font(.subheadline.weight(.medium))
 
             HStack {
-                Text(String(format: "%.1f h", sleepHoursInput))
+                Text(String(format: "%.1f h", displayedSleepHours))
                     .font(.title3.bold())
                     .foregroundStyle(AppTheme.accent)
                 Spacer()
@@ -999,18 +998,25 @@ struct ProfileView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(assessment.color)
                 } else {
-                    let preview = SleepAssessment.evaluate(hours: sleepHoursInput)
+                    let preview = SleepAssessment.evaluate(hours: displayedSleepHours)
                     Label(preview.title, systemImage: preview.icon)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(preview.color)
                 }
             }
 
-            Slider(value: $sleepHoursInput, in: 0...12, step: 0.5)
+            Slider(
+                value: Binding(
+                    get: { wellnessService.todaySleepHours ?? sleepHoursInput },
+                    set: { newValue in
+                        sleepHoursInput = newValue
+                        wellnessService.logSleep(hours: newValue)
+                    }
+                ),
+                in: 0...12,
+                step: 0.5
+            )
                 .tint(AppTheme.accent)
-                .onChange(of: sleepHoursInput) { _, newValue in
-                    wellnessService.logSleep(hours: newValue)
-                }
 
             if let assessment = wellnessService.todaySleepAssessment {
                 Text(assessment.message)
@@ -1079,7 +1085,9 @@ struct ProfileView: View {
                 "Copos (\(WaterServing.glassML) ml): \(wellnessService.todayEntry.waterIntakeMl / WaterServing.glassML)",
                 value: Binding(
                     get: { wellnessService.todayEntry.waterIntakeMl / WaterServing.glassML },
-                    set: { wellnessService.updateWaterIntake($0 * WaterServing.glassML) }
+                    set: { newCount in
+                        wellnessService.updateWaterIntake(newCount * WaterServing.glassML)
+                    }
                 ),
                 in: 0...WaterServing.maxDailyIntakeML / WaterServing.glassML,
                 step: 1
@@ -1089,7 +1097,9 @@ struct ProfileView: View {
                 "Garrafas (\(WaterServing.bottleML) ml): \(wellnessService.todayEntry.waterIntakeMl / WaterServing.bottleML)",
                 value: Binding(
                     get: { wellnessService.todayEntry.waterIntakeMl / WaterServing.bottleML },
-                    set: { wellnessService.updateWaterIntake($0 * WaterServing.bottleML) }
+                    set: { newCount in
+                        wellnessService.updateWaterIntake(newCount * WaterServing.bottleML)
+                    }
                 ),
                 in: 0...WaterServing.maxDailyIntakeML / WaterServing.bottleML,
                 step: 1
@@ -1178,7 +1188,9 @@ struct ProfileView: View {
     }
 
     private func syncWellnessFields() {
-        sleepHoursInput = wellnessService.todaySleepHours ?? 7
+        if let hours = wellnessService.todaySleepHours {
+            sleepHoursInput = hours
+        }
     }
 
     private func syncPreWorkoutFromWorkouts() {

@@ -17,6 +17,7 @@ final class AuthService: ObservableObject {
     var isFirebaseReady: Bool { FirebaseBootstrap.isConfigured }
 
     private let legacyUserDefaultsKey = "healthfit_current_user"
+    private var profileCloudSyncInFlight = false
 
     init() {
         FirebaseBootstrap.configure()
@@ -379,6 +380,32 @@ final class AuthService: ObservableObject {
         syncProfilePhotoToCloud(userId: uid)
     }
 
+    /// Sincroniza avatar entre dispositivo e nuvem (sobe local ou baixa do Storage).
+    func syncProfilePhotoFromCloud(userId: String) async {
+        if let local = Self.loadImage(for: userId) {
+            await MainActor.run { profileImage = local }
+            syncProfilePhotoToCloud(userId: userId)
+            return
+        }
+
+        guard let data = await ProfilePhotoStorageService.downloadPhotoJPEG(userId: userId),
+              let image = UIImage(data: data) else {
+            return
+        }
+
+        Self.saveImage(image, for: userId)
+        await MainActor.run { profileImage = image }
+    }
+
+    /// Mescla perfil (dados, medidas, peso…) com o Firestore.
+    func syncProfileFromCloudIfNeeded() async {
+        guard let user = currentUser else { return }
+        guard !profileCloudSyncInFlight else { return }
+        profileCloudSyncInFlight = true
+        defer { profileCloudSyncInFlight = false }
+        await refreshProfileFromCloud(userId: user.id, email: user.email)
+    }
+
     private func syncProfilePhotoToCloud(userId: String) {
         Task {
             let data: Data?
@@ -605,12 +632,18 @@ final class AuthService: ObservableObject {
     }
 
     private func persistSession(with profile: UserProfile) {
+        let profileChanged = currentUser != profile
         currentUser = profile
         isAuthenticated = true
         AppAnalytics.setUserID(profile.id)
+
+        guard profileChanged else { return }
+
         saveCachedProfile(profile)
         loadProfileImage()
-        syncProfilePhotoToCloudIfNeeded()
+        Task {
+            await syncProfilePhotoFromCloud(userId: profile.id)
+        }
         // Garante país/bandeira no diretório público (dupla/equipe).
         Task {
             try? await ProfileFirestoreService.syncUserDirectory(profile)
@@ -621,6 +654,7 @@ final class AuthService: ObservableObject {
             await MarcoCivilAccessLogService.recordSessionStartIfNeeded(userId: profile.id)
         }
         PushNotificationService.shared.bind(userId: profile.id)
+        DailyWellnessService.shared.refreshWaterGoal(from: profile)
         NotificationService.shared.refreshRecurringNotifications(force: true)
         NotificationService.shared.refreshWorkoutInactivityReminder(
             lastWorkoutAt: nil,

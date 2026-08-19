@@ -46,6 +46,7 @@ final class DailyWellnessService: ObservableObject {
 
     private var userEmail: String?
     private var cloudUserId: String?
+    private var wellnessCloudSyncInFlight = false
     /// Meta diária de água (ml), derivada do perfil; enviada ao Firebase junto com o dia.
     private var waterGoalMl: Int?
     private let storagePrefix = "healthfit_wellness"
@@ -77,25 +78,20 @@ final class DailyWellnessService: ObservableObject {
     /// Carrega o dia atual (e metadados) do Firebase e mescla com o cache local.
     func syncFromCloudIfNeeded() async {
         guard let userId = cloudUserId, DailyWellnessFirestoreService.isAvailable else { return }
+        guard !wellnessCloudSyncInFlight else { return }
+        wellnessCloudSyncInFlight = true
+        defer { wellnessCloudSyncInFlight = false }
 
         do {
             let todayKey = DailyWellnessEntry.dayKey(for: .now)
             if let remote = try await DailyWellnessFirestoreService.fetchEntry(userId: userId, dayKey: todayKey) {
                 let merged = mergeEntries(local: todayEntry.dayKey == todayKey ? todayEntry : .empty(), remote: remote)
-                todayEntry = merged
-                persistLocally(merged)
+                save(merged)
+                reconcileIconAnchorFromEntry(merged)
             }
 
             let meta = try await DailyWellnessFirestoreService.fetchMeta(userId: userId)
-            if let remoteLast = meta.lastWaterOrSleepUpdateAt {
-                let localLast = lastWaterOrSleepUpdateAt
-                if localLast == nil || remoteLast > localLast! {
-                    setLastWaterOrSleepUpdateAt(remoteLast)
-                }
-            }
-            if let remoteTracking = meta.trackingStartedAt, trackingStartedAt == nil {
-                setTrackingStartedAt(remoteTracking)
-            }
+            applyMergedMeta(mergeMeta(local: currentMetaState(), remote: meta))
 
             // Garante que o estado local atual também exista na nuvem.
             if todayEntry.dayKey == todayKey {
@@ -243,10 +239,13 @@ final class DailyWellnessService: ObservableObject {
     }
 
     func logSleep(hours: Double) {
+        let clamped = max(0, min(hours, 14))
         var entry = currentTodayEntry()
-        entry.sleepHours = max(0, min(hours, 14))
+        if entry.sleepHours == clamped, entry.sleepUpdatedAt != nil {
+            return
+        }
+        entry.sleepHours = clamped
         entry.sleepUpdatedAt = .now
-        todayEntry = entry
         save(entry)
         markWaterOrSleepUpdated()
         markMorningCheckInHandled()
@@ -261,12 +260,12 @@ final class DailyWellnessService: ObservableObject {
     func updateWaterIntake(_ milliliters: Int) {
         var entry = currentTodayEntry()
         let clamped = min(max(0, milliliters), WaterServing.maxDailyIntakeML)
+        guard entry.waterIntakeMl != clamped else { return }
         entry.waterIntakeMl = clamped
         if clamped > 0 {
             entry.waterUpdatedAt = .now
             markWaterOrSleepUpdated()
         }
-        todayEntry = entry
         save(entry)
     }
 
@@ -276,15 +275,17 @@ final class DailyWellnessService: ObservableObject {
 
     func updateEnergyDrinksCount(_ count: Int) {
         var entry = currentTodayEntry()
-        entry.energyDrinksCount = max(0, count)
-        todayEntry = entry
+        let clamped = max(0, count)
+        guard entry.energyDrinksCount != clamped else { return }
+        entry.energyDrinksCount = clamped
         save(entry)
     }
 
     func updatePreWorkoutCount(_ count: Int) {
         var entry = currentTodayEntry()
-        entry.preWorkoutCount = max(0, count)
-        todayEntry = entry
+        let clamped = max(0, count)
+        guard entry.preWorkoutCount != clamped else { return }
+        entry.preWorkoutCount = clamped
         save(entry)
     }
 
@@ -301,7 +302,6 @@ final class DailyWellnessService: ObservableObject {
         if doses > 0 {
             entry.preWorkoutCount = max(0, entry.preWorkoutCount + doses)
         }
-        todayEntry = entry
         save(entry)
         AssistantSupplementNudgeEngine.queueLoggedAcknowledgment(intake, athleteName: athleteName)
     }
@@ -317,7 +317,6 @@ final class DailyWellnessService: ObservableObject {
                 entry.preWorkoutCount = max(0, entry.preWorkoutCount - doses)
             }
         }
-        todayEntry = entry
         save(entry)
     }
 
@@ -328,7 +327,6 @@ final class DailyWellnessService: ObservableObject {
         var entry = currentTodayEntry()
         guard usedToday > entry.preWorkoutCount else { return }
         entry.preWorkoutCount = usedToday
-        todayEntry = entry
         save(entry)
     }
 
@@ -338,7 +336,6 @@ final class DailyWellnessService: ObservableObject {
         guard !entry.isRestDay else { return }
         entry.isRestDay = true
         entry.restDayMarkedAt = .now
-        todayEntry = entry
         save(entry)
         let message = AssistantRestDayEngine.restDayMarkedMessage(context: assistantContext)
         AssistantRestDayEngine.queueRestDayMarkedMessage(message)
@@ -349,7 +346,6 @@ final class DailyWellnessService: ObservableObject {
         guard entry.isRestDay else { return }
         entry.isRestDay = false
         entry.restDayMarkedAt = nil
-        todayEntry = entry
         save(entry)
     }
 
@@ -406,10 +402,13 @@ final class DailyWellnessService: ObservableObject {
 
     private func markMorningCheckInHandled() {
         guard let userEmail else { return }
-        UserDefaults.standard.set(
-            DailyWellnessEntry.dayKey(for: .now),
-            forKey: morningCheckInHandledKey(email: userEmail)
-        )
+        let dayKey = DailyWellnessEntry.dayKey(for: .now)
+        let key = morningCheckInHandledKey(email: userEmail)
+        guard UserDefaults.standard.string(forKey: key) != dayKey else { return }
+        UserDefaults.standard.set(dayKey, forKey: key)
+        Task {
+            await pushMetaToCloudSafely()
+        }
     }
 
     private func markWaterOrSleepUpdated(at date: Date = .now) {
@@ -464,6 +463,7 @@ final class DailyWellnessService: ObservableObject {
     }
 
     private func save(_ entry: DailyWellnessEntry) {
+        guard entry != todayEntry else { return }
         persistLocally(entry)
         Task {
             await pushEntryToCloudSafely(entry)
@@ -508,9 +508,95 @@ final class DailyWellnessService: ObservableObject {
         guard let userId = cloudUserId else { return }
         try await DailyWellnessFirestoreService.saveMeta(
             userId: userId,
-            lastWaterOrSleepUpdateAt: lastWaterOrSleepUpdateAt,
-            trackingStartedAt: trackingStartedAt
+            meta: currentMetaState()
         )
+    }
+
+    private func currentMetaState() -> DailyWellnessFirestoreService.WellnessMetaState {
+        let notificationState = NotificationService.shared.healthIconNotificationStateForSync()
+        return DailyWellnessFirestoreService.WellnessMetaState(
+            lastWaterOrSleepUpdateAt: lastWaterOrSleepUpdateAt,
+            trackingStartedAt: trackingStartedAt,
+            morningCheckInHandledDayKey: morningCheckInHandledDayKeyForSync(),
+            healthIconYellowNotifiedDayKey: notificationState.yellowDayKey,
+            healthIconRedNotifiedAnchor: notificationState.redAnchor
+        )
+    }
+
+    private func morningCheckInHandledDayKeyForSync() -> String? {
+        guard let userEmail else { return nil }
+        return UserDefaults.standard.string(forKey: morningCheckInHandledKey(email: userEmail))
+    }
+
+    private func applyMergedMeta(_ meta: DailyWellnessFirestoreService.WellnessMetaState) {
+        if let last = meta.lastWaterOrSleepUpdateAt {
+            setLastWaterOrSleepUpdateAt(last)
+        }
+        if let tracking = meta.trackingStartedAt {
+            setTrackingStartedAt(tracking)
+        }
+        if let handledDay = meta.morningCheckInHandledDayKey, let userEmail {
+            UserDefaults.standard.set(handledDay, forKey: morningCheckInHandledKey(email: userEmail))
+        }
+        NotificationService.shared.applySyncedHealthIconNotificationState(
+            yellowDayKey: meta.healthIconYellowNotifiedDayKey,
+            redAnchor: meta.healthIconRedNotifiedAnchor
+        )
+    }
+
+    private func mergeMeta(
+        local: DailyWellnessFirestoreService.WellnessMetaState,
+        remote: DailyWellnessFirestoreService.WellnessMetaState
+    ) -> DailyWellnessFirestoreService.WellnessMetaState {
+        DailyWellnessFirestoreService.WellnessMetaState(
+            lastWaterOrSleepUpdateAt: maxDate(local.lastWaterOrSleepUpdateAt, remote.lastWaterOrSleepUpdateAt),
+            trackingStartedAt: minDate(local.trackingStartedAt, remote.trackingStartedAt),
+            morningCheckInHandledDayKey: maxString(local.morningCheckInHandledDayKey, remote.morningCheckInHandledDayKey),
+            healthIconYellowNotifiedDayKey: maxString(
+                local.healthIconYellowNotifiedDayKey,
+                remote.healthIconYellowNotifiedDayKey
+            ),
+            healthIconRedNotifiedAnchor: maxDate(local.healthIconRedNotifiedAnchor, remote.healthIconRedNotifiedAnchor)
+        )
+    }
+
+    private func reconcileIconAnchorFromEntry(_ entry: DailyWellnessEntry) {
+        let candidates = [entry.sleepUpdatedAt, entry.waterUpdatedAt].compactMap { $0 }
+        guard let latest = candidates.max() else { return }
+        if let current = lastWaterOrSleepUpdateAt {
+            if latest > current {
+                setLastWaterOrSleepUpdateAt(latest)
+            }
+        } else {
+            setLastWaterOrSleepUpdateAt(latest)
+        }
+    }
+
+    private func maxDate(_ lhs: Date?, _ rhs: Date?) -> Date? {
+        switch (lhs, rhs) {
+        case let (l?, r?): return max(l, r)
+        case (.some, nil): return lhs
+        case (nil, .some): return rhs
+        default: return nil
+        }
+    }
+
+    private func minDate(_ lhs: Date?, _ rhs: Date?) -> Date? {
+        switch (lhs, rhs) {
+        case let (l?, r?): return min(l, r)
+        case (.some, nil): return lhs
+        case (nil, .some): return rhs
+        default: return nil
+        }
+    }
+
+    private func maxString(_ lhs: String?, _ rhs: String?) -> String? {
+        switch (lhs, rhs) {
+        case let (l?, r?): return max(l, r)
+        case (.some, nil): return lhs
+        case (nil, .some): return rhs
+        default: return nil
+        }
     }
 
     private func mergeEntries(local: DailyWellnessEntry, remote: DailyWellnessEntry) -> DailyWellnessEntry {

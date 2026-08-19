@@ -2,6 +2,17 @@ import FirebaseFirestore
 import Foundation
 
 enum DailyWellnessFirestoreService {
+    struct WellnessMetaState: Equatable {
+        var lastWaterOrSleepUpdateAt: Date?
+        var trackingStartedAt: Date?
+        /// Dia em que o check-in matinal foi dispensado/concluído (yyyy-MM-dd).
+        var morningCheckInHandledDayKey: String?
+        /// Dedup de notificação amarela do ícone de saúde.
+        var healthIconYellowNotifiedDayKey: String?
+        /// Dedup de notificação vermelha do ícone de saúde (âncora de 24h).
+        var healthIconRedNotifiedAnchor: Date?
+    }
+
     private static let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -81,35 +92,44 @@ enum DailyWellnessFirestoreService {
         return snapshot.documents.compactMap { decodeEntry(from: $0.data()) }
     }
 
-    static func saveMeta(
-        userId: String,
-        lastWaterOrSleepUpdateAt: Date?,
-        trackingStartedAt: Date?
-    ) async throws {
+    static func saveMeta(userId: String, meta: WellnessMetaState) async throws {
         guard isAvailable else { return }
 
         var data: [String: Any] = [
             "updatedAt": Timestamp(date: .now),
         ]
-        if let lastWaterOrSleepUpdateAt {
+        if let lastWaterOrSleepUpdateAt = meta.lastWaterOrSleepUpdateAt {
             data["lastWaterOrSleepUpdateAt"] = Timestamp(date: lastWaterOrSleepUpdateAt)
         }
-        if let trackingStartedAt {
+        if let trackingStartedAt = meta.trackingStartedAt {
             data["trackingStartedAt"] = Timestamp(date: trackingStartedAt)
+        }
+        if let morningCheckInHandledDayKey = meta.morningCheckInHandledDayKey {
+            data["morningCheckInHandledDayKey"] = morningCheckInHandledDayKey
+        }
+        if let healthIconYellowNotifiedDayKey = meta.healthIconYellowNotifiedDayKey {
+            data["healthIconYellowNotifiedDayKey"] = healthIconYellowNotifiedDayKey
+        }
+        if let healthIconRedNotifiedAnchor = meta.healthIconRedNotifiedAnchor {
+            data["healthIconRedNotifiedAnchor"] = Timestamp(date: healthIconRedNotifiedAnchor)
         }
 
         try await metaDocument(userId: userId).setData(data, merge: true)
     }
 
-    static func fetchMeta(userId: String) async throws -> (lastWaterOrSleepUpdateAt: Date?, trackingStartedAt: Date?) {
-        guard isAvailable else { return (nil, nil) }
+    static func fetchMeta(userId: String) async throws -> WellnessMetaState {
+        guard isAvailable else { return WellnessMetaState() }
 
         let snapshot = try await metaDocument(userId: userId).getDocument()
-        guard let data = snapshot.data() else { return (nil, nil) }
+        guard let data = snapshot.data() else { return WellnessMetaState() }
 
-        let last = (data["lastWaterOrSleepUpdateAt"] as? Timestamp)?.dateValue()
-        let tracking = (data["trackingStartedAt"] as? Timestamp)?.dateValue()
-        return (last, tracking)
+        return WellnessMetaState(
+            lastWaterOrSleepUpdateAt: (data["lastWaterOrSleepUpdateAt"] as? Timestamp)?.dateValue(),
+            trackingStartedAt: (data["trackingStartedAt"] as? Timestamp)?.dateValue(),
+            morningCheckInHandledDayKey: data["morningCheckInHandledDayKey"] as? String,
+            healthIconYellowNotifiedDayKey: data["healthIconYellowNotifiedDayKey"] as? String,
+            healthIconRedNotifiedAnchor: (data["healthIconRedNotifiedAnchor"] as? Timestamp)?.dateValue()
+        )
     }
 
     static func deleteAllEntries(userId: String) async throws {
