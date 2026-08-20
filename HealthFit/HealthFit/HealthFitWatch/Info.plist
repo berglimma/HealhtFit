@@ -9,7 +9,7 @@
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>luan.com.healthfit.app</string>
 	<key>WKRunsIndependentlyOfCompanionApp</key>
-	<true/>
+	<false/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>HealthFit no Apple Watch lê passos, batimentos e calorias para sincronizar com o iPhone e o app Saúde.</string>
 	<key>NSHealthUpdateUsageDescription</key>

@@ -9,6 +9,45 @@ struct MealPlanCloudSnapshot: Codable {
     var dailyCalorieTarget: Int
     var estimatedTDEE: Int
     var caloricDeficit: Int
+    /// Refeições criadas pelo usuário (fora do catálogo).
+    var userMealLibrary: [MealTemplate]
+
+    init(
+        weeklyPlan: [DailyMealPlan],
+        shoppingList: [ShoppingItem],
+        customMenuSelection: CustomMenuSelection,
+        basalMetabolicRate: Int,
+        dailyCalorieTarget: Int,
+        estimatedTDEE: Int,
+        caloricDeficit: Int,
+        userMealLibrary: [MealTemplate] = []
+    ) {
+        self.weeklyPlan = weeklyPlan
+        self.shoppingList = shoppingList
+        self.customMenuSelection = customMenuSelection
+        self.basalMetabolicRate = basalMetabolicRate
+        self.dailyCalorieTarget = dailyCalorieTarget
+        self.estimatedTDEE = estimatedTDEE
+        self.caloricDeficit = caloricDeficit
+        self.userMealLibrary = userMealLibrary
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        weeklyPlan = try container.decodeIfPresent([DailyMealPlan].self, forKey: .weeklyPlan) ?? []
+        shoppingList = try container.decodeIfPresent([ShoppingItem].self, forKey: .shoppingList) ?? []
+        customMenuSelection = try container.decodeIfPresent(CustomMenuSelection.self, forKey: .customMenuSelection) ?? .default
+        basalMetabolicRate = try container.decodeIfPresent(Int.self, forKey: .basalMetabolicRate) ?? 0
+        dailyCalorieTarget = try container.decodeIfPresent(Int.self, forKey: .dailyCalorieTarget) ?? 0
+        estimatedTDEE = try container.decodeIfPresent(Int.self, forKey: .estimatedTDEE) ?? 0
+        caloricDeficit = try container.decodeIfPresent(Int.self, forKey: .caloricDeficit) ?? 0
+        userMealLibrary = try container.decodeIfPresent([MealTemplate].self, forKey: .userMealLibrary) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case weeklyPlan, shoppingList, customMenuSelection
+        case basalMetabolicRate, dailyCalorieTarget, estimatedTDEE, caloricDeficit, userMealLibrary
+    }
 }
 
 enum MealPlanFirestoreService {

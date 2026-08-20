@@ -30,6 +30,13 @@ struct MealPlanView: View {
     @State private var shareItems: [Any] = []
     @State private var showShareSheet = false
     @State private var showShareHintAlert = false
+    @State private var mealEditorContext: UserMealEditorContext?
+
+    private struct UserMealEditorContext: Identifiable {
+        let id = UUID()
+        let mealType: MealType
+        let existing: MealTemplate?
+    }
 
     private var selectedGoal: FitnessGoal {
         authService.currentUser?.goal ?? .muscleGain
@@ -115,6 +122,30 @@ struct MealPlanView: View {
             }
             .sheet(item: $mailDraft, onDismiss: presentAlertForPendingMailResult) { draft in
                 nutritionistMailSheet(draft)
+            }
+            .sheet(item: $mealEditorContext) { context in
+                CreateUserMealSheet(
+                    mealType: context.mealType,
+                    existing: context.existing,
+                    dailyCalorieTarget: previewProfile?.dailyCalorieTarget
+                        ?? authService.currentUser?.dailyCalorieTarget
+                        ?? 2000,
+                    onSave: { meal in
+                        mealPlanService.saveUserMeal(
+                            meal,
+                            selectForSlot: true,
+                            profile: previewProfile ?? authService.currentUser
+                        )
+                    },
+                    onDelete: context.existing == nil
+                        ? nil
+                        : { id in
+                            mealPlanService.deleteUserMeal(
+                                id: id,
+                                profile: previewProfile ?? authService.currentUser
+                            )
+                        }
+                )
             }
     }
 
@@ -662,7 +693,7 @@ struct MealPlanView: View {
             if let profile = previewProfile {
                 macrosSummary(mealPlanService.builtMenuOption(for: profile))
 
-                Text("Monte um cardápio personalizado: escolha uma opção para cada refeição e salve no plano semanal.")
+                Text("Monte seu cardápio: use as recomendações do catálogo ou crie refeições e alimentos do seu jeito.")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -672,15 +703,23 @@ struct MealPlanView: View {
                 }
 
                 Button {
-                    savePersonalizedMenu()
+                    savePersonalizedMenu(replaceRecommended: false)
                 } label: {
-                    Label("Salvar e substituir o recomendado", systemImage: "checkmark.circle.fill")
+                    Label("Salvar Meu Cardápio (manter recomendações)", systemImage: "square.and.arrow.down")
                 }
                 .buttonStyle(PrimaryButtonStyle(isEnabled: hasProfileMetrics))
                 .disabled(!hasProfileMetrics)
                 .padding(.top, 8)
 
-                Text("O cardápio montado substitui as opções recomendadas na aba Plano.")
+                Button {
+                    savePersonalizedMenu(replaceRecommended: true)
+                } label: {
+                    Label("Salvar e substituir o recomendado", systemImage: "checkmark.circle.fill")
+                }
+                .buttonStyle(.bordered)
+                .disabled(!hasProfileMetrics)
+
+                Text("Nas recomendações, o catálogo continua disponível. Em Meu Cardápio entram as escolhas e refeições que você criar.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -700,83 +739,150 @@ struct MealPlanView: View {
     private func mealSlotBuilder(mealType: MealType, profile: UserProfile) -> some View {
         if let lactose = mealPlanService.customMenuSelection.lactoseTolerance {
             let sweetLevel = mealPlanService.customMenuSelection.sweetConsumption
-            let options = MealCatalog.templates(
+            let catalogOptions = MealCatalog.templates(
                 for: mealType,
                 sweetLevel: sweetLevel,
                 goal: profile.goal,
                 lactoseTolerance: lactose
             )
+            let userOptions = mealPlanService.userMeals(for: mealType)
             let selectedID = mealPlanService.customMenuSelection.selectedTemplateID(for: mealType)
 
             VStack(alignment: .leading, spacing: 10) {
-            Label(mealType.rawValue, systemImage: mealType.icon)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppTheme.textPrimary)
+                HStack {
+                    Label(mealType.rawValue, systemImage: mealType.icon)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Spacer()
+                    Button {
+                        mealEditorContext = UserMealEditorContext(mealType: mealType, existing: nil)
+                    } label: {
+                        Label("Criar", systemImage: "plus.circle.fill")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.borderless)
+                }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(options) { template in
-                        let isSelected = selectedID == template.id
-                        let scaled = template.scaled(
-                            to: max(Int(Double(profile.dailyCalorieTarget) * mealType.calorieShare), 120),
-                            proteinMultiplier: profile.goal == .muscleGain ? 2 : 1
-                        )
-
-                        Button {
-                            mealPlanService.updateMealSelection(template.id, for: mealType, profile: profile)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text(template.name)
-                                        .font(.caption.weight(.bold))
-                                        .lineLimit(2)
-                                        .multilineTextAlignment(.leading)
-                                    if template.isSimpleBasic {
-                                        Image(systemName: "leaf.circle.fill")
-                                            .font(.caption2)
-                                            .foregroundStyle(.green)
-                                    }
-                                    if template.isFatLossFocused {
-                                        Image(systemName: "flame.fill")
-                                            .font(.caption2)
-                                            .foregroundStyle(.orange)
-                                    }
-                                    if template.isSweet {
-                                        Image(systemName: "birthday.cake.fill")
-                                            .font(.caption2)
-                                            .foregroundStyle(AppTheme.accentSecondary)
-                                    }
-                                    if template.containsLactose {
-                                        Image(systemName: "cup.and.saucer.fill")
-                                            .font(.caption2)
-                                            .foregroundStyle(.blue.opacity(0.8))
-                                    }
-                                }
-                                Text("\(scaled.calories) kcal")
-                                    .font(.caption2.weight(.medium))
-                                    .foregroundStyle(AppTheme.accentSecondary)
-                                Text("P:\(scaled.protein)g C:\(scaled.carbs)g")
-                                    .font(.caption2)
-                                    .foregroundStyle(AppTheme.textSecondary)
+                if !userOptions.isEmpty {
+                    Text("Minhas refeições")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(userOptions) { template in
+                                mealTemplateChip(
+                                    template: template,
+                                    profile: profile,
+                                    mealType: mealType,
+                                    isSelected: selectedID == template.id,
+                                    isUserCreated: true
+                                )
                             }
-                            .frame(width: 148, alignment: .leading)
-                            .padding(10)
-                            .foregroundStyle(isSelected ? .white : AppTheme.textPrimary)
-                            .background(isSelected ? AppTheme.accent : AppTheme.cardBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(isSelected ? AppTheme.accent : Color.clear, lineWidth: 2)
+                        }
+                    }
+                }
+
+                Text("Recomendações")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(catalogOptions) { template in
+                            mealTemplateChip(
+                                template: template,
+                                profile: profile,
+                                mealType: mealType,
+                                isSelected: selectedID == template.id,
+                                isUserCreated: false
                             )
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
-        }
             .padding()
             .background(AppTheme.cardBackground.opacity(0.6))
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        }
+    }
+
+    private func mealTemplateChip(
+        template: MealTemplate,
+        profile: UserProfile,
+        mealType: MealType,
+        isSelected: Bool,
+        isUserCreated: Bool
+    ) -> some View {
+        let scaled = template.scaled(
+            to: max(Int(Double(profile.dailyCalorieTarget) * mealType.calorieShare), 120),
+            proteinMultiplier: profile.goal == .muscleGain ? 2 : 1
+        )
+
+        return VStack(alignment: .leading, spacing: 6) {
+            Button {
+                mealPlanService.updateMealSelection(template.id, for: mealType, profile: profile)
+            } label: {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(template.name)
+                            .font(.caption.weight(.bold))
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                        if isUserCreated {
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.caption2)
+                                .foregroundStyle(isSelected ? .white.opacity(0.9) : AppTheme.accent)
+                        }
+                        if template.isSimpleBasic {
+                            Image(systemName: "leaf.circle.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.green)
+                        }
+                        if template.isFatLossFocused {
+                            Image(systemName: "flame.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.orange)
+                        }
+                        if template.isSweet {
+                            Image(systemName: "birthday.cake.fill")
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.accentSecondary)
+                        }
+                        if template.containsLactose {
+                            Image(systemName: "cup.and.saucer.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.blue.opacity(0.8))
+                        }
+                    }
+                    Text("\(scaled.calories) kcal")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(isSelected ? .white.opacity(0.9) : AppTheme.accentSecondary)
+                    Text("P:\(scaled.protein)g C:\(scaled.carbs)g")
+                        .font(.caption2)
+                        .foregroundStyle(isSelected ? .white.opacity(0.8) : AppTheme.textSecondary)
+                }
+                .frame(width: 148, alignment: .leading)
+                .padding(10)
+                .foregroundStyle(isSelected ? .white : AppTheme.textPrimary)
+                .background(isSelected ? AppTheme.accent : AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isSelected ? AppTheme.accent : Color.clear, lineWidth: 2)
+                )
+            }
+            .buttonStyle(.plain)
+
+            if isUserCreated {
+                Button {
+                    mealEditorContext = UserMealEditorContext(mealType: mealType, existing: template)
+                } label: {
+                    Text("Editar")
+                        .font(.caption2.weight(.semibold))
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(AppTheme.accent)
+            }
         }
     }
 
@@ -1033,12 +1139,12 @@ struct MealPlanView: View {
         showMealPlanUpdatedAlert = true
     }
 
-    private func savePersonalizedMenu() {
+    private func savePersonalizedMenu(replaceRecommended: Bool) {
         trainingNutritionSync.clear()
-        mealPlanService.setReplacesRecommended(true)
+        mealPlanService.setReplacesRecommended(replaceRecommended)
         applyMetricsAndRegenerate()
         nutritionTab = 0
-        selectedOption = 0
+        selectedOption = replaceRecommended ? 0 : min(3, max(0, (mealPlanService.weeklyPlan.first?.options.count ?? 1) - 1))
     }
 
     private var mealReminderNotice: some View {

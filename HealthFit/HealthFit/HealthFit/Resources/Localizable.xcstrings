@@ -599,6 +599,9 @@
     "Adicionar à lista" : {
 
     },
+    "Adicionar alimento" : {
+
+    },
     "Adicionar equipamento" : {
 
     },
@@ -661,6 +664,9 @@
 
     },
     "Alerta OMS" : {
+
+    },
+    "Alimentos" : {
 
     },
     "Alimentos identificados" : {
@@ -1654,6 +1660,9 @@
     "Calorias estimadas" : {
 
     },
+    "Calorias: %lld kcal" : {
+
+    },
     "Câmera" : {
 
     },
@@ -1664,6 +1673,9 @@
 
     },
     "Cancelar" : {
+
+    },
+    "Carboidrato: %lld g" : {
 
     },
     "Card pronto para Stories e status — WhatsApp ou Instagram." : {
@@ -2038,6 +2050,9 @@
     "Contagem de voltas" : {
 
     },
+    "Contém lactose" : {
+
+    },
     "Continuar" : {
 
     },
@@ -2110,6 +2125,9 @@
 
     },
     "Criar ficha personalizada" : {
+
+    },
+    "Criar refeição" : {
 
     },
     "Crie uma dupla/equipe, busque pessoas pelo nome no app (ou SMS) e use o chat só para marcar atividades físicas (mensagens expiram em 12h)." : {
@@ -2238,6 +2256,9 @@
     "Detalhes do Cardio" : {
 
     },
+    "Detalhes opcionais" : {
+
+    },
     "Detecção por sensores desligada nesta sessão — registre as vias manualmente." : {
 
     },
@@ -2330,6 +2351,9 @@
     "Duração sugerida" : {
 
     },
+    "É doce / sobremesa" : {
+
+    },
     "É necessário ter %lld anos ou mais para usar o HealthFit" : {
 
     },
@@ -2358,6 +2382,9 @@
 
     },
     "Editar Ficha" : {
+
+    },
+    "Editar refeição" : {
 
     },
     "Eficiência e barco" : {
@@ -2602,6 +2629,9 @@
     "Excluir Conta" : {
 
     },
+    "Excluir esta refeição" : {
+
+    },
     "Excluir ficha" : {
 
     },
@@ -2757,6 +2787,9 @@
 
     },
     "Gerenciar na App Store" : {
+
+    },
+    "Gordura: %lld g" : {
 
     },
     "GPS" : {
@@ -3003,6 +3036,9 @@
     "Lista Semanal" : {
 
     },
+    "Liste os alimentos desta refeição (ex.: 150g frango, 100g arroz, salada)." : {
+
+    },
     "Livre" : {
 
     },
@@ -3019,6 +3055,9 @@
 
     },
     "m" : {
+
+    },
+    "Macros" : {
 
     },
     "Mail configurado neste %@" : {
@@ -3235,6 +3274,9 @@
     "Meu plano" : {
 
     },
+    "Minhas refeições" : {
+
+    },
     "Minimizar" : {
 
     },
@@ -3265,6 +3307,9 @@
     "Modo ativo para: %@. Outras modalidades ficam individuais (sem card/ranking de grupo)." : {
 
     },
+    "Modo de preparo (opcional)" : {
+
+    },
     "Modo de velejo" : {
 
     },
@@ -3283,7 +3328,7 @@
     "Montando ranking…" : {
 
     },
-    "Monte um cardápio personalizado: escolha uma opção para cada refeição e salve no plano semanal." : {
+    "Monte seu cardápio: use as recomendações do catálogo ou crie refeições e alimentos do seu jeito." : {
 
     },
     "Mudar de plano" : {
@@ -3326,6 +3371,9 @@
 
     },
     "Não, finalizar treino" : {
+
+    },
+    "Nas recomendações, o catálogo continua disponível. Em Meu Cardápio entram as escolhas e refeições que você criar." : {
 
     },
     "Nascimento" : {
@@ -3437,6 +3485,9 @@
 
     },
     "Nome (ex.: Corda 9.8 mm 60 m)" : {
+
+    },
+    "Nome (ex.: Frango com batata)" : {
 
     },
     "Nome completo: %@" : {
@@ -3622,9 +3673,6 @@
       }
     },
     "O app Mail não está configurado neste %@ (ou o relatório é grande demais para mailto). Escolha Gmail, Outlook ou outro app na tela de compartilhar e envie para o nutricionista." : {
-
-    },
-    "O cardápio montado substitui as opções recomendadas na aba Plano." : {
 
     },
     "O cronômetro abre na hora, já contando o tempo de luta." : {
@@ -4333,6 +4381,9 @@
     "Propor treino" : {
 
     },
+    "Proteína: %lld g" : {
+
+    },
     "Próxima menstruação estimada: %@" : {
 
     },
@@ -4391,6 +4442,9 @@
 
     },
     "Rec. %@" : {
+
+    },
+    "Recomendações" : {
 
     },
     "Recomendada" : {
@@ -4694,6 +4748,9 @@
     "Salvar medidas" : {
 
     },
+    "Salvar Meu Cardápio (manter recomendações)" : {
+
+    },
     "Salvar na Galeria?" : {
 
     },
@@ -4944,6 +5001,16 @@
     },
     "Sua carga" : {
 
+    },
+    "Sugestão para %@: cerca de %lld kcal no seu plano." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sugestão para %1$@: cerca de %2$lld kcal no seu plano."
+          }
+        }
+      }
     },
     "Sugestão: %@ %@" : {
       "localizations" : {
@@ -5329,6 +5396,9 @@
 
     },
     "Usado para calcular distância, ritmo e o diário de bordo." : {
+
+    },
+    "Usar meta sugerida (%lld kcal)" : {
 
     },
     "Use + e − para ajustar a quantidade. O número aparece ao lado e entra na lista de compras." : {

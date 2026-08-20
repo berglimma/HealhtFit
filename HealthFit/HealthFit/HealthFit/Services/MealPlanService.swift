@@ -10,10 +10,13 @@ final class MealPlanService: ObservableObject {
     @Published var estimatedTDEE: Int = 0
     @Published var caloricDeficit: Int = 0
     @Published var customMenuSelection: CustomMenuSelection = .default
+    /// Refeições criadas pelo usuário (podem ser escolhidas no personalizar).
+    @Published var userMealLibrary: [MealTemplate] = []
 
     private let planKey = "healthfit_meal_plan"
     private let shoppingKey = "healthfit_shopping_list"
     private let customMenuKey = "healthfit_custom_menu"
+    private let userMealLibraryKey = "healthfit_user_meal_library"
     private let purchaseStatsKey = "healthfit_shopping_purchase_stats"
     private var boundUserId: String?
 
@@ -21,6 +24,7 @@ final class MealPlanService: ObservableObject {
         static let plan = "meal_plan"
         static let shopping = "shopping_list"
         static let customMenu = "custom_menu"
+        static let userMealLibrary = "user_meal_library"
         static let purchaseStats = "shopping_purchase_stats"
         static let cloudUpdatedAt = "meal_plan_cloud_updated_at"
     }
@@ -44,10 +48,12 @@ final class MealPlanService: ObservableObject {
         estimatedTDEE = 0
         caloricDeficit = 0
         customMenuSelection = .default
+        userMealLibrary = []
         purchaseStats = []
         UserScopedDefaults.remove(logicalKey: ScopedKey.plan, uid: boundUserId, legacyKey: planKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.shopping, uid: boundUserId, legacyKey: shoppingKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey)
+        UserScopedDefaults.remove(logicalKey: ScopedKey.userMealLibrary, uid: boundUserId, legacyKey: userMealLibraryKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.purchaseStats, uid: boundUserId, legacyKey: purchaseStatsKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.cloudUpdatedAt, uid: boundUserId)
         boundUserId = nil
@@ -66,7 +72,8 @@ final class MealPlanService: ObservableObject {
             calorieBase: profile.dailyCalorieTarget,
             goal: profile.goal,
             sweetLevel: customMenuSelection.sweetConsumption,
-            customSelection: customMenuSelection
+            customSelection: customMenuSelection,
+            userMealLibrary: userMealLibrary
         )
         generateShoppingList()
         saveData()
@@ -105,6 +112,65 @@ final class MealPlanService: ObservableObject {
         }
     }
 
+    func userMeals(for mealType: MealType) -> [MealTemplate] {
+        userMealLibrary
+            .filter { $0.mealType == mealType }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    func saveUserMeal(_ meal: MealTemplate, selectForSlot: Bool = true, profile: UserProfile?) {
+        let cleaned = Self.sanitizedUserMeal(meal)
+        if let index = userMealLibrary.firstIndex(where: { $0.id == cleaned.id }) {
+            userMealLibrary[index] = cleaned
+        } else {
+            userMealLibrary.append(cleaned)
+        }
+        if selectForSlot {
+            customMenuSelection.setSelection(cleaned.id, for: cleaned.mealType)
+        }
+        if let profile {
+            generatePlan(for: profile)
+        } else {
+            saveData()
+        }
+    }
+
+    func deleteUserMeal(id: UUID, profile: UserProfile?) {
+        userMealLibrary.removeAll { $0.id == id }
+        for mealType in MealType.allCases {
+            if customMenuSelection.selectedTemplateID(for: mealType) == id {
+                customMenuSelection.selections.removeValue(forKey: mealType.rawValue)
+            }
+        }
+        if let profile {
+            ensureDefaultSelections(goal: profile.goal)
+            generatePlan(for: profile)
+        } else {
+            saveData()
+        }
+    }
+
+    func resolveTemplate(id: UUID) -> MealTemplate? {
+        MealCatalog.template(id: id) ?? userMealLibrary.first { $0.id == id }
+    }
+
+    private static func sanitizedUserMeal(_ meal: MealTemplate) -> MealTemplate {
+        var copy = meal
+        copy.name = copy.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if copy.name.isEmpty { copy.name = "Minha refeição" }
+        copy.calories = max(copy.calories, 1)
+        copy.protein = max(copy.protein, 0)
+        copy.carbs = max(copy.carbs, 0)
+        copy.fat = max(copy.fat, 0)
+        copy.ingredients = copy.ingredients
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        copy.instructions = copy.instructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        copy.isSimpleBasic = false
+        copy.isFatLossFocused = false
+        return copy
+    }
+
     func setReplacesRecommended(_ value: Bool) {
         customMenuSelection.replacesRecommended = value
         saveData()
@@ -132,7 +198,8 @@ final class MealPlanService: ObservableObject {
             lactoseTolerance: lactose,
             selection: customMenuSelection,
             variation: 0,
-            useCustomSelections: true
+            useCustomSelections: true,
+            userMealLibrary: userMealLibrary
         )
     }
 
@@ -419,6 +486,7 @@ final class MealPlanService: ObservableObject {
         weeklyPlan = []
         shoppingList = []
         customMenuSelection = .default
+        userMealLibrary = []
         purchaseStats = []
 
         if let data = UserScopedDefaults.data(forLogicalKey: ScopedKey.plan, uid: boundUserId, legacyKey: planKey),
@@ -432,6 +500,14 @@ final class MealPlanService: ObservableObject {
         if let data = UserScopedDefaults.data(forLogicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey),
            let selection = try? JSONDecoder().decode(CustomMenuSelection.self, from: data) {
             customMenuSelection = selection
+        }
+        if let data = UserScopedDefaults.data(
+            forLogicalKey: ScopedKey.userMealLibrary,
+            uid: boundUserId,
+            legacyKey: userMealLibraryKey
+        ),
+           let library = try? JSONDecoder().decode([MealTemplate].self, from: data) {
+            userMealLibrary = library
         }
         loadPurchaseStats()
         syncMealReminders()
@@ -475,6 +551,14 @@ final class MealPlanService: ObservableObject {
         if let data = try? JSONEncoder().encode(customMenuSelection) {
             UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey)
         }
+        if let data = try? JSONEncoder().encode(userMealLibrary) {
+            UserScopedDefaults.setData(
+                data,
+                forLogicalKey: ScopedKey.userMealLibrary,
+                uid: boundUserId,
+                legacyKey: userMealLibraryKey
+            )
+        }
         let now = Date()
         setLocalMealPlanUpdatedAt(now)
         Task {
@@ -493,7 +577,7 @@ final class MealPlanService: ObservableObject {
         }
 
         let localUpdated = localMealPlanUpdatedAt()
-        let localHasPlan = !weeklyPlan.isEmpty || !shoppingList.isEmpty
+        let localHasPlan = !weeklyPlan.isEmpty || !shoppingList.isEmpty || !userMealLibrary.isEmpty
 
         // Remoto mais novo, ou device sem plano local: aplica nuvem (iPhone ↔ iPad).
         if !localHasPlan || remote.updatedAt > localUpdated {
@@ -512,6 +596,7 @@ final class MealPlanService: ObservableObject {
         weeklyPlan = remote.weeklyPlan
         shoppingList = remote.shoppingList
         customMenuSelection = remote.customMenuSelection
+        userMealLibrary = remote.userMealLibrary
         basalMetabolicRate = remote.basalMetabolicRate
         dailyCalorieTarget = remote.dailyCalorieTarget
         estimatedTDEE = remote.estimatedTDEE
@@ -525,6 +610,14 @@ final class MealPlanService: ObservableObject {
         if let data = try? JSONEncoder().encode(customMenuSelection) {
             UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey)
         }
+        if let data = try? JSONEncoder().encode(userMealLibrary) {
+            UserScopedDefaults.setData(
+                data,
+                forLogicalKey: ScopedKey.userMealLibrary,
+                uid: boundUserId,
+                legacyKey: userMealLibraryKey
+            )
+        }
         syncMealReminders()
     }
 
@@ -537,7 +630,8 @@ final class MealPlanService: ObservableObject {
             basalMetabolicRate: basalMetabolicRate,
             dailyCalorieTarget: dailyCalorieTarget,
             estimatedTDEE: estimatedTDEE,
-            caloricDeficit: caloricDeficit
+            caloricDeficit: caloricDeficit,
+            userMealLibrary: userMealLibrary
         )
         try? await MealPlanFirestoreService.savePlan(snapshot, userId: userId)
         setLocalMealPlanUpdatedAt(updatedAt)
@@ -569,17 +663,30 @@ final class MealPlanService: ObservableObject {
                     index: 0
                 )
                 customMenuSelection.setSelection(template.id, for: mealType)
-            } else if let selectedID = customMenuSelection.selectedTemplateID(for: mealType),
-                      let template = MealCatalog.template(id: selectedID),
-                      lactose == .intolerant && template.containsLactose {
-                let replacement = MealCatalog.defaultTemplate(
-                    for: mealType,
-                    sweetLevel: customMenuSelection.sweetConsumption,
-                    goal: goal,
-                    lactoseTolerance: lactose,
-                    index: 0
-                )
-                customMenuSelection.setSelection(replacement.id, for: mealType)
+            } else if let selectedID = customMenuSelection.selectedTemplateID(for: mealType) {
+                if let catalog = MealCatalog.template(id: selectedID) {
+                    if lactose == .intolerant && catalog.containsLactose {
+                        let replacement = MealCatalog.defaultTemplate(
+                            for: mealType,
+                            sweetLevel: customMenuSelection.sweetConsumption,
+                            goal: goal,
+                            lactoseTolerance: lactose,
+                            index: 0
+                        )
+                        customMenuSelection.setSelection(replacement.id, for: mealType)
+                    }
+                } else if userMealLibrary.contains(where: { $0.id == selectedID && $0.mealType == mealType }) {
+                    continue
+                } else {
+                    let template = MealCatalog.defaultTemplate(
+                        for: mealType,
+                        sweetLevel: customMenuSelection.sweetConsumption,
+                        goal: goal,
+                        lactoseTolerance: lactose,
+                        index: 0
+                    )
+                    customMenuSelection.setSelection(template.id, for: mealType)
+                }
             }
         }
     }
@@ -705,7 +812,8 @@ final class MealPlanService: ObservableObject {
         calorieBase: Int,
         goal: FitnessGoal,
         sweetLevel: SweetConsumptionLevel,
-        customSelection: CustomMenuSelection
+        customSelection: CustomMenuSelection,
+        userMealLibrary: [MealTemplate]
     ) -> [DailyMealPlan] {
         guard let lactose = customSelection.lactoseTolerance else { return [] }
 
@@ -732,7 +840,8 @@ final class MealPlanService: ObservableObject {
                     lactoseTolerance: lactose,
                     selection: customSelection,
                     variation: variation,
-                    useCustomSelections: false
+                    useCustomSelections: false,
+                    userMealLibrary: userMealLibrary
                 )
                 return MealPlanOption(
                     name: template.0,
@@ -748,7 +857,8 @@ final class MealPlanService: ObservableObject {
                 lactoseTolerance: lactose,
                 selection: customSelection,
                 variation: 0,
-                useCustomSelections: true
+                useCustomSelections: true,
+                userMealLibrary: userMealLibrary
             )
             let customOption = MealPlanOption(
                 name: "Meu Cardápio",
@@ -771,7 +881,8 @@ final class MealPlanService: ObservableObject {
         lactoseTolerance: LactoseTolerance,
         selection: CustomMenuSelection,
         variation: Int,
-        useCustomSelections: Bool
+        useCustomSelections: Bool,
+        userMealLibrary: [MealTemplate]
     ) -> [Meal] {
         let proteins = goal == .muscleGain ? 2 : 1
 
@@ -781,7 +892,8 @@ final class MealPlanService: ObservableObject {
 
             if useCustomSelections,
                let selectedID = selection.selectedTemplateID(for: mealType),
-               let selected = MealCatalog.template(id: selectedID),
+               let selected = MealCatalog.template(id: selectedID)
+                ?? userMealLibrary.first(where: { $0.id == selectedID }),
                lactoseTolerance == .tolerant || !selected.containsLactose {
                 template = selected
             } else {

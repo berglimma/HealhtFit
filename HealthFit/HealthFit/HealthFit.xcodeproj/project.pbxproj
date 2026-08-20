@@ -22,6 +22,7 @@
 		B1000945 /* CourtesyVoucher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000945 /* CourtesyVoucher.swift */; };
 		B1000946 /* CourtesyVoucherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000946 /* CourtesyVoucherService.swift */; };
 		B1000947 /* AssistantRestDayEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000947 /* AssistantRestDayEngine.swift */; };
+		B1000948 /* CreateUserMealSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000948 /* CreateUserMealSheet.swift */; };
 		B1000908 /* ClimbingAreaCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000908 /* ClimbingAreaCatalog.swift */; };
 		B1000909 /* ClimbingMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000909 /* ClimbingMapView.swift */; };
 		B1000910 /* ClimbingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000910 /* ClimbingLogbookView.swift */; };
@@ -375,6 +376,7 @@
 		F1000945 /* CourtesyVoucher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtesyVoucher.swift; sourceTree = "<group>"; };
 		F1000946 /* CourtesyVoucherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtesyVoucherService.swift; sourceTree = "<group>"; };
 		F1000947 /* AssistantRestDayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRestDayEngine.swift; sourceTree = "<group>"; };
+		F1000948 /* CreateUserMealSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateUserMealSheet.swift; sourceTree = "<group>"; };
 		F1000908 /* ClimbingAreaCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAreaCatalog.swift; sourceTree = "<group>"; };
 		F1000909 /* ClimbingMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingMapView.swift; sourceTree = "<group>"; };
 		F1000910 /* ClimbingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingLogbookView.swift; sourceTree = "<group>"; };
@@ -1002,6 +1004,7 @@
 			isa = PBXGroup;
 			children = (
 				F1000026 /* MealPlanView.swift */,
+				F1000948 /* CreateUserMealSheet.swift */,
 				F1000027 /* ShoppingListView.swift */,
 				F1000345 /* SupplementsLogView.swift */,
 				F1000355 /* MealPhotoAnalysisView.swift */,
@@ -1677,6 +1680,7 @@
 				B1000349 /* MonthlyReportService.swift in Sources */,
 				B1000350 /* MonthlyReportView.swift in Sources */,
 				B1000026 /* MealPlanView.swift in Sources */,
+				B1000948 /* CreateUserMealSheet.swift in Sources */,
 				B1000027 /* ShoppingListView.swift in Sources */,
 				B1000028 /* ProfileView.swift in Sources */,
 				B1000325 /* BodyEvolutionView.swift in Sources */,
@@ -2044,7 +2048,7 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit no Apple Watch salva treinos e calorias no app Saúde.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = luan.com.healthfit.app;
-				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2084,7 +2088,7 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit no Apple Watch salva treinos e calorias no app Saúde.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = luan.com.healthfit.app;
-				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
