@@ -365,6 +365,20 @@ struct ActiveCardioView: View {
                 finishCardio(autoEndedByInactivity: true)
             }
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                elapsedSeconds = activeElapsedSeconds()
+                if isOutdoorGPS {
+                    runTracker.handleAppBecameActive()
+                }
+                UIApplication.shared.isIdleTimerDisabled = isOutdoorGPS && !isPaused && finishedSession == nil
+            } else if phase == .background || phase == .inactive {
+                // Mantém GPS em background; idle timer volta ao normal fora da tela ativa.
+                if isOutdoorGPS {
+                    runTracker.handleAppBecameActive()
+                }
+            }
+        }
         .onReceive(workoutStore.sessionAutoEnded) { ended in
             guard finishedSession == nil, !isFinishing else { return }
             isFinishing = true
@@ -381,6 +395,7 @@ struct ActiveCardioView: View {
             elapsedSeconds = activeElapsedSeconds()
             syncWithWatch()
             if isOutdoorGPS {
+                UIApplication.shared.isIdleTimerDisabled = true
                 runTracker.prepareForSession(modality: trackingModality)
                 runTracker.start(modality: trackingModality)
                 if isOutdoorCycling {
@@ -454,6 +469,7 @@ struct ActiveCardioView: View {
             // Hosted minimize keeps this view mounted; only stop if the session is gone.
             guard finishedSession == nil else { return }
             if workoutStore.activeSession != nil { return }
+            UIApplication.shared.isIdleTimerDisabled = false
             runTracker.stop()
             jumpMetrics.stop()
             rowingMetrics.stop()
@@ -1705,6 +1721,7 @@ struct ActiveCardioView: View {
         pauseStartedAt = .now
         if isOutdoorGPS {
             runTracker.setPaused(true)
+            UIApplication.shared.isIdleTimerDisabled = false
         }
         if isWaterSport {
             jumpMetrics.setPaused(true)
@@ -1726,6 +1743,7 @@ struct ActiveCardioView: View {
         isPaused = false
         if isOutdoorGPS {
             runTracker.setPaused(false)
+            UIApplication.shared.isIdleTimerDisabled = true
         }
         if isWaterSport {
             jumpMetrics.setPaused(false)
@@ -2078,6 +2096,7 @@ struct ActiveCardioView: View {
     private func finishCardio(autoEndedByInactivity: Bool = false) {
         guard !isFinishing else { return }
         isFinishing = true
+        UIApplication.shared.isIdleTimerDisabled = false
 
         // Summary must be visible even if the user had minimized the workout.
         if workoutStore.isActiveWorkoutMinimized {

@@ -49,8 +49,8 @@ final class RunTrackingService: NSObject, ObservableObject {
         super.init()
         nonisolatedWeakSelf = self
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = 5
+        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        locationManager.distanceFilter = kCLDistanceFilterNone
         locationManager.activityType = .fitness
         // Em treino ativo o GPS não pode auto-pausar: senão a rota e a distância
         // ficam zeradas até o usuário pausar/retomar (que “acorda” o Core Location).
@@ -120,8 +120,8 @@ final class RunTrackingService: NSObject, ObservableObject {
             locationManager.distanceFilter = 25
             locationManager.pausesLocationUpdatesAutomatically = true
         } else {
-            locationManager.desiredAccuracy = kCLLocationAccuracyBest
-            locationManager.distanceFilter = 5
+            locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+            locationManager.distanceFilter = kCLDistanceFilterNone
             locationManager.pausesLocationUpdatesAutomatically = false
             // Reativa entrega de localizações (auto-pause do sistema pode ter parado o stream).
             startLocationUpdatesIfAuthorized()
@@ -171,10 +171,22 @@ final class RunTrackingService: NSObject, ObservableObject {
         }
     }
 
-    /// Distância GPS quando há rota; caso contrário `nil` (usar estimativa por ritmo).
+    /// Distância GPS assim que há progresso real (não espera 5 m para liberar a UI).
     var gpsDistanceKmIfAvailable: Double? {
-        guard distanceMeters > 5 else { return nil }
+        guard distanceMeters >= 1 else { return nil }
         return distanceKm
+    }
+
+    /// Reativa GPS/tempo após desbloqueio do celular ou retorno ao app.
+    func handleAppBecameActive() {
+        guard isTracking else { return }
+        requestLocationPermissionIfNeeded()
+        if !isPaused {
+            locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+            locationManager.distanceFilter = kCLDistanceFilterNone
+            locationManager.pausesLocationUpdatesAutomatically = false
+        }
+        startLocationUpdatesIfAuthorized()
     }
 
     private func requestLocationPermissionIfNeeded() {
@@ -203,11 +215,12 @@ final class RunTrackingService: NSObject, ObservableObject {
         guard status == .authorizedAlways || status == .authorizedWhenInUse else { return }
         locationManager.desiredAccuracy = isPaused
             ? kCLLocationAccuracyHundredMeters
-            : kCLLocationAccuracyBest
-        locationManager.distanceFilter = isPaused ? 25 : 5
+            : kCLLocationAccuracyBestForNavigation
+        locationManager.distanceFilter = isPaused ? 25 : kCLDistanceFilterNone
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.showsBackgroundLocationIndicator = true
         locationManager.startUpdatingLocation()
+        // Força um fix imediato (útil após desbloqueio / cold start).
         locationManager.requestLocation()
     }
 
@@ -294,24 +307,35 @@ final class RunTrackingService: NSObject, ObservableObject {
 
     private func accept(_ location: CLLocation) {
         // Filtra leituras ruins / saltos GPS.
-        // Primeiro ponto: aceita precisão mais frouxa para ancorar a rota cedo (GPS frio).
-        let maxAccuracy: CLLocationAccuracy = lastAcceptedLocation == nil ? 100 : 40
+        // Warm-up: primeiros 90s aceitam precisão mais frouxa (GPS frio / tela bloqueada).
+        let elapsedSinceStart = sessionStartDate.map { location.timestamp.timeIntervalSince($0) } ?? 0
+        let maxAccuracy: CLLocationAccuracy
+        if lastAcceptedLocation == nil {
+            maxAccuracy = 120
+        } else if elapsedSinceStart < 90 {
+            maxAccuracy = 75
+        } else {
+            maxAccuracy = 45
+        }
         guard location.horizontalAccuracy >= 0, location.horizontalAccuracy <= maxAccuracy else { return }
         if let last = lastAcceptedLocation {
             let delta = location.distance(from: last)
             let dt = location.timestamp.timeIntervalSince(last.timestamp)
             if dt <= 0 { return }
             // Rejeita saltos absurdos (bike pode ser mais rápida que corrida).
+            // Com dt maior (wake após bloqueio), permite deslocamento proporcional.
             let maxJumpSpeed: Double
             switch modality {
-            case .cycling, .kitesurfing: maxJumpSpeed = 20.0
-            case .surfing, .rowing: maxJumpSpeed = 14.0
-            case .running, .walking: maxJumpSpeed = 8.0
+            case .cycling, .kitesurfing: maxJumpSpeed = 22.0
+            case .surfing, .rowing: maxJumpSpeed = 16.0
+            case .running, .walking: maxJumpSpeed = 9.0
             }
-            if delta > maxJumpSpeed * max(dt, 1), dt < 5 { return }
-            if delta > 120, dt < 5 { return }
+            let allowedGap = maxJumpSpeed * max(dt, 1)
+            if delta > allowedGap, dt < 8 { return }
+            if delta > 250, dt < 3 { return }
             // Distância de treino só em movimento ativo (não durante pausa).
-            if !isPaused, delta >= 1 {
+            // Aceita micro-avanços ≥ 0.5 m para percursos retos sem “só contar na volta”.
+            if !isPaused, delta >= 0.5 {
                 distanceMeters += delta
             }
         }
@@ -346,8 +370,9 @@ final class RunTrackingService: NSObject, ObservableObject {
         if let last = routePoints.last {
             let moved = CLLocation(latitude: last.latitude, longitude: last.longitude)
                 .distance(from: location)
-            let minMove = modality == .cycling ? 3.0 : 2.0
-            if moved < minMove { return }
+            // Menor limiar no mapa para desenhar trechos retos sem “buracos”.
+            let minMove = modality == .cycling ? 2.0 : 1.0
+            if moved < minMove, last.isPaused == isPaused { return }
         }
         routePoints.append(point)
 
@@ -393,10 +418,15 @@ extension RunTrackingService: CLLocationManagerDelegate {
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
+        // Processa TODOS os pontos do batch (não só .last) — crítico em percursos retos
+        // e após wake com a tela bloqueada, quando o iOS entrega vários fixes de uma vez.
+        let ordered = locations.sorted { $0.timestamp < $1.timestamp }
+        guard !ordered.isEmpty else { return }
         WeakMainActorBox.schedule(nonisolatedWeakSelf) { this in
             guard this.isTracking else { return }
-            this.accept(location)
+            for location in ordered {
+                this.accept(location)
+            }
         }
     }
 

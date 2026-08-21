@@ -21,6 +21,8 @@ struct RunRouteMapView: View {
     var spotTitle: String? = nil
     /// Inicia em 3D quando o percurso já tem pontos (resumo / diário), ou se forçado.
     var prefers3DInitially: Bool = false
+    /// Pin "Fim" só após finalizar (resumo); durante o treino fica oculto.
+    var showsEndPin: Bool = false
 
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var is3DEnabled = false
@@ -35,8 +37,14 @@ struct RunRouteMapView: View {
     }
 
     private var endCoordinate: CLLocationCoordinate2D? {
-        guard coordinates.count > 1 else { return nil }
-        return coordinates.last
+        guard coordinates.count >= 2 else { return nil }
+        let last = coordinates[coordinates.count - 1]
+        let first = coordinates[0]
+        // Evita pin de fim colado no início no começo da sessão.
+        let startLoc = CLLocation(latitude: first.latitude, longitude: first.longitude)
+        let endLoc = CLLocation(latitude: last.latitude, longitude: last.longitude)
+        guard startLoc.distance(from: endLoc) >= 3 else { return nil }
+        return last
     }
 
     private var performanceSegments: [RoutePerformanceSegment] {
@@ -146,13 +154,14 @@ struct RunRouteMapView: View {
                     }
                 }
 
-                if let start = coordinates.first {
+                if let start = startCoordinate {
                     Annotation("Início", coordinate: start) {
                         routeEndpointMarker(systemImage: "flag.fill", color: AppTheme.accent, label: "Início")
                     }
                 }
 
-                if let end = endCoordinate, !followUser || !showsUserLocation {
+                // Pin "Fim" apenas no resumo (após Encerrar), não durante a corrida ao vivo.
+                if showsEndPin, let end = endCoordinate {
                     Annotation("Fim", coordinate: end) {
                         routeEndpointMarker(systemImage: "flag.checkered", color: .orange, label: "Fim")
                     }

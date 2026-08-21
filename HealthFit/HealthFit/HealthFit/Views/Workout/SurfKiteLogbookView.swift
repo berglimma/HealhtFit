@@ -315,7 +315,8 @@ struct SurfKiteLogbookView: View {
                     allows3DMode: true,
                     spotCoordinate: w?.spot?.coordinate,
                     spotTitle: w?.spot?.name,
-                    prefers3DInitially: session.routePoints.count >= 2
+                    prefers3DInitially: session.routePoints.count >= 2,
+                    showsEndPin: true
                 )
             }
         }

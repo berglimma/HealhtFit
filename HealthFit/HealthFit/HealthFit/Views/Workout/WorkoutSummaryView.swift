@@ -1477,7 +1477,8 @@ struct WorkoutSummaryView: View {
                 allows3DMode: true,
                 spotCoordinate: waterSpotCoordinate,
                 spotTitle: session.waterSport?.spot?.name,
-                prefers3DInitially: session.routePoints.count >= 2
+                prefers3DInitially: session.routePoints.count >= 2,
+                showsEndPin: true
             )
 
             if session.routePoints.count >= 2 {
