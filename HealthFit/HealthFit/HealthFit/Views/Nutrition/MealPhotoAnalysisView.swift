@@ -362,7 +362,10 @@ struct MealPhotoAnalysisView: View {
                     carbsGrams: estimate.carbsGrams,
                     fatGrams: estimate.fatGrams,
                     calories: estimate.calories,
-                    confidence: estimate.confidence
+                    confidence: estimate.confidence,
+                    items: estimate.items,
+                    fromNutritionLabel: estimate.fromNutritionLabel,
+                    scanMode: estimate.scanMode
                 )
                 detectedFoods = estimate.detectedFoods
                 analysisNote = estimate.note

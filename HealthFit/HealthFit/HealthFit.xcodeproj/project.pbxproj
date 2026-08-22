@@ -24,6 +24,7 @@
 		B1000947 /* AssistantRestDayEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000947 /* AssistantRestDayEngine.swift */; };
 		B1000948 /* CreateUserMealSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000948 /* CreateUserMealSheet.swift */; };
 		B1000949 /* AssistantMealPlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000949 /* AssistantMealPlanBuilder.swift */; };
+		B1000950 /* OpenFoodFactsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000950 /* OpenFoodFactsService.swift */; };
 		B1000908 /* ClimbingAreaCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000908 /* ClimbingAreaCatalog.swift */; };
 		B1000909 /* ClimbingMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000909 /* ClimbingMapView.swift */; };
 		B1000910 /* ClimbingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000910 /* ClimbingLogbookView.swift */; };
@@ -380,6 +381,7 @@
 		F1000947 /* AssistantRestDayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRestDayEngine.swift; sourceTree = "<group>"; };
 		F1000948 /* CreateUserMealSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateUserMealSheet.swift; sourceTree = "<group>"; };
 		F1000949 /* AssistantMealPlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantMealPlanBuilder.swift; sourceTree = "<group>"; };
+		F1000950 /* OpenFoodFactsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenFoodFactsService.swift; sourceTree = "<group>"; };
 		F1000908 /* ClimbingAreaCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAreaCatalog.swift; sourceTree = "<group>"; };
 		F1000909 /* ClimbingMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingMapView.swift; sourceTree = "<group>"; };
 		F1000910 /* ClimbingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingLogbookView.swift; sourceTree = "<group>"; };
@@ -820,6 +822,7 @@
 				F100034A /* PhotoLibrarySaver.swift */,
 				F1000008 /* MealPlanService.swift */,
 				F1000353 /* MealPhotoAnalysisEngine.swift */,
+				F1000950 /* OpenFoodFactsService.swift */,
 				F1000354 /* MealPhotoAnalysisService.swift */,
 				F1000356 /* BluetoothHeartRateService.swift */,
 				F1000357 /* LiveMetricsHub.swift */,
@@ -1634,6 +1637,7 @@
 				B1000931 /* AssistantRoutineProfileEngine.swift in Sources */,
 				B1000352 /* MealPhotoAnalysisModels.swift in Sources */,
 				B1000353 /* MealPhotoAnalysisEngine.swift in Sources */,
+				B1000950 /* OpenFoodFactsService.swift in Sources */,
 				B1000354 /* MealPhotoAnalysisService.swift in Sources */,
 				B1000355 /* MealPhotoAnalysisView.swift in Sources */,
 				B1000356 /* BluetoothHeartRateService.swift in Sources */,
