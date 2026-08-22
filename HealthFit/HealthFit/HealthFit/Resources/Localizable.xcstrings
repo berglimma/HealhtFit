@@ -2565,6 +2565,9 @@
     "Este aparelho não pode enviar SMS. Use e-mail ou compartilhe o código." : {
 
     },
+    "Este cardápio foi montado no Assistente com base no seu perfil. Valide com um nutricionista antes de seguir." : {
+
+    },
     "Esteira indoor" : {
 
     },
@@ -5000,6 +5003,9 @@
 
     },
     "Sua carga" : {
+
+    },
+    "Sugerido pelo IAssistente" : {
 
     },
     "Sugestão para %@: cerca de %lld kcal no seu plano." : {

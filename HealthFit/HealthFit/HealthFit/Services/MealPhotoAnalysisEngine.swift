@@ -512,7 +512,7 @@ enum MealPhotoAnalysisEngine {
         default: scale = 0.65
         }
 
-        var items: [DetectedFoodItem] = hits.map { hit in
+        let items: [DetectedFoodItem] = hits.map { hit in
             var item = DetectedFoodItem.fromCatalogItem(hit.item, confidence: hit.confidence)
             if scale < 1.0 {
                 let scaledGrams = max(1, Int((Double(hit.item.typicalGrams) * scale).rounded()))
