@@ -342,7 +342,13 @@ struct HealthChatView: View {
                     Button {
                         draft = ""
                         dismissChatKeyboard()
-                        assistant.send(question, context: context, workoutStore: workoutStore)
+                        assistant.send(
+                            question,
+                            context: context,
+                            workoutStore: workoutStore,
+                            mealPlanService: mealPlanService,
+                            authService: authService
+                        )
                     } label: {
                         Text(question)
                             .font(.caption.weight(.medium))
@@ -379,6 +385,9 @@ struct HealthChatView: View {
         if assistant.isInWorkoutBuilder {
             return assistant.workoutBuilderQuickReplies
         }
+        if assistant.isInMealPlanBuilder {
+            return assistant.mealPlanBuilderQuickReplies
+        }
         return HealthAssistantEngine.suggestedQuestions(context: context)
     }
 
@@ -389,7 +398,7 @@ struct HealthChatView: View {
             }
             return "Conte como foi seu dia..."
         }
-        if assistant.isInWorkoutBuilder {
+        if assistant.isInWorkoutBuilder || assistant.isInMealPlanBuilder {
             return "Responda à pergunta do IAssistente..."
         }
         if assistant.isInGuidedCheckIn {
@@ -465,7 +474,13 @@ struct HealthChatView: View {
         draft = ""
         dismissChatKeyboard()
         AssistantUsageQuota.registerSend()
-        assistant.send(text, context: context, workoutStore: workoutStore)
+        assistant.send(
+            text,
+            context: context,
+            workoutStore: workoutStore,
+            mealPlanService: mealPlanService,
+            authService: authService
+        )
     }
 }
 

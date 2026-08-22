@@ -12,8 +12,11 @@ final class MealPlanService: ObservableObject {
     @Published var customMenuSelection: CustomMenuSelection = .default
     /// Refeições criadas pelo usuário (podem ser escolhidas no personalizar).
     @Published var userMealLibrary: [MealTemplate] = []
+    /// Plano gerado pelo fluxo do IAssistente (badge em Nutrição).
+    @Published private(set) var createdByAssistant = false
 
     private let planKey = "healthfit_meal_plan"
+    private let assistantOriginKey = "healthfit_meal_plan_assistant"
     private let shoppingKey = "healthfit_shopping_list"
     private let customMenuKey = "healthfit_custom_menu"
     private let userMealLibraryKey = "healthfit_user_meal_library"
@@ -27,6 +30,7 @@ final class MealPlanService: ObservableObject {
         static let userMealLibrary = "user_meal_library"
         static let purchaseStats = "shopping_purchase_stats"
         static let cloudUpdatedAt = "meal_plan_cloud_updated_at"
+        static let createdByAssistant = "meal_plan_created_by_assistant"
     }
 
     @Published private(set) var purchaseStats: [ShoppingPurchaseStat] = []
@@ -50,7 +54,9 @@ final class MealPlanService: ObservableObject {
         customMenuSelection = .default
         userMealLibrary = []
         purchaseStats = []
+        createdByAssistant = false
         UserScopedDefaults.remove(logicalKey: ScopedKey.plan, uid: boundUserId, legacyKey: planKey)
+        UserScopedDefaults.remove(logicalKey: ScopedKey.createdByAssistant, uid: boundUserId, legacyKey: assistantOriginKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.shopping, uid: boundUserId, legacyKey: shoppingKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.userMealLibrary, uid: boundUserId, legacyKey: userMealLibraryKey)
@@ -60,8 +66,10 @@ final class MealPlanService: ObservableObject {
         syncMealReminders()
     }
 
-    func generatePlan(for profile: UserProfile) {
+    func generatePlan(for profile: UserProfile, fromAssistant: Bool = false) {
         guard customMenuSelection.isReadyToBuild else { return }
+
+        createdByAssistant = fromAssistant
 
         basalMetabolicRate = profile.basalMetabolicRate
         estimatedTDEE = profile.estimatedTDEE
@@ -78,6 +86,19 @@ final class MealPlanService: ObservableObject {
         generateShoppingList()
         saveData()
         syncMealReminders()
+    }
+
+    func generatePlanFromAssistant(for profile: UserProfile) {
+        generatePlan(for: profile, fromAssistant: true)
+    }
+
+    func clearAssistantOrigin() {
+        guard createdByAssistant else { return }
+        createdByAssistant = false
+        persistAssistantOrigin()
+        Task {
+            await pushToCloudIfNeeded(updatedAt: localMealPlanUpdatedAt())
+        }
     }
 
     /// Remove o plano semanal persistido (cardápio alinhado ao treino ou gerado).
@@ -510,7 +531,32 @@ final class MealPlanService: ObservableObject {
             userMealLibrary = library
         }
         loadPurchaseStats()
+        loadAssistantOrigin()
         syncMealReminders()
+    }
+
+    private func loadAssistantOrigin() {
+        if let data = UserScopedDefaults.data(
+            forLogicalKey: ScopedKey.createdByAssistant,
+            uid: boundUserId,
+            legacyKey: assistantOriginKey
+        ),
+           let flag = try? JSONDecoder().decode(Bool.self, from: data) {
+            createdByAssistant = flag
+        } else {
+            createdByAssistant = false
+        }
+    }
+
+    private func persistAssistantOrigin() {
+        if let data = try? JSONEncoder().encode(createdByAssistant) {
+            UserScopedDefaults.setData(
+                data,
+                forLogicalKey: ScopedKey.createdByAssistant,
+                uid: boundUserId,
+                legacyKey: assistantOriginKey
+            )
+        }
     }
 
     private func syncMealReminders() {
@@ -559,6 +605,7 @@ final class MealPlanService: ObservableObject {
                 legacyKey: userMealLibraryKey
             )
         }
+        persistAssistantOrigin()
         let now = Date()
         setLocalMealPlanUpdatedAt(now)
         Task {
@@ -601,6 +648,7 @@ final class MealPlanService: ObservableObject {
         dailyCalorieTarget = remote.dailyCalorieTarget
         estimatedTDEE = remote.estimatedTDEE
         caloricDeficit = remote.caloricDeficit
+        createdByAssistant = remote.createdByAssistant
         if let data = try? JSONEncoder().encode(weeklyPlan) {
             UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.plan, uid: boundUserId, legacyKey: planKey)
         }
@@ -618,6 +666,7 @@ final class MealPlanService: ObservableObject {
                 legacyKey: userMealLibraryKey
             )
         }
+        persistAssistantOrigin()
         syncMealReminders()
     }
 
@@ -631,7 +680,8 @@ final class MealPlanService: ObservableObject {
             dailyCalorieTarget: dailyCalorieTarget,
             estimatedTDEE: estimatedTDEE,
             caloricDeficit: caloricDeficit,
-            userMealLibrary: userMealLibrary
+            userMealLibrary: userMealLibrary,
+            createdByAssistant: createdByAssistant
         )
         try? await MealPlanFirestoreService.savePlan(snapshot, userId: userId)
         setLocalMealPlanUpdatedAt(updatedAt)

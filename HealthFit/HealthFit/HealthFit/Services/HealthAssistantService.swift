@@ -64,6 +64,7 @@ enum HealthAssistantEngine {
         "Não use ferramentas de IA (incluindo este assistente) para diagnóstico, tratamento ou decisão médica."
 
     static let suggestedQuestions: [String] = [
+        "Montar cardápio personalizado",
         "Montar treino sem personal",
         "Treino em casa funciona?",
         "Como treinar em casa sem equipamento?",
@@ -555,6 +556,8 @@ enum HealthAssistantEngine {
                 • Meta calórica: \(ctx.dailyCalorieTarget) kcal/dia
 
                 Na aba Nutrição você monta o cardápio e gera a lista de compras (proteínas, frutas, grãos e suplementos).
+
+                Quer que eu monte uma sugestão? Digite **“montar cardápio”** (ou toque na sugestão) — vou perguntar sobre lactose, doces e objetivo antes de gerar.
 
                 Para perda de gordura, há opções mais restritivas com menos carboidrato e sem frituras.
                 """
@@ -1750,6 +1753,13 @@ final class HealthAssistantService: ObservableObject {
         case confirming
     }
 
+    private enum MealPlanBuilderPhase {
+        case askingLactose
+        case askingSweet
+        case askingGoal
+        case confirming
+    }
+
     private var replyTask: Task<Void, Never>?
     private var hasAppearedOnce = false
     private(set) var lastUserInteractionAt = Date()
@@ -1768,6 +1778,10 @@ final class HealthAssistantService: ObservableObject {
     private var draftWorkoutLocation: AssistantTrainingLocation?
     private var draftWorkoutExperience: AssistantTrainingExperience?
     private var draftWorkoutFocus: AssistantWorkoutGoalFocus?
+    private var mealPlanBuilderPhase: MealPlanBuilderPhase?
+    private var draftMealPlanLactose: LactoseTolerance?
+    private var draftMealPlanSweet: SweetConsumptionLevel?
+    private var draftMealPlanGoal: FitnessGoal?
     /// Minimum time the typing bubble stays visible before showing an assistant reply.
     /// `nonisolated` so default args / static helpers can read it under Swift 6 concurrency.
     nonisolated private static let replyDelay: Duration = .seconds(3)
@@ -1835,8 +1849,13 @@ final class HealthAssistantService: ObservableObject {
         workoutBuilderPhase != nil
     }
 
+    var isInMealPlanBuilder: Bool {
+        mealPlanBuilderPhase != nil
+    }
+
     var isInGuidedCheckIn: Bool {
-        isInPostWorkoutCheckIn || isInDailyMorningCheckIn || isInDailyEveningCheckIn || isInWorkoutBuilder
+        isInPostWorkoutCheckIn || isInDailyMorningCheckIn || isInDailyEveningCheckIn
+            || isInWorkoutBuilder || isInMealPlanBuilder
     }
 
     var workoutBuilderQuickReplies: [String] {
@@ -1855,6 +1874,21 @@ final class HealthAssistantService: ObservableObject {
             return AssistantWorkoutBuilder.quickFocusReplies
         case .confirming:
             return AssistantWorkoutBuilder.quickConfirmReplies
+        case .none:
+            return []
+        }
+    }
+
+    var mealPlanBuilderQuickReplies: [String] {
+        switch mealPlanBuilderPhase {
+        case .askingLactose:
+            return AssistantMealPlanBuilder.quickLactoseReplies
+        case .askingSweet:
+            return AssistantMealPlanBuilder.quickSweetReplies
+        case .askingGoal:
+            return AssistantMealPlanBuilder.quickGoalReplies
+        case .confirming:
+            return AssistantMealPlanBuilder.quickConfirmReplies
         case .none:
             return []
         }
@@ -1953,7 +1987,13 @@ final class HealthAssistantService: ObservableObject {
         ))
     }
 
-    func send(_ question: String, context: HealthAssistantContext, workoutStore: WorkoutStore? = nil) {
+    func send(
+        _ question: String,
+        context: HealthAssistantContext,
+        workoutStore: WorkoutStore? = nil,
+        mealPlanService: MealPlanService? = nil,
+        authService: AuthService? = nil
+    ) {
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isTyping else { return }
 
@@ -1987,14 +2027,261 @@ final class HealthAssistantService: ObservableObject {
             return
         }
 
+        if isInMealPlanBuilder {
+            handleMealPlanBuilderReply(
+                trimmed,
+                context: context,
+                mealPlanService: mealPlanService,
+                authService: authService
+            )
+            return
+        }
+
         if AssistantWorkoutBuilder.detectsWorkoutBuildIntent(trimmed) {
             beginWorkoutBuilderFlow(context: context, forceDespitePersonal: AssistantWorkoutBuilder.detectsForceBuildDespitePersonal(trimmed))
+            return
+        }
+
+        if AssistantMealPlanBuilder.detectsMealPlanBuildIntent(trimmed) {
+            beginMealPlanBuilderFlow(
+                context: context,
+                forceDespiteNutritionist: AssistantMealPlanBuilder.detectsForceBuildDespiteNutritionist(trimmed)
+            )
             return
         }
 
         deliverAfterMinimumTyping {
             HealthAssistantEngine.answer(for: trimmed, context: context)
         }
+    }
+
+    private func resetMealPlanBuilderDraft() {
+        mealPlanBuilderPhase = nil
+        draftMealPlanLactose = nil
+        draftMealPlanSweet = nil
+        draftMealPlanGoal = nil
+    }
+
+    private func beginMealPlanBuilderFlow(context: HealthAssistantContext, forceDespiteNutritionist: Bool) {
+        if context.user?.hasNutritionist == true, !forceDespiteNutritionist {
+            deliverDelayedMealPlanBuilderMessage("""
+            Você tem nutricionista cadastrado\(context.user?.nutritionistName.isEmpty == false ? " (\(context.user!.nutritionistName))" : ""). \
+            O ideal é seguir o plano do profissional em Nutrição.
+
+            Se quiser uma sugestão educativa do IAssistente mesmo assim, diga: “montar cardápio mesmo assim”.
+
+            \(AssistantMealPlanBuilder.professionalDisclaimer)
+            """)
+            return
+        }
+
+        mealPlanBuilderPhase = .askingLactose
+        draftMealPlanLactose = nil
+        draftMealPlanSweet = nil
+        draftMealPlanGoal = nil
+
+        let name = context.user?.greetingName ?? ""
+        let greeting = name.isEmpty ? "" : "\(name), "
+
+        deliverDelayedMealPlanBuilderMessage("""
+        \(greeting)posso montar uma sugestão de cardápio personalizado.
+
+        Vou fazer algumas perguntas (lactose, doces e objetivo) e, ao final, deixo o plano disponível na aba **Nutrição** com o selo **Sugerido pelo IAssistente**.
+
+        \(AssistantMealPlanBuilder.professionalDisclaimer)
+
+        Primeiro: você tolera lactose?
+        • **Sim, tolero**
+        • **Intolerância**
+        """)
+    }
+
+    private func handleMealPlanBuilderReply(
+        _ text: String,
+        context: HealthAssistantContext,
+        mealPlanService: MealPlanService?,
+        authService: AuthService?
+    ) {
+        switch mealPlanBuilderPhase {
+        case .askingLactose:
+            guard let lactose = AssistantMealPlanBuilder.parseLactoseTolerance(from: text) else {
+                divertOrRepromptMealPlanBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: "você tolera lactose — **Sim, tolero** ou **Intolerância**?",
+                    fallback: "Não entendi. Responda **Sim, tolero** ou **Intolerância**."
+                )
+                return
+            }
+            draftMealPlanLactose = lactose
+            mealPlanBuilderPhase = .askingSweet
+            deliverDelayedMealPlanBuilderMessage("""
+            Lactose: \(lactose.rawValue).
+
+            Como é seu consumo de doces e açúcar?
+            • **Pouco**
+            • **Moderado**
+            • **Muito**
+            """)
+
+        case .askingSweet:
+            guard let sweet = AssistantMealPlanBuilder.parseSweetLevel(from: text) else {
+                divertOrRepromptMealPlanBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: "como é seu consumo de doces — **Pouco**, **Moderado** ou **Muito**?",
+                    fallback: "Escolha: **Pouco**, **Moderado** ou **Muito**."
+                )
+                return
+            }
+            draftMealPlanSweet = sweet
+            mealPlanBuilderPhase = .askingGoal
+            let currentGoal = context.user?.goal ?? .maintenance
+            deliverDelayedMealPlanBuilderMessage("""
+            Doces: \(sweet.rawValue).
+
+            Qual o objetivo alimentar do cardápio?
+            Seu objetivo atual no perfil é **\(currentGoal.rawValue)** — confirme ou escolha outro:
+            • **Ganho de Massa**
+            • **Perda de Gordura**
+            • **Manutenção**
+            • **Resistência**
+            """)
+
+        case .askingGoal:
+            let goal: FitnessGoal?
+            if AssistantMealPlanBuilder.isAffirmative(text), !AssistantMealPlanBuilder.isNegative(text),
+               let current = context.user?.goal {
+                goal = current
+            } else {
+                goal = AssistantMealPlanBuilder.parseGoal(from: text)
+            }
+            guard let goal else {
+                divertOrRepromptMealPlanBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: "qual o objetivo — **Ganho de Massa**, **Perda de Gordura**, **Manutenção** ou **Resistência**?",
+                    fallback: "Escolha o objetivo: **Ganho de Massa**, **Perda de Gordura**, **Manutenção** ou **Resistência**."
+                )
+                return
+            }
+            draftMealPlanGoal = goal
+            mealPlanBuilderPhase = .confirming
+
+            guard let profile = context.user, AssistantMealPlanBuilder.hasRequiredProfileData(profile) else {
+                resetMealPlanBuilderDraft()
+                let gaps = AssistantMealPlanBuilder.profileGaps(for: context.user).map { "• \($0)" }.joined(separator: "\n")
+                deliverDelayedMealPlanBuilderMessage("""
+                Antes de montar, preciso dos seus dados básicos atualizados.
+
+                \(gaps.isEmpty ? "• Complete peso, altura e idade em Perfil (e biotipo em Nutrição)." : gaps)
+
+                Atualize em **Perfil** e diga de novo “montar cardápio”.
+
+                \(AssistantMealPlanBuilder.professionalDisclaimer)
+                """)
+                return
+            }
+
+            guard let lactose = draftMealPlanLactose, let sweet = draftMealPlanSweet else {
+                resetMealPlanBuilderDraft()
+                deliverDelayedMealPlanBuilderMessage(
+                    "Perdi algumas respostas — diga “montar cardápio” para recomeçar."
+                )
+                return
+            }
+
+            deliverDelayedMealPlanBuilderMessage(
+                AssistantMealPlanBuilder.confirmationSummary(
+                    profile: profile,
+                    lactose: lactose,
+                    sweet: sweet,
+                    goal: goal
+                )
+            )
+
+        case .confirming:
+            if AssistantMealPlanBuilder.isNegative(text) {
+                resetMealPlanBuilderDraft()
+                deliverDelayedMealPlanBuilderMessage(
+                    "Tudo bem — cancelei a criação. Quando quiser, diga “montar cardápio” novamente."
+                )
+                return
+            }
+
+            guard AssistantMealPlanBuilder.isAffirmative(text) else {
+                divertOrRepromptMealPlanBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: "posso gerar o cardápio? Responda **Sim, autorizo** ou **Não, cancelar**.",
+                    fallback: "Para continuar, responda **Sim, autorizo** ou **Não, cancelar**."
+                )
+                return
+            }
+
+            guard let lactose = draftMealPlanLactose,
+                  let sweet = draftMealPlanSweet,
+                  let goal = draftMealPlanGoal,
+                  var profile = context.user,
+                  AssistantMealPlanBuilder.hasRequiredProfileData(profile) else {
+                resetMealPlanBuilderDraft()
+                deliverDelayedMealPlanBuilderMessage(
+                    "Faltam dados do perfil. Atualize Perfil/Nutrição e peça “montar cardápio” de novo."
+                )
+                return
+            }
+
+            guard let mealPlanService else {
+                resetMealPlanBuilderDraft()
+                deliverDelayedMealPlanBuilderMessage(
+                    "Não consegui salvar o cardápio agora. Tente novamente em instantes."
+                )
+                return
+            }
+
+            profile.goal = goal
+            authService?.updateProfile(profile)
+            mealPlanService.updateLactoseTolerance(lactose, profile: profile)
+            mealPlanService.updateSweetConsumption(sweet, profile: profile)
+            TrainingNutritionSyncService.shared.clear()
+            mealPlanService.generatePlanFromAssistant(for: profile)
+            resetMealPlanBuilderDraft()
+
+            deliverDelayedMealPlanBuilderMessage("""
+            Pronto! Cardápio de **\(goal.rawValue)** gerado com \(profile.dailyCalorieTarget) kcal/dia.
+
+            \(AssistantMealPlanBuilder.createdPlanLocationHint())
+
+            \(AssistantMealPlanBuilder.professionalDisclaimer)
+
+            \(HealthAssistantEngine.healthSafetyDisclaimer)
+            """)
+
+        case .none:
+            break
+        }
+    }
+
+    private func divertOrRepromptMealPlanBuilder(
+        _ text: String,
+        context: HealthAssistantContext,
+        pendingQuestion: String,
+        fallback: String
+    ) {
+        guard PostWorkoutCheckInEngine.looksLikeOffTopicQuestion(text) else {
+            deliverDelayedMealPlanBuilderMessage(fallback)
+            return
+        }
+
+        deliverAfterMinimumTyping {
+            let answer = HealthAssistantEngine.answer(for: text, context: context)
+            let reminder = PostWorkoutCheckInEngine.pendingQuestionReminder(pendingQuestion)
+            return "\(answer)\n\n\(reminder)"
+        }
+    }
+
+    private func deliverDelayedMealPlanBuilderMessage(_ text: String) {
+        deliverAfterMinimumTyping(minDuration: Self.workoutBuilderReplyDelay) { text }
     }
 
     private func resetWorkoutBuilderDraft() {
@@ -2718,6 +3005,7 @@ final class HealthAssistantService: ObservableObject {
         restDaySevenDayNudgeDelivered = false
         tideAlertDelivered = false
         resetWorkoutBuilderDraft()
+        resetMealPlanBuilderDraft()
 
         if let checkIn = PostWorkoutCheckInService.shared.dueCheckIn {
             beginPostWorkoutCheckInIfNeeded(checkIn: checkIn, context: context)

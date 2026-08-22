@@ -1000,8 +1000,78 @@
       line-height: 1.35;
     }
 
+    .lang-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin: 0.85rem 0 0.75rem;
+    }
+    .lang-tabs button {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.4rem 0.75rem;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .lang-tabs button.active {
+      border-color: var(--accent);
+      color: #06140f;
+      background: var(--accent);
+    }
+    .banner-gallery {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+    .banner-gallery .hero {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: #000;
+      min-height: 220px;
+    }
+    .banner-gallery .hero img,
+    .banner-gallery .thumbs img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .banner-gallery .thumbs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.55rem;
+      grid-auto-rows: 1fr;
+    }
+    .banner-gallery .thumbs button {
+      appearance: none;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      padding: 0;
+      background: #000;
+      cursor: pointer;
+      aspect-ratio: 16 / 10;
+    }
+    .banner-gallery .thumbs button.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .banner-path {
+      margin-top: 0.65rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      word-break: break-all;
+    }
+
     @media (max-width: 860px) {
-      .grid-2, .grid-3, .two-col, .device-grid { grid-template-columns: 1fr; }
+      .grid-2, .grid-3, .two-col, .device-grid, .banner-gallery { grid-template-columns: 1fr; }
       .cycle-steps { grid-template-columns: 1fr 1fr; }
       .evo-compare { grid-template-columns: 1fr; }
       .evo-arrow { transform: rotate(90deg); justify-self: center; }
@@ -1174,7 +1244,7 @@
       <div class="slide-inner">
         <p class="eyebrow reveal">Posicionamento</p>
         <h2 class="reveal reveal-d1">Não é mais um diário de treino.</h2>
-        <p class="lead reveal reveal-d2">É um único ecossistema de performance: musculação, cardio com GPS, Surf e Kitesurf, meditação, cardápio, medidas, evolução com fotos, calendário do iPhone, cards de conquista, Apple Watch e IAssistente — com ponte para personal e nutricionista.</p>
+        <p class="lead reveal reveal-d2">É um único ecossistema de performance: musculação, cardio com GPS reforçado, Surf e Kitesurf, Dupla/equipe, meditação, cardápio com refeições próprias, dia de descanso no IAssistente, sync na nuvem, calendário do iPhone, cards de conquista e Apple Watch — com ponte para personal e nutricionista.</p>
         <div class="grid-2" style="margin-top:1.25rem;">
           <article class="media-card reveal reveal-d3">
             <div class="shot">
@@ -1216,7 +1286,7 @@
             <article class="card reveal reveal-d3">
               <strong>Outdoor &amp; água</strong>
               <ul>
-                <li>Corrida, caminhada e bike com GPS</li>
+                <li>Corrida, caminhada e bike com GPS estável</li>
                 <li>Surf e Kitesurf: mapa, SPOT, vento e maré</li>
                 <li>Diários, saltos e rota no resumo</li>
               </ul>
@@ -1270,46 +1340,97 @@
     <!-- 5b Novidades -->
     <section class="slide" data-title="Novidades">
       <div class="slide-inner">
-        <p class="eyebrow reveal">Novidades do produto</p>
-        <h2 class="reveal reveal-d1">Dupla/equipe, chat e conformidade — além do outdoor.</h2>
-        <p class="lead reveal reveal-d2">Motive com parceiros, combine treinos no chat (12h), acompanhe o ranking e mantenha privacidade sem GPS ao vivo — com idade mínima 16+ e logs Marco Civil.</p>
+        <p class="eyebrow reveal">Novidades do produto · ago/2026</p>
+        <h2 class="reveal reveal-d1">Dupla, GPS reforçado, nutrição livre, descanso e nuvem.</h2>
+        <p class="lead reveal reveal-d2">Parceiros no chat (12h), corrida estável com tela bloqueada, refeições criadas por você, dia de descanso no IAssistente e sync Firebase — com idade 16+ e Marco Civil.</p>
         <div class="grid-3" style="margin-top:1.25rem;">
           <article class="card reveal reveal-d3">
             <strong>Dupla / equipe</strong>
             <ul>
               <li>Convites por app, SMS, e-mail ou código</li>
               <li>Chat estilo mensageiro (verde + cinza)</li>
-              <li>Foto e bandeira nos membros</li>
+              <li>Badges de mensagens não lidas</li>
               <li>Ranking e relatório da equipe</li>
             </ul>
           </article>
           <article class="card reveal reveal-d4">
-            <strong>Notificação → chat</strong>
+            <strong>Outdoor &amp; GPS</strong>
             <ul>
-              <li>Toque na mensagem abre a conversa</li>
-              <li>Atualização em tempo quase real</li>
-              <li>Mensagens expiram em 12 horas</li>
-              <li>Sem mapa / localização ao vivo</li>
+              <li>Corrida/caminhada/bike com rota estável</li>
+              <li>Distância e mapa mesmo com lock</li>
+              <li>Surf/Kite: SPOT, vento, maré, saltos</li>
+              <li>Calendário do iPhone ao concluir</li>
             </ul>
           </article>
           <article class="card reveal reveal-d5">
-            <strong>Legal &amp; confiança</strong>
+            <strong>Nutri · descanso · nuvem</strong>
             <ul>
-              <li>Idade mínima 16 anos</li>
-              <li>Termos e Privacidade atualizados</li>
-              <li>Logs de acesso (Marco Civil) 6 meses</li>
-              <li>Exclusão de conta completa</li>
+              <li>Biblioteca de refeições do usuário</li>
+              <li>Dia de descanso no IAssistente</li>
+              <li>Conta Firebase + foto na nuvem</li>
+              <li>StoreKit 2 e vouchers de cortesia</li>
             </ul>
           </article>
         </div>
         <div class="grid-2" style="margin-top:1rem;">
           <article class="card reveal reveal-d6">
-            <strong>Outdoor completo</strong>
-            <p>Surf, Kite, corrida e bike com mapa, vento/maré, calendário do iPhone e diários — o ciclo outdoor continua no mesmo app.</p>
+            <strong>Legal &amp; confiança</strong>
+            <p>Idade mínima 16 anos, Termos/Privacidade atualizados, logs de acesso (Marco Civil) 6 meses e exclusão completa de conta.</p>
           </article>
           <article class="card reveal reveal-d6">
             <strong>Evolução &amp; Live Activity</strong>
-            <p>Comparativo de 30 dias com fotos privadas, PDF, Live Activity na tela de bloqueio e Apple Watch — o atleta e o personal no mesmo fluxo.</p>
+            <p>Comparativo de 30 dias com fotos privadas, PDF, Live Activity na tela de bloqueio e Apple Watch companion — atleta e personal no mesmo fluxo.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Banners multilíngues -->
+    <section class="slide" data-title="Banners">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Marketing · App Store</p>
+        <h2 class="reveal reveal-d1">Banners de divulgação nos 4 idiomas do app.</h2>
+        <p class="lead reveal reveal-d2">Mesmos visuais com texto localizado: pt-BR, English, Español e Français — prontos para ads, redes e loja.</p>
+        <div class="lang-tabs reveal reveal-d3" id="banner-lang-tabs" role="tablist" aria-label="Idioma do banner">
+          <button type="button" class="active" data-lang="pt-BR">pt-BR</button>
+          <button type="button" data-lang="en-US">EN</button>
+          <button type="button" data-lang="es-ES">ES</button>
+          <button type="button" data-lang="fr-FR">FR</button>
+        </div>
+        <div class="banner-gallery reveal reveal-d4" id="banner-gallery"
+             data-base="../HealthFit/AppStore/marketing">
+          <div class="hero">
+            <img id="banner-hero" src="../HealthFit/AppStore/marketing/pt-BR/HealthFit-banner-trio.png" alt="Banner HealthFit" />
+          </div>
+          <div class="thumbs" id="banner-thumbs">
+            <button type="button" class="active" data-file="HealthFit-banner-trio.png" aria-label="Trio"><img src="../HealthFit/AppStore/marketing/pt-BR/HealthFit-banner-trio.png" alt="" /></button>
+            <button type="button" data-file="HealthFit-banner-grupo.png" aria-label="Grupo"><img src="../HealthFit/AppStore/marketing/pt-BR/HealthFit-banner-grupo.png" alt="" /></button>
+            <button type="button" data-file="HealthFit-banner-mulher.png" aria-label="Mulher"><img src="../HealthFit/AppStore/marketing/pt-BR/HealthFit-banner-mulher.png" alt="" /></button>
+            <button type="button" data-file="HealthFit-banner-homem.png" aria-label="Homem"><img src="../HealthFit/AppStore/marketing/pt-BR/HealthFit-banner-homem.png" alt="" /></button>
+            <button type="button" data-file="HealthFit-banner-divulgacao.png" aria-label="Marca"><img src="../HealthFit/AppStore/marketing/pt-BR/HealthFit-banner-divulgacao.png" alt="" /></button>
+          </div>
+        </div>
+        <p class="banner-path reveal reveal-d5" id="banner-path">AppStore/marketing/pt-BR/HealthFit-banner-trio.png</p>
+      </div>
+    </section>
+
+    <!-- Mapa de publicação -->
+    <section class="slide" data-title="Mapa">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">App Store · disponibilidade</p>
+        <h2 class="reveal reveal-d1">Publicação mundial. Metadados em 4 idiomas.</h2>
+        <p class="lead reveal reveal-d2">O HealthFit será publicado em <strong>todos os territórios da App Store</strong>. pt-BR, EN, ES e FR cobrem a ficha da loja e os banners de divulgação.</p>
+        <div class="reveal reveal-d3" style="margin-top:0.85rem;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#000;">
+          <img src="apresentacao-assets/HealthFit-mapa-publicacao.png" alt="Mapa mundial HealthFit" style="display:block;width:100%;height:auto;max-height:48vh;object-fit:contain;background:#0b0d10;" />
+        </div>
+        <div class="grid-2" style="margin-top:0.85rem;">
+          <article class="card reveal reveal-d4">
+            <strong>Disponibilidade</strong>
+            <p>All countries or regions na App Store Connect — iPhone, iPad e Apple Watch companion.</p>
+          </article>
+          <article class="card reveal reveal-d5">
+            <strong>Localização da loja</strong>
+            <p>pt-BR · en-US · es-ES · fr-FR — descrição, keywords, screenshots e banners por idioma.</p>
           </article>
         </div>
       </div>
@@ -1729,7 +1850,7 @@
           <div>
             <p class="eyebrow reveal">Próximo passo</p>
             <h1 class="reveal reveal-d1">HealthFit está pronto para o mundo.</h1>
-            <p class="lead reveal reveal-d2">Um único app Apple-native: treino, Surf e Kite com mapa, calendário do iPhone, evolução com fotos, cards de conquista, IAssistente e ponte com profissionais — ficha multilíngue para App Store mundial.</p>
+            <p class="lead reveal reveal-d2">Um único app Apple-native: treino, GPS outdoor, Surf e Kite, Dupla/equipe, nutrição livre, dia de descanso, calendário do iPhone, sync na nuvem, IAssistente on-device e ponte com profissionais — ficha multilíngue para App Store mundial.</p>
             <div class="pill-row reveal reveal-d3">
               <span class="pill">Um único app</span>
               <span class="pill">Surf &amp; Kitesurf</span>
@@ -1815,6 +1936,45 @@
       if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); show(index + 1); }
       if (e.key === "ArrowLeft") { e.preventDefault(); show(index - 1); }
     });
+
+    (function initBannerLocale() {
+      const tabs = document.getElementById("banner-lang-tabs");
+      const gallery = document.getElementById("banner-gallery");
+      const hero = document.getElementById("banner-hero");
+      const pathEl = document.getElementById("banner-path");
+      const thumbs = document.getElementById("banner-thumbs");
+      if (!tabs || !gallery || !hero || !thumbs) return;
+      let lang = "pt-BR";
+      let file = "HealthFit-banner-trio.png";
+      const base = gallery.dataset.base || "../HealthFit/AppStore/marketing";
+      function apply() {
+        const url = `${base}/${lang}/${file}`;
+        hero.src = url;
+        pathEl.textContent = `AppStore/marketing/${lang}/${file}`;
+        thumbs.querySelectorAll("button").forEach((btn) => {
+          const f = btn.dataset.file;
+          btn.querySelector("img").src = `${base}/${lang}/${f}`;
+          btn.classList.toggle("active", f === file);
+        });
+        tabs.querySelectorAll("button").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.lang === lang);
+        });
+      }
+      tabs.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-lang]");
+        if (!btn) return;
+        lang = btn.dataset.lang;
+        apply();
+      });
+      thumbs.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-file]");
+        if (!btn) return;
+        file = btn.dataset.file;
+        apply();
+      });
+      apply();
+    })();
+
     show(0);
   </script>
 </body>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HealthFit — Mapa de publicação</title>
+  <style>
+    :root {
+      --bg: #12151a;
+      --surface: #1a1f27;
+      --line: rgba(255,255,255,0.1);
+      --text: #f4f7f5;
+      --muted: rgba(244,247,245,0.65);
+      --accent: #33d92e;
+      --accent-dim: rgba(51,217,46,0.18);
+      --en: #5ec8ff;
+      --es: #ffb020;
+      --fr: #c084fc;
+      --pt: #33d92e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 3rem;
+    }
+    .eyebrow {
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 0 0 0.4rem;
+    }
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      letter-spacing: -0.02em;
+    }
+    .lead {
+      color: var(--muted);
+      max-width: 52rem;
+      margin: 0 0 1.25rem;
+    }
+    .hero {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      background: #0b0d10;
+      margin-bottom: 1.25rem;
+    }
+    .hero img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin: 0 0 1.5rem;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: 999px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .dot {
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .dot.en { background: var(--en); }
+    .dot.es { background: var(--es); }
+    .dot.fr { background: var(--fr); }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 1rem;
+    }
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1rem 1.05rem;
+    }
+    .card h2 {
+      margin: 0 0 0.65rem;
+      font-size: 1.05rem;
+    }
+    .card p, .card li {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .card ul {
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+    .card li { margin: 0.25rem 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.55rem 0.35rem;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 6px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      margin-right: 0.25rem;
+    }
+    .tag.en { background: rgba(94,200,255,0.15); color: var(--en); }
+    .tag.es { background: rgba(255,176,32,0.15); color: var(--es); }
+    .tag.fr { background: rgba(192,132,252,0.15); color: var(--fr); }
+    .note {
+      margin-top: 1.25rem;
+      padding: 0.9rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(51,217,46,0.06);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .note strong { color: var(--text); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="eyebrow">App Store · lançamento</p>
+    <h1>Onde o HealthFit será publicado</h1>
+    <p class="lead">
+      Conforme o roadmap de lançamento (<strong>publicação mundial</strong>), o HealthFit será disponibilizado
+      em <strong>todos os territórios da App Store</strong>. Os metadados da loja (nome, descrição, keywords e banners)
+      estão prontos em <strong>4 idiomas</strong>: pt-BR, English, Español e Français.
+    </p>
+
+    <div class="hero">
+      <img src="../HealthFit/AppStore/marketing/HealthFit-mapa-publicacao.png" alt="Mapa mundial HealthFit — App Store em todos os territórios" />
+    </div>
+
+    <div class="legend">
+      <span class="pill"><span class="dot"></span> Verde = território App Store (mundial)</span>
+      <span class="pill"><span class="dot"></span> pt-BR metadados</span>
+      <span class="pill"><span class="dot en"></span> EN metadados</span>
+      <span class="pill"><span class="dot es"></span> ES metadados</span>
+      <span class="pill"><span class="dot fr"></span> FR metadados</span>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Disponibilidade na loja</h2>
+        <ul>
+          <li><strong>Escopo:</strong> todos os países/regiões da App Store (Apple)</li>
+          <li><strong>Plataformas:</strong> iPhone, iPad e Apple Watch companion</li>
+          <li><strong>Fonte:</strong> <code>AppStore/ROADMAP.md</code> — “aprovação e publicação mundial”</li>
+          <li><strong>Idade mínima:</strong> 16+</li>
+        </ul>
+        <p style="margin-top:0.85rem;">
+          Na App Store Connect, a disponibilidade padrão é <em>All countries or regions</em>,
+          salvo exclusão manual de território.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Metadados por idioma</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Locale</th>
+              <th>Idioma</th>
+              <th>Hubs de comunicação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tag">pt-BR</span></td>
+              <td>Português (Brasil)</td>
+              <td>Brasil, Portugal e lusofonia (storefronts que caem em pt-BR)</td>
+            </tr>
+            <tr>
+              <td><span class="tag en">en-US</span></td>
+              <td>English</td>
+              <td>EUA, Reino Unido, Canadá, Austrália, NZ e demais EN</td>
+            </tr>
+            <tr>
+              <td><span class="tag es">es-ES</span></td>
+              <td>Español</td>
+              <td>Espanha, México, LatAm e storefronts ES</td>
+            </tr>
+            <tr>
+              <td><span class="tag fr">fr-FR</span></td>
+              <td>Français</td>
+              <td>França, Bélgica, Suíça, Canadá (FR) e storefronts FR</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:1rem;">
+      <h2>Países em destaque no app (perfil / bandeira)</h2>
+      <p>
+        O catálogo de país do perfil inclui mercados prioritários de comunicação (não limita a loja).
+        Exemplos: Brasil, Portugal, EUA, Argentina, Espanha, França, México, Colômbia, Chile, Canadá,
+        Reino Unido, Alemanha, Itália, Japão, Austrália, Angola, Moçambique, entre outros.
+      </p>
+    </section>
+
+    <p class="note">
+      <strong>Resumo:</strong> publicação <strong>mundial</strong> na App Store; experiência localizada em
+      <strong>pt-BR · EN · ES · FR</strong>. Banners por idioma em
+      <a href="../HealthFit/AppStore/marketing/README.md"><code>AppStore/marketing/{pt-BR,en-US,es-ES,fr-FR}/</code></a>.
+      Mapa estático:
+      <a href="../HealthFit/AppStore/marketing/HealthFit-mapa-publicacao.png"><code>HealthFit-mapa-publicacao.png</code></a>.
+    </p>
+  </div>
+</body>
+</html>

@@ -12,10 +12,10 @@ enum MealPhotoAnalysisEngine {
         var calories: Int
         var confidence: Double
         var note: String
-        /// Alimentos individuais reconhecidos na foto (quando há mais de um).
         var detectedFoods: [String]
-        /// `true` quando os macros vieram de tabela nutricional lida por OCR.
         var fromNutritionLabel: Bool
+        var items: [DetectedFoodItem]
+        var scanMode: MealScanMode
     }
 
     enum AnalysisError: LocalizedError {
@@ -30,32 +30,60 @@ enum MealPhotoAnalysisEngine {
         }
     }
 
-    static func analyze(image: UIImage) async throws -> Estimate {
-        guard let cgImage = normalizedCGImage(from: image) else {
+    static func analyze(image: UIImage, mode: MealScanMode = .plate) async throws -> Estimate {
+        guard let cgImage = normalizedCGImage(from: image, mode: mode) else {
             throw AnalysisError.invalidImage
         }
 
+        if mode == .barcode || mode == .plate {
+            let barcodes = try await detectBarcodes(cgImage: cgImage)
+            for code in barcodes {
+                if let product = try? await OpenFoodFactsService.lookup(barcode: code) {
+                    let grams = product.servingGrams ?? 100
+                    let item = DetectedFoodItem.fromOpenFoodFacts(product, grams: grams)
+                    return Estimate(
+                        foodLabel: item.name,
+                        proteinGrams: item.proteinGrams,
+                        carbsGrams: item.carbsGrams,
+                        fatGrams: item.fatGrams,
+                        calories: item.calories,
+                        confidence: item.confidence,
+                        note: "Produto identificado pelo código \(code) via Open Food Facts. Ajuste a porção em gramas se precisar.",
+                        detectedFoods: [item.name],
+                        fromNutritionLabel: false,
+                        items: [item],
+                        scanMode: .barcode
+                    )
+                }
+            }
+            if mode == .barcode {
+                throw AnalysisError.visionFailed
+            }
+        }
+
         async let classificationsTask = classify(cgImage: cgImage)
-        async let ocrTask = recognizeText(cgImage: cgImage)
+        async let ocrTask = recognizeText(cgImage: cgImage, mode: mode)
 
         let classifications = try await classificationsTask
         let ocrText = (try? await ocrTask) ?? ""
 
-        // Prioridade: tabela nutricional impressa (valores reais do rótulo).
-        if let labelEstimate = estimateFromNutritionLabel(ocrText) {
-            return labelEstimate
+        if mode != .plate || ocrText.contains("kcal") || ocrText.lowercased().contains("prote") {
+            if let labelEstimate = estimateFromNutritionLabel(ocrText, mode: mode) {
+                return labelEstimate
+            }
         }
 
         var hits: [CatalogHit] = []
-        hits.append(contentsOf: matchAllInText(ocrText, sourceBoost: 0.85))
+        let ocrBoost = mode == .nutritionLabel ? 0.95 : 0.85
+        hits.append(contentsOf: matchAllInText(ocrText, sourceBoost: ocrBoost))
         hits.append(contentsOf: matchAllClassifications(classifications))
 
         let merged = mergeHits(hits)
         if merged.isEmpty {
-            return genericFallback(classifications: classifications, ocrText: ocrText)
+            return genericFallback(classifications: classifications, ocrText: ocrText, mode: mode)
         }
 
-        return composeEstimate(from: merged, ocrBoosted: !ocrText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        return composeEstimate(from: merged, ocrBoosted: !ocrText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, mode: mode)
     }
 
     // MARK: - Vision
@@ -75,7 +103,27 @@ enum MealPhotoAnalysisEngine {
         }
     }
 
-    private static func recognizeText(cgImage: CGImage) async throws -> String {
+    private static func detectBarcodes(cgImage: CGImage) async throws -> [String] {
+        try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let request = VNDetectBarcodesRequest()
+                request.symbologies = [.ean13, .ean8, .upce, .code128, .code39, .itf14]
+                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+                do {
+                    try handler.perform([request])
+                    let values = (request.results ?? [])
+                        .compactMap(\.payloadStringValue)
+                        .map { OpenFoodFactsService.sanitizeBarcode($0) }
+                        .filter { $0.count >= 8 }
+                    continuation.resume(returning: Array(Set(values)))
+                } catch {
+                    continuation.resume(returning: [])
+                }
+            }
+        }
+    }
+
+    private static func recognizeText(cgImage: CGImage, mode: MealScanMode) async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let request = VNRecognizeTextRequest()
@@ -83,7 +131,7 @@ enum MealPhotoAnalysisEngine {
                 request.usesLanguageCorrection = true
                 request.recognitionLanguages = ["pt-BR", "en-US"]
                 // Rótulos de embalagem usam tipografia pequena.
-                request.minimumTextHeight = 0.011
+                request.minimumTextHeight = mode == .nutritionLabel ? 0.008 : 0.011
                 if #available(iOS 16.0, *) {
                     request.automaticallyDetectsLanguage = true
                 }
@@ -108,9 +156,8 @@ enum MealPhotoAnalysisEngine {
         }
     }
 
-    private static func normalizedCGImage(from image: UIImage) -> CGImage? {
-        // Maior resolução favorece OCR de rótulos sem custo excessivo no Vision.
-        let maxSide: CGFloat = 1600
+    private static func normalizedCGImage(from image: UIImage, mode: MealScanMode) -> CGImage? {
+        let maxSide: CGFloat = mode == .nutritionLabel ? 2048 : 1800
         let size = image.size
         guard size.width > 0, size.height > 0 else { return image.cgImage }
 
@@ -137,6 +184,8 @@ enum MealPhotoAnalysisEngine {
         var fatGrams: Int?
         var isPer100g: Bool
         var productHint: String?
+        var servingGrams: Int?
+        var servingDescription: String?
 
         var macroCount: Int {
             [proteinGrams, carbsGrams, fatGrams].compactMap { $0 }.count
@@ -226,7 +275,9 @@ enum MealPhotoAnalysisEngine {
             carbsGrams: carbs.map { Int($0.rounded()) },
             fatGrams: fat.map { Int($0.rounded()) },
             isPer100g: isPer100g,
-            productHint: extractProductHint(from: raw)
+            productHint: extractProductHint(from: raw),
+            servingGrams: parseServingGrams(from: compact),
+            servingDescription: parseServingDescription(from: compact)
         )
 
         // Valores absurdos → ignora (OCR ruidoso).
@@ -238,37 +289,51 @@ enum MealPhotoAnalysisEngine {
         return reading.isUsable ? reading : nil
     }
 
-    private static func estimateFromNutritionLabel(_ ocrText: String) -> Estimate? {
+    private static func estimateFromNutritionLabel(_ ocrText: String, mode: MealScanMode) -> Estimate? {
         guard let reading = parseNutritionLabel(from: ocrText) else { return nil }
 
-        let p = reading.proteinGrams ?? 0
-        let c = reading.carbsGrams ?? 0
-        let f = reading.fatGrams ?? 0
+        let serving = reading.servingGrams ?? (reading.isPer100g ? 100 : 150)
+        let scale = reading.isPer100g ? Double(serving) / 100.0 : 1.0
+
+        let p = Int((Double(reading.proteinGrams ?? 0) * scale).rounded())
+        let c = Int((Double(reading.carbsGrams ?? 0) * scale).rounded())
+        let f = Int((Double(reading.fatGrams ?? 0) * scale).rounded())
         let atwater = MealPhotoAnalysisEntry.estimatedCalories(protein: p, carbs: c, fat: f)
         let calories: Int
-        if let labeled = reading.calories, labeled > 0 {
-            // Se Atwater e rótulo divergem muito e há 3 macros, confia nos macros.
+        if let labeled = reading.calories, labeled > 0, !reading.isPer100g {
             if reading.macroCount == 3, atwater > 0, abs(atwater - labeled) > Int(Double(max(atwater, labeled)) * 0.25) {
                 calories = atwater
             } else {
                 calories = labeled
             }
+        } else if reading.isPer100g, let labeled = reading.calories, labeled > 0 {
+            calories = Int((Double(labeled) * scale).rounded())
         } else {
             calories = atwater
         }
 
         let label = reading.productHint?.trimmingCharacters(in: .whitespacesAndNewlines)
         let foodLabel = (label?.isEmpty == false) ? label! : "Alimento (rótulo nutricional)"
+        let item = DetectedFoodItem(
+            name: foodLabel,
+            proteinGrams: p,
+            carbsGrams: c,
+            fatGrams: f,
+            typicalGrams: serving,
+            portionGrams: serving,
+            confidence: reading.macroCount == 3 ? 0.92 : 0.84,
+            baseProteinGrams: reading.proteinGrams ?? p,
+            baseCarbsGrams: reading.carbsGrams ?? c,
+            baseFatGrams: reading.fatGrams ?? f
+        )
 
         var note = "Li a tabela nutricional da embalagem"
         if reading.isPer100g {
-            note += " (valores por 100 g — ajuste à porção que você comeu)"
-        } else {
-            note += " — confira se os valores são da porção consumida"
+            note += " (valores por 100 g — porção sugerida \(serving) g)"
+        } else if let servingText = reading.servingDescription {
+            note += " (porção \(servingText))"
         }
         note += "."
-
-        let confidence = reading.macroCount == 3 ? 0.92 : (reading.macroCount == 2 ? 0.84 : 0.72)
 
         return Estimate(
             foodLabel: foodLabel,
@@ -276,10 +341,12 @@ enum MealPhotoAnalysisEngine {
             carbsGrams: c,
             fatGrams: f,
             calories: calories,
-            confidence: confidence,
+            confidence: item.confidence,
             note: note,
             detectedFoods: [foodLabel],
-            fromNutritionLabel: true
+            fromNutritionLabel: true,
+            items: [item],
+            scanMode: mode
         )
     }
 
@@ -435,12 +502,8 @@ enum MealPhotoAnalysisEngine {
         }
     }
 
-    static func composeEstimate(from hits: [CatalogHit], ocrBoosted: Bool) -> Estimate {
+    static func composeEstimate(from hits: [CatalogHit], ocrBoosted: Bool, mode: MealScanMode = .plate) -> Estimate {
         let foods = hits.map(\.item.displayName)
-        let protein = hits.reduce(0) { $0 + $1.item.proteinGrams }
-        let carbs = hits.reduce(0) { $0 + $1.item.carbsGrams }
-        let fat = hits.reduce(0) { $0 + $1.item.fatGrams }
-        // Pratos compostos: soma de porções típicas tende a exagerar.
         let scale: Double
         switch hits.count {
         case 0, 1: scale = 1.0
@@ -448,62 +511,66 @@ enum MealPhotoAnalysisEngine {
         case 3: scale = 0.72
         default: scale = 0.65
         }
-        let p = Int((Double(protein) * scale).rounded())
-        let c = Int((Double(carbs) * scale).rounded())
-        let f = Int((Double(fat) * scale).rounded())
+
+        var items: [DetectedFoodItem] = hits.map { hit in
+            var item = DetectedFoodItem.fromCatalogItem(hit.item, confidence: hit.confidence)
+            if scale < 1.0 {
+                let scaledGrams = max(1, Int((Double(hit.item.typicalGrams) * scale).rounded()))
+                item.applyPortionGrams(scaledGrams)
+            }
+            return item
+        }
+
+        let protein = items.totalProtein
+        let carbs = items.totalCarbs
+        let fat = items.totalFat
 
         let avgConfidence = hits.map(\.confidence).reduce(0, +) / Double(max(hits.count, 1))
         let maxConfidence = hits.map(\.confidence).max() ?? avgConfidence
-        // Confiança global: média + bônus OCR, limitada pelo melhor hit (evita % inflado).
         var confidence = min(avgConfidence + (ocrBoosted ? 0.04 : 0), 0.97)
         confidence = min(confidence, maxConfidence + 0.08)
         if maxConfidence < 0.35 {
             confidence = min(confidence, 0.32)
         }
 
-        let label: String
-        if foods.count == 1 {
-            label = foods[0]
-        } else if foods.count == 2 {
-            label = "\(foods[0]) e \(foods[1])"
-        } else {
-            let head = foods.dropLast().joined(separator: ", ")
-            label = "\(head) e \(foods.last!)"
-        }
+        let label = items.combinedLabel
 
         let sources = Set(hits.map(\.source))
         var note: String
         if maxConfidence < 0.35 {
-            note = "Identificação incerta (\(label)). Confirme o alimento e ajuste a porção."
+            note = "Identificação incerta (\(label)). Confirme os itens e ajuste a porção em gramas."
         } else if sources.contains("ocr"), sources.contains("vision") {
-            note = "Identifiquei: \(label). Combinei visão + texto — ajuste a porção se precisar."
+            note = "Identifiquei: \(label). Combinei visão + texto — ajuste gramas por item se precisar."
         } else if sources.contains("ocr") {
-            note = "Identifiquei pelo texto: \(label). Macros de porção típica — ajuste se a quantidade for diferente."
+            note = "Identifiquei pelo texto: \(label). Ajuste a porção de cada item."
         } else if foods.count > 1 {
-            note = "Detectei vários alimentos: \(label). Macros somados com fator de prato composto."
+            note = "Detectei \(foods.count) alimentos. Revise cada item e ajuste as gramas."
         } else {
-            note = "Alimento identificado: \(label). Estimativa visual da porção típica — ajuste se precisar."
+            note = "Alimento identificado: \(label). Ajuste a porção em gramas se a quantidade for diferente."
         }
 
         return Estimate(
             foodLabel: label,
-            proteinGrams: p,
-            carbsGrams: c,
-            fatGrams: f,
-            calories: MealPhotoAnalysisEntry.estimatedCalories(protein: p, carbs: c, fat: f),
+            proteinGrams: protein,
+            carbsGrams: carbs,
+            fatGrams: fat,
+            calories: MealPhotoAnalysisEntry.estimatedCalories(protein: protein, carbs: carbs, fat: fat),
             confidence: confidence,
             note: note,
             detectedFoods: foods,
-            fromNutritionLabel: false
+            fromNutritionLabel: false,
+            items: items,
+            scanMode: mode
         )
     }
 
     private static func genericFallback(
         classifications: [VNClassificationObservation],
-        ocrText: String
+        ocrText: String,
+        mode: MealScanMode
     ) -> Estimate {
         let topLabels = classifications.prefix(3).map(\.identifier).joined(separator: ", ")
-        var note = "Não reconheci o prato com precisão. Ajuste o alimento e os macros abaixo."
+        var note = "Não reconheci com precisão. Adicione alimentos manualmente ou ajuste os macros."
         if !topLabels.isEmpty {
             note += " Pistas da câmera: \(topLabels)."
         }
@@ -513,17 +580,74 @@ enum MealPhotoAnalysisEngine {
         if !trimmedOCR.isEmpty {
             note += " Texto lido: \(trimmedOCR.prefix(80))."
         }
-        return Estimate(
-            foodLabel: "Refeição mista (estimativa)",
+        let fallbackItem = DetectedFoodItem(
+            name: "Refeição mista (estimativa)",
             proteinGrams: 28,
             carbsGrams: 45,
             fatGrams: 15,
-            calories: MealPhotoAnalysisEntry.estimatedCalories(protein: 28, carbs: 45, fat: 15),
+            typicalGrams: 350,
+            portionGrams: 350,
             confidence: 0.18,
-            note: note,
-            detectedFoods: ["Refeição mista"],
-            fromNutritionLabel: false
+            baseProteinGrams: 28,
+            baseCarbsGrams: 45,
+            baseFatGrams: 15
         )
+        return Estimate(
+            foodLabel: fallbackItem.name,
+            proteinGrams: fallbackItem.proteinGrams,
+            carbsGrams: fallbackItem.carbsGrams,
+            fatGrams: fallbackItem.fatGrams,
+            calories: fallbackItem.calories,
+            confidence: fallbackItem.confidence,
+            note: note,
+            detectedFoods: [fallbackItem.name],
+            fromNutritionLabel: false,
+            items: [fallbackItem],
+            scanMode: mode
+        )
+    }
+
+    static func searchCatalog(query: String, limit: Int = 12) -> [FoodMacroItem] {
+        let q = normalize(query)
+        guard q.count >= 2 else { return [] }
+        var scored: [(FoodMacroItem, Int)] = []
+        for item in FoodMacroCatalog.items where !item.isGeneric {
+            var score = 0
+            let name = normalize(item.displayName)
+            if name.contains(q) { score += 40 }
+            if name.hasPrefix(q) { score += 20 }
+            for keyword in item.keywords {
+                let key = normalize(keyword)
+                if key.contains(q) || q.contains(key) { score += 10 + min(key.count, 12) }
+            }
+            if score > 0 { scored.append((item, score)) }
+        }
+        return scored
+            .sorted { $0.1 > $1.1 }
+            .prefix(limit)
+            .map(\.0)
+    }
+
+    private static func parseServingGrams(from compact: String) -> Int? {
+        if let match = compact.range(of: #"porcao[^0-9]{0,24}(\d+)\s*g"#, options: .regularExpression) {
+            let token = String(compact[match])
+            if let digits = token.components(separatedBy: CharacterSet.decimalDigits.inverted).compactMap({ Int($0) }).last {
+                return digits
+            }
+        }
+        if let match = compact.range(of: #"(\d+)\s*g"#, options: .regularExpression) {
+            let token = String(compact[match])
+            let digits = token.filter(\.isNumber)
+            if let value = Int(digits), value >= 10, value <= 900 { return value }
+        }
+        return nil
+    }
+
+    private static func parseServingDescription(from compact: String) -> String? {
+        if let range = compact.range(of: #"porcao[^0-9]{0,8}(\d+\s*g)"#, options: .regularExpression) {
+            return String(compact[range]).replacingOccurrences(of: "porcao", with: "porção")
+        }
+        return nil
     }
 
     private static func bestKeywordScore(item: FoodMacroItem, in normalizedText: String) -> Double? {
@@ -571,6 +695,7 @@ struct FoodMacroItem: Equatable {
     let proteinGrams: Int
     let carbsGrams: Int
     let fatGrams: Int
+    let typicalGrams: Int
     let matchWeight: Double
     let isGeneric: Bool
 
@@ -581,6 +706,7 @@ struct FoodMacroItem: Equatable {
         proteinGrams: Int,
         carbsGrams: Int,
         fatGrams: Int,
+        typicalGrams: Int = 150,
         matchWeight: Double,
         isGeneric: Bool = false
     ) {
@@ -590,6 +716,7 @@ struct FoodMacroItem: Equatable {
         self.proteinGrams = proteinGrams
         self.carbsGrams = carbsGrams
         self.fatGrams = fatGrams
+        self.typicalGrams = max(1, typicalGrams)
         self.matchWeight = matchWeight
         self.isGeneric = isGeneric
     }
@@ -601,13 +728,13 @@ enum FoodMacroCatalog {
             displayName: "Frango grelhado",
             keywords: ["peito de frango", "frango grelhado", "frango", "chicken", "grilled chicken", "roast chicken"],
             visionLabels: ["chicken", "roast chicken", "hen", "poultry"],
-            proteinGrams: 42, carbsGrams: 2, fatGrams: 8, matchWeight: 1.0
+            proteinGrams: 42, carbsGrams: 2, fatGrams: 8, typicalGrams: 150, matchWeight: 1.0
         ),
         FoodMacroItem(
             displayName: "Carne bovina",
             keywords: ["carne bovina", "carne moida", "carne moída", "picanha", "alcatra", "bife", "steak", "beef", "carne"],
             visionLabels: ["steak", "meat loaf", "filet", "ribeye", "beef"],
-            proteinGrams: 38, carbsGrams: 0, fatGrams: 18, matchWeight: 1.0
+            proteinGrams: 38, carbsGrams: 0, fatGrams: 18, typicalGrams: 120, matchWeight: 1.0
         ),
         FoodMacroItem(
             displayName: "Peixe",
@@ -625,19 +752,19 @@ enum FoodMacroCatalog {
             displayName: "Arroz e feijão",
             keywords: ["arroz e feijao", "arroz e feijão", "arroz com feijao", "arroz com feijão", "rice and beans"],
             visionLabels: [],
-            proteinGrams: 14, carbsGrams: 55, fatGrams: 6, matchWeight: 1.05
+            proteinGrams: 14, carbsGrams: 55, fatGrams: 6, typicalGrams: 300, matchWeight: 1.05
         ),
         FoodMacroItem(
             displayName: "Arroz",
             keywords: ["arroz branco", "arroz integral", "arroz", "white rice", "brown rice"],
             visionLabels: ["rice", "white rice", "fried rice"],
-            proteinGrams: 4, carbsGrams: 45, fatGrams: 1, matchWeight: 0.9
+            proteinGrams: 4, carbsGrams: 45, fatGrams: 1, typicalGrams: 150, matchWeight: 0.9
         ),
         FoodMacroItem(
             displayName: "Feijão",
             keywords: ["feijao", "feijão", "black bean", "beans"],
             visionLabels: ["bean", "black bean"],
-            proteinGrams: 12, carbsGrams: 28, fatGrams: 1, matchWeight: 0.9
+            proteinGrams: 12, carbsGrams: 28, fatGrams: 1, typicalGrams: 120, matchWeight: 0.9
         ),
         FoodMacroItem(
             displayName: "Feijoada",
@@ -679,13 +806,13 @@ enum FoodMacroCatalog {
             displayName: "Sanduíche",
             keywords: ["sanduiche", "sanduíche", "hamburguer", "hambúrguer", "cheeseburger", "burger", "hamburger", "sandwich", "hot dog"],
             visionLabels: ["cheeseburger", "hamburger", "hotdog", "sandwich"],
-            proteinGrams: 24, carbsGrams: 38, fatGrams: 18, matchWeight: 0.95
+            proteinGrams: 24, carbsGrams: 38, fatGrams: 18, typicalGrams: 220, matchWeight: 0.95
         ),
         FoodMacroItem(
             displayName: "Pizza",
             keywords: ["pizza"],
             visionLabels: ["pizza", "pepperoni pizza"],
-            proteinGrams: 18, carbsGrams: 48, fatGrams: 16, matchWeight: 1.0
+            proteinGrams: 18, carbsGrams: 48, fatGrams: 16, typicalGrams: 180, matchWeight: 1.0
         ),
         FoodMacroItem(
             displayName: "Sushi",
@@ -727,7 +854,7 @@ enum FoodMacroCatalog {
             displayName: "Banana",
             keywords: ["banana"],
             visionLabels: ["banana"],
-            proteinGrams: 1, carbsGrams: 27, fatGrams: 0, matchWeight: 1.0
+            proteinGrams: 1, carbsGrams: 27, fatGrams: 0, typicalGrams: 120, matchWeight: 1.0
         ),
         FoodMacroItem(
             displayName: "Maçã",

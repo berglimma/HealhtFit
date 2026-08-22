@@ -2,7 +2,7 @@
 
 Documentação oficial de produto e engenharia — alinhada ao código, aos documentos legais e ao Figma.
 
-**Versão de referência:** 1.0.x · **Atualização:** 10 de agosto de 2026  
+**Versão de referência:** 1.0.x · **Atualização:** 21 de agosto de 2026  
 **Desenvolvimento:** Berg Limma e Luan Chiminelli
 
 ## Figma
@@ -50,8 +50,11 @@ python3 -m venv .venv-docs
 
 ## Apresentação comercial
 
-- [`HealthFit_Apresentacao_Comercial.html`](./HealthFit_Apresentacao_Comercial.html)
+- [`HealthFit_Apresentacao_Comercial.html`](./HealthFit_Apresentacao_Comercial.html) — slides **Banners** (pt-BR / EN / ES / FR) e **Mapa** (publicação mundial)
+- [`HealthFit_Mapa_Publicacao.html`](./HealthFit_Mapa_Publicacao.html) — mapa e territórios App Store
 - Deck App Store / vendas: [`../HealthFit/AppStore/presentation/HealthFit-Vendas.html`](../HealthFit/AppStore/presentation/HealthFit-Vendas.html)
+- Banners localizados: [`../HealthFit/AppStore/marketing/`](../HealthFit/AppStore/marketing/) (`pt-BR`, `en-US`, `es-ES`, `fr-FR`)
+- Mapa estático: [`../HealthFit/AppStore/marketing/HealthFit-mapa-publicacao.png`](../HealthFit/AppStore/marketing/HealthFit-mapa-publicacao.png)
 
 ## Legais (públicos)
 
@@ -66,10 +69,14 @@ Espelhos em `Docs/healthfit/` e URLs públicas em `Docs/privacidade|termos|supor
 ## Fatos críticos (código atual)
 
 - Idade mínima: **16 anos**
-- Dupla/equipe: chat **12h**, sem GPS ao vivo; foto/bandeira nos membros
+- Dupla/equipe: chat **12h**, badges de não lidas, sem GPS ao vivo; foto/bandeira nos membros
 - Toque em notificação de mensagem → abre o chat
 - Logs de acesso (Marco Civil): retenção **6 meses** (`accessLogs`)
 - Água: a cada **2h**, **08–20h**
 - Abas: Início · Treinos · Nutrição · IAssistente · Perfil
-- IAssistente: **regras locais** (sem LLM cloud)
+- IAssistente: **regras locais** (sem LLM cloud) + **dia de descanso**
+- Nutrição: catálogo + **biblioteca de refeições do usuário** (sync Firestore)
+- Outdoor: GPS de corrida/caminhada/bike reforçado; Surf/Kite com mapa
+- Conta: **Firebase Auth** + sync de perfil/foto/treinos/wellness
 - Nudges cardio/meditação: **48h**
+- Relatório técnico: [`../HealthFit/Relatorio_HealthFit_Funcionalidades_e_CodeReview.docx`](../HealthFit/Relatorio_HealthFit_Funcionalidades_e_CodeReview.docx)

@@ -11,6 +11,8 @@ struct MealPlanCloudSnapshot: Codable {
     var caloricDeficit: Int
     /// Refeições criadas pelo usuário (fora do catálogo).
     var userMealLibrary: [MealTemplate]
+    /// Plano gerado pelo fluxo do IAssistente.
+    var createdByAssistant: Bool
 
     init(
         weeklyPlan: [DailyMealPlan],
@@ -20,7 +22,8 @@ struct MealPlanCloudSnapshot: Codable {
         dailyCalorieTarget: Int,
         estimatedTDEE: Int,
         caloricDeficit: Int,
-        userMealLibrary: [MealTemplate] = []
+        userMealLibrary: [MealTemplate] = [],
+        createdByAssistant: Bool = false
     ) {
         self.weeklyPlan = weeklyPlan
         self.shoppingList = shoppingList
@@ -30,6 +33,7 @@ struct MealPlanCloudSnapshot: Codable {
         self.estimatedTDEE = estimatedTDEE
         self.caloricDeficit = caloricDeficit
         self.userMealLibrary = userMealLibrary
+        self.createdByAssistant = createdByAssistant
     }
 
     init(from decoder: Decoder) throws {
@@ -42,11 +46,13 @@ struct MealPlanCloudSnapshot: Codable {
         estimatedTDEE = try container.decodeIfPresent(Int.self, forKey: .estimatedTDEE) ?? 0
         caloricDeficit = try container.decodeIfPresent(Int.self, forKey: .caloricDeficit) ?? 0
         userMealLibrary = try container.decodeIfPresent([MealTemplate].self, forKey: .userMealLibrary) ?? []
+        createdByAssistant = try container.decodeIfPresent(Bool.self, forKey: .createdByAssistant) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
         case weeklyPlan, shoppingList, customMenuSelection
         case basalMetabolicRate, dailyCalorieTarget, estimatedTDEE, caloricDeficit, userMealLibrary
+        case createdByAssistant
     }
 }
 

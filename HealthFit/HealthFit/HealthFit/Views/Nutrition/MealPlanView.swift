@@ -170,6 +170,13 @@ struct MealPlanView: View {
                         .adaptiveContentWidth()
                 }
 
+                if mealPlanService.createdByAssistant, nutritionTab <= 1 {
+                    assistantSuggestedBanner
+                        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                        .padding(.top, trainingNutritionSync.hasActiveTrainingFocus && nutritionTab == 0 ? 0 : 8)
+                        .adaptiveContentWidth()
+                }
+
                 nutritionTabPicker
 
                 if nutritionTab == 0 {
@@ -213,6 +220,29 @@ struct MealPlanView: View {
                         .font(.caption2)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private var assistantSuggestedBanner: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "bubble.left.and.bubble.right.fill")
+                .foregroundStyle(AppTheme.accentSecondary)
+                .frame(width: 36, height: 36)
+                .background(AppTheme.accentSecondary.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Sugerido pelo IAssistente")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("Este cardápio foi montado no Assistente com base no seu perfil. Valide com um nutricionista antes de seguir.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             Spacer(minLength: 0)
         }

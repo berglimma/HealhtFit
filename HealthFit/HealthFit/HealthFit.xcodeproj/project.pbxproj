@@ -23,6 +23,7 @@
 		B1000946 /* CourtesyVoucherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000946 /* CourtesyVoucherService.swift */; };
 		B1000947 /* AssistantRestDayEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000947 /* AssistantRestDayEngine.swift */; };
 		B1000948 /* CreateUserMealSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000948 /* CreateUserMealSheet.swift */; };
+		B1000949 /* AssistantMealPlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000949 /* AssistantMealPlanBuilder.swift */; };
 		B1000908 /* ClimbingAreaCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000908 /* ClimbingAreaCatalog.swift */; };
 		B1000909 /* ClimbingMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000909 /* ClimbingMapView.swift */; };
 		B1000910 /* ClimbingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000910 /* ClimbingLogbookView.swift */; };
@@ -302,6 +303,7 @@
 		B2000046 /* CourtesyVoucherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000046 /* CourtesyVoucherTests.swift */; };
 		B2000047 /* AssistantRestDayEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000047 /* AssistantRestDayEngineTests.swift */; };
 		B2000047 /* SubscriptionModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000047 /* SubscriptionModelsTests.swift */; };
+		B2000048 /* AssistantMealPlanBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000048 /* AssistantMealPlanBuilderTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -377,6 +379,7 @@
 		F1000946 /* CourtesyVoucherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtesyVoucherService.swift; sourceTree = "<group>"; };
 		F1000947 /* AssistantRestDayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRestDayEngine.swift; sourceTree = "<group>"; };
 		F1000948 /* CreateUserMealSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateUserMealSheet.swift; sourceTree = "<group>"; };
+		F1000949 /* AssistantMealPlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantMealPlanBuilder.swift; sourceTree = "<group>"; };
 		F1000908 /* ClimbingAreaCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAreaCatalog.swift; sourceTree = "<group>"; };
 		F1000909 /* ClimbingMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingMapView.swift; sourceTree = "<group>"; };
 		F1000910 /* ClimbingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingLogbookView.swift; sourceTree = "<group>"; };
@@ -658,6 +661,7 @@
 		F2000046 /* CourtesyVoucherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtesyVoucherTests.swift; sourceTree = "<group>"; };
 		F2000047 /* AssistantRestDayEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRestDayEngineTests.swift; sourceTree = "<group>"; };
 		F2000047 /* SubscriptionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionModelsTests.swift; sourceTree = "<group>"; };
+		F2000048 /* AssistantMealPlanBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantMealPlanBuilderTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -889,6 +893,7 @@
 				F1000131 /* NutritionReportBuilder.swift */,
 				F1000127 /* PasswordPolicy.swift */,
 				F1000130 /* AssistantWorkoutBuilder.swift */,
+				F1000949 /* AssistantMealPlanBuilder.swift */,
 				F1000201 /* ProfileDataReminderService.swift */,
 				F1000323 /* BodyMeasurementsPDFBuilder.swift */,
 				F1000324 /* BodyEvolutionService.swift */,
@@ -1219,6 +1224,7 @@
 				F2000046 /* CourtesyVoucherTests.swift */,
 				F2000047 /* AssistantRestDayEngineTests.swift */,
 				F2000047 /* SubscriptionModelsTests.swift */,
+				F2000048 /* AssistantMealPlanBuilderTests.swift */,
 			);
 			path = HealthFitTests;
 			sourceTree = "<group>";
@@ -1644,6 +1650,7 @@
 				B1000126 /* LegalDocumentView.swift in Sources */,
 				B1000127 /* PasswordPolicy.swift in Sources */,
 				B1000130 /* AssistantWorkoutBuilder.swift in Sources */,
+				B1000949 /* AssistantMealPlanBuilder.swift in Sources */,
 				B1000201 /* ProfileDataReminderService.swift in Sources */,
 				B1000128 /* PasswordRequirementsView.swift in Sources */,
 				B1000119 /* DeleteAccountSheet.swift in Sources */,
@@ -1751,6 +1758,7 @@
 				B2000046 /* CourtesyVoucherTests.swift in Sources */,
 				B2000047 /* AssistantRestDayEngineTests.swift in Sources */,
 				B2000047 /* SubscriptionModelsTests.swift in Sources */,
+				B2000048 /* AssistantMealPlanBuilderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
