@@ -25,6 +25,7 @@
 		B1000948 /* CreateUserMealSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000948 /* CreateUserMealSheet.swift */; };
 		B1000949 /* AssistantMealPlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000949 /* AssistantMealPlanBuilder.swift */; };
 		B1000950 /* OpenFoodFactsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000950 /* OpenFoodFactsService.swift */; };
+		B1000951 /* PhysicalAssessmentPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000951 /* PhysicalAssessmentPDFBuilder.swift */; };
 		B1000908 /* ClimbingAreaCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000908 /* ClimbingAreaCatalog.swift */; };
 		B1000909 /* ClimbingMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000909 /* ClimbingMapView.swift */; };
 		B1000910 /* ClimbingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000910 /* ClimbingLogbookView.swift */; };
@@ -382,6 +383,7 @@
 		F1000948 /* CreateUserMealSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateUserMealSheet.swift; sourceTree = "<group>"; };
 		F1000949 /* AssistantMealPlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantMealPlanBuilder.swift; sourceTree = "<group>"; };
 		F1000950 /* OpenFoodFactsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenFoodFactsService.swift; sourceTree = "<group>"; };
+		F1000951 /* PhysicalAssessmentPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicalAssessmentPDFBuilder.swift; sourceTree = "<group>"; };
 		F1000908 /* ClimbingAreaCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAreaCatalog.swift; sourceTree = "<group>"; };
 		F1000909 /* ClimbingMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingMapView.swift; sourceTree = "<group>"; };
 		F1000910 /* ClimbingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingLogbookView.swift; sourceTree = "<group>"; };
@@ -899,6 +901,7 @@
 				F1000949 /* AssistantMealPlanBuilder.swift */,
 				F1000201 /* ProfileDataReminderService.swift */,
 				F1000323 /* BodyMeasurementsPDFBuilder.swift */,
+				F1000951 /* PhysicalAssessmentPDFBuilder.swift */,
 				F1000324 /* BodyEvolutionService.swift */,
 				F1000062 /* WelcomeMotivationService.swift */,
 				F1000064 /* MarathonReportBuilder.swift */,
@@ -1619,6 +1622,7 @@
 				B1000321 /* BodyEvolutionStorageService.swift in Sources */,
 				B1000322 /* BodyEvolutionFirestoreService.swift in Sources */,
 				B1000323 /* BodyMeasurementsPDFBuilder.swift in Sources */,
+				B1000951 /* PhysicalAssessmentPDFBuilder.swift in Sources */,
 				B1000324 /* BodyEvolutionService.swift in Sources */,
 				B1000204 /* DailyWellnessFirestoreService.swift in Sources */,
 				B1000203 /* KeyboardDismiss.swift in Sources */,

@@ -2283,6 +2283,9 @@
     "Diários de natação, bike e surf/kite ficam dentro de cada modalidade." : {
 
     },
+    "Digite as circunferências em centímetros. Campos vazios não entram no relatório nem no PDF." : {
+
+    },
     "Digite pelo menos 2 letras do nome, apelido ou e-mail." : {
 
     },
@@ -2653,6 +2656,9 @@
     "Exercícios (%lld)" : {
 
     },
+    "Exportar avaliação PDF" : {
+
+    },
     "Exportar PDF Surf / Kite" : {
 
     },
@@ -2947,6 +2953,9 @@
 
     },
     "Inicie um cardio de Natação, defina o tamanho da piscina e use o Apple Watch para contar as voltas automaticamente. O histórico aparece aqui." : {
+
+    },
+    "Inserir medidas" : {
 
     },
     "Inspeção por usos" : {
@@ -3965,6 +3974,9 @@
 
     },
     "Pré-treino: %@." : {
+
+    },
+    "Preencha peso ou ao menos uma circunferência para exportar a avaliação em PDF." : {
 
     },
     "Preparando card..." : {

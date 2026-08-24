@@ -62,13 +62,17 @@ struct ProfileView: View {
     /// Phase 2 of profile content (heavy forms). First paint stays lean to avoid jetsam / UIDatePicker crashes.
     @State private var showSecondarySections = false
     @State private var showDateOfBirthSheet = false
+    @State private var physicalAssessmentPDFURL: URL?
+    @State private var showPhysicalAssessmentShare = false
+    @State private var showPhysicalAssessmentEmptyAlert = false
+    @State private var showMeasurementsEditor = false
 
     var body: some View {
         NavigationStack {
             profileList
                 .adaptiveContentWidth()
                 .navigationTitle("Perfil")
-                .scrollDismissesKeyboard(.immediately)
+                .scrollDismissesKeyboard(.interactively)
                 // No keyboard toolbar on this List — avoids TabView+List toolbar race that can abort the process.
                 .task { await handleProfileAppear() }
                 .onChange(of: authService.currentUser?.id) { _, _ in
@@ -135,6 +139,21 @@ struct ProfileView: View {
                         bodyDataSaveError = nil
                     }
                 )
+                .sheet(isPresented: $showMeasurementsEditor) {
+                    measurementsEditorSheet
+                }
+                .sheet(isPresented: $showPhysicalAssessmentShare) {
+                    if let physicalAssessmentPDFURL {
+                        ActivityShareSheet(items: [physicalAssessmentPDFURL]) {
+                            showPhysicalAssessmentShare = false
+                        }
+                    }
+                }
+                .alert("Medidas necessárias", isPresented: $showPhysicalAssessmentEmptyAlert) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text("Preencha peso ou ao menos uma circunferência para exportar a avaliação em PDF.")
+                }
         }
     }
 
@@ -1838,39 +1857,93 @@ struct ProfileView: View {
             }
         }
 
-        measurementField("Pescoço", text: $neckText)
-        measurementField("Ombros", text: $shouldersText)
-        measurementField("Peito", text: $chestText)
-        measurementField("Braço direito", text: $rightArmText)
-        measurementField("Braço esquerdo", text: $leftArmText)
-        measurementField("Cintura", text: $waistText)
-        measurementField("Abdômen", text: $abdomenText)
-        measurementField("Quadril", text: $hipText)
-        measurementField("Coxa direita", text: $rightThighText)
-        measurementField("Coxa esquerda", text: $leftThighText)
-        measurementField("Panturrilha direita", text: $rightCalfText)
-        measurementField("Panturrilha esquerda", text: $leftCalfText)
+        if currentFormMeasurements().hasAnyValue {
+            Text(measurementsSummaryLine)
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
 
         Button {
-            saveBodyMeasurements()
+            showMeasurementsEditor = true
         } label: {
-            Label("Salvar medidas", systemImage: "checkmark.circle.fill")
+            Label("Inserir medidas", systemImage: "ruler.fill")
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
         }
         .buttonStyle(ListSafeButtonStyle())
         .tint(AppTheme.accent)
+
+        Button {
+            exportPhysicalAssessmentPDF()
+        } label: {
+            Label("Exportar avaliação PDF", systemImage: "doc.richtext.fill")
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(ListSafeButtonStyle())
+        .tint(AppTheme.accentSecondary)
     }
 
-    private func measurementField(_ title: String, text: Binding<String>) -> some View {
-        HStack {
-            Text(title)
-            Spacer()
-            TextField("cm", text: text)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .frame(maxWidth: 90)
+    private var measurementsSummaryLine: String {
+        let filled = [
+            ("Pescoço", neckText),
+            ("Ombros", shouldersText),
+            ("Peito", chestText),
+            ("Cintura", waistText),
+            ("Abdômen", abdomenText),
+            ("Quadril", hipText)
+        ]
+        .filter { !$0.1.trimmingCharacters(in: .whitespaces).isEmpty }
+        .prefix(4)
+        .map { "\($0.0) \($0.1)" }
+        if filled.isEmpty { return "" }
+        return filled.joined(separator: " · ")
+    }
+
+    private var measurementsEditorSheet: some View {
+        BodyMeasurementsEditorSheet(
+            neckText: $neckText,
+            shouldersText: $shouldersText,
+            chestText: $chestText,
+            rightArmText: $rightArmText,
+            leftArmText: $leftArmText,
+            waistText: $waistText,
+            abdomenText: $abdomenText,
+            hipText: $hipText,
+            rightThighText: $rightThighText,
+            leftThighText: $leftThighText,
+            rightCalfText: $rightCalfText,
+            leftCalfText: $leftCalfText,
+            onSave: {
+                saveBodyMeasurements()
+                showMeasurementsEditor = false
+            },
+            onClose: {
+                showMeasurementsEditor = false
+            }
+        )
+    }
+
+    private func exportPhysicalAssessmentPDF() {
+        guard var user = authService.currentUser else { return }
+        let measurements = currentFormMeasurements(measuredAt: user.bodyMeasurements.measuredAt ?? .now)
+        guard measurements.hasAnyValue || user.weight > 0 else {
+            showPhysicalAssessmentEmptyAlert = true
+            return
         }
+        user.gender = selectedGender
+        if let parsedWeight = parseMeasurement(weightText) {
+            user.weight = parsedWeight
+        }
+        guard let url = PhysicalAssessmentPDFBuilder.writeTemporaryPDF(
+            profile: user,
+            measurements: measurements.hasAnyValue ? measurements : user.bodyMeasurements
+        ) else {
+            showPhysicalAssessmentEmptyAlert = true
+            return
+        }
+        physicalAssessmentPDFURL = url
+        showPhysicalAssessmentShare = true
     }
 
     private func saveBodyMeasurements() {
@@ -2204,5 +2277,144 @@ private struct ListSafeButtonStyle: PrimitiveButtonStyle {
             .highPriorityGesture(
                 TapGesture().onEnded { configuration.trigger() }
             )
+    }
+}
+
+/// Editor isolado: ScrollView + campos largos + FocusState (Form/List no Perfil travava o teclado numérico).
+private struct BodyMeasurementsEditorSheet: View {
+    enum Field: Hashable {
+        case neck, shoulders, chest, rightArm, leftArm
+        case waist, abdomen, hip
+        case rightThigh, leftThigh, rightCalf, leftCalf
+    }
+
+    @Binding var neckText: String
+    @Binding var shouldersText: String
+    @Binding var chestText: String
+    @Binding var rightArmText: String
+    @Binding var leftArmText: String
+    @Binding var waistText: String
+    @Binding var abdomenText: String
+    @Binding var hipText: String
+    @Binding var rightThighText: String
+    @Binding var leftThighText: String
+    @Binding var rightCalfText: String
+    @Binding var leftCalfText: String
+    var onSave: () -> Void
+    var onClose: () -> Void
+
+    @FocusState private var focusedField: Field?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Digite as circunferências em centímetros. Campos vazios não entram no relatório nem no PDF.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    group("Superior") {
+                        field("Pescoço", text: $neckText, focus: .neck)
+                        field("Ombros", text: $shouldersText, focus: .shoulders)
+                        field("Peito", text: $chestText, focus: .chest)
+                        field("Braço direito", text: $rightArmText, focus: .rightArm)
+                        field("Braço esquerdo", text: $leftArmText, focus: .leftArm)
+                    }
+
+                    group("Tronco") {
+                        field("Cintura", text: $waistText, focus: .waist)
+                        field("Abdômen", text: $abdomenText, focus: .abdomen)
+                        field("Quadril", text: $hipText, focus: .hip)
+                    }
+
+                    group("Inferior") {
+                        field("Coxa direita", text: $rightThighText, focus: .rightThigh)
+                        field("Coxa esquerda", text: $leftThighText, focus: .leftThigh)
+                        field("Panturrilha direita", text: $rightCalfText, focus: .rightCalf)
+                        field("Panturrilha esquerda", text: $leftCalfText, focus: .leftCalf)
+                    }
+
+                    Button {
+                        focusedField = nil
+                        onSave()
+                    } label: {
+                        Label("Salvar medidas", systemImage: "checkmark.circle.fill")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.accent)
+                    .padding(.top, 8)
+                }
+                .padding(20)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .background(AppTheme.background.ignoresSafeArea())
+            .navigationTitle("Medidas corporais")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Fechar") {
+                        focusedField = nil
+                        onClose()
+                    }
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("OK") {
+                        focusedField = nil
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+            .onAppear {
+                // Foca o primeiro campo após a ficha estabilizar (evita race com animação do sheet).
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    if focusedField == nil {
+                        focusedField = .neck
+                    }
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    @ViewBuilder
+    private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+            content()
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func field(_ title: String, text: Binding<String>, focus: Field) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                TextField("0", text: text)
+                    .keyboardType(.decimalPad)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .focused($focusedField, equals: focus)
+                    .padding(12)
+                    .background(AppTheme.background)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("cm")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28, alignment: .leading)
+            }
+        }
     }
 }

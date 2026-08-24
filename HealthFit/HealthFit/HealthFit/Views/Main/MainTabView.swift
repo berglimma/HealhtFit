@@ -322,7 +322,9 @@ struct MainTabView: View {
     }
 
     private func handleScenePhase(_ phase: ScenePhase) {
-        if phase == .active || phase == .background || phase == .inactive {
+        // Só fecha teclado ao ir para background. Em `.inactive`/`.active` (ficha, Control Center,
+        // animação de teclado) o endEditing global impede digitar em TextField (ex.: medidas).
+        if phase == .background {
             KeyboardDismiss.hide()
         }
         if phase == .active {

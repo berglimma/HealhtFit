@@ -59,8 +59,8 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
-                // Clear any residual keyboard avoidance that can leave bottom chrome mid-screen.
-                KeyboardDismiss.hide()
+                // Não chamar KeyboardDismiss aqui — ao voltar de inactive (ficha/sheet/teclado)
+                // o endEditing global cancela a digitação em TextFields.
                 if authService.isAuthenticated {
                     prepareWelcomeIfAuthenticated(trigger: .returnFromBackground)
                     DuoTeamService.shared.handleAppBecameActive()
@@ -68,16 +68,16 @@ struct RootView: View {
                 } else {
                     WorkoutLiveActivitySync.end()
                 }
-            case .inactive, .background:
+            case .background:
                 KeyboardDismiss.hide()
-                if phase == .background {
-                    workoutStore.handleAppEnteredBackground()
-                    timerService.handleAppEnteredBackground()
-                    DuoTeamService.shared.handleAppEnteredBackground()
-                    BluetoothHeartRateService.shared.stopScanning()
-                    authService.flushProfileToCloudIfNeeded()
-                    AppIconInactivityService.shared.handleAppEnteredBackground()
-                }
+                workoutStore.handleAppEnteredBackground()
+                timerService.handleAppEnteredBackground()
+                DuoTeamService.shared.handleAppEnteredBackground()
+                BluetoothHeartRateService.shared.stopScanning()
+                authService.flushProfileToCloudIfNeeded()
+                AppIconInactivityService.shared.handleAppEnteredBackground()
+            case .inactive:
+                break
             default:
                 break
             }
