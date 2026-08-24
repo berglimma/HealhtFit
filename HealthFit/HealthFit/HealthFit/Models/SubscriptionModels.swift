@@ -305,7 +305,7 @@ private extension AppFeature {
 
 enum SubscriptionConfiguration {
     static let subscriptionGroupName = "HealthFit Plans"
-    static let subscriptionGroupIDPlaceholder = "COLE_O_GROUP_ID_DA_CONNECT"
+    static let subscriptionGroupIDPlaceholder = "22332052"
 
     /// Bloqueios por plano. **Desligados por padrão** (soft launch / testes).
     /// Reative em DEBUG → Meu plano → “Ativar feature gates”, ou mude o default abaixo

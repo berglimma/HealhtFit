@@ -1,0 +1,45 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "Docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare site root from Docs/
+        run: |
+          mkdir -p _site
+          # URLs públicas esperadas pela App Store / AppLegalConfiguration:
+          # /privacidade/ /termos/ /suporte/ e landing /
+          cp Docs/index.html _site/index.html
+          cp -R Docs/privacidade _site/privacidade
+          cp -R Docs/termos _site/termos
+          cp -R Docs/suporte _site/suporte
+          # Espelho com landing de produto
+          mkdir -p _site/healthfit
+          cp -R Docs/healthfit/. _site/healthfit/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
