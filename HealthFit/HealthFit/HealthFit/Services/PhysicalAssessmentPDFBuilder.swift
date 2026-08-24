@@ -32,11 +32,11 @@ enum PhysicalAssessmentPDFBuilder {
     static func build(profile: UserProfile, measurements: BodyMeasurements) -> Data? {
         let rows = AssessmentRow.make(profile: profile, measurements: measurements)
         let evaluated = profile.shownName
-        let trainer = profile.personalTrainerName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let evaluator = (profile.usesPersonalTrainer && !trainer.isEmpty) ? trainer : "HealthFit"
+        let evaluator = profile.personalTrainerName.trimmingCharacters(in: .whitespacesAndNewlines)
         let date = measurements.measuredAt ?? Date()
         let code = assessmentCode(date: date, userId: profile.id)
         let notes = observations(rows: rows, gender: profile.gender)
+        let evaluations = profile.recentMeasurementEvaluations(current: measurements)
 
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(origin: .zero, size: pageSize))
         return renderer.pdfData { context in
@@ -64,7 +64,7 @@ enum PhysicalAssessmentPDFBuilder {
 
             let tableWidth = contentWidth * 0.46
             let mapWidth = contentWidth - tableWidth - 10
-            let midHeight: CGFloat = 268
+            let midHeight: CGFloat = 248
             drawMeasurementsTable(
                 rows: rows,
                 in: CGRect(x: margin, y: y, width: tableWidth, height: midHeight)
@@ -74,11 +74,11 @@ enum PhysicalAssessmentPDFBuilder {
                 gender: profile.gender,
                 in: CGRect(x: margin + tableWidth + 10, y: y, width: mapWidth, height: midHeight)
             )
-            y += midHeight + 10
+            y += midHeight + 8
 
             let chartWidth = contentWidth * 0.55
             let refWidth = contentWidth - chartWidth - 10
-            let bottomHeight: CGFloat = 168
+            let bottomHeight: CGFloat = 118
             drawBarChart(
                 rows: rows,
                 in: CGRect(x: margin, y: y, width: chartWidth, height: bottomHeight)
@@ -87,7 +87,14 @@ enum PhysicalAssessmentPDFBuilder {
                 gender: profile.gender,
                 in: CGRect(x: margin + chartWidth + 10, y: y, width: refWidth, height: bottomHeight)
             )
-            y += bottomHeight + 10
+            y += bottomHeight + 8
+
+            let historyHeight: CGFloat = 110
+            drawHistoryTable(
+                evaluations: evaluations,
+                in: CGRect(x: margin, y: y, width: contentWidth, height: historyHeight)
+            )
+            y += historyHeight + 8
 
             drawNotesAndSignatures(
                 notes: notes,
@@ -266,7 +273,7 @@ enum PhysicalAssessmentPDFBuilder {
 
         drawCardTitle("Dados do Avaliador", in: evaluatorRect)
         drawKeyValue("Nome", evaluator, at: CGPoint(x: evaluatorRect.minX + 8, y: evaluatorRect.minY + 28))
-        drawKeyValue("Origem", "HealthFit", at: CGPoint(x: evaluatorRect.minX + 8, y: evaluatorRect.minY + 46))
+        drawKeyValue("Função", "Personal trainer", at: CGPoint(x: evaluatorRect.minX + 8, y: evaluatorRect.minY + 46))
 
         return y + height + 10
     }
@@ -571,7 +578,8 @@ enum PhysicalAssessmentPDFBuilder {
             .foregroundColor: inkMuted
         ]
         let y1 = signRect.minY + 36
-        drawSignatureLine(at: y1, in: signRect, title: "Avaliador — \(evaluator)", attrs: lineAttrs)
+        let evaluatorTitle = evaluator.isEmpty ? "Avaliador (personal trainer)" : "Avaliador — \(evaluator)"
+        drawSignatureLine(at: y1, in: signRect, title: evaluatorTitle, attrs: lineAttrs)
         let evaluatedLabel = gender == .female ? "Avaliada" : "Avaliado"
         drawSignatureLine(at: y1 + 36, in: signRect, title: "\(evaluatedLabel) — \(evaluated)", attrs: lineAttrs)
     }
@@ -589,6 +597,95 @@ enum PhysicalAssessmentPDFBuilder {
         path.lineWidth = 0.8
         path.stroke()
         (title as NSString).draw(at: CGPoint(x: rect.minX + 10, y: y + 4), withAttributes: attrs)
+    }
+
+    // MARK: History (last 3 evaluations)
+
+    private static func drawHistoryTable(evaluations: [BodyMeasurements], in rect: CGRect) {
+        drawCard(rect)
+        drawCardTitle("Últimas 3 avaliações", in: rect)
+
+        let columns = Array(evaluations.prefix(UserProfile.maxMeasurementEvaluationsInPDF))
+        let headerY = rect.minY + 20
+        let labels = ["Pescoço", "Ombros", "Peito", "Braços", "Cintura", "Abdômen", "Quadril", "Coxas", "Panturrilhas"]
+        let colCount = max(columns.count, 1)
+        let labelW = rect.width * 0.28
+        let valueW = (rect.width - labelW - 16) / CGFloat(colCount)
+
+        let headerAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 6.5, weight: .semibold),
+            .foregroundColor: inkMuted
+        ]
+        ("Região" as NSString).draw(at: CGPoint(x: rect.minX + 8, y: headerY), withAttributes: headerAttrs)
+
+        if columns.isEmpty {
+            ("Ainda não há histórico — esta será a 1ª avaliação." as NSString).draw(
+                at: CGPoint(x: rect.minX + 8, y: headerY + 16),
+                withAttributes: [
+                    .font: UIFont.systemFont(ofSize: 8, weight: .regular),
+                    .foregroundColor: inkMuted
+                ]
+            )
+            return
+        }
+
+        for (index, evaluation) in columns.enumerated() {
+            let prefix = index == 0 ? "Atual" : "Av. \(index + 1)"
+            let title = "\(prefix) \(shortDate(evaluation.measuredAt))"
+            let x = rect.minX + labelW + CGFloat(index) * valueW
+            (title as NSString).draw(at: CGPoint(x: x, y: headerY), withAttributes: headerAttrs)
+        }
+
+        let rowH = (rect.maxY - headerY - 16) / CGFloat(labels.count)
+        let cellAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 6, weight: .regular),
+            .foregroundColor: ink
+        ]
+        let nameAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 6, weight: .medium),
+            .foregroundColor: ink
+        ]
+        for (rowIndex, label) in labels.enumerated() {
+            let y = headerY + 12 + CGFloat(rowIndex) * rowH
+            (label as NSString).draw(at: CGPoint(x: rect.minX + 8, y: y), withAttributes: nameAttrs)
+            for (colIndex, evaluation) in columns.enumerated() {
+                let text = historyValue(label: label, in: evaluation)
+                let x = rect.minX + labelW + CGFloat(colIndex) * valueW
+                (text as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: cellAttrs)
+            }
+        }
+    }
+
+    private static func historyValue(label: String, in measurements: BodyMeasurements) -> String {
+        let value: Double?
+        switch label {
+        case "Pescoço": value = measurements.neckCm
+        case "Ombros": value = measurements.shouldersCm
+        case "Peito": value = measurements.chestCm
+        case "Braços": value = average(measurements.rightArmCm, measurements.leftArmCm)
+        case "Cintura": value = measurements.waistCm
+        case "Abdômen": value = measurements.abdomenCm
+        case "Quadril": value = measurements.hipCm
+        case "Coxas": value = average(measurements.rightThighCm, measurements.leftThighCm)
+        case "Panturrilhas": value = average(measurements.rightCalfCm, measurements.leftCalfCm)
+        default: value = nil
+        }
+        guard let value else { return "—" }
+        return BodyMeasurements.formatCm(value)
+    }
+
+    private static func average(_ a: Double?, _ b: Double?) -> Double? {
+        switch (a, b) {
+        case let (left?, right?): return (left + right) / 2
+        case let (left?, nil): return left
+        case let (nil, right?): return right
+        default: return nil
+        }
+    }
+
+    private static func shortDate(_ date: Date?) -> String {
+        guard let date else { return "—" }
+        return formattedDate(date)
     }
 
     // MARK: Helpers

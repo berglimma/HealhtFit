@@ -1767,7 +1767,11 @@ struct ProfileView: View {
         if shouldGenerateComparison && previousSnapshot.hasAnyValue {
             user.previousBodyMeasurements = previousSnapshot
         }
-        user.bodyMeasurements = measurements
+        if measurements.hasAnyValue {
+            user.recordBodyMeasurementEvaluation(measurements)
+        } else {
+            user.bodyMeasurements = measurements
+        }
 
         if shouldGenerateComparison,
            let comparison = BodyMeasurementComparison.make(
@@ -1863,25 +1867,38 @@ struct ProfileView: View {
                 .foregroundStyle(AppTheme.textSecondary)
         }
 
-        Button {
-            showMeasurementsEditor = true
-        } label: {
-            Label("Inserir medidas", systemImage: "ruler.fill")
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(ListSafeButtonStyle())
-        .tint(AppTheme.accent)
+        VStack(spacing: 0) {
+            Button {
+                showMeasurementsEditor = true
+            } label: {
+                Label("Inserir medidas", systemImage: "ruler.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(AppTheme.accent)
 
-        Button {
-            exportPhysicalAssessmentPDF()
-        } label: {
-            Label("Exportar avaliação PDF", systemImage: "doc.richtext.fill")
+            Rectangle()
+                .fill(Color.primary.opacity(0.22))
+                .frame(height: 0.5)
                 .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
+                .padding(.horizontal, -20)
+
+            Button {
+                exportPhysicalAssessmentPDF()
+            } label: {
+                Label("Exportar avaliação PDF", systemImage: "doc.richtext.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(AppTheme.accentSecondary)
         }
-        .buttonStyle(ListSafeButtonStyle())
-        .tint(AppTheme.accentSecondary)
+        .frame(maxWidth: .infinity)
+        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+        .listRowSeparator(.hidden)
     }
 
     private var measurementsSummaryLine: String {

@@ -430,6 +430,10 @@ struct BodyMeasurements: Codable, Equatable {
         labeledValues.contains { $0.value != nil }
     }
 
+    func hasSameCircumferences(as other: BodyMeasurements) -> Bool {
+        zip(labeledValues, other.labeledValues).allSatisfy { $0.value == $1.value }
+    }
+
     var labeledValues: [(label: String, value: Double?)] {
         [
             ("Pescoço", neckCm),
@@ -609,6 +613,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var bodyMeasurements: BodyMeasurements
     /// Snapshot da medição anterior (usado no comparativo de 30 dias).
     var previousBodyMeasurements: BodyMeasurements?
+    /// Avaliações anteriores de circunferência (mais recente primeiro). Máx. 2 — o PDF mostra atual + estas = 3.
+    var bodyMeasurementHistory: [BodyMeasurements]
     /// Ciclo menstrual — só usado no perfil feminino.
     var menstrualCycle: MenstrualCycleProfile
     /// IDs das modalidades que o usuário pratica (`PracticeModalityID`).
@@ -619,6 +625,9 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var updatedAt: Date
 
     static let maxCaloricDeficit = 3_000
+    /// Avaliações anteriores persistidas (o PDF junta a atual + estas, no máximo 3 no total).
+    static let maxStoredPreviousMeasurementEvaluations = 2
+    static let maxMeasurementEvaluationsInPDF = 3
 
     init(
         id: String = UUID().uuidString,
@@ -643,6 +652,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         caloricDeficit: Int = 400,
         bodyMeasurements: BodyMeasurements = .empty,
         previousBodyMeasurements: BodyMeasurements? = nil,
+        bodyMeasurementHistory: [BodyMeasurements] = [],
         menstrualCycle: MenstrualCycleProfile = .inactive,
         practicedModalityIDs: [String] = [],
         createdAt: Date = .now,
@@ -674,6 +684,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         self.caloricDeficit = caloricDeficit
         self.bodyMeasurements = bodyMeasurements
         self.previousBodyMeasurements = previousBodyMeasurements
+        self.bodyMeasurementHistory = Array(bodyMeasurementHistory.prefix(Self.maxStoredPreviousMeasurementEvaluations))
         self.menstrualCycle = menstrualCycle.clamped()
         self.practicedModalityIDs = practicedModalityIDs
         self.createdAt = createdAt
@@ -719,6 +730,11 @@ struct UserProfile: Codable, Identifiable, Equatable {
         caloricDeficit = try container.decodeIfPresent(Int.self, forKey: .caloricDeficit) ?? 400
         bodyMeasurements = try container.decodeIfPresent(BodyMeasurements.self, forKey: .bodyMeasurements) ?? .empty
         previousBodyMeasurements = try container.decodeIfPresent(BodyMeasurements.self, forKey: .previousBodyMeasurements)
+        bodyMeasurementHistory = try container.decodeIfPresent([BodyMeasurements].self, forKey: .bodyMeasurementHistory) ?? []
+        if bodyMeasurementHistory.isEmpty, let previous = previousBodyMeasurements, previous.hasAnyValue {
+            bodyMeasurementHistory = [previous]
+        }
+        bodyMeasurementHistory = Array(bodyMeasurementHistory.prefix(Self.maxStoredPreviousMeasurementEvaluations))
         menstrualCycle = (try container.decodeIfPresent(MenstrualCycleProfile.self, forKey: .menstrualCycle) ?? .inactive).clamped()
         practicedModalityIDs = try container.decodeIfPresent([String].self, forKey: .practicedModalityIDs) ?? []
         createdAt = try container.decode(Date.self, forKey: .createdAt)
@@ -729,7 +745,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         case id, name, displayName, email, personalTrainerName, personalTrainerEmail, usesPersonalTrainer
         case nutritionistName, nutritionistEmail, usesNutritionist, accountRole
         case biotype, goal, gender, weight, height, age, dateOfBirth, countryCode, caloricDeficit
-        case bodyMeasurements, previousBodyMeasurements, menstrualCycle, practicedModalityIDs, createdAt, updatedAt
+        case bodyMeasurements, previousBodyMeasurements, bodyMeasurementHistory, menstrualCycle, practicedModalityIDs, createdAt, updatedAt
     }
 
     /// Conjunto efetivo: lista salva ou todas as modalidades (perfil sem preferência).
@@ -805,6 +821,37 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var latestMeasurementComparison: BodyMeasurementComparison? {
         guard let previous = previousBodyMeasurements else { return nil }
         return BodyMeasurementComparison.make(previous: previous, current: bodyMeasurements)
+    }
+
+    /// Atual + até 2 anteriores (mais recente primeiro), para o PDF.
+    func recentMeasurementEvaluations(current: BodyMeasurements? = nil) -> [BodyMeasurements] {
+        let latest = current ?? bodyMeasurements
+        var list: [BodyMeasurements] = []
+        if latest.hasAnyValue {
+            list.append(latest)
+        }
+        for item in bodyMeasurementHistory where item.hasAnyValue {
+            if latest.hasAnyValue, item.hasSameCircumferences(as: latest) { continue }
+            list.append(item)
+            if list.count >= Self.maxMeasurementEvaluationsInPDF { break }
+        }
+        return list
+    }
+
+    /// Empilha a medição vigente no histórico (máx. 2 anteriores) e grava a nova.
+    mutating func recordBodyMeasurementEvaluation(_ new: BodyMeasurements) {
+        guard new.hasAnyValue else { return }
+        if bodyMeasurements.hasAnyValue, bodyMeasurements.hasSameCircumferences(as: new) {
+            bodyMeasurements = new
+            return
+        }
+        var history = bodyMeasurementHistory.filter(\.hasAnyValue)
+        if bodyMeasurements.hasAnyValue {
+            history.insert(bodyMeasurements, at: 0)
+        }
+        bodyMeasurementHistory = Array(history.prefix(Self.maxStoredPreviousMeasurementEvaluations))
+        previousBodyMeasurements = bodyMeasurementHistory.first
+        bodyMeasurements = new
     }
 
     func bodyMeasurementCycleAdvice(

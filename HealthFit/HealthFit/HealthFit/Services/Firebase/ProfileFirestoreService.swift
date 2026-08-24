@@ -77,6 +77,7 @@ enum ProfileFirestoreService {
         }
         data["bodyMeasurements"] = bodyMeasurementsData
         data["hasPreviousBodyMeasurements"] = profile.previousBodyMeasurements?.hasAnyValue == true
+        data["bodyMeasurementHistoryCount"] = profile.bodyMeasurementHistory.count
 
         try await userDocument(userId: profile.id).setData(data, merge: true)
         try await syncUserDirectory(profile)
