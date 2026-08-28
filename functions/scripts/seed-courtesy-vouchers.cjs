@@ -2,10 +2,10 @@
 "use strict";
 
 /**
- * Gera 20 vouchers de 30 dias por plano pago e grava no Firestore.
+ * Gera 40 vouchers de 30 dias por plano pago e grava no Firestore.
  *
  * Uso (na pasta functions, com ADC / firebase login):
- *   node scripts/seed-courtesy-vouchers.cjs
+ *   node scripts/seed-courtesy-vouchers.cjs --deploy   # via Cloud Function (firebase login)
  *
  * Idempotente: se o lote launch-v1-30d já existir, só reimprime os códigos.
  */
@@ -13,13 +13,16 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const {initializeApp, applicationDefault} = require("firebase-admin/app");
+const {initializeApp, applicationDefault, cert} = require("firebase-admin/app");
 const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 
 const PROJECT_ID = "healthfit-30d87";
-const BATCH_ID = "launch-v1-30d";
+const BATCH_ID = "launch-v2-40x-30d";
 const DURATION_DAYS = 30;
-const CODES_PER_PLAN = 20;
+const CODES_PER_PLAN = 40;
+const COURTESY_SEED_KEY = "healthfit-courtesy-seed-v2-40x";
+const FUNCTION_NAME = "seedCourtesyVouchers";
+const FUNCTION_REGION = "southamerica-east1";
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
 const PLANS = [
@@ -113,10 +116,81 @@ function docsFromGrouped(grouped) {
   return docs;
 }
 
+function initializeFirebaseAdmin() {
+  const serviceAccountPath =
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    path.join(__dirname, "..", "serviceAccountKey.json");
+
+  if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
+    initializeApp({
+      credential: cert(serviceAccount),
+      projectId: PROJECT_ID,
+    });
+    console.log(`Firebase Admin: service account (${path.basename(serviceAccountPath)})`);
+    return;
+  }
+
+  initializeApp({
+    credential: applicationDefault(),
+    projectId: PROJECT_ID,
+  });
+  console.log("Firebase Admin: Application Default Credentials");
+}
+
+const {execSync} = require("child_process");
+
+async function deployViaCloudFunction(csvPath) {
+  const vouchers = parseLocalCsv(csvPath);
+  if (vouchers.length === 0) {
+    throw new Error(`CSV vazio ou ausente: ${csvPath}`);
+  }
+
+  console.log(`==> Build + deploy ${FUNCTION_NAME} (${vouchers.length} vouchers)...`);
+  execSync("npm run build", {stdio: "inherit", cwd: path.join(__dirname, "..")});
+  execSync(
+    `firebase deploy --only functions:${FUNCTION_NAME} --project ${PROJECT_ID} --non-interactive`,
+    {stdio: "inherit", cwd: path.join(repoRoot())}
+  );
+
+  const url = `https://${FUNCTION_REGION}-${PROJECT_ID}.cloudfunctions.net/${FUNCTION_NAME}`;
+  console.log(`==> POST ${url}`);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-healthfit-seed-key": COURTESY_SEED_KEY,
+    },
+    body: JSON.stringify({vouchers}),
+  });
+
+  const text = await response.text();
+  let body;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = {raw: text};
+  }
+
+  if (!response.ok) {
+    throw new Error(`Seed HTTP ${response.status}: ${text}`);
+  }
+
+  console.log(`OK: ${JSON.stringify(body)}`);
+  return body;
+}
+
 async function main() {
   const localOnly = process.argv.includes("--local-only");
+  const deploy = process.argv.includes("--deploy");
   const dir = path.join(repoRoot(), "HealthFit", "AppStore");
   const csvPath = path.join(dir, "courtesy-vouchers.local.csv");
+
+  if (deploy) {
+    await deployViaCloudFunction(csvPath);
+    return;
+  }
 
   if (localOnly) {
     if (fs.existsSync(csvPath) && parseLocalCsv(csvPath).length > 0) {
@@ -132,10 +206,7 @@ async function main() {
     return;
   }
 
-  initializeApp({
-    credential: applicationDefault(),
-    projectId: PROJECT_ID,
-  });
+  initializeFirebaseAdmin();
   const db = getFirestore();
 
   const existingSnap = await db
@@ -219,9 +290,14 @@ async function commitVouchers(db, docs) {
 main().catch((error) => {
   const message = String(error && error.message ? error.message : error);
   if (message.includes("default credentials") || message.includes("Could not load the default credentials")) {
-    console.error("Falta Application Default Credentials.");
-    console.error("Rode uma vez: gcloud auth application-default login --project healthfit-30d87");
-    console.error("Depois: cd functions && npm run seed:courtesy");
+    console.error("Falta credencial do Firebase.");
+    console.error("");
+    console.error("Use o deploy via Firebase CLI (sem gcloud):");
+    console.error("  cd functions && npm run seed:courtesy:deploy");
+    console.error("");
+    console.error("Ou baixe uma service account em:");
+    console.error("  https://console.firebase.google.com/project/healthfit-30d87/settings/serviceaccounts/adminsdk");
+    console.error("  Salve como functions/serviceAccountKey.json e rode npm run seed:courtesy");
   } else {
     console.error(error);
   }

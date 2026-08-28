@@ -2,7 +2,7 @@ import {initializeApp} from "firebase-admin/app";
 import {getFirestore, Timestamp} from "firebase-admin/firestore";
 import {getMessaging} from "firebase-admin/messaging";
 import {onDocumentCreated} from "firebase-functions/v2/firestore";
-import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {onCall, HttpsError, onRequest} from "firebase-functions/v2/https";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {logger} from "firebase-functions";
 import {setGlobalOptions} from "firebase-functions/v2";
@@ -344,5 +344,79 @@ export const redeemCourtesyVoucher = onCall(
 
     logger.info("redeemCourtesyVoucher", {uid, code, plan: result.plan});
     return result;
+  }
+);
+
+/** Uso interno: popular courtesyVouchers via `npm run seed:courtesy -- --deploy`. */
+const COURTESY_SEED_KEY = "healthfit-courtesy-seed-v2-40x";
+
+export const seedCourtesyVouchers = onRequest(
+  {
+    region: "southamerica-east1",
+    timeoutSeconds: 120,
+    memory: "256MiB",
+    invoker: "public",
+  },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({error: "Use POST"});
+      return;
+    }
+    if (req.get("x-healthfit-seed-key") !== COURTESY_SEED_KEY) {
+      res.status(403).json({error: "Forbidden"});
+      return;
+    }
+
+    const vouchers = req.body?.vouchers as Array<{
+      code: string;
+      plan: string;
+      durationDays: number;
+      batchId: string;
+    }> | undefined;
+
+    if (!Array.isArray(vouchers) || vouchers.length === 0) {
+      res.status(400).json({error: "Missing vouchers array"});
+      return;
+    }
+
+    const batchId = String(vouchers[0]?.batchId ?? "");
+    const existing = await db
+      .collection("courtesyVouchers")
+      .where("batchId", "==", batchId)
+      .limit(1)
+      .get();
+
+    if (!existing.empty) {
+      res.status(409).json({
+        error: "Batch already exists",
+        batchId,
+        count: existing.size,
+      });
+      return;
+    }
+
+    const now = Timestamp.now();
+    let written = 0;
+    for (let i = 0; i < vouchers.length; i += 400) {
+      const slice = vouchers.slice(i, i + 400);
+      const batch = db.batch();
+      for (const item of slice) {
+        const ref = db.collection("courtesyVouchers").doc(item.code);
+        batch.set(ref, {
+          code: item.code,
+          plan: item.plan,
+          durationDays: item.durationDays,
+          batchId: item.batchId,
+          redeemedBy: null,
+          redeemedAt: null,
+          createdAt: now,
+        });
+      }
+      await batch.commit();
+      written += slice.length;
+    }
+
+    logger.info("seedCourtesyVouchers", {batchId, written});
+    res.json({ok: true, batchId, written});
   }
 );
