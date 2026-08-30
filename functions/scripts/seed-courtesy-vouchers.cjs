@@ -148,10 +148,15 @@ async function deployViaCloudFunction(csvPath) {
 
   console.log(`==> Build + deploy ${FUNCTION_NAME} (${vouchers.length} vouchers)...`);
   execSync("npm run build", {stdio: "inherit", cwd: path.join(__dirname, "..")});
-  execSync(
-    `firebase deploy --only functions:${FUNCTION_NAME} --project ${PROJECT_ID} --non-interactive`,
-    {stdio: "inherit", cwd: path.join(repoRoot())}
-  );
+  try {
+    execSync(
+      `firebase deploy --only functions:${FUNCTION_NAME} --project ${PROJECT_ID} --non-interactive`,
+      {stdio: "inherit", cwd: path.join(repoRoot())}
+    );
+  } catch (error) {
+    // Deploy can succeed but exit 1 on artifact cleanup policy prompt in new regions.
+    console.warn("Deploy command exited non-zero; continuing if function URL responds...");
+  }
 
   const url = `https://${FUNCTION_REGION}-${PROJECT_ID}.cloudfunctions.net/${FUNCTION_NAME}`;
   console.log(`==> POST ${url}`);

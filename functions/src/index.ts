@@ -1,4 +1,5 @@
 import {initializeApp} from "firebase-admin/app";
+import {getAuth} from "firebase-admin/auth";
 import {getFirestore, Timestamp} from "firebase-admin/firestore";
 import {getMessaging} from "firebase-admin/messaging";
 import {onDocumentCreated} from "firebase-functions/v2/firestore";
@@ -418,5 +419,64 @@ export const seedCourtesyVouchers = onRequest(
 
     logger.info("seedCourtesyVouchers", {batchId, written});
     res.json({ok: true, batchId, written});
+  }
+);
+
+const DEMO_REVIEW_EMAIL = "healthfit.appreview@gmail.com";
+const DEMO_REVIEW_PASSWORD = "HealthFitReview2026!";
+
+/** Uso interno: garantir conta demo para App Review (`npm run ensure:demo-account`). */
+export const ensureAppReviewDemoAccount = onRequest(
+  {
+    region: "southamerica-east1",
+    timeoutSeconds: 30,
+    memory: "256MiB",
+    invoker: "public",
+  },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({error: "Use POST"});
+      return;
+    }
+    if (req.get("x-healthfit-seed-key") !== COURTESY_SEED_KEY) {
+      res.status(403).json({error: "Forbidden"});
+      return;
+    }
+
+    const auth = getAuth();
+
+    try {
+      const existing = await auth.getUserByEmail(DEMO_REVIEW_EMAIL);
+      await auth.updateUser(existing.uid, {
+        password: DEMO_REVIEW_PASSWORD,
+        emailVerified: true,
+        displayName: "App Review",
+        disabled: false,
+      });
+      logger.info("ensureAppReviewDemoAccount", {uid: existing.uid, created: false});
+      res.json({ok: true, created: false, uid: existing.uid, email: DEMO_REVIEW_EMAIL});
+      return;
+    } catch (error: unknown) {
+      const code = (error as {code?: string})?.code;
+      if (code !== "auth/user-not-found") {
+        logger.error("ensureAppReviewDemoAccount lookup", error);
+        res.status(500).json({error: "Failed to check demo user"});
+        return;
+      }
+    }
+
+    try {
+      const user = await auth.createUser({
+        email: DEMO_REVIEW_EMAIL,
+        password: DEMO_REVIEW_PASSWORD,
+        emailVerified: true,
+        displayName: "App Review",
+      });
+      logger.info("ensureAppReviewDemoAccount", {uid: user.uid, created: true});
+      res.json({ok: true, created: true, uid: user.uid, email: DEMO_REVIEW_EMAIL});
+    } catch (error) {
+      logger.error("ensureAppReviewDemoAccount create", error);
+      res.status(500).json({error: "Failed to create demo user"});
+    }
   }
 );
