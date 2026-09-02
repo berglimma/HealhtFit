@@ -5,6 +5,9 @@ import Foundation
 enum PlanAccessRules {
     /// Feature necessária para abrir a modalidade de cardio, ou `nil` se é livre.
     static func requiredFeature(for exercise: CardioExercise) -> AppFeature? {
+        if exercise.name == "Corrida" {
+            return .fullWorkouts
+        }
         if exercise.isWaterSport || exercise.isRowing || exercise.isClimbing || exercise.isFight {
             return .advancedModalities
         }
@@ -29,7 +32,6 @@ enum AssistantUsageQuota {
     }
 
     static func remaining(for tier: PlanTier) -> Int? {
-        guard SubscriptionConfiguration.featureGatesEnabled else { return nil }
         guard let limit = tier.dailyAssistantMessageLimit else { return nil }
         return max(0, limit - usedToday)
     }

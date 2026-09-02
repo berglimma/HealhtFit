@@ -20,6 +20,14 @@ Idiomas do app / App Store: **pt-BR**, **en-US**, **es-ES**, **fr-FR**.
 | `HealthFit-banner-grupo.png` | Grupo (4 pessoas) |
 | `HealthFit-banner-mulher.png` | Atleta mulher |
 | `HealthFit-banner-homem.png` | Atleta homem |
+| `HealthFit-camisa-masculina-mockup.png` | Mockup camisa masculina (divulgação) |
+| `HealthFit-camisa-feminina-mockup.png` | Mockup camisa feminina (divulgação) |
+
+Especificação completa das camisas: `../camisas-divulgacao.md` (raiz `marketing/`).
+
+## Redes sociais
+
+Pasta `pt-BR/social/` — cards Instagram (feed 1:1 + story 9:16) e legenda pronta com link da App Store.
 
 CTA localizado: App Store (pt/es) · Available on the App Store (en) · Disponible sur l'App Store (fr).
 

@@ -97,6 +97,7 @@ struct DuoTeamHubView: View {
         .sheet(isPresented: $showJoin) {
             joinSheet
         }
+        .requiresSubscription(.duoTeam)
     }
 
     private var privacyBanner: some View {

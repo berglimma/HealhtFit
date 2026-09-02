@@ -25,6 +25,7 @@
 # Firebase — NÃO commitar (contém API_KEY e CLIENT_ID)
 **/GoogleService-Info.plist
 !**/GoogleService-Info.plist.example
+functions/serviceAccountKey.json
 
 # Segredos / ambiente
 .env

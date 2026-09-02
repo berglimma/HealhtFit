@@ -4,16 +4,16 @@
 
 ## Status
 
-| Produto | Preço BR | pt-BR | Screenshot review | Para revisão |
-|---------|----------|-------|-------------------|--------------|
-| Fit Anual | OK | OK | falta | falta |
-| Fit Mensal | OK | OK | falta | falta |
-| Básico Mensal | OK | OK | falta | falta |
-| Básico Anual | OK | OK | falta | falta |
-| Completo Mensal | OK | OK | falta | falta |
-| Completo Anual | OK | OK | falta | falta |
-| IA Plus Mensal | OK | OK | falta | falta |
-| IA Plus Anual | OK | OK | falta | falta |
+| Produto | Preço BR | pt-BR | Disponibilidade | Screenshot review | Para revisão |
+|---------|----------|-------|-----------------|-------------------|--------------|
+| Fit Anual | OK | OK | OK (todos) | falta | falta |
+| Fit Mensal | OK | OK | OK (todos) | falta | falta |
+| Básico Mensal | OK | OK | OK (todos) | falta | falta |
+| Básico Anual | OK | OK | OK (todos) | falta | falta |
+| Completo Mensal | OK | OK | OK (todos) | falta | falta |
+| Completo Anual | OK | OK | OK (todos) | falta | falta |
+| IA Plus Mensal | OK | OK | OK (todos) | falta | falta |
+| IA Plus Anual | OK | OK | OK (todos) | falta | falta |
 
 **Screenshot (todos):** `HealthFit/AppStore/screenshots/pt-BR/iphone-6.7/02_treinos.png`
 

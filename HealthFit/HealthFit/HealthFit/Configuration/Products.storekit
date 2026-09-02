@@ -63,7 +63,7 @@
   },
   "subscriptionGroups" : [
     {
-      "id" : "21500000",
+      "id" : "22332052",
       "localizations" : [
         {
           "description" : "Planos mensais e anuais do HealthFit",
@@ -105,7 +105,7 @@
           "productID" : "healthfit.plan.basic.monthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "Basic Monthly",
-          "subscriptionGroupID" : "21500000",
+          "subscriptionGroupID" : "22332052",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 
@@ -138,7 +138,7 @@
           "productID" : "healthfit.plan.fit.monthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "Fit Monthly",
-          "subscriptionGroupID" : "21500000",
+          "subscriptionGroupID" : "22332052",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 
@@ -171,7 +171,7 @@
           "productID" : "healthfit.plan.ai.monthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "AI Plus Monthly",
-          "subscriptionGroupID" : "21500000",
+          "subscriptionGroupID" : "22332052",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 
@@ -204,7 +204,7 @@
           "productID" : "healthfit.plan.complete.monthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "Complete Monthly",
-          "subscriptionGroupID" : "21500000",
+          "subscriptionGroupID" : "22332052",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 
@@ -237,7 +237,7 @@
           "productID" : "healthfit.plan.basic.yearly",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "Basic Yearly",
-          "subscriptionGroupID" : "21500000",
+          "subscriptionGroupID" : "22332052",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 
@@ -270,7 +270,7 @@
           "productID" : "healthfit.plan.fit.yearly",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "Fit Yearly",
-          "subscriptionGroupID" : "21500000",
+          "subscriptionGroupID" : "22332052",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 
@@ -303,7 +303,7 @@
           "productID" : "healthfit.plan.ai.yearly",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "AI Plus Yearly",
-          "subscriptionGroupID" : "21500000",
+          "subscriptionGroupID" : "22332052",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 
@@ -336,7 +336,7 @@
           "productID" : "healthfit.plan.complete.yearly",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "Complete Yearly",
-          "subscriptionGroupID" : "21500000",
+          "subscriptionGroupID" : "22332052",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 

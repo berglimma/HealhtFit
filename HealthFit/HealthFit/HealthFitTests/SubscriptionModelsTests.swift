@@ -23,6 +23,8 @@ final class SubscriptionModelsTests: XCTestCase {
         // Básico: treinos + Watch
         XCTAssertTrue(FeatureGate.canAccess(.fullWorkouts, tier: .basic, gatesEnabled: true))
         XCTAssertTrue(FeatureGate.canAccess(.appleWatchSync, tier: .basic, gatesEnabled: true))
+        XCTAssertTrue(FeatureGate.canAccess(.duoTeam, tier: .basic, gatesEnabled: true))
+        XCTAssertFalse(FeatureGate.canAccess(.duoTeam, tier: .free, gatesEnabled: true))
         XCTAssertFalse(FeatureGate.canAccess(.mealPlan, tier: .basic, gatesEnabled: true))
 
         // Fit: cardápio + modalidades + IA limitada

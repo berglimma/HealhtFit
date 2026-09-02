@@ -3,8 +3,8 @@ import Foundation
 /// Cortesia de plano (brinde do HealthFit, sem cobrança na App Store).
 enum CourtesyVoucher {
     static let durationDays = 30
-    static let codesPerPaidPlan = 20
-    static let batchID = "launch-v1-30d"
+    static let codesPerPaidPlan = 40
+    static let batchID = "launch-v2-40x-30d"
 
     /// Sem 0/O/1/I/L para facilitar digitação.
     static let alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"

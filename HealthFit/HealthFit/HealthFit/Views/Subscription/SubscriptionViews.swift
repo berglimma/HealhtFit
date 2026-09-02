@@ -34,6 +34,9 @@ struct PaywallView: View {
                         lockedFeatureBanner(highlight)
                     }
                     billingPeriodPicker
+                    if subscriptions.isConfigured && !subscriptions.areStoreProductsAvailable {
+                        storeProductsUnavailableBanner
+                    }
                     plansStack
                     if let message = subscriptions.lastErrorMessage, !message.isEmpty {
                         Text(message)
@@ -94,6 +97,20 @@ struct PaywallView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.top, 8)
+    }
+
+    private var storeProductsUnavailableBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "info.circle.fill")
+                .foregroundStyle(AppTheme.accent)
+            Text("Os planos pagos ainda estão sendo ativados na App Store. O app funciona gratuitamente — assine quando os preços aparecerem aqui.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
     private var billingPeriodPicker: some View {
@@ -224,6 +241,10 @@ struct PaywallView: View {
         .buttonStyle(.plain)
     }
 
+    private var canPurchaseSelectedPlan: Bool {
+        subscriptions.isProductAvailable(tier: selectedTier, period: billingPeriod)
+    }
+
     private var purchaseButton: some View {
         Button {
             Task {
@@ -238,17 +259,25 @@ struct PaywallView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
+            } else if selectedIsActive {
+                Text("Plano já ativo")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            } else if canPurchaseSelectedPlan {
+                Text("Assinar \(selectedTier.displayName) \(billingPeriod.displayName.lowercased())")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
             } else {
-                Text(selectedIsActive
-                      ? "Plano já ativo"
-                      : "Assinar \(selectedTier.displayName) \(billingPeriod.displayName.lowercased())")
+                Text("Plano indisponível na App Store")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
             }
         }
-        .buttonStyle(PrimaryButtonStyle())
-        .disabled(subscriptions.purchaseInProgress || selectedIsActive)
+        .buttonStyle(PrimaryButtonStyle(isEnabled: canPurchaseSelectedPlan && !selectedIsActive))
+        .disabled(subscriptions.purchaseInProgress || selectedIsActive || !canPurchaseSelectedPlan)
     }
 
     private var secondaryActions: some View {
@@ -282,9 +311,6 @@ struct SubscriptionPlanView: View {
     @State private var showPaywall = false
     @State private var showManage = false
     @State private var showCourtesyRedeem = false
-    #if DEBUG
-    @State private var debugSelection: Int = -1
-    #endif
 
     var body: some View {
         ScrollView {
@@ -292,10 +318,6 @@ struct SubscriptionPlanView: View {
                 currentPlanCard
                 comparisonSection
                 actions
-                #if DEBUG
-                rolloutNote
-                debugSection
-                #endif
             }
             .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
             .adaptiveContentWidth()
@@ -331,13 +353,6 @@ struct SubscriptionPlanView: View {
                     .font(.caption)
                     .foregroundStyle(AppTheme.accent)
             }
-            #if DEBUG
-            if !SubscriptionConfiguration.featureGatesEnabled {
-                Text("Bloqueios de plano ainda desativados — o paywall e a loja já estão prontos.")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-            }
-            #endif
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
@@ -421,62 +436,6 @@ struct SubscriptionPlanView: View {
             }
         }
     }
-
-    private var rolloutNote: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Próximos passos")
-                .font(.headline)
-                .foregroundStyle(AppTheme.textPrimary)
-            Text("""
-            1. Criar grupo “HealthFit Plans” e os 8 product IDs (4 mensais + 4 anuais) na App Store Connect.
-            2. Em Xcode: Scheme → Options → StoreKit Configuration → Products.storekit.
-            3. Feature gates estão OFF por padrão (testes). Ligar em DEBUG → Meu plano quando for cobrar.
-            """)
-                .font(.caption)
-                .foregroundStyle(AppTheme.textSecondary)
-        }
-        .padding()
-        .background(AppTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-    }
-
-    #if DEBUG
-    private var debugSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("DEBUG — simular plano")
-                .font(.headline)
-                .foregroundStyle(AppTheme.textPrimary)
-            Picker("Plano", selection: $debugSelection) {
-                Text("StoreKit real").tag(-1)
-                ForEach(PlanTier.allCases) { tier in
-                    Text(tier.displayName).tag(tier.rawValue)
-                }
-            }
-            .onChange(of: debugSelection) { _, value in
-                if value < 0 {
-                    SubscriptionConfiguration.debugPlanOverride = nil
-                } else {
-                    SubscriptionConfiguration.debugPlanOverride = PlanTier(rawValue: value)
-                }
-                subscriptions.objectWillChange.send()
-            }
-            Toggle("Ativar feature gates", isOn: Binding(
-                get: { SubscriptionConfiguration.featureGatesEnabled },
-                set: {
-                    SubscriptionConfiguration.featureGatesEnabled = $0
-                    subscriptions.objectWillChange.send()
-                }
-            ))
-            .tint(AppTheme.accent)
-        }
-        .padding()
-        .background(AppTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-        .onAppear {
-            debugSelection = SubscriptionConfiguration.debugPlanOverride?.rawValue ?? -1
-        }
-    }
-    #endif
 }
 
 // MARK: - Locks por plano

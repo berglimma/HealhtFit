@@ -1,1 +1,1 @@
-workout,fitness,gym,hypertrophy,health,diet,nutrition,healthkit,trainer,exercise,cardio
+personal,fitness,hypertrophy,nutrition,meal plan,apple watch,training,exercise,cardio,health

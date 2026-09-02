@@ -22,5 +22,6 @@ Beginner and intermediate athletes who want guided training, progress tracking, 
 IMPORTANT
 HealthFit provides informational guidance only. It does not replace medical evaluation, a registered dietitian, or professional coaching. Consult a physician before starting any exercise program.
 
-Privacy: https://berglimma.github.io/HealhtFit/privacidade/
-Support: https://berglimma.github.io/HealhtFit/suporte/
+Privacy: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
+Support: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/suporte/index.html
+Terms: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/termos/index.html

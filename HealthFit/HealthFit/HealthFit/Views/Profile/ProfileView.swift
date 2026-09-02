@@ -65,6 +65,7 @@ struct ProfileView: View {
     @State private var physicalAssessmentPDFURL: URL?
     @State private var showPhysicalAssessmentShare = false
     @State private var showPhysicalAssessmentEmptyAlert = false
+    @State private var isGeneratingPhysicalAssessmentPDF = false
     @State private var showMeasurementsEditor = false
 
     var body: some View {
@@ -147,6 +148,17 @@ struct ProfileView: View {
                         ActivityShareSheet(items: [physicalAssessmentPDFURL]) {
                             showPhysicalAssessmentShare = false
                         }
+                    }
+                }
+                .overlay {
+                    if isGeneratingPhysicalAssessmentPDF {
+                        ZStack {
+                            Color.black.opacity(0.25).ignoresSafeArea()
+                            ProgressView("Gerando PDF…")
+                                .padding(20)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                        }
+                        .allowsHitTesting(true)
                     }
                 }
                 .alert("Medidas necessárias", isPresented: $showPhysicalAssessmentEmptyAlert) {
@@ -380,6 +392,13 @@ struct ProfileView: View {
         }
     }
 
+    private var profilePlanPriceHint: String {
+        if subscriptions.isProductAvailable(tier: .basic, period: .monthly) {
+            return "A partir de \(subscriptions.displayPrice(for: .basic, period: .monthly))"
+        }
+        return "Ver planos"
+    }
+
     private var subscriptionPlanSection: some View {
         Section("Assinatura") {
             NavigationLink {
@@ -396,7 +415,7 @@ struct ProfileView: View {
                     }
                     Spacer()
                     if subscriptions.currentTier == .free {
-                        Text(subscriptions.currentTier.referencePriceBRL)
+                        Text(profilePlanPriceHint)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(AppTheme.accent)
                     }
@@ -1895,6 +1914,8 @@ struct ProfileView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(AppTheme.accentSecondary)
+            .disabled(isGeneratingPhysicalAssessmentPDF)
+            .opacity(isGeneratingPhysicalAssessmentPDF ? 0.55 : 1)
         }
         .frame(maxWidth: .infinity)
         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
@@ -1942,6 +1963,7 @@ struct ProfileView: View {
     }
 
     private func exportPhysicalAssessmentPDF() {
+        guard !isGeneratingPhysicalAssessmentPDF else { return }
         guard var user = authService.currentUser else { return }
         let measurements = currentFormMeasurements(measuredAt: user.bodyMeasurements.measuredAt ?? .now)
         guard measurements.hasAnyValue || user.weight > 0 else {
@@ -1952,15 +1974,26 @@ struct ProfileView: View {
         if let parsedWeight = parseMeasurement(weightText) {
             user.weight = parsedWeight
         }
-        guard let url = PhysicalAssessmentPDFBuilder.writeTemporaryPDF(
-            profile: user,
-            measurements: measurements.hasAnyValue ? measurements : user.bodyMeasurements
-        ) else {
-            showPhysicalAssessmentEmptyAlert = true
-            return
+        let exportMeasurements = measurements.hasAnyValue ? measurements : user.bodyMeasurements
+        isGeneratingPhysicalAssessmentPDF = true
+        PhysicalAssessmentPDFBuilder.prepareForExport()
+        Task {
+            let url = await Task.detached(priority: .userInitiated) {
+                PhysicalAssessmentPDFBuilder.writeTemporaryPDF(
+                    profile: user,
+                    measurements: exportMeasurements
+                )
+            }.value
+            await MainActor.run {
+                isGeneratingPhysicalAssessmentPDF = false
+                guard let url else {
+                    showPhysicalAssessmentEmptyAlert = true
+                    return
+                }
+                physicalAssessmentPDFURL = url
+                showPhysicalAssessmentShare = true
+            }
         }
-        physicalAssessmentPDFURL = url
-        showPhysicalAssessmentShare = true
     }
 
     private func saveBodyMeasurements() {

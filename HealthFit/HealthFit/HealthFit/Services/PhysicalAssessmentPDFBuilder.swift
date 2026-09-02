@@ -13,13 +13,39 @@ enum PhysicalAssessmentPDFBuilder {
     private static let cardFill = UIColor(red: 0.96, green: 0.97, blue: 0.97, alpha: 1)
     private static let cardStroke = UIColor(red: 0.86, green: 0.87, blue: 0.88, alpha: 1)
 
+    /// Logo reduzido (evita redesenhar BrandHeart 1024×1024 a cada export).
+    private static let logoLock = NSLock()
+    private static var _cachedLogo: UIImage?
+
+    /// Prefira chamar na main antes de gerar o PDF em background.
+    static func prepareForExport() {
+        _ = brandLogo()
+    }
+
+    private static func brandLogo() -> UIImage? {
+        logoLock.lock()
+        defer { logoLock.unlock() }
+        if let _cachedLogo { return _cachedLogo }
+        guard let source = UIImage(named: "BrandHeart") else { return nil }
+        let side: CGFloat = 96
+        let format = UIGraphicsImageRendererFormat.default()
+        format.opaque = false
+        format.scale = 1
+        let reduced = UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { _ in
+            source.draw(in: CGRect(x: 0, y: 0, width: side, height: side))
+        }
+        _cachedLogo = reduced
+        return reduced
+    }
+
     static func writeTemporaryPDF(profile: UserProfile, measurements: BodyMeasurements) -> URL? {
         guard measurements.hasAnyValue || profile.weight > 0,
               let data = build(profile: profile, measurements: measurements) else { return nil }
         let slug = profile.shownName
             .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
             .replacingOccurrences(of: " ", with: "_")
-        let file = "Avaliacao_Fisica_\(slug.isEmpty ? "HealthFit" : slug).pdf"
+        let stamp = Int(Date().timeIntervalSince1970)
+        let file = "Avaliacao_Fisica_\(slug.isEmpty ? "HealthFit" : slug)_\(stamp).pdf"
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(file)
         do {
             try data.write(to: url, options: .atomic)
@@ -118,7 +144,7 @@ enum PhysicalAssessmentPDFBuilder {
         context.fill(CGRect(x: 0, y: 0, width: pageSize.width, height: headerHeight))
 
         let logoRect = CGRect(x: 18, y: 16, width: 36, height: 36)
-        if let logo = UIImage(named: "BrandHeart") {
+        if let logo = brandLogo() {
             context.saveGState()
             UIBezierPath(roundedRect: logoRect, cornerRadius: 8).addClip()
             logo.draw(in: logoRect)
@@ -188,7 +214,7 @@ enum PhysicalAssessmentPDFBuilder {
         context.fill(rect)
 
         let logoRect = CGRect(x: 18, y: rect.minY + 8, width: 28, height: 28)
-        if let logo = UIImage(named: "BrandHeart") {
+        if let logo = brandLogo() {
             context.saveGState()
             UIBezierPath(roundedRect: logoRect, cornerRadius: 6).addClip()
             logo.draw(in: logoRect)
@@ -218,25 +244,18 @@ enum PhysicalAssessmentPDFBuilder {
     }
 
     private static func drawWatermark(in page: CGRect, context: CGContext) {
+        // Só texto — evita escalar PNG 1024×1024 na geração do PDF.
         context.saveGState()
         defer { context.restoreGState() }
         context.translateBy(x: page.midX, y: page.midY)
         context.rotate(by: -.pi / 6)
-        if let logo = UIImage(named: "BrandHeart") {
-            let side: CGFloat = 260
-            logo.draw(
-                in: CGRect(x: -side / 2, y: -side / 2 - 20, width: side, height: side),
-                blendMode: .normal,
-                alpha: 0.045
-            )
-        }
         let mark = "HealthFit" as NSString
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 48, weight: .heavy),
-            .foregroundColor: UIColor.black.withAlphaComponent(0.04)
+            .font: UIFont.systemFont(ofSize: 54, weight: .heavy),
+            .foregroundColor: UIColor.black.withAlphaComponent(0.045)
         ]
         let size = mark.size(withAttributes: attrs)
-        mark.draw(at: CGPoint(x: -size.width / 2, y: 70), withAttributes: attrs)
+        mark.draw(at: CGPoint(x: -size.width / 2, y: -size.height / 2), withAttributes: attrs)
     }
 
     // MARK: Info
@@ -280,22 +299,8 @@ enum PhysicalAssessmentPDFBuilder {
 
     private static func drawPortrait(gender: Gender, in rect: CGRect) {
         drawCard(rect)
-        let imageName = gender == .female ? "WorkoutProgramFemale" : "WorkoutProgramMale"
-        let inset = rect.insetBy(dx: 4, dy: 4)
-        guard let image = UIImage(named: imageName) else { return }
-        UIGraphicsGetCurrentContext()?.saveGState()
-        UIBezierPath(roundedRect: inset, cornerRadius: 6).addClip()
-        let scale = max(inset.width / image.size.width, inset.height / image.size.height)
-        let drawSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
-        image.draw(
-            in: CGRect(
-                x: inset.midX - drawSize.width / 2,
-                y: inset.midY - drawSize.height / 2,
-                width: drawSize.width,
-                height: drawSize.height
-            )
-        )
-        UIGraphicsGetCurrentContext()?.restoreGState()
+        let inset = rect.insetBy(dx: 6, dy: 4)
+        drawGenderMannequin(gender: gender, in: inset)
     }
 
     // MARK: Table
@@ -410,59 +415,112 @@ enum PhysicalAssessmentPDFBuilder {
     }
 
     private static func drawGenderFigure(gender: Gender, in rect: CGRect) {
-        let imageName = gender == .female ? "WorkoutProgramFemale" : "WorkoutProgramMale"
-        if let image = UIImage(named: imageName) {
-            let ratio = image.size.width / max(image.size.height, 1)
-            var drawW = rect.width
-            var drawH = drawW / ratio
-            if drawH > rect.height {
-                drawH = rect.height
-                drawW = drawH * ratio
-            }
-            let draw = CGRect(
-                x: rect.midX - drawW / 2,
-                y: rect.midY - drawH / 2,
-                width: drawW,
-                height: drawH
-            )
-            UIGraphicsGetCurrentContext()?.saveGState()
-            UIBezierPath(roundedRect: draw, cornerRadius: 8).addClip()
-            image.draw(in: draw)
-            UIGraphicsGetCurrentContext()?.restoreGState()
-            return
-        }
-        drawFallbackSilhouette(isFemale: gender == .female, in: rect)
+        drawGenderMannequin(gender: gender, in: rect)
     }
 
-    private static func drawFallbackSilhouette(isFemale: Bool, in rect: CGRect) {
+    /// Manequim antropométrico (não foto) — masculino ou feminino conforme o sexo do perfil.
+    private static func drawGenderMannequin(gender: Gender, in rect: CGRect) {
+        let isFemale = gender == .female
         let cx = rect.midX
-        let top = rect.minY + 6
-        let h = rect.height - 12
-        let color = brandGreen.withAlphaComponent(0.35)
-        color.setFill()
+        let top = rect.minY + max(2, rect.height * 0.02)
+        let h = rect.height - max(4, rect.height * 0.04)
+        let fill = brandGreen.withAlphaComponent(0.38)
+        let stroke = brandGreen.withAlphaComponent(0.72)
+        fill.setFill()
+        stroke.setStroke()
 
-        let headR = h * 0.07
-        UIBezierPath(ovalIn: CGRect(x: cx - headR, y: top, width: headR * 2, height: headR * 2)).fill()
+        // Cabeça
+        let headR = h * 0.065
+        let head = UIBezierPath(ovalIn: CGRect(x: cx - headR, y: top, width: headR * 2, height: headR * 2))
+        head.fill()
+        head.lineWidth = 0.8
+        head.stroke()
 
-        let shoulderY = top + headR * 2 + 4
-        let hipY = top + h * (isFemale ? 0.48 : 0.46)
-        let shoulderW = rect.width * (isFemale ? 0.38 : 0.46)
-        let hipW = rect.width * (isFemale ? 0.42 : 0.34)
+        // Pescoço
+        let neckW = rect.width * (isFemale ? 0.10 : 0.12)
+        let neckH = h * 0.04
+        let neckY = top + headR * 2 - 1
+        let neck = UIBezierPath(
+            roundedRect: CGRect(x: cx - neckW / 2, y: neckY, width: neckW, height: neckH),
+            cornerRadius: 2
+        )
+        neck.fill()
+
+        // Ombros / tronco (proporções de manequim de avaliação física)
+        let shoulderY = neckY + neckH
+        let waistY = top + h * (isFemale ? 0.42 : 0.40)
+        let hipY = top + h * (isFemale ? 0.52 : 0.48)
+        let shoulderW = rect.width * (isFemale ? 0.42 : 0.52)
+        let waistW = rect.width * (isFemale ? 0.28 : 0.30)
+        let hipW = rect.width * (isFemale ? 0.46 : 0.36)
+
         let torso = UIBezierPath()
         torso.move(to: CGPoint(x: cx - shoulderW / 2, y: shoulderY))
         torso.addLine(to: CGPoint(x: cx + shoulderW / 2, y: shoulderY))
+        torso.addLine(to: CGPoint(x: cx + waistW / 2, y: waistY))
         torso.addLine(to: CGPoint(x: cx + hipW / 2, y: hipY))
         torso.addLine(to: CGPoint(x: cx - hipW / 2, y: hipY))
+        torso.addLine(to: CGPoint(x: cx - waistW / 2, y: waistY))
         torso.close()
         torso.fill()
+        torso.lineWidth = 0.9
+        torso.stroke()
 
-        let armW: CGFloat = 7
-        UIBezierPath(roundedRect: CGRect(x: cx - shoulderW / 2 - 8, y: shoulderY, width: armW, height: h * 0.32), cornerRadius: 3).fill()
-        UIBezierPath(roundedRect: CGRect(x: cx + shoulderW / 2 + 1, y: shoulderY, width: armW, height: h * 0.32), cornerRadius: 3).fill()
+        // Braços
+        let armW = max(5, rect.width * 0.07)
+        let armH = h * 0.30
+        let leftArm = UIBezierPath(
+            roundedRect: CGRect(x: cx - shoulderW / 2 - armW - 1, y: shoulderY + 2, width: armW, height: armH),
+            cornerRadius: armW / 2
+        )
+        let rightArm = UIBezierPath(
+            roundedRect: CGRect(x: cx + shoulderW / 2 + 1, y: shoulderY + 2, width: armW, height: armH),
+            cornerRadius: armW / 2
+        )
+        leftArm.fill(); leftArm.lineWidth = 0.7; leftArm.stroke()
+        rightArm.fill(); rightArm.lineWidth = 0.7; rightArm.stroke()
 
-        let legW: CGFloat = isFemale ? 11 : 13
-        UIBezierPath(roundedRect: CGRect(x: cx - hipW / 3 - 2, y: hipY, width: legW, height: h * 0.46), cornerRadius: 4).fill()
-        UIBezierPath(roundedRect: CGRect(x: cx + hipW / 3 - legW + 2, y: hipY, width: legW, height: h * 0.46), cornerRadius: 4).fill()
+        // Coxas / panturrilhas
+        let thighW = max(8, rect.width * (isFemale ? 0.13 : 0.15))
+        let calfW = thighW * 0.72
+        let thighH = h * 0.22
+        let calfH = h * 0.22
+        let legGap = max(2, hipW * 0.08)
+        let leftThighX = cx - legGap / 2 - thighW
+        let rightThighX = cx + legGap / 2
+
+        let leftThigh = UIBezierPath(
+            roundedRect: CGRect(x: leftThighX, y: hipY - 1, width: thighW, height: thighH),
+            cornerRadius: 4
+        )
+        let rightThigh = UIBezierPath(
+            roundedRect: CGRect(x: rightThighX, y: hipY - 1, width: thighW, height: thighH),
+            cornerRadius: 4
+        )
+        leftThigh.fill(); leftThigh.lineWidth = 0.7; leftThigh.stroke()
+        rightThigh.fill(); rightThigh.lineWidth = 0.7; rightThigh.stroke()
+
+        let calfY = hipY + thighH - 2
+        let leftCalf = UIBezierPath(
+            roundedRect: CGRect(
+                x: leftThighX + (thighW - calfW) / 2,
+                y: calfY,
+                width: calfW,
+                height: calfH
+            ),
+            cornerRadius: 3
+        )
+        let rightCalf = UIBezierPath(
+            roundedRect: CGRect(
+                x: rightThighX + (thighW - calfW) / 2,
+                y: calfY,
+                width: calfW,
+                height: calfH
+            ),
+            cornerRadius: 3
+        )
+        leftCalf.fill(); leftCalf.lineWidth = 0.7; leftCalf.stroke()
+        rightCalf.fill(); rightCalf.lineWidth = 0.7; rightCalf.stroke()
     }
 
     // MARK: Chart + reference

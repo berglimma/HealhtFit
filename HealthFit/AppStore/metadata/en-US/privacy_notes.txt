@@ -10,5 +10,5 @@ Data collected and purpose (for the App Privacy questionnaire):
 Body evolution photos are confidential and account-bound; removed with account deletion and when a completed evolution cycle drops prior photos per app logic.
 Data is NOT used for tracking across apps.
 Account deletion is available in the app (Profile → Delete Account).
-Policy: https://berglimma.github.io/HealhtFit/privacidade/
+Policy: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
 Contact: berg.limma@gmail.com

@@ -18,14 +18,9 @@ final class SubscriptionService: ObservableObject {
     @Published var lastErrorMessage: String?
     @Published private(set) var isConfigured = false
 
-    /// Plano efetivo (StoreKit + cortesia + override DEBUG opcional).
+    /// Plano efetivo (StoreKit + cortesia).
     var currentTier: PlanTier {
-        #if DEBUG
-        if let override = SubscriptionConfiguration.debugPlanOverride {
-            return override
-        }
-        #endif
-        return PlanTier.highest(of: [storeTier, activeCourtesyTier])
+        PlanTier.highest(of: [storeTier, activeCourtesyTier])
     }
 
     var isCourtesyActive: Bool {
@@ -38,6 +33,13 @@ final class SubscriptionService: ObservableObject {
     }
 
     var isSubscribed: Bool { currentTier.isPaid }
+
+    /// `true` quando a App Store devolveu ao menos um produto carregado.
+    var areStoreProductsAvailable: Bool { !products.isEmpty }
+
+    func isProductAvailable(tier: PlanTier, period: SubscriptionBillingPeriod = .monthly) -> Bool {
+        product(for: tier, period: period) != nil
+    }
 
     var activeBillingPeriod: SubscriptionBillingPeriod? {
         guard let activeProductID,
@@ -85,12 +87,8 @@ final class SubscriptionService: ObservableObject {
                 return "\(product.displayPrice)/ano"
             }
         }
-        switch period {
-        case .monthly:
-            return "\(tier.referencePriceBRL)/mês"
-        case .yearly:
-            return "\(tier.referenceYearlyPriceBRL)/ano"
-        }
+        // Evita preços de referência que parecem compráveis mas falham na App Review (2.1.0).
+        return unavailablePriceLabel
     }
 
     /// Preço mostrado no card: no anual, destaca o equivalente mensal + total.
@@ -103,8 +101,12 @@ final class SubscriptionService: ObservableObject {
                let monthly = equivalentMonthlyPrice(from: product) {
                 return "\(monthly)/mês"
             }
-            return "\(tier.referenceYearlyPerMonthBRL)/mês"
+            return unavailablePriceLabel
         }
+    }
+
+    private var unavailablePriceLabel: String {
+        areStoreProductsAvailable ? "Indisponível" : "Na App Store"
     }
 
     func displayPriceSubtitle(for tier: PlanTier, period: SubscriptionBillingPeriod) -> String? {
@@ -118,12 +120,6 @@ final class SubscriptionService: ObservableObject {
 
     func isActive(tier: PlanTier, period: SubscriptionBillingPeriod) -> Bool {
         guard currentTier == tier else { return false }
-        #if DEBUG
-        if SubscriptionConfiguration.debugPlanOverride != nil {
-            // Override de DEBUG não distingue período.
-            return period == (activeBillingPeriod ?? .monthly)
-        }
-        #endif
         if let activeProductID,
            let product = SubscriptionProductID(rawValue: activeProductID),
            product.tier == tier {

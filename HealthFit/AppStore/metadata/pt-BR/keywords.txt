@@ -1,1 +1,1 @@
-treino,fitness,academia,hipertrofia,saude,dieta,musculacao,cardio,nutricao,watch,exercicio
+personal,academia,hipertrofia,emagrecer,fitness,treino,nutricao,plano alimentar,apple watch,cardio

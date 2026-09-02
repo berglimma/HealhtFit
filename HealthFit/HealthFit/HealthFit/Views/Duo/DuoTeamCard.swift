@@ -2,11 +2,24 @@ import SwiftUI
 
 /// Card de entrada no Dashboard / Treinos para dupla ou equipe.
 struct DuoTeamCard: View {
+    @EnvironmentObject private var subscriptions: SubscriptionService
     @ObservedObject private var duoService = DuoTeamService.shared
     @State private var showConsent = false
     @State private var showHub = false
+    @State private var showPaywall = false
+
+    private var isLocked: Bool {
+        !subscriptions.canAccess(.duoTeam)
+    }
+
+    private var lockedPlan: PlanTier? {
+        isLocked ? FeatureGate.minimumPlan(for: .duoTeam) : nil
+    }
 
     private var subtitle: String {
+        if isLocked {
+            return "Convide parceiros, chat e ranking — plano \(FeatureGate.minimumPlan(for: .duoTeam).displayName)"
+        }
         if !duoService.hasPrivacyConsent {
             return "Toque para saber como funciona (sem mapa em tempo real)"
         }
@@ -24,12 +37,15 @@ struct DuoTeamCard: View {
     }
 
     private var footerText: String {
-        duoService.teams.isEmpty ? "Criar ou entrar" : "Abrir equipes"
+        if isLocked { return "Liberar com plano Básico" }
+        return duoService.teams.isEmpty ? "Criar ou entrar" : "Abrir equipes"
     }
 
     var body: some View {
         Button {
-            if duoService.hasPrivacyConsent {
+            if isLocked {
+                showPaywall = true
+            } else if duoService.hasPrivacyConsent {
                 showHub = true
             } else {
                 showConsent = true
@@ -46,10 +62,13 @@ struct DuoTeamCard: View {
                     footerLabels: [
                         (icon: "person.3.fill", text: footerText),
                         (icon: "chart.bar.fill", text: "Ranking")
-                    ]
+                    ],
+                    lockedByPlan: lockedPlan
                 )
-                DuoUnreadBadge(count: duoService.totalUnreadChatCount)
-                    .padding(12)
+                if !isLocked {
+                    DuoUnreadBadge(count: duoService.totalUnreadChatCount)
+                        .padding(12)
+                }
             }
         }
         .buttonStyle(.plain)
@@ -66,6 +85,10 @@ struct DuoTeamCard: View {
         }
         .navigationDestination(isPresented: $showHub) {
             DuoTeamHubView()
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(highlight: .duoTeam)
+                .environmentObject(subscriptions)
         }
     }
 }

@@ -1,28 +1,60 @@
-HealthFit — App Review Notes (v1.0.0)
+HealthFit — App Review Notes (v1.0.0 build 4)
 
 BUNDLE
 - iOS: luan.com.healthfit.app
 - watchOS: luan.com.healthfit.app.watchkitapp
-- Version 1.0.0 / Build 1
+- Version 1.0.0 / Build 4
 
-DEMO ACCOUNT
-No pre-seeded account required. On the review device:
+DEMO ACCOUNT (RECOMMENDED)
+Email: healthfit.appreview@gmail.com
+Password: HealthFitReview2026!
+Sign in on the login screen (Entrar). Complete the short profile if prompted.
+
+DEVICES TESTED (Guideline 2.1)
+- iPhone 15 Pro / iOS 18.x (primary)
+- iPhone SE (3rd gen) / iOS 17.6+
+- Apple Watch Series 9 companion / watchOS 11.x
+- iPad (compatibility mode) / iPadOS 18.x
+
+APP PURPOSE & AUDIENCE
+HealthFit is a fitness companion for adults 16+ who want guided workouts, nutrition planning, and optional AI coaching. It helps users train (strength, cardio, sports), track wellness, and optionally subscribe for tiered premium features.
+
+EXTERNAL SERVICES
+- Firebase (Auth, Firestore, Cloud Functions, FCM, Storage)
+- Apple Sign In, Google Sign In
+- Apple HealthKit, CoreLocation (active sessions), CoreMotion
+- StoreKit 2 (subscriptions)
+- No third-party ads or cross-app tracking
+
+REGIONAL DIFFERENCES
+Same feature set in all App Store territories. UI localized in pt-BR (primary), en-US, es-ES, fr-FR.
+
+SANDBOX SUBSCRIPTION TEST (optional)
+After login: Profile → Meu plano → choose a plan → purchase with Sandbox Apple ID.
+Restore: Profile → Meu plano → Restaurar compras.
+Core workouts (Básico+) unlock after subscribing. Nutrition/IA features require Fit or IA Plus tiers.
+
+IAP SUMMARY (where to buy)
+Profile → Meu plano → choose tier (Básico / Fit / IA Plus / Completo) → Monthly or Yearly → purchase.
+Restore: Profile → Meu plano → Restaurar compras.
+Courtesy codes (30-day grant, not IAP): Profile → Meu plano → Tenho um código de cortesia.
+
+ALTERNATIVE: Create account in-app
 1) Tap Criar conta (email + password), OR
 2) Use Sign in with Apple.
-Complete the short profile prompts, then use the flows below.
-Minimum age: 16+. If the review team prefers a fixed account, contact berg.limma@gmail.com and we will provide credentials within a few hours.
+Minimum age: 16+.
 
 HOW TO TEST CORE FLOWS
 1. Onboarding → complete profile (gender, goal, modalities).
-2. Workouts tab → start a guided strength workout OR Cardio → Corrida / Luta.
-3. Nutrition tab → view meal plan; shopping list via cart icon; Análise for meal photo (IA Plus feature).
-4. Assistant tab → ask a simple question (e.g. “Como melhorar meu sono?”).
-5. Workouts → Dupla/equipe → create/join team → chat (long-press a message to Report; leave team from hub).
-6. Profile → Meu plano → Restore purchases / view subscription tiers.
-7. Profile → Excluir conta is available (Guideline 5.1.1(v)).
+2. Workouts tab → guided strength (Básico+) OR Cardio → Corrida / Luta (Fit+ for advanced modalities).
+3. Nutrition tab → meal plan + shopping list (Fit+). Meal photo Análise (IA Plus).
+4. Assistant tab → ask a question (Fit: 5 msgs/day; IA Plus: unlimited).
+5. Workouts → Dupla/equipe → create/join team → chat (long-press to Report).
+6. Profile → Meu plano → subscribe / Restore purchases.
+7. Profile → Excluir conta (Guideline 5.1.1(v)).
 
 SUBSCRIPTIONS (StoreKit 2)
-- Group: HealthFit Plans
+- Group: HealthFit Plans (ID 22332052)
 - Product IDs (monthly):
   healthfit.plan.basic.monthly
   healthfit.plan.fit.monthly
@@ -33,28 +65,26 @@ SUBSCRIPTIONS (StoreKit 2)
   healthfit.plan.fit.yearly
   healthfit.plan.ai.yearly
   healthfit.plan.complete.yearly
-- Restore: Profile → Meu plano → Restaurar compras
-- Manage: Profile → Meu plano → Gerenciar na App Store
-- Courtesy codes: Profile → Meu plano → Tenho um código de cortesia. These are developer complimentary 30-day grants (not sold, not an alternative to IAP). They do not auto-renew.
-- Terms & Privacy links are shown on the paywall.
+- Free tier: dashboard + limited access; premium features require subscription.
+- Courtesy codes: Profile → Meu plano → Tenho um código de cortesia (30-day grant, not IAP alternative).
+- Terms & Privacy on paywall and bundled in-app.
 
 HEALTHKIT / LOCATION / MOTION
 - HealthKit: metrics and workout sync (user must grant permission).
-- Location: used for outdoor cardio/sports maps (run/walk/bike/surf/kite). Background location only while an active outdoor session is tracking; purpose strings explain Always if requested by the system for continuous tracking.
-- Motion: pedometer / activity state / climbing motion assist.
-- No third-party advertising; no cross-app tracking.
+- Location: outdoor cardio/sports maps only during active sessions.
+- Motion: pedometer / activity assist.
+- No ads; no cross-app tracking.
 
 USER-GENERATED CONTENT (DUO CHAT)
-- Private team chat to coordinate workouts only (no public feed).
-- Messages expire (~12 hours).
-- Users can report a message (mailto support) and leave the team.
-- Contact for moderation: berg.limma@gmail.com
+- Private team chat; messages expire (~12 hours).
+- Report via long-press; leave team from hub.
+- Moderation: berg.limma@gmail.com
 
 CONTENT DISCLAIMER
-HealthFit provides informational fitness and nutrition guidance only. It does not provide medical diagnosis or replace a licensed professional.
+Informational fitness/nutrition guidance only — not medical advice.
 
 WATCH APP
-Companion app for live heart rate / calories / session control. Pair Apple Watch with the same Apple ID for best results. Review can be completed on iPhone alone.
+Companion for heart rate / calories / session control. iPhone-only review is fine.
 
 CONTACT
 berg.limma@gmail.com

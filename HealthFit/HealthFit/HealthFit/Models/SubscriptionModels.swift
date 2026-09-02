@@ -173,6 +173,7 @@ enum PlanTier: Int, CaseIterable, Codable, Comparable, Identifiable {
 enum AppFeature: String, CaseIterable, Identifiable {
     case fullWorkouts
     case appleWatchSync
+    case duoTeam
     case customWorkouts
     case advancedModalities
     case mealPlan
@@ -193,6 +194,7 @@ enum AppFeature: String, CaseIterable, Identifiable {
         switch self {
         case .fullWorkouts: return "Treinos completos"
         case .appleWatchSync: return "Sincronização Apple Watch"
+        case .duoTeam: return "Treino em dupla / equipe"
         case .customWorkouts: return "Criar treinos personalizados"
         case .advancedModalities: return "Modalidades avançadas"
         case .mealPlan: return "Cardápio e nutrição"
@@ -213,9 +215,11 @@ enum AppFeature: String, CaseIterable, Identifiable {
     var upsellDescription: String {
         switch self {
         case .fullWorkouts:
-            return "Todas as fichas de musculação, treino em casa e mobilidade."
+            return "Fichas de musculação, treino em casa, mobilidade e corrida com GPS."
         case .appleWatchSync:
             return "Batimentos, calorias e controle da sessão no Apple Watch."
+        case .duoTeam:
+            return "Crie equipes, convide parceiros, chat e ranking — sem localização ao vivo."
         case .customWorkouts:
             return "Monte e edite suas próprias fichas de treino."
         case .advancedModalities:
@@ -248,7 +252,7 @@ enum AppFeature: String, CaseIterable, Identifiable {
     /// Menor plano que libera a feature (alinhado ao ROADMAP).
     var minimumTier: PlanTier {
         switch self {
-        case .fullWorkouts, .appleWatchSync:
+        case .fullWorkouts, .appleWatchSync, .duoTeam:
             return .basic
         case .customWorkouts, .advancedModalities, .mealPlan, .shoppingList, .aiChatLimited:
             return .fit
@@ -277,7 +281,6 @@ extension PlanTier {
 // MARK: - Feature gate
 
 enum FeatureGate {
-    /// Com `gatesEnabled == false`, tudo liberado (modo preparação / soft launch).
     static func canAccess(_ feature: AppFeature, tier: PlanTier, gatesEnabled: Bool = SubscriptionConfiguration.featureGatesEnabled) -> Bool {
         guard gatesEnabled else { return true }
         return tier >= feature.minimumTierEffective
@@ -301,47 +304,15 @@ private extension AppFeature {
     }
 }
 
-// MARK: - Configuração de rollout
+// MARK: - Configuração (App Store Connect)
 
 enum SubscriptionConfiguration {
     static let subscriptionGroupName = "HealthFit Plans"
-    static let subscriptionGroupIDPlaceholder = "22332052"
+    /// ID do grupo na App Store Connect (HealthFit Plans).
+    static let subscriptionGroupID = "22332052"
 
-    /// Bloqueios por plano. **Desligados por padrão** (soft launch / testes).
-    /// Reative em DEBUG → Meu plano → “Ativar feature gates”, ou mude o default abaixo
-    /// quando for cobrar assinatura de novo.
-    static var featureGatesEnabled: Bool {
-        get {
-            guard UserDefaults.standard.object(forKey: gatesKey) != nil else { return false }
-            return UserDefaults.standard.bool(forKey: gatesKey)
-        }
-        set { UserDefaults.standard.set(newValue, forKey: gatesKey) }
-    }
-
-    /// Chave nova para ignorar valor antigo que deixava os gates ligados.
-    private static let gatesKey = "healthfit.subscription.gatesEnabled.testingOff"
-
-    #if DEBUG
-    /// Em DEBUG, permite simular plano sem compra (Perfil → Meu plano).
-    static var debugPlanOverride: PlanTier? {
-        get {
-            let raw = UserDefaults.standard.integer(forKey: debugTierKey)
-            // 0 é free; usamos -1 sentinel “sem override”
-            if UserDefaults.standard.object(forKey: debugTierKey) == nil { return nil }
-            if raw == -1 { return nil }
-            return PlanTier(rawValue: raw)
-        }
-        set {
-            if let newValue {
-                UserDefaults.standard.set(newValue.rawValue, forKey: debugTierKey)
-            } else {
-                UserDefaults.standard.set(-1, forKey: debugTierKey)
-            }
-        }
-    }
-
-    private static let debugTierKey = "healthfit.subscription.debugTier"
-    #endif
+    /// Bloqueios por plano ativos em produção.
+    static let featureGatesEnabled = true
 }
 
 // MARK: - Marketing / copy paywall
@@ -361,7 +332,7 @@ struct PlanMarketingCopy: Identifiable, Hashable {
                 "Sem cartão"
             ]
         case .basic:
-            return ["Treinos guiados e cardio", "Apple Watch", "Metas de treino"]
+            return ["Treinos guiados e cardio", "Apple Watch", "Treino em dupla (Duo)", "Metas de treino"]
         case .fit:
             return [
                 "Tudo do Básico",
