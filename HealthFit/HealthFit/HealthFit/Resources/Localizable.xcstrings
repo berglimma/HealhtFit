@@ -475,9 +475,6 @@
     "1 unidade" : {
 
     },
-    "1. Criar grupo “HealthFit Plans” e os 8 product IDs (4 mensais + 4 anuais) na App Store Connect.\n2. Em Xcode: Scheme → Options → StoreKit Configuration → Products.storekit.\n3. Feature gates estão OFF por padrão (testes). Ligar em DEBUG → Meu plano quando for cobrar." : {
-
-    },
     "1. Tipo de equipamento (kite)" : {
 
     },
@@ -3760,6 +3757,9 @@
     "Orientações" : {
 
     },
+    "Os planos pagos ainda estão sendo ativados na App Store. O app funciona gratuitamente — assine quando os preços aparecerem aqui." : {
+
+    },
     "Ótimo! Menos cafeína ajuda no sono e na recuperação muscular." : {
 
     },
@@ -3926,6 +3926,9 @@
 
     },
     "Plano de refeições" : {
+
+    },
+    "Plano indisponível na App Store" : {
 
     },
     "Plano já ativo" : {
@@ -4409,9 +4412,6 @@
 
     },
     "Próximo relatório em %lld dia(s)" : {
-
-    },
-    "Próximos passos" : {
 
     },
     "Pular Descanso" : {

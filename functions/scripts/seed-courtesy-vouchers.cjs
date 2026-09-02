@@ -280,16 +280,36 @@ function parseLocalCsv(csvPath) {
 }
 
 async function commitVouchers(db, docs) {
-  const batch = db.batch();
+  let written = 0;
+  let skipped = 0;
   const now = FieldValue.serverTimestamp();
-  for (const item of docs) {
-    const ref = db.collection("courtesyVouchers").doc(item.code);
-    batch.set(ref, {
-      ...item,
-      createdAt: now,
-    });
+
+  for (let i = 0; i < docs.length; i += 400) {
+    const slice = docs.slice(i, i + 400);
+    const refs = slice.map((item) => db.collection("courtesyVouchers").doc(item.code));
+    const snaps = await db.getAll(...refs);
+    const batch = db.batch();
+    let batchWrites = 0;
+
+    for (let j = 0; j < slice.length; j++) {
+      if (snaps[j].exists) {
+        skipped++;
+        continue;
+      }
+      batch.set(refs[j], {
+        ...slice[j],
+        createdAt: now,
+      });
+      batchWrites++;
+    }
+
+    if (batchWrites > 0) {
+      await batch.commit();
+      written += batchWrites;
+    }
   }
-  await batch.commit();
+
+  return {written, skipped};
 }
 
 main().catch((error) => {

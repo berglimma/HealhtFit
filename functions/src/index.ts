@@ -381,29 +381,27 @@ export const seedCourtesyVouchers = onRequest(
     }
 
     const batchId = String(vouchers[0]?.batchId ?? "");
-    const existing = await db
-      .collection("courtesyVouchers")
-      .where("batchId", "==", batchId)
-      .limit(1)
-      .get();
-
-    if (!existing.empty) {
-      res.status(409).json({
-        error: "Batch already exists",
-        batchId,
-        count: existing.size,
-      });
-      return;
-    }
-
     const now = Timestamp.now();
     let written = 0;
+    let skipped = 0;
+
+    // Idempotente: grava só códigos que ainda não existem (não sobrescreve resgates).
     for (let i = 0; i < vouchers.length; i += 400) {
       const slice = vouchers.slice(i, i + 400);
+      const refs = slice.map((item) =>
+        db.collection("courtesyVouchers").doc(item.code)
+      );
+      const snaps = await db.getAll(...refs);
       const batch = db.batch();
-      for (const item of slice) {
-        const ref = db.collection("courtesyVouchers").doc(item.code);
-        batch.set(ref, {
+      let batchWrites = 0;
+
+      for (let j = 0; j < slice.length; j++) {
+        if (snaps[j].exists) {
+          skipped++;
+          continue;
+        }
+        const item = slice[j];
+        batch.set(refs[j], {
           code: item.code,
           plan: item.plan,
           durationDays: item.durationDays,
@@ -412,13 +410,17 @@ export const seedCourtesyVouchers = onRequest(
           redeemedAt: null,
           createdAt: now,
         });
+        batchWrites++;
       }
-      await batch.commit();
-      written += slice.length;
+
+      if (batchWrites > 0) {
+        await batch.commit();
+        written += batchWrites;
+      }
     }
 
-    logger.info("seedCourtesyVouchers", {batchId, written});
-    res.json({ok: true, batchId, written});
+    logger.info("seedCourtesyVouchers", {batchId, written, skipped});
+    res.json({ok: true, batchId, written, skipped, total: vouchers.length});
   }
 );
 
