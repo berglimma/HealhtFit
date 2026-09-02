@@ -133,6 +133,9 @@
     "%@ em tela cheia" : {
 
     },
+    "%@ pediu ajuda" : {
+
+    },
     "%@: %@" : {
       "localizations" : {
         "pt-BR" : {
@@ -266,6 +269,9 @@
     "%lld no ideal (7–9 h)" : {
 
     },
+    "%lld no radar" : {
+
+    },
     "%lld noite(s)" : {
 
     },
@@ -385,6 +391,9 @@
           }
         }
       }
+    },
+    "%lld°" : {
+
     },
     "%lld×" : {
 
@@ -516,6 +525,9 @@
       }
     },
     "99+" : {
+
+    },
+    "A ~%lld m de você" : {
 
     },
     "A assinatura renova automaticamente até cancelar. Gerencie em Ajustes → Apple ID." : {
@@ -673,6 +685,9 @@
 
     },
     "Aluno treina com o app. Personal e nutricionista usam como profissionais — dá para marcar os dois." : {
+
+    },
+    "Amigos da equipe com Spot Buddy ativo receberão um alerta com sua distância aproximada." : {
 
     },
     "Análise" : {
@@ -2029,6 +2044,9 @@
     "Confirmar encerramento" : {
 
     },
+    "Confirmar pedido de ajuda?" : {
+
+    },
     "Confirmar senha" : {
 
     },
@@ -2305,6 +2323,9 @@
     "Direção do vento %lld graus" : {
 
     },
+    "Direção: %lld°" : {
+
+    },
     "Direção: %lld° · %@" : {
       "localizations" : {
         "pt-BR" : {
@@ -2441,6 +2462,9 @@
     "Energéticos por semana" : {
 
     },
+    "Entendi" : {
+
+    },
     "Entendo que não poderei recuperar minha conta" : {
 
     },
@@ -2460,6 +2484,9 @@
 
     },
     "Enviar link de redefinição" : {
+
+    },
+    "Enviar pedido de ajuda" : {
 
     },
     "Enviaremos um link para o seu e-mail com instruções para criar uma nova senha." : {
@@ -2587,6 +2614,9 @@
 
     },
     "Estimativa por tempo, distância em volta e intensidade." : {
+
+    },
+    "Estou bem — cancelar ajuda" : {
 
     },
     "Etapa %lld de %lld" : {
@@ -3006,6 +3036,9 @@
     "Kit de %@" : {
 
     },
+    "Kite Spot Buddy" : {
+
+    },
     "Kite: %@" : {
 
     },
@@ -3028,6 +3061,9 @@
 
     },
     "Li e aceito os Termos de Uso e a Política de Privacidade" : {
+
+    },
+    "Li e concordo — ativar Spot Buddy" : {
 
     },
     "Li e concordo — continuar" : {
@@ -3392,6 +3428,9 @@
 
     },
     "Nenhum" : {
+
+    },
+    "Nenhum amigo da equipe com Spot Buddy ativo por perto (até 2 km)." : {
 
     },
     "Nenhum cardápio ativo. Gere seu plano em Nutrição." : {
@@ -3849,6 +3888,12 @@
 
     },
     "Pedal livre — encerre quando quiser" : {
+
+    },
+    "Pedido de ajuda enviado" : {
+
+    },
+    "Pedir ajuda aos amigos" : {
 
     },
     "Pendente" : {
@@ -4990,6 +5035,9 @@
     "Sobre" : {
 
     },
+    "Somente kitesurf · somente durante a sessão · opt-in separado do Duo." : {
+
+    },
     "Somente treinos iniciados em dupla/equipe. Treinos individuais não entram." : {
 
     },
@@ -5000,6 +5048,9 @@
 
     },
     "Sono, suplementos, medidas e plano de refeições" : {
+
+    },
+    "Spot Buddy" : {
 
     },
     "SPOT de partida" : {

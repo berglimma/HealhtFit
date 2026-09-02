@@ -8,4 +8,4 @@ Données collectées et finalité (pour le questionnaire App Privacy) :
 
 Données NON utilisées pour le suivi inter-apps.
 Suppression de compte disponible dans l'app (Profil → Supprimer le compte).
-Politique : https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
+Politique : https://healthfit-30d87.web.app/privacidade/

@@ -42,9 +42,9 @@ Seus dados de saúde e treino ficam sob seu controle. Você pode excluir a conta
 IMPORTANTE
 O HealthFit oferece orientação informativa para fitness e bem-estar. Não substitui avaliação médica, nutricionista ou acompanhamento profissional. Consulte um médico antes de iniciar qualquer programa de exercícios.
 
-Privacidade: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
-Suporte: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/suporte/index.html
-Termos: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/termos/index.html
+Privacidade: https://healthfit-30d87.web.app/privacidade/
+Suporte: https://healthfit-30d87.web.app/suporte/
+Termos: https://healthfit-30d87.web.app/termos/
 
 DETALHES DE TREINO
 Monte sua rotina com séries, repetições e cargas. Use o timer de descanso para manter o ritmo. Acompanhe histórico de treinos e veja sua evolução ao longo das semanas. No cardio outdoor, registre percursos e desempenho. Nas modalidades avançadas, use diários e ferramentas específicas para luta, escalada, surf, kitesurf e remo.

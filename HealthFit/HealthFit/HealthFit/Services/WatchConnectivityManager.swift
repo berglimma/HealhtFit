@@ -218,7 +218,8 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         waterSportMode: Bool = false,
         isKitesurf: Bool = false,
         swimmingMode: Bool = false,
-        poolLengthMeters: Double = 25
+        poolLengthMeters: Double = 25,
+        spotBuddyEnabled: Bool = false
     ) {
         clearWatchMetrics()
         sendToWatch([
@@ -231,6 +232,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             "isKitesurf": isKitesurf,
             "swimmingMode": swimmingMode,
             "poolLengthMeters": poolLengthMeters,
+            "spotBuddyEnabled": spotBuddyEnabled,
             "timestamp": Date().timeIntervalSince1970
         ])
         isWorkoutActiveOnWatch = true
@@ -246,6 +248,16 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         Task {
             _ = await attemptSyncWithWatch()
         }
+    }
+
+    func sendKiteSpotBuddyToWatch(_ payload: KiteSpotBuddyWatchPayload) {
+        guard let data = try? JSONEncoder().encode(payload),
+              let json = String(data: data, encoding: .utf8) else { return }
+        sendToWatch([
+            "action": "kiteSpotBuddy",
+            "payload": json,
+            "timestamp": Date().timeIntervalSince1970
+        ], realtime: true)
     }
 
     /// Publica para o Watch: última altura estimada / contagem de saltos (espelho).
@@ -318,7 +330,9 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         elapsedSeconds: Int,
         targetSeconds: Int,
         currentCalories: Double,
-        targetCalories: Int? = nil
+        targetCalories: Int? = nil,
+        isKitesurf: Bool = false,
+        spotBuddyEnabled: Bool = false
     ) {
         // Não envia estimativa do iPhone como calorias — o Watch é a fonte.
         sendToWatch([
@@ -326,7 +340,9 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             "elapsedSeconds": elapsedSeconds,
             "targetSeconds": targetSeconds,
             "currentCalories": watchCalories,
-            "targetCalories": targetCalories ?? 0
+            "targetCalories": targetCalories ?? 0,
+            "isKitesurf": isKitesurf,
+            "spotBuddyEnabled": spotBuddyEnabled,
         ], realtime: true)
     }
 
@@ -654,6 +670,12 @@ extension WatchConnectivityManager: WCSessionDelegate {
             isWorkoutActiveOnWatch = true
             workoutStore?.setExerciseTimerPaused(false)
             refreshConnectionStatus()
+        }
+        if action == "kiteSpotHelpRequest" {
+            Task { await KiteSpotBuddyService.shared.requestHelp() }
+        }
+        if action == "kiteSpotImOk" || action == "kiteSpotHelpCancel" {
+            Task { await KiteSpotBuddyService.shared.cancelHelp() }
         }
 
         HealthKitManager.shared.applyLiveWatchMetrics(

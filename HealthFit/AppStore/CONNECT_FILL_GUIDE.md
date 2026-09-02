@@ -3,14 +3,15 @@
 Use este guia com a conta Apple Developer do HealthFit.
 Bundle: `luan.com.healthfit.app` · Versão `1.0.0` / Build `1`
 
-URLs legais (já 16+, estáveis):
+URLs legais (16+, renderizam HTML corretamente):
 
-- Privacidade: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
-- Termos: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/termos/index.html
-- Suporte: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/suporte/index.html
+- Site / marketing: https://healthfit-30d87.web.app/
+- Privacidade: https://healthfit-30d87.web.app/privacidade/
+- Termos: https://healthfit-30d87.web.app/termos/
+- Suporte: https://healthfit-30d87.web.app/suporte/
 
-> O domínio `berglimma.github.io/HealhtFit/privacidade/` ainda pode mostrar a política antiga.
-> Use as URLs jsDelivr acima na Connect (e no app já apontam para elas).
+> Não use jsDelivr para HTML — o CDN envia `text/plain` e o Safari mostra o código-fonte.
+> Hospedagem: Firebase Hosting (`firebase deploy --only hosting`).
 
 ---
 
@@ -76,7 +77,7 @@ Marque conforme `APP_PRIVACY.md`:
 - Precise Location (treino outdoor) → App Functionality, **not tracking**
 
 Privacy Policy URL:
-`https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html`
+`https://healthfit-30d87.web.app/privacidade/`
 
 ---
 

@@ -234,5 +234,18 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow write: if false;
     }
+
+    // Kite Spot Buddy — presença temporária durante sessão de kitesurf (opt-in).
+    match /kiteSpotPresence/{uid} {
+      allow read: if request.auth != null
+        && resource.data.visible == true
+        && resource.data.expiresAt > request.time;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.isKitesurf == true
+        && request.resource.data.visible == true;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
   }
 }

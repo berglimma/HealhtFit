@@ -211,6 +211,9 @@ struct WatchContentView: View {
             if workoutManager.isWaterSportMode {
                 waterSportStatsPage
             }
+            if workoutManager.isKitesurfMode {
+                KiteSpotBuddyWatchRootView(workoutManager: workoutManager)
+            }
             sessionControlsPage
         }
         .tabViewStyle(.verticalPage)
@@ -313,6 +316,12 @@ struct WatchContentView: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+
+                if workoutManager.isKitesurfMode {
+                    Text("Deslize ↑ para Spot Buddy")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.cyan)
+                }
 
                 if !workoutManager.waterSensorStatus.isEmpty {
                     Text(workoutManager.waterSensorStatus)

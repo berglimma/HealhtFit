@@ -30,6 +30,7 @@ jobs:
           mkdir -p _site
           # URLs públicas esperadas pela App Store / AppLegalConfiguration:
           # /privacidade/ /termos/ /suporte/ e landing /
+          touch _site/.nojekyll
           cp Docs/index.html _site/index.html
           cp -R Docs/privacidade _site/privacidade
           cp -R Docs/termos _site/termos

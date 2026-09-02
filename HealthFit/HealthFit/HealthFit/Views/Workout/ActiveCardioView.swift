@@ -53,6 +53,10 @@ struct ActiveCardioView: View {
     @State private var lastHazardCheckAt: Date = .distantPast
     @State private var clockTickCount = 0
     @State private var treadmillInclinePercent: Double = 0
+    @State private var showSpotBuddyHelpConfirm = false
+    @State private var showSpotBuddyLiveMap = false
+    @State private var showSpotBuddyDuoInvite = false
+    @ObservedObject private var spotBuddy = KiteSpotBuddyService.shared
 
     /// Side-effects; display uses wall clock from session start minus pauses.
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -63,6 +67,7 @@ struct ActiveCardioView: View {
     private var isOutdoorWalking: Bool { config.isOutdoorWalkingSession }
     private var isSwimming: Bool { config.isSwimmingSession }
     private var isWaterSport: Bool { config.isWaterSportSession }
+    private var isKitesurf: Bool { config.isKitesurfSession }
     private var isRowing: Bool { config.isRowingSession }
     private var isClimbing: Bool { config.isClimbingSession }
     private var isFight: Bool { config.isFightSession }
@@ -233,6 +238,11 @@ struct ActiveCardioView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
+                        if isKitesurf, let alert = spotBuddy.incomingHelpAlert {
+                            KiteSpotBuddyIncomingHelpBanner(peer: alert) {
+                                spotBuddy.dismissIncomingHelp()
+                            }
+                        }
                         if isOutdoorGPS {
                             runMapSection
                             activityStateBanner
@@ -389,6 +399,9 @@ struct ActiveCardioView: View {
             jumpMetrics.stop()
             rowingMetrics.stop()
             watchConnectivity.stopWorkoutOnWatch()
+            if isKitesurf {
+                spotBuddy.stop()
+            }
             finishedSession = ended
         }
         .onAppear {
@@ -431,7 +444,22 @@ struct ActiveCardioView: View {
                     watchConnectivity.requestWatchSwimSync()
                 }
             }
+            if isKitesurf, spotBuddy.canStart,
+               let sessionId = workoutStore.activeSession?.id.uuidString {
+                let user = authService.currentUser
+                let photoURL = user.flatMap { KiteSpotBuddyService.resolvedPhotoURL(for: $0.id) }
+                spotBuddy.start(
+                    sessionId: sessionId,
+                    displayName: user?.greetingName ?? user?.name ?? "Atleta",
+                    photoURL: photoURL
+                )
+                syncWithWatch()
+            }
             handleExternalFinishTickIfNeeded()
+        }
+        .onChange(of: runTracker.currentLocation) { _, location in
+            guard isKitesurf, let location else { return }
+            spotBuddy.updateLocation(location)
         }
         .onChange(of: watchConnectivity.watchSwimLapTick) { _, tick in
             guard isSwimming, tick > lastWatchSwimLapTick else { return }
@@ -452,6 +480,54 @@ struct ActiveCardioView: View {
         .onChange(of: watchConnectivity.lastWatchAccelG) { _, g in
             guard isWaterSport, g > 0 else { return }
             jumpMetrics.ingestWatchAcceleration(g)
+        }
+        .sheet(isPresented: $showSpotBuddyHelpConfirm) {
+            KiteSpotBuddyHelpConfirmSheet(
+                onConfirm: {
+                    showSpotBuddyHelpConfirm = false
+                    Task { await spotBuddy.requestHelp() }
+                },
+                onCancel: { showSpotBuddyHelpConfirm = false }
+            )
+        }
+        .fullScreenCover(isPresented: $showSpotBuddyLiveMap) {
+            KiteSpotBuddyLiveMapView(
+                service: spotBuddy,
+                routePoints: runTracker.routePoints,
+                userCoordinate: runTracker.currentLocation?.coordinate
+                    ?? config.waterSportSetup?.spot.coordinate,
+                spotCoordinate: config.waterSportSetup?.spot.coordinate,
+                onRequestHelp: {
+                    showSpotBuddyLiveMap = false
+                    showSpotBuddyHelpConfirm = true
+                },
+                onCancelHelp: { Task { await spotBuddy.cancelHelp() } },
+                onDismiss: { showSpotBuddyLiveMap = false },
+                onInviteFriends: {
+                    showSpotBuddyLiveMap = false
+                    showSpotBuddyDuoInvite = true
+                },
+                onAddFriend: {
+                    showSpotBuddyLiveMap = false
+                    showSpotBuddyDuoInvite = true
+                }
+            )
+        }
+        .sheet(isPresented: $showSpotBuddyDuoInvite) {
+            NavigationStack {
+                DuoTeamHubView()
+                    .navigationTitle("Equipe Duo")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Fechar") { showSpotBuddyDuoInvite = false }
+                        }
+                    }
+            }
+        }
+        .onChange(of: spotBuddy.incomingHelpAlert?.uid) { _, uid in
+            guard isKitesurf, spotBuddy.isActive, uid != nil else { return }
+            showSpotBuddyLiveMap = true
         }
         .sheet(isPresented: $showReportHazardSheet) {
             ReportRoadHazardSheet(
@@ -588,6 +664,15 @@ struct ActiveCardioView: View {
                             .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
+            }
+
+            if isKitesurf, spotBuddy.isActive {
+                KiteSpotBuddyEntryCard(
+                    service: spotBuddy,
+                    onOpen: { showSpotBuddyLiveMap = true },
+                    onRequestHelp: { showSpotBuddyHelpConfirm = true },
+                    onCancelHelp: { Task { await spotBuddy.cancelHelp() } }
+                )
             }
 
             HStack(spacing: 16) {
@@ -1769,7 +1854,9 @@ struct ActiveCardioView: View {
             elapsedSeconds: elapsedSeconds,
             targetSeconds: config.targetDurationSeconds,
             currentCalories: liveCalories,
-            targetCalories: config.targetCalories
+            targetCalories: config.targetCalories,
+            isKitesurf: isKitesurf,
+            spotBuddyEnabled: isKitesurf && spotBuddy.isActive
         )
     }
 
@@ -2107,6 +2194,9 @@ struct ActiveCardioView: View {
         jumpMetrics.stop()
         rowingMetrics.stop()
         climbingMotion.stop()
+        if isKitesurf {
+            spotBuddy.stop()
+        }
         watchConnectivity.stopWorkoutOnWatch()
 
         let finalPausedSeconds = finalizedPausedSeconds()

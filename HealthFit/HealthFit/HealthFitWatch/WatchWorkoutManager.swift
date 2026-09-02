@@ -35,6 +35,12 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var restOvertimeSeconds = 0
     @Published var isWaterSportMode = false
     @Published var isKitesurfMode = false
+    @Published var spotBuddyEnabled = false
+    @Published var spotBuddyPeers: [KiteSpotBuddyPeer] = []
+    @Published var spotBuddyNeedsHelp = false
+    @Published var spotBuddyIncomingHelp: KiteSpotBuddyPeer?
+    @Published var spotBuddyMyLatitude: Double?
+    @Published var spotBuddyMyLongitude: Double?
     /// Detecção automática de escalada ligada pelo usuário.
     @Published var isClimbingAutoDetectEnabled = false {
         didSet {
@@ -299,7 +305,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         swimmingMode: Bool = false,
         poolLengthMeters: Double = 25,
         setupModeName: String = "",
-        setupBoardName: String = ""
+        setupBoardName: String = "",
+        spotBuddyEnabled: Bool = false
     ) {
         resetWorkoutState()
         meditationOwnedByWatch = false
@@ -309,6 +316,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isMeditationWorkout = false
         isWaterSportMode = waterSportMode
         isKitesurfMode = isKitesurf
+        self.spotBuddyEnabled = spotBuddyEnabled && isKitesurf
         isSwimmingMode = swimmingMode
         self.poolLengthMeters = max(poolLengthMeters, 1)
         cardioTargetSeconds = max(targetSeconds, 0)
@@ -486,6 +494,12 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isPaused = false
         isWaterSportMode = false
         isKitesurfMode = false
+        spotBuddyEnabled = false
+        spotBuddyPeers = []
+        spotBuddyNeedsHelp = false
+        spotBuddyIncomingHelp = nil
+        spotBuddyMyLatitude = nil
+        spotBuddyMyLongitude = nil
         waterSetupModeName = ""
         waterSetupBoardName = ""
         isSwimmingMode = false
@@ -1338,6 +1352,42 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         max(0.3, (waterPeakG - 1.0) * 0.55)
     }
 
+    func requestSpotBuddyHelp() {
+        spotBuddyNeedsHelp = true
+        sendToPhone([
+            "action": "kiteSpotHelpRequest",
+            "timestamp": Date().timeIntervalSince1970,
+        ])
+    }
+
+    func cancelSpotBuddyHelp() {
+        spotBuddyNeedsHelp = false
+        sendToPhone([
+            "action": "kiteSpotImOk",
+            "timestamp": Date().timeIntervalSince1970,
+        ])
+    }
+
+    func dismissSpotBuddyHelpAlert() {
+        spotBuddyIncomingHelp = nil
+    }
+
+    private func applyKiteSpotBuddyPayload(_ message: [String: Any]) {
+        guard let json = message["payload"] as? String,
+              let data = json.data(using: .utf8),
+              let payload = try? JSONDecoder().decode(KiteSpotBuddyWatchPayload.self, from: data) else {
+            return
+        }
+        spotBuddyEnabled = payload.spotBuddyEnabled
+        spotBuddyPeers = payload.peers
+        spotBuddyNeedsHelp = payload.needsHelp
+        spotBuddyMyLatitude = payload.myLatitude
+        spotBuddyMyLongitude = payload.myLongitude
+        if let incoming = payload.incomingHelp {
+            spotBuddyIncomingHelp = incoming
+        }
+    }
+
     private func handlePhoneMessage(_ message: [String: Any]) {
         guard let action = message["action"] as? String else { return }
 
@@ -1379,6 +1429,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             let poolLen = (message["poolLengthMeters"] as? Double)
                 ?? (message["poolLengthMeters"] as? NSNumber)?.doubleValue
                 ?? 25
+            let spotBuddy = (message["spotBuddyEnabled"] as? Bool)
+                ?? ((message["spotBuddyEnabled"] as? NSNumber)?.boolValue ?? false)
             startCardio(
                 name: name,
                 targetSeconds: targetSeconds,
@@ -1387,7 +1439,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 waterSportMode: waterMode,
                 isKitesurf: kite,
                 swimmingMode: swimMode,
-                poolLengthMeters: poolLen
+                poolLengthMeters: poolLen,
+                spotBuddyEnabled: spotBuddy
             )
         case "syncWorkoutProgress":
             applyPhoneSync(
@@ -1402,6 +1455,15 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 targetCalories: message["targetCalories"] as? Int,
                 currentCalories: message["currentCalories"] as? Double
             )
+            if let kite = message["isKitesurf"] as? Bool ?? (message["isKitesurf"] as? NSNumber)?.boolValue {
+                isKitesurfMode = kite
+            }
+            if let enabled = message["spotBuddyEnabled"] as? Bool
+                ?? (message["spotBuddyEnabled"] as? NSNumber)?.boolValue {
+                spotBuddyEnabled = enabled && isKitesurfMode
+            }
+        case "kiteSpotBuddy":
+            applyKiteSpotBuddyPayload(message)
         case "requestWaterSportSync":
             sendMetricsToPhone()
             if isWaterSportMode {

@@ -50,6 +50,8 @@ struct CardioSetupView: View {
     @State private var windSnapshot: OpenMeteoWindService.Snapshot?
     @State private var isLoadingWind = false
     @State private var windLoadError: String?
+    @State private var spotBuddyEnabled = KiteSpotBuddyPreferences.isEnabledForNextSession
+    @State private var showSpotBuddyConsent = false
 
     private static let caloriePresets = [100, 150, 200, 250, 300, 350, 400, 500, 600, 800]
     private static let lapPresets = [10, 20, 30, 40, 50, 60, 80, 100]
@@ -706,7 +708,45 @@ struct CardioSetupView: View {
                 Text("No treino: altura de saltos via giroscópio Apple Watch + iPhone, pontos no mapa, gráficos e relatório PDF.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
+
+                kiteSpotBuddySetupSection
             }
+        }
+    }
+
+    private var kiteSpotBuddySetupSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: $spotBuddyEnabled) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Kite Spot Buddy", systemImage: "location.fill.viewfinder")
+                        .font(.subheadline.weight(.semibold))
+                    Text(KiteSpotBuddyPrivacy.shortLabel)
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+            .tint(AppTheme.accent)
+            .onChange(of: spotBuddyEnabled) { _, enabled in
+                if enabled, !KiteSpotBuddyPreferences.hasConsent {
+                    spotBuddyEnabled = false
+                    showSpotBuddyConsent = true
+                } else {
+                    KiteSpotBuddyPreferences.isEnabledForNextSession = enabled
+                }
+            }
+        }
+        .padding(12)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .sheet(isPresented: $showSpotBuddyConsent) {
+            KiteSpotBuddyConsentView(
+                onAccept: {
+                    showSpotBuddyConsent = false
+                    spotBuddyEnabled = true
+                    KiteSpotBuddyPreferences.isEnabledForNextSession = true
+                },
+                onCancel: { showSpotBuddyConsent = false }
+            )
         }
     }
 
@@ -2148,7 +2188,8 @@ struct CardioSetupView: View {
             waterSportMode: sessionConfig.isWaterSportSession,
             isKitesurf: sessionConfig.isKitesurfSession,
             swimmingMode: sessionConfig.isSwimmingSession,
-            poolLengthMeters: sessionConfig.resolvedPoolLengthMeters
+            poolLengthMeters: sessionConfig.resolvedPoolLengthMeters,
+            spotBuddyEnabled: sessionConfig.isKitesurfSession && KiteSpotBuddyPreferences.isEnabledForNextSession
         )
         let athleteName = authService.currentUser?.greetingName ?? "Atleta"
         NotificationService.shared.deliverCardioStartNotification(

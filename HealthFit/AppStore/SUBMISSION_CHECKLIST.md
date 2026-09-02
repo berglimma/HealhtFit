@@ -17,7 +17,7 @@ Versão alvo: **1.0.0 (Build 1)** · Bundle `luan.com.healthfit.app`
 
 > Passo a passo detalhado: [`CONNECT_FILL_GUIDE.md`](./CONNECT_FILL_GUIDE.md)
 
-> Privacidade 16+ estável: `https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html`
+> Privacidade 16+ estável: `https://healthfit-30d87.web.app/privacidade/`
 
 - [ ] **Push do workflow / Pages ligado** e validar no Safari:
     - https://berglimma.github.io/HealhtFit/privacidade/ → deve dizer **16 anos**

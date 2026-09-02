@@ -26,6 +26,14 @@
 		B1000949 /* AssistantMealPlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000949 /* AssistantMealPlanBuilder.swift */; };
 		B1000950 /* OpenFoodFactsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000950 /* OpenFoodFactsService.swift */; };
 		B1000951 /* PhysicalAssessmentPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000951 /* PhysicalAssessmentPDFBuilder.swift */; };
+		B1000960 /* KiteSpotBuddyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000960 /* KiteSpotBuddyModels.swift */; };
+		B1000961 /* KiteSpotBuddyFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000961 /* KiteSpotBuddyFirestoreService.swift */; };
+		B1000962 /* KiteSpotBuddyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000962 /* KiteSpotBuddyService.swift */; };
+		B1000963 /* KiteSpotBuddyConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000963 /* KiteSpotBuddyConsentView.swift */; };
+		B1000964 /* KiteSpotBuddySessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000964 /* KiteSpotBuddySessionView.swift */; };
+		B1000965 /* KiteSpotBuddyLiveMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000965 /* KiteSpotBuddyLiveMapView.swift */; };
+		B100W960 /* KiteSpotBuddyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000960 /* KiteSpotBuddyModels.swift */; };
+		B100W965 /* KiteSpotBuddyWatchViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100W965 /* KiteSpotBuddyWatchViews.swift */; };
 		B1000908 /* ClimbingAreaCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000908 /* ClimbingAreaCatalog.swift */; };
 		B1000909 /* ClimbingMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000909 /* ClimbingMapView.swift */; };
 		B1000910 /* ClimbingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000910 /* ClimbingLogbookView.swift */; };
@@ -385,6 +393,13 @@
 		F1000949 /* AssistantMealPlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantMealPlanBuilder.swift; sourceTree = "<group>"; };
 		F1000950 /* OpenFoodFactsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenFoodFactsService.swift; sourceTree = "<group>"; };
 		F1000951 /* PhysicalAssessmentPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicalAssessmentPDFBuilder.swift; sourceTree = "<group>"; };
+		F1000960 /* KiteSpotBuddyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KiteSpotBuddyModels.swift; sourceTree = "<group>"; };
+		F1000961 /* KiteSpotBuddyFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KiteSpotBuddyFirestoreService.swift; sourceTree = "<group>"; };
+		F1000962 /* KiteSpotBuddyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KiteSpotBuddyService.swift; sourceTree = "<group>"; };
+		F1000963 /* KiteSpotBuddyConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KiteSpotBuddyConsentView.swift; sourceTree = "<group>"; };
+		F1000964 /* KiteSpotBuddySessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KiteSpotBuddySessionView.swift; sourceTree = "<group>"; };
+		F1000965 /* KiteSpotBuddyLiveMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KiteSpotBuddyLiveMapView.swift; sourceTree = "<group>"; };
+		F100W965 /* KiteSpotBuddyWatchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KiteSpotBuddyWatchViews.swift; sourceTree = "<group>"; };
 		F1000908 /* ClimbingAreaCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAreaCatalog.swift; sourceTree = "<group>"; };
 		F1000909 /* ClimbingMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingMapView.swift; sourceTree = "<group>"; };
 		F1000910 /* ClimbingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingLogbookView.swift; sourceTree = "<group>"; };
@@ -761,6 +776,7 @@
 				F1000031 /* WatchContentView.swift */,
 				F1000032 /* WatchWorkoutManager.swift */,
 				F100W412 /* WatchCatalog.swift */,
+				F100W965 /* KiteSpotBuddyWatchViews.swift */,
 				F1000033 /* Assets.xcassets */,
 				F100W001 /* Info.plist */,
 				F100W002 /* HealthFitWatch.entitlements */,
@@ -802,6 +818,7 @@
 				F1000004 /* MealModels.swift */,
 				F1000352 /* MealPhotoAnalysisModels.swift */,
 				F1000920 /* DuoTeamModels.swift */,
+				F1000960 /* KiteSpotBuddyModels.swift */,
 				F1000059 /* MealCatalog.swift */,
 				F1000046 /* WeeklyProgressModels.swift */,
 				F1000050 /* MeditationModels.swift */,
@@ -835,6 +852,7 @@
 				F1000341 /* TrainingNutritionSyncService.swift */,
 				F1000009 /* NotificationService.swift */,
 				F1000921 /* DuoTeamService.swift */,
+				F1000962 /* KiteSpotBuddyService.swift */,
 				F1000935 /* DuoNavigationRouter.swift */,
 				F1000914 /* NutritionNotificationPreferences.swift */,
 				F1000918 /* RecommendedWorkoutCatalog.swift */,
@@ -935,6 +953,7 @@
 				G1000015 /* Profile */,
 				G1000060 /* Subscription */,
 				G1000018 /* Duo */,
+				G1000KITE /* Kite */,
 				G1000016 /* Shared */,
 			);
 			path = Views;
@@ -1050,6 +1069,16 @@
 			path = Duo;
 			sourceTree = "<group>";
 		};
+		G1000KITE /* Kite */ = {
+			isa = PBXGroup;
+			children = (
+				F1000963 /* KiteSpotBuddyConsentView.swift */,
+				F1000964 /* KiteSpotBuddySessionView.swift */,
+				F1000965 /* KiteSpotBuddyLiveMapView.swift */,
+			);
+			path = Kite;
+			sourceTree = "<group>";
+		};
 		G1000016 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
@@ -1104,6 +1133,7 @@
 				F2000080 /* CrossDeviceSyncFirestoreService.swift */,
 				F2000081 /* CrossDeviceSyncCoordinator.swift */,
 				F1000922 /* DuoTeamFirestoreService.swift */,
+				F1000961 /* KiteSpotBuddyFirestoreService.swift */,
 				F1000932 /* ProfilePhotoStorageService.swift */,
 				F1000934 /* MarcoCivilAccessLogService.swift */,
 				F1000936 /* PushNotificationService.swift */,
@@ -1626,6 +1656,12 @@
 				B1000322 /* BodyEvolutionFirestoreService.swift in Sources */,
 				B1000323 /* BodyMeasurementsPDFBuilder.swift in Sources */,
 				B1000951 /* PhysicalAssessmentPDFBuilder.swift in Sources */,
+				B1000960 /* KiteSpotBuddyModels.swift in Sources */,
+				B1000961 /* KiteSpotBuddyFirestoreService.swift in Sources */,
+				B1000962 /* KiteSpotBuddyService.swift in Sources */,
+				B1000963 /* KiteSpotBuddyConsentView.swift in Sources */,
+				B1000964 /* KiteSpotBuddySessionView.swift in Sources */,
+				B1000965 /* KiteSpotBuddyLiveMapView.swift in Sources */,
 				B1000324 /* BodyEvolutionService.swift in Sources */,
 				B1000204 /* DailyWellnessFirestoreService.swift in Sources */,
 				B1000203 /* KeyboardDismiss.swift in Sources */,
@@ -1712,7 +1748,9 @@
 				B1000030 /* HealthFitWatchApp.swift in Sources */,
 				B1000031 /* WatchContentView.swift in Sources */,
 				B1000032 /* WatchWorkoutManager.swift in Sources */,
-				B100W412 /* WatchCatalog.swift in Sources */,
+				B100W412 /* WatchCatalog.swift */,
+				B100W960 /* KiteSpotBuddyModels.swift in Sources */,
+				B100W965 /* KiteSpotBuddyWatchViews.swift in Sources */,
 				B100W411 /* WeakMainActorBox.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

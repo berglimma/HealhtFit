@@ -1,4 +1,32 @@
 {
+  "hosting": {
+    "public": "Docs",
+    "cleanUrls": true,
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "**/*.py",
+      "**/*.mp4",
+      "**/*.zip",
+      "**/*.pdf",
+      "**/videos/**",
+      "**/apresentacao-assets/**",
+      "**/figma/**",
+      "**/firebase/**"
+    ],
+    "headers": [
+      {
+        "source": "**/*.html",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "text/html; charset=utf-8"
+          }
+        ]
+      }
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"

@@ -42,10 +42,10 @@ Pacote de publicação v1.0. Comece por **[SUBMISSION_CHECKLIST.md](./SUBMISSION
 
 Ative GitHub Pages: branch `main` → pasta `/docs`.
 
-- Marketing: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/index.html
-- Privacidade: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
-- Termos: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/termos/index.html
-- Suporte: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/suporte/index.html
+- Marketing: https://healthfit-30d87.web.app/
+- Privacidade: https://healthfit-30d87.web.app/privacidade/
+- Termos: https://healthfit-30d87.web.app/termos/
+- Suporte: https://healthfit-30d87.web.app/suporte/
 
 ## Screenshots
 

@@ -88,6 +88,6 @@ Companion for heart rate / calories / session control. iPhone-only review is fin
 
 CONTACT
 berg.limma@gmail.com
-Support: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/suporte/index.html
-Privacy: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
-Terms: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/termos/index.html
+Support: https://healthfit-30d87.web.app/suporte/
+Privacy: https://healthfit-30d87.web.app/privacidade/
+Terms: https://healthfit-30d87.web.app/termos/
