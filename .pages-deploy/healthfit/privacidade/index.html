@@ -38,7 +38,7 @@
 </head>
 <body>
   <h1>Política de Privacidade</h1>
-  <p class="updated">Última atualização: 16 de agosto de 2026</p>
+  <p class="updated">Última atualização: 2 de setembro de 2026</p>
   <p>Esta Política de Privacidade descreve como o aplicativo <strong>HealthFit</strong> (“App”), desenvolvido por <strong>Berg Limma e Luan Chiminelli</strong> (“nós”, “Controladores”), coleta, usa, armazena e protege dados pessoais, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD) e o Marco Civil da Internet (Lei nº 12.965/2014), quando aplicáveis.</p>
 
   <h2>1. Escopo e elegibilidade</h2>
@@ -50,11 +50,13 @@
     <li><strong>Perfil de treino e nutrição:</strong> biotipo, objetivo, peso, altura, gênero, preferências alimentares e dados de planos.</li>
     <li><strong>Medidas e evolução corporal:</strong> medições e, se optar, fotos de evolução (privadas).</li>
     <li><strong>Atividade física:</strong> sessões de musculação, cardio, meditação, escalada, lutas e demais modalidades, incluindo métricas, diários e relatórios.</li>
+    <li><strong>Localização (GPS):</strong> durante sessões ativas de modalidades outdoor (ex.: corrida, bike, surf, kitesurf) para mapa e rota. No <strong>Kite Spot Buddy</strong>, a posição aproximada também pode ser compartilhada com amigos da equipe, somente com opt-in e sessão de kitesurf ativa.</li>
     <li><strong>Apple Health (HealthKit):</strong> dados de saúde e fitness que você autorizar (ex.: frequência cardíaca, calorias, passos).</li>
     <li><strong>Treino em dupla / equipe:</strong> nome da equipe, modalidades, membros, convites (código, status, destinatário), mensagens do chat (somente para combinar atividades físicas), ranking de desempenho e notificações relacionadas. <strong>Não coletamos nem exibimos localização em tempo real</strong> nesse recurso.</li>
+    <li><strong>Kite Spot Buddy (somente kitesurf):</strong> se você ativar o recurso e iniciar uma sessão de kitesurf, compartilhamos posição aproximada, nome e foto de perfil (se houver) com membros da sua equipe que também estiverem com o Spot Buddy ativo na mesma sessão, para radar de amigos, distância/direção e pedido de ajuda. A posição é removida ao encerrar a sessão (retenção máxima de cerca de 30 minutos por atualização). <strong>Isso não altera as regras do Duo:</strong> chat e ranking continuam sem mapa em tempo real.</li>
     <li><strong>Foto de perfil na equipe:</strong> URL da foto e bandeira do país podem ser sincronizadas aos membros da equipe para identificação visual.</li>
     <li><strong>Câmera e galeria:</strong> apenas quando você iniciar funções que as solicitam.</li>
-    <li><strong>Notificações:</strong> lembretes e avisos (treino, água, check-ins, chat de equipe, convites), mediante permissão do sistema.</li>
+    <li><strong>Notificações:</strong> lembretes e avisos (treino, água, check-ins, chat de equipe, convites e, se aplicável, alertas do Kite Spot Buddy), mediante permissão do sistema.</li>
     <li><strong>Assinaturas:</strong> status de compra processado pela Apple (StoreKit); não armazenamos dados completos de cartão.</li>
     <li><strong>Registros de acesso (Marco Civil):</strong> data e hora de uso, identificador da conta, endereço IP (quando disponível), versão do App, modelo/sistema do aparelho e identificador de sessão — em login, abertura de sessão e saída.</li>
     <li><strong>Diagnósticos:</strong> dados técnicos de falha/desempenho (ex.: Firebase Analytics/Crashlytics), quando habilitados, para estabilidade do App.</li>
@@ -65,25 +67,38 @@
     <li>Prestar e personalizar os serviços de treino, nutrição, bem-estar e IAssistente.</li>
     <li>Autenticar a conta e sincronizar dados na nuvem (Firebase) entre aparelhos em que você estiver logado.</li>
     <li>Operar treino em dupla/equipe: convites, chat com prazo de expiração, ranking e avisos aos membros.</li>
+    <li>Operar o Kite Spot Buddy durante sessões de kitesurf ativas e com seu consentimento: radar de amigos da equipe, distância aproximada e pedido de ajuda.</li>
+    <li>Exibir mapa e rota GPS em sessões outdoor ativas.</li>
     <li>Enviar notificações locais e permitir abertura do chat ao tocar em aviso de mensagem.</li>
     <li>Cumprir obrigações legais, inclusive retenção de registros de acesso.</li>
     <li>Melhorar segurança, prevenir abuso e corrigir falhas técnicas.</li>
   </ul>
-  <p><strong>Bases legais (LGPD), conforme o caso:</strong> execução de contrato / prestação do serviço; consentimento (ex.: HealthKit, notificações, foto); legítimo interesse (segurança e melhoria do produto, sem prevalecer sobre direitos do titular); e cumprimento de obrigação legal (Marco Civil).</p>
+  <p><strong>Bases legais (LGPD), conforme o caso:</strong> execução de contrato / prestação do serviço; <strong>consentimento</strong> (ex.: HealthKit, notificações, foto, Kite Spot Buddy / compartilhamento de posição na sessão de kitesurf); legítimo interesse (segurança e melhoria do produto, sem prevalecer sobre direitos do titular); e cumprimento de obrigação legal (Marco Civil).</p>
 
   <h2>4. Treino em dupla / equipe e chat</h2>
   <ul>
     <li>O chat destina-se <strong>exclusivamente a marcar atividades físicas</strong>. As mensagens <strong>expiram em 12 (doze) horas</strong> e são removidas após esse prazo.</li>
-    <li><strong>Não há mapa nem localização em tempo real</strong> dos membros da equipe.</li>
+    <li><strong>Não há mapa nem localização em tempo real</strong> dos membros da equipe no Duo.</li>
     <li>Ao sair da equipe, seus dados de membro (incluindo foto de perfil exibida no grupo) deixam de constar naquele grupo; se for o último membro, a equipe e a capa associada podem ser encerradas/removidas.</li>
     <li>Convites podem usar nome, código, SMS, e-mail ou busca no diretório interno (nome/apelido, país e foto públicos mínimos para o recurso).</li>
+  </ul>
+
+  <h2>4.1. Kite Spot Buddy (kitesurf)</h2>
+  <ul>
+    <li>Recurso <strong>opcional</strong>, separado do Duo, disponível apenas na modalidade <strong>kitesurf</strong> e somente enquanto uma sessão estiver ativa.</li>
+    <li>Você escolhe ativar antes de iniciar o treino (consentimento explícito no App); pode desativar ou encerrar a sessão para parar o compartilhamento.</li>
+    <li>Compartilhamos com amigos da equipe (que também estiverem com Spot Buddy ativo): posição aproximada, nome, foto (se houver), distância e direção relativas, e status de pedido de ajuda.</li>
+    <li>A localização <strong>não</strong> é usada para publicidade, rastreamento entre apps de terceiros nem perfilamento comercial.</li>
+    <li>Alarme de ajuda: exige confirmação no Apple Watch; use “Estou bem” para cancelar.</li>
+    <li>Base legal: <strong>consentimento</strong> (art. 7º, I, LGPD). Revogável a qualquer momento desativando o recurso ou encerrando a sessão.</li>
+    <li>Retenção: dados de presença são apagados ao fim da sessão; documentos expirados são ignorados pelo App (TTL de até 30 minutos por atualização).</li>
   </ul>
 
   <h2>5. Confidencialidade de fotos e imagens</h2>
   <p>Fotos e imagens que você adiciona ao HealthFit são tratadas como conteúdo <strong>privado e confidencial</strong>.</p>
   <ul>
     <li><strong>Evolução corporal:</strong> uso exclusivo do seu acompanhamento; sem feed público e sem venda a anunciantes.</li>
-    <li><strong>Foto de perfil:</strong> opcional; pode ser sincronizada à equipe e ao diretório de busca do App para identificação entre membros.</li>
+    <li><strong>Foto de perfil:</strong> opcional; pode ser sincronizada à equipe, ao diretório de busca do App e, se o Spot Buddy estiver ativo, aos amigos da sessão de kitesurf para identificação.</li>
     <li><strong>Compartilhamento externo:</strong> exportar, salvar na Galeria ou enviar a terceiros só ocorre por ação sua.</li>
     <li><strong>IA:</strong> não usamos fotos de evolução para treinar modelos de terceiros nem para publicidade.</li>
   </ul>
@@ -94,7 +109,7 @@
     <li><strong>Firebase (Google):</strong> autenticação, Firestore, Storage e, quando aplicável, Analytics/Crashlytics.</li>
     <li><strong>Apple:</strong> Sign in with Apple, HealthKit, StoreKit, notificações e permissões do iOS.</li>
     <li><strong>Google:</strong> login com Google, se você escolher essa opção.</li>
-    <li><strong>Membros da sua equipe:</strong> nome, foto de perfil (se houver), bandeira/país e conteúdo do chat/ranking da equipe.</li>
+    <li><strong>Membros da sua equipe:</strong> nome, foto de perfil (se houver), bandeira/país e conteúdo do chat/ranking da equipe; no Kite Spot Buddy (kitesurf, sessão ativa e opt-in), também posição aproximada e pedidos de ajuda com colegas que optaram pelo recurso.</li>
     <li><strong>CDN de exercícios:</strong> mídias demonstrativas sem dados pessoais seus.</li>
     <li><strong>Serviços que você aciona:</strong> e-mail, SMS, compartilhamento do sistema etc.</li>
     <li><strong>Autoridades:</strong> quando houver obrigação legal ou ordem judicial válida.</li>
@@ -107,21 +122,23 @@
   <ul>
     <li><strong>Conta e dados de uso:</strong> enquanto a conta estiver ativa, ressalvadas exclusões automáticas de ciclos de evolução e mensagens de chat expiradas.</li>
     <li><strong>Chat de equipe:</strong> até 12 horas após o envio.</li>
+    <li><strong>Kite Spot Buddy:</strong> removido ao encerrar a sessão de kitesurf; entradas expiradas deixam de ser exibidas (até ~30 minutos desde a última atualização).</li>
     <li><strong>Registros de acesso (Marco Civil, art. 15):</strong> mantidos sob sigilo, em ambiente controlado, por <strong>6 (seis) meses</strong>; após esse prazo, são excluídos. Não são usados para publicidade.</li>
-    <li><strong>Exclusão de conta:</strong> removemos dados associados em até 30 dias, na medida tecnicamente possível, salvo retenção legal.</li>
+    <li><strong>Exclusão de conta:</strong> removemos dados associados em até 30 dias, na medida tecnicamente possível, salvo retenção legal — inclusive presença do Spot Buddy, se houver.</li>
   </ul>
 
   <h2>9. Direitos do titular (LGPD)</h2>
-  <p>Você pode solicitar confirmação de tratamento, acesso, correção, anonimização, portabilidade (quando aplicável), eliminação de dados desnecessários, informação sobre compartilhamentos e revogação de consentimentos. No App: editar perfil, revogar permissões do iOS e <strong>excluir a conta</strong> em Perfil → Excluir Conta. Contato: <a href="mailto:berg.limma@gmail.com">berg.limma@gmail.com</a>.</p>
+  <p>Você pode solicitar confirmação de tratamento, acesso, correção, anonimização, portabilidade (quando aplicável), eliminação de dados desnecessários, informação sobre compartilhamentos e revogação de consentimentos (incluindo Kite Spot Buddy e permissões de localização/HealthKit no iOS). No App: editar perfil, revogar permissões do sistema e <strong>excluir a conta</strong> em Perfil → Excluir Conta. Contato: <a href="mailto:berg.limma@gmail.com">berg.limma@gmail.com</a>.</p>
 
   <h2>10. Transferência internacional</h2>
   <p>Provedores como Google/Firebase e Apple podem processar dados em servidores fora do Brasil. Nesses casos, observamos as salvaguardas previstas na legislação aplicável e nas políticas desses provedores.</p>
 
   <h2>11. Alterações</h2>
-  <p>Podemos atualizar esta política para refletir novas funcionalidades ou exigências legais. A data da versão vigente constará no topo desta página.</p>
+  <p>Podemos atualizar esta política para refletir novas funcionalidades ou exigências legais. A data da versão vigente constará no topo desta página. A URL pública atual é <a href="https://healthfit-30d87.web.app/privacidade/">https://healthfit-30d87.web.app/privacidade/</a>.</p>
 
   <h2>12. Contato</h2>
   <p><strong>Berg Limma e Luan Chiminelli</strong><br>
-  E-mail: <a href="mailto:berg.limma@gmail.com">berg.limma@gmail.com</a></p>
+  E-mail: <a href="mailto:berg.limma@gmail.com">berg.limma@gmail.com</a><br>
+  Suporte: <a href="https://healthfit-30d87.web.app/suporte/">https://healthfit-30d87.web.app/suporte/</a></p>
 </body>
 </html>
