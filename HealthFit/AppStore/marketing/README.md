@@ -27,7 +27,9 @@ Especificação completa das camisas: `../camisas-divulgacao.md` (raiz `marketin
 
 ## Redes sociais
 
-Pasta `pt-BR/social/` — cards Instagram (feed 1:1 + story 9:16) e legenda pronta com link da App Store.
+Pasta `pt-BR/social/` — cards Instagram (feed 1:1 + story 9:16) e legendas prontas com link da App Store.
+
+Além do card institucional: **Coach**, **Duo**, **Nutrição**, **Apple Watch**, **Modalidades** e story **Comece grátis**.
 
 CTA localizado: App Store (pt/es) · Available on the App Store (en) · Disponible sur l'App Store (fr).
 

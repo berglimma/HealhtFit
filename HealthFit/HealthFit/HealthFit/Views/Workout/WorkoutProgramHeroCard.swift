@@ -63,6 +63,8 @@ struct WorkoutProgramHeroCard: View {
                     HStack(spacing: 10) {
                         ForEach(Array(footerLabels.enumerated()), id: \.offset) { _, item in
                             Label(item.text, systemImage: item.icon)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
                         }
                     }
                     .font(.caption2.weight(.semibold))
@@ -70,6 +72,7 @@ struct WorkoutProgramHeroCard: View {
                 }
             }
             .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if let lockedByPlan {
                 PlanRequirementBadge(tier: lockedByPlan, compact: true)

@@ -361,8 +361,29 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
+    /// Atualiza ficha prescrita pelo Coach sem barreira de `canModify` (sync remoto).
+    func applyCoachPrescribedSheet(_ sheet: WorkoutSheet) {
+        var stamped = sheet
+        stamped.isCoachPrescribed = true
+        if let index = workoutSheets.firstIndex(where: { $0.id == stamped.id }) {
+            workoutSheets[index] = stamped
+        } else {
+            workoutSheets.append(stamped)
+        }
+        saveData()
+        pushSheetToCloud(stamped)
+    }
+
     func deleteWorkoutSheet(_ sheet: WorkoutSheet) {
         guard canModify(sheet) else { return }
+        workoutSheets.removeAll { $0.id == sheet.id }
+        saveData()
+        deleteSheetFromCloud(sheet.id)
+    }
+
+    /// Remove ficha prescrita pelo Coach (exclusão feita pelo personal no Firebase).
+    func removeCoachPrescribedSheet(_ sheet: WorkoutSheet) {
+        guard sheet.isCoachPrescribed else { return }
         workoutSheets.removeAll { $0.id == sheet.id }
         saveData()
         deleteSheetFromCloud(sheet.id)

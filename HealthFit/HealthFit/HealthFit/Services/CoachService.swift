@@ -278,6 +278,11 @@ final class CoachService: ObservableObject {
         prescribed.prescribedByName = link.coachName
         prescribed.assignedTo = link.studentUid
         prescribed.updatedAt = .now
+
+        let existing = assignedWorkoutsByLink[link.id]?.first {
+            $0.id == sheet.id.uuidString || $0.sheet.id == sheet.id
+        }
+
         let assignment = CoachAssignedWorkout(
             id: sheet.id.uuidString,
             linkId: link.id,
@@ -285,12 +290,42 @@ final class CoachService: ObservableObject {
             coachName: link.coachName,
             studentUid: link.studentUid,
             sheet: prescribed,
-            publishedAt: .now,
+            publishedAt: existing?.publishedAt ?? .now,
             updatedAt: .now,
             isActive: true
         )
         do {
             try await CoachFirestoreService.publishWorkout(assignment)
+            var list = assignedWorkoutsByLink[link.id] ?? []
+            if let idx = list.firstIndex(where: { $0.id == assignment.id }) {
+                list[idx] = assignment
+            } else {
+                list.insert(assignment, at: 0)
+            }
+            assignedWorkoutsByLink[link.id] = list.sorted { $0.updatedAt > $1.updatedAt }
+            mergeAssignedWorkoutsIntoStore()
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    func deleteAssignedWorkout(link: CoachLink, assignment: CoachAssignedWorkout) async -> Bool {
+        guard let uid = currentUid, uid == link.coachUid else { return false }
+        do {
+            try await CoachFirestoreService.deleteWorkout(linkId: link.id, workoutId: assignment.id)
+            var list = assignedWorkoutsByLink[link.id] ?? []
+            list.removeAll { $0.id == assignment.id }
+            assignedWorkoutsByLink[link.id] = list
+            if let store = workoutStore {
+                let sheetId = assignment.sheet.id
+                if let local = store.workoutSheets.first(where: {
+                    $0.id == sheetId || $0.id.uuidString == assignment.id
+                }), local.isCoachPrescribed {
+                    store.removeCoachPrescribedSheet(local)
+                }
+            }
             return true
         } catch {
             lastError = error.localizedDescription
@@ -509,6 +544,9 @@ final class CoachService: ObservableObject {
         // Only merge into the student device (or keep coach local copy too)
         let all = assignedWorkoutsByLink.values.flatMap { $0 }
         let relevant = all.filter { $0.studentUid == uid || $0.coachUid == uid }
+        let activeIds = Set(relevant.filter(\.isActive).map(\.sheet.id))
+        let knownLinkIds = Set(assignedWorkoutsByLink.keys)
+
         for item in relevant where item.isActive {
             var sheet = item.sheet
             sheet.isCoachPrescribed = true
@@ -518,12 +556,23 @@ final class CoachService: ObservableObject {
             sheet.assignedTo = item.studentUid
             sheet.updatedAt = item.updatedAt
             if let existing = store.workoutSheets.first(where: { $0.id == sheet.id }) {
-                if existing.updatedAt < sheet.updatedAt {
-                    store.updateWorkoutSheet(sheet)
+                if existing.updatedAt <= sheet.updatedAt {
+                    store.applyCoachPrescribedSheet(sheet)
                 }
             } else {
                 store.addWorkoutSheet(sheet)
             }
+        }
+
+        // Remove fichas do Coach que o personal excluiu (sumiram do listener).
+        let stale = store.workoutSheets.filter { sheet in
+            guard sheet.isCoachPrescribed,
+                  let linkId = sheet.coachLinkId,
+                  knownLinkIds.contains(linkId) else { return false }
+            return !activeIds.contains(sheet.id)
+        }
+        for sheet in stale {
+            store.removeCoachPrescribedSheet(sheet)
         }
     }
 

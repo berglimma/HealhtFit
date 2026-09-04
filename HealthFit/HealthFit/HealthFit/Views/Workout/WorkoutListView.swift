@@ -318,23 +318,17 @@ struct WorkoutListView: View {
                 .foregroundStyle(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            NavigationLink(value: Gender.male) {
-                GenderProgramHeroCard(
-                    gender: .male,
-                    recommendedCount: workoutStore.maleStandardWorkoutSheets.count,
-                    customCount: workoutStore.customWorkoutSheets(for: .male).count
-                )
+            ForEach(Gender.allCases, id: \.self) { gender in
+                NavigationLink(value: gender) {
+                    GenderProgramHeroCard(
+                        gender: gender,
+                        recommendedCount: workoutStore.recommendedStandardWorkouts(for: gender).count,
+                        customCount: workoutStore.customWorkoutSheets(for: gender).filter { !$0.isCoachPrescribed }.count,
+                        coachPrescribedCount: coachPrescribedSheetCount(for: gender)
+                    )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-
-            NavigationLink(value: Gender.female) {
-                GenderProgramHeroCard(
-                    gender: .female,
-                    recommendedCount: workoutStore.femaleStandardWorkoutSheets.count,
-                    customCount: workoutStore.customWorkoutSheets(for: .female).count
-                )
-            }
-            .buttonStyle(.plain)
 
             NavigationLink(value: MobilityWorkoutHubRoute()) {
                 MobilityProgramHeroCard(
@@ -343,11 +337,19 @@ struct WorkoutListView: View {
             }
             .buttonStyle(.plain)
 
-            Text("Mobilidade ajuda a preparar articulações para agachamento, terra, supino e desenvolvimento.")
+            Text("Mobilidade, cardio, treino em casa e meditação continuam disponíveis mesmo com personal.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private func coachPrescribedSheetCount(for gender: Gender) -> Int {
+        workoutStore.workoutSheets.filter { sheet in
+            sheet.isCoachPrescribed
+                && sheet.isActive
+                && (sheet.targetGender ?? sheet.resolvedProgramGender) == gender
+        }.count
     }
 
     private var cardioSection: some View {
@@ -643,13 +645,19 @@ struct GenderProgramHeroCard: View {
     let gender: Gender
     let recommendedCount: Int
     let customCount: Int
+    var coachPrescribedCount: Int = 0
 
     private var title: String {
         gender == .female ? L10n.Workout.female : L10n.Workout.male
     }
 
     private var subtitle: String {
-        gender == .female
+        if coachPrescribedCount > 0 {
+            return gender == .female
+                ? "Fichas do personal em destaque · glúteos, pernas e core"
+                : "Fichas do personal em destaque · peito, costas e pernas"
+        }
+        return gender == .female
             ? "Glúteos, pernas, postura e core"
             : "Peito, costas, pernas e ombros"
     }
@@ -662,6 +670,18 @@ struct GenderProgramHeroCard: View {
         gender == .female ? Color(red: 0.86, green: 0.45, blue: 0.58) : AppTheme.accent
     }
 
+    private var footerLabels: [(icon: String, text: String)] {
+        var labels: [(icon: String, text: String)] = []
+        if coachPrescribedCount > 0 {
+            labels.append((icon: "person.badge.shield.checkmark.fill", text: "\(coachPrescribedCount) do personal"))
+            labels.append((icon: "star.fill", text: "\(recommendedCount) recomendados"))
+        } else {
+            labels.append((icon: "star.fill", text: "\(recommendedCount) recomendados"))
+            labels.append((icon: "person.crop.circle", text: "\(customCount) personalizados"))
+        }
+        return labels
+    }
+
     var body: some View {
         WorkoutProgramHeroCard(
             title: title,
@@ -670,10 +690,7 @@ struct GenderProgramHeroCard: View {
             imageName: imageName,
             systemImage: "dumbbell.fill",
             coverColors: [accent, accent.opacity(0.55)],
-            footerLabels: [
-                (icon: "star.fill", text: "\(recommendedCount) recomendados"),
-                (icon: "person.crop.circle", text: "\(customCount) personalizados")
-            ]
+            footerLabels: footerLabels
         )
     }
 }
@@ -704,17 +721,9 @@ struct GenderWorkoutHubView: View {
         workoutStore.workoutSheets.filter { sheet in
             sheet.isCoachPrescribed
                 && sheet.isActive
-                && (sheet.targetGender == nil || sheet.targetGender == gender)
+                && (sheet.targetGender ?? sheet.resolvedProgramGender) == gender
         }
         .sorted { $0.updatedAt > $1.updatedAt }
-    }
-
-    /// Com personal ativo + Fit+: musculação mostra só as fichas prescritas (cardio permanece livre).
-    private var usesCoachPrescribedOnly: Bool {
-        guard subscriptions.canAccess(.healthFitCoach),
-              let link = coach.activePersonalLink,
-              link.status == .active else { return false }
-        return !coachPrescribedSheets.isEmpty
     }
 
     private var recommendedSheets: [WorkoutSheet] {
@@ -734,38 +743,30 @@ struct GenderWorkoutHubView: View {
             VStack(spacing: 20) {
                 hubHeader
 
-                if usesCoachPrescribedOnly {
+                if !coachPrescribedSheets.isEmpty {
                     workoutGroupSection(
                         title: "Fichas do seu personal",
-                        subtitle: coach.activePersonalLink.map { "Prescritas por \($0.coachName) · HealthFit Coach" }
-                            ?? "Prescritas pelo seu personal",
+                        subtitle: coach.activePersonalLink.map { "Em destaque · prescritas por \($0.coachName)" }
+                            ?? "Em destaque · HealthFit Coach",
                         sheets: coachPrescribedSheets,
-                        emptyMessage: "Aguardando ficha do personal."
-                    )
-                } else {
-                    if !coachPrescribedSheets.isEmpty {
-                        workoutGroupSection(
-                            title: "Fichas do seu personal",
-                            subtitle: "HealthFit Coach",
-                            sheets: coachPrescribedSheets
-                        )
-                    }
-
-                    workoutGroupSection(
-                        title: "Personalizados",
-                        subtitle: "Treinos criados para este programa",
-                        sheets: customSheets,
-                        emptyMessage: "Nenhum personalizado ainda. Toque em + para criar ou importe uma ficha (câmera, foto ou PDF)."
-                    )
-
-                    GuidedWorkoutSections(gender: gender)
-
-                    workoutGroupSection(
-                        title: "Recomendados",
-                        subtitle: recommendedSubtitle,
-                        sheets: recommendedSheets
+                        highlighted: true
                     )
                 }
+
+                workoutGroupSection(
+                    title: "Personalizados",
+                    subtitle: "Treinos criados para este programa",
+                    sheets: customSheets,
+                    emptyMessage: "Nenhum personalizado ainda. Toque em + para criar ou importe uma ficha (câmera, foto ou PDF)."
+                )
+
+                GuidedWorkoutSections(gender: gender)
+
+                workoutGroupSection(
+                    title: "Recomendados",
+                    subtitle: recommendedSubtitle,
+                    sheets: recommendedSheets
+                )
 
                 RecentCompletedWorkoutsSection(
                     sessions: recentCompletedSessions,
@@ -783,24 +784,22 @@ struct GenderWorkoutHubView: View {
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                if !usesCoachPrescribedOnly {
-                    HStack(spacing: 12) {
-                        Button {
-                            showScanWorkout = true
-                        } label: {
-                            Image(systemName: "doc.text.viewfinder")
-                                .foregroundStyle(AppTheme.accent)
-                        }
-                        .accessibilityLabel("Escanear ficha de treino")
-
-                        Button {
-                            onCreateCustom(gender)
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundStyle(AppTheme.accent)
-                        }
-                        .accessibilityLabel("Criar ficha personalizada")
+                HStack(spacing: 12) {
+                    Button {
+                        showScanWorkout = true
+                    } label: {
+                        Image(systemName: "doc.text.viewfinder")
+                            .foregroundStyle(AppTheme.accent)
                     }
+                    .accessibilityLabel("Escanear ficha de treino")
+
+                    Button {
+                        onCreateCustom(gender)
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .accessibilityLabel("Criar ficha personalizada")
                 }
             }
         }
@@ -846,12 +845,12 @@ struct GenderWorkoutHubView: View {
                 Text(gender == .female ? "FEMININO" : "MASCULINO")
                     .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
-                if usesCoachPrescribedOnly {
-                    Text("\(coachPrescribedSheets.count) ficha(s) do personal · HealthFit Coach")
+                if coachPrescribedSheets.isEmpty {
+                    Text("\(recommendedSheets.count) recomendados · \(customSheets.count) personalizados")
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                 } else {
-                    Text("\(recommendedSheets.count) recomendados · \(customSheets.count) personalizados")
+                    Text("\(coachPrescribedSheets.count) do personal · \(recommendedSheets.count) recomendados")
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
@@ -888,13 +887,20 @@ struct GenderWorkoutHubView: View {
         title: String,
         subtitle: String,
         sheets: [WorkoutSheet],
-        emptyMessage: String? = nil
+        emptyMessage: String? = nil,
+        highlighted: Bool = false
     ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.textPrimary)
+                HStack(spacing: 8) {
+                    if highlighted {
+                        Image(systemName: "person.badge.shield.checkmark.fill")
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
@@ -911,18 +917,30 @@ struct GenderWorkoutHubView: View {
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(sheets) { sheet in
-                        workoutSheetRow(sheet)
+                        workoutSheetRow(sheet, highlighted: highlighted || sheet.isCoachPrescribed)
                     }
                 }
             }
         }
+        .padding(highlighted ? 14 : 0)
+        .background(
+            highlighted
+                ? AppTheme.accent.opacity(0.08)
+                : Color.clear,
+            in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .strokeBorder(highlighted ? AppTheme.accent.opacity(0.45) : Color.clear, lineWidth: 1.5)
+        )
     }
 
-    private func workoutSheetRow(_ sheet: WorkoutSheet) -> some View {
+    private func workoutSheetRow(_ sheet: WorkoutSheet, highlighted: Bool = false) -> some View {
         NavigationLink(value: sheet) {
             WorkoutSheetCard(
                 sheet: sheet,
-                showsPersonalBadge: workoutStore.canModify(sheet)
+                showsPersonalBadge: workoutStore.canModify(sheet) && !sheet.isCoachPrescribed,
+                highlightedAsCoach: sheet.isCoachPrescribed || highlighted
             )
         }
         .buttonStyle(.plain)
@@ -1037,10 +1055,12 @@ struct RecentWorkoutSessionCard: View {
 struct WorkoutSheetCard: View {
     let sheet: WorkoutSheet
     var showsPersonalBadge = false
+    var highlightedAsCoach = false
     var iconSystemName: String?
 
     private var resolvedIcon: String {
         if let iconSystemName { return iconSystemName }
+        if sheet.isCoachPrescribed { return "person.badge.shield.checkmark.fill" }
         if sheet.createdByAssistant { return "bubble.left.and.bubble.right.fill" }
         if sheet.title.lowercased().hasPrefix("casa") { return "house.fill" }
         if sheet.title.lowercased().hasPrefix("mobilidade") { return "figure.flexibility" }
@@ -1051,50 +1071,67 @@ struct WorkoutSheetCard: View {
         HStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(AppTheme.accent.opacity(0.2))
+                    .fill(AppTheme.accent.opacity(highlightedAsCoach || sheet.isCoachPrescribed ? 0.28 : 0.2))
                     .frame(width: 50, height: 50)
                 Image(systemName: resolvedIcon)
                     .foregroundStyle(AppTheme.accent)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .center, spacing: 8) {
                     Text(sheet.title)
                         .font(.headline)
                         .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .layoutPriority(1)
 
-                    if sheet.createdByAssistant {
+                    if sheet.isCoachPrescribed {
+                        Text("Personal")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppTheme.accent)
+                            .clipShape(Capsule())
+                            .fixedSize()
+                    } else if sheet.createdByAssistant {
                         Text("IAssistente")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(Color(red: 0.35, green: 0.55, blue: 0.95))
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
+                            .padding(.vertical, 4)
                             .background(Color(red: 0.35, green: 0.55, blue: 0.95).opacity(0.15))
                             .clipShape(Capsule())
+                            .fixedSize()
                     } else if showsPersonalBadge {
                         Text("Personalizado")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(AppTheme.accent)
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
+                            .padding(.vertical, 4)
                             .background(AppTheme.accent.opacity(0.15))
                             .clipShape(Capsule())
+                            .fixedSize()
                     } else if sheet.title.lowercased().hasPrefix("casa") {
                         Text("Treine em Casa")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(Color(red: 0.35, green: 0.72, blue: 0.55))
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
+                            .padding(.vertical, 4)
                             .background(Color(red: 0.35, green: 0.72, blue: 0.55).opacity(0.15))
                             .clipShape(Capsule())
+                            .fixedSize()
                     } else if sheet.title.lowercased().hasPrefix("mobilidade") {
                         Text("Mobilidade")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(Color(red: 0.45, green: 0.65, blue: 0.95))
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
+                            .padding(.vertical, 4)
                             .background(Color(red: 0.45, green: 0.65, blue: 0.95).opacity(0.15))
                             .clipShape(Capsule())
+                            .fixedSize()
                     }
                 }
                 Text(sheet.description)
@@ -1105,6 +1142,10 @@ struct WorkoutSheetCard: View {
                 HStack(spacing: 12) {
                     Label("\(sheet.totalExercises) exercícios", systemImage: "list.bullet")
                     Label("~\(sheet.estimatedDuration / 60) min", systemImage: "clock")
+                    if let coachName = sheet.prescribedByName, sheet.isCoachPrescribed, !coachName.isEmpty {
+                        Label(coachName, systemImage: "person.fill")
+                            .lineLimit(1)
+                    }
                 }
                 .font(.caption2)
                 .foregroundStyle(AppTheme.textSecondary)
@@ -1117,7 +1158,18 @@ struct WorkoutSheetCard: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppTheme.cardBackground)
+        .background(
+            (highlightedAsCoach || sheet.isCoachPrescribed)
+                ? AppTheme.accent.opacity(0.12)
+                : AppTheme.cardBackground
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .strokeBorder(
+                    (highlightedAsCoach || sheet.isCoachPrescribed) ? AppTheme.accent.opacity(0.55) : Color.clear,
+                    lineWidth: 1.5
+                )
+        )
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 }

@@ -66,8 +66,11 @@ struct DuoMemberAvatarView: View {
         ZStack {
             Circle().fill(AppTheme.accent.opacity(0.2))
             Text(initial)
-                .font(.system(size: size * 0.4, weight: .bold))
+                .font(.system(size: size * 0.36, weight: .bold))
                 .foregroundStyle(AppTheme.accent)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+                .frame(width: size * 0.7, height: size * 0.7)
         }
     }
 }

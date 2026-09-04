@@ -10,6 +10,9 @@ struct CoachLinkDetailView: View {
     @State private var showPrescribeMeal = false
     @State private var showChat = false
     @State private var statusMessage: String?
+    @State private var assignmentToEdit: CoachAssignedWorkout?
+    @State private var assignmentPendingDeletion: CoachAssignedWorkout?
+    @State private var isDeleting = false
 
     private var isCoach: Bool {
         authService.currentUser?.id == link.coachUid
@@ -39,6 +42,7 @@ struct CoachLinkDetailView: View {
                 Section("Prescrever") {
                     if link.profession == .personal {
                         Button {
+                            assignmentToEdit = nil
                             showPrescribeWorkout = true
                         } label: {
                             Label("Criar / enviar ficha de musculação", systemImage: "dumbbell.fill")
@@ -60,14 +64,54 @@ struct CoachLinkDetailView: View {
             }
 
             if !assigned.isEmpty {
-                Section("Fichas prescritas") {
+                Section {
                     ForEach(assigned) { item in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.sheet.title).font(.subheadline.weight(.semibold))
-                            Text("\(item.sheet.exercises.count) exercícios · atualizado \(item.updatedAt.formatted(date: .abbreviated, time: .shortened))")
+                            Text("\(item.sheet.exercises.count) exercícios · \(item.sheet.targetGender?.rawValue ?? "—")")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text("Atualizado \(item.updatedAt.formatted(date: .abbreviated, time: .shortened))")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if isCoach {
+                                Button(role: .destructive) {
+                                    assignmentPendingDeletion = item
+                                } label: {
+                                    Label("Excluir", systemImage: "trash")
+                                }
+                                Button {
+                                    assignmentToEdit = item
+                                    showPrescribeWorkout = true
+                                } label: {
+                                    Label("Editar", systemImage: "pencil")
+                                }
+                                .tint(AppTheme.accent)
+                            }
+                        }
+                        .contextMenu {
+                            if isCoach {
+                                Button {
+                                    assignmentToEdit = item
+                                    showPrescribeWorkout = true
+                                } label: {
+                                    Label("Editar ficha", systemImage: "pencil")
+                                }
+                                Button(role: .destructive) {
+                                    assignmentPendingDeletion = item
+                                } label: {
+                                    Label("Excluir ficha", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Fichas prescritas")
+                } footer: {
+                    if isCoach {
+                        Text("Deslize para editar ou excluir. As alterações sincronizam com o aluno.")
                     }
                 }
             }
@@ -91,11 +135,20 @@ struct CoachLinkDetailView: View {
         .onAppear {
             coach.ensureChatListening(linkId: link.id)
         }
-        .sheet(isPresented: $showPrescribeWorkout) {
+        .sheet(isPresented: $showPrescribeWorkout, onDismiss: {
+            assignmentToEdit = nil
+        }) {
             NavigationStack {
-                CoachPrescribeWorkoutView(link: link) { ok in
-                    statusMessage = ok ? "Ficha enviada e sincronizada com o aluno." : (coach.lastError ?? "Falha ao enviar.")
+                CoachPrescribeWorkoutView(
+                    link: link,
+                    editingAssignment: assignmentToEdit
+                ) { ok in
+                    let editing = assignmentToEdit != nil
+                    statusMessage = ok
+                        ? (editing ? "Ficha atualizada e sincronizada com o aluno." : "Ficha enviada e sincronizada com o aluno.")
+                        : (coach.lastError ?? "Falha ao salvar.")
                     showPrescribeWorkout = false
+                    assignmentToEdit = nil
                 }
             }
         }
@@ -112,28 +165,70 @@ struct CoachLinkDetailView: View {
                 CoachChatView(link: link)
             }
         }
+        .alert("Excluir ficha?", isPresented: deletionAlertBinding) {
+            Button("Excluir", role: .destructive) {
+                guard let item = assignmentPendingDeletion else { return }
+                Task {
+                    isDeleting = true
+                    let ok = await coach.deleteAssignedWorkout(link: link, assignment: item)
+                    isDeleting = false
+                    statusMessage = ok
+                        ? "Ficha removida do aluno."
+                        : (coach.lastError ?? "Falha ao excluir.")
+                    assignmentPendingDeletion = nil
+                }
+            }
+            Button("Cancelar", role: .cancel) {
+                assignmentPendingDeletion = nil
+            }
+        } message: {
+            if let item = assignmentPendingDeletion {
+                Text("“\(item.sheet.title)” será removida do app do aluno.")
+            }
+        }
+        .disabled(isDeleting)
+    }
+
+    private var deletionAlertBinding: Binding<Bool> {
+        Binding(
+            get: { assignmentPendingDeletion != nil },
+            set: { if !$0 { assignmentPendingDeletion = nil } }
+        )
     }
 }
 
 struct CoachPrescribeWorkoutView: View {
     let link: CoachLink
+    var editingAssignment: CoachAssignedWorkout? = nil
     var onFinished: (Bool) -> Void
 
     @ObservedObject private var coach = CoachService.shared
     @Environment(\.dismiss) private var dismiss
 
+    @State private var sheetId = UUID()
     @State private var title = ""
     @State private var description = ""
     @State private var selectedFocusGroups: Set<CustomWorkoutFocusGroup> = [.chest]
     @State private var exercises: [Exercise] = []
     @State private var targetGender: Gender = .male
     @State private var isPublishing = false
+    @State private var showAddExercise = false
+    @State private var showCustomExercise = false
+    @State private var customName = ""
+    @State private var customMuscleGroup: MuscleGroup = .chest
+    @State private var customSets = 3
+    @State private var customReps = 10
+    @State private var didLoadEditing = false
+
+    private var isEditing: Bool { editingAssignment != nil }
 
     var body: some View {
         Form {
             Section("Aluno") {
                 Text(link.studentName)
-                Text("A ficha aparece só na musculação do aluno (plano Fit+).")
+                Text(isEditing
+                     ? "Ao salvar, a ficha é atualizada no app do aluno."
+                     : "A ficha aparece na musculação do aluno (plano Fit+).")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -153,7 +248,9 @@ struct CoachPrescribeWorkoutView: View {
                     }
                 }
             } header: {
-                Text("Grupos (preenche exercícios)")
+                Text("Grupos (sugestão rápida)")
+            } footer: {
+                Text("Liga um grupo para incluir os exercícios do catálogo. Você também pode adicionar ou criar exercícios abaixo.")
             }
 
             Section("Informações") {
@@ -161,14 +258,33 @@ struct CoachPrescribeWorkoutView: View {
                 TextField("Observação para o aluno", text: $description)
             }
 
-            Section("Exercícios (\(exercises.count))") {
+            Section {
+                Button {
+                    showAddExercise = true
+                } label: {
+                    Label("Adicionar do catálogo", systemImage: "plus.circle.fill")
+                }
+                Button {
+                    customName = ""
+                    customMuscleGroup = .chest
+                    customSets = 3
+                    customReps = 10
+                    showCustomExercise = true
+                } label: {
+                    Label("Criar exercício personalizado", systemImage: "square.and.pencil")
+                }
+
                 if exercises.isEmpty {
-                    Text("Escolha grupos musculares acima.")
+                    Text("Adicione exercícios do catálogo, crie um personalizado ou use os grupos acima.")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach($exercises) { $exercise in
                         VStack(alignment: .leading, spacing: 6) {
                             Text(exercise.name).font(.subheadline.weight(.semibold))
+                            Text(exercise.muscleGroup.rawValue)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                             HStack {
                                 Stepper("Séries \(exercise.sets)", value: $exercise.sets, in: 1...8)
                             }
@@ -179,27 +295,89 @@ struct CoachPrescribeWorkoutView: View {
                     }
                     .onDelete { exercises.remove(atOffsets: $0) }
                 }
+            } header: {
+                Text("Exercícios (\(exercises.count))")
             }
         }
-        .navigationTitle("Prescrever ficha")
+        .navigationTitle(isEditing ? "Editar ficha" : "Prescrever ficha")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancelar") { dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button(isPublishing ? "…" : "Enviar") {
+                Button(isPublishing ? "…" : (isEditing ? "Salvar" : "Enviar")) {
                     Task { await publish() }
                 }
                 .disabled(isPublishing || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || exercises.isEmpty)
             }
         }
-        .onChange(of: selectedFocusGroups) { _, _ in
-            reloadExercisesFromCatalog()
+        .sheet(isPresented: $showAddExercise) {
+            AddExerciseDuringWorkoutView(
+                excludeNames: Set(exercises.map(\.name))
+            ) { template in
+                exercises.append(WorkoutStore.copyExerciseForWorkout(template))
+                updateDefaultTitleIfNeeded()
+            }
+        }
+        .sheet(isPresented: $showCustomExercise) {
+            NavigationStack {
+                Form {
+                    Section {
+                        TextField("Nome do exercício", text: $customName)
+                        Picker("Grupo muscular", selection: $customMuscleGroup) {
+                            ForEach(MuscleGroup.allCases) { group in
+                                Label(group.rawValue, systemImage: group.icon).tag(group)
+                            }
+                        }
+                        Stepper("Séries \(customSets)", value: $customSets, in: 1...8)
+                        Stepper("Repetições \(customReps)", value: $customReps, in: 1...30)
+                    } footer: {
+                        Text("O exercício entra só nesta ficha do aluno.")
+                    }
+                }
+                .navigationTitle("Exercício personalizado")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancelar") { showCustomExercise = false }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Adicionar") {
+                            addCustomExercise()
+                            showCustomExercise = false
+                        }
+                        .disabled(customName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
         }
         .onAppear {
+            loadInitialStateIfNeeded()
+        }
+    }
+
+    private func loadInitialStateIfNeeded() {
+        guard !didLoadEditing else { return }
+        didLoadEditing = true
+        if let editing = editingAssignment {
+            let sheet = editing.sheet
+            sheetId = sheet.id
+            title = sheet.title
+            description = sheet.description
+            exercises = sheet.exercises
+            targetGender = sheet.targetGender ?? sheet.resolvedProgramGender ?? .male
+            selectedFocusGroups = Set(exercises.compactMap { WorkoutStore.focusGroup(for: $0) })
+            if selectedFocusGroups.isEmpty {
+                selectedFocusGroups = [.chest]
+            }
+        } else {
             if title.isEmpty { title = "Treino A — \(link.studentName)" }
-            reloadExercisesFromCatalog()
+            if exercises.isEmpty {
+                appendExercises(from: selectedFocusGroups)
+                updateDefaultTitleIfNeeded()
+            }
         }
     }
 
@@ -207,28 +385,73 @@ struct CoachPrescribeWorkoutView: View {
         Binding(
             get: { selectedFocusGroups.contains(group) },
             set: { enabled in
+                let previous = selectedFocusGroups
                 if enabled { selectedFocusGroups.insert(group) }
                 else { selectedFocusGroups.remove(group) }
+                syncExercisesAfterSelectionChange(from: previous, to: selectedFocusGroups)
+                updateDefaultTitleIfNeeded()
             }
         )
     }
 
-    private func reloadExercisesFromCatalog() {
-        let presets = WorkoutStore.presetExercises(for: selectedFocusGroups)
-        var next: [Exercise] = []
-        for exercise in presets {
-            if let existing = exercises.first(where: { $0.name == exercise.name }) {
-                next.append(existing)
-            } else {
-                next.append(WorkoutStore.copyExerciseForWorkout(exercise))
+    private func syncExercisesAfterSelectionChange(
+        from previous: Set<CustomWorkoutFocusGroup>,
+        to current: Set<CustomWorkoutFocusGroup>
+    ) {
+        let removed = previous.subtracting(current)
+        let added = current.subtracting(previous)
+
+        if !removed.isEmpty {
+            exercises.removeAll { exercise in
+                guard let focus = WorkoutStore.focusGroup(for: exercise) else { return false }
+                // Mantém exercícios adicionados manualmente / personalizados sem foco de catálogo.
+                return removed.contains(focus)
             }
         }
-        exercises = next
-        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title.hasPrefix("Treino A") {
-            let joined = selectedFocusGroups.map(\.rawValue).sorted().joined(separator: " + ")
-            if !joined.isEmpty {
-                title = "Treino — \(joined)"
-            }
+
+        for group in added {
+            appendExercises(from: [group])
+        }
+    }
+
+    private func appendExercises(from groups: Set<CustomWorkoutFocusGroup>) {
+        let existingNames = Set(exercises.map(\.name))
+        let additions = WorkoutStore.presetExercises(for: groups)
+            .filter { !existingNames.contains($0.name) }
+            .map { WorkoutStore.copyExerciseForWorkout($0) }
+        exercises.append(contentsOf: additions)
+    }
+
+    private func addCustomExercise() {
+        let name = customName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        if exercises.contains(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) {
+            return
+        }
+        exercises.append(
+            Exercise(
+                name: name,
+                sets: customSets,
+                reps: customReps,
+                muscleGroup: customMuscleGroup
+            )
+        )
+        updateDefaultTitleIfNeeded()
+    }
+
+    private func updateDefaultTitleIfNeeded() {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty || title.hasPrefix("Treino A") || title.hasPrefix("Treino —") || title.hasPrefix("Treino -") else {
+            return
+        }
+        let joined = CustomWorkoutFocusGroup.allCases
+            .filter { selectedFocusGroups.contains($0) }
+            .map(\.rawValue)
+            .joined(separator: " + ")
+        if !joined.isEmpty {
+            title = "Treino — \(joined)"
+        } else if !exercises.isEmpty {
+            title = "Treino — \(link.studentName)"
         }
     }
 
@@ -236,6 +459,7 @@ struct CoachPrescribeWorkoutView: View {
         isPublishing = true
         defer { isPublishing = false }
         let sheet = WorkoutSheet(
+            id: sheetId,
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             description: description,
             exercises: exercises,

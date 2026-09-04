@@ -716,14 +716,50 @@ struct CardioSetupView: View {
 
     private var kiteSpotBuddySetupSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Toggle(isOn: $spotBuddyEnabled) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Label("Kite Spot Buddy", systemImage: "location.fill.viewfinder")
-                        .font(.subheadline.weight(.semibold))
-                    Text(KiteSpotBuddyPrivacy.shortLabel)
-                        .font(.caption2)
-                        .foregroundStyle(AppTheme.textSecondary)
+            Button {
+                if spotBuddyEnabled {
+                    spotBuddyEnabled = false
+                    KiteSpotBuddyPreferences.isEnabledForNextSession = false
+                } else if KiteSpotBuddyPreferences.hasConsent {
+                    spotBuddyEnabled = true
+                    KiteSpotBuddyPreferences.isEnabledForNextSession = true
+                } else {
+                    showSpotBuddyConsent = true
                 }
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    WorkoutProgramHeroCard(
+                        title: "Kite Spot Buddy",
+                        subtitle: KiteSpotBuddyPrivacy.shortLabel,
+                        accent: Color.cyan,
+                        imageName: "KiteSpotBuddyCover",
+                        systemImage: "location.fill.viewfinder",
+                        coverColors: [Color.cyan, Color.blue.opacity(0.75)],
+                        footerLabels: [
+                            (icon: "person.2.fill", text: "Amigos no spot"),
+                            (icon: "map.fill", text: "Radar até 2 km")
+                        ]
+                    )
+
+                    Image(systemName: spotBuddyEnabled ? "checkmark.circle.fill" : "circle")
+                        .font(.title2)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(
+                            spotBuddyEnabled ? Color.white : Color.white.opacity(0.85),
+                            spotBuddyEnabled ? AppTheme.accent : Color.white.opacity(0.35)
+                        )
+                        .padding(14)
+                        .accessibilityHidden(true)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Kite Spot Buddy")
+            .accessibilityValue(spotBuddyEnabled ? "Ativado" : "Desativado")
+            .accessibilityHint("Toque para ativar ou desativar o radar de amigos no kitesurf")
+
+            Toggle(isOn: $spotBuddyEnabled) {
+                Text(spotBuddyEnabled ? "Ativo nesta sessão" : "Ativar nesta sessão")
+                    .font(.subheadline.weight(.semibold))
             }
             .tint(AppTheme.accent)
             .onChange(of: spotBuddyEnabled) { _, enabled in
@@ -735,9 +771,6 @@ struct CardioSetupView: View {
                 }
             }
         }
-        .padding(12)
-        .background(AppTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
         .sheet(isPresented: $showSpotBuddyConsent) {
             KiteSpotBuddyConsentView(
                 onAccept: {

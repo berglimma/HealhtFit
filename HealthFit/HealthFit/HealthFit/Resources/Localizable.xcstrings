@@ -29,6 +29,9 @@
         }
       }
     },
+    "“%@” será removida do app do aluno." : {
+
+    },
     "“%@” será removido permanentemente." : {
 
     },
@@ -221,6 +224,16 @@
     "%lld dia(s) prontos para enviar" : {
 
     },
+    "%lld do personal · %lld recomendados" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld do personal · %2$lld recomendados"
+          }
+        }
+      }
+    },
     "%lld doses" : {
 
     },
@@ -230,18 +243,15 @@
     "%lld exercícios" : {
 
     },
-    "%lld exercícios · atualizado %@" : {
+    "%lld exercícios · %@" : {
       "localizations" : {
         "pt-BR" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$lld exercícios · atualizado %2$@"
+            "value" : "%1$lld exercícios · %2$@"
           }
         }
       }
-    },
-    "%lld ficha(s) do personal · HealthFit Coach" : {
-
     },
     "%lld ficha%@" : {
       "localizations" : {
@@ -594,7 +604,7 @@
     "A esteira tem elevação?" : {
 
     },
-    "A ficha aparece só na musculação do aluno (plano Fit+)." : {
+    "A ficha aparece na musculação do aluno (plano Fit+)." : {
 
     },
     "A ficha será salva em Personalizados deste programa." : {
@@ -675,6 +685,9 @@
     "Adicionar alimento" : {
 
     },
+    "Adicionar do catálogo" : {
+
+    },
     "Adicionar equipamento" : {
 
     },
@@ -697,6 +710,9 @@
 
     },
     "Adicionar pessoas" : {
+
+    },
+    "Adicione exercícios do catálogo, crie um personalizado ou use os grupos acima." : {
 
     },
     "Agora não" : {
@@ -787,6 +803,9 @@
     "Ao iniciar um treino, sua resposta sobre pré-treino aparecerá aqui." : {
 
     },
+    "Ao salvar, a ficha é atualizada no app do aluno." : {
+
+    },
     "Ao vivo" : {
 
     },
@@ -867,6 +886,12 @@
     "Ativa" : {
 
     },
+    "Ativado" : {
+
+    },
+    "Ativar nesta sessão" : {
+
+    },
     "Ativar: próximos treinos das modalidades do grupo" : {
 
     },
@@ -891,6 +916,9 @@
     "Atividade diária" : {
 
     },
+    "Ativo nesta sessão" : {
+
+    },
     "Ativo: %@" : {
 
     },
@@ -898,6 +926,9 @@
 
     },
     "Atual" : {
+
+    },
+    "Atualizado %@" : {
 
     },
     "Atualizar" : {
@@ -2283,6 +2314,9 @@
     "Criar e enviar SMS" : {
 
     },
+    "Criar exercício personalizado" : {
+
+    },
     "Criar ficha personalizada" : {
 
     },
@@ -2361,6 +2395,9 @@
     "Depois" : {
 
     },
+    "Desativado" : {
+
+    },
     "Descanso acumulado: %@" : {
 
     },
@@ -2401,6 +2438,9 @@
 
     },
     "Deslize para a esquerda ou toque no ícone de lixeira para remover um exercício." : {
+
+    },
+    "Deslize para editar ou excluir. As alterações sincronizam com o aluno." : {
 
     },
     "Destaques da semana" : {
@@ -2688,9 +2728,6 @@
     "Escolha em qual seção da lista o item deve aparecer." : {
 
     },
-    "Escolha grupos musculares acima." : {
-
-    },
     "Escolha o barco para calibrar equilíbrio e simetria (Single, Double, Four) ou o ergométrico." : {
 
     },
@@ -2842,6 +2879,9 @@
     "Excluir ficha" : {
 
     },
+    "Excluir ficha?" : {
+
+    },
     "Excluir treino?" : {
 
     },
@@ -2849,6 +2889,9 @@
 
     },
     "Exercício Atual" : {
+
+    },
+    "Exercício personalizado" : {
 
     },
     "Exercícios" : {
@@ -3038,7 +3081,10 @@
     "Gravar vídeo" : {
 
     },
-    "Grupos (preenche exercícios)" : {
+    "Grupo muscular" : {
+
+    },
+    "Grupos (sugestão rápida)" : {
 
     },
     "Grupos Musculares" : {
@@ -3280,6 +3326,9 @@
 
     },
     "Liberar com o plano %@" : {
+
+    },
+    "Liga um grupo para incluir os exercícios do catálogo. Você também pode adicionar ou criar exercícios abaixo." : {
 
     },
     "Limites" : {
@@ -3562,7 +3611,7 @@
     "MOBILIDADE" : {
 
     },
-    "Mobilidade ajuda a preparar articulações para agachamento, terra, supino e desenvolvimento." : {
+    "Mobilidade, cardio, treino em casa e meditação continuam disponíveis mesmo com personal." : {
 
     },
     "Modalidade" : {
@@ -3787,6 +3836,9 @@
     "Nome da via" : {
 
     },
+    "Nome do exercício" : {
+
+    },
     "Nome do item" : {
 
     },
@@ -3991,6 +4043,9 @@
 
     },
     "O destino da mensagem fica só com o app — o endereço de e-mail não é exibido." : {
+
+    },
+    "O exercício entra só nesta ficha do aluno." : {
 
     },
     "O ícone do app na tela inicial usa a mesma cor." : {
@@ -4964,6 +5019,9 @@
     "Remover item" : {
 
     },
+    "Repetições %lld" : {
+
+    },
     "Reportar" : {
 
     },
@@ -5723,6 +5781,9 @@
 
     },
     "Toque no avatar para foto" : {
+
+    },
+    "Toque para ativar ou desativar o radar de amigos no kitesurf" : {
 
     },
     "Toque para expandir o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos." : {

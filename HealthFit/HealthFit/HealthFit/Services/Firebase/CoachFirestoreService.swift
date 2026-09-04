@@ -268,6 +268,11 @@ enum CoachFirestoreService {
         try await assignedWorkouts(linkId: assignment.linkId).document(assignment.id).setData(payload, merge: true)
     }
 
+    static func deleteWorkout(linkId: String, workoutId: String) async throws {
+        guard isAvailable else { throw CoachFirestoreError.unavailable }
+        try await assignedWorkouts(linkId: linkId).document(workoutId).delete()
+    }
+
     static func listenAssignedWorkouts(
         linkId: String,
         handler: @escaping ([CoachAssignedWorkout]) -> Void
