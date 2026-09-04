@@ -11,6 +11,7 @@ RECURSOS PRINCIPAIS
 • Análise de refeição por foto (planos com IA)
 • Plano alimentar com lista de compras
 • Duo: treine em dupla com chat e metas compartilhadas
+• Kite Spot Buddy: radar de amigos e alerta de ajuda no kitesurf (opt-in, só durante a sessão)
 • Integração com Apple Saúde (frequência cardíaca, calorias, passos, sono/HRV quando autorizado)
 • Cronômetro de descanso entre séries
 • Relatórios de progresso e evolução corporal

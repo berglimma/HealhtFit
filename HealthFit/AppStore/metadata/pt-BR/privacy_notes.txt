@@ -2,10 +2,11 @@ Dados coletados e finalidade (para o questionário App Privacy):
 
 1. E-mail — criação de conta e recuperação de senha
 2. Nome — personalização e saudações
-3. Foto de perfil (opcional) — exibição no perfil
+3. Foto de perfil (opcional) — exibição no perfil / equipe / Spot Buddy
 4. Fotos de evolução corporal (opcional) — comparação privada e laudos; não vendidas nem publicadas automaticamente
 5. Dados de saúde/fitness — treinos, sono, hidratação, HealthKit (com permissão do usuário)
 6. ID de usuário — sincronização Firebase
+7. Localização precisa — mapa/rota em sessões outdoor ativas; no Kite Spot Buddy (opt-in, só kitesurf), posição aproximada compartilhada temporariamente com amigos da equipe na mesma sessão. Não usada para ads nem tracking.
 
 Fotos de evolução: confidenciais, vinculadas à conta; exclusão com a conta e, quando o ciclo de evolução avança, exclusão automática das fotos do ciclo anterior conforme o app.
 Dados NÃO usados para rastreamento entre apps.

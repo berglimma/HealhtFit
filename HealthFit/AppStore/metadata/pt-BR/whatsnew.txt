@@ -1,3 +1,4 @@
-• Corrida e Treino em dupla (Duo) no plano Básico
-• Paywall e assinaturas com preços reais da App Store
-• Melhorias de estabilidade e correções gerais
+• Kite Spot Buddy: radar de amigos, alerta de ajuda e bússola no Apple Watch (só kitesurf, opt-in, só durante a sessão)
+• Política de privacidade atualizada (compartilhamento de posição temporário e consentimento LGPD)
+• Melhorias de mapa Spot Buddy no iPhone e layout no Watch
+• Correções de estabilidade

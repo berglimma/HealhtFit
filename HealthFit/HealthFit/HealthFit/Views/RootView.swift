@@ -106,6 +106,7 @@ struct RootView: View {
                 MealPhotoAnalysisService.shared.bind(userId: nil)
                 ClimbingGearService.shared.bind(userId: nil)
                 DuoTeamService.shared.bind(userId: nil, userName: nil)
+                CoachService.shared.stop()
                 WorkoutLiveActivitySync.end()
                 EveningTrainingNudgeService.cancelAll()
             }
@@ -150,6 +151,11 @@ struct RootView: View {
             userName: authService.currentUser?.greetingName,
             countryCode: authService.currentUser?.countryCode
         )
+        CoachService.shared.bind(
+            authService: authService,
+            workoutStore: workoutStore,
+            mealPlanService: mealPlanService
+        )
         mealPlanService.loadSavedData()
         if let userId = authService.currentUser?.id {
             Task { await MealPhotoAnalysisService.shared.loadIfNeeded(userId: userId) }
@@ -158,6 +164,8 @@ struct RootView: View {
                 await authService.syncProfilePhotoFromCloud(userId: userId)
             }
             Task { await DuoTeamService.shared.loadIfNeeded() }
+            CoachService.shared.start()
+            Task { await CoachService.shared.refreshLinkStatusesForPlan() }
         }
         refreshInactivityReminder()
         EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
@@ -215,6 +223,11 @@ struct RootView: View {
             userName: authService.currentUser?.greetingName,
             countryCode: authService.currentUser?.countryCode
         )
+        CoachService.shared.bind(
+            authService: authService,
+            workoutStore: workoutStore,
+            mealPlanService: mealPlanService
+        )
         mealPlanService.loadSavedData()
         refreshInactivityReminder()
         EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
@@ -225,6 +238,8 @@ struct RootView: View {
                 await authService.syncProfilePhotoFromCloud(userId: userId)
             }
             Task { await DuoTeamService.shared.loadIfNeeded() }
+            CoachService.shared.start()
+            Task { await CoachService.shared.refreshLinkStatusesForPlan() }
         }
 
         try? await Task.sleep(nanoseconds: 250_000_000)

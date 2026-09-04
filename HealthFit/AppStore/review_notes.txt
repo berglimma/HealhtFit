@@ -1,13 +1,13 @@
-HealthFit — App Review Notes (v1.0.0 build 4)
+HealthFit — App Review Notes (v1.0.2 build 6)
 
 BUNDLE
 - iOS: luan.com.healthfit.app
 - watchOS: luan.com.healthfit.app.watchkitapp
-- Version 1.0.0 / Build 4
+- Version 1.0.2 / Build 6
 
 DEMO ACCOUNT (RECOMMENDED)
 Email: healthfit.appreview@gmail.com
-Password: HealthFitReview2026!
+Password: (colar só no App Store Connect → App Review Information — não versionar senha no git)
 Sign in on the login screen (Entrar). Complete the short profile if prompted.
 
 DEVICES TESTED (Guideline 2.1)
@@ -19,10 +19,13 @@ DEVICES TESTED (Guideline 2.1)
 APP PURPOSE & AUDIENCE
 HealthFit is a fitness companion for adults 16+ who want guided workouts, nutrition planning, and optional AI coaching. It helps users train (strength, cardio, sports), track wellness, and optionally subscribe for tiered premium features.
 
+WHAT'S NEW IN THIS BUILD
+Kite Spot Buddy (kitesurf only): optional session-only friend radar, help request, and Watch compass. Separate consent from Duo. Location sharing ends when the session ends. Privacy policy updated: https://healthfit-30d87.web.app/privacidade/
+
 EXTERNAL SERVICES
 - Firebase (Auth, Firestore, Cloud Functions, FCM, Storage)
 - Apple Sign In, Google Sign In
-- Apple HealthKit, CoreLocation (active sessions), CoreMotion
+- Apple HealthKit, CoreLocation (active sessions + optional Spot Buddy), CoreMotion
 - StoreKit 2 (subscriptions)
 - No third-party ads or cross-app tracking
 
@@ -50,8 +53,14 @@ HOW TO TEST CORE FLOWS
 3. Nutrition tab → meal plan + shopping list (Fit+). Meal photo Análise (IA Plus).
 4. Assistant tab → ask a question (Fit: 5 msgs/day; IA Plus: unlimited).
 5. Workouts → Dupla/equipe → create/join team → chat (long-press to Report).
-6. Profile → Meu plano → subscribe / Restore purchases.
-7. Profile → Excluir conta (Guideline 5.1.1(v)).
+6. Cardio → Kitesurf → enable Kite Spot Buddy (consent sheet) → Start → Abrir mapa / Watch Spot Buddy page.
+7. Profile → Meu plano → subscribe / Restore purchases.
+8. Profile → Excluir conta (Guideline 5.1.1(v)).
+
+KITE SPOT BUDDY (LOCATION)
+- Opt-in only; kitesurf session only; separate from Duo (Duo has no live map).
+- Shares approximate position with opted-in team friends; deleted on session end.
+- Help alert requires Watch confirmation; “Estou bem” cancels.
 
 SUBSCRIPTIONS (StoreKit 2)
 - Group: HealthFit Plans (ID 22332052)
@@ -71,7 +80,7 @@ SUBSCRIPTIONS (StoreKit 2)
 
 HEALTHKIT / LOCATION / MOTION
 - HealthKit: metrics and workout sync (user must grant permission).
-- Location: outdoor cardio/sports maps only during active sessions.
+- Location: outdoor cardio/sports maps during active sessions; optional Spot Buddy sharing for kitesurf with consent.
 - Motion: pedometer / activity assist.
 - No ads; no cross-app tracking.
 
@@ -84,7 +93,7 @@ CONTENT DISCLAIMER
 Informational fitness/nutrition guidance only — not medical advice.
 
 WATCH APP
-Companion for heart rate / calories / session control. iPhone-only review is fine.
+Companion for heart rate / calories / session control + Spot Buddy radar/compass during kitesurf. iPhone-only review is fine.
 
 CONTACT
 berg.limma@gmail.com

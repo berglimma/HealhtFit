@@ -1,3 +1,4 @@
-• Running and Duo team training on the Basic plan
-• Paywall and subscriptions with live App Store pricing
-• Stability improvements and general fixes
+• Kite Spot Buddy: friend radar, help alert and Watch compass (kitesurf only, opt-in, session-only)
+• Updated privacy policy (temporary location sharing + LGPD consent)
+• Spot Buddy map and Watch layout improvements
+• Stability fixes

@@ -6,7 +6,7 @@ Bundle: `luan.com.healthfit.app` · Versão **1.0.0 (4)**
 ## Imediato (primeiras 48h)
 
 - [ ] Baixar o app da loja em um iPhone limpo (busca "HealthFit" ou link acima)
-- [ ] Login com conta demo: `healthfit.appreview@gmail.com` / `HealthFitReview2026!`
+- [ ] Login com conta demo: `healthfit.appreview@gmail.com` (senha no App Store Connect)
 - [ ] Testar compra sandbox: Perfil → Meu plano → assinar → Restaurar compras
 - [ ] Testar código cortesia: Perfil → Meu plano → Tenho um código de cortesia
 - [ ] Confirmar links na ficha (Privacidade, Suporte, Termos) abrem no Safari

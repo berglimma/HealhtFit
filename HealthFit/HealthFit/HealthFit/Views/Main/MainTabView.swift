@@ -11,6 +11,8 @@ struct MainTabView: View {
     @ObservedObject private var dailyEveningService = DailyEveningCheckInService.shared
     @ObservedObject private var profileReminder = ProfileDataReminderService.shared
     @ObservedObject private var duoNavigation = DuoNavigationRouter.shared
+    @ObservedObject private var coachNavigation = CoachNavigationRouter.shared
+    @ObservedObject private var coachService = CoachService.shared
     @State private var selectedTab = 0
     /// Only mount heavy tab roots after first visit — TabView otherwise builds all 5 eagerly.
     @State private var loadedTabs: Set<Int> = [0]
@@ -123,6 +125,10 @@ struct MainTabView: View {
                 loadedTabs.insert(workoutsTabTag)
                 selectedTab = workoutsTabTag
             }
+            .onChange(of: coachNavigation.focusProfileTabTick) { _, _ in
+                loadedTabs.insert(profileTabTag)
+                selectedTab = profileTabTag
+            }
             .sheet(item: $duoNavigation.presentedChat) { destination in
                 NavigationStack {
                     DuoTeamChatView(teamId: destination.teamId, teamName: destination.teamName)
@@ -134,6 +140,36 @@ struct MainTabView: View {
                                 }
                             }
                         }
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(item: $coachNavigation.presentedChat) { destination in
+                NavigationStack {
+                    Group {
+                        if let link = coachService.myLinks.first(where: { $0.id == destination.linkId }) {
+                            CoachChatView(link: link)
+                        } else {
+                            VStack(spacing: 12) {
+                                ProgressView()
+                                Text("Abrindo chat Coach…")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .onAppear {
+                                CoachService.shared.start()
+                                CoachService.shared.ensureChatListening(linkId: destination.linkId)
+                            }
+                        }
+                    }
+                    .environmentObject(authService)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Fechar") {
+                                coachNavigation.dismissChat()
+                            }
+                        }
+                    }
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)

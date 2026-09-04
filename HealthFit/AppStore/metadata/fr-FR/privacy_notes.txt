@@ -2,10 +2,12 @@ Données collectées et finalité (pour le questionnaire App Privacy) :
 
 1. E-mail — création de compte et récupération de mot de passe
 2. Nom — personnalisation et salutations
-3. Photo de profil (optionnelle) — affichage dans le profil
+3. Photo de profil (optionnelle) — affichage dans le profil / équipe / Spot Buddy
 4. Données santé/fitness — séances, sommeil, hydratation, HealthKit (avec permission)
 5. ID utilisateur — synchronisation Firebase
+6. Localisation précise — carte/itinéraire pendant les séances outdoor actives ; avec Kite Spot Buddy (opt-in, kitesurf uniquement), position approximative partagée temporairement avec les amis de l'équipe. Pas utilisée pour la pub ni le tracking.
 
 Données NON utilisées pour le suivi inter-apps.
 Suppression de compte disponible dans l'app (Profil → Supprimer le compte).
 Politique : https://healthfit-30d87.web.app/privacidade/
+Contact : berg.limma@gmail.com

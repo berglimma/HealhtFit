@@ -187,6 +187,7 @@ enum AppFeature: String, CaseIterable, Identifiable {
     case bodyEvolutionExport
     case liveActivityPremium
     case completePriority
+    case healthFitCoach
 
     var id: String { rawValue }
 
@@ -208,6 +209,7 @@ enum AppFeature: String, CaseIterable, Identifiable {
         case .bodyEvolutionExport: return "Evolução corporal / exportação"
         case .liveActivityPremium: return "Live Activity e insights premium"
         case .completePriority: return "Acesso prioritário / tudo liberado"
+        case .healthFitCoach: return "HealthFit Coach (personal / nutri)"
         }
     }
 
@@ -246,6 +248,8 @@ enum AppFeature: String, CaseIterable, Identifiable {
             return "Live Activity na tela de bloqueio e insights avançados."
         case .completePriority:
             return "Tudo liberado, sem limites."
+        case .healthFitCoach:
+            return "Receba fichas do personal, cardápio do nutricionista e chat 1:1 — o profissional não paga; você precisa do plano Fit ou superior."
         }
     }
 
@@ -254,7 +258,7 @@ enum AppFeature: String, CaseIterable, Identifiable {
         switch self {
         case .fullWorkouts, .appleWatchSync, .duoTeam:
             return .basic
-        case .customWorkouts, .advancedModalities, .mealPlan, .shoppingList, .aiChatLimited:
+        case .customWorkouts, .advancedModalities, .mealPlan, .shoppingList, .aiChatLimited, .healthFitCoach:
             return .fit
         case .nutritionCoach, .mealPhotoAnalysis, .advancedSportAnalytics, .aiChatUnlimited,
              .monthlyReport, .bodyEvolutionExport, .liveActivityPremium:

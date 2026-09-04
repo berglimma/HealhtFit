@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Cria ou atualiza a conta demo de App Review no Firebase Auth.
- * Uso: npm run ensure:demo-account
+ * Uso: DEMO_REVIEW_PASSWORD='...' npm run ensure:demo-account
  */
 const {execSync} = require("child_process");
 const path = require("path");
@@ -16,6 +16,12 @@ function repoRoot() {
 }
 
 async function main() {
+  const password = (process.env.DEMO_REVIEW_PASSWORD || "").trim();
+  if (password.length < 8) {
+    console.error("Defina DEMO_REVIEW_PASSWORD (mín. 8) no ambiente — não versionar no git.");
+    process.exit(1);
+  }
+
   console.log(`==> Build + deploy ${FUNCTION_NAME}...`);
   execSync("npm run build", {stdio: "inherit", cwd: path.join(__dirname, "..")});
   try {
@@ -32,7 +38,11 @@ async function main() {
 
   const response = await fetch(url, {
     method: "POST",
-    headers: {"x-healthfit-seed-key": COURTESY_SEED_KEY},
+    headers: {
+      "content-type": "application/json",
+      "x-healthfit-seed-key": COURTESY_SEED_KEY,
+    },
+    body: JSON.stringify({password}),
   });
   const text = await response.text();
   console.log(`Status: ${response.status}`);

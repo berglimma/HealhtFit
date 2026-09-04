@@ -1428,6 +1428,10 @@ final class AppNotificationCenterDelegate: NSObject, UNUserNotificationCenterDel
                 content.userInfo,
                 category: content.categoryIdentifier
             )
+            CoachNavigationRouter.shared.handleNotificationUserInfo(
+                content.userInfo,
+                category: content.categoryIdentifier
+            )
         }
         completionHandler()
     }

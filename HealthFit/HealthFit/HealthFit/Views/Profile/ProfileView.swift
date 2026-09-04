@@ -10,6 +10,7 @@ struct ProfileView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var evolutionService: BodyEvolutionService
     @EnvironmentObject var subscriptions: SubscriptionService
+    @ObservedObject private var coach = CoachService.shared
     @ObservedObject private var nutritionNotifPrefs = NutritionNotificationPreferences.shared
     @ObservedObject private var bleHeartRate = BluetoothHeartRateService.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -178,6 +179,7 @@ struct ProfileView: View {
                 subscriptionPlanSection
                 displayNameSection(for: user)
                 accountRoleSection(for: user)
+                healthFitCoachSection
 
                 if showSecondarySections {
                     biotypeSection(for: user)
@@ -713,48 +715,133 @@ struct ProfileView: View {
     }
 
     @ViewBuilder
+    private var healthFitCoachSection: some View {
+        Section {
+            NavigationLink {
+                CoachHubView()
+            } label: {
+                HealthFitCoachProfileCard(
+                    role: authService.currentUser?.accountRole ?? .student,
+                    subtitle: coachHubSubtitle,
+                    statusChips: coachStatusChips,
+                    isFitLocked: {
+                        let role = authService.currentUser?.accountRole ?? .student
+                        let isPro = role.isPersonalProfessional || role.isNutritionProfessional
+                        return !isPro && !subscriptions.canAccess(.healthFitCoach)
+                    }()
+                )
+            }
+            .buttonStyle(.plain)
+            .navigationLinkIndicatorVisibility(.hidden)
+            // Largura igual às seções agrupadas (“Você é” / Biotipo).
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+            .listRowBackground(Color.clear)
+            .onAppear { coach.start() }
+        }
+    }
+
+    private var coachStatusChips: [String] {
+        var chips: [String] = []
+        let role = authService.currentUser?.accountRole ?? .student
+        if role.isPersonalProfessional || role.isNutritionProfessional {
+            let students = coach.myLinks.filter { $0.coachUid == authService.currentUser?.id && $0.isActiveLike }.count
+            chips.append(students == 0 ? "Sem alunos" : "\(students) aluno\(students == 1 ? "" : "s")")
+            if coach.myProfile != nil {
+                chips.append(coach.myProfile?.credentialSummary ?? "Credencial")
+            } else {
+                chips.append("Completar CREF/CRN")
+            }
+            return chips
+        }
+        if let personal = coach.activePersonalLink {
+            chips.append("Personal · \(personal.status.displayLabel)")
+        }
+        if let nutri = coach.activeNutritionLink {
+            chips.append("Nutri · \(nutri.status.displayLabel)")
+        }
+        if chips.isEmpty {
+            chips.append(subscriptions.canAccess(.healthFitCoach) ? "Pronto para vincular" : "Fit+")
+        }
+        return chips
+    }
+
+    private var coachHubSubtitle: String {
+        let role = authService.currentUser?.accountRole ?? .student
+        if role.isPersonalProfessional || role.isNutritionProfessional {
+            let count = coach.myLinks.filter { $0.coachUid == authService.currentUser?.id }.count
+            return count == 0
+                ? "Cadastre alunos, envie fichas e cardápios."
+                : "\(count) aluno(s) vinculado(s) · fichas, dietas e chat"
+        }
+        if let personal = coach.activePersonalLink, let nutri = coach.activeNutritionLink {
+            return "\(personal.coachName) · \(nutri.coachName)"
+        }
+        if let personal = coach.activePersonalLink {
+            return "Personal: \(personal.coachName) · \(personal.status.displayLabel)"
+        }
+        if let nutri = coach.activeNutritionLink {
+            return "Nutri: \(nutri.coachName) · \(nutri.status.displayLabel)"
+        }
+        return "Vincule personal ou nutri com código ou busca regional."
+    }
+
+    private var isPersonalLockedByCoach: Bool {
+        coach.activePersonalLink != nil
+    }
+
+    private var isNutritionLockedByCoach: Bool {
+        coach.activeNutritionLink != nil
+    }
+
+    @ViewBuilder
     private var personalTrainerSection: some View {
         Section(L10n.Profile.personalTrainer) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(L10n.Profile.hasPersonalTrainer)
-                    .font(.subheadline.weight(.medium))
-                Picker("Possui personal?", selection: $usesPersonalTrainer) {
-                    Text(L10n.Common.no).tag(false)
-                    Text(L10n.Common.yes).tag(true)
-                }
-                .pickerStyle(.segmented)
-                .onChange(of: usesPersonalTrainer) { _, enabled in
-                    updatePersonalTrainerAvailability(enabled)
-                }
-            }
-
-            if usesPersonalTrainer {
-                TextField(L10n.Profile.trainerName, text: $trainerName)
-                    .textContentType(.name)
-                    .onChange(of: trainerName) { _, _ in
-                        savePersonalTrainer()
-                    }
-
-                TextField(L10n.Profile.trainerEmail, text: $trainerEmail)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .onChange(of: trainerEmail) { _, _ in
-                        savePersonalTrainer()
-                    }
-
-                if authService.currentUser?.hasPersonalTrainer == true {
-                    MailAccountRequiredNotice(audience: .trainer)
-                } else {
-                    Text("Cadastre o e-mail para enviar relatórios após cada treino. O envio usa o app Mail deste \(MailSetupGuidance.deviceName) — é preciso ter uma conta em \(MailSetupGuidance.settingsPath).")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            } else {
-                Text("Sem personal cadastrado. A edição de nome e e-mail fica bloqueada.")
+            if isPersonalLockedByCoach, let link = coach.activePersonalLink {
+                Label("Vinculado via HealthFit Coach", systemImage: "checkmark.seal.fill")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.accent)
+                LabeledContent("Personal", value: link.coachName)
+                Text("Nome preenchido automaticamente. Gerencie o vínculo em HealthFit Coach.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L10n.Profile.hasPersonalTrainer)
+                        .font(.subheadline.weight(.medium))
+                    Picker("Possui personal?", selection: $usesPersonalTrainer) {
+                        Text(L10n.Common.no).tag(false)
+                        Text(L10n.Common.yes).tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: usesPersonalTrainer) { _, enabled in
+                        updatePersonalTrainerAvailability(enabled)
+                    }
+                }
+
+                if usesPersonalTrainer {
+                    TextField(L10n.Profile.trainerName, text: $trainerName)
+                        .textContentType(.name)
+                        .onChange(of: trainerName) { _, _ in
+                            savePersonalTrainer()
+                        }
+
+                    TextField(L10n.Profile.trainerEmail, text: $trainerEmail)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .onChange(of: trainerEmail) { _, _ in
+                            savePersonalTrainer()
+                        }
+
+                    if authService.currentUser?.hasPersonalTrainer == true {
+                        MailAccountRequiredNotice(audience: .trainer)
+                    } else {
+                        Text("Informe o e-mail para enviar a ficha de treino.")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
             }
         }
     }
@@ -762,46 +849,56 @@ struct ProfileView: View {
     @ViewBuilder
     private var nutritionistSection: some View {
         Section(L10n.Profile.nutritionist) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(L10n.Profile.hasNutritionist)
-                    .font(.subheadline.weight(.medium))
-                Picker("Possui nutricionista?", selection: $usesNutritionist) {
-                    Text(L10n.Common.no).tag(false)
-                    Text(L10n.Common.yes).tag(true)
-                }
-                .pickerStyle(.segmented)
-                .onChange(of: usesNutritionist) { _, enabled in
-                    updateNutritionistAvailability(enabled)
-                }
-            }
-
-            if usesNutritionist {
-                TextField(L10n.Profile.nutritionistName, text: $nutritionistName)
-                    .textContentType(.name)
-                    .onChange(of: nutritionistName) { _, _ in
-                        saveNutritionist()
+            if isNutritionLockedByCoach, let link = coach.activeNutritionLink {
+                Label("Vinculado via HealthFit Coach", systemImage: "checkmark.seal.fill")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.accent)
+                LabeledContent("Nutricionista", value: link.coachName)
+                Text("Nome preenchido automaticamente. Gerencie o vínculo em HealthFit Coach.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L10n.Profile.hasNutritionist)
+                        .font(.subheadline.weight(.medium))
+                    Picker("Possui nutricionista?", selection: $usesNutritionist) {
+                        Text(L10n.Common.no).tag(false)
+                        Text(L10n.Common.yes).tag(true)
                     }
-
-                TextField(L10n.Profile.nutritionistEmail, text: $nutritionistEmail)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .onChange(of: nutritionistEmail) { _, _ in
-                        saveNutritionist()
+                    .pickerStyle(.segmented)
+                    .onChange(of: usesNutritionist) { _, enabled in
+                        updateNutritionistAvailability(enabled)
                     }
+                }
 
-                if authService.currentUser?.hasNutritionist == true {
-                    MailAccountRequiredNotice(audience: .nutritionist)
+                if usesNutritionist {
+                    TextField(L10n.Profile.nutritionistName, text: $nutritionistName)
+                        .textContentType(.name)
+                        .onChange(of: nutritionistName) { _, _ in
+                            saveNutritionist()
+                        }
+
+                    TextField(L10n.Profile.nutritionistEmail, text: $nutritionistEmail)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .onChange(of: nutritionistEmail) { _, _ in
+                            saveNutritionist()
+                        }
+
+                    if authService.currentUser?.hasNutritionist == true {
+                        MailAccountRequiredNotice(audience: .nutritionist)
+                    } else {
+                        Text("Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista. O envio usa o app Mail deste \(MailSetupGuidance.deviceName) — é preciso ter uma conta em \(MailSetupGuidance.settingsPath).")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 } else {
-                    Text("Cadastre o e-mail para enviar o relatório de nutrição ao nutricionista. O envio usa o app Mail deste \(MailSetupGuidance.deviceName) — é preciso ter uma conta em \(MailSetupGuidance.settingsPath).")
+                    Text("Sem nutricionista cadastrado. A edição de nome e e-mail fica bloqueada.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-            } else {
-                Text("Sem nutricionista cadastrado. A edição de nome e e-mail fica bloqueada.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -2331,7 +2428,7 @@ private struct ListSafeButtonStyle: PrimitiveButtonStyle {
 }
 
 /// Editor isolado: ScrollView + campos largos + FocusState (Form/List no Perfil travava o teclado numérico).
-private struct BodyMeasurementsEditorSheet: View {
+struct BodyMeasurementsEditorSheet: View {
     enum Field: Hashable {
         case neck, shoulders, chest, rightArm, leftArm
         case waist, abdomen, hip

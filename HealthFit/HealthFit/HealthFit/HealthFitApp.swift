@@ -44,6 +44,7 @@ struct HealthFitApp: App {
                 .environmentObject(BodyEvolutionService.shared)
                 .environmentObject(languageStore)
                 .environmentObject(SubscriptionService.shared)
+                .environmentObject(CoachService.shared)
                 .environment(\.locale, languageStore.locale)
                 // Avoid `.id(language)` — full view remount freezes tab navigation on language bind.
                 .preferredColorScheme(.dark)
@@ -52,6 +53,11 @@ struct HealthFitApp: App {
                 }
                 .onAppear {
                     watchConnectivity.bind(workoutStore: workoutStore)
+                    CoachService.shared.bind(
+                        authService: authService,
+                        workoutStore: workoutStore,
+                        mealPlanService: mealPlanService
+                    )
                 }
                 .task(priority: .utility) {
                     await Task.yield()

@@ -680,6 +680,8 @@ struct GenderProgramHeroCard: View {
 
 struct GenderWorkoutHubView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
+    @EnvironmentObject var subscriptions: SubscriptionService
+    @ObservedObject private var coach = CoachService.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     let gender: Gender
@@ -698,12 +700,29 @@ struct GenderWorkoutHubView: View {
         gender == .female ? Color(red: 0.86, green: 0.45, blue: 0.58) : AppTheme.accent
     }
 
+    private var coachPrescribedSheets: [WorkoutSheet] {
+        workoutStore.workoutSheets.filter { sheet in
+            sheet.isCoachPrescribed
+                && sheet.isActive
+                && (sheet.targetGender == nil || sheet.targetGender == gender)
+        }
+        .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    /// Com personal ativo + Fit+: musculação mostra só as fichas prescritas (cardio permanece livre).
+    private var usesCoachPrescribedOnly: Bool {
+        guard subscriptions.canAccess(.healthFitCoach),
+              let link = coach.activePersonalLink,
+              link.status == .active else { return false }
+        return !coachPrescribedSheets.isEmpty
+    }
+
     private var recommendedSheets: [WorkoutSheet] {
         workoutStore.recommendedStandardWorkouts(for: gender)
     }
 
     private var customSheets: [WorkoutSheet] {
-        workoutStore.customWorkoutSheets(for: gender)
+        workoutStore.customWorkoutSheets(for: gender).filter { !$0.isCoachPrescribed }
     }
 
     private var recentCompletedSessions: [WorkoutSession] {
@@ -715,20 +734,38 @@ struct GenderWorkoutHubView: View {
             VStack(spacing: 20) {
                 hubHeader
 
-                workoutGroupSection(
-                    title: "Personalizados",
-                    subtitle: "Treinos criados para este programa",
-                    sheets: customSheets,
-                    emptyMessage: "Nenhum personalizado ainda. Toque em + para criar ou importe uma ficha (câmera, foto ou PDF)."
-                )
+                if usesCoachPrescribedOnly {
+                    workoutGroupSection(
+                        title: "Fichas do seu personal",
+                        subtitle: coach.activePersonalLink.map { "Prescritas por \($0.coachName) · HealthFit Coach" }
+                            ?? "Prescritas pelo seu personal",
+                        sheets: coachPrescribedSheets,
+                        emptyMessage: "Aguardando ficha do personal."
+                    )
+                } else {
+                    if !coachPrescribedSheets.isEmpty {
+                        workoutGroupSection(
+                            title: "Fichas do seu personal",
+                            subtitle: "HealthFit Coach",
+                            sheets: coachPrescribedSheets
+                        )
+                    }
 
-                GuidedWorkoutSections(gender: gender)
+                    workoutGroupSection(
+                        title: "Personalizados",
+                        subtitle: "Treinos criados para este programa",
+                        sheets: customSheets,
+                        emptyMessage: "Nenhum personalizado ainda. Toque em + para criar ou importe uma ficha (câmera, foto ou PDF)."
+                    )
 
-                workoutGroupSection(
-                    title: "Recomendados",
-                    subtitle: recommendedSubtitle,
-                    sheets: recommendedSheets
-                )
+                    GuidedWorkoutSections(gender: gender)
+
+                    workoutGroupSection(
+                        title: "Recomendados",
+                        subtitle: recommendedSubtitle,
+                        sheets: recommendedSheets
+                    )
+                }
 
                 RecentCompletedWorkoutsSection(
                     sessions: recentCompletedSessions,
@@ -746,22 +783,24 @@ struct GenderWorkoutHubView: View {
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                HStack(spacing: 12) {
-                    Button {
-                        showScanWorkout = true
-                    } label: {
-                        Image(systemName: "doc.text.viewfinder")
-                            .foregroundStyle(AppTheme.accent)
-                    }
-                    .accessibilityLabel("Escanear ficha de treino")
+                if !usesCoachPrescribedOnly {
+                    HStack(spacing: 12) {
+                        Button {
+                            showScanWorkout = true
+                        } label: {
+                            Image(systemName: "doc.text.viewfinder")
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                        .accessibilityLabel("Escanear ficha de treino")
 
-                    Button {
-                        onCreateCustom(gender)
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(AppTheme.accent)
+                        Button {
+                            onCreateCustom(gender)
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                        .accessibilityLabel("Criar ficha personalizada")
                     }
-                    .accessibilityLabel("Criar ficha personalizada")
                 }
             }
         }
@@ -807,9 +846,15 @@ struct GenderWorkoutHubView: View {
                 Text(gender == .female ? "FEMININO" : "MASCULINO")
                     .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
-                Text("\(recommendedSheets.count) recomendados · \(customSheets.count) personalizados")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
+                if usesCoachPrescribedOnly {
+                    Text("\(coachPrescribedSheets.count) ficha(s) do personal · HealthFit Coach")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                } else {
+                    Text("\(recommendedSheets.count) recomendados · \(customSheets.count) personalizados")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
             }
 
             Spacer()

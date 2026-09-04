@@ -257,10 +257,15 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
     var targetGender: Gender?
     /// Ficha gerada pelo IAssistente (não criada manualmente em Nova Ficha).
     var createdByAssistant: Bool
+    /// Ficha prescrita pelo HealthFit Coach (personal).
+    var isCoachPrescribed: Bool
+    var coachLinkId: String?
+    var prescribedByUid: String?
+    var prescribedByName: String?
 
-    /// Fichas personalizadas / IA — sincronizam na nuvem. Catálogo local fica no device.
+    /// Fichas personalizadas / IA / coach — sincronizam na nuvem. Catálogo local fica no device.
     var isCloudSyncable: Bool {
-        isUserCreated || createdByAssistant
+        isUserCreated || createdByAssistant || isCoachPrescribed
     }
 
     init(
@@ -274,7 +279,11 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         isActive: Bool = true,
         isUserCreated: Bool = false,
         targetGender: Gender? = nil,
-        createdByAssistant: Bool = false
+        createdByAssistant: Bool = false,
+        isCoachPrescribed: Bool = false,
+        coachLinkId: String? = nil,
+        prescribedByUid: String? = nil,
+        prescribedByName: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -287,10 +296,15 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         self.isUserCreated = isUserCreated
         self.targetGender = targetGender ?? Self.inferredGender(from: title)
         self.createdByAssistant = createdByAssistant
+        self.isCoachPrescribed = isCoachPrescribed
+        self.coachLinkId = coachLinkId
+        self.prescribedByUid = prescribedByUid
+        self.prescribedByName = prescribedByName
     }
 
     enum CodingKeys: String, CodingKey {
         case id, title, description, exercises, assignedTo, createdAt, updatedAt, isActive, isUserCreated, targetGender, createdByAssistant
+        case isCoachPrescribed, coachLinkId, prescribedByUid, prescribedByName
     }
 
     init(from decoder: Decoder) throws {
@@ -307,6 +321,10 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         targetGender = try container.decodeIfPresent(Gender.self, forKey: .targetGender)
             ?? Self.inferredGender(from: title)
         createdByAssistant = try container.decodeIfPresent(Bool.self, forKey: .createdByAssistant) ?? false
+        isCoachPrescribed = try container.decodeIfPresent(Bool.self, forKey: .isCoachPrescribed) ?? false
+        coachLinkId = try container.decodeIfPresent(String.self, forKey: .coachLinkId)
+        prescribedByUid = try container.decodeIfPresent(String.self, forKey: .prescribedByUid)
+        prescribedByName = try container.decodeIfPresent(String.self, forKey: .prescribedByName)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -322,6 +340,10 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         try container.encode(isUserCreated, forKey: .isUserCreated)
         try container.encodeIfPresent(targetGender, forKey: .targetGender)
         try container.encode(createdByAssistant, forKey: .createdByAssistant)
+        try container.encode(isCoachPrescribed, forKey: .isCoachPrescribed)
+        try container.encodeIfPresent(coachLinkId, forKey: .coachLinkId)
+        try container.encodeIfPresent(prescribedByUid, forKey: .prescribedByUid)
+        try container.encodeIfPresent(prescribedByName, forKey: .prescribedByName)
     }
 
     var resolvedProgramGender: Gender? {

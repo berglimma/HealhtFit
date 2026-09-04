@@ -1,6 +1,8 @@
 # App Privacy — questionário App Store Connect
 
-Marque apenas o que o app realmente coleta. Base: `privacy_notes.txt` + Firebase + HealthKit + fotos.
+Marque apenas o que o app realmente coleta. Base: `privacy_notes.txt` + Firebase + HealthKit + fotos + Kite Spot Buddy.
+
+**Privacy Policy URL (obrigatório):** `https://healthfit-30d87.web.app/privacidade/`
 
 ## Data Types
 
@@ -9,6 +11,13 @@ Marque apenas o que o app realmente coleta. Base: `privacy_notes.txt` + Firebase
 |------|--------|----------------------|---------------------|------------|
 | Email Address | Sim | Sim | Não | App Functionality, Account |
 | Name | Sim | Sim | Não | App Functionality |
+
+### Location
+| Tipo | Coleta | Vinculado | Tracking | Finalidade |
+|------|--------|-----------|----------|------------|
+| Precise Location | Sim | Sim | Não | App Functionality |
+
+**Quando / por quê:** mapa e rota em sessões outdoor ativas (corrida, caminhada, bike, surf, kitesurf etc.) e, com opt-in, **Kite Spot Buddy** (compartilhamento temporário com amigos da equipe só durante kitesurf). **Não** usar para ads / tracking.
 
 ### Health & Fitness
 | Tipo | Coleta | Vinculado | Tracking | Finalidade |
@@ -20,7 +29,7 @@ Marque apenas o que o app realmente coleta. Base: `privacy_notes.txt` + Firebase
 | Tipo | Coleta | Vinculado | Tracking | Finalidade |
 |------|--------|-----------|----------|------------|
 | Photos or Videos | Sim (perfil / evolução, opcional) | Sim | Não | App Functionality |
-| Other User Content | Sim (check-ins, notas) | Sim | Não | App Functionality |
+| Other User Content | Sim (check-ins, notas, chat Duo) | Sim | Não | App Functionality |
 
 ### Identifiers
 | Tipo | Coleta | Vinculado | Tracking | Finalidade |
@@ -39,11 +48,8 @@ Declare Crash Data + Product Interaction. **Não** marque como tracking (sem IDF
 
 ## NÃO declarar
 - Advertising Data
-- Precise Location for ads (location is only for workout maps — se Connect perguntar Location, marque **Precise Location** com finalidade **App Functionality**, não tracking)
+- Location para ads
 - Purchases history as sold to third parties
 
-## Privacy Policy URL
-`https://healthfit-30d87.web.app/privacidade/`
-
 ## Account deletion
-Disponível em **Perfil → Excluir conta** (obrigatório Guideline 5.1.1(v)). Apaga Auth, Firestore (perfil, treinos, wellness, meal plan, evolução corporal) e Storage do usuário.
+Disponível em **Perfil → Excluir conta** (Guideline 5.1.1(v)). Apaga Auth, Firestore (perfil, treinos, wellness, meal plan, evolução, presença Spot Buddy) e Storage do usuário.

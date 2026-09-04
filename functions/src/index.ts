@@ -215,6 +215,122 @@ export const onDuoChatMessageCreated = onDocumentCreated(
   },
 );
 
+/**
+ * Push FCM ao criar mensagem no chat HealthFit Coach (personal/nutri ↔ aluno).
+ */
+export const onCoachChatMessageCreated = onDocumentCreated(
+  {
+    document: "coachLinks/{linkId}/messages/{messageId}",
+    timeoutSeconds: 30,
+    memory: "256MiB",
+    concurrency: 20,
+  },
+  async (event) => {
+    const data = event.data?.data() as Record<string, unknown> | undefined;
+    if (!data) return;
+
+    const linkId = event.params.linkId as string;
+    const senderUid = String(data.senderUid ?? "");
+    const senderName = String(data.senderName ?? "Alguém");
+    const rawText = String(data.text ?? "").trim();
+    if (!senderUid || !rawText) {
+      logger.info("onCoachChatMessageCreated: missing sender/text", {linkId});
+      return;
+    }
+
+    const linkSnap = await db.collection("coachLinks").doc(linkId).get();
+    if (!linkSnap.exists) return;
+    const link = linkSnap.data() ?? {};
+    const memberUids = (link.memberUids as string[] | undefined) ?? [];
+    const recipients = memberUids.filter((uid) => uid && uid !== senderUid);
+    if (recipients.length === 0) return;
+
+    const coachName = String(link.coachName ?? "Coach");
+    const studentName = String(link.studentName ?? "Aluno");
+    const peerLabel =
+      senderUid === String(link.coachUid ?? "") ? studentName : coachName;
+    const preview =
+      rawText.length > 120 ? `${rawText.slice(0, 117)}…` : rawText;
+    const title = `HealthFit Coach · ${peerLabel}`;
+    const body = `${senderName}: ${preview}`;
+
+    const tokenSnaps = await Promise.all(
+      recipients.map((uid) =>
+        db.collection("users").doc(uid).collection("fcmTokens").limit(8).get()
+      )
+    );
+    const tokens: string[] = [];
+    for (const tokenSnap of tokenSnaps) {
+      for (const doc of tokenSnap.docs) {
+        const token = doc.data().token as string | undefined;
+        if (token && token.length > 20) tokens.push(token);
+      }
+    }
+    const uniqueTokens = Array.from(new Set(tokens));
+    if (uniqueTokens.length === 0) {
+      logger.info("onCoachChatMessageCreated: no FCM tokens", {linkId, recipients});
+      return;
+    }
+
+    const response = await getMessaging().sendEachForMulticast({
+      tokens: uniqueTokens,
+      notification: {title, body},
+      data: {
+        type: "coachChatMessage",
+        kind: "coachChatMessage",
+        linkId,
+        category: "HEALTHFIT_COACH",
+      },
+      android: {priority: "high"},
+      apns: {
+        headers: {
+          "apns-priority": "10",
+          "apns-push-type": "alert",
+        },
+        payload: {
+          aps: {
+            alert: {title, body},
+            sound: "default",
+            badge: 1,
+            category: "HEALTHFIT_COACH",
+          },
+        },
+      },
+    });
+
+    for (let i = 0; i < response.responses.length; i++) {
+      const res = response.responses[i];
+      if (res.success) continue;
+      const code = res.error?.code ?? "";
+      if (
+        !code.includes("registration-token-not-registered") &&
+        !code.includes("invalid-registration-token")
+      ) {
+        continue;
+      }
+      const badToken = uniqueTokens[i];
+      for (const uid of recipients) {
+        const hit = await db
+          .collection("users")
+          .doc(uid)
+          .collection("fcmTokens")
+          .where("token", "==", badToken)
+          .limit(3)
+          .get();
+        const batch = db.batch();
+        hit.docs.forEach((d) => batch.delete(d.ref));
+        if (!hit.empty) await batch.commit();
+      }
+    }
+
+    logger.info("onCoachChatMessageCreated push", {
+      linkId,
+      successCount: response.successCount,
+      failureCount: response.failureCount,
+    });
+  },
+);
+
 const COURTESY_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const COURTESY_PLAN_RANK: Record<string, number> = {
   basic: 1,
@@ -425,9 +541,10 @@ export const seedCourtesyVouchers = onRequest(
 );
 
 const DEMO_REVIEW_EMAIL = "healthfit.appreview@gmail.com";
-const DEMO_REVIEW_PASSWORD = "HealthFitReview2026!";
 
-/** Uso interno: garantir conta demo para App Review (`npm run ensure:demo-account`). */
+/** Uso interno: garantir conta demo para App Review (`npm run ensure:demo-account`).
+ *  Senha via body.password ou env DEMO_REVIEW_PASSWORD — não versionar no git.
+ */
 export const ensureAppReviewDemoAccount = onRequest(
   {
     region: "southamerica-east1",
@@ -445,12 +562,23 @@ export const ensureAppReviewDemoAccount = onRequest(
       return;
     }
 
+    const bodyPassword =
+      typeof req.body?.password === "string" ? req.body.password.trim() : "";
+    const envPassword = (process.env.DEMO_REVIEW_PASSWORD || "").trim();
+    const demoPassword = bodyPassword || envPassword;
+    if (demoPassword.length < 8) {
+      res.status(400).json({
+        error: "Provide password in body or DEMO_REVIEW_PASSWORD env (min 8 chars)",
+      });
+      return;
+    }
+
     const auth = getAuth();
 
     try {
       const existing = await auth.getUserByEmail(DEMO_REVIEW_EMAIL);
       await auth.updateUser(existing.uid, {
-        password: DEMO_REVIEW_PASSWORD,
+        password: demoPassword,
         emailVerified: true,
         displayName: "App Review",
         disabled: false,
@@ -470,7 +598,7 @@ export const ensureAppReviewDemoAccount = onRequest(
     try {
       const user = await auth.createUser({
         email: DEMO_REVIEW_EMAIL,
-        password: DEMO_REVIEW_PASSWORD,
+        password: demoPassword,
         emailVerified: true,
         displayName: "App Review",
       });

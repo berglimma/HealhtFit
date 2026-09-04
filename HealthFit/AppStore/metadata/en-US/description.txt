@@ -9,6 +9,8 @@ KEY FEATURES
 • Advanced modalities: Surf, Kitesurf, Rowing, Climbing, and Combat sports (fight timer)
 • AI Assistant with check-ins, tips, and daily motivation
 • Meal plan with shopping list
+• Duo team training with chat
+• Kite Spot Buddy: friend radar and help alert for kitesurf (opt-in, session-only)
 • Apple Health integration (heart rate, calories, steps, sleep/HRV when authorized)
 • Rest timer between sets
 • Progress reports and body evolution

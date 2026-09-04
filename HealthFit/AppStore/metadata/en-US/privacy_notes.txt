@@ -2,10 +2,11 @@ Data collected and purpose (for the App Privacy questionnaire):
 
 1. Email — account creation and password recovery
 2. Name — personalization and greetings
-3. Profile photo (optional) — display on profile
+3. Profile photo (optional) — display on profile / team / Spot Buddy
 4. Body evolution photos (optional) — private progress comparison and reports; not sold or auto-published
 5. Health/fitness data — workouts, sleep, hydration, HealthKit (with user permission)
 6. User ID — Firebase sync
+7. Precise location — map/route during active outdoor sessions; with Kite Spot Buddy (opt-in, kitesurf only), approximate position shared temporarily with team friends in the same session. Not used for ads or tracking.
 
 Body evolution photos are confidential and account-bound; removed with account deletion and when a completed evolution cycle drops prior photos per app logic.
 Data is NOT used for tracking across apps.

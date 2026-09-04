@@ -1,7 +1,7 @@
 # Preencher App Store Connect + Developer Portal (passo a passo)
 
 Use este guia com a conta Apple Developer do HealthFit.
-Bundle: `luan.com.healthfit.app` · Versão `1.0.0` / Build `1`
+Bundle: `luan.com.healthfit.app` · Versão `1.0.2` / Build `6`
 
 URLs legais (16+, renderizam HTML corretamente):
 
@@ -12,6 +12,7 @@ URLs legais (16+, renderizam HTML corretamente):
 
 > Não use jsDelivr para HTML — o CDN envia `text/plain` e o Safari mostra o código-fonte.
 > Hospedagem: Firebase Hosting (`firebase deploy --only hosting`).
+> Após alterar a política: `firebase deploy --only hosting` e validar a URL no Safari.
 
 ---
 
@@ -74,7 +75,8 @@ Marque conforme `APP_PRIVACY.md`:
 - Photos / Other User Content → App Functionality
 - User ID → App Functionality
 - Crash Data + Product Interaction (Analytics/Crashlytics) → Analytics / App Functionality, **not tracking**
-- Precise Location (treino outdoor) → App Functionality, **not tracking**
+- Precise Location (treino outdoor + Kite Spot Buddy opt-in) → App Functionality, **not tracking**
+  - Ver seção Location em `APP_PRIVACY.md`
 
 Privacy Policy URL:
 `https://healthfit-30d87.web.app/privacidade/`

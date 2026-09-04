@@ -1,9 +1,4 @@
-Primera versión pública de HealthFit.
-
-• Entrenamientos de fuerza, en casa, cardio y meditación
-• Modalidades avanzadas: Surf, Kitesurf, Remo, Escalada y Lucha
-• Menú, lista de compras y metas calóricas
-• Asistente IA con check-ins
-• Apple Health + companion Apple Watch
-• Informes de progreso y evolución corporal
-• Planes de suscripción opcionales (Perfil → Mi plan)
+• Kite Spot Buddy: radar de amigos, alerta de ayuda y brújula en Apple Watch (solo kitesurf, opt-in, solo en sesión)
+• Política de privacidad actualizada
+• Mejoras de mapa Spot Buddy y Watch
+• Correcciones de estabilidad

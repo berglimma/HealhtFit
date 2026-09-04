@@ -32,6 +32,12 @@
 		B1000963 /* KiteSpotBuddyConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000963 /* KiteSpotBuddyConsentView.swift */; };
 		B1000964 /* KiteSpotBuddySessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000964 /* KiteSpotBuddySessionView.swift */; };
 		B1000965 /* KiteSpotBuddyLiveMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000965 /* KiteSpotBuddyLiveMapView.swift */; };
+		B1000970 /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000970 /* CoachModels.swift */; };
+		B1000971 /* CoachFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000971 /* CoachFirestoreService.swift */; };
+		B1000972 /* CoachService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000972 /* CoachService.swift */; };
+		B1000973 /* CoachHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000973 /* CoachHubView.swift */; };
+		B1000974 /* CoachSetupAndSearchViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000974 /* CoachSetupAndSearchViews.swift */; };
+		B1000975 /* CoachLinkDetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000975 /* CoachLinkDetailViews.swift */; };
 		B100W960 /* KiteSpotBuddyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000960 /* KiteSpotBuddyModels.swift */; };
 		B100W965 /* KiteSpotBuddyWatchViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100W965 /* KiteSpotBuddyWatchViews.swift */; };
 		B1000908 /* ClimbingAreaCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000908 /* ClimbingAreaCatalog.swift */; };
@@ -399,6 +405,12 @@
 		F1000963 /* KiteSpotBuddyConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KiteSpotBuddyConsentView.swift; sourceTree = "<group>"; };
 		F1000964 /* KiteSpotBuddySessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KiteSpotBuddySessionView.swift; sourceTree = "<group>"; };
 		F1000965 /* KiteSpotBuddyLiveMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KiteSpotBuddyLiveMapView.swift; sourceTree = "<group>"; };
+		F1000970 /* CoachModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachModels.swift; sourceTree = "<group>"; };
+		F1000971 /* CoachFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachFirestoreService.swift; sourceTree = "<group>"; };
+		F1000972 /* CoachService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachService.swift; sourceTree = "<group>"; };
+		F1000973 /* CoachHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachHubView.swift; sourceTree = "<group>"; };
+		F1000974 /* CoachSetupAndSearchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachSetupAndSearchViews.swift; sourceTree = "<group>"; };
+		F1000975 /* CoachLinkDetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachLinkDetailViews.swift; sourceTree = "<group>"; };
 		F100W965 /* KiteSpotBuddyWatchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KiteSpotBuddyWatchViews.swift; sourceTree = "<group>"; };
 		F1000908 /* ClimbingAreaCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAreaCatalog.swift; sourceTree = "<group>"; };
 		F1000909 /* ClimbingMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingMapView.swift; sourceTree = "<group>"; };
@@ -819,6 +831,7 @@
 				F1000352 /* MealPhotoAnalysisModels.swift */,
 				F1000920 /* DuoTeamModels.swift */,
 				F1000960 /* KiteSpotBuddyModels.swift */,
+				F1000970 /* CoachModels.swift */,
 				F1000059 /* MealCatalog.swift */,
 				F1000046 /* WeeklyProgressModels.swift */,
 				F1000050 /* MeditationModels.swift */,
@@ -853,6 +866,7 @@
 				F1000009 /* NotificationService.swift */,
 				F1000921 /* DuoTeamService.swift */,
 				F1000962 /* KiteSpotBuddyService.swift */,
+				F1000972 /* CoachService.swift */,
 				F1000935 /* DuoNavigationRouter.swift */,
 				F1000914 /* NutritionNotificationPreferences.swift */,
 				F1000918 /* RecommendedWorkoutCatalog.swift */,
@@ -954,6 +968,7 @@
 				G1000060 /* Subscription */,
 				G1000018 /* Duo */,
 				G1000KITE /* Kite */,
+				G1000COACH /* Coach */,
 				G1000016 /* Shared */,
 			);
 			path = Views;
@@ -1079,6 +1094,16 @@
 			path = Kite;
 			sourceTree = "<group>";
 		};
+		G1000COACH /* Coach */ = {
+			isa = PBXGroup;
+			children = (
+				F1000973 /* CoachHubView.swift */,
+				F1000974 /* CoachSetupAndSearchViews.swift */,
+				F1000975 /* CoachLinkDetailViews.swift */,
+			);
+			path = Coach;
+			sourceTree = "<group>";
+		};
 		G1000016 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
@@ -1134,6 +1159,7 @@
 				F2000081 /* CrossDeviceSyncCoordinator.swift */,
 				F1000922 /* DuoTeamFirestoreService.swift */,
 				F1000961 /* KiteSpotBuddyFirestoreService.swift */,
+				F1000971 /* CoachFirestoreService.swift */,
 				F1000932 /* ProfilePhotoStorageService.swift */,
 				F1000934 /* MarcoCivilAccessLogService.swift */,
 				F1000936 /* PushNotificationService.swift */,
@@ -1662,6 +1688,12 @@
 				B1000963 /* KiteSpotBuddyConsentView.swift in Sources */,
 				B1000964 /* KiteSpotBuddySessionView.swift in Sources */,
 				B1000965 /* KiteSpotBuddyLiveMapView.swift in Sources */,
+				B1000970 /* CoachModels.swift in Sources */,
+				B1000971 /* CoachFirestoreService.swift in Sources */,
+				B1000972 /* CoachService.swift in Sources */,
+				B1000973 /* CoachHubView.swift in Sources */,
+				B1000974 /* CoachSetupAndSearchViews.swift in Sources */,
+				B1000975 /* CoachLinkDetailViews.swift in Sources */,
 				B1000324 /* BodyEvolutionService.swift in Sources */,
 				B1000204 /* DailyWellnessFirestoreService.swift in Sources */,
 				B1000203 /* KeyboardDismiss.swift in Sources */,
@@ -1997,7 +2029,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthFit/HealthFitDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -2027,7 +2059,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2046,7 +2078,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthFit/HealthFit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -2076,7 +2108,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2095,7 +2127,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthFitWatch/HealthFitWatch.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = NO;
@@ -2111,7 +2143,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.watchkitapp;
 				PRODUCT_NAME = HealthFitWatch;
 				SDKROOT = watchos;
@@ -2135,7 +2167,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthFitWatch/HealthFitWatch.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = NO;
@@ -2151,7 +2183,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.watchkitapp;
 				PRODUCT_NAME = HealthFitWatch;
 				SDKROOT = watchos;
@@ -2172,7 +2204,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
@@ -2184,7 +2216,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -2200,7 +2232,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
@@ -2212,7 +2244,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -2230,7 +2262,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
@@ -2239,7 +2271,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2256,7 +2288,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
@@ -2265,7 +2297,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2281,7 +2313,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -2290,7 +2322,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2306,7 +2338,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -2315,7 +2347,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

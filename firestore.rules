@@ -50,8 +50,23 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Treino em dupla/equipe — grupos em duoTeams + users/{uid}/duoMemberships.
+    // HealthFit Coach — personal ativo pode ler/atualizar perfil do aluno vinculado
+    // (peso, altura, medidas) via linkId previsível: {coachUid}_{studentUid}_personal
+    function isActivePersonalCoachOf(studentUid) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/coachLinks/$(request.auth.uid + '_' + studentUid + '_personal'))
+        && get(/databases/$(database)/documents/coachLinks/$(request.auth.uid + '_' + studentUid + '_personal')).data.coachUid == request.auth.uid
+        && get(/databases/$(database)/documents/coachLinks/$(request.auth.uid + '_' + studentUid + '_personal')).data.studentUid == studentUid
+        && get(/databases/$(database)/documents/coachLinks/$(request.auth.uid + '_' + studentUid + '_personal')).data.profession == 'personal'
+        && get(/databases/$(database)/documents/coachLinks/$(request.auth.uid + '_' + studentUid + '_personal')).data.status in ['active', 'blockedPlan'];
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null
+        && (request.auth.uid == userId || isActivePersonalCoachOf(userId));
+      allow write: if request.auth != null
+        && (request.auth.uid == userId || isActivePersonalCoachOf(userId));
     }
 
     match /exerciseVideos/{videoId} {
@@ -246,6 +261,151 @@ service cloud.firestore {
         && request.resource.data.isKitesurf == true
         && request.resource.data.visible == true;
       allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // HealthFit Coach — personal/nutri ↔ aluno (sem localização em tempo real).
+    // Autorização = memberUids no coachLinks. Memberships são só índice (não atalho de auth).
+    function coachLinkData(linkId) {
+      return get(/databases/$(database)/documents/coachLinks/$(linkId)).data;
+    }
+
+    function isCoachLinkMember(linkId) {
+      return request.auth != null
+        && request.auth.uid in coachLinkData(linkId).get('memberUids', []);
+    }
+
+    function isCoachLinkActive(linkId) {
+      return coachLinkData(linkId).get('status', '') == 'active';
+    }
+
+    function isCoachOfLink(linkId) {
+      return request.auth != null
+        && request.auth.uid == coachLinkData(linkId).get('coachUid', '');
+    }
+
+    // Índice em users/{uid}/coachMemberships — só quem já está em memberUids pode criar.
+    function canWriteCoachMembership(userId, linkId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/coachLinks/$(linkId))
+        && request.auth.uid in coachLinkData(linkId).get('memberUids', [])
+        && userId in coachLinkData(linkId).get('memberUids', []);
+    }
+
+    match /coachProfiles/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid
+            || (resource != null && resource.data.isDirectoryVisible == true));
+      // Dono do doc = Auth UID. create e update (inclui set+merge).
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.uid == request.auth.uid;
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    match /coachLinks/{linkId} {
+      // Sem GET aberto: linkId é previsível (coachUid_studentUid_profession).
+      allow get: if request.auth != null
+        && request.auth.uid in resource.data.get('memberUids', []);
+      allow list: if request.auth != null
+        && request.auth.uid in resource.data.get('memberUids', []);
+      allow create: if request.auth != null
+        && request.auth.uid in request.resource.data.get('memberUids', [])
+        && request.resource.data.keys().hasAll(['coachUid', 'studentUid', 'memberUids', 'status', 'profession'])
+        && request.auth.uid in [request.resource.data.coachUid, request.resource.data.studentUid];
+      allow update: if request.auth != null
+        && (request.auth.uid in resource.data.get('memberUids', [])
+            || request.auth.uid in request.resource.data.get('memberUids', []));
+      allow delete: if request.auth != null
+        && request.auth.uid in resource.data.get('memberUids', []);
+
+      match /messages/{messageId} {
+        allow read: if isCoachLinkMember(linkId);
+        allow create: if isCoachLinkMember(linkId)
+          && isCoachLinkActive(linkId)
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.linkId == linkId
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000;
+        // Remetente edita a própria; destinatário só atualiza entregue/lida (não muda texto/remetente).
+        allow update: if isCoachLinkMember(linkId)
+          && request.resource.data.senderUid == resource.data.senderUid
+          && request.resource.data.linkId == resource.data.linkId
+          && request.resource.data.text == resource.data.text
+          && (
+            request.auth.uid == resource.data.senderUid
+            || request.auth.uid != resource.data.senderUid
+          );
+        allow delete: if isCoachLinkMember(linkId)
+          && resource.data.senderUid == request.auth.uid;
+      }
+
+      match /assignedWorkouts/{workoutId} {
+        // Coach sempre lê; aluno só com vínculo ativo (Fit+ refletido no status).
+        allow read: if isCoachLinkMember(linkId)
+          && (isCoachOfLink(linkId) || isCoachLinkActive(linkId));
+        allow create, update: if isCoachOfLink(linkId)
+          && request.auth.uid == request.resource.data.coachUid
+          && request.resource.data.linkId == linkId
+          && request.resource.data.studentUid == coachLinkData(linkId).studentUid;
+        allow delete: if isCoachOfLink(linkId)
+          || (isCoachLinkMember(linkId) && request.auth.uid == resource.data.coachUid);
+      }
+
+      match /mealPlan/{docId} {
+        allow read: if isCoachLinkMember(linkId)
+          && (isCoachOfLink(linkId) || isCoachLinkActive(linkId));
+        allow create, update: if isCoachOfLink(linkId)
+          && request.auth.uid == request.resource.data.coachUid
+          && request.resource.data.linkId == linkId;
+        allow delete: if isCoachOfLink(linkId)
+          && request.auth.uid == resource.data.coachUid;
+      }
+    }
+
+    match /coachInvites/{inviteId} {
+      // get (não list): aceitar código precisa ler o invite pendente pelo ID do lookup.
+      allow get: if request.auth != null
+        && (request.auth.uid == resource.data.fromUid
+            || resource.data.get('toUid', '') == request.auth.uid
+            || resource.data.status == 'pending');
+      allow list: if request.auth != null
+        && (request.auth.uid == resource.data.fromUid
+            || resource.data.get('toUid', '') == request.auth.uid);
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.fromUid;
+      allow update: if request.auth != null
+        && (request.auth.uid == resource.data.fromUid
+            || (resource.data.status == 'pending'
+                && request.resource.data.status in ['accepted', 'declined', 'cancelled']));
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.fromUid;
+    }
+
+    match /coachInviteCodes/{code} {
+      allow get: if request.auth != null
+        && (resource.data.status == 'pending'
+            || resource.data.fromUid == request.auth.uid);
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.fromUid;
+      allow update: if request.auth != null
+        && (request.auth.uid == resource.data.fromUid
+            || (resource.data.status == 'pending'
+                && request.resource.data.status in ['accepted', 'declined', 'cancelled']));
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.fromUid;
+    }
+
+    match /users/{userId}/coachMemberships/{linkId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Aluno (ou coach) membro do link pode indexar o outro membro — sem self-grant de estranhos.
+      allow create, update: if canWriteCoachMembership(userId, linkId);
+      allow delete: if request.auth != null
+        && (request.auth.uid == userId || canWriteCoachMembership(userId, linkId));
     }
   }
 }

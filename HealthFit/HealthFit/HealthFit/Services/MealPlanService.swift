@@ -88,6 +88,15 @@ final class MealPlanService: ObservableObject {
         syncMealReminders()
     }
 
+    /// Aplica cardápio semanal prescrito pelo nutricionista (HealthFit Coach).
+    func applyCoachPrescribedPlan(_ plan: [DailyMealPlan]) {
+        guard !plan.isEmpty else { return }
+        weeklyPlan = plan
+        createdByAssistant = false
+        saveData()
+        Task { await pushToCloudIfNeeded() }
+    }
+
     func generatePlanFromAssistant(for profile: UserProfile) {
         generatePlan(for: profile, fromAssistant: true)
     }

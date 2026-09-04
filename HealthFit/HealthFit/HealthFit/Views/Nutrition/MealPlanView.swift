@@ -13,6 +13,7 @@ struct MealPlanView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var mealPlanService: MealPlanService
     @EnvironmentObject var trainingNutritionSync: TrainingNutritionSyncService
+    @ObservedObject private var coach = CoachService.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selectedDay = 0
     @State private var selectedOption = 0
@@ -170,6 +171,13 @@ struct MealPlanView: View {
                         .adaptiveContentWidth()
                 }
 
+                if let nutri = coach.activeNutritionLink, nutri.status == .active, nutritionTab <= 1, !mealPlanService.weeklyPlan.isEmpty {
+                    coachPrescribedBanner(name: nutri.coachName)
+                        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                        .padding(.top, 8)
+                        .adaptiveContentWidth()
+                }
+
                 if mealPlanService.createdByAssistant, nutritionTab <= 1 {
                     assistantSuggestedBanner
                         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
@@ -220,6 +228,28 @@ struct MealPlanView: View {
                         .font(.caption2)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private func coachPrescribedBanner(name: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "leaf.fill")
+                .foregroundStyle(AppTheme.accent)
+                .frame(width: 36, height: 36)
+                .background(AppTheme.accent.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Cardápio do nutricionista")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("Prescrito por \(name) · sincronizado via HealthFit Coach")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             Spacer(minLength: 0)
         }
