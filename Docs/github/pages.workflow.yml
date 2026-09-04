@@ -8,10 +8,11 @@ on:
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
+# O site público sai de origin/gh-pages → pasta .pages-deploy
+# (Source do Pages = Deploy from a branch). actions/deploy-pages falha
+# nesse modo (job sem runner / environment github-pages).
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -19,27 +20,30 @@ concurrency:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Prepare site root from Docs/
         run: |
           mkdir -p _site
           # URLs públicas esperadas pela App Store / AppLegalConfiguration:
           # /privacidade/ /termos/ /suporte/ e landing /
+          touch _site/.nojekyll
           cp Docs/index.html _site/index.html
           cp -R Docs/privacidade _site/privacidade
           cp -R Docs/termos _site/termos
           cp -R Docs/suporte _site/suporte
-          # Espelho com landing de produto
           mkdir -p _site/healthfit
           cp -R Docs/healthfit/. _site/healthfit/
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+
+      - name: Publish to gh-pages (.pages-deploy)
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: _site
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          destination_dir: .pages-deploy
+          commit_message: "Deploy legal pages from Docs/"
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
