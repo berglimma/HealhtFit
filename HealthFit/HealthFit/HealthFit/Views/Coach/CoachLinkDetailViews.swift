@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct CoachLinkDetailView: View {
     let link: CoachLink
@@ -6,6 +7,7 @@ struct CoachLinkDetailView: View {
     @EnvironmentObject private var authService: AuthService
     @EnvironmentObject private var workoutStore: WorkoutStore
     @EnvironmentObject private var mealPlanService: MealPlanService
+    @Environment(\.dismiss) private var dismiss
     @State private var showPrescribeWorkout = false
     @State private var showPrescribeMeal = false
     @State private var showChat = false
@@ -13,24 +15,64 @@ struct CoachLinkDetailView: View {
     @State private var assignmentToEdit: CoachAssignedWorkout?
     @State private var assignmentPendingDeletion: CoachAssignedWorkout?
     @State private var isDeleting = false
+    @State private var showEndLinkConfirm = false
+    @State private var isEndingLink = false
+
+    private var liveLink: CoachLink {
+        coach.myLinks.first(where: { $0.id == link.id }) ?? link
+    }
 
     private var isCoach: Bool {
-        authService.currentUser?.id == link.coachUid
+        authService.currentUser?.id == liveLink.coachUid
     }
 
     private var assigned: [CoachAssignedWorkout] {
-        coach.assignedWorkoutsByLink[link.id] ?? []
+        coach.assignedWorkoutsByLink[liveLink.id] ?? []
+    }
+
+    private var endLinkButtonTitle: String {
+        if isCoach {
+            return "Desvincular aluno"
+        }
+        switch liveLink.profession {
+        case .personal: return "Excluir personal"
+        case .nutritionist: return "Excluir nutricionista"
+        }
+    }
+
+    private var endLinkConfirmMessage: String {
+        if isCoach {
+            return "O aluno \(liveLink.studentName) deixará de receber fichas, dietas e chat deste vínculo. As fichas já enviadas permanecem no aparelho do aluno."
+        }
+        switch liveLink.profession {
+        case .personal:
+            return "Você deixará de estar vinculado a \(liveLink.coachName). As fichas já recebidas permanecem nos seus treinos."
+        case .nutritionist:
+            return "Você deixará de estar vinculado a \(liveLink.coachName). O cardápio prescrito pode permanecer até você gerar outro."
+        }
     }
 
     var body: some View {
         List {
             Section {
-                LabeledContent("Profissão", value: link.profession.title)
-                LabeledContent("Status", value: link.status.displayLabel)
-                LabeledContent(isCoach ? "Aluno" : "Profissional", value: isCoach ? link.studentName : link.coachName)
+                HStack(spacing: 12) {
+                    DuoMemberAvatarView(
+                        name: isCoach ? liveLink.studentName : liveLink.coachName,
+                        photoURL: isCoach ? liveLink.studentPhotoURL : liveLink.coachPhotoURL,
+                        size: 48
+                    )
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(isCoach ? liveLink.studentName : liveLink.coachName)
+                            .font(.headline)
+                        Text("\(liveLink.profession.title) · \(liveLink.status.displayLabel)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
             }
 
-            if link.status == .blockedPlan {
+            if liveLink.status == .blockedPlan {
                 Section {
                     Text("O aluno precisa do plano Fit ou superior para liberar fichas, dietas e chat.")
                         .font(.caption)
@@ -38,9 +80,9 @@ struct CoachLinkDetailView: View {
                 }
             }
 
-            if isCoach {
+            if isCoach, liveLink.isActiveLike {
                 Section("Prescrever") {
-                    if link.profession == .personal {
+                    if liveLink.profession == .personal {
                         Button {
                             assignmentToEdit = nil
                             showPrescribeWorkout = true
@@ -48,12 +90,12 @@ struct CoachLinkDetailView: View {
                             Label("Criar / enviar ficha de musculação", systemImage: "dumbbell.fill")
                         }
                         NavigationLink {
-                            CoachStudentMetricsView(link: link)
+                            CoachStudentMetricsView(link: liveLink)
                         } label: {
                             Label("Medidas, peso e relatório PDF", systemImage: "figure.stand")
                         }
                     }
-                    if link.profession == .nutritionist {
+                    if liveLink.profession == .nutritionist {
                         Button {
                             showPrescribeMeal = true
                         } label: {
@@ -76,7 +118,7 @@ struct CoachLinkDetailView: View {
                                 .foregroundStyle(.secondary)
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            if isCoach {
+                            if isCoach, liveLink.isActiveLike {
                                 Button(role: .destructive) {
                                     assignmentPendingDeletion = item
                                 } label: {
@@ -92,7 +134,7 @@ struct CoachLinkDetailView: View {
                             }
                         }
                         .contextMenu {
-                            if isCoach {
+                            if isCoach, liveLink.isActiveLike {
                                 Button {
                                     assignmentToEdit = item
                                     showPrescribeWorkout = true
@@ -110,7 +152,7 @@ struct CoachLinkDetailView: View {
                 } header: {
                     Text("Fichas prescritas")
                 } footer: {
-                    if isCoach {
+                    if isCoach, liveLink.isActiveLike {
                         Text("Deslize para editar ou excluir. As alterações sincronizam com o aluno.")
                     }
                 }
@@ -118,29 +160,48 @@ struct CoachLinkDetailView: View {
 
             Section {
                 Button {
-                    guard link.status == .active else { return }
-                    coach.ensureChatListening(linkId: link.id)
+                    guard liveLink.status == .active else { return }
+                    coach.ensureChatListening(linkId: liveLink.id)
                     showChat = true
                 } label: {
                     Label("Abrir chat", systemImage: "bubble.left.and.bubble.right.fill")
                 }
-                .disabled(link.status != .active)
+                .disabled(liveLink.status != .active)
+            }
+
+            if liveLink.status != .ended {
+                Section {
+                    Button(role: .destructive) {
+                        showEndLinkConfirm = true
+                    } label: {
+                        if isEndingLink {
+                            ProgressView()
+                        } else {
+                            Label(endLinkButtonTitle, systemImage: "person.badge.minus")
+                        }
+                    }
+                    .disabled(isEndingLink)
+                } footer: {
+                    Text(isCoach
+                         ? "Remove o vínculo com este aluno no HealthFit Coach."
+                         : "Remove o vínculo. Você poderá conectar outro profissional depois.")
+                }
             }
 
             if let statusMessage {
                 Text(statusMessage).font(.caption).foregroundStyle(.secondary)
             }
         }
-        .navigationTitle(isCoach ? link.studentName : link.coachName)
+        .navigationTitle(isCoach ? liveLink.studentName : liveLink.coachName)
         .onAppear {
-            coach.ensureChatListening(linkId: link.id)
+            coach.ensureChatListening(linkId: liveLink.id)
         }
         .sheet(isPresented: $showPrescribeWorkout, onDismiss: {
             assignmentToEdit = nil
         }) {
             NavigationStack {
                 CoachPrescribeWorkoutView(
-                    link: link,
+                    link: liveLink,
                     editingAssignment: assignmentToEdit
                 ) { ok in
                     let editing = assignmentToEdit != nil
@@ -154,7 +215,7 @@ struct CoachLinkDetailView: View {
         }
         .sheet(isPresented: $showPrescribeMeal) {
             NavigationStack {
-                CoachPrescribeMealView(link: link) { ok in
+                CoachPrescribeMealView(link: liveLink) { ok in
                     statusMessage = ok ? "Cardápio enviado e sincronizado com o aluno." : (coach.lastError ?? "Falha ao enviar.")
                     showPrescribeMeal = false
                 }
@@ -162,7 +223,7 @@ struct CoachLinkDetailView: View {
         }
         .sheet(isPresented: $showChat) {
             NavigationStack {
-                CoachChatView(link: link)
+                CoachChatView(link: liveLink)
             }
         }
         .alert("Excluir ficha?", isPresented: deletionAlertBinding) {
@@ -170,7 +231,7 @@ struct CoachLinkDetailView: View {
                 guard let item = assignmentPendingDeletion else { return }
                 Task {
                     isDeleting = true
-                    let ok = await coach.deleteAssignedWorkout(link: link, assignment: item)
+                    let ok = await coach.deleteAssignedWorkout(link: liveLink, assignment: item)
                     isDeleting = false
                     statusMessage = ok
                         ? "Ficha removida do aluno."
@@ -186,7 +247,24 @@ struct CoachLinkDetailView: View {
                 Text("“\(item.sheet.title)” será removida do app do aluno.")
             }
         }
-        .disabled(isDeleting)
+        .alert(endLinkButtonTitle, isPresented: $showEndLinkConfirm) {
+            Button(endLinkButtonTitle, role: .destructive) {
+                Task {
+                    isEndingLink = true
+                    let ok = await coach.endLink(liveLink)
+                    isEndingLink = false
+                    if ok {
+                        dismiss()
+                    } else {
+                        statusMessage = coach.lastError ?? "Não foi possível encerrar o vínculo."
+                    }
+                }
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text(endLinkConfirmMessage)
+        }
+        .disabled(isDeleting || isEndingLink)
     }
 
     private var deletionAlertBinding: Binding<Bool> {
@@ -670,88 +748,408 @@ struct CoachChatView: View {
     let link: CoachLink
     @ObservedObject private var coach = CoachService.shared
     @EnvironmentObject private var authService: AuthService
-    @State private var draft = ""
+    @Environment(\.dismiss) private var dismiss
     @FocusState private var focused: Bool
+    @State private var draft = ""
+
+    private var liveLink: CoachLink {
+        coach.myLinks.first(where: { $0.id == link.id }) ?? link
+    }
 
     private var messages: [CoachChatMessage] {
-        coach.chatMessages[link.id] ?? []
+        coach.chatMessages[liveLink.id] ?? []
+    }
+
+    private var currentUid: String? {
+        authService.currentUser?.id
+    }
+
+    private var isCoachViewer: Bool {
+        currentUid == liveLink.coachUid
+    }
+
+    private var peerName: String {
+        isCoachViewer ? liveLink.studentName : liveLink.coachName
+    }
+
+    private var peerPhotoURL: String? {
+        isCoachViewer ? liveLink.studentPhotoURL : liveLink.coachPhotoURL
+    }
+
+    private var canSend: Bool {
+        liveLink.status == .active
+            && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            if link.status != .active {
-                Text("Chat liberado com vínculo ativo e plano Fit+ do aluno.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding()
+            peerHeader
+            policyBanner
+
+            if liveLink.status != .active {
+                inactiveBanner
             }
 
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 8) {
-                        ForEach(messages) { message in
-                            let mine = message.senderUid == authService.currentUser?.id
-                            HStack {
-                                if mine { Spacer(minLength: 40) }
-                                VStack(alignment: mine ? .trailing : .leading, spacing: 2) {
-                                    Text(message.text)
-                                        .font(.subheadline)
-                                        .foregroundStyle(mine ? .black : AppTheme.textPrimary)
-                                        .padding(10)
-                                        .background(mine ? AppTheme.accent : AppTheme.cardBackground)
-                                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                                    HStack(spacing: 4) {
-                                        Text(message.createdAt.formatted(date: .omitted, time: .shortened))
-                                        if mine {
-                                            CoachMessageReceiptTicks(status: message.receiptStatus)
-                                        }
-                                    }
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                }
-                                if !mine { Spacer(minLength: 40) }
+            messagesArea
+            composerBar
+        }
+        .background(AppTheme.background.ignoresSafeArea())
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Fechar") { dismiss() }
+                    .foregroundStyle(AppTheme.accent)
+            }
+        }
+        .onAppear {
+            coach.ensureChatListening(linkId: liveLink.id)
+            coach.acknowledgeDeliveredIfNeeded(linkId: liveLink.id)
+            coach.markChatRead(linkId: liveLink.id)
+        }
+        .onChange(of: messages.count) { _, _ in
+            coach.markChatRead(linkId: liveLink.id)
+        }
+    }
+
+    // MARK: - Header
+
+    private var peerHeader: some View {
+        HStack(spacing: 12) {
+            DuoMemberAvatarView(
+                name: peerName,
+                photoURL: peerPhotoURL,
+                size: 40
+            )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(peerName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .lineLimit(1)
+                Text(headerSubtitle)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: liveLink.profession.icon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+                .padding(8)
+                .background(AppTheme.accent.opacity(0.15))
+                .clipShape(Circle())
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            AppTheme.cardBackground
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(AppTheme.accent.opacity(0.12))
+                        .frame(height: 1)
+                }
+        )
+    }
+
+    private var headerSubtitle: String {
+        let role = isCoachViewer ? "Aluno" : liveLink.profession.title
+        return "\(role) · \(liveLink.status.displayLabel)"
+    }
+
+    private var inactiveBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "lock.fill")
+                .font(.caption)
+            Text("Chat liberado com vínculo ativo e plano Fit+ do aluno.")
+                .font(.caption)
+        }
+        .foregroundStyle(AppTheme.accentSecondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(AppTheme.accentSecondary.opacity(0.12))
+    }
+
+    private var policyBanner: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "clock.badge.checkmark")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+            Text(CoachChatPolicy.purposeNotice)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(AppTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(AppTheme.cardBackground.opacity(0.85))
+    }
+
+    // MARK: - Messages
+
+    private var messagesArea: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    if messages.isEmpty {
+                        emptyState
+                            .padding(.top, 48)
+                    } else {
+                        ForEach(Array(messages.enumerated()), id: \.element.id) { index, message in
+                            if shouldShowDaySeparator(at: index) {
+                                daySeparator(for: message.createdAt)
                             }
-                            .id(message.id)
+                            messageBubble(message, index: index)
+                                .id(message.id)
+                                .padding(.top, topSpacing(before: index))
                         }
                     }
-                    .padding(12)
                 }
-                .onChange(of: messages.count) { _, _ in
-                    if let last = messages.last {
-                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
-                    }
-                    coach.markChatRead(linkId: link.id)
-                }
-                .onChange(of: messages.map(\.id)) { _, _ in
-                    coach.markChatRead(linkId: link.id)
-                }
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+                .padding(.bottom, 16)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .onChange(of: messages.last?.id) { _, _ in
+                scrollToBottom(proxy: proxy, animated: true)
+            }
+            .onAppear {
+                scrollToBottom(proxy: proxy, animated: false)
+            }
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(AppTheme.accent.opacity(0.12))
+                    .frame(width: 72, height: 72)
+                Image(systemName: "bubble.left.and.bubble.right.fill")
+                    .font(.system(size: 28, weight: .medium))
+                    .foregroundStyle(AppTheme.accent)
+            }
+            Text("Nenhuma mensagem ainda")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+            Text(isCoachViewer
+                  ? "Envie orientações, ajustes de treino ou feedback para \(peerName)."
+                  : "Tire dúvidas com seu \(liveLink.profession.title.lowercased()) \(peerName).")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 28)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func messageBubble(_ message: CoachChatMessage, index: Int) -> some View {
+        let mine = message.senderUid == currentUid
+        let showName = shouldShowSenderName(at: index, isMine: mine)
+        let showAvatar = !mine && (index == 0 || messages[index - 1].senderUid != message.senderUid)
+
+        return HStack(alignment: .bottom, spacing: 8) {
+            if mine {
+                Spacer(minLength: 52)
+            } else if showAvatar {
+                DuoMemberAvatarView(
+                    name: message.senderName,
+                    photoURL: peerPhotoURL,
+                    size: 28
+                )
+            } else {
+                Color.clear.frame(width: 28, height: 28)
             }
 
-            HStack(spacing: 8) {
-                TextField("Mensagem", text: $draft, axis: .vertical)
-                    .lineLimit(1...4)
-                    .focused($focused)
-                Button {
-                    Task {
-                        let text = draft
-                        draft = ""
-                        _ = await coach.sendChat(link: link, text: text)
-                    }
-                } label: {
-                    Image(systemName: "paperplane.fill")
-                        .foregroundStyle(AppTheme.accent)
+            VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
+                if showName {
+                    Text(message.senderName)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .padding(.horizontal, 4)
                 }
-                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || link.status != .active)
+
+                Text(message.text)
+                    .font(.subheadline)
+                    .foregroundStyle(mine ? Color(red: 0.08, green: 0.12, blue: 0.10) : AppTheme.textPrimary)
+                    .multilineTextAlignment(.leading)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background {
+                        if mine {
+                            LinearGradient(
+                                colors: [AppTheme.accent, AppTheme.accent.opacity(0.82)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        } else {
+                            AppTheme.cardBackground
+                        }
+                    }
+                    .clipShape(bubbleShape(isMine: mine))
+                    .overlay(
+                        bubbleShape(isMine: mine)
+                            .strokeBorder(
+                                mine ? Color.clear : Color.white.opacity(0.07),
+                                lineWidth: 1
+                            )
+                    )
+                    .contextMenu {
+                        Button {
+                            UIPasteboard.general.string = message.text
+                        } label: {
+                            Label("Copiar", systemImage: "doc.on.doc")
+                        }
+                    }
+
+                // Horário de envio sempre visível; ticks de recebimento em cada mensagem própria.
+                HStack(spacing: 4) {
+                    Text(message.createdAt, format: .dateTime.hour().minute())
+                    if mine {
+                        CoachMessageReceiptTicks(status: message.receiptStatus)
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary.opacity(0.9))
+                .padding(.horizontal, 4)
             }
-            .padding(12)
-            .background(AppTheme.cardBackground)
+            .frame(maxWidth: 290, alignment: mine ? .trailing : .leading)
+
+            if !mine {
+                Spacer(minLength: 52)
+            }
         }
-        .navigationTitle("Chat Coach")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            coach.ensureChatListening(linkId: link.id)
-            coach.acknowledgeDeliveredIfNeeded(linkId: link.id)
-            coach.markChatRead(linkId: link.id)
+        .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
+    }
+
+    private func bubbleShape(isMine: Bool) -> UnevenRoundedRectangle {
+        UnevenRoundedRectangle(
+            topLeadingRadius: 18,
+            bottomLeadingRadius: isMine ? 18 : 5,
+            bottomTrailingRadius: isMine ? 5 : 18,
+            topTrailingRadius: 18,
+            style: .continuous
+        )
+    }
+
+    private func daySeparator(for date: Date) -> some View {
+        Text(dayLabel(for: date))
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(AppTheme.textSecondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background(AppTheme.cardBackground.opacity(0.9))
+            .clipShape(Capsule())
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+    }
+
+    // MARK: - Composer
+
+    private var composerBar: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.white.opacity(0.06))
+                .frame(height: 1)
+
+            HStack(alignment: .bottom, spacing: 10) {
+                TextField(
+                    liveLink.status == .active ? "Escreva uma mensagem…" : "Chat indisponível",
+                    text: $draft,
+                    axis: .vertical
+                )
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.textPrimary)
+                .lineLimit(1...5)
+                .focused($focused)
+                .disabled(liveLink.status != .active)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .strokeBorder(
+                            focused ? AppTheme.accent.opacity(0.45) : Color.white.opacity(0.08),
+                            lineWidth: 1
+                        )
+                )
+
+                Button {
+                    sendDraft()
+                } label: {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(canSend ? Color(red: 0.08, green: 0.12, blue: 0.10) : AppTheme.textSecondary)
+                        .frame(width: 36, height: 36)
+                        .background(
+                            Circle().fill(canSend ? AppTheme.accent : AppTheme.cardBackground)
+                        )
+                        .overlay(
+                            Circle().strokeBorder(Color.white.opacity(canSend ? 0 : 0.08), lineWidth: 1)
+                        )
+                }
+                .disabled(!canSend)
+                .accessibilityLabel("Enviar")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(AppTheme.background.opacity(0.98))
+        }
+    }
+
+    private func sendDraft() {
+        let text = draft
+        draft = ""
+        focused = false
+        Task {
+            _ = await coach.sendChat(link: liveLink, text: text)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func shouldShowSenderName(at index: Int, isMine: Bool) -> Bool {
+        guard !isMine else { return false }
+        guard index > 0 else { return true }
+        return messages[index - 1].senderUid != messages[index].senderUid
+    }
+
+    private func shouldShowDaySeparator(at index: Int) -> Bool {
+        guard index > 0 else { return true }
+        return !Calendar.current.isDate(messages[index].createdAt, inSameDayAs: messages[index - 1].createdAt)
+    }
+
+    private func topSpacing(before index: Int) -> CGFloat {
+        guard index > 0 else { return 4 }
+        let previous = messages[index - 1]
+        let current = messages[index]
+        if previous.senderUid == current.senderUid,
+           current.createdAt.timeIntervalSince(previous.createdAt) < 2 * 60 {
+            return 3
+        }
+        return 10
+    }
+
+    private func dayLabel(for date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "Hoje" }
+        if calendar.isDateInYesterday(date) { return "Ontem" }
+        return date.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
+        guard let last = messages.last else { return }
+        if animated {
+            withAnimation(.easeOut(duration: 0.22)) {
+                proxy.scrollTo(last.id, anchor: .bottom)
+            }
+        } else {
+            proxy.scrollTo(last.id, anchor: .bottom)
         }
     }
 }
@@ -767,7 +1165,7 @@ private struct CoachMessageReceiptTicks: View {
             }
         }
         .font(.system(size: 9, weight: .bold))
-        .foregroundStyle(status == .read ? AppTheme.accent : Color.secondary)
+        .foregroundStyle(status == .read ? AppTheme.accent : AppTheme.textSecondary)
         .accessibilityLabel(accessibilityLabel)
     }
 

@@ -1,4 +1,4 @@
-• Kite Spot Buddy: friend radar, help alert and Watch compass (kitesurf only, opt-in, session-only)
-• Updated privacy policy (temporary location sharing + LGPD consent)
-• Spot Buddy map and Watch layout improvements
-• Stability fixes
+• Kite Spot Buddy: friend radar, SOS help alert and Watch compass (kitesurf only, opt-in, session-only)
+• HealthFit Coach: trainer/nutritionist links, chat, unlink and delete pro registration
+• Updated privacy policy (temporary location sharing + consent)
+• Spot Buddy map improvements and stability fixes

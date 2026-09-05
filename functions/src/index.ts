@@ -230,6 +230,7 @@ export const onCoachChatMessageCreated = onDocumentCreated(
     if (!data) return;
 
     const linkId = event.params.linkId as string;
+    const messageId = event.params.messageId as string;
     const senderUid = String(data.senderUid ?? "");
     const senderName = String(data.senderName ?? "Alguém");
     const rawText = String(data.text ?? "").trim();
@@ -242,13 +243,56 @@ export const onCoachChatMessageCreated = onDocumentCreated(
     if (!linkSnap.exists) return;
     const link = linkSnap.data() ?? {};
     const memberUids = (link.memberUids as string[] | undefined) ?? [];
+    const coachUid = String(link.coachUid ?? "");
+    const studentUid = String(link.studentUid ?? "");
+
+    // Registro/log (visível só Admin): mensagem some do chat em 48h, log fica 6 meses.
+    const createdAt =
+      data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.now();
+    const chatExpiresAt =
+      data.expiresAt instanceof Timestamp
+        ? data.expiresAt
+        : Timestamp.fromMillis(createdAt.toMillis() + 48 * 60 * 60 * 1000);
+    const registryExpiresAt = Timestamp.fromDate(
+      new Date(createdAt.toMillis() + 183 * 24 * 60 * 60 * 1000) // ~6 meses
+    );
+    try {
+      await db.collection("coachChatMessageLogs").doc(messageId).set(
+        {
+          messageId,
+          linkId,
+          channel: "coachChat",
+          coachUid,
+          studentUid,
+          profession: String(link.profession ?? ""),
+          senderUid,
+          senderName,
+          text: rawText,
+          createdAt,
+          chatExpiresAt,
+          expiresAt: registryExpiresAt,
+          retentionMonths: 6,
+          legalBasis:
+            "Registro de comunicação profissional HealthFit Coach — segurança e conformidade",
+          archivedAt: Timestamp.now(),
+        },
+        {merge: true}
+      );
+    } catch (err) {
+      logger.error("onCoachChatMessageCreated: registry write failed", {
+        linkId,
+        messageId,
+        err,
+      });
+    }
+
     const recipients = memberUids.filter((uid) => uid && uid !== senderUid);
     if (recipients.length === 0) return;
 
     const coachName = String(link.coachName ?? "Coach");
     const studentName = String(link.studentName ?? "Aluno");
     const peerLabel =
-      senderUid === String(link.coachUid ?? "") ? studentName : coachName;
+      senderUid === coachUid ? studentName : coachName;
     const preview =
       rawText.length > 120 ? `${rawText.slice(0, 117)}…` : rawText;
     const title = `HealthFit Coach · ${peerLabel}`;
@@ -328,6 +372,57 @@ export const onCoachChatMessageCreated = onDocumentCreated(
       successCount: response.successCount,
       failureCount: response.failureCount,
     });
+  },
+);
+
+/**
+ * Apaga mensagens Coach vencidas (48h) do chat ativo e limpa logs com mais de 6 meses.
+ * O registro em `coachChatMessageLogs` é criado no onCreate e permanece após o purge do chat.
+ */
+export const purgeExpiredCoachChat = onSchedule(
+  {
+    schedule: "every 6 hours",
+    timeZone: "America/Sao_Paulo",
+  },
+  async () => {
+    const now = Timestamp.now();
+    let messagesDeleted = 0;
+    let logsDeleted = 0;
+
+    for (let page = 0; page < 20; page++) {
+      const snap = await db
+        .collectionGroup("messages")
+        .where("channel", "==", "coachChat")
+        .where("expiresAt", "<", now)
+        .limit(400)
+        .get();
+      if (snap.empty) break;
+      const batch = db.batch();
+      for (const doc of snap.docs) {
+        batch.delete(doc.ref);
+      }
+      await batch.commit();
+      messagesDeleted += snap.size;
+      if (snap.size < 400) break;
+    }
+
+    for (let page = 0; page < 20; page++) {
+      const snap = await db
+        .collection("coachChatMessageLogs")
+        .where("expiresAt", "<", now)
+        .limit(400)
+        .get();
+      if (snap.empty) break;
+      const batch = db.batch();
+      for (const doc of snap.docs) {
+        batch.delete(doc.ref);
+      }
+      await batch.commit();
+      logsDeleted += snap.size;
+      if (snap.size < 400) break;
+    }
+
+    logger.info("purgeExpiredCoachChat done", {messagesDeleted, logsDeleted});
   },
 );
 

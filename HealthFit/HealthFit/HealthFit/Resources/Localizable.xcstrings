@@ -1862,7 +1862,7 @@
     "Chat" : {
 
     },
-    "Chat Coach" : {
+    "Chat indisponível" : {
 
     },
     "Chat liberado com vínculo ativo e plano Fit+ do aluno." : {
@@ -2688,6 +2688,9 @@
     "Enviaremos um link para o seu e-mail com instruções para criar uma nova senha." : {
 
     },
+    "Envie orientações, ajustes de treino ou feedback para %@." : {
+
+    },
     "Equipamento" : {
 
     },
@@ -2768,6 +2771,9 @@
 
     },
     "Escreva sua reclamação, sugestão, melhoria ou dúvida…" : {
+
+    },
+    "Escreva uma mensagem…" : {
 
     },
     "Esq. %lld%%" : {
@@ -2870,6 +2876,15 @@
     "Excluir" : {
 
     },
+    "Excluir cadastro" : {
+
+    },
+    "Excluir cadastro no Coach" : {
+
+    },
+    "Excluir cadastro no Coach?" : {
+
+    },
     "Excluir Conta" : {
 
     },
@@ -2880,6 +2895,18 @@
 
     },
     "Excluir ficha?" : {
+
+    },
+    "Excluir nutricionista" : {
+
+    },
+    "Excluir nutricionista?" : {
+
+    },
+    "Excluir personal" : {
+
+    },
+    "Excluir personal?" : {
 
     },
     "Excluir treino?" : {
@@ -2997,6 +3024,9 @@
 
     },
     "Foto ou vídeo do treino" : {
+
+    },
+    "Foto sincronizada do Perfil do app. Altere em Perfil para atualizar aqui e na busca." : {
 
     },
     "Fotos (opcional e privado)" : {
@@ -3782,6 +3812,9 @@
     "Nenhuma medida variou no período." : {
 
     },
+    "Nenhuma mensagem ainda" : {
+
+    },
     "Nenhuma modalidade ativa" : {
 
     },
@@ -4064,6 +4097,12 @@
 
     },
     "O relatório de nutrição foi enviado para %@ com sucesso." : {
+
+    },
+    "O vínculo com o nutricionista será encerrado." : {
+
+    },
+    "O vínculo com o personal será encerrado. As fichas já recebidas permanecem nos seus treinos." : {
 
     },
     "Objetivo" : {
@@ -4804,9 +4843,6 @@
     "Profissão" : {
 
     },
-    "Profissional" : {
-
-    },
     "Programa" : {
 
     },
@@ -4999,6 +5035,15 @@
 
     },
     "Remo ao vivo" : {
+
+    },
+    "Remove o vínculo com este aluno no HealthFit Coach." : {
+
+    },
+    "Remove o vínculo. Você poderá conectar outro profissional depois." : {
+
+    },
+    "Remove seu perfil da busca, encerra vínculos com alunos e volta o papel da conta para Aluno." : {
 
     },
     "Remover" : {
@@ -5378,6 +5423,9 @@
     "Seu cardápio semanal foi atualizado com base nas suas preferências e metas." : {
 
     },
+    "Seu perfil sai da busca regional, os vínculos com alunos são encerrados e o papel da conta volta para Aluno. Fichas já enviadas podem permanecer no app dos alunos." : {
+
+    },
     "Seu personal e nutrição" : {
 
     },
@@ -5743,6 +5791,16 @@
     },
     "Tipo de vínculo" : {
 
+    },
+    "Tire dúvidas com seu %@ %@." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tire dúvidas com seu %1$@ %2$@."
+          }
+        }
+      }
     },
     "Título" : {
 

@@ -200,6 +200,11 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
 
+    // Registro/log das mensagens do chat Coach (48h no app; retenção 6 meses só Admin/Functions).
+    match /coachChatMessageLogs/{logId} {
+      allow read, write: if false;
+    }
+
     // Feedback do app (reclamações/sugestões). Só o autor cria/lê; e-mail sai na Function.
     match /appFeedback/{feedbackId} {
       allow create: if request.auth != null
@@ -339,8 +344,21 @@ service cloud.firestore {
             request.auth.uid == resource.data.senderUid
             || request.auth.uid != resource.data.senderUid
           );
+        // Remetente pode apagar a própria; qualquer membro remove mensagens já expiradas (48h).
         allow delete: if isCoachLinkMember(linkId)
-          && resource.data.senderUid == request.auth.uid;
+          && (
+            resource.data.senderUid == request.auth.uid
+            || (
+              resource.data.keys().hasAny(['expiresAt'])
+              && resource.data.expiresAt is timestamp
+              && resource.data.expiresAt < request.time
+            )
+            || (
+              resource.data.keys().hasAny(['createdAt'])
+              && resource.data.createdAt is timestamp
+              && resource.data.createdAt < request.time - duration.value(48, 'h')
+            )
+          );
       }
 
       match /assignedWorkouts/{workoutId} {

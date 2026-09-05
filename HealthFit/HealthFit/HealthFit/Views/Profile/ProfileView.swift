@@ -16,6 +16,8 @@ struct ProfileView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showLogoutAlert = false
     @State private var showDeleteAccountSheet = false
+    @State private var showUnlinkPersonalConfirm = false
+    @State private var showUnlinkNutritionConfirm = false
     @State private var showPhotoSourceDialog = false
     @State private var showProfileGalleryPicker = false
     @State private var showProfileCameraPicker = false
@@ -166,6 +168,34 @@ struct ProfileView: View {
                     Button("OK", role: .cancel) {}
                 } message: {
                     Text("Preencha peso ou ao menos uma circunferência para exportar a avaliação em PDF.")
+                }
+                .alert("Excluir personal?", isPresented: $showUnlinkPersonalConfirm) {
+                    Button("Cancelar", role: .cancel) {}
+                    Button("Excluir", role: .destructive) {
+                        guard let link = coach.activePersonalLink else { return }
+                        Task {
+                            _ = await coach.endLink(link)
+                            usesPersonalTrainer = false
+                            trainerName = ""
+                            trainerEmail = ""
+                        }
+                    }
+                } message: {
+                    Text("O vínculo com o personal será encerrado. As fichas já recebidas permanecem nos seus treinos.")
+                }
+                .alert("Excluir nutricionista?", isPresented: $showUnlinkNutritionConfirm) {
+                    Button("Cancelar", role: .cancel) {}
+                    Button("Excluir", role: .destructive) {
+                        guard let link = coach.activeNutritionLink else { return }
+                        Task {
+                            _ = await coach.endLink(link)
+                            usesNutritionist = false
+                            nutritionistName = ""
+                            nutritionistEmail = ""
+                        }
+                    }
+                } message: {
+                    Text("O vínculo com o nutricionista será encerrado.")
                 }
         }
     }
@@ -804,6 +834,11 @@ struct ProfileView: View {
                 Text("Nome preenchido automaticamente. Gerencie o vínculo em HealthFit Coach.")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
+                Button(role: .destructive) {
+                    showUnlinkPersonalConfirm = true
+                } label: {
+                    Label("Excluir personal", systemImage: "person.badge.minus")
+                }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L10n.Profile.hasPersonalTrainer)
@@ -857,6 +892,11 @@ struct ProfileView: View {
                 Text("Nome preenchido automaticamente. Gerencie o vínculo em HealthFit Coach.")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
+                Button(role: .destructive) {
+                    showUnlinkNutritionConfirm = true
+                } label: {
+                    Label("Excluir nutricionista", systemImage: "person.badge.minus")
+                }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L10n.Profile.hasNutritionist)

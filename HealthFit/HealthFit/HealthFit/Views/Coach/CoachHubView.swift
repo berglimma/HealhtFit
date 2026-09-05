@@ -59,6 +59,9 @@ struct CoachHubView: View {
     @State private var inviteCode = ""
     @State private var joinStatus: String?
     @State private var selectedLink: CoachLink?
+    @State private var showDeleteCadastroConfirm = false
+    @State private var isDeletingCadastro = false
+    @State private var cadastroStatusMessage: String?
 
     private var role: UserAccountRole {
         authService.currentUser?.accountRole ?? .student
@@ -88,7 +91,12 @@ struct CoachHubView: View {
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
             coach.start()
-            Task { await coach.refreshLinkStatusesForPlan() }
+            Task {
+                await coach.refreshLinkStatusesForPlan()
+                if isPro {
+                    await coach.refreshProfessionalPhotoFromAppProfileIfNeeded()
+                }
+            }
         }
         .sheet(isPresented: $showConsent) {
             CoachConsentView(
@@ -119,6 +127,24 @@ struct CoachHubView: View {
         }
         .navigationDestination(item: $selectedLink) { link in
             CoachLinkDetailView(link: link)
+        }
+        .alert("Excluir cadastro no Coach?", isPresented: $showDeleteCadastroConfirm) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Excluir cadastro", role: .destructive) {
+                Task {
+                    isDeletingCadastro = true
+                    cadastroStatusMessage = nil
+                    let ok = await coach.deleteProfessionalRegistration()
+                    isDeletingCadastro = false
+                    if ok {
+                        cadastroStatusMessage = "Cadastro removido. Você pode cadastrar de novo depois se quiser."
+                    } else {
+                        cadastroStatusMessage = coach.lastError ?? "Não foi possível excluir o cadastro."
+                    }
+                }
+            }
+        } message: {
+            Text("Seu perfil sai da busca regional, os vínculos com alunos são encerrados e o papel da conta volta para Aluno. Fichas já enviadas podem permanecer no app dos alunos.")
         }
     }
 
@@ -176,6 +202,31 @@ struct CoachHubView: View {
                 }
                 .buttonStyle(.bordered)
             }
+
+            Button(role: .destructive) {
+                showDeleteCadastroConfirm = true
+            } label: {
+                if isDeletingCadastro {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Label("Excluir cadastro no Coach", systemImage: "person.crop.circle.badge.minus")
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .buttonStyle(.bordered)
+            .tint(.red)
+            .disabled(isDeletingCadastro)
+
+            Text("Remove seu perfil da busca, encerra vínculos com alunos e volta o papel da conta para Aluno.")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            if let cadastroStatusMessage {
+                Text(cadastroStatusMessage)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.accentSecondary)
+            }
         }
 
         linksSection(title: "Meus alunos", empty: "Nenhum aluno vinculado ainda. Gere um código de convite.")
@@ -215,17 +266,31 @@ struct CoachHubView: View {
     }
 
     private var profileSummary: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             if let profile = coach.myProfile {
-                Text(profile.displayName)
-                    .font(.headline)
-                Text(profile.credentialSummary)
-                    .font(.subheadline)
-                    .foregroundStyle(AppTheme.accent)
-                Text(profile.locationLabel)
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
+                HStack(spacing: 14) {
+                    DuoMemberAvatarView(
+                        name: profile.displayName,
+                        photoURL: profile.photoURL,
+                        localImage: authService.profileImage,
+                        size: 56
+                    )
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(profile.displayName)
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text(profile.credentialSummary)
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.accent)
+                        Text(profile.locationLabel)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
                 Text(profile.isDirectoryVisible ? "Visível na busca regional" : "Oculto na busca")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+                Text("Foto sincronizada do Perfil do app. Altere em Perfil para atualizar aqui e na busca.")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
             }
@@ -293,20 +358,24 @@ struct CoachLinkRow: View {
         viewerUid == link.coachUid ? link.studentName : link.coachName
     }
 
+    private var photoURL: String? {
+        viewerUid == link.coachUid ? link.studentPhotoURL : link.coachPhotoURL
+    }
+
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: link.profession.icon)
-                .foregroundStyle(AppTheme.accent)
-                .frame(width: 36, height: 36)
-                .background(AppTheme.accent.opacity(0.15))
-                .clipShape(Circle())
+            DuoMemberAvatarView(name: title, photoURL: photoURL, size: 40)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.textPrimary)
-                Text("\(link.profession.title) · \(link.status.displayLabel)")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
+                HStack(spacing: 6) {
+                    Image(systemName: link.profession.icon)
+                        .font(.caption2)
+                    Text("\(link.profession.title) · \(link.status.displayLabel)")
+                        .font(.caption)
+                }
+                .foregroundStyle(AppTheme.textSecondary)
             }
             Spacer()
             Image(systemName: "chevron.right")

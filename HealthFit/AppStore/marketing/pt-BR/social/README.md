@@ -8,6 +8,7 @@ Link de download: **https://apps.apple.com/br/app/id6798621208**
 
 | Arquivo | Formato | Uso |
 |---------|---------|-----|
+| `HealthFit-perfil-logo.png` | 1:1 (1080) | Foto de perfil (só logo) — Instagram, TikTok, Facebook |
 | `HealthFit-card-instagram-feed.png` | 1:1 (feed) | Card institucional (treino · dieta · IA) |
 | `HealthFit-card-instagram-story.png` | 9:16 | Story institucional |
 | `HealthFit-card-comece-gratis-story.png` | 9:16 | CTA “Comece grátis” |
@@ -21,6 +22,20 @@ Link de download: **https://apps.apple.com/br/app/id6798621208**
 | `HealthFit-card-duo-feed.png` | 1:1 | Duo (dupla / equipe) |
 | `HealthFit-card-nutricao-feed.png` | 1:1 | Nutrição com IA |
 | `HealthFit-card-watch-feed.png` | 1:1 | Apple Watch |
+| `HealthFit-card-corrida-feed.png` | 1:1 | Corrida (GPS · ritmo · Watch) |
+| `HealthFit-card-corrida-story.png` | 9:16 | Corrida (story) |
+| `HealthFit-card-kite-spot-feed.png` | 1:1 | Kite Spot Buddy (alias / legado) |
+| `HealthFit-card-kite-spot-story.png` | 9:16 | Kitesurf story (alias) |
+| `HealthFit-card-kitesurf-feed.png` | 1:1 | Kitesurf (setup · vento · Spot Buddy · SOS) |
+| `HealthFit-card-kite-sos-amigos-feed.png` | 1:1 | SOS Ajuda + mapa de amigos + Watch |
+| `HealthFit-card-kitesurf-story.png` | 9:16 | Kitesurf Spot Buddy + SOS (story) |
+| `HealthFit-card-bike-feed.png` | 1:1 | Bicicleta pedal (meta · diário · alerta) |
+| `HealthFit-card-bike-story.png` | 9:16 | Bicicleta pedal (story) |
+| `HealthFit-card-cardio-duo-corrida-feed.png` | 1:1 | Cardio: Duo · Corrida · Esteira |
+| `HealthFit-card-cardio-bike-caminhada-feed.png` | 1:1 | Cardio: Caminhada · MTB · Pedal |
+| `HealthFit-card-cardio-surf-kite-feed.png` | 1:1 | Cardio: Surf · Kite · HIIT |
+| `HealthFit-card-cardio-escalada-remo-feed.png` | 1:1 | Cardio: Escalada · Remo · Natação |
+| `HealthFit-card-cardio-funcional-luta-feed.png` | 1:1 | Cardio: Funcional · Luta |
 | `HealthFit-card-modalidades-feed.png` | 1:1 | Surf · Kite · Remo · Escalada · Luta |
 
 Pasta: `HealthFit/AppStore/marketing/pt-BR/social/`
@@ -101,6 +116,96 @@ Companion Apple Watch + HealthFit no iPhone.
 https://apps.apple.com/br/app/id6798621208
 
 #HealthFit #AppleWatch #Fitness #Cardio
+```
+
+---
+
+## Legenda — Corrida
+
+```
+🏃 Corrida com GPS no mapa e no Apple Watch.
+
+Ritmo, distância, FC e calorias em tempo real no HealthFit.
+Comece grátis 👇
+https://apps.apple.com/br/app/id6798621208
+
+#HealthFit #Corrida #Running #GPS #AppleWatch #Cardio #Fitness
+```
+
+---
+
+## Legenda — Kite Spot Buddy
+
+```
+🪁 Kite Spot Buddy — radar de amigos no spot.
+
+✅ Mapa ao vivo com a equipe
+✅ Alerta de ajuda
+✅ Bússola no Apple Watch
+✅ Opt-in · só durante a sessão de kitesurf
+
+No HealthFit 👇
+https://apps.apple.com/br/app/id6798621208
+
+#HealthFit #KiteSpotBuddy #Kitesurf #Kite #AppleWatch #Spot #Safety
+```
+
+---
+
+## Legenda — Kitesurf (funções + SOS + amigos)
+
+```
+🪁 Kitesurf no HealthFit — do setup ao Spot Buddy.
+
+✅ Equipamento, modo (Big Air), prancha e SPOT
+✅ Vento, maré e previsão por hora
+✅ Saltos com giroscópio Watch + iPhone
+✅ Spot Buddy: mapa de amigos até 2 km
+✅ SOS Ajuda no iPhone e girar a coroa no Watch
+
+Opt-in · só na sessão de kitesurf.
+
+📲 https://apps.apple.com/br/app/id6798621208
+
+#HealthFit #Kitesurf #KiteSpotBuddy #SOS #BigAir #AppleWatch #Spot
+```
+
+---
+
+## Legenda — Bicicleta pedal
+
+```
+🚴 Bicicleta pedal — meta de km, diário e alerta na pista.
+
+✅ Meta e intensidade do pedal
+✅ Diário: corrente, pneus e pastilhas
+✅ Reportar perigo na pista (comunidade)
+✅ Mapa GPS + Apple Watch
+
+No HealthFit 👇
+https://apps.apple.com/br/app/id6798621208
+
+#HealthFit #Bike #Ciclismo #Pedal #GPS #AppleWatch #Manutenção
+```
+
+---
+
+## Legenda — Cardio (série de 5)
+
+```
+🔥 Cardio no HealthFit — escolha o exercício e a intensidade.
+
+✅ Duo / equipes e ranking
+✅ Corrida, caminhada, bike e MTB com GPS
+✅ Surf, kite, remo e natação
+✅ Escalada, esteira, elíptico e HIIT
+✅ Luta com cronômetro (12 modalidades)
+
+Diários de natação, bike e surf/kite dentro de cada modalidade.
+
+📲 https://apps.apple.com/br/app/id6798621208
+
+#HealthFit #Cardio #Treinos #Corrida #Bike #Surf #Kitesurf #Natação #Escalada #Luta #Fitness
 ```
 
 ---

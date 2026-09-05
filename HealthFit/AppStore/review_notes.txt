@@ -1,13 +1,13 @@
-HealthFit — App Review Notes (v1.0.2 build 6)
+HealthFit — App Review Notes (v1.0.2 build 8)
 
 BUNDLE
 - iOS: luan.com.healthfit.app
 - watchOS: luan.com.healthfit.app.watchkitapp
-- Version 1.0.2 / Build 6
+- Version 1.0.2 / Build 8
 
 DEMO ACCOUNT (RECOMMENDED)
 Email: healthfit.appreview@gmail.com
-Password: (colar só no App Store Connect → App Review Information — não versionar senha no git)
+Password: see Sign-in Information fields on App Store Connect
 Sign in on the login screen (Entrar). Complete the short profile if prompted.
 
 DEVICES TESTED (Guideline 2.1)
@@ -17,83 +17,20 @@ DEVICES TESTED (Guideline 2.1)
 - iPad (compatibility mode) / iPadOS 18.x
 
 APP PURPOSE & AUDIENCE
-HealthFit is a fitness companion for adults 16+ who want guided workouts, nutrition planning, and optional AI coaching. It helps users train (strength, cardio, sports), track wellness, and optionally subscribe for tiered premium features.
+HealthFit is a fitness companion for adults 16+ who want guided workouts, nutrition planning, and optional AI coaching.
 
 WHAT'S NEW IN THIS BUILD
-Kite Spot Buddy (kitesurf only): optional session-only friend radar, help request, and Watch compass. Separate consent from Duo. Location sharing ends when the session ends. Privacy policy updated: https://healthfit-30d87.web.app/privacidade/
-
-EXTERNAL SERVICES
-- Firebase (Auth, Firestore, Cloud Functions, FCM, Storage)
-- Apple Sign In, Google Sign In
-- Apple HealthKit, CoreLocation (active sessions + optional Spot Buddy), CoreMotion
-- StoreKit 2 (subscriptions)
-- No third-party ads or cross-app tracking
-
-REGIONAL DIFFERENCES
-Same feature set in all App Store territories. UI localized in pt-BR (primary), en-US, es-ES, fr-FR.
-
-SANDBOX SUBSCRIPTION TEST (optional)
-After login: Profile → Meu plano → choose a plan → purchase with Sandbox Apple ID.
-Restore: Profile → Meu plano → Restaurar compras.
-Core workouts (Básico+) unlock after subscribing. Nutrition/IA features require Fit or IA Plus tiers.
-
-IAP SUMMARY (where to buy)
-Profile → Meu plano → choose tier (Básico / Fit / IA Plus / Completo) → Monthly or Yearly → purchase.
-Restore: Profile → Meu plano → Restaurar compras.
-Courtesy codes (30-day grant, not IAP): Profile → Meu plano → Tenho um código de cortesia.
-
-ALTERNATIVE: Create account in-app
-1) Tap Criar conta (email + password), OR
-2) Use Sign in with Apple.
-Minimum age: 16+.
+- HealthFit Coach: student/pro profile photos sync on link cards; improved chat UI
+- Coach chat messages visible 48h then removed from chat; compliance registry retained
+- Kite Spot Buddy (kitesurf only): optional session-only friend radar, help request, Watch compass
+Privacy: https://healthfit-30d87.web.app/privacidade/
 
 HOW TO TEST CORE FLOWS
-1. Onboarding → complete profile (gender, goal, modalities).
-2. Workouts tab → guided strength (Básico+) OR Cardio → Corrida / Luta (Fit+ for advanced modalities).
-3. Nutrition tab → meal plan + shopping list (Fit+). Meal photo Análise (IA Plus).
-4. Assistant tab → ask a question (Fit: 5 msgs/day; IA Plus: unlimited).
-5. Workouts → Dupla/equipe → create/join team → chat (long-press to Report).
-6. Cardio → Kitesurf → enable Kite Spot Buddy (consent sheet) → Start → Abrir mapa / Watch Spot Buddy page.
-7. Profile → Meu plano → subscribe / Restore purchases.
-8. Profile → Excluir conta (Guideline 5.1.1(v)).
-
-KITE SPOT BUDDY (LOCATION)
-- Opt-in only; kitesurf session only; separate from Duo (Duo has no live map).
-- Shares approximate position with opted-in team friends; deleted on session end.
-- Help alert requires Watch confirmation; “Estou bem” cancels.
-
-SUBSCRIPTIONS (StoreKit 2)
-- Group: HealthFit Plans (ID 22332052)
-- Product IDs (monthly):
-  healthfit.plan.basic.monthly
-  healthfit.plan.fit.monthly
-  healthfit.plan.ai.monthly
-  healthfit.plan.complete.monthly
-- Product IDs (yearly):
-  healthfit.plan.basic.yearly
-  healthfit.plan.fit.yearly
-  healthfit.plan.ai.yearly
-  healthfit.plan.complete.yearly
-- Free tier: dashboard + limited access; premium features require subscription.
-- Courtesy codes: Profile → Meu plano → Tenho um código de cortesia (30-day grant, not IAP alternative).
-- Terms & Privacy on paywall and bundled in-app.
-
-HEALTHKIT / LOCATION / MOTION
-- HealthKit: metrics and workout sync (user must grant permission).
-- Location: outdoor cardio/sports maps during active sessions; optional Spot Buddy sharing for kitesurf with consent.
-- Motion: pedometer / activity assist.
-- No ads; no cross-app tracking.
-
-USER-GENERATED CONTENT (DUO CHAT)
-- Private team chat; messages expire (~12 hours).
-- Report via long-press; leave team from hub.
-- Moderation: berg.limma@gmail.com
-
-CONTENT DISCLAIMER
-Informational fitness/nutrition guidance only — not medical advice.
-
-WATCH APP
-Companion for heart rate / calories / session control + Spot Buddy radar/compass during kitesurf. iPhone-only review is fine.
+1. Onboarding → complete profile.
+2. Workouts / Cardio / Nutrition / Assistant.
+3. Profile → HealthFit Coach → link via invite code; open chat (both sides can write).
+4. Profile → Meu plano → subscribe / Restore.
+5. Profile → Excluir conta (Guideline 5.1.1(v)).
 
 CONTACT
 berg.limma@gmail.com

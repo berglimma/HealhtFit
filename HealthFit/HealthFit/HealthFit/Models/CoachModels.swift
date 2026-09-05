@@ -9,11 +9,33 @@ enum CoachPrivacy {
     • O profissional pode ver e prescrever treinos de musculação e/ou cardápio do aluno vinculado.
     • Relatórios de adesão (treinos concluídos) podem ser compartilhados com o coach.
     • Chat 1:1 só existe com vínculo ativo — não é o Duo nem localização em tempo real.
+    • Mensagens do chat ficam disponíveis por 48 horas e depois são apagadas do app.
+    • Cópias de registro (logs) das mensagens são mantidas por até 6 meses para segurança e conformidade legal.
     • Cardio e demais modalidades do aluno continuam privados e livres.
     • O aluno precisa do plano Fit ou superior para receber fichas, dietas e chat.
     """
 
     static let shortLabel = "Vínculo profissional para fichas, dietas e chat (sem mapa ao vivo)."
+}
+
+/// Política do chat Coach (personal / nutri).
+enum CoachChatPolicy {
+    /// Mensagens visíveis no app por 48 horas.
+    static let messageTTL: TimeInterval = 48 * 60 * 60
+    /// Retenção dos registros/logs de mensagens (meses).
+    static let registryRetentionMonths = 6
+
+    static let purposeNotice =
+        "Mensagens do chat ficam 48 horas e depois são apagadas. Registros de segurança são mantidos conforme a política."
+
+    static func expiresAt(from createdAt: Date = .now) -> Date {
+        createdAt.addingTimeInterval(messageTTL)
+    }
+
+    static func registryExpiresAt(from createdAt: Date = .now) -> Date {
+        Calendar.current.date(byAdding: .month, value: registryRetentionMonths, to: createdAt)
+            ?? createdAt.addingTimeInterval(TimeInterval(registryRetentionMonths) * 30 * 24 * 3600)
+    }
 }
 
 enum CoachPreferences {
@@ -222,12 +244,16 @@ struct CoachChatMessage: Identifiable, Codable, Equatable, Hashable {
     var senderName: String
     var text: String
     var createdAt: Date
+    /// Quando a mensagem some do chat ativo (padrão: createdAt + 48h).
+    var expiresAt: Date?
     /// Destinatário recebeu no aparelho (listener / app aberto).
     var deliveredAt: Date?
     /// Destinatário abriu o chat e leu.
     var readAt: Date?
 
     static let maxLength = 2_000
+    /// Marca mensagens Coach em collection group / Functions.
+    static let channel = "coachChat"
 
     enum ReceiptStatus: Equatable {
         case sent
@@ -241,6 +267,14 @@ struct CoachChatMessage: Identifiable, Codable, Equatable, Hashable {
         return .sent
     }
 
+    var effectiveExpiresAt: Date {
+        expiresAt ?? createdAt.addingTimeInterval(CoachChatPolicy.messageTTL)
+    }
+
+    var isExpired: Bool {
+        Date() >= effectiveExpiresAt
+    }
+
     init(
         id: String,
         linkId: String,
@@ -248,6 +282,7 @@ struct CoachChatMessage: Identifiable, Codable, Equatable, Hashable {
         senderName: String,
         text: String,
         createdAt: Date,
+        expiresAt: Date? = nil,
         deliveredAt: Date? = nil,
         readAt: Date? = nil
     ) {
@@ -257,6 +292,7 @@ struct CoachChatMessage: Identifiable, Codable, Equatable, Hashable {
         self.senderName = senderName
         self.text = text
         self.createdAt = createdAt
+        self.expiresAt = expiresAt ?? CoachChatPolicy.expiresAt(from: createdAt)
         self.deliveredAt = deliveredAt
         self.readAt = readAt
     }
@@ -269,6 +305,7 @@ struct CoachChatMessage: Identifiable, Codable, Equatable, Hashable {
         senderName = try container.decode(String.self, forKey: .senderName)
         text = try container.decode(String.self, forKey: .text)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
+        expiresAt = try container.decodeIfPresent(Date.self, forKey: .expiresAt)
         deliveredAt = try container.decodeIfPresent(Date.self, forKey: .deliveredAt)
         readAt = try container.decodeIfPresent(Date.self, forKey: .readAt)
     }

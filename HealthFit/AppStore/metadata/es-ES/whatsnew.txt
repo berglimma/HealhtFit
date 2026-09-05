@@ -1,4 +1,4 @@
-• Kite Spot Buddy: radar de amigos, alerta de ayuda y brújula en Apple Watch (solo kitesurf, opt-in, solo en sesión)
+• Kite Spot Buddy: radar de amigos, alerta SOS y brújula en Apple Watch (solo kitesurf, opt-in, solo en sesión)
+• HealthFit Coach: vínculos personal/nutri, chat, desvincular y eliminar registro profesional
 • Política de privacidad actualizada
-• Mejoras de mapa Spot Buddy y Watch
-• Correcciones de estabilidad
+• Mejoras de mapa Spot Buddy y estabilidad

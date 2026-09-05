@@ -1,4 +1,4 @@
-• Kite Spot Buddy: radar de amigos, alerta de ajuda e bússola no Apple Watch (só kitesurf, opt-in, só durante a sessão)
-• Política de privacidade atualizada (compartilhamento de posição temporário e consentimento LGPD)
-• Melhorias de mapa Spot Buddy no iPhone e layout no Watch
-• Correções de estabilidade
+• HealthFit Coach: fotos no card do aluno/profissional, chat redesenhado (48h)
+• Kite Spot Buddy: radar de amigos, SOS e bússola no Apple Watch (só kitesurf, opt-in)
+• Política de privacidade atualizada
+• Melhorias de estabilidade

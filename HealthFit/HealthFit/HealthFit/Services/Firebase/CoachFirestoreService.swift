@@ -130,7 +130,19 @@ enum CoachFirestoreService {
         if payload["createdAt"] == nil {
             payload["createdAt"] = Timestamp(date: toSave.createdAt)
         }
+        // Optional nil is omitted by Codable; force-clear so merge não mantém foto antiga.
+        if toSave.photoURL == nil || (toSave.photoURL?.isEmpty == true) {
+            payload["photoURL"] = FieldValue.delete()
+        }
         try await profiles().document(authUid).setData(payload, merge: true)
+    }
+
+    static func deleteProfile(uid: String) async throws {
+        guard isAvailable else { throw CoachFirestoreError.unavailable }
+        guard let authUid = Auth.auth().currentUser?.uid, !authUid.isEmpty, authUid == uid else {
+            throw CoachFirestoreError.notSignedIn
+        }
+        try await profiles().document(authUid).delete()
     }
 
     static func fetchProfile(uid: String) async throws -> CoachProfessionalProfile? {
@@ -206,6 +218,13 @@ enum CoachFirestoreService {
         ]
         try await membership(uid: link.coachUid, linkId: link.id).setData(membershipPayload, merge: true)
         try await membership(uid: link.studentUid, linkId: link.id).setData(membershipPayload, merge: true)
+    }
+
+    /// Remove o índice de membership dos dois lados (após encerrar o vínculo).
+    static func deleteMemberships(for link: CoachLink) async throws {
+        guard isAvailable else { throw CoachFirestoreError.unavailable }
+        try await membership(uid: link.coachUid, linkId: link.id).delete()
+        try await membership(uid: link.studentUid, linkId: link.id).delete()
     }
 
     static func updateInviteStatus(
@@ -313,13 +332,25 @@ enum CoachFirestoreService {
     static func sendMessage(_ message: CoachChatMessage) async throws {
         guard isAvailable else { throw CoachFirestoreError.unavailable }
         var payload = try encode(message)
-        // Campos explícitos para a Cloud Function de push.
+        // Campos explícitos para a Cloud Function de push / registro.
         payload["senderUid"] = message.senderUid
         payload["senderName"] = message.senderName
         payload["text"] = message.text
         payload["linkId"] = message.linkId
+        payload["channel"] = CoachChatMessage.channel
         payload["createdAt"] = Timestamp(date: message.createdAt)
+        payload["expiresAt"] = Timestamp(date: message.effectiveExpiresAt)
         try await messages(linkId: message.linkId).document(message.id).setData(payload, merge: true)
+    }
+
+    static func deleteMessages(linkId: String, messageIds: [String]) async throws {
+        guard isAvailable else { throw CoachFirestoreError.unavailable }
+        guard !messageIds.isEmpty else { return }
+        let batch = db.batch()
+        for id in messageIds.prefix(400) {
+            batch.deleteDocument(messages(linkId: linkId).document(id))
+        }
+        try await batch.commit()
     }
 
     static func updateMessageReceipt(
@@ -349,8 +380,67 @@ enum CoachFirestoreService {
             .order(by: "createdAt", descending: false)
             .limit(toLast: 100)
             .addSnapshotListener { snap, _ in
-                let items = (snap?.documents ?? []).compactMap { try? decode(CoachChatMessage.self, from: $0.data()) }
-                handler(items)
+                // Decodifica Timestamps nativos (sem ISO) para não perder frações de segundo
+                // e embaralhar a ordem quando várias msgs caem no mesmo segundo.
+                let items = (snap?.documents ?? []).compactMap { doc in
+                    decodeChatMessage(from: doc.data(), documentId: doc.documentID)
+                }
+                handler(sortedChatMessages(items))
             }
+    }
+
+    /// Ordenação estável: horário de envio, depois id.
+    static func sortedChatMessages(_ messages: [CoachChatMessage]) -> [CoachChatMessage] {
+        messages.sorted { lhs, rhs in
+            if lhs.createdAt != rhs.createdAt {
+                return lhs.createdAt < rhs.createdAt
+            }
+            return lhs.id < rhs.id
+        }
+    }
+
+    private static func decodeChatMessage(from data: [String: Any], documentId: String) -> CoachChatMessage? {
+        let id = (data["id"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? documentId
+        guard let senderUid = data["senderUid"] as? String,
+              let text = data["text"] as? String,
+              !senderUid.isEmpty,
+              !text.isEmpty else {
+            return nil
+        }
+        let linkId = data["linkId"] as? String ?? ""
+        let senderName = data["senderName"] as? String ?? ""
+        let createdAt = dateValue(from: data["createdAt"]) ?? .distantPast
+        let expiresAt = dateValue(from: data["expiresAt"])
+        let deliveredAt = dateValue(from: data["deliveredAt"])
+        let readAt = dateValue(from: data["readAt"])
+        return CoachChatMessage(
+            id: id,
+            linkId: linkId,
+            senderUid: senderUid,
+            senderName: senderName,
+            text: text,
+            createdAt: createdAt,
+            expiresAt: expiresAt,
+            deliveredAt: deliveredAt,
+            readAt: readAt
+        )
+    }
+
+    private static func dateValue(from raw: Any?) -> Date? {
+        if let timestamp = raw as? Timestamp {
+            return timestamp.dateValue()
+        }
+        if let date = raw as? Date {
+            return date
+        }
+        if let string = raw as? String {
+            let fractional = ISO8601DateFormatter()
+            fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = fractional.date(from: string) { return date }
+            let plain = ISO8601DateFormatter()
+            plain.formatOptions = [.withInternetDateTime]
+            return plain.date(from: string)
+        }
+        return nil
     }
 }

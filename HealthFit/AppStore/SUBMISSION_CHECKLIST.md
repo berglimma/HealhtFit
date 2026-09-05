@@ -1,6 +1,6 @@
 # Checklist — publicar HealthFit na App Store
 
-Versão alvo: **1.0.2 (Build 6)** · Bundle `luan.com.healthfit.app`
+Versão alvo: **1.0.2 (Build 7)** · Bundle `luan.com.healthfit.app`
 
 ## URLs legais (já no app e metadados)
 
@@ -15,7 +15,7 @@ Versão alvo: **1.0.2 (Build 6)** · Bundle `luan.com.healthfit.app`
 - [x] `APP_PRIVACY.md` com Precise Location (App Functionality, sem tracking)
 - [x] `privacy_notes.txt` (pt-BR, en-US, es-ES, fr-FR)
 - [x] `whatsnew.txt` + `review_notes.txt` para 1.0.2 (6)
-- [x] Versão Xcode **1.0.2 (6)**
+- [x] Versão Xcode **1.0.2 (7)**
 - [x] Textos de permissão de localização mencionam Spot Buddy
 - [x] Firestore rules `kiteSpotPresence`
 - [x] Feature Spot Buddy (iPhone + Watch)
@@ -30,7 +30,7 @@ Versão alvo: **1.0.2 (Build 6)** · Bundle `luan.com.healthfit.app`
 4. **Support URL** / Marketing URL dos arquivos `metadata/*/support_url.txt` e `marketing_url.txt`
 5. Colar `review_notes.txt` em App Review Information
 6. Conta demo: `healthfit.appreview@gmail.com` (senha só no App Store Connect Review Information)
-7. Xcode: **Product → Archive** → upload build **6** → selecionar no Connect → **Add for Review**
+7. Xcode: **Product → Archive** → upload build **7** → selecionar no Connect → **Add for Review**
 
 ## Testes rápidos pré-envio
 
@@ -42,6 +42,9 @@ Versão alvo: **1.0.2 (Build 6)** · Bundle `luan.com.healthfit.app`
 
 ## Enviar
 
-- [ ] Archive 1.0.2 (6)
-- [ ] Attach build
-- [ ] Submit for Review
+- [x] Archive 1.0.2 (7)
+- [x] Upload build 7 (processando no Connect)
+- [x] Versão 1.0.2 criada + What’s New salvo
+- [ ] Attach build **7** quando processing terminar
+- [ ] Atualizar Review Notes para build 7
+- [ ] Submit for Review (Adicionar para revisão → Enviar)

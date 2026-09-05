@@ -66,7 +66,12 @@ final class CoachService: ObservableObject {
             stop()
             return
         }
-        Task { await refreshProfile(uid: uid) }
+        Task {
+            await refreshProfile(uid: uid)
+            if isProfessionalAccount || myProfile != nil {
+                await refreshProfessionalPhotoFromAppProfileIfNeeded()
+            }
+        }
         membershipListener?.remove()
         membershipListener = CoachFirestoreService.listenMemberships(uid: uid) { [weak self] docs in
             Task { @MainActor in
@@ -167,6 +172,41 @@ final class CoachService: ObservableObject {
         }
     }
 
+    /// Remove o cadastro profissional do Coach (perfil na busca + vínculos como coach).
+    func deleteProfessionalRegistration(resetAccountRoleToStudent: Bool = true) async -> Bool {
+        guard let user = authService?.currentUser else {
+            lastError = CoachFirestoreError.notSignedIn.errorDescription
+            return false
+        }
+        guard isProfessionalAccount || myProfile != nil else {
+            lastError = "Não há cadastro profissional para excluir."
+            return false
+        }
+
+        let coachLinks = myLinks.filter { $0.coachUid == user.id && $0.status != .ended }
+        for link in coachLinks {
+            let ok = await endLink(link)
+            if !ok {
+                return false
+            }
+        }
+
+        do {
+            try await CoachFirestoreService.deleteProfile(uid: user.id)
+            myProfile = nil
+
+            if resetAccountRoleToStudent, user.accountRole != .student {
+                var updated = user
+                updated.accountRole = .student
+                authService?.updateProfile(updated)
+            }
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
     // MARK: - Invite / accept
 
     func createStudentInvite(profession: CoachProfession, toName: String? = nil, toEmail: String? = nil) async -> CoachInvite? {
@@ -218,14 +258,16 @@ final class CoachService: ObservableObject {
                 profession: invite.profession
             )
             let planOK = studentCanUseCoachFeatures
+            async let studentPhoto = Self.resolveCoachPhotoURL(userId: user.id)
+            async let coachPhoto = Self.resolveCoachPhotoURL(userId: invite.fromUid)
             let link = CoachLink(
                 id: linkId,
                 coachUid: invite.fromUid,
                 coachName: invite.fromName,
-                coachPhotoURL: nil,
+                coachPhotoURL: await coachPhoto,
                 studentUid: user.id,
                 studentName: user.greetingName.isEmpty ? user.name : user.greetingName,
-                studentPhotoURL: nil,
+                studentPhotoURL: await studentPhoto,
                 profession: invite.profession,
                 status: planOK ? .active : .blockedPlan,
                 memberUids: [invite.fromUid, user.id],
@@ -263,6 +305,45 @@ final class CoachService: ObservableObject {
                 updated.updatedAt = .now
                 try? await CoachFirestoreService.saveLink(updated)
             }
+        }
+    }
+
+    /// Aluno ou profissional encerra o vínculo (ex.: excluir personal).
+    func endLink(_ link: CoachLink) async -> Bool {
+        guard let uid = currentUid, link.memberUids.contains(uid) else {
+            lastError = "Sem permissão para encerrar este vínculo."
+            return false
+        }
+        guard link.status != .ended else { return true }
+
+        var updated = link
+        updated.status = .ended
+        updated.updatedAt = .now
+
+        do {
+            try await CoachFirestoreService.saveLink(updated)
+            try await CoachFirestoreService.deleteMemberships(for: updated)
+
+            myLinks.removeAll { $0.id == link.id }
+            assignedWorkoutsByLink[link.id] = nil
+            chatMessages[link.id] = nil
+
+            linkListeners[link.id]?.remove()
+            linkListeners.removeValue(forKey: link.id)
+            workoutListeners[link.id]?.remove()
+            workoutListeners.removeValue(forKey: link.id)
+            mealListeners[link.id]?.remove()
+            mealListeners.removeValue(forKey: link.id)
+            chatListeners[link.id]?.remove()
+            chatListeners.removeValue(forKey: link.id)
+
+            if link.studentUid == uid {
+                clearProfileAutoFill(for: link.profession)
+            }
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
         }
     }
 
@@ -372,7 +453,8 @@ final class CoachService: ObservableObject {
             senderUid: user.id,
             senderName: user.greetingName.isEmpty ? user.name : user.greetingName,
             text: String(trimmed.prefix(CoachChatMessage.maxLength)),
-            createdAt: .now
+            createdAt: .now,
+            expiresAt: CoachChatPolicy.expiresAt()
         )
         do {
             try await CoachFirestoreService.sendMessage(message)
@@ -380,7 +462,7 @@ final class CoachService: ObservableObject {
             var local = chatMessages[link.id] ?? []
             if !local.contains(where: { $0.id == message.id }) {
                 local.append(message)
-                chatMessages[link.id] = local
+                chatMessages[link.id] = Self.filterActiveMessages(local)
             }
             return true
         } catch {
@@ -393,8 +475,11 @@ final class CoachService: ObservableObject {
         if chatListeners[linkId] == nil {
             chatListeners[linkId] = CoachFirestoreService.listenMessages(linkId: linkId) { [weak self] messages in
                 Task { @MainActor in
-                    self?.chatMessages[linkId] = messages
-                    self?.acknowledgeDeliveredIfNeeded(linkId: linkId, messages: messages)
+                    guard let self else { return }
+                    let active = Self.filterActiveMessages(messages)
+                    self.chatMessages[linkId] = active
+                    self.acknowledgeDeliveredIfNeeded(linkId: linkId, messages: active)
+                    await self.purgeExpiredMessages(linkId: linkId, from: messages)
                 }
             }
         } else if let messages = chatMessages[linkId] {
@@ -402,38 +487,53 @@ final class CoachService: ObservableObject {
         }
     }
 
+    private static func filterActiveMessages(_ messages: [CoachChatMessage]) -> [CoachChatMessage] {
+        CoachFirestoreService.sortedChatMessages(messages.filter { !$0.isExpired })
+    }
+
+    private func purgeExpiredMessages(linkId: String, from messages: [CoachChatMessage]) async {
+        let expiredIds = messages.filter(\.isExpired).map(\.id)
+        guard !expiredIds.isEmpty else { return }
+        try? await CoachFirestoreService.deleteMessages(linkId: linkId, messageIds: expiredIds)
+    }
+
     /// Marca mensagens recebidas como entregues (outro aparelho sincroniza os ticks).
+    /// Processa em ordem cronológica para a indicação de recebimento ficar sequencial.
     func acknowledgeDeliveredIfNeeded(linkId: String, messages: [CoachChatMessage]? = nil) {
         guard let uid = currentUid else { return }
-        let list = messages ?? chatMessages[linkId] ?? []
+        let list = CoachFirestoreService.sortedChatMessages(messages ?? chatMessages[linkId] ?? [])
         let pending = list.filter { $0.senderUid != uid && $0.deliveredAt == nil }
         guard !pending.isEmpty else { return }
         Task {
-            let now = Date()
+            var cursor = Date()
             for message in pending.prefix(40) {
+                // Avança 1 ms entre ticks para manter ordem visível se várias chegam juntas.
+                cursor = max(cursor, message.createdAt).addingTimeInterval(0.001)
                 try? await CoachFirestoreService.updateMessageReceipt(
                     linkId: linkId,
                     messageId: message.id,
-                    deliveredAt: now
+                    deliveredAt: cursor
                 )
             }
         }
     }
 
-    /// Marca mensagens recebidas como lidas ao abrir o chat.
+    /// Marca mensagens recebidas como lidas ao abrir o chat (em ordem).
     func markChatRead(linkId: String) {
         guard let uid = currentUid else { return }
-        let list = chatMessages[linkId] ?? []
+        let list = CoachFirestoreService.sortedChatMessages(chatMessages[linkId] ?? [])
         let pending = list.filter { $0.senderUid != uid && $0.readAt == nil }
         guard !pending.isEmpty else { return }
         Task {
-            let now = Date()
+            var cursor = Date()
             for message in pending.prefix(40) {
+                let delivered = message.deliveredAt ?? cursor
+                cursor = max(cursor, delivered).addingTimeInterval(0.001)
                 try? await CoachFirestoreService.updateMessageReceipt(
                     linkId: linkId,
                     messageId: message.id,
-                    deliveredAt: message.deliveredAt ?? now,
-                    readAt: now
+                    deliveredAt: delivered,
+                    readAt: cursor
                 )
             }
         }
@@ -476,10 +576,101 @@ final class CoachService: ObservableObject {
         return await ProfilePhotoStorageService.downloadURLIfExists(userId: userId)
     }
 
+    /// Propaga a foto de perfil do usuário atual para todos os vínculos Coach (aluno ou profissional).
+    func refreshMyPhotoAcrossLinks(photoURL: String?) async {
+        guard let uid = currentUid else { return }
+        let normalized = photoURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let nextURL = (normalized?.isEmpty == false) ? normalized : nil
+
+        await syncProfessionalProfilePhoto(photoURL: nextURL)
+
+        var links = myLinks
+        if links.isEmpty {
+            links = await Self.fetchLinksForUser(uid: uid)
+        }
+
+        for link in links {
+            var updated = link
+            var changed = false
+            if link.studentUid == uid, link.studentPhotoURL != nextURL {
+                updated.studentPhotoURL = nextURL
+                changed = true
+            }
+            if link.coachUid == uid, link.coachPhotoURL != nextURL {
+                updated.coachPhotoURL = nextURL
+                changed = true
+            }
+            guard changed else { continue }
+            updated.updatedAt = .now
+            try? await CoachFirestoreService.saveLink(updated)
+        }
+    }
+
+    /// Atualiza a foto no cadastro profissional (busca regional + painel personal/nutri).
+    func syncProfessionalProfilePhoto(photoURL: String?) async {
+        guard let uid = currentUid else { return }
+        let normalized = photoURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let nextURL = (normalized?.isEmpty == false) ? normalized : nil
+
+        var profile = myProfile
+        if profile == nil {
+            profile = try? await CoachFirestoreService.fetchProfile(uid: uid)
+        }
+        guard var profile else { return }
+        guard profile.photoURL != nextURL else {
+            myProfile = profile
+            return
+        }
+        profile.photoURL = nextURL
+        profile.updatedAt = .now
+        do {
+            try await CoachFirestoreService.saveProfile(profile)
+            myProfile = profile
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Garante que o perfil profissional use a foto atual do app (ao abrir o painel).
+    func refreshProfessionalPhotoFromAppProfileIfNeeded() async {
+        guard let uid = currentUid else { return }
+        guard isProfessionalAccount || myProfile != nil else { return }
+        let resolved = await Self.resolveCoachPhotoURL(userId: uid)
+        await syncProfessionalProfilePhoto(photoURL: resolved)
+    }
+
+    private static func fetchLinksForUser(uid: String) async -> [CoachLink] {
+        guard CoachFirestoreService.isAvailable else { return [] }
+        do {
+            let snap = try await Firestore.firestore()
+                .collection("users").document(uid).collection("coachMemberships")
+                .getDocuments()
+            var links: [CoachLink] = []
+            for doc in snap.documents {
+                if let link = try await CoachFirestoreService.fetchLink(id: doc.documentID) {
+                    links.append(link)
+                }
+            }
+            return links
+        } catch {
+            return []
+        }
+    }
+
     // MARK: - Private sync
 
     private func applyMembershipSnapshots(_ docs: [QueryDocumentSnapshot]) async {
         let linkIds = docs.map(\.documentID)
+        let linkIdSet = Set(linkIds)
+
+        myLinks.removeAll { !linkIdSet.contains($0.id) }
+        for key in assignedWorkoutsByLink.keys where !linkIdSet.contains(key) {
+            assignedWorkoutsByLink.removeValue(forKey: key)
+        }
+        for key in chatMessages.keys where !linkIdSet.contains(key) {
+            chatMessages.removeValue(forKey: key)
+        }
+
         // Drop stale listeners
         for key in linkListeners.keys where !linkIds.contains(key) {
             linkListeners[key]?.remove()
@@ -528,14 +719,46 @@ final class CoachService: ObservableObject {
 
     private func upsertLink(_ link: CoachLink?) {
         guard let link else { return }
+        if link.status == .ended {
+            myLinks.removeAll { $0.id == link.id }
+            return
+        }
         if let idx = myLinks.firstIndex(where: { $0.id == link.id }) {
             myLinks[idx] = link
         } else {
             myLinks.append(link)
         }
         myLinks.sort { $0.updatedAt > $1.updatedAt }
-        if link.studentUid == currentUid {
+        if link.studentUid == currentUid, link.isActiveLike {
             applyProfileAutoFill(from: link)
+        }
+        enrichMissingLinkPhotosIfNeeded(link)
+    }
+
+    /// Preenche fotos ausentes em vínculos antigos (criados antes da sincronização).
+    private func enrichMissingLinkPhotosIfNeeded(_ link: CoachLink) {
+        let needsStudent = (link.studentPhotoURL ?? "").isEmpty
+        let needsCoach = (link.coachPhotoURL ?? "").isEmpty
+        guard needsStudent || needsCoach else { return }
+
+        Task {
+            var updated = link
+            var changed = false
+            if needsStudent,
+               let url = await Self.resolveCoachPhotoURL(userId: link.studentUid),
+               !url.isEmpty {
+                updated.studentPhotoURL = url
+                changed = true
+            }
+            if needsCoach,
+               let url = await Self.resolveCoachPhotoURL(userId: link.coachUid),
+               !url.isEmpty {
+                updated.coachPhotoURL = url
+                changed = true
+            }
+            guard changed else { return }
+            updated.updatedAt = .now
+            try? await CoachFirestoreService.saveLink(updated)
         }
     }
 
@@ -620,6 +843,21 @@ final class CoachService: ObservableObject {
         if changed {
             authService?.updateProfile(user)
         }
+    }
+
+    private func clearProfileAutoFill(for profession: CoachProfession) {
+        guard var user = authService?.currentUser else { return }
+        switch profession {
+        case .personal:
+            user.usesPersonalTrainer = false
+            user.personalTrainerName = ""
+            user.personalTrainerEmail = ""
+        case .nutritionist:
+            user.usesNutritionist = false
+            user.nutritionistName = ""
+            user.nutritionistEmail = ""
+        }
+        authService?.updateProfile(user)
     }
 
     private func applyNutritionistName(_ name: String) {

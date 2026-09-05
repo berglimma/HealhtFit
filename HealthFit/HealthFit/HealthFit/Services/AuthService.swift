@@ -370,6 +370,7 @@ final class AuthService: ObservableObject {
                 try? await ProfilePhotoStorageService.deletePhoto(userId: uid)
                 try? await ProfileFirestoreService.updateDirectoryPhotoURL(userId: uid, photoURL: nil)
                 await DuoTeamService.shared.refreshMyMemberProfileAcrossTeams(photoURL: "")
+                await CoachService.shared.refreshMyPhotoAcrossLinks(photoURL: nil)
             }
         }
     }
@@ -425,6 +426,7 @@ final class AuthService: ObservableObject {
                     photoURL: url.absoluteString,
                     countryCode: currentUser?.countryCode
                 )
+                await CoachService.shared.refreshMyPhotoAcrossLinks(photoURL: url.absoluteString)
             } catch {
                 print("[HealthFit] Falha ao sincronizar foto de perfil: \(error.localizedDescription)")
             }
