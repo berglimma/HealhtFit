@@ -258,7 +258,9 @@ final class WorkoutStore: ObservableObject {
             saveData()
             _ = autoEndStaleActiveSessionIfNeeded()
         } else {
-            // Returning users: sample merge can wait — don't hitch first tab switches.
+            // Seed Shape right away so "Foco no Shape" isn't empty while other samples refresh.
+            ensureShapeWorkoutsSeeded()
+            // Returning users: full sample merge can wait — don't hitch first tab switches.
             try? await Task.sleep(nanoseconds: 1_200_000_000)
             refreshSampleWorkoutsIfNeeded()
             refreshRecommendedRotationIfNeeded()
@@ -442,6 +444,34 @@ final class WorkoutStore: ObservableObject {
         standardWorkoutSheets.filter { Self.femaleSampleTitles.contains($0.title) }
     }
 
+    /// Fichas Foco no Shape. Usa o catálogo como fonte e prefere a cópia já persistida (ID estável).
+    func shapeStandardWorkouts(for gender: Gender) -> [WorkoutSheet] {
+        let catalog = ShapeWorkoutCatalog.sheets(for: gender)
+        let storedByTitle = Dictionary(
+            workoutSheets.map { ($0.title, $0) },
+            uniquingKeysWith: { current, _ in current }
+        )
+        return catalog.map { sample in
+            storedByTitle[sample.title] ?? sample
+        }
+    }
+
+    /// Garante que as fichas Foco no Shape existam no store (usuários que já tinham o app instalado).
+    @discardableResult
+    func ensureShapeWorkoutsSeeded() -> Bool {
+        var existingTitles = Set(workoutSheets.map(\.title))
+        var didAdd = false
+        for sample in Self.shapeSampleWorkouts where !existingTitles.contains(sample.title) {
+            workoutSheets.append(sample)
+            existingTitles.insert(sample.title)
+            didAdd = true
+        }
+        if didAdd {
+            saveDataLocalOnly()
+        }
+        return didAdd
+    }
+
     var homeStandardWorkoutSheets: [WorkoutSheet] {
         standardWorkoutSheets.filter { Self.homeSampleTitles.contains($0.title) }
     }
@@ -484,6 +514,7 @@ final class WorkoutStore: ObservableObject {
     private static let femaleSampleTitles: Set<String> = RecommendedWorkoutCatalog.allFemaleTitles
     private static let sampleWorkoutTitles: Set<String> = {
         RecommendedWorkoutCatalog.allRecommendedTitles
+            .union(ShapeWorkoutCatalog.allTitles)
             .union(homeSampleTitles)
             .union(mobilitySampleTitles)
     }()
@@ -1664,8 +1695,11 @@ final class WorkoutStore: ObservableObject {
 
         workoutSheets = workoutSheets.map { sheet in
             guard let sample = sampleByTitle[sheet.title] else { return sheet }
-            let missingWarmup = !sheet.exercises.contains { $0.notes == GuidedWorkoutCatalog.warmupNote }
-            let outdated = sheet.exercises.count != sample.exercises.count || sheet.exercises.count < 10
+            let isShapeSheet = ShapeWorkoutCatalog.allTitles.contains(sheet.title)
+            let missingWarmup = !isShapeSheet
+                && !sheet.exercises.contains { $0.notes == GuidedWorkoutCatalog.warmupNote }
+            let outdated = sheet.exercises.count != sample.exercises.count
+                || (!isShapeSheet && sheet.exercises.count < 10)
             guard missingWarmup || outdated else { return sheet }
             didUpdate = true
             return WorkoutSheet(
@@ -1794,13 +1828,21 @@ final class WorkoutStore: ObservableObject {
     }
 
     static let sampleWorkouts: [WorkoutSheet] =
-        maleSampleWorkouts + femaleSampleWorkouts + homeSampleWorkouts + mobilitySampleWorkouts
+        maleSampleWorkouts
+        + femaleSampleWorkouts
+        + shapeSampleWorkouts
+        + homeSampleWorkouts
+        + mobilitySampleWorkouts
 
     /// Programa padrão masculino — coorte 0 (as demais rotacionam a cada 30 dias).
     static let maleSampleWorkouts: [WorkoutSheet] = RecommendedWorkoutCatalog.baselineMaleSheets
 
     /// Programa padrão feminino — coorte 0 (as demais rotacionam a cada 30 dias).
     static let femaleSampleWorkouts: [WorkoutSheet] = RecommendedWorkoutCatalog.baselineFemaleSheets
+
+    /// Método Shape de Respeito — fichas masculino e feminino (Nível 1 e 2).
+    static let shapeSampleWorkouts: [WorkoutSheet] =
+        ShapeWorkoutCatalog.allMaleSheets + ShapeWorkoutCatalog.allFemaleSheets
 
     /// Programa em casa — peso corporal com demos em vídeo/GIF durante o treino.
     static let homeSampleWorkouts: [WorkoutSheet] = [

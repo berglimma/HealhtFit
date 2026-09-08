@@ -236,8 +236,8 @@ enum MusculacaoProgram: Equatable {
     private static func program(fromTitle title: String) -> MusculacaoProgram? {
         let lower = title.lowercased()
         if lower.hasPrefix("mobilidade") { return .mobility }
-        if lower.hasPrefix("masculino") { return .male }
-        if lower.hasPrefix("feminino") { return .female }
+        if lower.hasPrefix("masculino") || lower.hasPrefix("shape masculino") { return .male }
+        if lower.hasPrefix("feminino") || lower.hasPrefix("shape feminino") { return .female }
         return nil
     }
 }
@@ -262,6 +262,9 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
     var coachLinkId: String?
     var prescribedByUid: String?
     var prescribedByName: String?
+    /// Método/programa opcional definido pelo personal (ex.: “Foco no Shape”).
+    var coachMethodId: String?
+    var coachMethodName: String?
 
     /// Fichas personalizadas / IA / coach — sincronizam na nuvem. Catálogo local fica no device.
     var isCloudSyncable: Bool {
@@ -283,7 +286,9 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         isCoachPrescribed: Bool = false,
         coachLinkId: String? = nil,
         prescribedByUid: String? = nil,
-        prescribedByName: String? = nil
+        prescribedByName: String? = nil,
+        coachMethodId: String? = nil,
+        coachMethodName: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -300,11 +305,13 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         self.coachLinkId = coachLinkId
         self.prescribedByUid = prescribedByUid
         self.prescribedByName = prescribedByName
+        self.coachMethodId = coachMethodId
+        self.coachMethodName = coachMethodName
     }
 
     enum CodingKeys: String, CodingKey {
         case id, title, description, exercises, assignedTo, createdAt, updatedAt, isActive, isUserCreated, targetGender, createdByAssistant
-        case isCoachPrescribed, coachLinkId, prescribedByUid, prescribedByName
+        case isCoachPrescribed, coachLinkId, prescribedByUid, prescribedByName, coachMethodId, coachMethodName
     }
 
     init(from decoder: Decoder) throws {
@@ -325,6 +332,8 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         coachLinkId = try container.decodeIfPresent(String.self, forKey: .coachLinkId)
         prescribedByUid = try container.decodeIfPresent(String.self, forKey: .prescribedByUid)
         prescribedByName = try container.decodeIfPresent(String.self, forKey: .prescribedByName)
+        coachMethodId = try container.decodeIfPresent(String.self, forKey: .coachMethodId)
+        coachMethodName = try container.decodeIfPresent(String.self, forKey: .coachMethodName)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -344,6 +353,8 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         try container.encodeIfPresent(coachLinkId, forKey: .coachLinkId)
         try container.encodeIfPresent(prescribedByUid, forKey: .prescribedByUid)
         try container.encodeIfPresent(prescribedByName, forKey: .prescribedByName)
+        try container.encodeIfPresent(coachMethodId, forKey: .coachMethodId)
+        try container.encodeIfPresent(coachMethodName, forKey: .coachMethodName)
     }
 
     var resolvedProgramGender: Gender? {
@@ -357,8 +368,8 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
 
     private static func inferredGender(from title: String) -> Gender? {
         let lower = title.lowercased()
-        if lower.hasPrefix("masculino") { return .male }
-        if lower.hasPrefix("feminino") { return .female }
+        if lower.hasPrefix("masculino") || lower.hasPrefix("shape masculino") { return .male }
+        if lower.hasPrefix("feminino") || lower.hasPrefix("shape feminino") { return .female }
         return nil
     }
 

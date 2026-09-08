@@ -17,6 +17,12 @@ struct CoachLinkDetailView: View {
     @State private var isDeleting = false
     @State private var showEndLinkConfirm = false
     @State private var isEndingLink = false
+    @State private var showMethodEditor = false
+    @State private var methodToEdit: CoachTrainingMethod?
+    @State private var methodPendingDeletion: CoachTrainingMethod?
+    @State private var methodDraftName = ""
+    @State private var methodDraftNotes = ""
+    @State private var isSavingMethod = false
 
     private var liveLink: CoachLink {
         coach.myLinks.first(where: { $0.id == link.id }) ?? link
@@ -105,11 +111,80 @@ struct CoachLinkDetailView: View {
                 }
             }
 
+            if isCoach, liveLink.isActiveLike, liveLink.profession == .personal {
+                Section {
+                    ForEach(coach.myTrainingMethods) { method in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(method.name)
+                                .font(.subheadline.weight(.semibold))
+                            if !method.notes.isEmpty {
+                                Text(method.notes)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                            Text("\(assigned.filter { $0.sheet.coachMethodId == method.id }.count) fichas neste aluno")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                methodPendingDeletion = method
+                            } label: {
+                                Label("Excluir", systemImage: "trash")
+                            }
+                            Button {
+                                methodToEdit = method
+                                methodDraftName = method.name
+                                methodDraftNotes = method.notes
+                                showMethodEditor = true
+                            } label: {
+                                Label("Editar", systemImage: "pencil")
+                            }
+                            .tint(AppTheme.accent)
+                        }
+                        .contextMenu {
+                            Button {
+                                methodToEdit = method
+                                methodDraftName = method.name
+                                methodDraftNotes = method.notes
+                                showMethodEditor = true
+                            } label: {
+                                Label("Editar método", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                methodPendingDeletion = method
+                            } label: {
+                                Label("Excluir método", systemImage: "trash")
+                            }
+                        }
+                    }
+
+                    Button {
+                        methodToEdit = nil
+                        methodDraftName = ""
+                        methodDraftNotes = ""
+                        showMethodEditor = true
+                    } label: {
+                        Label("Novo método", systemImage: "plus.circle.fill")
+                    }
+                } header: {
+                    Text("Métodos de treino")
+                } footer: {
+                    Text("Opcional. Dê um nome ao seu método (ex.: Foco no Shape) e vincule fichas a ele ao prescrever. Deslize para editar ou excluir.")
+                }
+            }
+
             if !assigned.isEmpty {
                 Section {
                     ForEach(assigned) { item in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.sheet.title).font(.subheadline.weight(.semibold))
+                            if let methodName = item.sheet.coachMethodName, !methodName.isEmpty {
+                                Text(methodName)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(AppTheme.accent)
+                            }
                             Text("\(item.sheet.exercises.count) exercícios · \(item.sheet.targetGender?.rawValue ?? "—")")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
@@ -247,6 +322,83 @@ struct CoachLinkDetailView: View {
                 Text("“\(item.sheet.title)” será removida do app do aluno.")
             }
         }
+        .sheet(isPresented: $showMethodEditor) {
+            NavigationStack {
+                Form {
+                    Section {
+                        TextField("Nome do método", text: $methodDraftName)
+                        TextField("Observação (opcional)", text: $methodDraftNotes, axis: .vertical)
+                            .lineLimit(2...4)
+                    } footer: {
+                        Text("Ex.: Foco no Shape, Hipertrofia 12 semanas, Emagrecimento. Você pode vincular fichas a este método ao prescrever.")
+                    }
+                }
+                .navigationTitle(methodToEdit == nil ? "Novo método" : "Editar método")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancelar") { showMethodEditor = false }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(isSavingMethod ? "…" : "Salvar") {
+                            Task {
+                                isSavingMethod = true
+                                let saved = await coach.saveTrainingMethod(
+                                    name: methodDraftName,
+                                    notes: methodDraftNotes,
+                                    existing: methodToEdit
+                                )
+                                isSavingMethod = false
+                                if saved != nil {
+                                    statusMessage = methodToEdit == nil
+                                        ? "Método criado."
+                                        : "Método atualizado."
+                                    showMethodEditor = false
+                                    methodToEdit = nil
+                                } else {
+                                    statusMessage = coach.lastError ?? "Falha ao salvar método."
+                                }
+                            }
+                        }
+                        .disabled(isSavingMethod || methodDraftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+        .alert("Excluir método?", isPresented: methodDeletionAlertBinding) {
+            Button("Só o método", role: .destructive) {
+                guard let method = methodPendingDeletion else { return }
+                Task {
+                    isDeleting = true
+                    let ok = await coach.deleteTrainingMethod(method, removeAssignedSheets: false)
+                    isDeleting = false
+                    statusMessage = ok
+                        ? "Método removido. As fichas permanecem sem método."
+                        : (coach.lastError ?? "Falha ao excluir método.")
+                    methodPendingDeletion = nil
+                }
+            }
+            Button("Método e fichas", role: .destructive) {
+                guard let method = methodPendingDeletion else { return }
+                Task {
+                    isDeleting = true
+                    let ok = await coach.deleteTrainingMethod(method, removeAssignedSheets: true)
+                    isDeleting = false
+                    statusMessage = ok
+                        ? "Método e fichas deste aluno removidos."
+                        : (coach.lastError ?? "Falha ao excluir método.")
+                    methodPendingDeletion = nil
+                }
+            }
+            Button("Cancelar", role: .cancel) {
+                methodPendingDeletion = nil
+            }
+        } message: {
+            if let method = methodPendingDeletion {
+                Text("Excluir “\(method.name)”? Você pode manter as fichas (sem o nome do método) ou removê-las também deste aluno.")
+            }
+        }
         .alert(endLinkButtonTitle, isPresented: $showEndLinkConfirm) {
             Button(endLinkButtonTitle, role: .destructive) {
                 Task {
@@ -273,6 +425,13 @@ struct CoachLinkDetailView: View {
             set: { if !$0 { assignmentPendingDeletion = nil } }
         )
     }
+
+    private var methodDeletionAlertBinding: Binding<Bool> {
+        Binding(
+            get: { methodPendingDeletion != nil },
+            set: { if !$0 { methodPendingDeletion = nil } }
+        )
+    }
 }
 
 struct CoachPrescribeWorkoutView: View {
@@ -297,8 +456,16 @@ struct CoachPrescribeWorkoutView: View {
     @State private var customSets = 3
     @State private var customReps = 10
     @State private var didLoadEditing = false
+    @State private var selectedMethodId: String? = nil
+    @State private var showQuickMethod = false
+    @State private var quickMethodName = ""
 
     private var isEditing: Bool { editingAssignment != nil }
+
+    private var selectedMethod: CoachTrainingMethod? {
+        guard let selectedMethodId else { return nil }
+        return coach.myTrainingMethods.first { $0.id == selectedMethodId }
+    }
 
     var body: some View {
         Form {
@@ -309,6 +476,25 @@ struct CoachPrescribeWorkoutView: View {
                      : "A ficha aparece na musculação do aluno (plano Fit+).")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Picker("Método", selection: $selectedMethodId) {
+                    Text("Nenhum").tag(String?.none)
+                    ForEach(coach.myTrainingMethods) { method in
+                        Text(method.name).tag(Optional(method.id))
+                    }
+                }
+                Button {
+                    quickMethodName = ""
+                    showQuickMethod = true
+                } label: {
+                    Label("Criar método rápido", systemImage: "plus.circle")
+                }
+            } header: {
+                Text("Método (opcional)")
+            } footer: {
+                Text("Agrupe fichas sob um nome (ex.: Foco no Shape). O aluno vê o método no app.")
             }
 
             Section("Perfil da ficha") {
@@ -434,6 +620,36 @@ struct CoachPrescribeWorkoutView: View {
         .onAppear {
             loadInitialStateIfNeeded()
         }
+        .sheet(isPresented: $showQuickMethod) {
+            NavigationStack {
+                Form {
+                    Section {
+                        TextField("Nome do método", text: $quickMethodName)
+                    } footer: {
+                        Text("O método fica disponível para outras fichas deste personal.")
+                    }
+                }
+                .navigationTitle("Novo método")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancelar") { showQuickMethod = false }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Criar") {
+                            Task {
+                                if let created = await coach.saveTrainingMethod(name: quickMethodName) {
+                                    selectedMethodId = created.id
+                                    showQuickMethod = false
+                                }
+                            }
+                        }
+                        .disabled(quickMethodName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
     }
 
     private func loadInitialStateIfNeeded() {
@@ -446,6 +662,7 @@ struct CoachPrescribeWorkoutView: View {
             description = sheet.description
             exercises = sheet.exercises
             targetGender = sheet.targetGender ?? sheet.resolvedProgramGender ?? .male
+            selectedMethodId = sheet.coachMethodId
             selectedFocusGroups = Set(exercises.compactMap { WorkoutStore.focusGroup(for: $0) })
             if selectedFocusGroups.isEmpty {
                 selectedFocusGroups = [.chest]
@@ -547,7 +764,9 @@ struct CoachPrescribeWorkoutView: View {
             isCoachPrescribed: true,
             coachLinkId: link.id,
             prescribedByUid: link.coachUid,
-            prescribedByName: link.coachName
+            prescribedByName: link.coachName,
+            coachMethodId: selectedMethod?.id,
+            coachMethodName: selectedMethod?.name
         )
         let ok = await coach.publishWorkout(link: link, sheet: sheet)
         onFinished(ok)

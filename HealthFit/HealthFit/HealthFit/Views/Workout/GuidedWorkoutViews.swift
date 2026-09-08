@@ -23,17 +23,17 @@ struct GuidedWorkoutSections: View {
                 title: "Séries por nível",
                 subtitle: "Escolha a intensidade e abra as fichas guiadas"
             ) {
-                LazyVStack(spacing: 10) {
+                LazyVStack(spacing: 12) {
                     ForEach(WorkoutLevel.allCases) { level in
                         NavigationLink(value: GuidedLevelRoute(level: level, gender: gender)) {
-                            GuidedCategoryCard(
+                            MusculacaoPhotoCategoryCard(
                                 title: level.pluralTitle,
                                 subtitle: level.subtitle,
                                 icon: level.icon,
                                 accent: level.accentColor,
+                                gender: gender,
                                 count: GuidedWorkoutCatalog.templates(for: level).count,
-                                compact: true,
-                                elevated: true
+                                eyebrow: "SÉRIE POR NÍVEL"
                             )
                         }
                         .buttonStyle(.plain)
@@ -45,16 +45,18 @@ struct GuidedWorkoutSections: View {
                 title: "Foco do treino",
                 subtitle: "A primeira ficha alinha o cardápio; outro treino ou objetivo remove esse alinhamento"
             ) {
-                LazyVStack(spacing: 10) {
+                LazyVStack(spacing: 12) {
                     ForEach(WorkoutFocus.allCases) { focus in
                         NavigationLink(value: GuidedFocusRoute(focus: focus, gender: gender)) {
-                            GuidedCategoryCard(
+                            MusculacaoPhotoCategoryCard(
                                 title: focus.shortTitle,
                                 subtitle: focus.subtitle,
                                 icon: focus.icon,
                                 accent: focus.accentColor,
+                                gender: gender,
                                 count: GuidedWorkoutCatalog.templates(for: focus).count,
-                                compact: true
+                                eyebrow: "FOCO DO TREINO",
+                                height: 118
                             )
                         }
                         .buttonStyle(.plain)
@@ -175,7 +177,7 @@ struct GuidedWorkoutCategoryView: View {
                         Button {
                             selectTemplate(template)
                         } label: {
-                            GuidedTemplateCard(template: template, accent: accent)
+                            GuidedTemplateCard(template: template, accent: accent, gender: gender)
                         }
                         .buttonStyle(.plain)
                     }
@@ -247,54 +249,25 @@ struct GuidedWorkoutCategoryView: View {
 struct GuidedTemplateCard: View {
     let template: GuidedWorkoutTemplate
     let accent: Color
+    var gender: Gender = .male
 
     private var sheetPreview: WorkoutSheet {
         template.makeSheet()
     }
 
+    private var cleanedTitle: String {
+        template.title
+            .replacingOccurrences(of: "Guiado — ", with: "")
+            .replacingOccurrences(of: "Guiado - ", with: "")
+    }
+
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(accent.opacity(0.2))
-                    .frame(width: 50, height: 50)
-                Image(systemName: template.focus?.icon ?? template.level?.icon ?? "dumbbell.fill")
-                    .foregroundStyle(accent)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(template.title.replacingOccurrences(of: "Guiado — ", with: ""))
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .multilineTextAlignment(.leading)
-
-                Text(template.description)
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .lineLimit(2)
-
-                HStack(spacing: 10) {
-                    Label("\(sheetPreview.totalExercises) exercícios", systemImage: "list.bullet")
-                    Label("~\(max(sheetPreview.estimatedDuration / 60, 1)) min", systemImage: "clock")
-                    if let level = template.level {
-                        Text(level.rawValue)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(level.accentColor.opacity(0.18))
-                            .clipShape(Capsule())
-                    }
-                }
-                .font(.caption2)
-                .foregroundStyle(AppTheme.textSecondary)
-            }
-
-            Spacer(minLength: 0)
-
-            Image(systemName: "chevron.right")
-                .foregroundStyle(AppTheme.textSecondary)
-        }
-        .padding()
-        .background(AppTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        MusculacaoPhotoSheetCard(
+            sheet: sheetPreview,
+            gender: gender,
+            style: .standard,
+            highlighted: false,
+            displayTitle: cleanedTitle
+        )
     }
 }

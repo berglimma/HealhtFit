@@ -112,6 +112,268 @@ struct WorkoutProgramHeroCard: View {
     }
 }
 
+/// Estilo visual das fichas nos hubs masculino/feminino.
+enum MusculacaoSheetCardStyle {
+    case shape
+    case shapeLevel1
+    case shapeLevel2
+    case recommended
+    case standard
+
+    private static let shapeLevel1Blue = Color(red: 0.45, green: 0.72, blue: 0.98)
+    private static let shapeLevel2Orange = AppTheme.accentSecondary
+
+    var badgeTitle: String? {
+        switch self {
+        case .shape: return "Foco no Shape"
+        case .shapeLevel1: return "Shape · Nível 1"
+        case .shapeLevel2: return "Shape · Nível 2"
+        case .recommended: return "Recomendado"
+        case .standard: return nil
+        }
+    }
+
+    var badgeIcon: String {
+        switch self {
+        case .shape, .shapeLevel1, .shapeLevel2: return "flame.fill"
+        case .recommended: return "star.fill"
+        case .standard: return "dumbbell.fill"
+        }
+    }
+
+    func accent(for sheetTitle: String, gender: Gender, highlighted: Bool) -> Color {
+        switch self {
+        case .shape:
+            return sheetTitle.contains("Nível 2")
+                ? Self.shapeLevel2Orange
+                : Self.shapeLevel1Blue
+        case .shapeLevel1:
+            return Self.shapeLevel1Blue
+        case .shapeLevel2:
+            return Self.shapeLevel2Orange
+        case .recommended:
+            return gender == .female
+                ? Color(red: 0.86, green: 0.45, blue: 0.58)
+                : AppTheme.accent
+        case .standard:
+            return highlighted ? AppTheme.accent : AppTheme.accent.opacity(0.85)
+        }
+    }
+}
+
+/// Card fotográfico compacto — séries por nível, foco do treino, Shape e recomendados.
+struct MusculacaoPhotoCategoryCard: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let accent: Color
+    let gender: Gender
+    var count: Int = 0
+    var eyebrow: String? = nil
+    var height: CGFloat = 128
+
+    private var imageName: String {
+        gender == .female ? "WorkoutProgramFemale" : "WorkoutProgramMale"
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            Image(imageName)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: height)
+                .clipped()
+
+            LinearGradient(
+                colors: [
+                    accent.opacity(0.15),
+                    .black.opacity(0.55),
+                    .black.opacity(0.88)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            HStack(alignment: .bottom, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(accent.opacity(0.28))
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(.white.opacity(0.22), lineWidth: 1)
+                        )
+                    Image(systemName: icon)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    if let eyebrow {
+                        Text(eyebrow)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(accent)
+                    }
+
+                    Text(title)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+
+                    Text(subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(2)
+
+                    if count > 0 {
+                        Label("\(count) ficha\(count == 1 ? "" : "s")", systemImage: "list.bullet.rectangle.fill")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.92))
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.75))
+                    .padding(.bottom, 2)
+            }
+            .padding(14)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
+        .background(accent.opacity(0.2))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .strokeBorder(accent.opacity(0.4), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.28), radius: 10, y: 5)
+        .contentShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .compositingGroup()
+    }
+}
+
+/// Card fotográfico de ficha (Shape / Recomendados) nos hubs M/F.
+struct MusculacaoPhotoSheetCard: View {
+    let sheet: WorkoutSheet
+    let gender: Gender
+    var style: MusculacaoSheetCardStyle = .standard
+    var highlighted: Bool = false
+    var displayTitle: String? = nil
+
+    private var imageName: String {
+        gender == .female ? "WorkoutProgramFemale" : "WorkoutProgramMale"
+    }
+
+    private var accent: Color {
+        style.accent(for: sheet.title, gender: gender, highlighted: highlighted)
+    }
+
+    private var badgeTitle: String? {
+        switch style {
+        case .shape:
+            return sheet.title.contains("Nível 2") ? "Shape · Nível 2" : "Shape · Nível 1"
+        default:
+            return style.badgeTitle
+        }
+    }
+
+    private var shortTitle: String {
+        if let displayTitle, !displayTitle.isEmpty { return displayTitle }
+        var title = sheet.title
+        for prefix in [
+            "Shape Feminino ", "Shape Masculino ",
+            "Feminino ", "Masculino ",
+            "Guiado — ", "Guiado - "
+        ] {
+            if title.hasPrefix(prefix) {
+                title = String(title.dropFirst(prefix.count))
+                break
+            }
+        }
+        return title
+    }
+
+    /// Desloca o crop da foto para cada ficha não parecer idêntica.
+    private var coverOffset: CGFloat {
+        let values = sheet.title.unicodeScalars.map { Int($0.value) }
+        let sum = values.reduce(0, +)
+        return CGFloat(sum % 48) - 24
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            Image(imageName)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: 118)
+                .offset(y: coverOffset)
+                .clipped()
+
+            LinearGradient(
+                colors: [
+                    accent.opacity(0.22),
+                    .black.opacity(0.35),
+                    .black.opacity(0.86)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    if let badge = badgeTitle {
+                        Label(badge, systemImage: style.badgeIcon)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(accent.opacity(0.9))
+                            .clipShape(Capsule())
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+
+                Text(shortTitle)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.88)
+
+                HStack(spacing: 10) {
+                    Label("\(sheet.totalExercises) exercícios", systemImage: "list.bullet")
+                    Label("~\(max(sheet.estimatedDuration / 60, 1)) min", systemImage: "clock")
+                    Label("\(sheet.exercises.reduce(0) { $0 + $1.sets }) séries", systemImage: "repeat")
+                }
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.9))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            }
+            .padding(14)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 118)
+        .background(accent.opacity(0.22))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .strokeBorder(accent.opacity(highlighted ? 0.7 : 0.4), lineWidth: highlighted ? 1.5 : 1)
+        )
+        .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+        .contentShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .compositingGroup()
+    }
+}
+
 /// Capa de modalidade: asset fotográfico quando existir; senão gradiente + símbolo.
 struct ModalityCoverArt: View {
     let systemImage: String

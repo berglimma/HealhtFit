@@ -54,6 +54,7 @@
 		B1000009 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000009 /* NotificationService.swift */; };
 		B1000914 /* NutritionNotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000914 /* NutritionNotificationPreferences.swift */; };
 		B1000918 /* RecommendedWorkoutCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000918 /* RecommendedWorkoutCatalog.swift */; };
+		B1000988 /* ShapeWorkoutCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000988 /* ShapeWorkoutCatalog.swift */; };
 		B1000919 /* AddExerciseDuringWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000919 /* AddExerciseDuringWorkoutView.swift */; };
 		B1000915 /* WorkoutSheetOCRParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000915 /* WorkoutSheetOCRParser.swift */; };
 		B1000916 /* WorkoutSheetDocumentScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000916 /* WorkoutSheetDocumentScanner.swift */; };
@@ -426,6 +427,7 @@
 		F1000009 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		F1000914 /* NutritionNotificationPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionNotificationPreferences.swift; sourceTree = "<group>"; };
 		F1000918 /* RecommendedWorkoutCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendedWorkoutCatalog.swift; sourceTree = "<group>"; };
+		F1000988 /* ShapeWorkoutCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapeWorkoutCatalog.swift; sourceTree = "<group>"; };
 		F1000919 /* AddExerciseDuringWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExerciseDuringWorkoutView.swift; sourceTree = "<group>"; };
 		F1000915 /* WorkoutSheetOCRParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSheetOCRParser.swift; sourceTree = "<group>"; };
 		F1000916 /* WorkoutSheetDocumentScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSheetDocumentScanner.swift; sourceTree = "<group>"; };
@@ -870,6 +872,7 @@
 				F1000935 /* DuoNavigationRouter.swift */,
 				F1000914 /* NutritionNotificationPreferences.swift */,
 				F1000918 /* RecommendedWorkoutCatalog.swift */,
+				F1000988 /* ShapeWorkoutCatalog.swift */,
 				F1000915 /* WorkoutSheetOCRParser.swift */,
 				F1000010 /* RestTimerService.swift */,
 				F1000306 /* WorkoutLiveActivityAttributes.swift */,
@@ -1583,6 +1586,7 @@
 				B1000009 /* NotificationService.swift in Sources */,
 				B1000914 /* NutritionNotificationPreferences.swift in Sources */,
 				B1000918 /* RecommendedWorkoutCatalog.swift in Sources */,
+				B1000988 /* ShapeWorkoutCatalog.swift in Sources */,
 				B1000915 /* WorkoutSheetOCRParser.swift in Sources */,
 				B1000916 /* WorkoutSheetDocumentScanner.swift in Sources */,
 				B1000917 /* ScanWorkoutSheetView.swift in Sources */,

@@ -308,6 +308,18 @@ service cloud.firestore {
         && request.auth.uid == uid
         && request.resource.data.uid == request.auth.uid;
       allow delete: if request.auth != null && request.auth.uid == uid;
+
+      // Métodos de treino do personal (nomeável / editável / excluível).
+      match /methods/{methodId} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow create, update: if request.auth != null
+          && request.auth.uid == uid
+          && request.resource.data.coachUid == request.auth.uid
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 80;
+        allow delete: if request.auth != null && request.auth.uid == uid;
+      }
     }
 
     match /coachLinks/{linkId} {

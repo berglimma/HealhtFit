@@ -9,6 +9,9 @@ Link de download: **https://apps.apple.com/br/app/id6798621208**
 | Arquivo | Formato | Uso |
 |---------|---------|-----|
 | `HealthFit-perfil-logo.png` | 1:1 (1080) | Foto de perfil (só logo) — Instagram, TikTok, Facebook |
+| `HealthFit-card-retro80-todos-momentos-feed.png` | 1:1 (feed) | Retro anos 80 — “HealthFit está em todos os momentos” |
+| `HealthFit-card-divulgacao-personal-feed.png` | 1:1 (feed) | Divulgação — “Seu personal trainer inteligente” |
+| `HealthFit-card-independencia-treino-feed.png` | 1:1 (feed) | 7 de Setembro — treino no feriado |
 | `HealthFit-card-instagram-feed.png` | 1:1 (feed) | Card institucional (treino · dieta · IA) |
 | `HealthFit-card-instagram-story.png` | 9:16 | Story institucional |
 | `HealthFit-card-comece-gratis-story.png` | 9:16 | CTA “Comece grátis” |

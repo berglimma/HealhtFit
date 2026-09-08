@@ -53,6 +53,10 @@ enum CoachFirestoreService {
         links().document(linkId).collection("assignedWorkouts")
     }
 
+    private static func methods(coachUid: String) -> CollectionReference {
+        profiles().document(coachUid).collection("methods")
+    }
+
     private static func messages(linkId: String) -> CollectionReference {
         links().document(linkId).collection("messages")
     }
@@ -302,6 +306,47 @@ enum CoachFirestoreService {
             .addSnapshotListener { snap, _ in
                 let items = (snap?.documents ?? []).compactMap { try? decode(CoachAssignedWorkout.self, from: $0.data()) }
                 handler(items.sorted { $0.updatedAt > $1.updatedAt })
+            }
+    }
+
+    // MARK: - Training methods
+
+    static func saveMethod(_ method: CoachTrainingMethod) async throws {
+        guard isAvailable else { throw CoachFirestoreError.unavailable }
+        guard let authUid = Auth.auth().currentUser?.uid, authUid == method.coachUid else {
+            throw CoachFirestoreError.notSignedIn
+        }
+        var toSave = method
+        toSave.updatedAt = .now
+        var payload = try encode(toSave)
+        payload["updatedAt"] = Timestamp(date: toSave.updatedAt)
+        if payload["createdAt"] == nil {
+            payload["createdAt"] = Timestamp(date: toSave.createdAt)
+        }
+        try await methods(coachUid: authUid).document(toSave.id).setData(payload, merge: true)
+    }
+
+    static func deleteMethod(coachUid: String, methodId: String) async throws {
+        guard isAvailable else { throw CoachFirestoreError.unavailable }
+        guard let authUid = Auth.auth().currentUser?.uid, authUid == coachUid else {
+            throw CoachFirestoreError.notSignedIn
+        }
+        try await methods(coachUid: coachUid).document(methodId).delete()
+    }
+
+    static func listenMethods(
+        coachUid: String,
+        handler: @escaping ([CoachTrainingMethod]) -> Void
+    ) -> ListenerRegistration? {
+        guard isAvailable else { return nil }
+        return methods(coachUid: coachUid)
+            .addSnapshotListener { snap, _ in
+                let items = (snap?.documents ?? []).compactMap {
+                    try? decode(CoachTrainingMethod.self, from: $0.data())
+                }
+                handler(items.sorted {
+                    $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                })
             }
     }
 

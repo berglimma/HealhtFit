@@ -9,6 +9,7 @@ final class CoachService: ObservableObject {
 
     @Published private(set) var myProfile: CoachProfessionalProfile?
     @Published private(set) var myLinks: [CoachLink] = []
+    @Published private(set) var myTrainingMethods: [CoachTrainingMethod] = []
     @Published private(set) var assignedWorkoutsByLink: [String: [CoachAssignedWorkout]] = [:]
     @Published private(set) var chatMessages: [String: [CoachChatMessage]] = [:]
     @Published private(set) var isSyncing = false
@@ -23,6 +24,7 @@ final class CoachService: ObservableObject {
     private var workoutListeners: [String: ListenerRegistration] = [:]
     private var mealListeners: [String: ListenerRegistration] = [:]
     private var chatListeners: [String: ListenerRegistration] = [:]
+    private var methodsListener: ListenerRegistration?
 
     private init() {}
 
@@ -83,6 +85,8 @@ final class CoachService: ObservableObject {
     func stop() {
         membershipListener?.remove()
         membershipListener = nil
+        methodsListener?.remove()
+        methodsListener = nil
         linkListeners.values.forEach { $0.remove() }
         workoutListeners.values.forEach { $0.remove() }
         mealListeners.values.forEach { $0.remove() }
@@ -92,6 +96,7 @@ final class CoachService: ObservableObject {
         mealListeners.removeAll()
         chatListeners.removeAll()
         myLinks = []
+        myTrainingMethods = []
         assignedWorkoutsByLink = [:]
         chatMessages = [:]
     }
@@ -102,8 +107,102 @@ final class CoachService: ObservableObject {
         guard let uid = uid ?? currentUid else { return }
         do {
             myProfile = try await CoachFirestoreService.fetchProfile(uid: uid)
+            if isProfessionalAccount || myProfile != nil {
+                ensureMethodsListening(coachUid: uid)
+            }
         } catch {
             lastError = error.localizedDescription
+        }
+    }
+
+    private func ensureMethodsListening(coachUid: String) {
+        guard methodsListener == nil else { return }
+        methodsListener = CoachFirestoreService.listenMethods(coachUid: coachUid) { [weak self] methods in
+            Task { @MainActor in
+                self?.myTrainingMethods = methods
+            }
+        }
+    }
+
+    // MARK: - Training methods
+
+    @discardableResult
+    func saveTrainingMethod(name: String, notes: String = "", existing: CoachTrainingMethod? = nil) async -> CoachTrainingMethod? {
+        guard let uid = currentUid else {
+            lastError = CoachFirestoreError.notSignedIn.errorDescription
+            return nil
+        }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            lastError = "Informe um nome para o método."
+            return nil
+        }
+        let method = CoachTrainingMethod(
+            id: existing?.id ?? UUID().uuidString,
+            coachUid: uid,
+            name: String(trimmed.prefix(80)),
+            notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
+            createdAt: existing?.createdAt ?? .now,
+            updatedAt: .now
+        )
+        do {
+            try await CoachFirestoreService.saveMethod(method)
+            if let idx = myTrainingMethods.firstIndex(where: { $0.id == method.id }) {
+                myTrainingMethods[idx] = method
+            } else {
+                myTrainingMethods.append(method)
+                myTrainingMethods.sort {
+                    $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                }
+            }
+            if let existing, existing.name != method.name {
+                await propagateMethodRename(method)
+            }
+            return method
+        } catch {
+            lastError = error.localizedDescription
+            return nil
+        }
+    }
+
+    func deleteTrainingMethod(_ method: CoachTrainingMethod, removeAssignedSheets: Bool = false) async -> Bool {
+        guard let uid = currentUid, uid == method.coachUid else { return false }
+        do {
+            try await CoachFirestoreService.deleteMethod(coachUid: uid, methodId: method.id)
+            myTrainingMethods.removeAll { $0.id == method.id }
+
+            for link in myLinks where link.coachUid == uid && link.profession == .personal {
+                let assignments = assignedWorkoutsByLink[link.id] ?? []
+                for assignment in assignments where assignment.sheet.coachMethodId == method.id {
+                    if removeAssignedSheets {
+                        _ = await deleteAssignedWorkout(link: link, assignment: assignment)
+                    } else {
+                        var sheet = assignment.sheet
+                        sheet.coachMethodId = nil
+                        sheet.coachMethodName = nil
+                        sheet.updatedAt = .now
+                        _ = await publishWorkout(link: link, sheet: sheet)
+                    }
+                }
+            }
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    private func propagateMethodRename(_ method: CoachTrainingMethod) async {
+        guard let uid = currentUid else { return }
+        for link in myLinks where link.coachUid == uid && link.profession == .personal {
+            let assignments = assignedWorkoutsByLink[link.id] ?? []
+            for assignment in assignments where assignment.sheet.coachMethodId == method.id {
+                var sheet = assignment.sheet
+                guard sheet.coachMethodName != method.name else { continue }
+                sheet.coachMethodName = method.name
+                sheet.updatedAt = .now
+                _ = await publishWorkout(link: link, sheet: sheet)
+            }
         }
     }
 
@@ -165,6 +264,7 @@ final class CoachService: ObservableObject {
         do {
             try await CoachFirestoreService.saveProfile(profile)
             myProfile = profile
+            ensureMethodsListening(coachUid: user.id)
             return true
         } catch {
             lastError = error.localizedDescription

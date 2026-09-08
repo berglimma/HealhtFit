@@ -269,6 +269,9 @@
     "%lld fichas · preparo para carga · demos em GIF" : {
 
     },
+    "%lld fichas neste aluno" : {
+
+    },
     "%lld hoje" : {
 
     },
@@ -364,6 +367,9 @@
 
     },
     "%lld salto(s) · curva subida/descida no mapa GPS" : {
+
+    },
+    "%lld séries" : {
 
     },
     "%lld sessões · %lld min" : {
@@ -727,6 +733,9 @@
           }
         }
       }
+    },
+    "Agrupe fichas sob um nome (ex.: Foco no Shape). O aluno vê o método no app." : {
+
     },
     "Água recomendada" : {
 
@@ -2320,6 +2329,9 @@
     "Criar ficha personalizada" : {
 
     },
+    "Criar método rápido" : {
+
+    },
     "Criar refeição" : {
 
     },
@@ -2601,6 +2613,9 @@
     "Editar medidas corporais" : {
 
     },
+    "Editar método" : {
+
+    },
     "Editar refeição" : {
 
     },
@@ -2870,10 +2885,16 @@
     "Ex.: buraco profundo na direita" : {
 
     },
+    "Ex.: Foco no Shape, Hipertrofia 12 semanas, Emagrecimento. Você pode vincular fichas a este método ao prescrever." : {
+
+    },
     "Excluindo conta…" : {
 
     },
     "Excluir" : {
+
+    },
+    "Excluir “%@”? Você pode manter as fichas (sem o nome do método) ou removê-las também deste aluno." : {
 
     },
     "Excluir cadastro" : {
@@ -2895,6 +2916,12 @@
 
     },
     "Excluir ficha?" : {
+
+    },
+    "Excluir método" : {
+
+    },
+    "Excluir método?" : {
 
     },
     "Excluir nutricionista" : {
@@ -3620,6 +3647,18 @@
     "Metabolismo Basal" : {
 
     },
+    "Método" : {
+
+    },
+    "Método (opcional)" : {
+
+    },
+    "Método e fichas" : {
+
+    },
+    "Métodos de treino" : {
+
+    },
     "Métrica" : {
 
     },
@@ -3878,6 +3917,9 @@
     "Nome do local / praia / spot" : {
 
     },
+    "Nome do método" : {
+
+    },
     "Nome do profissional" : {
 
     },
@@ -3933,6 +3975,9 @@
 
     },
     "Novo item" : {
+
+    },
+    "Novo método" : {
 
     },
     "Novo recorde! −%lld min" : {
@@ -4087,6 +4132,9 @@
     "O laudo usa as medidas do Perfil. As fotos abaixo são opcionais e reforçam o antes/depois." : {
 
     },
+    "O método fica disponível para outras fichas deste personal." : {
+
+    },
     "O que melhorar" : {
 
     },
@@ -4146,6 +4194,9 @@
 
     },
     "Opcional e privado — só na sua conta." : {
+
+    },
+    "Opcional. Dê um nome ao seu método (ex.: Foco no Shape) e vincule fichas a ele ao prescrever. Deslize para editar ou excluir." : {
 
     },
     "Open-Meteo (vento + Marine): altura real estimada com sua localização." : {
@@ -5481,6 +5532,9 @@
 
     },
     "Só musculação" : {
+
+    },
+    "Só o método" : {
 
     },
     "Só para marcar atividades físicas. A mensagem expira em 12 horas. Sem mapa e sem localização ao vivo." : {

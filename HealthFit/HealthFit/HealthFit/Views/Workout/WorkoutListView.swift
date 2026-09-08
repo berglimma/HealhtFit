@@ -726,8 +726,39 @@ struct GenderWorkoutHubView: View {
         .sorted { $0.updatedAt > $1.updatedAt }
     }
 
+    /// Fichas do personal agrupadas por método nomeado (quando houver).
+    private var coachMethodGroups: [(name: String, sheets: [WorkoutSheet])] {
+        let withMethod = coachPrescribedSheets.filter {
+            ($0.coachMethodName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+        }
+        let names = Array(Set(withMethod.compactMap(\.coachMethodName))).sorted {
+            $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+        }
+        return names.map { name in
+            (name, withMethod.filter { $0.coachMethodName == name })
+        }
+    }
+
+    private var coachSheetsWithoutMethod: [WorkoutSheet] {
+        coachPrescribedSheets.filter {
+            $0.coachMethodName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false
+        }
+    }
+
     private var recommendedSheets: [WorkoutSheet] {
         workoutStore.recommendedStandardWorkouts(for: gender)
+    }
+
+    private var shapeSheets: [WorkoutSheet] {
+        workoutStore.shapeStandardWorkouts(for: gender)
+    }
+
+    private var shapeLevel1Sheets: [WorkoutSheet] {
+        shapeSheets.filter { $0.title.contains("Nível 1") }
+    }
+
+    private var shapeLevel2Sheets: [WorkoutSheet] {
+        shapeSheets.filter { $0.title.contains("Nível 2") }
     }
 
     private var customSheets: [WorkoutSheet] {
@@ -744,13 +775,25 @@ struct GenderWorkoutHubView: View {
                 hubHeader
 
                 if !coachPrescribedSheets.isEmpty {
-                    workoutGroupSection(
-                        title: "Fichas do seu personal",
-                        subtitle: coach.activePersonalLink.map { "Em destaque · prescritas por \($0.coachName)" }
-                            ?? "Em destaque · HealthFit Coach",
-                        sheets: coachPrescribedSheets,
-                        highlighted: true
-                    )
+                    ForEach(coachMethodGroups, id: \.name) { group in
+                        workoutGroupSection(
+                            title: group.name,
+                            subtitle: coach.activePersonalLink.map { "Método prescrito por \($0.coachName)" }
+                                ?? "Método do seu personal",
+                            sheets: group.sheets,
+                            highlighted: true
+                        )
+                    }
+
+                    if !coachSheetsWithoutMethod.isEmpty {
+                        workoutGroupSection(
+                            title: "Fichas do seu personal",
+                            subtitle: coach.activePersonalLink.map { "Em destaque · prescritas por \($0.coachName)" }
+                                ?? "Em destaque · HealthFit Coach",
+                            sheets: coachSheetsWithoutMethod,
+                            highlighted: true
+                        )
+                    }
                 }
 
                 workoutGroupSection(
@@ -762,10 +805,29 @@ struct GenderWorkoutHubView: View {
 
                 GuidedWorkoutSections(gender: gender)
 
+                if !shapeLevel1Sheets.isEmpty {
+                    workoutGroupSection(
+                        title: "Foco no Shape · Nível 1",
+                        subtitle: "Base do método",
+                        sheets: shapeLevel1Sheets,
+                        cardStyle: .shapeLevel1
+                    )
+                }
+
+                if !shapeLevel2Sheets.isEmpty {
+                    workoutGroupSection(
+                        title: "Foco no Shape · Nível 2",
+                        subtitle: "Progressão do método",
+                        sheets: shapeLevel2Sheets,
+                        cardStyle: .shapeLevel2
+                    )
+                }
+
                 workoutGroupSection(
                     title: "Recomendados",
                     subtitle: recommendedSubtitle,
-                    sheets: recommendedSheets
+                    sheets: recommendedSheets,
+                    cardStyle: .recommended
                 )
 
                 RecentCompletedWorkoutsSection(
@@ -780,6 +842,7 @@ struct GenderWorkoutHubView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
+            workoutStore.ensureShapeWorkoutsSeeded()
             _ = workoutStore.refreshRecommendedRotationIfNeeded()
         }
         .toolbar {
@@ -888,7 +951,8 @@ struct GenderWorkoutHubView: View {
         subtitle: String,
         sheets: [WorkoutSheet],
         emptyMessage: String? = nil,
-        highlighted: Bool = false
+        highlighted: Bool = false,
+        cardStyle: MusculacaoSheetCardStyle? = nil
     ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -917,7 +981,11 @@ struct GenderWorkoutHubView: View {
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(sheets) { sheet in
-                        workoutSheetRow(sheet, highlighted: highlighted || sheet.isCoachPrescribed)
+                        workoutSheetRow(
+                            sheet,
+                            highlighted: highlighted || sheet.isCoachPrescribed,
+                            cardStyle: cardStyle
+                        )
                     }
                 }
             }
@@ -935,13 +1003,26 @@ struct GenderWorkoutHubView: View {
         )
     }
 
-    private func workoutSheetRow(_ sheet: WorkoutSheet, highlighted: Bool = false) -> some View {
+    private func workoutSheetRow(
+        _ sheet: WorkoutSheet,
+        highlighted: Bool = false,
+        cardStyle: MusculacaoSheetCardStyle? = nil
+    ) -> some View {
         NavigationLink(value: sheet) {
-            WorkoutSheetCard(
-                sheet: sheet,
-                showsPersonalBadge: workoutStore.canModify(sheet) && !sheet.isCoachPrescribed,
-                highlightedAsCoach: sheet.isCoachPrescribed || highlighted
-            )
+            if let cardStyle {
+                MusculacaoPhotoSheetCard(
+                    sheet: sheet,
+                    gender: gender,
+                    style: cardStyle,
+                    highlighted: highlighted
+                )
+            } else {
+                WorkoutSheetCard(
+                    sheet: sheet,
+                    showsPersonalBadge: workoutStore.canModify(sheet) && !sheet.isCoachPrescribed,
+                    highlightedAsCoach: sheet.isCoachPrescribed || highlighted
+                )
+            }
         }
         .buttonStyle(.plain)
         .contextMenu {
@@ -1058,6 +1139,11 @@ struct WorkoutSheetCard: View {
     var highlightedAsCoach = false
     var iconSystemName: String?
 
+    private func coachMethodBadgeTitle(for sheet: WorkoutSheet) -> String {
+        let name = sheet.coachMethodName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return name.isEmpty ? "Personal" : name
+    }
+
     private var resolvedIcon: String {
         if let iconSystemName { return iconSystemName }
         if sheet.isCoachPrescribed { return "person.badge.shield.checkmark.fill" }
@@ -1088,7 +1174,7 @@ struct WorkoutSheetCard: View {
                         .layoutPriority(1)
 
                     if sheet.isCoachPrescribed {
-                        Text("Personal")
+                        Text(coachMethodBadgeTitle(for: sheet))
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 8)

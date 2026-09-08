@@ -4,6 +4,10 @@ enum ExerciseGifCatalog {
     /// ExerciseGymGifsDB — 1.300+ GIFs demonstrativos via jsDelivr CDN.
     /// Poucos arquivos são rotulados como `*-female`; quando o programa é feminino,
     /// priorizamos esses e variantes mais alinhadas a glúteos/pernas.
+    ///
+    /// Foco no Shape: nomes das fichas mapeados explicitamente (M/F) com base na
+    /// biblioteca Drive `EXERCÍCIOS NO CABO OU POLIA`
+    /// (folder `1KqXg1r8YHtnXSh3VPLYMbH1t7l4Yzlvx`).
     static let cdnBaseURL = "https://cdn.jsdelivr.net/gh/JahelCuadrado/ExerciseGymGifsDB@main/"
 
     static func gifURL(for exercise: Exercise, preferredGender: Gender? = nil) -> URL? {
@@ -51,6 +55,14 @@ enum ExerciseGifCatalog {
         muscleGroup: MuscleGroup,
         preferredGender: Gender? = nil
     ) -> String? {
+        // Foco no Shape — demos alinhadas à biblioteca Cabo/Polia (Drive) por gênero.
+        if preferredGender == .female, let shapeFemale = shapeFemaleExerciseFilePaths[name] {
+            return shapeFemale
+        }
+        if let shape = shapeExerciseFilePaths[name] {
+            return shape
+        }
+
         if preferredGender == .female, let female = femaleExerciseFilePaths[name] {
             return female
         }
@@ -103,27 +115,40 @@ enum ExerciseGifCatalog {
         (["supino reto"], "pectorals/barbell-bench-press.gif"),
         (["supino inclinado"], "pectorals/barbell-incline-bench-press.gif"),
         (["supino declinado"], "pectorals/barbell-decline-bench-press.gif"),
+        (["crucifixo inverso"], "delts/lever-seated-reverse-fly.gif"),
+        (["crucifixo inclinado"], "pectorals/dumbbell-incline-fly.gif"),
         (["crucifixo"], "pectorals/dumbbell-fly.gif"),
-        (["crossover"], "pectorals/cable-standing-up-straight-crossovers.gif"),
+        (["crossover", "cross over"], "pectorals/cable-standing-up-straight-crossovers.gif"),
+        (["voador", "pec deck"], "pectorals/lever-seated-fly.gif"),
         (["flexao", "flexão"], "pectorals/push-up.gif"),
-        (["triceps pulley", "tríceps pulley"], "triceps/cable-pushdown.gif"),
+        (["triceps corda", "tríceps corda", "triceps pulley", "tríceps pulley", "triceps pushdown"], "triceps/cable-pushdown.gif"),
         (["triceps testa", "tríceps testa"], "triceps/barbell-lying-triceps-extension-skull-crusher.gif"),
         (["triceps frances", "tríceps francês"], "triceps/cable-overhead-triceps-extension-rope-attachment.gif"),
         (["mergulho"], "triceps/bench-dip-knees-bent.gif"),
+        (["rosca martelo", "martelo"], "biceps/dumbbell-hammer-curl.gif"),
         (["rosca"], "biceps/barbell-curl.gif"),
+        (["remada baixa", "seated row"], "upper-back/cable-seated-row.gif"),
         (["remada"], "upper-back/barbell-bent-over-row.gif"),
         (["pulldown triangulo", "pulldown triângulo", "puxada triangulo", "puxada triângulo", "v-bar pulldown", "triangle pulldown", "close grip pulldown"], "lats/cable-lateral-pulldown-with-v-bar.gif"),
-        (["puxada", "pulldown", "barra fixa"], "lats/cable-pulldown.gif"),
+        (["puxada alta", "puxada frente", "pulldown", "barra fixa"], "lats/cable-pulldown.gif"),
+        (["rotacao externa", "rotação externa", "external rotation"], "delts/cable-standing-rear-delt-row-with-rope.gif"),
         (["hip thrust", "elevacao pelvica", "elevação pélvica"], "glutes/resistance-band-hip-thrusts-on-knees-female.gif"),
-        (["agachamento sumo", "agachamento sumô"], "glutes/smith-sumo-squat.gif"),
-        (["afundo bulgaro", "afundo búlgaro"], "quads/dumbbell-single-leg-split-squat.gif"),
+        (["agachamento sumo", "agachamento sumô", "sumo"], "glutes/smith-sumo-squat.gif"),
+        (["afundo bulgaro", "afundo búlgaro", "agachamento bulgaro", "agachamento búlgaro"], "quads/dumbbell-single-leg-split-squat.gif"),
         (["coice"], "glutes/cable-pull-through-with-rope.gif"),
-        (["agachamento", "leg press", "hack"], "glutes/barbell-full-squat.gif"),
-        (["extensora", "flexora", "stiff", "afundo", "adutora", "abdutora"], "quads/lever-leg-extension.gif"),
-        (["panturrilha"], "calves/lever-standing-calf-raise.gif"),
-        (["desenvolvimento", "elevacao", "elevação", "arnold"], "delts/dumbbell-lateral-raise.gif"),
+        (["abducao", "abdução", "abdutora"], "abductors/lever-seated-hip-abduction.gif"),
+        (["leg press"], "glutes/sled-45-leg-press.gif"),
+        (["hack"], "glutes/sled-hack-squat.gif"),
+        (["agachamento corporal", "agachamento livre", "agachamento"], "glutes/barbell-full-squat.gif"),
+        (["cadeira flexora", "mesa flexora", "flexora"], "hamstrings/lever-lying-leg-curl.gif"),
+        (["extensora"], "quads/lever-leg-extension.gif"),
+        (["stiff", "afundo", "adutora"], "quads/lever-leg-extension.gif"),
+        (["gemeos", "gêmeos", "panturrilha"], "calves/lever-standing-calf-raise.gif"),
+        (["desenvolvimento", "elevacao lateral", "elevação lateral", "elevacao", "elevação", "arnold"], "delts/dumbbell-lateral-raise.gif"),
         (["encolhimento"], "traps/barbell-shrug.gif"),
         (["face pull"], "delts/cable-standing-rear-delt-row-with-rope.gif"),
+        (["abdomen corda", "abdômen corda", "abdominal na polia"], "abs/cable-kneeling-crunch.gif"),
+        (["abdominal reto", "abdominal crunch", "crunch"], "abs/band-bicycle-crunch.gif"),
         (["bicicleta", "bicycle", "air bike"], "abs/air-bike.gif"),
         (["abdominal", "prancha", "mountain", "russian"], "abs/crunch-floor.gif"),
         (["polichinelo", "jumping jack", "jack jump", "star jump"], "cardio/star-jump-male.gif"),
@@ -156,6 +181,107 @@ enum ExerciseGifCatalog {
         (["burpee", "thruster", "kettlebell", "farmer", "terra"], "glutes/barbell-deadlift.gif"),
     ]
 
+    /// Demos Foco no Shape (M) — nomes das fichas → GIFs Cabo/Polia / academia.
+    /// Fonte de referência: Drive `EXERCÍCIOS NO CABO OU POLIA`.
+    private static let shapeExerciseFilePaths: [String: String] = [
+        "Rotação Externa Polia Unilateral": "delts/cable-standing-rear-delt-row-with-rope.gif",
+        "Puxada Alta Frente": "lats/cable-pulldown.gif",
+        "Supino Inclinado com Halteres": "pectorals/dumbbell-incline-bench-press.gif",
+        "Elevação Lateral com Halteres": "delts/dumbbell-lateral-raise.gif",
+        "Elevação Lateral": "delts/dumbbell-lateral-raise.gif",
+        "Tríceps Pulley Barra W": "triceps/cable-pushdown.gif",
+        "Tríceps Corda": "triceps/cable-overhead-triceps-extension-rope-attachment.gif",
+        "Tríceps Testa Barra W": "triceps/barbell-lying-triceps-extension-skull-crusher.gif",
+        "Rosca Direta Corda (Martelo)": "biceps/dumbbell-hammer-curl.gif",
+        "Rosca Martelo Corda": "biceps/dumbbell-hammer-curl.gif",
+        "Rosca Martelo em Pé Alternado": "biceps/dumbbell-hammer-curl.gif",
+        "Rosca Direta Cabo": "biceps/cable-curl.gif",
+        "Rosca Direta Cabo Baixo": "biceps/cable-curl.gif",
+        "Rosca Direta Cabo Barra W": "biceps/cable-curl.gif",
+        "Rosca Direta Barra W": "biceps/barbell-curl.gif",
+        "Rosca com Halteres Banco Inclinado": "biceps/dumbbell-incline-curl.gif",
+        "Remada Baixa Pronada": "upper-back/cable-low-seated-row.gif",
+        "Remada Baixa": "upper-back/cable-seated-row.gif",
+        "Remada Curvada Pronada": "upper-back/barbell-bent-over-row.gif",
+        "Remada Curvada com Halteres": "upper-back/dumbbell-bent-over-row.gif",
+        "Remada Unilateral": "upper-back/dumbbell-bent-over-row.gif",
+        "Crossover": "pectorals/cable-standing-up-straight-crossovers.gif",
+        "Crucifixo Inverso Máquina": "delts/lever-seated-reverse-fly.gif",
+        "Crucifixo Inclinado com Halteres": "pectorals/dumbbell-incline-fly.gif",
+        "Voador": "pectorals/lever-seated-fly.gif",
+        "Desenvolvimento com Halteres": "delts/dumbbell-seated-shoulder-press.gif",
+        "Agachamento Corporal": "glutes/barbell-full-squat.gif",
+        "Agachamento Livre": "glutes/barbell-full-squat.gif",
+        "Agachamento Búlgaro": "quads/dumbbell-single-leg-split-squat.gif",
+        "Leg Press": "glutes/sled-45-leg-press.gif",
+        "Leg Press 45": "glutes/sled-45-leg-press.gif",
+        "Hack Squat": "glutes/sled-hack-squat.gif",
+        "Cadeira Extensora": "quads/lever-leg-extension.gif",
+        "Cadeira Flexora": "hamstrings/lever-seated-leg-curl.gif",
+        "Mesa Flexora": "hamstrings/lever-lying-leg-curl.gif",
+        "Cadeira Abdutora": "abductors/lever-seated-hip-abduction.gif",
+        "Abdução Lateral Polia Baixa": "abductors/lever-seated-hip-abduction.gif",
+        "Abdução Lateral Caneleira": "abductors/lever-seated-hip-abduction.gif",
+        "Gêmeos em Pé": "calves/lever-standing-calf-raise.gif",
+        "Stiff": "glutes/barbell-romanian-deadlift.gif",
+        "Elevação Pélvica": "glutes/resistance-band-hip-thrusts-on-knees-female.gif",
+        "Sumô com Halteres": "glutes/smith-sumo-squat.gif",
+        "Abdominal Reto": "abs/band-bicycle-crunch.gif",
+        "Abdominal Infra": "abs/assisted-lying-leg-raise-with-lateral-throw-down.gif",
+        "Abdômen Corda": "abs/cable-standing-crunch.gif",
+        "Prancha": "abs/front-plank-with-twist.gif",
+    ]
+
+    /// Demos Foco no Shape (F) — prioriza variantes female do CDN alinhadas ao Drive Cabo/Polia.
+    private static let shapeFemaleExerciseFilePaths: [String: String] = [
+        "Rotação Externa Polia Unilateral": "delts/cable-lateral-raise.gif",
+        "Puxada Alta Frente": "lats/cable-pulldown.gif",
+        "Supino Inclinado com Halteres": "pectorals/dumbbell-incline-bench-press.gif",
+        "Elevação Lateral com Halteres": "delts/dumbbell-lateral-raise.gif",
+        "Elevação Lateral": "delts/dumbbell-lateral-raise.gif",
+        "Tríceps Pulley Barra W": "triceps/cable-pushdown.gif",
+        "Tríceps Corda": "triceps/cable-overhead-triceps-extension-rope-attachment.gif",
+        "Tríceps Testa Barra W": "triceps/barbell-lying-triceps-extension-skull-crusher.gif",
+        "Rosca Direta Corda (Martelo)": "biceps/dumbbell-hammer-curl.gif",
+        "Rosca Martelo Corda": "biceps/dumbbell-hammer-curl.gif",
+        "Rosca Martelo em Pé Alternado": "biceps/dumbbell-hammer-curl.gif",
+        "Rosca Direta Cabo": "biceps/cable-curl.gif",
+        "Rosca Direta Cabo Baixo": "biceps/cable-curl.gif",
+        "Rosca Direta Cabo Barra W": "biceps/cable-curl.gif",
+        "Rosca Direta Barra W": "biceps/barbell-curl.gif",
+        "Rosca com Halteres Banco Inclinado": "biceps/dumbbell-incline-curl.gif",
+        "Remada Baixa Pronada": "upper-back/cable-low-seated-row.gif",
+        "Remada Baixa": "upper-back/cable-seated-row.gif",
+        "Remada Curvada Pronada": "upper-back/dumbbell-reverse-grip-row-female.gif",
+        "Remada Curvada com Halteres": "upper-back/dumbbell-reverse-grip-row-female.gif",
+        "Remada Unilateral": "upper-back/dumbbell-reverse-grip-row-female.gif",
+        "Crossover": "pectorals/cable-standing-up-straight-crossovers.gif",
+        "Crucifixo Inverso Máquina": "delts/lever-seated-reverse-fly.gif",
+        "Crucifixo Inclinado com Halteres": "pectorals/cable-incline-fly.gif",
+        "Voador": "pectorals/lever-seated-fly.gif",
+        "Desenvolvimento com Halteres": "delts/dumbbell-seated-shoulder-press.gif",
+        "Agachamento Corporal": "glutes/barbell-full-squat.gif",
+        "Agachamento Livre": "glutes/barbell-full-squat.gif",
+        "Agachamento Búlgaro": "quads/dumbbell-single-leg-split-squat.gif",
+        "Leg Press": "glutes/sled-45-leg-press.gif",
+        "Leg Press 45": "glutes/sled-45-leg-press.gif",
+        "Hack Squat": "glutes/sled-hack-squat.gif",
+        "Cadeira Extensora": "quads/lever-leg-extension.gif",
+        "Cadeira Flexora": "hamstrings/lever-seated-leg-curl.gif",
+        "Mesa Flexora": "hamstrings/lever-lying-leg-curl.gif",
+        "Cadeira Abdutora": "abductors/lever-seated-hip-abduction.gif",
+        "Abdução Lateral Polia Baixa": "abductors/lever-seated-hip-abduction.gif",
+        "Abdução Lateral Caneleira": "abductors/lever-seated-hip-abduction.gif",
+        "Gêmeos em Pé": "calves/lever-standing-calf-raise.gif",
+        "Stiff": "glutes/barbell-romanian-deadlift.gif",
+        "Elevação Pélvica": "glutes/resistance-band-hip-thrusts-on-knees-female.gif",
+        "Sumô com Halteres": "glutes/smith-sumo-squat.gif",
+        "Abdominal Reto": "abs/twisted-leg-raise-female.gif",
+        "Abdominal Infra": "abs/barbell-sitted-alternate-leg-raise-female.gif",
+        "Abdômen Corda": "abs/cable-standing-crunch.gif",
+        "Prancha": "abs/front-plank-with-twist.gif",
+    ]
+
     /// GIFs rotulados `*-female` no CDN + variantes com foco em glúteos/pernas.
     private static let femaleExerciseFilePaths: [String: String] = [
         "Elevação Pélvica (Hip Thrust)": "glutes/resistance-band-hip-thrusts-on-knees-female.gif",
@@ -181,8 +307,14 @@ enum ExerciseGifCatalog {
         (["sumo"], "glutes/smith-sumo-squat.gif"),
         (["bulgaro", "búlgaro", "split squat"], "quads/dumbbell-single-leg-split-squat.gif"),
         (["coice", "kickback gluteo", "kickback glúteo"], "glutes/cable-pull-through-with-rope.gif"),
+        (["abducao", "abdução", "abdutora"], "abductors/lever-seated-hip-abduction.gif"),
+        (["puxada", "pulldown"], "lats/cable-pulldown.gif"),
+        (["remada baixa", "cable row"], "upper-back/cable-seated-row.gif"),
+        (["triceps corda", "tríceps corda", "triceps pulley", "tríceps pulley"], "triceps/cable-pushdown.gif"),
+        (["rosca", "curl"], "biceps/dumbbell-hammer-curl.gif"),
         (["elevacao de pernas", "elevação de pernas"], "abs/twisted-leg-raise-female.gif"),
         (["abdominal infra"], "abs/barbell-sitted-alternate-leg-raise-female.gif"),
+        (["abdominal reto", "crunch"], "abs/twisted-leg-raise-female.gif"),
         (["obliquo", "oblíquo"], "abs/twisted-leg-raise-female.gif"),
         (["remada"], "upper-back/dumbbell-reverse-grip-row-female.gif"),
     ]

@@ -325,6 +325,34 @@ struct CoachAssignedWorkout: Identifiable, Codable, Equatable, Hashable {
     var isActive: Bool
 }
 
+// MARK: - Training method (named program by personal)
+
+/// Método de treino criado pelo personal (ex.: “Foco no Shape”, “Hipertrofia 12 semanas”).
+struct CoachTrainingMethod: Identifiable, Codable, Equatable, Hashable {
+    var id: String
+    var coachUid: String
+    var name: String
+    var notes: String
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(
+        id: String = UUID().uuidString,
+        coachUid: String,
+        name: String,
+        notes: String = "",
+        createdAt: Date = .now,
+        updatedAt: Date = .now
+    ) {
+        self.id = id
+        self.coachUid = coachUid
+        self.name = name
+        self.notes = notes
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
 // MARK: - Helpers
 
 enum CoachCodeGenerator {
