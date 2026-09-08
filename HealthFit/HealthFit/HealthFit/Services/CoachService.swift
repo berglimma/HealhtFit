@@ -12,6 +12,7 @@ final class CoachService: ObservableObject {
     @Published private(set) var myTrainingMethods: [CoachTrainingMethod] = []
     @Published private(set) var assignedWorkoutsByLink: [String: [CoachAssignedWorkout]] = [:]
     @Published private(set) var chatMessages: [String: [CoachChatMessage]] = [:]
+    @Published private(set) var interestMessages: [CoachInterestMessage] = []
     @Published private(set) var isSyncing = false
     @Published var lastError: String?
 
@@ -25,6 +26,7 @@ final class CoachService: ObservableObject {
     private var mealListeners: [String: ListenerRegistration] = [:]
     private var chatListeners: [String: ListenerRegistration] = [:]
     private var methodsListener: ListenerRegistration?
+    private var interestMessagesListener: ListenerRegistration?
 
     private init() {}
 
@@ -80,6 +82,7 @@ final class CoachService: ObservableObject {
                 await self?.applyMembershipSnapshots(docs)
             }
         }
+        ensureInterestMessagesListening(studentUid: uid)
     }
 
     func stop() {
@@ -87,6 +90,8 @@ final class CoachService: ObservableObject {
         membershipListener = nil
         methodsListener?.remove()
         methodsListener = nil
+        interestMessagesListener?.remove()
+        interestMessagesListener = nil
         linkListeners.values.forEach { $0.remove() }
         workoutListeners.values.forEach { $0.remove() }
         mealListeners.values.forEach { $0.remove() }
@@ -99,6 +104,16 @@ final class CoachService: ObservableObject {
         myTrainingMethods = []
         assignedWorkoutsByLink = [:]
         chatMessages = [:]
+        interestMessages = []
+    }
+
+    private func ensureInterestMessagesListening(studentUid: String) {
+        interestMessagesListener?.remove()
+        interestMessagesListener = CoachFirestoreService.listenInterestMessages(studentUid: studentUid) { [weak self] messages in
+            Task { @MainActor in
+                self?.interestMessages = messages
+            }
+        }
     }
 
     // MARK: - Profile
@@ -309,7 +324,7 @@ final class CoachService: ObservableObject {
 
     // MARK: - Invite / accept
 
-    func createStudentInvite(profession: CoachProfession, toName: String? = nil, toEmail: String? = nil) async -> CoachInvite? {
+    func createStudentInvite(profession: CoachProfession, toName: String? = nil, toEmail: String? = nil, toUid: String? = nil) async -> CoachInvite? {
         guard let user = authService?.currentUser else { return nil }
         let activeCount = myLinks.filter { $0.coachUid == user.id && $0.isActiveLike }.count
         let maxStudents = myProfile?.maxStudents ?? CoachProfessionalProfile.defaultMaxStudents
@@ -323,7 +338,7 @@ final class CoachService: ObservableObject {
             fromUid: user.id,
             fromName: myProfile?.displayName
                 ?? (user.greetingName.isEmpty ? user.name : user.greetingName),
-            toUid: nil,
+            toUid: toUid,
             toName: toName,
             toEmail: toEmail,
             profession: profession,
@@ -383,10 +398,136 @@ final class CoachService: ObservableObject {
                 code: invite.code
             )
             applyProfileAutoFill(from: link)
+            await syncDirectoryPersonalFlag()
             return true
         } catch {
             lastError = error.localizedDescription
             return false
+        }
+    }
+
+    /// Busca alunos no diretório do app (nome / apelido / e-mail).
+    func searchStudents(query: String) async -> [UserDirectoryEntry] {
+        guard let uid = currentUid else { return [] }
+        do {
+            return try await ProfileFirestoreService.searchUsers(
+                query: query,
+                excludingUserId: uid,
+                limit: 25
+            )
+        } catch {
+            lastError = error.localizedDescription
+            return []
+        }
+    }
+
+    /// Personal envia mensagem motivacional a aluno sem personal (com código de convite).
+    func sendMotivationalInterest(
+        to student: UserDirectoryEntry,
+        customText: String?
+    ) async -> Bool {
+        guard let user = authService?.currentUser else {
+            lastError = CoachFirestoreError.notSignedIn.errorDescription
+            return false
+        }
+        guard myProfile != nil || user.accountRole.isPersonalProfessional else {
+            lastError = "Complete o perfil profissional antes de contatar alunos."
+            return false
+        }
+        guard user.accountRole.isPersonalProfessional || myProfile?.professions.contains(.personal) == true else {
+            lastError = "Somente personal trainer pode enviar mensagem de interesse a alunos."
+            return false
+        }
+        if student.hasPersonalTrainer {
+            lastError = "Este aluno já possui personal. Não enviamos mensagem de interesse."
+            return false
+        }
+        if myLinks.contains(where: {
+            $0.studentUid == student.uid && $0.profession == .personal && $0.isActiveLike
+        }) {
+            lastError = "Você já está vinculado a este aluno."
+            return false
+        }
+
+        guard let invite = await createStudentInvite(
+            profession: .personal,
+            toName: student.shownName,
+            toEmail: nil,
+            toUid: student.uid
+        ) else {
+            return false
+        }
+
+        let coachName = myProfile?.displayName
+            ?? (user.greetingName.isEmpty ? user.name : user.greetingName)
+        let defaultText = """
+        Olá, \(student.shownName)! Sou \(coachName), personal trainer no HealthFit.
+
+        Vi seu perfil e gostaria de mostrar meu trabalho — posso te ajudar com fichas, acompanhamento e motivação. Se fizer sentido pra você, use o código \(invite.code) em HealthFit Coach → Entrar com código.
+        """
+        let trimmedCustom = customText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let body = trimmedCustom.isEmpty ? defaultText : """
+        \(trimmedCustom)
+
+        — \(coachName) · código \(invite.code)
+        """
+
+        let message = CoachInterestMessage(
+            fromCoachUid: user.id,
+            fromCoachName: coachName,
+            fromCoachPhotoURL: myProfile?.photoURL,
+            toStudentUid: student.uid,
+            text: String(body.prefix(CoachInterestMessage.maxLength)),
+            inviteCode: invite.code,
+            profession: .personal
+        )
+
+        do {
+            try await CoachFirestoreService.sendInterestMessage(message)
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    func dismissInterestMessage(_ message: CoachInterestMessage) async {
+        guard let uid = currentUid, message.toStudentUid == uid else { return }
+        try? await CoachFirestoreService.updateInterestMessageStatus(
+            studentUid: uid,
+            messageId: message.id,
+            status: .dismissed
+        )
+    }
+
+    func acceptInterestMessage(_ message: CoachInterestMessage) async -> Bool {
+        guard let code = message.inviteCode?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !code.isEmpty else {
+            lastError = "Esta mensagem não tem código de convite."
+            return false
+        }
+        let ok = await acceptInvite(code: code)
+        if ok, let uid = currentUid {
+            try? await CoachFirestoreService.updateInterestMessageStatus(
+                studentUid: uid,
+                messageId: message.id,
+                status: .accepted
+            )
+        }
+        return ok
+    }
+
+    private func syncDirectoryPersonalFlag() async {
+        guard var user = authService?.currentUser else { return }
+        // Garante flag pública alinhada ao vínculo Coach.
+        if activePersonalLink != nil, !user.usesPersonalTrainer {
+            user.usesPersonalTrainer = true
+            if let name = activePersonalLink?.coachName, !name.isEmpty {
+                user.personalTrainerName = name
+            }
+            authService?.updateProfile(user)
+        } else {
+            try? await ProfileFirestoreService.syncUserDirectory(user)
         }
     }
 
@@ -439,6 +580,9 @@ final class CoachService: ObservableObject {
 
             if link.studentUid == uid {
                 clearProfileAutoFill(for: link.profession)
+                if link.profession == .personal {
+                    await syncDirectoryPersonalFlag()
+                }
             }
             return true
         } catch {

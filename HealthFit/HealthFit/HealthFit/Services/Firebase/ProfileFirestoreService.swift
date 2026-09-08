@@ -46,6 +46,7 @@ enum ProfileFirestoreService {
             "goal": profile.goal.rawValue,
             "biotype": profile.biotype.rawValue,
             "accountRole": profile.accountRole.rawValue,
+            "usesPersonalTrainer": profile.usesPersonalTrainer,
             "hasBodyMeasurements": profile.bodyMeasurements.hasAnyValue,
             "updatedAt": Timestamp(date: profile.updatedAt),
             "createdAt": Timestamp(date: profile.createdAt),
@@ -135,6 +136,7 @@ enum ProfileFirestoreService {
             "displayNameLower": searchableText(displayName),
             "emailLower": searchableText(email),
             "countryCode": country,
+            "hasPersonalTrainer": profile.usesPersonalTrainer,
             "updatedAt": Timestamp(date: .now),
         ]
         if let photoURL, !photoURL.isEmpty {
@@ -192,7 +194,8 @@ enum ProfileFirestoreService {
             name: name,
             displayName: displayName,
             countryCode: country,
-            photoURL: data["photoURL"] as? String
+            photoURL: data["photoURL"] as? String,
+            hasPersonalTrainer: (data["usesPersonalTrainer"] as? Bool) ?? false
         )
         var directoryData: [String: Any] = [
             "uid": userId,
@@ -201,6 +204,7 @@ enum ProfileFirestoreService {
             "nameLower": searchableText(name),
             "displayNameLower": searchableText(displayName),
             "updatedAt": Timestamp(date: .now),
+            "hasPersonalTrainer": entry.hasPersonalTrainer,
         ]
         if let email = (data["email"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
            !email.isEmpty {
@@ -348,6 +352,13 @@ enum ProfileFirestoreService {
             }
         }
 
+        if !updated.hasPersonalTrainer {
+            if let hasPersonal = try? await fetchHasPersonalTrainerFromUserDoc(userId: entry.uid), hasPersonal {
+                updated.hasPersonalTrainer = true
+                patch["hasPersonalTrainer"] = true
+            }
+        }
+
         if !patch.isEmpty {
             patch["uid"] = entry.uid
             patch["updatedAt"] = Timestamp(date: .now)
@@ -365,6 +376,21 @@ enum ProfileFirestoreService {
         return nil
     }
 
+    private static func fetchHasPersonalTrainerFromUserDoc(userId: String) async throws -> Bool {
+        let snap = try await userDocument(userId: userId).getDocument()
+        guard let data = snap.data() else { return false }
+        if let flag = data["usesPersonalTrainer"] as? Bool {
+            return flag
+        }
+        if let json = data["profilePayload"] as? String,
+           let payload = json.data(using: .utf8),
+           let profile = try? decoder.decode(UserProfile.self, from: payload) {
+            return profile.usesPersonalTrainer
+                || !profile.personalTrainerEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        return false
+    }
+
     private static func directoryCollection() -> CollectionReference {
         db.collection("userDirectory")
     }
@@ -377,7 +403,8 @@ enum ProfileFirestoreService {
             name: data["name"] as? String ?? "",
             displayName: data["displayName"] as? String ?? "",
             countryCode: normalizedCountry(data["countryCode"] as? String),
-            photoURL: (photo?.isEmpty == false) ? photo : nil
+            photoURL: (photo?.isEmpty == false) ? photo : nil,
+            hasPersonalTrainer: (data["hasPersonalTrainer"] as? Bool) ?? false
         )
     }
 }

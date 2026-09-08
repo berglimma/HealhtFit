@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B1000977 /* CoachStudentSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000977 /* CoachStudentSearchView.swift */; };
+		B1000976 /* AssistantCoachComplianceNudgeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000976 /* AssistantCoachComplianceNudgeEngine.swift */; };
 		B1000912 /* FightModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000912 /* FightModels.swift */; };
 		B1000913 /* FightHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000913 /* FightHubView.swift */; };
 		B1000911 /* ClimbingAttemptEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000911 /* ClimbingAttemptEditorView.swift */; };
@@ -381,6 +383,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1000977 /* CoachStudentSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachStudentSearchView.swift; sourceTree = "<group>"; };
+		F1000976 /* AssistantCoachComplianceNudgeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCoachComplianceNudgeEngine.swift; sourceTree = "<group>"; };
 		F1000912 /* FightModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightModels.swift; sourceTree = "<group>"; };
 		F1000913 /* FightHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightHubView.swift; sourceTree = "<group>"; };
 		F1000911 /* ClimbingAttemptEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAttemptEditorView.swift; sourceTree = "<group>"; };
@@ -922,6 +926,7 @@
 				F1000205 /* AssistantCardioMeditationNudgeEngine.swift */,
 				F1000947 /* AssistantRestDayEngine.swift */,
 				F1000346 /* AssistantSupplementNudgeEngine.swift */,
+				F1000976 /* AssistantCoachComplianceNudgeEngine.swift */,
 				F1000351 /* AssistantImprovementAnalysisEngine.swift */,
 				F1000930 /* AssistantRoutineStore.swift */,
 				F1000931 /* AssistantRoutineProfileEngine.swift */,
@@ -1102,6 +1107,7 @@
 			children = (
 				F1000973 /* CoachHubView.swift */,
 				F1000974 /* CoachSetupAndSearchViews.swift */,
+				F1000977 /* CoachStudentSearchView.swift */,
 				F1000975 /* CoachLinkDetailViews.swift */,
 			);
 			path = Coach;
@@ -1697,6 +1703,7 @@
 				B1000972 /* CoachService.swift in Sources */,
 				B1000973 /* CoachHubView.swift in Sources */,
 				B1000974 /* CoachSetupAndSearchViews.swift in Sources */,
+				B1000977 /* CoachStudentSearchView.swift in Sources */,
 				B1000975 /* CoachLinkDetailViews.swift in Sources */,
 				B1000324 /* BodyEvolutionService.swift in Sources */,
 				B1000204 /* DailyWellnessFirestoreService.swift in Sources */,
@@ -1765,6 +1772,7 @@
 				B1000344 /* SupplementModels.swift in Sources */,
 				B1000345 /* SupplementsLogView.swift in Sources */,
 				B1000346 /* AssistantSupplementNudgeEngine.swift in Sources */,
+				B1000976 /* AssistantCoachComplianceNudgeEngine.swift in Sources */,
 				B1000347 /* MonthlyProgressModels.swift in Sources */,
 				B1000348 /* MonthlyProgressAnalyzer.swift in Sources */,
 				B1000349 /* MonthlyReportService.swift in Sources */,

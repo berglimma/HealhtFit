@@ -379,6 +379,8 @@ struct UserDirectoryEntry: Identifiable, Codable, Equatable, Hashable {
     var displayName: String
     var countryCode: String?
     var photoURL: String?
+    /// Aluno já declara personal ou tem vínculo ativo no Coach (visível na busca profissional).
+    var hasPersonalTrainer: Bool
 
     var id: String { uid }
 
@@ -397,6 +399,22 @@ struct UserDirectoryEntry: Identifiable, Codable, Equatable, Hashable {
             return name
         }
         return "\(name) · “\(callName)”"
+    }
+
+    init(
+        uid: String,
+        name: String,
+        displayName: String,
+        countryCode: String? = nil,
+        photoURL: String? = nil,
+        hasPersonalTrainer: Bool = false
+    ) {
+        self.uid = uid
+        self.name = name
+        self.displayName = displayName
+        self.countryCode = countryCode
+        self.photoURL = photoURL
+        self.hasPersonalTrainer = hasPersonalTrainer
     }
 }
 

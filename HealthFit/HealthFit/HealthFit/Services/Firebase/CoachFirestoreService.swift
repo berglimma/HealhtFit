@@ -65,6 +65,10 @@ enum CoachFirestoreService {
         links().document(linkId).collection("mealPlan").document("current")
     }
 
+    private static func interestMessages(studentUid: String) -> CollectionReference {
+        db.collection("users").document(studentUid).collection("coachInterestMessages")
+    }
+
     // MARK: - Encode helpers
 
     private static func encode<T: Encodable>(_ value: T) throws -> [String: Any] {
@@ -487,5 +491,80 @@ enum CoachFirestoreService {
             return plain.date(from: string)
         }
         return nil
+    }
+
+    // MARK: - Interest messages (cold outreach)
+
+    static func sendInterestMessage(_ message: CoachInterestMessage) async throws {
+        guard isAvailable else { throw CoachFirestoreError.unavailable }
+        var data = try encode(message)
+        data["createdAt"] = Timestamp(date: message.createdAt)
+        if let readAt = message.readAt {
+            data["readAt"] = Timestamp(date: readAt)
+        }
+        try await interestMessages(studentUid: message.toStudentUid)
+            .document(message.id)
+            .setData(data, merge: true)
+    }
+
+    static func updateInterestMessageStatus(
+        studentUid: String,
+        messageId: String,
+        status: CoachInterestMessageStatus,
+        readAt: Date? = .now
+    ) async throws {
+        guard isAvailable else { throw CoachFirestoreError.unavailable }
+        var patch: [String: Any] = [
+            "status": status.rawValue,
+        ]
+        if let readAt {
+            patch["readAt"] = Timestamp(date: readAt)
+        }
+        try await interestMessages(studentUid: studentUid)
+            .document(messageId)
+            .setData(patch, merge: true)
+    }
+
+    static func listenInterestMessages(
+        studentUid: String,
+        handler: @escaping ([CoachInterestMessage]) -> Void
+    ) -> ListenerRegistration? {
+        guard isAvailable else { return nil }
+        return interestMessages(studentUid: studentUid)
+            .order(by: "createdAt", descending: true)
+            .limit(to: 30)
+            .addSnapshotListener { snap, _ in
+                let items = (snap?.documents ?? []).compactMap { doc -> CoachInterestMessage? in
+                    decodeInterestMessage(from: doc.data(), documentId: doc.documentID)
+                }
+                handler(items)
+            }
+    }
+
+    private static func decodeInterestMessage(from data: [String: Any], documentId: String) -> CoachInterestMessage? {
+        let id = (data["id"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? documentId
+        guard let fromCoachUid = data["fromCoachUid"] as? String,
+              let toStudentUid = data["toStudentUid"] as? String,
+              let text = data["text"] as? String,
+              !fromCoachUid.isEmpty,
+              !toStudentUid.isEmpty,
+              !text.isEmpty else {
+            return nil
+        }
+        let profession = CoachProfession(rawValue: data["profession"] as? String ?? "") ?? .personal
+        let status = CoachInterestMessageStatus(rawValue: data["status"] as? String ?? "") ?? .pending
+        return CoachInterestMessage(
+            id: id,
+            fromCoachUid: fromCoachUid,
+            fromCoachName: data["fromCoachName"] as? String ?? "",
+            fromCoachPhotoURL: data["fromCoachPhotoURL"] as? String,
+            toStudentUid: toStudentUid,
+            text: text,
+            inviteCode: data["inviteCode"] as? String,
+            profession: profession,
+            createdAt: dateValue(from: data["createdAt"]) ?? .now,
+            readAt: dateValue(from: data["readAt"]),
+            status: status
+        )
     }
 }

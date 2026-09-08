@@ -585,6 +585,47 @@ struct BodyMeasurementComparison: Equatable {
     }
 }
 
+/// Experiência declarada do aluno em musculação (hub + IAssistente).
+enum MusculacaoTrainingExperience: String, Codable, CaseIterable, Identifiable, Hashable {
+    case beginner
+    case trainsAlready
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .beginner: return "Iniciante"
+        case .trainsAlready: return "Já treino"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .beginner: return "Cargas leves e foco em técnica"
+        case .trainsAlready: return "Cargas do programa padrão"
+        }
+    }
+
+    /// Multiplicador sobre cargas de fichas de catálogo (recomendados, Shape, guiados).
+    var catalogLoadFactor: Double {
+        switch self {
+        case .beginner: return 0.55
+        case .trainsAlready: return 1.0
+        }
+    }
+
+    static func scaleCatalogExercises(
+        _ exercises: [Exercise],
+        experience: MusculacaoTrainingExperience?,
+        isCatalogSheet: Bool
+    ) -> [Exercise] {
+        guard isCatalogSheet, let experience, experience.catalogLoadFactor != 1 else {
+            return exercises
+        }
+        return exercises.map { $0.withScaledRecommendedWeight(factor: experience.catalogLoadFactor) }
+    }
+}
+
 struct UserProfile: Codable, Identifiable, Equatable {
     var id: String
     var name: String
@@ -620,6 +661,10 @@ struct UserProfile: Codable, Identifiable, Equatable {
     /// IDs das modalidades que o usuário pratica (`PracticeModalityID`).
     /// Vazio = todas (compatível com contas antigas).
     var practicedModalityIDs: [String]
+    /// Experiência em musculação (perguntada no hub / IAssistente). `nil` = ainda não respondeu.
+    var musculacaoTrainingExperience: MusculacaoTrainingExperience?
+    /// Última vez que o aluno enviou relatório de treino ao personal (e-mail / compartilhamento).
+    var lastTrainerReportSentAt: Date?
     var createdAt: Date
     /// Última alteração local/remota — usado para não sobrescrever dados novos com Firestore antigo.
     var updatedAt: Date
@@ -655,6 +700,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
         bodyMeasurementHistory: [BodyMeasurements] = [],
         menstrualCycle: MenstrualCycleProfile = .inactive,
         practicedModalityIDs: [String] = [],
+        musculacaoTrainingExperience: MusculacaoTrainingExperience? = nil,
+        lastTrainerReportSentAt: Date? = nil,
         createdAt: Date = .now,
         updatedAt: Date? = nil
     ) {
@@ -687,6 +734,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
         self.bodyMeasurementHistory = Array(bodyMeasurementHistory.prefix(Self.maxStoredPreviousMeasurementEvaluations))
         self.menstrualCycle = menstrualCycle.clamped()
         self.practicedModalityIDs = practicedModalityIDs
+        self.musculacaoTrainingExperience = musculacaoTrainingExperience
+        self.lastTrainerReportSentAt = lastTrainerReportSentAt
         self.createdAt = createdAt
         self.updatedAt = updatedAt ?? createdAt
     }
@@ -737,6 +786,11 @@ struct UserProfile: Codable, Identifiable, Equatable {
         bodyMeasurementHistory = Array(bodyMeasurementHistory.prefix(Self.maxStoredPreviousMeasurementEvaluations))
         menstrualCycle = (try container.decodeIfPresent(MenstrualCycleProfile.self, forKey: .menstrualCycle) ?? .inactive).clamped()
         practicedModalityIDs = try container.decodeIfPresent([String].self, forKey: .practicedModalityIDs) ?? []
+        musculacaoTrainingExperience = try container.decodeIfPresent(
+            MusculacaoTrainingExperience.self,
+            forKey: .musculacaoTrainingExperience
+        )
+        lastTrainerReportSentAt = try container.decodeIfPresent(Date.self, forKey: .lastTrainerReportSentAt)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
     }
@@ -745,7 +799,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
         case id, name, displayName, email, personalTrainerName, personalTrainerEmail, usesPersonalTrainer
         case nutritionistName, nutritionistEmail, usesNutritionist, accountRole
         case biotype, goal, gender, weight, height, age, dateOfBirth, countryCode, caloricDeficit
-        case bodyMeasurements, previousBodyMeasurements, bodyMeasurementHistory, menstrualCycle, practicedModalityIDs, createdAt, updatedAt
+        case bodyMeasurements, previousBodyMeasurements, bodyMeasurementHistory, menstrualCycle
+        case practicedModalityIDs, musculacaoTrainingExperience, lastTrainerReportSentAt, createdAt, updatedAt
     }
 
     /// Conjunto efetivo: lista salva ou todas as modalidades (perfil sem preferência).

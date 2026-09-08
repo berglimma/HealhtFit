@@ -213,6 +213,11 @@ struct HealthChatView: View {
                         context: context,
                         todayIntakes: wellnessService.todaySupplementIntakes
                     )
+                    assistant.checkCoachComplianceNudgeIfNeeded(
+                        context: context,
+                        sessions: workoutStore.sessionHistory,
+                        coachSheets: workoutStore.workoutSheets.filter(\.isCoachPrescribed)
+                    )
                     assistant.checkSevenDayTrainingStreakIfNeeded(context: context)
                     assistant.checkTideAlertIfNeeded(
                         context: context,
@@ -251,6 +256,11 @@ struct HealthChatView: View {
                     assistant.checkSupplementNudgeIfNeeded(
                         context: context,
                         todayIntakes: wellnessService.todaySupplementIntakes
+                    )
+                    assistant.checkCoachComplianceNudgeIfNeeded(
+                        context: context,
+                        sessions: workoutStore.sessionHistory,
+                        coachSheets: workoutStore.workoutSheets.filter(\.isCoachPrescribed)
                     )
                     assistant.checkSevenDayTrainingStreakIfNeeded(context: context)
                     assistant.checkTideAlertIfNeeded(

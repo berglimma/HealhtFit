@@ -824,6 +824,7 @@ struct WorkoutSummaryView: View {
         switch result {
         case .sent:
             emailWasSent = true
+            markTrainerReportSent()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                 showEmailSentAlert = true
             }
@@ -888,6 +889,8 @@ struct WorkoutSummaryView: View {
             ) {
                 UIApplication.shared.open(url) { accepted in
                     if accepted {
+                        markTrainerReportSent()
+                        emailWasSent = true
                         // mailto não confirma envio; segue para o card.
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                             focusShareCard()
@@ -915,9 +918,18 @@ struct WorkoutSummaryView: View {
         ) {
             shareItems = [fileURL]
             showShareSheet = true
+            markTrainerReportSent()
+            emailWasSent = true
         } else {
             showMailUnavailableAlert = true
         }
+    }
+
+    private func markTrainerReportSent() {
+        guard var profile = authService.currentUser else { return }
+        profile.lastTrainerReportSentAt = .now
+        profile.updatedAt = .now
+        authService.updateProfile(profile)
     }
 
     private var earlyEndCount: Int {

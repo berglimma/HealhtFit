@@ -351,6 +351,12 @@ struct ActiveWorkoutView: View {
                 .font(.title.bold())
                 .foregroundStyle(AppTheme.textPrimary)
 
+            if let technique = exercise.techniqueLabel {
+                Text(technique)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppTheme.accentSecondary)
+            }
+
             if !exercise.notes.isEmpty {
                 Text(exercise.notes)
                     .font(.caption.weight(.semibold))
@@ -393,6 +399,12 @@ struct ActiveWorkoutView: View {
             Text(exercise.name)
                 .font(.title.bold())
                 .foregroundStyle(AppTheme.textPrimary)
+
+            if let technique = exercise.techniqueLabel {
+                Text(technique)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppTheme.accentSecondary)
+            }
 
             if !exercise.notes.isEmpty {
                 Text(exercise.notes)
@@ -895,6 +907,11 @@ struct ExerciseTrackingRow: View {
                 Text(SetProgressFormatting.progressLabel(completed: completedSets, totalSets: exercise.sets))
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
+                if let technique = exercise.techniqueLabel {
+                    Text(technique)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(AppTheme.accentSecondary)
+                }
                 Text("Total \(max(exercise.sets, 1)) séries")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary.opacity(0.85))

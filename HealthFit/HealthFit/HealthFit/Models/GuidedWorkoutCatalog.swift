@@ -152,7 +152,8 @@ enum GuidedWorkoutCatalog {
             weight: max(scaled, 2.5),
             restSeconds: exercise.restSeconds,
             notes: exercise.notes,
-            muscleGroup: exercise.muscleGroup
+            muscleGroup: exercise.muscleGroup,
+            techniqueMode: exercise.techniqueMode
         )
     }
 

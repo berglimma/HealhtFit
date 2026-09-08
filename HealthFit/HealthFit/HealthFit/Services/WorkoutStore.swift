@@ -1823,7 +1823,8 @@ final class WorkoutStore: ObservableObject {
             weight: template.weight,
             restSeconds: template.restSeconds,
             notes: template.notes,
-            muscleGroup: template.muscleGroup
+            muscleGroup: template.muscleGroup,
+            techniqueMode: template.techniqueMode
         )
     }
 

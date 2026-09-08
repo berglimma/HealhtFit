@@ -1767,6 +1767,7 @@ final class HealthAssistantService: ObservableObject {
     private var inactivityFollowUpDelivered = false
     private var cardioMeditationNudgeDelivered = false
     private var supplementNudgeDelivered = false
+    private var coachComplianceNudgeDelivered = false
     private var restDaySevenDayNudgeDelivered = false
     private var tideAlertDelivered = false
     private var activePostWorkoutCheckIn: PendingPostWorkoutCheckIn?
@@ -2002,6 +2003,7 @@ final class HealthAssistantService: ObservableObject {
         inactivityFollowUpDelivered = false
         cardioMeditationNudgeDelivered = false
         supplementNudgeDelivered = false
+        coachComplianceNudgeDelivered = false
         restDaySevenDayNudgeDelivered = false
         tideAlertDelivered = false
         replyTask?.cancel()
@@ -2023,7 +2025,12 @@ final class HealthAssistantService: ObservableObject {
         }
 
         if isInWorkoutBuilder {
-            handleWorkoutBuilderReply(trimmed, context: context, workoutStore: workoutStore)
+            handleWorkoutBuilderReply(
+                trimmed,
+                context: context,
+                workoutStore: workoutStore,
+                authService: authService
+            )
             return
         }
 
@@ -2292,6 +2299,18 @@ final class HealthAssistantService: ObservableObject {
         draftWorkoutFocus = nil
     }
 
+    private func persistMusculacaoExperience(
+        _ experience: AssistantTrainingExperience?,
+        authService: AuthService?
+    ) {
+        guard let experience, var profile = authService?.currentUser else { return }
+        let preference = experience.musculacaoPreference
+        guard profile.musculacaoTrainingExperience != preference else { return }
+        profile.musculacaoTrainingExperience = preference
+        profile.updatedAt = .now
+        authService?.updateProfile(profile)
+    }
+
     private func beginWorkoutBuilderFlow(context: HealthAssistantContext, forceDespitePersonal: Bool) {
         if context.user?.hasPersonalTrainer == true, !forceDespitePersonal {
             deliverDelayedWorkoutBuilderMessage("""
@@ -2328,7 +2347,8 @@ final class HealthAssistantService: ObservableObject {
     private func handleWorkoutBuilderReply(
         _ text: String,
         context: HealthAssistantContext,
-        workoutStore: WorkoutStore?
+        workoutStore: WorkoutStore?,
+        authService: AuthService?
     ) {
         switch workoutBuilderPhase {
         case .askingGender:
@@ -2420,11 +2440,12 @@ final class HealthAssistantService: ObservableObject {
                 return
             }
             draftWorkoutExperience = AssistantTrainingExperience.fromFirstTimeAnswer(isFirstTime)
+            persistMusculacaoExperience(draftWorkoutExperience, authService: authService)
             workoutBuilderPhase = .askingFocus
             let experienceNote: String
             if draftWorkoutLocation == .homeOnly {
                 experienceNote = isFirstTime
-                    ? "Perfil: primeira vez em casa — volume moderado e foco em técnica (use os GIFs)."
+                    ? "Perfil: primeira vez em casa — cargas leves e foco em técnica (use os GIFs)."
                     : "Perfil: retomando em casa — progressão cuidadosa sem equipamentos."
             } else {
                 experienceNote = isFirstTime
@@ -2451,9 +2472,13 @@ final class HealthAssistantService: ObservableObject {
                 return
             }
             draftWorkoutExperience = level
+            persistMusculacaoExperience(level, authService: authService)
             workoutBuilderPhase = .askingFocus
+            let loadNote = level.musculacaoPreference == .beginner
+                ? " Vou usar **cargas leves** nesta ficha."
+                : ""
             deliverDelayedWorkoutBuilderMessage("""
-            Nível \(level.rawValue.lowercased()) anotado.
+            Nível \(level.rawValue.lowercased()) anotado.\(loadNote)
 
             Qual o foco do treino?
             • Ganho de massa
@@ -3002,6 +3027,7 @@ final class HealthAssistantService: ObservableObject {
         inactivityFollowUpDelivered = false
         cardioMeditationNudgeDelivered = false
         supplementNudgeDelivered = false
+        coachComplianceNudgeDelivered = false
         restDaySevenDayNudgeDelivered = false
         tideAlertDelivered = false
         resetWorkoutBuilderDraft()
@@ -3169,6 +3195,45 @@ final class HealthAssistantService: ObservableObject {
         deliverAssistantMessage(text)
         AssistantSupplementNudgeEngine.markDailyNudgeDelivered()
         supplementNudgeDelivered = true
+        lastUserInteractionAt = Date()
+    }
+
+    func checkCoachComplianceNudgeIfNeeded(
+        context: HealthAssistantContext,
+        sessions: [WorkoutSession],
+        coachSheets: [WorkoutSheet]
+    ) {
+        guard !isTyping else { return }
+        guard !isInGuidedCheckIn else { return }
+        guard !coachComplianceNudgeDelivered else { return }
+        guard AssistantCoachComplianceNudgeEngine.shouldDeliverToday() else {
+            coachComplianceNudgeDelivered = true
+            return
+        }
+
+        let link = CoachService.shared.activePersonalLink
+        guard let evaluation = AssistantCoachComplianceNudgeEngine.evaluate(
+            user: context.user,
+            hasActivePersonalLink: link != nil,
+            personalCoachName: link?.coachName,
+            coachSheets: coachSheets,
+            sessions: sessions
+        ) else {
+            coachComplianceNudgeDelivered = true
+            return
+        }
+
+        let name = context.user?.greetingName ?? "Atleta"
+        let text = AssistantCoachComplianceNudgeEngine.message(for: evaluation, athleteName: name)
+        if let last = messages.last, !last.isUser, last.text == text {
+            coachComplianceNudgeDelivered = true
+            AssistantCoachComplianceNudgeEngine.markDelivered()
+            return
+        }
+
+        deliverAssistantMessage(text)
+        AssistantCoachComplianceNudgeEngine.markDelivered()
+        coachComplianceNudgeDelivered = true
         lastUserInteractionAt = Date()
     }
 

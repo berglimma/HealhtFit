@@ -56,6 +56,7 @@ struct CoachHubView: View {
     @State private var showInvite = false
     @State private var showJoin = false
     @State private var showSearch = false
+    @State private var showStudentSearch = false
     @State private var inviteCode = ""
     @State private var joinStatus: String?
     @State private var selectedLink: CoachLink?
@@ -123,6 +124,11 @@ struct CoachHubView: View {
         .sheet(isPresented: $showSearch) {
             NavigationStack {
                 CoachSearchView()
+            }
+        }
+        .sheet(isPresented: $showStudentSearch) {
+            NavigationStack {
+                CoachStudentSearchView()
             }
         }
         .navigationDestination(item: $selectedLink) { link in
@@ -196,12 +202,18 @@ struct CoachHubView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
 
-                Button { showProfileSetup = true } label: {
-                    Label("Editar", systemImage: "pencil")
+                Button { showStudentSearch = true } label: {
+                    Label("Buscar alunos", systemImage: "magnifyingglass")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
             }
+
+            Button { showProfileSetup = true } label: {
+                Label("Editar perfil profissional", systemImage: "pencil")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
 
             Button(role: .destructive) {
                 showDeleteCadastroConfirm = true
@@ -262,7 +274,63 @@ struct CoachHubView: View {
             .buttonStyle(.bordered)
         }
 
+        interestMessagesSection
+
         linksSection(title: "Meus profissionais", empty: "Você ainda não tem personal ou nutricionista vinculado no app.")
+    }
+
+    @ViewBuilder
+    private var interestMessagesSection: some View {
+        let pending = coach.interestMessages.filter { $0.status == .pending }
+        if !pending.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Interessados em te treinar")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("Personals que viram seu perfil e enviaram uma mensagem motivacional.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+
+                ForEach(pending) { message in
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 10) {
+                            DuoMemberAvatarView(
+                                name: message.fromCoachName,
+                                photoURL: message.fromCoachPhotoURL,
+                                size: 44
+                            )
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(message.fromCoachName)
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Personal trainer")
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
+                        }
+                        Text(message.text)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textPrimary)
+                        HStack(spacing: 10) {
+                            if message.inviteCode != nil {
+                                Button("Aceitar vínculo") {
+                                    Task {
+                                        _ = await coach.acceptInterestMessage(message)
+                                    }
+                                }
+                                .buttonStyle(PrimaryButtonStyle())
+                            }
+                            Button("Dispensar") {
+                                Task { await coach.dismissInterestMessage(message) }
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                    .padding(14)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+            }
+        }
     }
 
     private var profileSummary: some View {

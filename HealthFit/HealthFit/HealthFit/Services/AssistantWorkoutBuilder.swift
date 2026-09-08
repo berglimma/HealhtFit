@@ -55,6 +55,16 @@ enum AssistantTrainingExperience: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Preferência persistida no perfil (hub de musculação).
+    var musculacaoPreference: MusculacaoTrainingExperience {
+        switch self {
+        case .firstTime, .returning, .beginner:
+            return .beginner
+        case .intermediate, .advanced:
+            return .trainsAlready
+        }
+    }
+
     static let quickLevelReplies = ["Iniciante", "Intermediário", "Avançado"]
     static let quickAlreadyTrainsReplies = ["Sim, já treino", "Não, ainda não"]
     static let quickFirstTimeReplies = ["Sim, primeira vez", "Não, já treinei antes"]
@@ -650,8 +660,8 @@ enum AssistantWorkoutBuilder {
         let experienceFactor: Double
         switch experience {
         case .firstTime: experienceFactor = 0.45
-        case .returning: experienceFactor = 0.60
-        case .beginner: experienceFactor = 0.75
+        case .returning: experienceFactor = 0.55
+        case .beginner: experienceFactor = 0.55
         case .intermediate: experienceFactor = 1.0
         case .advanced: experienceFactor = 1.15
         }

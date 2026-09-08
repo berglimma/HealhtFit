@@ -353,6 +353,57 @@ struct CoachTrainingMethod: Identifiable, Codable, Equatable, Hashable {
     }
 }
 
+/// Mensagem motivacional de interesse (personal → aluno sem vínculo).
+struct CoachInterestMessage: Identifiable, Codable, Equatable, Hashable {
+    var id: String
+    var fromCoachUid: String
+    var fromCoachName: String
+    var fromCoachPhotoURL: String?
+    var toStudentUid: String
+    var text: String
+    var inviteCode: String?
+    var profession: CoachProfession
+    var createdAt: Date
+    var readAt: Date?
+    var status: CoachInterestMessageStatus
+
+    static let maxLength = 600
+
+    var isUnread: Bool { readAt == nil && status == .pending }
+
+    init(
+        id: String = UUID().uuidString,
+        fromCoachUid: String,
+        fromCoachName: String,
+        fromCoachPhotoURL: String? = nil,
+        toStudentUid: String,
+        text: String,
+        inviteCode: String? = nil,
+        profession: CoachProfession = .personal,
+        createdAt: Date = .now,
+        readAt: Date? = nil,
+        status: CoachInterestMessageStatus = .pending
+    ) {
+        self.id = id
+        self.fromCoachUid = fromCoachUid
+        self.fromCoachName = fromCoachName
+        self.fromCoachPhotoURL = fromCoachPhotoURL
+        self.toStudentUid = toStudentUid
+        self.text = text
+        self.inviteCode = inviteCode
+        self.profession = profession
+        self.createdAt = createdAt
+        self.readAt = readAt
+        self.status = status
+    }
+}
+
+enum CoachInterestMessageStatus: String, Codable, CaseIterable, Hashable {
+    case pending
+    case dismissed
+    case accepted
+}
+
 // MARK: - Helpers
 
 enum CoachCodeGenerator {

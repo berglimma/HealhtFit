@@ -455,6 +455,8 @@ struct CoachPrescribeWorkoutView: View {
     @State private var customMuscleGroup: MuscleGroup = .chest
     @State private var customSets = 3
     @State private var customReps = 10
+    @State private var customWeightText = ""
+    @State private var customTechnique: ExerciseTechniqueMode = .normal
     @State private var didLoadEditing = false
     @State private var selectedMethodId: String? = nil
     @State private var showQuickMethod = false
@@ -533,6 +535,8 @@ struct CoachPrescribeWorkoutView: View {
                     customMuscleGroup = .chest
                     customSets = 3
                     customReps = 10
+                    customWeightText = ""
+                    customTechnique = .normal
                     showCustomExercise = true
                 } label: {
                     Label("Criar exercício personalizado", systemImage: "square.and.pencil")
@@ -544,7 +548,7 @@ struct CoachPrescribeWorkoutView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach($exercises) { $exercise in
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Text(exercise.name).font(.subheadline.weight(.semibold))
                             Text(exercise.muscleGroup.rawValue)
                                 .font(.caption2)
@@ -555,7 +559,35 @@ struct CoachPrescribeWorkoutView: View {
                             HStack {
                                 Stepper("Reps \(exercise.reps)", value: $exercise.reps, in: 1...30)
                             }
+                            HStack(spacing: 8) {
+                                Text("Carga")
+                                    .font(.subheadline)
+                                TextField(
+                                    "kg",
+                                    text: Binding(
+                                        get: { ExerciseLoadEditor.text(from: exercise.recommendedWeight) },
+                                        set: { exercise.recommendedWeight = ExerciseLoadEditor.weight(from: $0) }
+                                    )
+                                )
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                Text("kg")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Picker("Técnica", selection: $exercise.techniqueMode) {
+                                ForEach(ExerciseTechniqueMode.allCases) { mode in
+                                    Text(mode.rawValue).tag(mode)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            if exercise.techniqueMode != .normal {
+                                Text(exercise.techniqueMode.shortHint)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        .padding(.vertical, 4)
                     }
                     .onDelete { exercises.remove(atOffsets: $0) }
                 }
@@ -596,8 +628,20 @@ struct CoachPrescribeWorkoutView: View {
                         }
                         Stepper("Séries \(customSets)", value: $customSets, in: 1...8)
                         Stepper("Repetições \(customReps)", value: $customReps, in: 1...30)
+                        HStack {
+                            TextField("Carga (kg)", text: $customWeightText)
+                                .keyboardType(.decimalPad)
+                            Text("kg")
+                                .foregroundStyle(.secondary)
+                        }
+                        Picker("Técnica", selection: $customTechnique) {
+                            ForEach(ExerciseTechniqueMode.allCases) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
                     } footer: {
-                        Text("O exercício entra só nesta ficha do aluno.")
+                        Text("O exercício entra só nesta ficha do aluno. Use Conjugado ou Drop set quando fizer parte da prescrição.")
                     }
                 }
                 .navigationTitle("Exercício personalizado")
@@ -728,7 +772,9 @@ struct CoachPrescribeWorkoutView: View {
                 name: name,
                 sets: customSets,
                 reps: customReps,
-                muscleGroup: customMuscleGroup
+                weight: ExerciseLoadEditor.weight(from: customWeightText),
+                muscleGroup: customMuscleGroup,
+                techniqueMode: customTechnique
             )
         )
         updateDefaultTitleIfNeeded()

@@ -275,6 +275,23 @@ private struct CreateWorkoutExerciseRow: View {
                     }
                 }
 
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Técnica")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Picker("Técnica", selection: $exercise.techniqueMode) {
+                        ForEach(ExerciseTechniqueMode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    if exercise.techniqueMode != .normal {
+                        Text(exercise.techniqueMode.shortHint)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 ExerciseExecutionGuideView(
                     steps: exercise.executionGuide,
                     exercise: exercise,
@@ -308,6 +325,9 @@ private struct CreateWorkoutExerciseRow: View {
                         }
                         Text("\(exercise.sets)x\(exercise.reps)")
                         Text("Rec. \(exercise.recommendedWeightLabel)")
+                        if let technique = exercise.techniqueLabel {
+                            Text(technique)
+                        }
                         Text("\(exercise.restSeconds)s descanso")
                     }
                     .font(.caption)

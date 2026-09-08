@@ -698,6 +698,7 @@ struct GenderProgramHeroCard: View {
 struct GenderWorkoutHubView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var subscriptions: SubscriptionService
+    @EnvironmentObject var authService: AuthService
     @ObservedObject private var coach = CoachService.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -708,6 +709,8 @@ struct GenderWorkoutHubView: View {
     @State private var sheetPendingDeletion: WorkoutSheet?
     @State private var selectedRecentSession: WorkoutSession?
     @State private var showScanWorkout = false
+    @State private var showExperiencePrompt = false
+    @State private var showExperiencePicker = false
 
     private var title: String {
         gender == .female ? "Programa Feminino" : "Programa Masculino"
@@ -844,6 +847,39 @@ struct GenderWorkoutHubView: View {
         .onAppear {
             workoutStore.ensureShapeWorkoutsSeeded()
             _ = workoutStore.refreshRecommendedRotationIfNeeded()
+            if authService.currentUser?.musculacaoTrainingExperience == nil {
+                showExperiencePrompt = true
+            }
+        }
+        .confirmationDialog(
+            "Qual o seu nível na musculação?",
+            isPresented: $showExperiencePrompt,
+            titleVisibility: .visible
+        ) {
+            Button("Sou iniciante") {
+                saveMusculacaoExperience(.beginner)
+            }
+            Button("Já treino") {
+                saveMusculacaoExperience(.trainsAlready)
+            }
+            Button("Responder depois", role: .cancel) {}
+        } message: {
+            Text("Se for iniciante, as cargas dos treinos recomendados ficam mais leves.")
+        }
+        .confirmationDialog(
+            "Atualizar nível na musculação",
+            isPresented: $showExperiencePicker,
+            titleVisibility: .visible
+        ) {
+            Button("Sou iniciante") {
+                saveMusculacaoExperience(.beginner)
+            }
+            Button("Já treino") {
+                saveMusculacaoExperience(.trainsAlready)
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Isso ajusta as cargas sugeridas nos treinos de catálogo.")
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -917,6 +953,24 @@ struct GenderWorkoutHubView: View {
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
+
+                Button {
+                    showExperiencePicker = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.caption2)
+                        Text(experienceChipTitle)
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(accent.opacity(0.12))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
             }
 
             Spacer()
@@ -924,6 +978,20 @@ struct GenderWorkoutHubView: View {
         .padding()
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private var experienceChipTitle: String {
+        if let experience = authService.currentUser?.musculacaoTrainingExperience {
+            return experience.title
+        }
+        return "Definir nível"
+    }
+
+    private func saveMusculacaoExperience(_ experience: MusculacaoTrainingExperience) {
+        guard var profile = authService.currentUser else { return }
+        profile.musculacaoTrainingExperience = experience
+        profile.updatedAt = .now
+        authService.updateProfile(profile)
     }
 
     private var recommendedSubtitle: String {

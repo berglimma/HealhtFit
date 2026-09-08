@@ -10,6 +10,8 @@ struct Exercise: Identifiable, Codable, Hashable {
     var restSeconds: Int
     var notes: String
     var muscleGroup: MuscleGroup
+    /// Técnica especial prescrita (conjugado / drop set).
+    var techniqueMode: ExerciseTechniqueMode
 
     init(
         id: UUID = UUID(),
@@ -19,7 +21,8 @@ struct Exercise: Identifiable, Codable, Hashable {
         weight: Double? = nil,
         restSeconds: Int = 60,
         notes: String = "",
-        muscleGroup: MuscleGroup = .chest
+        muscleGroup: MuscleGroup = .chest,
+        techniqueMode: ExerciseTechniqueMode = .normal
     ) {
         self.id = id
         self.name = name
@@ -29,6 +32,24 @@ struct Exercise: Identifiable, Codable, Hashable {
         self.restSeconds = restSeconds
         self.notes = notes
         self.muscleGroup = muscleGroup
+        self.techniqueMode = techniqueMode
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try container.decode(String.self, forKey: .name)
+        sets = try container.decodeIfPresent(Int.self, forKey: .sets) ?? 3
+        reps = try container.decodeIfPresent(Int.self, forKey: .reps) ?? 12
+        weight = try container.decodeIfPresent(Double.self, forKey: .weight)
+        restSeconds = try container.decodeIfPresent(Int.self, forKey: .restSeconds) ?? 60
+        notes = try container.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        muscleGroup = try container.decodeIfPresent(MuscleGroup.self, forKey: .muscleGroup) ?? .chest
+        techniqueMode = try container.decodeIfPresent(ExerciseTechniqueMode.self, forKey: .techniqueMode) ?? .normal
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, sets, reps, weight, restSeconds, notes, muscleGroup, techniqueMode
     }
 
     var recommendedWeight: Double? {
@@ -41,6 +62,36 @@ struct Exercise: Identifiable, Codable, Hashable {
         return weight.truncatingRemainder(dividingBy: 1) == 0
             ? "\(Int(weight)) kg"
             : String(format: "%.1f kg", weight)
+    }
+
+    var techniqueLabel: String? {
+        techniqueMode == .normal ? nil : techniqueMode.rawValue
+    }
+
+    /// Aplica fator nas cargas recomendadas (ex.: iniciante → mais leve).
+    func withScaledRecommendedWeight(factor: Double) -> Exercise {
+        guard let weight, weight > 0, factor != 1 else { return self }
+        var copy = self
+        let scaled = (weight * factor * 2).rounded() / 2
+        copy.weight = max(scaled, 2.5)
+        return copy
+    }
+}
+
+/// Como o exercício deve ser executado na série.
+enum ExerciseTechniqueMode: String, Codable, CaseIterable, Identifiable, Hashable {
+    case normal = "Normal"
+    case conjugado = "Conjugado"
+    case dropSet = "Drop set"
+
+    var id: String { rawValue }
+
+    var shortHint: String {
+        switch self {
+        case .normal: return "Execução padrão"
+        case .conjugado: return "Dois exercícios em sequência sem descanso"
+        case .dropSet: return "Reduz a carga e continua até a falha"
+        }
     }
 }
 

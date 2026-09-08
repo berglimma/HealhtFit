@@ -649,6 +649,9 @@
     "Aceitar" : {
 
     },
+    "Aceitar vínculo" : {
+
+    },
     "Aceleração e saltos" : {
 
     },
@@ -950,6 +953,9 @@
 
     },
     "Atualizar localização" : {
+
+    },
+    "Atualizar nível na musculação" : {
 
     },
     "Aumentar pausa 15 segundos" : {
@@ -1705,6 +1711,9 @@
     "Buscar" : {
 
     },
+    "Buscar alunos" : {
+
+    },
     "Buscar áreas próximas no mapa" : {
 
     },
@@ -1730,6 +1739,9 @@
 
     },
     "Buscar sensores" : {
+
+    },
+    "Busque alunos pelo nome, apelido ou e-mail. Se a pessoa ainda não tem personal, você pode enviar uma mensagem motivacional com seu interesse e um código de vínculo." : {
 
     },
     "Busque no app e envie o convite. A pessoa precisa aceitar ou recusar. Só ficam listados os pendentes — arraste para retirar. Também dá para SMS, e-mail ou código. Sem localização em tempo real." : {
@@ -1842,6 +1854,12 @@
 
     },
     "Cardápio do nutricionista" : {
+
+    },
+    "Carga" : {
+
+    },
+    "Carga (kg)" : {
 
     },
     "Carga recomendada" : {
@@ -2389,6 +2407,9 @@
     "Defina quantas calorias pretende gastar. Ao atingir a meta o treino continua — ele só encerra quando você tocar em Finalizar." : {
 
     },
+    "Deixe em branco para usar o texto padrão. Um código de convite é anexado automaticamente." : {
+
+    },
     "Delta" : {
 
     },
@@ -2506,6 +2527,9 @@
     "Digite pelo menos 2 letras do nome, apelido ou e-mail." : {
 
     },
+    "Digite pelo menos 2 letras." : {
+
+    },
     "Diminuir pausa 15 segundos" : {
 
     },
@@ -2539,6 +2563,9 @@
       }
     },
     "Disciplina · Evolução · Constância" : {
+
+    },
+    "Dispensar" : {
 
     },
     "Disponível a partir do plano %@." : {
@@ -2614,6 +2641,9 @@
 
     },
     "Editar método" : {
+
+    },
+    "Editar perfil profissional" : {
 
     },
     "Editar refeição" : {
@@ -2694,7 +2724,13 @@
     "Enviar" : {
 
     },
+    "Enviar interesse" : {
+
+    },
     "Enviar link de redefinição" : {
+
+    },
+    "Enviar mensagem motivacional" : {
 
     },
     "Enviar pedido de ajuda" : {
@@ -3313,6 +3349,9 @@
     "Intensidade %@" : {
 
     },
+    "Interessados em te treinar" : {
+
+    },
     "Ir para Nutrição" : {
 
     },
@@ -3320,6 +3359,9 @@
 
     },
     "Ir para Perfil" : {
+
+    },
+    "Isso ajusta as cargas sugeridas nos treinos de catálogo." : {
 
     },
     "Item" : {
@@ -3332,6 +3374,12 @@
 
     },
     "Itens marcados como comprados na lista são contabilizados aqui. Deslize para remover do histórico." : {
+
+    },
+    "Já possui personal" : {
+
+    },
+    "Já treino" : {
 
     },
     "kcal" : {
@@ -3589,6 +3637,9 @@
     "Mensagem" : {
 
     },
+    "Mensagem motivacional" : {
+
+    },
     "Meta %@ km" : {
 
     },
@@ -3780,6 +3831,9 @@
 
     },
     "Nenhum" : {
+
+    },
+    "Nenhum aluno encontrado com este termo." : {
 
     },
     "Nenhum amigo com Spot Buddy ativo por perto (até 2 km). Convide a equipe Duo com modalidade kitesurf." : {
@@ -4123,7 +4177,7 @@
     "O destino da mensagem fica só com o app — o endereço de e-mail não é exibido." : {
 
     },
-    "O exercício entra só nesta ficha do aluno." : {
+    "O exercício entra só nesta ficha do aluno. Use Conjugado ou Drop set quando fizer parte da prescrição." : {
 
     },
     "O ícone do app na tela inicial usa a mesma cor." : {
@@ -4262,6 +4316,9 @@
     "País" : {
 
     },
+    "Para" : {
+
+    },
     "Para: %@" : {
 
     },
@@ -4332,6 +4389,9 @@
     "Perfil da ficha" : {
 
     },
+    "Perfil iniciante — cargas sugeridas nesta ficha estão mais leves. Foque na execução e avance com segurança." : {
+
+    },
     "Perfis novos ou sem preferência exibem todas as modalidades. É preciso manter ao menos uma marcada." : {
 
     },
@@ -4363,6 +4423,9 @@
 
     },
     "Personalizar km" : {
+
+    },
+    "Personals que viram seu perfil e enviaram uma mensagem motivacional." : {
 
     },
     "Peso (kg)" : {
@@ -4937,6 +5000,9 @@
     "Qtd" : {
 
     },
+    "Qual o seu nível na musculação?" : {
+
+    },
     "Quando" : {
 
     },
@@ -5145,6 +5211,9 @@
     "Responda sobre lactose e doces para montar seu cardápio." : {
 
     },
+    "Responder depois" : {
+
+    },
     "Respostas desta semana" : {
 
     },
@@ -5322,6 +5391,9 @@
     "Salvo" : {
 
     },
+    "Se for iniciante, as cargas dos treinos recomendados ficam mais leves." : {
+
+    },
     "Seção" : {
 
     },
@@ -5371,6 +5443,9 @@
 
     },
     "Sem nutricionista cadastrado. A edição de nome e e-mail fica bloqueada." : {
+
+    },
+    "Sem personal no app" : {
 
     },
     "Sem pontos GPS registrados nesta sessão." : {
@@ -5562,6 +5637,9 @@
 
     },
     "Sono, suplementos, medidas e plano de refeições" : {
+
+    },
+    "Sou iniciante" : {
 
     },
     "Spot Buddy" : {
@@ -5781,6 +5859,9 @@
 
     },
     "TDEE: %lld kcal" : {
+
+    },
+    "Técnica" : {
 
     },
     "Telefone com DDD" : {

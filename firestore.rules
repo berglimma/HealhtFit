@@ -240,6 +240,18 @@ service cloud.firestore {
         && request.resource.data.fromUid == request.auth.uid;
     }
 
+    // Mensagens motivacionais de interesse (personal → aluno sem vínculo Coach).
+    match /users/{userId}/coachInterestMessages/{messageId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.resource.data.fromCoachUid == request.auth.uid
+        && request.resource.data.toStudentUid == userId
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 600
+        && request.resource.data.profession == 'personal';
+    }
+
     match /users/{userId}/duoReadCursors/{teamId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }

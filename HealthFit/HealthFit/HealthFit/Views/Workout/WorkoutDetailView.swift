@@ -24,6 +24,25 @@ struct WorkoutDetailView: View {
         workoutStore.canModify(sheet)
     }
 
+    /// Fichas de catálogo (recomendados / Shape / guiados) — não personalizadas nem do coach.
+    private var isCatalogSheet: Bool {
+        !sheet.isCoachPrescribed && !sheet.isUserCreated && !sheet.createdByAssistant
+    }
+
+    private var displayExercises: [Exercise] {
+        MusculacaoTrainingExperience.scaleCatalogExercises(
+            sheet.exercises,
+            experience: authService.currentUser?.musculacaoTrainingExperience,
+            isCatalogSheet: isCatalogSheet
+        )
+    }
+
+    private var sessionSheet: WorkoutSheet {
+        var copy = sheet
+        copy.exercises = displayExercises
+        return copy
+    }
+
     private var repeatedWorkoutAlertMessage: String {
         guard let session = repeatedWorkoutSession else {
             return "Este treino é o mesmo que o último realizado nas últimas 24 horas."
@@ -124,7 +143,7 @@ struct WorkoutDetailView: View {
         }
         .sheet(isPresented: $showStartingExercisePicker) {
             StartingExercisePickerSheet(
-                exercises: sheet.exercises,
+                exercises: displayExercises,
                 selectedIndex: $selectedStartingExerciseIndex,
                 onCancel: {
                     showStartingExercisePicker = false
@@ -159,6 +178,21 @@ struct WorkoutDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
+            if isCatalogSheet,
+               authService.currentUser?.musculacaoTrainingExperience == .beginner {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "leaf.fill")
+                        .foregroundStyle(AppTheme.accent)
+                    Text("Perfil iniciante — cargas sugeridas nesta ficha estão mais leves. Foque na execução e avance com segurança.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppTheme.accent.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
             HStack(spacing: 16) {
                 StatPill(value: "\(sheet.totalExercises)", label: "Exercícios", icon: "list.bullet")
                 StatPill(value: "~\(sheet.estimatedDuration / 60)", label: "Minutos", icon: "clock")
@@ -173,7 +207,7 @@ struct WorkoutDetailView: View {
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
 
-            ForEach(Array(sheet.exercises.enumerated()), id: \.element.id) { index, exercise in
+            ForEach(Array(displayExercises.enumerated()), id: \.element.id) { index, exercise in
                 ExerciseRow(
                     index: index + 1,
                     exercise: exercise,
@@ -220,7 +254,7 @@ struct WorkoutDetailView: View {
     private func presentStartingExercisePicker(tookPreWorkout: Bool) {
         pendingTookPreWorkout = tookPreWorkout
         selectedStartingExerciseIndex = 0
-        if sheet.exercises.count <= 1 {
+        if displayExercises.count <= 1 {
             beginWorkout(tookPreWorkout: tookPreWorkout, startingExerciseIndex: 0)
         } else {
             showStartingExercisePicker = true
@@ -228,21 +262,22 @@ struct WorkoutDetailView: View {
     }
 
     private func beginWorkout(tookPreWorkout: Bool, startingExerciseIndex: Int = 0) {
+        let workout = sessionSheet
         guard workoutStore.startSession(
-            for: sheet,
+            for: workout,
             tookPreWorkout: tookPreWorkout,
             startingExerciseIndex: startingExerciseIndex
         ) else { return }
 
         wellnessService.applyPreWorkoutFromWorkouts(allTrackedSessions)
-        let startIndex = min(max(0, startingExerciseIndex), max(0, sheet.exercises.count - 1))
-        let exerciseName = sheet.exercises.indices.contains(startIndex)
-            ? sheet.exercises[startIndex].name
-            : (sheet.exercises.first?.name ?? "")
-        watchConnectivity.startWorkoutOnWatch(workoutName: sheet.title, exerciseName: exerciseName)
+        let startIndex = min(max(0, startingExerciseIndex), max(0, workout.exercises.count - 1))
+        let exerciseName = workout.exercises.indices.contains(startIndex)
+            ? workout.exercises[startIndex].name
+            : (workout.exercises.first?.name ?? "")
+        watchConnectivity.startWorkoutOnWatch(workoutName: workout.title, exerciseName: exerciseName)
         let athleteName = authService.currentUser?.greetingName ?? "Atleta"
         NotificationService.shared.deliverWorkoutStartNotification(
-            workoutTitle: sheet.title,
+            workoutTitle: workout.title,
             athleteName: athleteName
         )
         pendingTookPreWorkout = nil
@@ -307,6 +342,11 @@ struct ExerciseRow: View {
                     Text(exercise.name)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.textPrimary)
+                    if let technique = exercise.techniqueLabel {
+                        Text(technique)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
                     if !exercise.notes.isEmpty {
                         Text(exercise.notes)
                             .font(.caption2.weight(.medium))
