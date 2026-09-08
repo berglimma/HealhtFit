@@ -1,4 +1,7 @@
-• Kite Spot Buddy: friend radar, SOS help alert and Watch compass (kitesurf only, opt-in, session-only)
-• HealthFit Coach: trainer/nutritionist links, chat, unlink and delete pro registration
-• Updated privacy policy (temporary location sharing + consent)
-• Spot Buddy map improvements and stability fixes
+• Foco no Shape: Level 1 & 2 strength programs
+• HealthFit Coach: named methods, student search & interest outreach
+• Prescriptions with load, supersets and drop sets
+• Beginner mode: lighter catalog loads + IAssistente
+• IAssistente: report & coach-sheet adherence reminders
+• Required update when a newer App Store version is available
+• Stability improvements

@@ -16,6 +16,7 @@ struct HealthFitApp: App {
     @StateObject private var shareCardStore = WorkoutShareCardStore.shared
     @StateObject private var exerciseVideoRepository = ExerciseVideoRepository.shared
     @ObservedObject private var languageStore = AppLanguageStore.shared
+    @ObservedObject private var appUpdateService = AppUpdateService.shared
 
     init() {
         // BGTask registration must stay early; notifications / Watch activate after first frame.
@@ -26,48 +27,61 @@ struct HealthFitApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environmentObject(authService)
-                .environmentObject(healthKitManager)
-                .environmentObject(workoutStore)
-                .environmentObject(mealPlanService)
-                .environmentObject(timerService)
-                .environmentObject(watchConnectivity)
-                .environmentObject(LiveMetricsHub.shared)
-                .environmentObject(BluetoothHeartRateService.shared)
-                .environmentObject(weeklyReportService)
-                .environmentObject(monthlyReportService)
-                .environmentObject(wellnessService)
-                .environmentObject(shareCardStore)
-                .environmentObject(exerciseVideoRepository)
-                .environmentObject(TrainingNutritionSyncService.shared)
-                .environmentObject(BodyEvolutionService.shared)
-                .environmentObject(languageStore)
-                .environmentObject(SubscriptionService.shared)
-                .environmentObject(CoachService.shared)
-                .environment(\.locale, languageStore.locale)
-                // Avoid `.id(language)` — full view remount freezes tab navigation on language bind.
-                .preferredColorScheme(.dark)
-                .onOpenURL { url in
-                    _ = SocialSignInService.handleIncomingURL(url)
+            ZStack {
+                RootView()
+                    .environmentObject(authService)
+                    .environmentObject(healthKitManager)
+                    .environmentObject(workoutStore)
+                    .environmentObject(mealPlanService)
+                    .environmentObject(timerService)
+                    .environmentObject(watchConnectivity)
+                    .environmentObject(LiveMetricsHub.shared)
+                    .environmentObject(BluetoothHeartRateService.shared)
+                    .environmentObject(weeklyReportService)
+                    .environmentObject(monthlyReportService)
+                    .environmentObject(wellnessService)
+                    .environmentObject(shareCardStore)
+                    .environmentObject(exerciseVideoRepository)
+                    .environmentObject(TrainingNutritionSyncService.shared)
+                    .environmentObject(BodyEvolutionService.shared)
+                    .environmentObject(languageStore)
+                    .environmentObject(SubscriptionService.shared)
+                    .environmentObject(CoachService.shared)
+                    .environment(\.locale, languageStore.locale)
+                    // Avoid `.id(language)` — full view remount freezes tab navigation on language bind.
+                    .preferredColorScheme(.dark)
+
+                if appUpdateService.requiresUpdate {
+                    ForceAppUpdateView(updateService: appUpdateService)
+                        .transition(.opacity)
+                        .zIndex(1000)
                 }
-                .onAppear {
-                    watchConnectivity.bind(workoutStore: workoutStore)
-                    CoachService.shared.bind(
-                        authService: authService,
-                        workoutStore: workoutStore,
-                        mealPlanService: mealPlanService
-                    )
-                }
-                .task(priority: .utility) {
-                    await Task.yield()
-                    try? await Task.sleep(nanoseconds: 800_000_000)
-                    NotificationService.shared.requestAuthorization()
-                    watchConnectivity.ensureSessionActivated()
-                    watchConnectivity.bind(workoutStore: workoutStore)
-                    // StoreKit products only after first UI frames — not during install/login paint.
-                    await SubscriptionService.shared.refreshIfNeeded()
-                }
+            }
+            .onOpenURL { url in
+                _ = SocialSignInService.handleIncomingURL(url)
+            }
+            .onAppear {
+                watchConnectivity.bind(workoutStore: workoutStore)
+                CoachService.shared.bind(
+                    authService: authService,
+                    workoutStore: workoutStore,
+                    mealPlanService: mealPlanService
+                )
+                Task { await appUpdateService.checkForRequiredUpdate(force: true) }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                Task { await appUpdateService.checkForRequiredUpdate() }
+            }
+            .task(priority: .utility) {
+                await Task.yield()
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                NotificationService.shared.requestAuthorization()
+                watchConnectivity.ensureSessionActivated()
+                watchConnectivity.bind(workoutStore: workoutStore)
+                // StoreKit products only after first UI frames — not during install/login paint.
+                await SubscriptionService.shared.refreshIfNeeded()
+                await appUpdateService.checkForRequiredUpdate(force: true)
+            }
         }
     }
 }

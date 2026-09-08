@@ -1,4 +1,7 @@
-• HealthFit Coach: fotos no card do aluno/profissional, chat redesenhado (48h)
-• Kite Spot Buddy: radar de amigos, SOS e bússola no Apple Watch (só kitesurf, opt-in)
-• Política de privacidade atualizada
+• Foco no Shape: fichas Nível 1 e 2 no hub de musculação
+• HealthFit Coach: métodos nomeados, busca de alunos e mensagem de interesse
+• Prescrição com carga, conjugado e drop set
+• Experiência iniciante: cargas leves no catálogo e no IAssistente
+• IAssistente: lembrete de relatório e adesão às fichas do personal
+• Atualização obrigatória quando houver versão nova na App Store
 • Melhorias de estabilidade

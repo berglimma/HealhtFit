@@ -1,4 +1,7 @@
-• Kite Spot Buddy: radar de amigos, alerta SOS y brújula en Apple Watch (solo kitesurf, opt-in, solo en sesión)
-• HealthFit Coach: vínculos personal/nutri, chat, desvincular y eliminar registro profesional
-• Política de privacidad actualizada
-• Mejoras de mapa Spot Buddy y estabilidad
+• Foco no Shape: fichas Nivel 1 y 2
+• HealthFit Coach: métodos, búsqueda de alumnos y mensaje de interés
+• Prescripción con carga, conjugado y drop set
+• Principiantes: cargas más ligeras
+• IAssistente: recordatorios de informe y fichas del personal
+• Actualización obligatoria a la versión más reciente
+• Mejoras de estabilidad

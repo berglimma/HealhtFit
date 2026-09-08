@@ -22,6 +22,16 @@ Link de download: **https://apps.apple.com/br/app/id6798621208**
 |---------|---------|------|
 | `HealthFit-card-coach-feed.png` | 1:1 | HealthFit Coach (personal / nutri) |
 | `HealthFit-card-coach-story.png` | 9:16 | HealthFit Coach |
+| `HealthFit-card-coach-fichas-feed.png` | 1:1 | Coach — ficha do personal no app |
+| `HealthFit-card-coach-metodos-feed.png` | 1:1 | Coach — métodos com nome |
+| `HealthFit-card-coach-chat-feed.png` | 1:1 | Coach — chat 1:1 |
+| `HealthFit-card-coach-prescricao-feed.png` | 1:1 | Coach — carga, conjugado e drop set |
+| `HealthFit-card-coach-adesao-feed.png` | 1:1 | Coach — acompanhar adesão |
+| `HealthFit-card-foco-shape-niveis-feed.png` | 1:1 | Foco no Shape — Nível 1 e 2 |
+| `HealthFit-card-foco-shape-iniciantes-feed.png` | 1:1 | Foco no Shape — iniciantes |
+| `HealthFit-card-foco-shape-demo-feed.png` | 1:1 | Foco no Shape — demonstrações |
+| `HealthFit-card-foco-shape-masculino-feminino-feed.png` | 1:1 | Foco no Shape — M/F |
+| `HealthFit-card-foco-shape-tecnica-feed.png` | 1:1 | Foco no Shape — técnica |
 | `HealthFit-card-duo-feed.png` | 1:1 | Duo (dupla / equipe) |
 | `HealthFit-card-nutricao-feed.png` | 1:1 | Nutrição com IA |
 | `HealthFit-card-watch-feed.png` | 1:1 | Apple Watch |

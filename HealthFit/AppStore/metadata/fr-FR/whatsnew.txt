@@ -1,4 +1,7 @@
-• Kite Spot Buddy : radar d'amis, alerte SOS et boussole Apple Watch (kitesurf uniquement, opt-in, pendant la séance)
-• HealthFit Coach : liens coach/nutritionniste, chat, détachement et suppression du compte pro
-• Politique de confidentialité mise à jour
-• Améliorations Spot Buddy et stabilité
+• Foco no Shape : programmes Niveau 1 et 2
+• HealthFit Coach : méthodes, recherche d’élèves et message d’intérêt
+• Prescription avec charge, supersets et drop sets
+• Débutants : charges plus légères
+• IAssistente : rappels rapport et fiches du coach
+• Mise à jour obligatoire vers la dernière version
+• Améliorations de stabilité
