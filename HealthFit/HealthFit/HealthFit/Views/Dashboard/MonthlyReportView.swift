@@ -182,6 +182,14 @@ struct MonthlyReportView: View {
                 label: "Suplementos",
                 color: .teal
             )
+            if report.currentMonth.ratedEffortSessionCount > 0 {
+                MonthlyStatCard(
+                    icon: "gauge.with.dots.needle.33percent",
+                    value: String(format: "%.1f/10", report.currentMonth.averagePerceivedEffort),
+                    label: "Intensidade média",
+                    color: .orange
+                )
+            }
         }
     }
 
@@ -509,6 +517,31 @@ struct MonthlyReportView: View {
                 .padding()
                 .background(AppTheme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+
+                let daysWithEffort = report.dailyWorkoutMinutes.filter { $0.ratedEffortCount > 0 }
+                if !daysWithEffort.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Intensidade por dia")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        ForEach(daysWithEffort) { day in
+                            HStack {
+                                Text(day.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated))
+                                    .font(.caption)
+                                Spacer()
+                                if let avg = day.averagePerceivedEffort {
+                                    Text(String(format: "%.1f/10 · %d treino(s)", avg, day.workoutCount))
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(AppTheme.accentSecondary)
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+                }
             }
         }
     }

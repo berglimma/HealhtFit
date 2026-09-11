@@ -447,6 +447,19 @@
     "%lld/6 fotos (opcional)" : {
 
     },
+    "%lld/10" : {
+
+    },
+    "%lld/10 · %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/10 · %2$@"
+          }
+        }
+      }
+    },
     "%lld%%" : {
 
     },
@@ -740,6 +753,9 @@
     "Agrupe fichas sob um nome (ex.: Foco no Shape). O aluno vê o método no app." : {
 
     },
+    "Água diária do aluno" : {
+
+    },
     "Água recomendada" : {
 
     },
@@ -962,6 +978,9 @@
 
     },
     "Atualizar nível na musculação" : {
+
+    },
+    "Aumentar meta de água" : {
 
     },
     "Aumentar pausa 15 segundos" : {
@@ -1669,6 +1688,9 @@
     "Automático · Watch" : {
 
     },
+    "Avaliações desta semana" : {
+
+    },
     "Aviso" : {
 
     },
@@ -1863,9 +1885,6 @@
 
     },
     "Carga" : {
-
-    },
-    "Carga (kg)" : {
 
     },
     "Carga recomendada" : {
@@ -2136,6 +2155,9 @@
 
     },
     "Como deseja importar a ficha?" : {
+
+    },
+    "Como foi a intensidade?" : {
 
     },
     "Como saber se você é %@" : {
@@ -2527,6 +2549,9 @@
     "Dieta" : {
 
     },
+    "Difícil" : {
+
+    },
     "Digite as circunferências em centímetros. Campos vazios não entram no relatório nem no PDF." : {
 
     },
@@ -2534,6 +2559,9 @@
 
     },
     "Digite pelo menos 2 letras." : {
+
+    },
+    "Diminuir meta de água" : {
 
     },
     "Diminuir pausa 15 segundos" : {
@@ -3011,6 +3039,9 @@
     "Faça uma busca para ver profissionais." : {
 
     },
+    "Fácil" : {
+
+    },
     "Faixas de SPM (Stroke Rate)" : {
 
     },
@@ -3355,6 +3386,15 @@
     "Intensidade %@" : {
 
     },
+    "Intensidade %lld de 10" : {
+
+    },
+    "Intensidade dos treinos" : {
+
+    },
+    "Intensidade por dia" : {
+
+    },
     "Interessados em te treinar" : {
 
     },
@@ -3668,6 +3708,9 @@
 
     },
     "Meta de voltas" : {
+
+    },
+    "Meta diária" : {
 
     },
     "Meta do aluno" : {
@@ -4198,6 +4241,9 @@
     "O método fica disponível para outras fichas deste personal." : {
 
     },
+    "O personal define a meta em ml. Sem override, o app usa 35 ml por kg de peso." : {
+
+    },
     "O que melhorar" : {
 
     },
@@ -4443,7 +4489,7 @@
     "Peso e altura" : {
 
     },
-    "Peso, altura e medidas do aluno foram atualizados." : {
+    "Peso, altura, água e medidas do aluno foram atualizados." : {
 
     },
     "Peso, altura, data de nascimento e sexo foram sincronizados com a sua conta." : {
@@ -5412,6 +5458,9 @@
     "Selecionada · toque no círculo para marcar como concluída" : {
 
     },
+    "Selecione a intensidade" : {
+
+    },
     "Selecione um ou mais grupos musculares. Os exercícios do catálogo são carregados automaticamente — remova os que não quiser." : {
 
     },
@@ -5967,6 +6016,9 @@
     "Tópicos praticados" : {
 
     },
+    "Toque de 1 (muito fácil) a 10 (máximo)" : {
+
+    },
     "Toque em + para incluir na lista" : {
 
     },
@@ -6103,6 +6155,9 @@
 
     },
     "Usamos a mesma foto do seu perfil no HealthFit. Altere em Perfil se quiser atualizar." : {
+
+    },
+    "Usar 35 ml/kg" : {
 
     },
     "Usar meta sugerida (%lld kcal)" : {

@@ -65,16 +65,16 @@ struct ActiveMeditationView: View {
                 }
             }
         }
+        .onAppear {
+            isFinishing = false
+            elapsedSeconds = wallClockElapsedSeconds()
+            ensureWatchMeditationActive()
+        }
         .onReceive(clock) { _ in
             elapsedSeconds = wallClockElapsedSeconds()
             // Em background: só encerra por tempo; evita sync Watch a cada segundo.
             if scenePhase == .active {
-                watchConnectivity.syncMeditationProgress(
-                    elapsedSeconds: elapsedSeconds,
-                    targetSeconds: config.targetDurationSeconds,
-                    currentPrompt: currentPrompt,
-                    promptIndex: currentPromptIndex
-                )
+                ensureWatchMeditationActive()
             }
             if elapsedSeconds >= config.targetDurationSeconds && !isFinishing {
                 finishMeditation()
@@ -99,16 +99,6 @@ struct ActiveMeditationView: View {
             watchConnectivity.stopWorkoutOnWatch()
             finishedSession = ended
         }
-        .onAppear {
-            isFinishing = false
-            elapsedSeconds = wallClockElapsedSeconds()
-            watchConnectivity.syncMeditationProgress(
-                elapsedSeconds: elapsedSeconds,
-                targetSeconds: config.targetDurationSeconds,
-                currentPrompt: currentPrompt,
-                promptIndex: currentPromptIndex
-            )
-        }
         .fullScreenCover(item: $finishedSession) { session in
             WorkoutSummaryView(
                 session: session,
@@ -125,6 +115,28 @@ struct ActiveMeditationView: View {
                 }
             )
         }
+    }
+
+    private func ensureWatchMeditationActive() {
+        guard !isFinishing, finishedSession == nil, workoutStore.activeSession != nil else { return }
+        if !watchConnectivity.isWorkoutActiveOnWatch {
+            watchConnectivity.startMeditationOnWatch(
+                workoutName: config.title,
+                targetSeconds: config.targetDurationSeconds,
+                topicName: config.topic.name,
+                topicIcon: config.topic.icon,
+                colorName: config.topic.colorName,
+                currentPrompt: currentPrompt,
+                promptIndex: currentPromptIndex,
+                totalPrompts: config.topic.prompts.count
+            )
+        }
+        watchConnectivity.syncMeditationProgress(
+            elapsedSeconds: elapsedSeconds,
+            targetSeconds: config.targetDurationSeconds,
+            currentPrompt: currentPrompt,
+            promptIndex: currentPromptIndex
+        )
     }
 
     private func closeMeditationHost() {

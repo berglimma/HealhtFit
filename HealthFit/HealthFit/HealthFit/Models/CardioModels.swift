@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import HealthKit
 
 enum RunningDistance: Int, CaseIterable, Identifiable, Codable, Hashable {
     case five = 5
@@ -517,6 +518,35 @@ struct CardioWorkoutConfig: Hashable, Codable {
 
     /// Caminhada outdoor (mapa + passos + ritmo; sem metas 5–40 km de corrida).
     var isOutdoorWalkingSession: Bool { exercise.isOutdoorWalking }
+
+    /// Tipo HealthKit para espelhar/abrir o treino no Apple Watch.
+    var healthKitActivityType: HKWorkoutActivityType {
+        if isSwimmingSession { return .swimming }
+        if isOutdoorCyclingSession || exercise.isStationaryBike { return .cycling }
+        if isOutdoorWalkingSession { return .walking }
+        if isRunningSession || isDistanceRun || isTreadmillSession { return .running }
+        if isRowingSession { return .rowing }
+        if isClimbingSession { return .climbing }
+        if isKitesurfSession { return .paddleSports }
+        if isSurfSession { return .surfingSports }
+        if exercise.name.localizedCaseInsensitiveContains("luta")
+            || exercise.name.localizedCaseInsensitiveContains("box") {
+            return .martialArts
+        }
+        return .other
+    }
+
+    /// Local outdoor no HealthKit (GPS / sensores de percurso).
+    var prefersOutdoorHealthKitLocation: Bool {
+        if isTreadmillSession || exercise.isStationaryBike { return false }
+        if isSwimmingSession || isWaterSportSession || isOutdoorGPSCardio { return true }
+        switch healthKitActivityType {
+        case .walking, .running, .cycling, .rowing, .hiking, .paddleSports, .surfingSports:
+            return true
+        default:
+            return false
+        }
+    }
 
     /// Modalidade do `RunTrackingService` (passos ligados em corrida e caminhada).
     var outdoorTrackingModality: OutdoorCardioModality {

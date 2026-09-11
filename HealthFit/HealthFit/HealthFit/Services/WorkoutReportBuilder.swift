@@ -116,6 +116,13 @@ enum WorkoutReportBuilder {
             lines.append(String(format: "FC média: %.0f BPM", session.averageHeartRate))
         }
 
+        if let effort = session.perceivedEffort {
+            let label = session.perceivedEffortLabel.map { " · \($0)" } ?? ""
+            lines.append("Intensidade percebida: \(effort)/10\(label)")
+        } else if let planned = session.cardioIntensityLabel, !planned.isEmpty {
+            lines.append("Intensidade planejada (cardio): \(planned)")
+        }
+
         if !isCardioSession(session) {
             lines.append(contentsOf: preWorkoutReportLines(
                 currentSession: session,
@@ -211,6 +218,11 @@ enum WorkoutReportBuilder {
             lines.append(String(format: "BPM: %.0f", session.averageHeartRate))
         } else {
             lines.append("BPM: —")
+        }
+
+        if let effort = session.perceivedEffort {
+            let label = session.perceivedEffortLabel.map { " · \($0)" } ?? ""
+            lines.append("Intensidade percebida: \(effort)/10\(label)")
         }
 
         lines.append(burned > 0 ? "Kcal: \(burned)" : "Kcal: —")
@@ -374,6 +386,28 @@ enum WorkoutReportBuilder {
                 )
             }
             .sorted { $0.date > $1.date }
+    }
+
+    static func effortEntries(from sessions: [WorkoutSession]) -> [WorkoutEffortEntry] {
+        sessions
+            .compactMap { session -> WorkoutEffortEntry? in
+                guard let effort = session.perceivedEffort else { return nil }
+                return WorkoutEffortEntry(
+                    id: session.id,
+                    date: session.startedAt,
+                    workoutTitle: session.workoutTitle,
+                    perceivedEffort: effort,
+                    effortLabel: session.perceivedEffortLabel ?? "\(effort)/10"
+                )
+            }
+            .sorted { $0.date > $1.date }
+    }
+
+    static func todayEffortEntries(from sessions: [WorkoutSession]) -> [WorkoutEffortEntry] {
+        let todayKey = DailyWellnessEntry.dayKey(for: .now)
+        return effortEntries(from: sessions).filter {
+            DailyWellnessEntry.dayKey(for: $0.date) == todayKey
+        }
     }
 
     static func todayPreWorkoutEntries(from sessions: [WorkoutSession]) -> [PreWorkoutSessionEntry] {

@@ -35,6 +35,7 @@ private struct MonthlyReportPDFContentView: View {
             bodyMeasurementsSection
             mealPlanSection
             workoutChartSection
+            dailyEffortBreakdown
             if !report.highlights.isEmpty {
                 highlightsSection
             }
@@ -109,6 +110,42 @@ private struct MonthlyReportPDFContentView: View {
                 ReportPDFPrintTheme.indigo
             )
             pdfStat("pills.fill", "\(report.supplementSummary.totalIntakes)", "Suplementos", ReportPDFPrintTheme.teal)
+            if report.currentMonth.ratedEffortSessionCount > 0 {
+                pdfStat(
+                    "gauge.with.dots.needle.33percent",
+                    String(format: "%.1f/10", report.currentMonth.averagePerceivedEffort),
+                    "Intensidade",
+                    ReportPDFPrintTheme.orange
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var dailyEffortBreakdown: some View {
+        let days = report.dailyWorkoutMinutes.filter { $0.ratedEffortCount > 0 }
+        if !days.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Intensidade por dia")
+                    .font(.headline)
+                    .foregroundStyle(ReportPDFPrintTheme.textPrimary)
+                ForEach(days) { day in
+                    HStack {
+                        Text(day.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated))
+                            .font(.caption)
+                            .foregroundStyle(ReportPDFPrintTheme.textPrimary)
+                        Spacer()
+                        if let avg = day.averagePerceivedEffort {
+                            Text(String(format: "%.1f/10", avg))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(ReportPDFPrintTheme.orange)
+                        }
+                    }
+                }
+            }
+            .padding(12)
+            .background(ReportPDFPrintTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: ReportPDFPrintTheme.corner))
         }
     }
 

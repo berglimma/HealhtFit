@@ -848,5 +848,5 @@ private struct WaterSportWatchStartView: View {
 
 #Preview {
     WatchContentView()
-        .environmentObject(WatchWorkoutManager())
+        .environmentObject(WatchWorkoutManager.shared)
 }

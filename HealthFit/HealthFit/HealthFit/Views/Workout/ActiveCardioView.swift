@@ -408,6 +408,14 @@ struct ActiveCardioView: View {
             }
             finishedSession = ended
         }
+        .onChange(of: watchConnectivity.isWatchSessionPaused) { _, paused in
+            guard !isFinishing, finishedSession == nil else { return }
+            if paused, !isPaused {
+                pauseCardio(fromWatch: true)
+            } else if !paused, isPaused {
+                resumeCardio(fromWatch: true)
+            }
+        }
         .onAppear {
             elapsedSeconds = activeElapsedSeconds()
             syncWithWatch()
@@ -1804,7 +1812,7 @@ struct ActiveCardioView: View {
         }
     }
 
-    private func pauseCardio() {
+    private func pauseCardio(fromWatch: Bool = false) {
         guard !isPaused, !isFinishing else { return }
         isPaused = true
         pauseStartedAt = .now
@@ -1821,9 +1829,12 @@ struct ActiveCardioView: View {
         if isClimbing {
             climbingMotion.setPaused(true)
         }
+        if !fromWatch {
+            watchConnectivity.pauseWorkoutOnWatch()
+        }
     }
 
-    private func resumeCardio() {
+    private func resumeCardio(fromWatch: Bool = false) {
         guard isPaused else { return }
         if let pauseStartedAt {
             totalPausedSeconds += max(0, Int(Date().timeIntervalSince(pauseStartedAt)))
@@ -1844,6 +1855,9 @@ struct ActiveCardioView: View {
             climbingMotion.setPaused(false)
         }
         elapsedSeconds = activeElapsedSeconds()
+        if !fromWatch {
+            watchConnectivity.resumeWorkoutOnWatch()
+        }
     }
 
     private func finalizedPausedSeconds() -> Int {
@@ -1854,13 +1868,30 @@ struct ActiveCardioView: View {
     }
 
     private func syncWithWatch() {
+        guard !isFinishing, finishedSession == nil, workoutStore.activeSession != nil else { return }
+        if !watchConnectivity.isWorkoutActiveOnWatch {
+            watchConnectivity.startCardioOnWatch(
+                workoutName: config.title,
+                targetSeconds: config.targetDurationSeconds,
+                exerciseName: config.exercise.name,
+                targetCalories: config.targetCalories,
+                waterSportMode: isWaterSport,
+                isKitesurf: isKitesurf,
+                swimmingMode: isSwimming,
+                poolLengthMeters: config.resolvedPoolLengthMeters,
+                spotBuddyEnabled: isKitesurf && spotBuddy.isActive,
+                activityType: config.healthKitActivityType,
+                locationOutdoor: config.prefersOutdoorHealthKitLocation
+            )
+        }
         watchConnectivity.syncCardioProgress(
             elapsedSeconds: elapsedSeconds,
             targetSeconds: config.targetDurationSeconds,
             currentCalories: liveCalories,
             targetCalories: config.targetCalories,
             isKitesurf: isKitesurf,
-            spotBuddyEnabled: isKitesurf && spotBuddy.isActive
+            spotBuddyEnabled: isKitesurf && spotBuddy.isActive,
+            isPaused: isPaused
         )
     }
 

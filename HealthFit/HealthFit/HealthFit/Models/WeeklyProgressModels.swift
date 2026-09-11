@@ -15,6 +15,9 @@ struct WeekStats: Equatable {
     let totalExerciseMinutes: Int
     let preWorkoutUsedCount: Int
     let preWorkoutNotUsedCount: Int
+    /// Média do esforço percebido (1…10) nas sessões avaliadas.
+    let averagePerceivedEffort: Double
+    let ratedEffortSessionCount: Int
 
     static let empty = WeekStats(
         workoutCount: 0,
@@ -30,7 +33,9 @@ struct WeekStats: Equatable {
         totalRestMinutes: 0,
         totalExerciseMinutes: 0,
         preWorkoutUsedCount: 0,
-        preWorkoutNotUsedCount: 0
+        preWorkoutNotUsedCount: 0,
+        averagePerceivedEffort: 0,
+        ratedEffortSessionCount: 0
     )
 }
 
@@ -82,6 +87,7 @@ struct WeeklyProgressReport: Equatable {
     let preWorkoutSummary: PreWorkoutUsageSummary
     let lifetimePreWorkoutSummary: PreWorkoutUsageSummary
     let preWorkoutEntries: [PreWorkoutSessionEntry]
+    let effortEntries: [WorkoutEffortEntry]
 
     var periodLabel: String {
         let formatter = DateFormatter()
@@ -110,6 +116,32 @@ struct DailyWorkoutActivity: Identifiable, Equatable {
     let date: Date
     let minutes: Int
     let workoutCount: Int
+    /// Média 1…10 das sessões avaliadas no dia (`nil` se ninguém avaliou).
+    let averagePerceivedEffort: Double?
+    let ratedEffortCount: Int
+
+    init(
+        date: Date,
+        minutes: Int,
+        workoutCount: Int,
+        averagePerceivedEffort: Double? = nil,
+        ratedEffortCount: Int = 0
+    ) {
+        self.date = date
+        self.minutes = minutes
+        self.workoutCount = workoutCount
+        self.averagePerceivedEffort = averagePerceivedEffort
+        self.ratedEffortCount = ratedEffortCount
+    }
+}
+
+/// Sessão com esforço percebido para listagens de relatório.
+struct WorkoutEffortEntry: Identifiable, Equatable {
+    let id: UUID
+    let date: Date
+    let workoutTitle: String
+    let perceivedEffort: Int
+    let effortLabel: String
 }
 
 struct DailyMeditationActivity: Identifiable, Equatable {

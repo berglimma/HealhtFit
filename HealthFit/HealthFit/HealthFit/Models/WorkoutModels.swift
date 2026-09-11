@@ -529,6 +529,8 @@ struct WorkoutSession: Identifiable, Codable {
     var completedDistanceKm: Double?
     var averagePaceSecondsPerKm: Int?
     var cardioIntensityLabel: String?
+    /// Esforço percebido ao final (1…10), estilo Apple Fitness.
+    var perceivedEffort: Int?
     var targetCalories: Int?
     /// Pontos GPS da rota (corrida ao ar livre).
     var routePoints: [RouteCoordinate]
@@ -583,6 +585,7 @@ struct WorkoutSession: Identifiable, Codable {
         completedDistanceKm: Double? = nil,
         averagePaceSecondsPerKm: Int? = nil,
         cardioIntensityLabel: String? = nil,
+        perceivedEffort: Int? = nil,
         targetCalories: Int? = nil,
         routePoints: [RouteCoordinate] = [],
         stepCount: Int? = nil,
@@ -622,6 +625,7 @@ struct WorkoutSession: Identifiable, Codable {
         self.completedDistanceKm = completedDistanceKm
         self.averagePaceSecondsPerKm = averagePaceSecondsPerKm
         self.cardioIntensityLabel = cardioIntensityLabel
+        self.perceivedEffort = perceivedEffort.map { min(max($0, 1), 10) }
         self.targetCalories = targetCalories
         self.routePoints = routePoints
         self.stepCount = stepCount
@@ -661,6 +665,11 @@ struct WorkoutSession: Identifiable, Codable {
         completedDistanceKm = try container.decodeIfPresent(Double.self, forKey: .completedDistanceKm)
         averagePaceSecondsPerKm = try container.decodeIfPresent(Int.self, forKey: .averagePaceSecondsPerKm)
         cardioIntensityLabel = try container.decodeIfPresent(String.self, forKey: .cardioIntensityLabel)
+        if let effort = try container.decodeIfPresent(Int.self, forKey: .perceivedEffort) {
+            perceivedEffort = min(max(effort, 1), 10)
+        } else {
+            perceivedEffort = nil
+        }
         targetCalories = try container.decodeIfPresent(Int.self, forKey: .targetCalories)
         routePoints = try container.decodeIfPresent([RouteCoordinate].self, forKey: .routePoints) ?? []
         stepCount = try container.decodeIfPresent(Int.self, forKey: .stepCount)
@@ -700,6 +709,7 @@ struct WorkoutSession: Identifiable, Codable {
         try container.encodeIfPresent(completedDistanceKm, forKey: .completedDistanceKm)
         try container.encodeIfPresent(averagePaceSecondsPerKm, forKey: .averagePaceSecondsPerKm)
         try container.encodeIfPresent(cardioIntensityLabel, forKey: .cardioIntensityLabel)
+        try container.encodeIfPresent(perceivedEffort, forKey: .perceivedEffort)
         try container.encodeIfPresent(targetCalories, forKey: .targetCalories)
         if !routePoints.isEmpty {
             try container.encode(routePoints, forKey: .routePoints)
@@ -728,7 +738,7 @@ struct WorkoutSession: Identifiable, Codable {
         case heartRateSamples, caloriesBurned, completedExercises, totalExercises
         case exerciseRecords, tookPreWorkout
         case source, healthKitUUID, externalSourceName
-        case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel
+        case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel, perceivedEffort
         case targetCalories, routePoints, stepCount, pausedDurationSeconds
         case poolLengthMeters, swimLapCount, targetSwimLaps, swimPaceSecondsPer100m
         case waterSport, rowing, climbing, treadmill
@@ -752,6 +762,18 @@ struct WorkoutSession: Identifiable, Codable {
     var averageHeartRate: Double {
         guard !heartRateSamples.isEmpty else { return 0 }
         return heartRateSamples.map(\.bpm).reduce(0, +) / Double(heartRateSamples.count)
+    }
+
+    /// Rótulo de esforço 1…10 (estilo Apple Fitness).
+    var perceivedEffortLabel: String? {
+        guard let perceivedEffort else { return nil }
+        switch perceivedEffort {
+        case 1...2: return "Muito fácil"
+        case 3...4: return "Fácil"
+        case 5...6: return "Moderado"
+        case 7...8: return "Difícil"
+        default: return "Máximo"
+        }
     }
 
     /// Natação (título ou dados de piscina/voltas).

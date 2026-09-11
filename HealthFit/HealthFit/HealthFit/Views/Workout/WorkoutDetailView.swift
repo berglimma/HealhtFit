@@ -4,16 +4,13 @@ struct WorkoutDetailView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @EnvironmentObject var authService: AuthService
-    @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var mealPlanService: MealPlanService
     @EnvironmentObject var trainingNutritionSync: TrainingNutritionSyncService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
     @State var sheet: WorkoutSheet
     @State private var showScanWorkout = false
-    @State private var showPreWorkoutPrompt = false
     @State private var showStartingExercisePicker = false
-    @State private var pendingTookPreWorkout: Bool?
     @State private var selectedStartingExerciseIndex = 0
     @State private var showEditWorkout = false
     @State private var showDeleteConfirmation = false
@@ -115,7 +112,7 @@ struct WorkoutDetailView: View {
         }
         .alert("Treino repetido", isPresented: $showRepeatedWorkoutAlert) {
             Button("Continuar mesmo assim") {
-                showPreWorkoutPrompt = true
+                presentStartingExercisePicker()
             }
             Button("Escolher outro", role: .cancel) {
                 repeatedWorkoutSession = nil
@@ -126,36 +123,16 @@ struct WorkoutDetailView: View {
         .sheet(isPresented: $showScanWorkout) {
             ScanWorkoutSheetView(targetGender: sheet.resolvedProgramGender ?? .male)
         }
-        .confirmationDialog(
-            "Pré-treino",
-            isPresented: $showPreWorkoutPrompt,
-            titleVisibility: .visible
-        ) {
-            Button("Sim, tomei") {
-                presentStartingExercisePicker(tookPreWorkout: true)
-            }
-            Button("Não tomei") {
-                presentStartingExercisePicker(tookPreWorkout: false)
-            }
-            Button("Cancelar", role: .cancel) {}
-        } message: {
-            Text("Você tomou pré-treino antes deste treino? \(SupplementGuidance.preWorkoutCaffeineLimit.capitalized).")
-        }
         .sheet(isPresented: $showStartingExercisePicker) {
             StartingExercisePickerSheet(
                 exercises: displayExercises,
                 selectedIndex: $selectedStartingExerciseIndex,
                 onCancel: {
                     showStartingExercisePicker = false
-                    pendingTookPreWorkout = nil
                 },
                 onStart: {
-                    let tookPreWorkout = pendingTookPreWorkout ?? false
                     showStartingExercisePicker = false
-                    beginWorkout(
-                        tookPreWorkout: tookPreWorkout,
-                        startingExerciseIndex: selectedStartingExerciseIndex
-                    )
+                    beginWorkout(startingExerciseIndex: selectedStartingExerciseIndex)
                 }
             )
             .presentationDetents([.medium, .large])
@@ -247,29 +224,27 @@ struct WorkoutDetailView: View {
             repeatedWorkoutSession = repeated
             showRepeatedWorkoutAlert = true
         } else {
-            showPreWorkoutPrompt = true
+            presentStartingExercisePicker()
         }
     }
 
-    private func presentStartingExercisePicker(tookPreWorkout: Bool) {
-        pendingTookPreWorkout = tookPreWorkout
+    private func presentStartingExercisePicker() {
         selectedStartingExerciseIndex = 0
         if displayExercises.count <= 1 {
-            beginWorkout(tookPreWorkout: tookPreWorkout, startingExerciseIndex: 0)
+            beginWorkout(startingExerciseIndex: 0)
         } else {
             showStartingExercisePicker = true
         }
     }
 
-    private func beginWorkout(tookPreWorkout: Bool, startingExerciseIndex: Int = 0) {
+    private func beginWorkout(startingExerciseIndex: Int = 0) {
         let workout = sessionSheet
         guard workoutStore.startSession(
             for: workout,
-            tookPreWorkout: tookPreWorkout,
+            tookPreWorkout: nil,
             startingExerciseIndex: startingExerciseIndex
         ) else { return }
 
-        wellnessService.applyPreWorkoutFromWorkouts(allTrackedSessions)
         let startIndex = min(max(0, startingExerciseIndex), max(0, workout.exercises.count - 1))
         let exerciseName = workout.exercises.indices.contains(startIndex)
             ? workout.exercises[startIndex].name
@@ -280,18 +255,8 @@ struct WorkoutDetailView: View {
             workoutTitle: workout.title,
             athleteName: athleteName
         )
-        pendingTookPreWorkout = nil
         workoutStore.resumeActiveWorkout()
     }
-
-    private var allTrackedSessions: [WorkoutSession] {
-        var sessions = workoutStore.sessionHistory
-        if let activeSession = workoutStore.activeSession {
-            sessions.append(activeSession)
-        }
-        return sessions
-    }
-}
 
 struct StatPill: View {
     let value: String

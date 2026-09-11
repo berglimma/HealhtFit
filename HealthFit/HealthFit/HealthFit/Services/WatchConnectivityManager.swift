@@ -1,6 +1,7 @@
 import Foundation
 import WatchConnectivity
 import Combine
+import HealthKit
 
 enum WatchSyncResult: Equatable {
     case synced
@@ -216,7 +217,11 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     }
 
     func startWorkoutOnWatch(workoutName: String, exerciseName: String = "") {
+        stopRetryTask?.cancel()
+        stopRetryTask = nil
         clearWatchMetrics()
+        suppressWatchSessionCommandsUntil = nil
+        lastWorkoutName = workoutName
         let message: [String: Any] = [
             "action": "startWorkout",
             "workoutName": workoutName,
@@ -226,9 +231,17 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             "exerciseElapsedSeconds": 0,
             "timestamp": Date().timeIntervalSince1970
         ]
-        sendToWatch(message)
+        // Não marca ativo até o Watch confirmar — senão o iPhone para de reenviar o start.
+        isWorkoutActiveOnWatch = false
+        sendToWatch(message, realtime: true)
         publishWorkoutContext(message)
-        isWorkoutActiveOnWatch = true
+        // Fallback: transferUserInfo garante entrega se o Watch estiver bloqueado.
+        session?.transferUserInfo(message)
+        scheduleStartRetries(message)
+        launchCompanionWatchApp(
+            activityType: .traditionalStrengthTraining,
+            locationType: .indoor
+        )
         refreshConnectionStatus()
     }
 
@@ -241,10 +254,28 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         isKitesurf: Bool = false,
         swimmingMode: Bool = false,
         poolLengthMeters: Double = 25,
-        spotBuddyEnabled: Bool = false
+        spotBuddyEnabled: Bool = false,
+        activityType: HKWorkoutActivityType = .other,
+        locationOutdoor: Bool = false
     ) {
+        stopRetryTask?.cancel()
+        stopRetryTask = nil
         clearWatchMetrics()
-        sendToWatch([
+        suppressWatchSessionCommandsUntil = nil
+        lastWorkoutName = workoutName
+        let resolvedActivity = activityType == .other
+            ? Self.inferredCardioActivityType(
+                exerciseName: exerciseName,
+                swimmingMode: swimmingMode,
+                waterSportMode: waterSportMode,
+                isKitesurf: isKitesurf
+            )
+            : activityType
+        let resolvedOutdoor = locationOutdoor
+            || swimmingMode
+            || waterSportMode
+            || [.walking, .running, .cycling, .rowing, .hiking].contains(resolvedActivity)
+        let message: [String: Any] = [
             "action": "startCardio",
             "workoutName": workoutName,
             "targetSeconds": targetSeconds,
@@ -255,9 +286,21 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             "swimmingMode": swimmingMode,
             "poolLengthMeters": poolLengthMeters,
             "spotBuddyEnabled": spotBuddyEnabled,
+            "activityTypeRaw": resolvedActivity.rawValue,
+            "locationOutdoor": resolvedOutdoor,
             "timestamp": Date().timeIntervalSince1970
-        ])
-        isWorkoutActiveOnWatch = true
+        ]
+        isWorkoutActiveOnWatch = false
+        sendToWatch(message, realtime: true)
+        publishWorkoutContext(message)
+        session?.transferUserInfo(message)
+        scheduleStartRetries(message)
+        launchCompanionWatchApp(
+            activityType: resolvedActivity,
+            locationType: resolvedOutdoor ? .outdoor : .indoor,
+            swimmingMode: swimmingMode,
+            poolLengthMeters: poolLengthMeters
+        )
         refreshConnectionStatus()
     }
 
@@ -314,8 +357,12 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         promptIndex: Int,
         totalPrompts: Int
     ) {
+        stopRetryTask?.cancel()
+        stopRetryTask = nil
         clearWatchMetrics()
-        sendToWatch([
+        suppressWatchSessionCommandsUntil = nil
+        lastWorkoutName = workoutName
+        let message: [String: Any] = [
             "action": "startMeditation",
             "workoutName": workoutName,
             "targetSeconds": targetSeconds,
@@ -326,9 +373,67 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             "promptIndex": promptIndex,
             "totalPrompts": totalPrompts,
             "timestamp": Date().timeIntervalSince1970
-        ])
-        isWorkoutActiveOnWatch = true
+        ]
+        isWorkoutActiveOnWatch = false
+        sendToWatch(message, realtime: true)
+        publishWorkoutContext(message)
+        session?.transferUserInfo(message)
+        scheduleStartRetries(message)
+        launchCompanionWatchApp(
+            activityType: .mindAndBody,
+            locationType: .indoor
+        )
         refreshConnectionStatus()
+    }
+
+    /// Abre o app no Apple Watch (tela de treino). WC sozinho não traz o app para frente.
+    private func launchCompanionWatchApp(
+        activityType: HKWorkoutActivityType,
+        locationType: HKWorkoutSessionLocationType,
+        swimmingMode: Bool = false,
+        poolLengthMeters: Double = 25
+    ) {
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = activityType
+        configuration.locationType = locationType
+        if swimmingMode || activityType == .swimming {
+            configuration.swimmingLocationType = .pool
+            configuration.lapLength = HKQuantity(
+                unit: .meter(),
+                doubleValue: max(poolLengthMeters, 1)
+            )
+        }
+        HKHealthStore().startWatchApp(with: configuration) { success, error in
+            #if DEBUG
+            if let error {
+                print("[HealthFit] startWatchApp falhou: \(error.localizedDescription)")
+            } else {
+                print("[HealthFit] startWatchApp success=\(success)")
+            }
+            #endif
+        }
+    }
+
+    private static func inferredCardioActivityType(
+        exerciseName: String,
+        swimmingMode: Bool,
+        waterSportMode: Bool,
+        isKitesurf: Bool
+    ) -> HKWorkoutActivityType {
+        if swimmingMode { return .swimming }
+        if isKitesurf { return .paddleSports }
+        if waterSportMode { return .surfingSports }
+        let name = exerciseName.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+        if name.contains("corrida") || name.contains("run") || name.contains("esteira") { return .running }
+        if name.contains("caminh") || name.contains("walk") { return .walking }
+        if name.contains("bike") || name.contains("cicl") || name.contains("cycling") { return .cycling }
+        if name.contains("escal") || name.contains("climb") { return .climbing }
+        if name.contains("remo") || name.contains("row") { return .rowing }
+        if name.contains("luta") || name.contains("fight") || name.contains("box") { return .martialArts }
+        if name.contains("surf") { return .surfingSports }
+        if name.contains("kite") { return .paddleSports }
+        return .other
     }
 
     func syncWorkoutProgress(
@@ -336,12 +441,14 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         exerciseName: String,
         exerciseElapsedSeconds: Int
     ) {
+        guard !shouldSuppressWatchSessionCommands else { return }
         let message: [String: Any] = [
             "action": "syncWorkoutProgress",
             "workoutName": workoutNameIfActive(),
             "workoutElapsedSeconds": workoutElapsedSeconds,
             "exerciseName": exerciseName,
             "exerciseElapsedSeconds": exerciseElapsedSeconds,
+            "isPaused": isWatchSessionPaused,
             "timestamp": Date().timeIntervalSince1970
         ]
         sendToWatch(message, realtime: true)
@@ -354,18 +461,24 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         currentCalories: Double,
         targetCalories: Int? = nil,
         isKitesurf: Bool = false,
-        spotBuddyEnabled: Bool = false
+        spotBuddyEnabled: Bool = false,
+        isPaused: Bool = false
     ) {
+        guard !shouldSuppressWatchSessionCommands else { return }
         // Não envia estimativa do iPhone como calorias — o Watch é a fonte.
-        sendToWatch([
+        let message: [String: Any] = [
             "action": "syncCardioProgress",
+            "workoutName": workoutNameIfActive(),
             "elapsedSeconds": elapsedSeconds,
             "targetSeconds": targetSeconds,
             "currentCalories": watchCalories,
             "targetCalories": targetCalories ?? 0,
             "isKitesurf": isKitesurf,
             "spotBuddyEnabled": spotBuddyEnabled,
-        ], realtime: true)
+            "isPaused": isPaused,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        sendToWatch(message, realtime: true)
     }
 
     func syncMeditationProgress(
@@ -374,24 +487,110 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         currentPrompt: String,
         promptIndex: Int
     ) {
+        guard !shouldSuppressWatchSessionCommands else { return }
         sendToWatch([
             "action": "syncMeditationProgress",
+            "workoutName": workoutNameIfActive(),
             "elapsedSeconds": elapsedSeconds,
             "targetSeconds": targetSeconds,
             "currentPrompt": currentPrompt,
-            "promptIndex": promptIndex
+            "promptIndex": promptIndex,
+            "timestamp": Date().timeIntervalSince1970
         ], realtime: true)
     }
 
+    /// Evita que um tick de sync reabra o treino no Watch logo após finalizar no iPhone.
+    private var suppressWatchSessionCommandsUntil: Date?
+    private var stopRetryTask: Task<Void, Never>?
+    private var startRetryTask: Task<Void, Never>?
+
+    private var shouldSuppressWatchSessionCommands: Bool {
+        guard let until = suppressWatchSessionCommandsUntil else { return false }
+        return Date() < until
+    }
+
     func stopWorkoutOnWatch() {
-        let message: [String: Any] = ["action": "stopWorkout"]
-        sendToWatch(message)
-        publishWorkoutContext(message)
+        startRetryTask?.cancel()
+        startRetryTask = nil
+        stopRetryTask?.cancel()
+
+        let timestamp = Date().timeIntervalSince1970
+        let message: [String: Any] = [
+            "action": "stopWorkout",
+            "timestamp": timestamp
+        ]
         isWorkoutActiveOnWatch = false
         isWatchSessionPaused = false
         lastWorkoutName = ""
+        suppressWatchSessionCommandsUntil = Date().addingTimeInterval(8)
         clearWatchMetrics()
+
+        // Entrega redundante: sendMessage + transferUserInfo + applicationContext.
+        sendToWatch(message, realtime: true)
+        publishWorkoutContext(message)
+        session?.transferUserInfo(message)
+
+        // Reenvia o stop — cancelado automaticamente no próximo start.
+        stopRetryTask = Task { @MainActor in
+            for delayMs in [350, 900, 1800] as [UInt64] {
+                do {
+                    try await Task.sleep(for: .milliseconds(delayMs))
+                    try Task.checkCancellation()
+                } catch {
+                    return
+                }
+                let retry: [String: Any] = [
+                    "action": "stopWorkout",
+                    "timestamp": Date().timeIntervalSince1970
+                ]
+                sendToWatch(retry, realtime: true)
+                // Não republica applicationContext nos retries — um start novo pode já ter
+                // publicado o contexto de treino ativo.
+                session?.transferUserInfo(retry)
+            }
+        }
         refreshConnectionStatus()
+    }
+
+    func pauseWorkoutOnWatch() {
+        let message: [String: Any] = [
+            "action": "pauseWorkout",
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        isWatchSessionPaused = true
+        sendToWatch(message, realtime: true)
+        publishWorkoutContext(message)
+        session?.transferUserInfo(message)
+    }
+
+    func resumeWorkoutOnWatch() {
+        let message: [String: Any] = [
+            "action": "resumeWorkout",
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        isWatchSessionPaused = false
+        sendToWatch(message, realtime: true)
+        publishWorkoutContext(message)
+        session?.transferUserInfo(message)
+    }
+
+    /// Reenvia o start até o Watch confirmar (`watchAckStarted`), sem matar com stop atrasado.
+    private func scheduleStartRetries(_ message: [String: Any]) {
+        startRetryTask?.cancel()
+        startRetryTask = Task { @MainActor in
+            for delayMs in [400, 1000, 2200, 4000] as [UInt64] {
+                do {
+                    try await Task.sleep(for: .milliseconds(delayMs))
+                    try Task.checkCancellation()
+                } catch {
+                    return
+                }
+                guard !isWorkoutActiveOnWatch else { return }
+                sendToWatch(message, realtime: true)
+                publishWorkoutContext(message)
+                session?.transferUserInfo(message)
+            }
+        }
     }
 
     /// BPM/kcal ao vivo do Watch — mantém última leitura mesmo se a reachability oscilar.
@@ -548,13 +747,20 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             session.activate()
         }
 
-        if let action = message["action"] as? String, action == "startWorkout",
+        if let action = message["action"] as? String,
+           ["startWorkout", "startCardio", "startMeditation"].contains(action),
            let workoutName = message["workoutName"] as? String {
             lastWorkoutName = workoutName
         }
 
         if session.isReachable {
             session.sendMessage(message, replyHandler: nil) { _ in
+                session.transferUserInfo(message)
+            }
+            // Stop/pause/resume: também enfileira transferUserInfo mesmo com reachability
+            // (sendMessage pode “aceitar” e o Watch ainda não processar).
+            if let action = message["action"] as? String,
+               ["stopWorkout", "pauseWorkout", "resumeWorkout"].contains(action) {
                 session.transferUserInfo(message)
             }
         } else if session.activationState == .activated {
@@ -565,7 +771,15 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     private func publishWorkoutContext(_ message: [String: Any]) {
         guard let session else { return }
         guard let action = message["action"] as? String else { return }
-        guard ["startWorkout", "syncWorkoutProgress", "stopWorkout", "startCardio", "startMeditation"].contains(action) else {
+        guard [
+            "startWorkout",
+            "syncWorkoutProgress",
+            "stopWorkout",
+            "startCardio",
+            "startMeditation",
+            "pauseWorkout",
+            "resumeWorkout"
+        ].contains(action) else {
             return
         }
 
@@ -687,6 +901,15 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
         if action == "requestPhoneSync" {
             Task { _ = await attemptSyncWithWatch() }
+        }
+        if action == "watchAckStarted" || action == "watchStartedSession" {
+            startRetryTask?.cancel()
+            startRetryTask = nil
+            isWorkoutActiveOnWatch = true
+            if let name = message["workoutName"] as? String, !name.isEmpty {
+                lastWorkoutName = name
+            }
+            refreshConnectionStatus()
         }
         if action == "watchStartedSession" {
             mirrorWatchStartedSession(message)

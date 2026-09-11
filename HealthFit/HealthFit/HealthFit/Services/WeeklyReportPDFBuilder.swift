@@ -34,8 +34,10 @@ private struct WeeklyReportPDFContentView: View {
                 trendsSection
             }
             meditationSection
+            effortSection
             preWorkoutSection
             activityChart
+            dailyEffortBreakdown
             if !report.highlights.isEmpty {
                 highlightsSection
             }
@@ -118,6 +120,84 @@ private struct WeeklyReportPDFContentView: View {
             pdfStat("calendar", "\(report.currentWeek.activeDays)/7", "Dias ativos", ReportPDFPrintTheme.blue)
             pdfStat("brain.head.profile", "\(report.meditationSummary.sessionCount)", "Meditação", ReportPDFPrintTheme.purple)
             pdfStat("leaf.fill", "\(report.meditationSummary.totalMinutes) min", "Min. meditação", ReportPDFPrintTheme.indigo)
+            if report.currentWeek.ratedEffortSessionCount > 0 {
+                pdfStat(
+                    "gauge.with.dots.needle.33percent",
+                    String(format: "%.1f/10", report.currentWeek.averagePerceivedEffort),
+                    "Intensidade",
+                    ReportPDFPrintTheme.orange
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var effortSection: some View {
+        if report.currentWeek.ratedEffortSessionCount > 0 {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Intensidade dos treinos")
+                    .font(.headline)
+                    .foregroundStyle(ReportPDFPrintTheme.textPrimary)
+                Text(
+                    String(
+                        format: "Média %.1f/10 · %d treino(s) avaliados",
+                        report.currentWeek.averagePerceivedEffort,
+                        report.currentWeek.ratedEffortSessionCount
+                    )
+                )
+                .font(.subheadline)
+                .foregroundStyle(ReportPDFPrintTheme.textSecondary)
+
+                ForEach(report.effortEntries.prefix(12)) { entry in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(entry.workoutTitle)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(ReportPDFPrintTheme.textPrimary)
+                            Text(entry.date, format: .dateTime.day().month().hour().minute())
+                                .font(.caption2)
+                                .foregroundStyle(ReportPDFPrintTheme.textSecondary)
+                        }
+                        Spacer()
+                        Text("\(entry.perceivedEffort)/10 · \(entry.effortLabel)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(ReportPDFPrintTheme.orange)
+                    }
+                }
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(ReportPDFPrintTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    @ViewBuilder
+    private var dailyEffortBreakdown: some View {
+        let days = report.dailyWorkoutMinutes.filter { $0.ratedEffortCount > 0 }
+        if !days.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Intensidade por dia")
+                    .font(.headline)
+                    .foregroundStyle(ReportPDFPrintTheme.textPrimary)
+                ForEach(days) { day in
+                    HStack {
+                        Text(day.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated))
+                            .font(.caption)
+                            .foregroundStyle(ReportPDFPrintTheme.textPrimary)
+                        Spacer()
+                        if let avg = day.averagePerceivedEffort {
+                            Text(String(format: "%.1f/10", avg))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(ReportPDFPrintTheme.orange)
+                        }
+                    }
+                }
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(ReportPDFPrintTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import HealthKit
 
 /// Rota de navegação para as modalidades de luta.
 struct FightHubRoute: Hashable {}
@@ -106,7 +107,9 @@ struct FightHubView: View {
         watchConnectivity.startCardioOnWatch(
             workoutName: config.title,
             targetSeconds: 0,
-            exerciseName: modality.name
+            exerciseName: modality.name,
+            activityType: .martialArts,
+            locationOutdoor: false
         )
         NotificationService.shared.deliverCardioStartNotification(
             sessionTitle: config.title,

@@ -241,8 +241,18 @@ enum MonthlyProgressAnalyzer {
                 calendar.isDate($0.startedAt, inSameDayAs: cursor)
             }
             let minutes = daySessions.reduce(0) { $0 + Int($1.duration / 60) }
+            let efforts = daySessions.compactMap(\.perceivedEffort)
+            let avgEffort: Double? = efforts.isEmpty
+                ? nil
+                : Double(efforts.reduce(0, +)) / Double(efforts.count)
             result.append(
-                DailyWorkoutActivity(date: cursor, minutes: minutes, workoutCount: daySessions.count)
+                DailyWorkoutActivity(
+                    date: cursor,
+                    minutes: minutes,
+                    workoutCount: daySessions.count,
+                    averagePerceivedEffort: avgEffort,
+                    ratedEffortCount: efforts.count
+                )
             )
             guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
             cursor = next
@@ -291,6 +301,15 @@ enum MonthlyProgressAnalyzer {
 
         if stats.workoutCount > 0 {
             items.append("\(stats.workoutCount) treinos no período (\(stats.totalMinutes) min).")
+        }
+        if stats.ratedEffortSessionCount > 0 {
+            items.append(
+                String(
+                    format: "Intensidade média: %.1f/10 em %d treino(s).",
+                    stats.averagePerceivedEffort,
+                    stats.ratedEffortSessionCount
+                )
+            )
         }
         if sleep.daysLogged > 0 {
             items.append(

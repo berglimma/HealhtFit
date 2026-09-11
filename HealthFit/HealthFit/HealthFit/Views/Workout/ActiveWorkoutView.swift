@@ -230,6 +230,9 @@ struct ActiveWorkoutView: View {
         .onReceive(watchSyncClock) { _ in
             guard scenePhase == .active else { return }
             syncWatchData()
+            if !isFinishing, finishedSession == nil {
+                syncWatchWorkoutState()
+            }
         }
         .onChange(of: workoutStore.allExercisesCompleted) { _, allDone in
             if allDone && !isFinishing && !showAddExercisePrompt && !showAddExercisePicker {
@@ -575,7 +578,7 @@ struct ActiveWorkoutView: View {
     }
 
     private func syncWatchWorkoutState() {
-        guard let session = workoutStore.activeSession else { return }
+        guard !isFinishing, finishedSession == nil, let session = workoutStore.activeSession else { return }
         let exerciseName = workoutStore.currentExercise?.name ?? ""
         let exerciseElapsed = workoutStore.exerciseRecords
             .first(where: { $0.exerciseId == workoutStore.currentExercise?.id })?

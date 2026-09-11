@@ -50,6 +50,7 @@ enum WeeklyProgressAnalyzer {
         let weekPreWorkout = PreWorkoutUsageSummary.from(sessions: currentSessions)
         let lifetimePreWorkout = PreWorkoutUsageSummary.from(sessions: completedSessions)
         let preWorkoutEntries = WorkoutReportBuilder.preWorkoutEntries(from: currentSessions)
+        let effortEntries = WorkoutReportBuilder.effortEntries(from: currentSessions)
 
         return WeeklyProgressReport(
             weekStart: currentStart,
@@ -65,7 +66,8 @@ enum WeeklyProgressAnalyzer {
             overallScore: score,
             preWorkoutSummary: weekPreWorkout,
             lifetimePreWorkoutSummary: lifetimePreWorkout,
-            preWorkoutEntries: preWorkoutEntries
+            preWorkoutEntries: preWorkoutEntries,
+            effortEntries: effortEntries
         )
     }
 
@@ -91,7 +93,8 @@ enum WeeklyProgressAnalyzer {
             overallScore: 0,
             preWorkoutSummary: .empty,
             lifetimePreWorkoutSummary: .empty,
-            preWorkoutEntries: []
+            preWorkoutEntries: [],
+            effortEntries: []
         )
     }
 
@@ -199,6 +202,10 @@ enum WeeklyProgressAnalyzer {
         let totalRest = sessions.reduce(0) { $0 + $1.totalRestSeconds } / 60
         let totalExercise = sessions.reduce(0) { $0 + $1.totalExerciseSeconds } / 60
         let preWorkout = PreWorkoutUsageSummary.from(sessions: sessions)
+        let efforts = sessions.compactMap(\.perceivedEffort)
+        let averageEffort = efforts.isEmpty
+            ? 0
+            : Double(efforts.reduce(0, +)) / Double(efforts.count)
 
         return WeekStats(
             workoutCount: sessions.count,
@@ -214,7 +221,9 @@ enum WeeklyProgressAnalyzer {
             totalRestMinutes: totalRest,
             totalExerciseMinutes: totalExercise,
             preWorkoutUsedCount: preWorkout.usedCount,
-            preWorkoutNotUsedCount: preWorkout.notUsedCount
+            preWorkoutNotUsedCount: preWorkout.notUsedCount,
+            averagePerceivedEffort: averageEffort,
+            ratedEffortSessionCount: efforts.count
         )
     }
 
@@ -335,6 +344,16 @@ enum WeeklyProgressAnalyzer {
 
         if current.preWorkoutUsedCount > 0 {
             highlights.append("Pré-treino usado em \(current.preWorkoutUsedCount) treino(s) esta semana.")
+        }
+
+        if current.ratedEffortSessionCount > 0 {
+            highlights.append(
+                String(
+                    format: "Intensidade média da semana: %.1f/10 (%d treino(s) avaliados).",
+                    current.averagePerceivedEffort,
+                    current.ratedEffortSessionCount
+                )
+            )
         }
 
         if highlights.isEmpty && current.workoutCount > 0 {
@@ -515,11 +534,17 @@ enum WeeklyProgressAnalyzer {
         while day <= end {
             let daySessions = sessions.filter { calendar.isDate($0.startedAt, inSameDayAs: day) }
             let minutes = daySessions.reduce(0) { $0 + Int($1.duration / 60) }
+            let efforts = daySessions.compactMap(\.perceivedEffort)
+            let avgEffort: Double? = efforts.isEmpty
+                ? nil
+                : Double(efforts.reduce(0, +)) / Double(efforts.count)
             result.append(
                 DailyWorkoutActivity(
                     date: day,
                     minutes: minutes,
-                    workoutCount: daySessions.count
+                    workoutCount: daySessions.count,
+                    averagePerceivedEffort: avgEffort,
+                    ratedEffortCount: efforts.count
                 )
             )
             guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }

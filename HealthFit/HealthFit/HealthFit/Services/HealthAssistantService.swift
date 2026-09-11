@@ -1506,7 +1506,6 @@ enum HealthAssistantEngine {
 
                 3. Registre tudo
                 • Anote cargas e reps reais durante o treino
-                • Informe se tomou pré-treino ao iniciar
                 • Ao finalizar, o relatório é gerado automaticamente
 
                 4. Comunicação com o personal

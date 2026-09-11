@@ -1335,6 +1335,20 @@ final class WorkoutStore: ObservableObject {
         PostWorkoutCheckInService.shared.scheduleCheckIn(for: session)
     }
 
+    /// Atualiza o esforço percebido (1…10) de uma sessão já finalizada.
+    func updatePerceivedEffort(sessionId: UUID, effort: Int) {
+        let clamped = min(max(effort, 1), 10)
+        guard let index = sessionHistory.firstIndex(where: { $0.id == sessionId }) else { return }
+        sessionHistory[index].perceivedEffort = clamped
+        saveHistory()
+        let updated = sessionHistory[index]
+        if let userId = cloudUserId {
+            Task {
+                try? await WorkoutFirestoreService.saveSession(updated, userId: userId)
+            }
+        }
+    }
+
     private func scheduleAutoEnd(for session: WorkoutSession) {
         let fireDate = session.startedAt.addingTimeInterval(Self.autoEndInactivityLimit)
         NotificationService.shared.scheduleActiveWorkoutAutoEnd(

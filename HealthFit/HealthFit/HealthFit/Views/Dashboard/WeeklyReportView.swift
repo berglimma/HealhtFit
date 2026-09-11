@@ -35,8 +35,10 @@ struct WeeklyReportView: View {
                         trendsSection
                     }
                     meditationSection
+                    effortSection
                     preWorkoutSection
                     activityChart
+                    dailyEffortBreakdown
                     if !report.highlights.isEmpty {
                         highlightsSection
                     }
@@ -185,6 +187,100 @@ struct WeeklyReportView: View {
                 label: "Min. meditação",
                 color: .indigo
             )
+            if report.currentWeek.ratedEffortSessionCount > 0 {
+                WeeklyStatCard(
+                    icon: "flame.fill",
+                    value: String(format: "%.1f/10", report.currentWeek.averagePerceivedEffort),
+                    label: "Intensidade média",
+                    color: .orange
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var effortSection: some View {
+        if report.currentWeek.ratedEffortSessionCount > 0 || !report.effortEntries.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Intensidade dos treinos", systemImage: "gauge.with.dots.needle.33percent")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.accentSecondary)
+
+                HStack(spacing: 12) {
+                    preWorkoutStatTile(
+                        value: String(format: "%.1f/10", report.currentWeek.averagePerceivedEffort),
+                        label: "Média da semana"
+                    )
+                    preWorkoutStatTile(
+                        value: "\(report.currentWeek.ratedEffortSessionCount)",
+                        label: "Treinos avaliados"
+                    )
+                }
+
+                if !report.effortEntries.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Avaliações desta semana")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(AppTheme.textPrimary)
+
+                        ForEach(report.effortEntries) { entry in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(entry.workoutTitle)
+                                        .font(.caption.weight(.medium))
+                                    Text(entry.date, format: .dateTime.day().month().hour().minute())
+                                        .font(.caption2)
+                                        .foregroundStyle(AppTheme.textSecondary)
+                                }
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text("\(entry.perceivedEffort)/10")
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(AppTheme.accent)
+                                    Text(entry.effortLabel)
+                                        .font(.caption2)
+                                        .foregroundStyle(AppTheme.textSecondary)
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var dailyEffortBreakdown: some View {
+        let daysWithEffort = report.dailyWorkoutMinutes.filter { $0.ratedEffortCount > 0 }
+        if !daysWithEffort.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Intensidade por dia", systemImage: "calendar")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                ForEach(daysWithEffort) { day in
+                    HStack {
+                        Text(day.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated))
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Spacer()
+                        if let avg = day.averagePerceivedEffort {
+                            Text(String(format: "%.1f/10 · %d treino(s)", avg, day.workoutCount))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(AppTheme.accentSecondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
         }
     }
 

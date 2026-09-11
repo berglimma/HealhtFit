@@ -2222,7 +2222,9 @@ struct CardioSetupView: View {
             isKitesurf: sessionConfig.isKitesurfSession,
             swimmingMode: sessionConfig.isSwimmingSession,
             poolLengthMeters: sessionConfig.resolvedPoolLengthMeters,
-            spotBuddyEnabled: sessionConfig.isKitesurfSession && KiteSpotBuddyPreferences.isEnabledForNextSession
+            spotBuddyEnabled: sessionConfig.isKitesurfSession && KiteSpotBuddyPreferences.isEnabledForNextSession,
+            activityType: sessionConfig.healthKitActivityType,
+            locationOutdoor: sessionConfig.prefersOutdoorHealthKitLocation
         )
         let athleteName = authService.currentUser?.greetingName ?? "Atleta"
         NotificationService.shared.deliverCardioStartNotification(

@@ -564,7 +564,7 @@ struct CoachPrescribeWorkoutView: View {
                                     .font(.subheadline)
                                 Spacer()
                                 Button {
-                                    nudgeLoad(for: $exercise, by: -1.25)
+                                    nudgeLoad(for: $exercise, by: -1)
                                 } label: {
                                     Image(systemName: "minus.circle.fill")
                                         .font(.title3)
@@ -580,7 +580,7 @@ struct CoachPrescribeWorkoutView: View {
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.secondary)
                                 Button {
-                                    nudgeLoad(for: $exercise, by: 1.25)
+                                    nudgeLoad(for: $exercise, by: 1)
                                 } label: {
                                     Image(systemName: "plus.circle.fill")
                                         .font(.title3)
@@ -645,7 +645,7 @@ struct CoachPrescribeWorkoutView: View {
                             Text("Carga")
                             Spacer()
                             Button {
-                                nudgeCustomLoad(by: -1.25)
+                                nudgeCustomLoad(by: -1)
                             } label: {
                                 Image(systemName: "minus.circle.fill")
                                     .font(.title3)
@@ -658,7 +658,7 @@ struct CoachPrescribeWorkoutView: View {
                             Text("kg")
                                 .foregroundStyle(.secondary)
                             Button {
-                                nudgeCustomLoad(by: 1.25)
+                                nudgeCustomLoad(by: 1)
                             } label: {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.title3)
@@ -795,14 +795,14 @@ struct CoachPrescribeWorkoutView: View {
 
     private func nudgeLoad(for exercise: Binding<Exercise>, by delta: Double) {
         let current = exercise.wrappedValue.recommendedWeight ?? 0
-        // Passos de 1,25 kg (alinhado a anilha fracionada comum).
-        let value = max(0, ((current + delta) * 4).rounded() / 4)
+        // Passos de 1 kg inteiro (1, 2, 3…).
+        let value = max(0, (current + delta).rounded())
         exercise.wrappedValue.recommendedWeight = value == 0 ? nil : value
     }
 
     private func nudgeCustomLoad(by delta: Double) {
         let current = ExerciseLoadEditor.weight(from: customWeightText) ?? 0
-        let value = max(0, ((current + delta) * 4).rounded() / 4)
+        let value = max(0, (current + delta).rounded())
         customWeightText = value == 0 ? "" : ExerciseLoadEditor.text(from: value)
     }
 

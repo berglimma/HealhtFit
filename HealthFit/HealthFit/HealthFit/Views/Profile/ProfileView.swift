@@ -1501,7 +1501,7 @@ struct ProfileView: View {
                     .background(AppTheme.cardBackground.opacity(0.65))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
-                    Text("Ao iniciar um treino, sua resposta sobre pré-treino aparecerá aqui.")
+                    Text("Você também pode registrar pré-treino em Sono e Hidratação / suplementos.")
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                 }

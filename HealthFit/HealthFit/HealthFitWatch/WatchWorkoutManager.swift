@@ -8,6 +8,8 @@ import CoreMotion
 
 @MainActor
 final class WatchWorkoutManager: NSObject, ObservableObject {
+    static let shared = WatchWorkoutManager()
+
     @Published var isActive = false
     @Published var workoutName = ""
     @Published var isCardioWorkout = false
@@ -79,6 +81,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var configuredRestSeconds = 60
     private var restElapsedSeconds = 0
     private var secondsSincePhoneSync = 0
+    /// Ignora `stopWorkout` atrasado que chega depois de um start mais novo.
+    private var lastPhoneStartTimestamp: TimeInterval = 0
     private var hasSentRestOvertimeNotification = false
     private var workoutStartedAt: Date?
     private var localMeditationPrompts: [String] = []
@@ -306,7 +310,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         poolLengthMeters: Double = 25,
         setupModeName: String = "",
         setupBoardName: String = "",
-        spotBuddyEnabled: Bool = false
+        spotBuddyEnabled: Bool = false,
+        locationOutdoor: Bool = false
     ) {
         resetWorkoutState()
         meditationOwnedByWatch = false
@@ -325,14 +330,19 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         waterSetupModeName = setupModeName
         waterSetupBoardName = setupBoardName
         isActive = true
+        let activity = cardioActivityType(
+            exerciseName: exerciseName,
+            swimmingMode: swimmingMode,
+            waterSportMode: waterSportMode,
+            isKitesurf: isKitesurf
+        )
+        let outdoor = locationOutdoor
+            || swimmingMode
+            || waterSportMode
+            || [.walking, .running, .cycling, .rowing, .hiking].contains(activity)
         startLiveWorkoutSession(
-            activityType: cardioActivityType(
-                exerciseName: exerciseName,
-                swimmingMode: swimmingMode,
-                waterSportMode: waterSportMode,
-                isKitesurf: isKitesurf
-            ),
-            locationType: swimmingMode || waterSportMode ? .outdoor : .indoor,
+            activityType: activity,
+            locationType: outdoor ? .outdoor : .indoor,
             swimmingMode: swimmingMode
         )
         startHeartRateMonitoring()
@@ -408,23 +418,33 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     func togglePause() {
         guard isActive else { return }
-        isPaused.toggle()
+        setPaused(!isPaused, notifyPhone: true)
+    }
+
+    /// Pausa/retoma alinhado ao iPhone (ou ao botão do Watch).
+    func setPaused(_ paused: Bool, notifyPhone: Bool) {
+        guard isActive, isPaused != paused else { return }
+        isPaused = paused
         if isPaused {
             resetAirborneJumpState()
             hkWorkoutSession?.pause()
             WKInterfaceDevice.current().play(.stop)
-            sendToPhone([
-                "action": "watchPausedSession",
-                "timestamp": Date().timeIntervalSince1970
-            ])
+            if notifyPhone {
+                sendToPhone([
+                    "action": "watchPausedSession",
+                    "timestamp": Date().timeIntervalSince1970
+                ])
+            }
             watchSyncStatus = "Pausado"
         } else {
             hkWorkoutSession?.resume()
             WKInterfaceDevice.current().play(.start)
-            sendToPhone([
-                "action": "watchResumedSession",
-                "timestamp": Date().timeIntervalSince1970
-            ])
+            if notifyPhone {
+                sendToPhone([
+                    "action": "watchResumedSession",
+                    "timestamp": Date().timeIntervalSince1970
+                ])
+            }
             watchSyncStatus = "Em andamento"
         }
     }
@@ -562,6 +582,19 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         sendToPhone(payload)
     }
 
+    /// Confirma ao iPhone que a sessão está ativa na tela do Watch.
+    private func sendWatchAckStarted(kind: String, workoutName: String, playHaptic: Bool = true) {
+        sendToPhone([
+            "action": "watchAckStarted",
+            "kind": kind,
+            "workoutName": workoutName.isEmpty ? self.workoutName : workoutName,
+            "timestamp": Date().timeIntervalSince1970
+        ])
+        if playHaptic {
+            WKInterfaceDevice.current().play(.start)
+        }
+    }
+
     private func notifyPhoneWatchStarted(
         kind: String,
         workoutName: String,
@@ -684,6 +717,101 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         if let promptIndex {
             meditationPromptIndex = promptIndex
         }
+    }
+
+    private func applyPhonePausedFlag(_ message: [String: Any]) {
+        let paused = (message["isPaused"] as? Bool)
+            ?? (message["isPaused"] as? NSNumber)?.boolValue
+        guard let paused else { return }
+        setPaused(paused, notifyPhone: false)
+    }
+
+    /// iPhone pediu abertura do app Watch (`startWatchApp`) — sobe a tela de atividade.
+    func handleHealthKitLaunch(configuration: HKWorkoutConfiguration) {
+        notePhoneStart(timestamp: Date().timeIntervalSince1970)
+
+        if let context = session?.receivedApplicationContext,
+           let action = context["action"] as? String,
+           ["startWorkout", "startCardio", "startMeditation"].contains(action) {
+            handlePhoneMessage(context)
+            WKInterfaceDevice.current().play(.start)
+            return
+        }
+
+        if isActive {
+            sendWatchAckStarted(
+                kind: isMeditationWorkout ? "meditation" : (isCardioWorkout ? "cardio" : "strength"),
+                workoutName: workoutName,
+                playHaptic: false
+            )
+            return
+        }
+
+        switch configuration.activityType {
+        case .mindAndBody:
+            startMeditation(
+                name: "Meditação",
+                targetSeconds: 0,
+                topicName: "Meditação",
+                topicIcon: "brain.head.profile",
+                colorName: "purple",
+                currentPrompt: "",
+                promptIndex: 0,
+                totalPrompts: 1
+            )
+            sendWatchAckStarted(kind: "meditation", workoutName: "Meditação")
+        case .traditionalStrengthTraining, .functionalStrengthTraining, .highIntensityIntervalTraining:
+            startWorkout(name: "Treino", exerciseName: "")
+            sendWatchAckStarted(kind: "strength", workoutName: "Treino")
+        default:
+            let swimming = configuration.activityType == .swimming
+            let name: String = {
+                switch configuration.activityType {
+                case .walking: return "Caminhada"
+                case .running: return "Corrida"
+                case .cycling: return "Ciclismo"
+                case .swimming: return "Natação"
+                case .rowing: return "Remo"
+                case .climbing: return "Escalada"
+                case .martialArts: return "Luta"
+                case .paddleSports: return "Kitesurf"
+                case .surfingSports: return "Surf"
+                default: return "Cardio"
+                }
+            }()
+            startCardio(
+                name: name,
+                targetSeconds: 0,
+                exerciseName: name,
+                swimmingMode: swimming,
+                poolLengthMeters: configuration.lapLength?.doubleValue(for: .meter()) ?? 25
+            )
+            sendWatchAckStarted(kind: "cardio", workoutName: name)
+        }
+        WKInterfaceDevice.current().play(.start)
+    }
+
+    func handleActiveWorkoutRecovery() {
+        guard !isActive else { return }
+        if let context = session?.receivedApplicationContext,
+           let action = context["action"] as? String,
+           ["startWorkout", "startCardio", "startMeditation"].contains(action) {
+            handlePhoneMessage(context)
+        }
+    }
+
+    private func notePhoneStart(timestamp: TimeInterval) {
+        guard timestamp > 0 else {
+            lastPhoneStartTimestamp = max(lastPhoneStartTimestamp, Date().timeIntervalSince1970)
+            return
+        }
+        lastPhoneStartTimestamp = max(lastPhoneStartTimestamp, timestamp)
+    }
+
+    private static func timeInterval(from message: [String: Any], key: String) -> TimeInterval? {
+        if let value = message[key] as? TimeInterval { return value }
+        if let number = message[key] as? NSNumber { return number.doubleValue }
+        return nil
     }
 
     private func updateCalorieSuperation() {
@@ -1390,9 +1518,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     private func handlePhoneMessage(_ message: [String: Any]) {
         guard let action = message["action"] as? String else { return }
+        let messageTimestamp = Self.timeInterval(from: message, key: "timestamp") ?? 0
 
         switch action {
         case "startWorkout":
+            notePhoneStart(timestamp: messageTimestamp)
             // Já em treino no Watch (iniciado localmente): só espelha progresso do iPhone.
             if isActive {
                 applyPhoneSync(
@@ -1400,6 +1530,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                     exerciseElapsedSeconds: message["exerciseElapsedSeconds"] as? Int,
                     exerciseName: message["exerciseName"] as? String
                 )
+                sendWatchAckStarted(kind: "strength", workoutName: workoutName, playHaptic: false)
                 return
             }
             meditationOwnedByWatch = false
@@ -1412,8 +1543,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 exerciseElapsedSeconds: message["exerciseElapsedSeconds"] as? Int,
                 exerciseName: exerciseName
             )
+            sendWatchAckStarted(kind: "strength", workoutName: name)
         case "startCardio":
-            if isActive { return }
+            notePhoneStart(timestamp: messageTimestamp)
+            if isActive {
+                sendWatchAckStarted(kind: "cardio", workoutName: workoutName, playHaptic: false)
+                return
+            }
             meditationOwnedByWatch = false
             localMeditationPrompts = []
             let name = message["workoutName"] as? String ?? "Cardio"
@@ -1431,6 +1567,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 ?? 25
             let spotBuddy = (message["spotBuddyEnabled"] as? Bool)
                 ?? ((message["spotBuddyEnabled"] as? NSNumber)?.boolValue ?? false)
+            let outdoor = (message["locationOutdoor"] as? Bool)
+                ?? ((message["locationOutdoor"] as? NSNumber)?.boolValue ?? false)
             startCardio(
                 name: name,
                 targetSeconds: targetSeconds,
@@ -1440,15 +1578,22 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 isKitesurf: kite,
                 swimmingMode: swimMode,
                 poolLengthMeters: poolLen,
-                spotBuddyEnabled: spotBuddy
+                spotBuddyEnabled: spotBuddy,
+                locationOutdoor: outdoor
             )
+            sendWatchAckStarted(kind: "cardio", workoutName: name)
         case "syncWorkoutProgress":
+            // Não reinicia sessão a partir de sync — startWorkout já cobre o início.
+            // Um sync atrasado após stopWorkout reabria o treino no Watch.
+            guard isActive else { return }
             applyPhoneSync(
                 workoutElapsedSeconds: message["workoutElapsedSeconds"] as? Int,
                 exerciseElapsedSeconds: message["exerciseElapsedSeconds"] as? Int,
                 exerciseName: message["exerciseName"] as? String
             )
+            applyPhonePausedFlag(message)
         case "syncCardioProgress":
+            guard isActive else { return }
             applyPhoneSync(
                 workoutElapsedSeconds: message["elapsedSeconds"] as? Int,
                 targetSeconds: message["targetSeconds"] as? Int,
@@ -1462,6 +1607,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 ?? (message["spotBuddyEnabled"] as? NSNumber)?.boolValue {
                 spotBuddyEnabled = enabled && isKitesurfMode
             }
+            applyPhonePausedFlag(message)
         case "kiteSpotBuddy":
             applyKiteSpotBuddyPayload(message)
         case "requestWaterSportSync":
@@ -1490,11 +1636,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
             watchSyncStatus = "Dados do iPhone"
         case "startMeditation":
-            if isActive { return }
+            notePhoneStart(timestamp: messageTimestamp)
+            if isActive {
+                sendWatchAckStarted(kind: "meditation", workoutName: workoutName, playHaptic: false)
+                return
+            }
             meditationOwnedByWatch = false
             localMeditationPrompts = []
+            let name = message["workoutName"] as? String ?? "Meditação"
             startMeditation(
-                name: message["workoutName"] as? String ?? "Meditação",
+                name: name,
                 targetSeconds: message["targetSeconds"] as? Int ?? 0,
                 topicName: message["topicName"] as? String ?? "Meditação",
                 topicIcon: message["topicIcon"] as? String ?? "brain.head.profile",
@@ -1503,14 +1654,26 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 promptIndex: message["promptIndex"] as? Int ?? 0,
                 totalPrompts: message["totalPrompts"] as? Int ?? 1
             )
+            sendWatchAckStarted(kind: "meditation", workoutName: name)
         case "syncMeditationProgress":
+            guard isActive else { return }
             applyPhoneSync(
                 workoutElapsedSeconds: message["elapsedSeconds"] as? Int,
                 targetSeconds: message["targetSeconds"] as? Int,
                 meditationPrompt: message["currentPrompt"] as? String,
                 promptIndex: message["promptIndex"] as? Int
             )
+        case "pauseWorkout":
+            setPaused(true, notifyPhone: false)
+        case "resumeWorkout":
+            setPaused(false, notifyPhone: false)
         case "stopWorkout":
+            // Stop atrasado (retry do iPhone) não pode derrubar um start mais novo.
+            if messageTimestamp > 0, messageTimestamp + 0.05 < lastPhoneStartTimestamp {
+                return
+            }
+            if !isActive { return }
+            WKInterfaceDevice.current().play(.success)
             stopWorkout()
         case "restTimerStart":
             let seconds = message["seconds"] as? Int ?? 60
@@ -1571,6 +1734,10 @@ extension WatchWorkoutManager: WCSessionDelegate {
             guard activationState == .activated else { return }
             let context = session.receivedApplicationContext
             guard !context.isEmpty else { return }
+            // Contexto antigo de stop não deve impedir o próximo start.
+            if let action = context["action"] as? String, action == "stopWorkout", !isActive {
+                return
+            }
             handlePhoneMessage(context)
         }
     }

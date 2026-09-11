@@ -1,6 +1,7 @@
 import SwiftUI
 import MessageUI
 import CoreLocation
+import UIKit
 
 private struct TrainerMailDraft: Identifiable {
     let id = UUID()
@@ -51,6 +52,7 @@ struct WorkoutSummaryView: View {
     @State private var reportPDFURL: URL?
     @State private var showReportPDFShare = false
     @State private var pdfExportFailed = false
+    @State private var selectedEffort: Int?
 
     private let shareCardAnchorID = "workoutShareCard"
 
@@ -95,10 +97,7 @@ struct WorkoutSummaryView: View {
                         if session.endedEarly {
                             earlyEndSection
                         }
-                        if let user = authService.currentUser,
-                           user.bodyMeasurements.hasAnyValue {
-                            bodyMeasurementsSection(user: user)
-                        }
+                        perceivedEffortSection
                         if session.targetCalories != nil {
                             calorieGoalResultSection
                         }
@@ -139,6 +138,7 @@ struct WorkoutSummaryView: View {
                 }
             }
             .onAppear {
+                selectedEffort = session.perceivedEffort
                 shareCardStore.remember(
                     session: session,
                     athleteName: athleteDisplayName,
@@ -803,6 +803,111 @@ struct WorkoutSummaryView: View {
         }
     }
 
+    /// Avaliação de intensidade/esforço (estilo Apple Fitness).
+    private var perceivedEffortSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Como foi a intensidade?")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            Text("Toque de 1 (muito fácil) a 10 (máximo)")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            HStack(spacing: 6) {
+                ForEach(1...10, id: \.self) { value in
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
+                            selectedEffort = value
+                        }
+                        workoutStore.updatePerceivedEffort(sessionId: session.id, effort: value)
+                        UISelectionFeedbackGenerator().selectionChanged()
+                    } label: {
+                        Text("\(value)")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(selectedEffort == value ? Color.black : AppTheme.textPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(selectedEffort == value ? effortColor(for: value) : AppTheme.cardBackground)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            effortIntensityBarChart
+
+            HStack {
+                Text("Fácil")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+                Spacer()
+                if let selectedEffort, let label = effortLabel(for: selectedEffort) {
+                    Text(label)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(effortColor(for: selectedEffort))
+                }
+                Spacer()
+                Text("Difícil")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+        }
+        .padding(16)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// Barras 1…10; preenche até a intensidade escolhida.
+    private var effortIntensityBarChart: some View {
+        let selected = selectedEffort ?? 0
+        return HStack(alignment: .bottom, spacing: 6) {
+            ForEach(1...10, id: \.self) { value in
+                let isFilled = selected > 0 && value <= selected
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isFilled ? effortColor(for: selected) : AppTheme.background.opacity(0.85))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 18 + CGFloat(value) * 7)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .strokeBorder(
+                                value == selected ? Color.white.opacity(0.35) : Color.clear,
+                                lineWidth: 1.5
+                            )
+                    )
+            }
+        }
+        .frame(height: 96)
+        .padding(.top, 4)
+        .accessibilityLabel(
+            selected > 0
+                ? "Intensidade \(selected) de 10"
+                : "Selecione a intensidade"
+        )
+    }
+
+    private func effortColor(for value: Int) -> Color {
+        switch value {
+        case 1...3: return AppTheme.accent
+        case 4...6: return AppTheme.accentSecondary
+        case 7...8: return .orange
+        default: return .red
+        }
+    }
+
+    private func effortLabel(for value: Int) -> String? {
+        switch value {
+        case 1...2: return "Muito fácil"
+        case 3...4: return "Fácil"
+        case 5...6: return "Moderado"
+        case 7...8: return "Difícil"
+        case 9...10: return "Máximo"
+        default: return nil
+        }
+    }
+
     private var buttonLabel: String {
         if emailWasSent { return "E-mail enviado" }
         if mailDraft != nil { return "Abrindo e-mail..." }
@@ -975,46 +1080,6 @@ struct WorkoutSummaryView: View {
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background((session.autoEndedByInactivity ? Color.orange : Color.red).opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-    }
-
-    private func bodyMeasurementsSection(user: UserProfile) -> some View {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "pt_BR")
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-
-        let lines = user.bodyMeasurements.reportLines(dateFormatter: formatter)
-            .filter { !$0.isEmpty && $0 != "Medidas corporais:" }
-
-        let comparison = user.latestMeasurementComparison
-        let comparisonLines = (comparison?.periodDays ?? 0) >= BodyMeasurements.comparisonIntervalDays
-            ? (comparison?.reportLines(dateFormatter: formatter) ?? []).filter { !$0.isEmpty }
-            : []
-
-        return VStack(alignment: .leading, spacing: 10) {
-            Label("Medidas corporais", systemImage: "ruler")
-                .font(.headline)
-                .foregroundStyle(AppTheme.textPrimary)
-
-            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                Text(line)
-                    .font(.subheadline)
-                    .foregroundStyle(AppTheme.textSecondary)
-            }
-
-            if !comparisonLines.isEmpty {
-                Divider()
-                ForEach(Array(comparisonLines.enumerated()), id: \.offset) { _, line in
-                    Text(line)
-                        .font(.subheadline)
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
-            }
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
