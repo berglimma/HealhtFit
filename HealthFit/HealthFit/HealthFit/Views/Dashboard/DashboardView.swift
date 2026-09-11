@@ -17,6 +17,7 @@ struct DashboardView: View {
 
     @State private var showWeeklyReport = false
     @State private var showMonthlyReport = false
+    @State private var selectedRecentSession: WorkoutSession?
     @State private var isSyncingWatch = false
     @State private var watchSyncResult: WatchSyncResult?
     @State private var showWatchSyncAlert = false
@@ -77,6 +78,12 @@ struct DashboardView: View {
             }
             .sheet(isPresented: $showMonthlyReport) {
                 MonthlyReportView()
+            }
+            .sheet(item: $selectedRecentSession) { session in
+                WorkoutSummaryView(
+                    session: workoutStore.sessionHistory.first(where: { $0.id == session.id }) ?? session,
+                    onFinish: { selectedRecentSession = nil }
+                )
             }
             .alert(
                 watchSyncResult?.title ?? "Apple Watch",
@@ -692,7 +699,7 @@ struct DashboardView: View {
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
 
-            if workoutStore.sessionHistory.isEmpty {
+            if recentCompletedSessions.isEmpty {
                 Text("Nenhum treino realizado ainda")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.textSecondary)
@@ -700,33 +707,51 @@ struct DashboardView: View {
                     .padding(.vertical, 24)
                     .cardStyle()
             } else {
-                ForEach(workoutStore.sessionHistory.prefix(3)) { session in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(session.workoutTitle)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(AppTheme.textPrimary)
-                            Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.textSecondary)
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("\(Int(session.duration / 60)) min")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(AppTheme.accent)
-                            if session.caloriesBurned > 0 {
-                                Text("\(Int(session.caloriesBurned)) kcal")
+                ForEach(recentCompletedSessions) { session in
+                    Button {
+                        selectedRecentSession = session
+                    } label: {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(session.workoutTitle)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                    .multilineTextAlignment(.leading)
+                                Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
                                     .font(.caption)
                                     .foregroundStyle(AppTheme.textSecondary)
                             }
+                            Spacer(minLength: 8)
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text("\(Int(session.duration / 60)) min")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(AppTheme.accent)
+                                if session.caloriesBurned > 0 {
+                                    Text("\(Int(session.caloriesBurned)) kcal")
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.textSecondary)
+                                }
+                            }
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
+                        .padding()
+                        .background(AppTheme.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .padding()
-                    .background(AppTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Mostra o relatório do treino concluído")
                 }
             }
         }
+    }
+
+    private var recentCompletedSessions: [WorkoutSession] {
+        Array(
+            workoutStore.sessionHistory
+                .filter { $0.endedAt != nil }
+                .prefix(3)
+        )
     }
 }

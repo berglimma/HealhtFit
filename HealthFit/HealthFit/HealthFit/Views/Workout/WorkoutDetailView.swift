@@ -257,6 +257,7 @@ struct WorkoutDetailView: View {
         )
         workoutStore.resumeActiveWorkout()
     }
+}
 
 struct StatPill: View {
     let value: String

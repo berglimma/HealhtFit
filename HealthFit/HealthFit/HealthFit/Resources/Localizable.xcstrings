@@ -828,9 +828,6 @@
     "Anual com %lld%% de desconto" : {
 
     },
-    "Ao iniciar um treino, sua resposta sobre pré-treino aparecerá aqui." : {
-
-    },
     "Ao salvar, a ficha é atualizada no app do aluno." : {
 
     },
@@ -3828,6 +3825,9 @@
     "Monte um cardápio em Nutrição ou use a aba Montar." : {
 
     },
+    "Mostra o relatório do treino concluído" : {
+
+    },
     "Mudar de plano" : {
 
     },
@@ -6281,10 +6281,10 @@
     "Você poderá entrar de novo só com um novo convite/código." : {
 
     },
-    "Você tolera lactose?" : {
+    "Você também pode registrar pré-treino em Sono e Hidratação / suplementos." : {
 
     },
-    "Você tomou pré-treino antes deste treino? %@." : {
+    "Você tolera lactose?" : {
 
     },
     "voltas" : {
