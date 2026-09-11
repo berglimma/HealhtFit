@@ -1,7 +1,4 @@
-• Foco no Shape: Level 1 & 2 strength programs
-• HealthFit Coach: named methods, student search & interest outreach
-• Prescriptions with load, supersets and drop sets
-• Beginner mode: lighter catalog loads + IAssistente
-• IAssistente: report & coach-sheet adherence reminders
-• Required update when a newer App Store version is available
-• Stability improvements
+• Perceived workout intensity (1–10) in summaries, reports, and trainer email
+• Apple Watch opens the activity when you start on iPhone; pause and end stay in sync
+• Open completed workout reports from Dashboard recent sessions
+• Faster strength workout start without the pre-workout prompt

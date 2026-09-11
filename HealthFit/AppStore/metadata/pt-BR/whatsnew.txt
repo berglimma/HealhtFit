@@ -1,7 +1,4 @@
-• Foco no Shape: fichas Nível 1 e 2 no hub de musculação
-• HealthFit Coach: métodos nomeados, busca de alunos e mensagem de interesse
-• Prescrição com carga, conjugado e drop set
-• Experiência iniciante: cargas leves no catálogo e no IAssistente
-• IAssistente: lembrete de relatório e adesão às fichas do personal
-• Atualização obrigatória quando houver versão nova na App Store
-• Melhorias de estabilidade
+• Intensidade do treino (1–10) no resumo, relatórios e e-mail ao personal
+• Apple Watch abre a atividade ao iniciar no iPhone; pausa e fim sincronizados
+• Relatório dos treinos recentes no Dashboard
+• Início de musculação mais rápido, sem pergunta de pré-treino

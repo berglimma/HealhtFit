@@ -1,16 +1,17 @@
-HealthFit 1.0.3 (Build 9)
+HealthFit 1.0.4 (Build 11)
 
 Conta demo App Review:
 E-mail: healthfit.appreview@gmail.com
 (senha apenas no campo App Review Information do Connect)
 
 Novidades desta build:
-- Foco no Shape (musculação)
-- HealthFit Coach: métodos, busca de alunos, mensagem de interesse, carga/conjugado/drop set
-- IAssistente: experiência iniciante + nudge de relatório/adesão
-- Force update quando houver versão mais nova na App Store
+- Intensidade percebida (1–10) no fim do treino, nos relatórios e no envio ao personal
+- Sync Apple Watch: abertura automática ao iniciar, pausa e fim alinhados com o iPhone
+- Dashboard: tocar em treinos recentes reabre o relatório concluído
+- Musculação: início sem perguntar sobre pré-treino
 
 Teste sugerido:
-1. Treinos → Musculação → Foco no Shape
-2. HealthFit Coach (aluno Fit+ / personal)
-3. IAssistente → montar treino (perguntas de experiência)
+1. Iniciar caminhada/cardio no iPhone → confirmar tela de atividade no Apple Watch
+2. Pausar/finalizar no iPhone → Watch acompanha
+3. Dashboard → Treinos Recentes → abrir relatório
+4. Finalizar musculação → avaliar intensidade 1–10

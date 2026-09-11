@@ -1,7 +1,4 @@
-• Foco no Shape : programmes Niveau 1 et 2
-• HealthFit Coach : méthodes, recherche d’élèves et message d’intérêt
-• Prescription avec charge, supersets et drop sets
-• Débutants : charges plus légères
-• IAssistente : rappels rapport et fiches du coach
-• Mise à jour obligatoire vers la dernière version
-• Améliorations de stabilité
+• Intensité perçue (1–10) dans le résumé, les rapports et l’e-mail au coach
+• Apple Watch ouvre l’activité au démarrage sur iPhone ; pause et fin synchronisées
+• Rapports des séances récentes depuis le Dashboard
+• Démarrage musculation plus rapide, sans question de pré-workout
