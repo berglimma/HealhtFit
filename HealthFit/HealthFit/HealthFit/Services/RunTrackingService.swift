@@ -36,6 +36,10 @@ final class RunTrackingService: NSObject, ObservableObject {
     private var latestPedometerRaw = 0
     private var pedometerOffset = 0
     private var pedometerRawWhenPaused: Int?
+    /// Evita restart agressivo do GPS em cada transição inactive/active (lock/unlock).
+    private var lastForegroundResumeAt: Date?
+    /// Distância mínima entre updates GPS em treino ativo (reduz flood na UI após wake).
+    private static let activeDistanceFilterMeters: CLLocationDistance = 6
 
     var distanceKm: Double { distanceMeters / 1_000.0 }
 
@@ -50,7 +54,7 @@ final class RunTrackingService: NSObject, ObservableObject {
         nonisolatedWeakSelf = self
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-        locationManager.distanceFilter = kCLDistanceFilterNone
+        locationManager.distanceFilter = Self.activeDistanceFilterMeters
         locationManager.activityType = .fitness
         // Em treino ativo o GPS não pode auto-pausar: senão a rota e a distância
         // ficam zeradas até o usuário pausar/retomar (que “acorda” o Core Location).
@@ -94,7 +98,7 @@ final class RunTrackingService: NSObject, ObservableObject {
         locationManager.activityType = .fitness
         locationManager.pausesLocationUpdatesAutomatically = false
         requestLocationPermissionIfNeeded()
-        startLocationUpdatesIfAuthorized()
+        startLocationUpdatesIfAuthorized(forceImmediateFix: true)
         if self.modality.usesFootTracking {
             startPedometer()
         } else {
@@ -120,11 +124,9 @@ final class RunTrackingService: NSObject, ObservableObject {
             locationManager.distanceFilter = 25
             locationManager.pausesLocationUpdatesAutomatically = true
         } else {
-            locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-            locationManager.distanceFilter = kCLDistanceFilterNone
-            locationManager.pausesLocationUpdatesAutomatically = false
+            applyActiveTrackingAccuracy()
             // Reativa entrega de localizações (auto-pause do sistema pode ter parado o stream).
-            startLocationUpdatesIfAuthorized()
+            startLocationUpdatesIfAuthorized(forceImmediateFix: true)
             // Exclui passos acumulados só durante a pausa.
             if let rawAtPause = pedometerRawWhenPaused {
                 pedometerOffset += max(0, latestPedometerRaw - rawAtPause)
@@ -177,16 +179,39 @@ final class RunTrackingService: NSObject, ObservableObject {
         return distanceKm
     }
 
-    /// Reativa GPS/tempo após desbloqueio do celular ou retorno ao app.
+    /// Reativa GPS após desbloqueio / retorno ao foreground (debounced).
     func handleAppBecameActive() {
         guard isTracking else { return }
+        let now = Date()
+        if let last = lastForegroundResumeAt, now.timeIntervalSince(last) < 1.2 {
+            return
+        }
+        lastForegroundResumeAt = now
         requestLocationPermissionIfNeeded()
         if !isPaused {
-            locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-            locationManager.distanceFilter = kCLDistanceFilterNone
-            locationManager.pausesLocationUpdatesAutomatically = false
+            applyActiveTrackingAccuracy()
         }
-        startLocationUpdatesIfAuthorized()
+        let needsImmediateFix = currentLocation.map { now.timeIntervalSince($0.timestamp) > 8 } ?? true
+        startLocationUpdatesIfAuthorized(forceImmediateFix: needsImmediateFix)
+    }
+
+    /// Garante entrega em background sem reiniciar o stream (lock / inactive).
+    func ensureBackgroundLocationDelivery() {
+        guard isTracking else { return }
+        let status = locationManager.authorizationStatus
+        guard status == .authorizedAlways || status == .authorizedWhenInUse else { return }
+        locationManager.allowsBackgroundLocationUpdates = true
+        locationManager.showsBackgroundLocationIndicator = true
+        if !isPaused {
+            applyActiveTrackingAccuracy()
+        }
+        locationManager.startUpdatingLocation()
+    }
+
+    private func applyActiveTrackingAccuracy() {
+        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        locationManager.distanceFilter = Self.activeDistanceFilterMeters
+        locationManager.pausesLocationUpdatesAutomatically = false
     }
 
     private func requestLocationPermissionIfNeeded() {
@@ -210,18 +235,22 @@ final class RunTrackingService: NSObject, ObservableObject {
     private static let deniedMessage =
         "Localização negada. Ative em Ajustes → HealthFit → Localização para ver o mapa do treino outdoor."
 
-    private func startLocationUpdatesIfAuthorized() {
+    private func startLocationUpdatesIfAuthorized(forceImmediateFix: Bool = false) {
         let status = locationManager.authorizationStatus
         guard status == .authorizedAlways || status == .authorizedWhenInUse else { return }
-        locationManager.desiredAccuracy = isPaused
-            ? kCLLocationAccuracyHundredMeters
-            : kCLLocationAccuracyBestForNavigation
-        locationManager.distanceFilter = isPaused ? 25 : kCLDistanceFilterNone
+        if isPaused {
+            locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+            locationManager.distanceFilter = 25
+        } else {
+            applyActiveTrackingAccuracy()
+        }
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.showsBackgroundLocationIndicator = true
         locationManager.startUpdatingLocation()
-        // Força um fix imediato (útil após desbloqueio / cold start).
-        locationManager.requestLocation()
+        // Só força one-shot quando o stream pode estar frio (evita rajada duplicada no unlock).
+        if forceImmediateFix {
+            locationManager.requestLocation()
+        }
     }
 
     private func startPedometer() {
@@ -306,6 +335,12 @@ final class RunTrackingService: NSObject, ObservableObject {
     }
 
     private func accept(_ location: CLLocation) {
+        _ = ingest(location)
+    }
+
+    /// Aplica um ponto no estado interno. Retorna `true` se algo relevante mudou.
+    @discardableResult
+    private func ingest(_ location: CLLocation) -> Bool {
         // Filtra leituras ruins / saltos GPS.
         // Warm-up: primeiros 90s aceitam precisão mais frouxa (GPS frio / tela bloqueada).
         let elapsedSinceStart = sessionStartDate.map { location.timestamp.timeIntervalSince($0) } ?? 0
@@ -317,11 +352,11 @@ final class RunTrackingService: NSObject, ObservableObject {
         } else {
             maxAccuracy = 45
         }
-        guard location.horizontalAccuracy >= 0, location.horizontalAccuracy <= maxAccuracy else { return }
+        guard location.horizontalAccuracy >= 0, location.horizontalAccuracy <= maxAccuracy else { return false }
         if let last = lastAcceptedLocation {
             let delta = location.distance(from: last)
             let dt = location.timestamp.timeIntervalSince(last.timestamp)
-            if dt <= 0 { return }
+            if dt <= 0 { return false }
             // Rejeita saltos absurdos (bike pode ser mais rápida que corrida).
             // Com dt maior (wake após bloqueio), permite deslocamento proporcional.
             let maxJumpSpeed: Double
@@ -331,8 +366,8 @@ final class RunTrackingService: NSObject, ObservableObject {
             case .running, .walking: maxJumpSpeed = 9.0
             }
             let allowedGap = maxJumpSpeed * max(dt, 1)
-            if delta > allowedGap, dt < 8 { return }
-            if delta > 250, dt < 3 { return }
+            if delta > allowedGap, dt < 8 { return false }
+            if delta > 250, dt < 3 { return false }
             // Distância de treino só em movimento ativo (não durante pausa).
             // Aceita micro-avanços ≥ 0.5 m para percursos retos sem “só contar na volta”.
             if !isPaused, delta >= 0.5 {
@@ -372,13 +407,137 @@ final class RunTrackingService: NSObject, ObservableObject {
                 .distance(from: location)
             // Menor limiar no mapa para desenhar trechos retos sem “buracos”.
             let minMove = modality == .cycling ? 2.0 : 1.0
-            if moved < minMove, last.isPaused == isPaused { return }
+            if moved < minMove, last.isPaused == isPaused { return true }
         }
         routePoints.append(point)
 
         if modality.usesFootTracking, !usesPedometerSteps {
             stepCount = RunTrackingMath.estimatedSteps(distanceKm: distanceKm)
         }
+        return true
+    }
+
+    /// Processa um batch de GPS com um único publish da rota (evita jank no unlock).
+    private func applyLocationBatch(_ locations: [CLLocation]) {
+        guard !locations.isEmpty else { return }
+
+        // Snapshot local: muta fora dos @Published e aplica no fim.
+        var localRoute = routePoints
+        var localDistance = distanceMeters
+        var localLast = lastAcceptedLocation
+        var localCurrent = currentLocation
+        var localSpeed = currentSpeedMetersPerSecond
+        var localActivity = activityState
+        var localSteps = stepCount
+        var changed = false
+
+        for location in locations {
+            let result = ingestIntoSnapshot(
+                location,
+                route: &localRoute,
+                distance: &localDistance,
+                lastAccepted: &localLast,
+                current: &localCurrent,
+                speed: &localSpeed,
+                activity: &localActivity,
+                steps: &localSteps
+            )
+            if result { changed = true }
+        }
+
+        guard changed else { return }
+
+        lastAcceptedLocation = localLast
+        // Uma rodada de publishes (SwiftUI observa uma vez por ciclo de runloop após o método).
+        currentLocation = localCurrent
+        distanceMeters = localDistance
+        currentSpeedMetersPerSecond = localSpeed
+        activityState = localActivity
+        if localSteps != stepCount {
+            stepCount = localSteps
+        }
+        if localRoute.count != routePoints.count || localRoute.last?.id != routePoints.last?.id {
+            routePoints = localRoute
+        }
+    }
+
+    /// Mesma lógica de `ingest`, operando em snapshot (sem tocar @Published).
+    private func ingestIntoSnapshot(
+        _ location: CLLocation,
+        route: inout [RouteCoordinate],
+        distance: inout Double,
+        lastAccepted: inout CLLocation?,
+        current: inout CLLocation?,
+        speed: inout Double,
+        activity: inout RunningActivityState,
+        steps: inout Int
+    ) -> Bool {
+        let elapsedSinceStart = sessionStartDate.map { location.timestamp.timeIntervalSince($0) } ?? 0
+        let maxAccuracy: CLLocationAccuracy
+        if lastAccepted == nil {
+            maxAccuracy = 120
+        } else if elapsedSinceStart < 90 {
+            maxAccuracy = 75
+        } else {
+            maxAccuracy = 45
+        }
+        guard location.horizontalAccuracy >= 0, location.horizontalAccuracy <= maxAccuracy else { return false }
+        if let last = lastAccepted {
+            let delta = location.distance(from: last)
+            let dt = location.timestamp.timeIntervalSince(last.timestamp)
+            if dt <= 0 { return false }
+            let maxJumpSpeed: Double
+            switch modality {
+            case .cycling, .kitesurfing: maxJumpSpeed = 22.0
+            case .surfing, .rowing: maxJumpSpeed = 16.0
+            case .running, .walking: maxJumpSpeed = 9.0
+            }
+            let allowedGap = maxJumpSpeed * max(dt, 1)
+            if delta > allowedGap, dt < 8 { return false }
+            if delta > 250, dt < 3 { return false }
+            if !isPaused, delta >= 0.5 {
+                distance += delta
+            }
+        }
+
+        lastAccepted = location
+        current = location
+        if isPaused {
+            speed = 0
+            activity = .stationary
+        } else if location.speed >= 0 {
+            speed = location.speed
+            if !motionActivityAvailable || activity == .unknown {
+                activity = RunTrackingMath.activityState(
+                    fromSpeedMetersPerSecond: location.speed,
+                    modality: modality
+                )
+            } else {
+                let gpsState = RunTrackingMath.activityState(
+                    fromSpeedMetersPerSecond: location.speed,
+                    modality: modality
+                )
+                if gpsState != activity, abs(location.speed - impliedSpeed(for: activity)) > 1.5 {
+                    activity = gpsState
+                }
+            }
+        } else if activity == .unknown {
+            activity = .stationary
+        }
+
+        let point = RouteCoordinate(location: location, isPaused: isPaused)
+        if let last = route.last {
+            let moved = CLLocation(latitude: last.latitude, longitude: last.longitude)
+                .distance(from: location)
+            let minMove = modality == .cycling ? 2.0 : 1.0
+            if moved < minMove, last.isPaused == isPaused { return true }
+        }
+        route.append(point)
+
+        if modality.usesFootTracking, !usesPedometerSteps {
+            steps = RunTrackingMath.estimatedSteps(distanceKm: distance / 1_000.0)
+        }
+        return true
     }
 
     private func impliedSpeed(for state: RunningActivityState) -> Double {
@@ -405,7 +564,7 @@ extension RunTrackingService: CLLocationManagerDelegate {
                     if status == .authorizedWhenInUse {
                         this.locationManager.requestAlwaysAuthorization()
                     }
-                    this.startLocationUpdatesIfAuthorized()
+                    this.startLocationUpdatesIfAuthorized(forceImmediateFix: true)
                 }
             case .denied, .restricted:
                 this.locationDeniedMessage = Self.deniedMessage
@@ -420,13 +579,12 @@ extension RunTrackingService: CLLocationManagerDelegate {
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         // Processa TODOS os pontos do batch (não só .last) — crítico em percursos retos
         // e após wake com a tela bloqueada, quando o iOS entrega vários fixes de uma vez.
+        // Publica na UI uma vez por batch para não travar o contador/mapa no unlock.
         let ordered = locations.sorted { $0.timestamp < $1.timestamp }
         guard !ordered.isEmpty else { return }
         WeakMainActorBox.schedule(nonisolatedWeakSelf) { this in
             guard this.isTracking else { return }
-            for location in ordered {
-                this.accept(location)
-            }
+            this.applyLocationBatch(ordered)
         }
     }
 

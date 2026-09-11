@@ -54,6 +54,8 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
 
     @Published var isWatchConnected = false
     @Published var watchHeartRate: Double = 0
+    /// Última vez que o Watch enviou BPM > 0 (para detectar HR congelado).
+    @Published private(set) var lastWatchHeartRateAt: Date?
     @Published var watchCalories: Double = 0
     @Published var watchSteps: Int = 0
     @Published var isWorkoutActiveOnWatch = false
@@ -73,6 +75,12 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     /// Store de treinos do iPhone — necessário para espelhar início no Watch.
     private weak var workoutStore: WorkoutStore?
     private var lastMirroredWatchStartAt: TimeInterval = 0
+    /// Mensagem pendente se o iPhone ainda não ligou o WorkoutStore.
+    private var pendingWatchStartedSession: [String: Any]?
+    private var watchHeartRateStaleTimer: Timer?
+
+    /// BPM do Watch só é considerado fresco por este intervalo.
+    static let watchHeartRateStaleInterval: TimeInterval = 12
 
     private override init() {
         super.init()
@@ -86,6 +94,20 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     /// Liga o store da UI para treinos iniciados no Watch abrirem no iPhone.
     func bind(workoutStore: WorkoutStore) {
         self.workoutStore = workoutStore
+        if let pending = pendingWatchStartedSession {
+            pendingWatchStartedSession = nil
+            mirrorWatchStartedSession(pending)
+        }
+    }
+
+    /// BPM do Watch ainda válido para a UI (não congelado).
+    var freshWatchHeartRate: Double {
+        guard watchHeartRate > 0,
+              let at = lastWatchHeartRateAt,
+              Date().timeIntervalSince(at) <= Self.watchHeartRateStaleInterval else {
+            return 0
+        }
+        return watchHeartRate
     }
 
     /// Activates WatchConnectivity after the UI is interactive (cold launch).
@@ -380,10 +402,30 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
 
     private func clearWatchMetrics() {
         watchHeartRate = 0
+        lastWatchHeartRateAt = nil
+        watchHeartRateStaleTimer?.invalidate()
+        watchHeartRateStaleTimer = nil
         watchCalories = 0
         watchSwimLapCount = 0
         watchSwimDistanceMeters = 0
         // Passos do dia permanecem; vêm do HealthKit/Watch ao longo do dia.
+    }
+
+    private func noteWatchHeartRateUpdate(_ value: Double) {
+        watchHeartRate = value
+        lastWatchHeartRateAt = .now
+        watchHeartRateStaleTimer?.invalidate()
+        let box = WeakMainActorBox(self)
+        watchHeartRateStaleTimer = Timer.scheduledTimer(withTimeInterval: Self.watchHeartRateStaleInterval + 0.5, repeats: false) { _ in
+            box.run { this in
+                // Expira BPM antigo para o hub cair em BLE/HealthKit.
+                if let at = this.lastWatchHeartRateAt,
+                   Date().timeIntervalSince(at) >= Self.watchHeartRateStaleInterval {
+                    this.watchHeartRate = 0
+                    this.lastWatchHeartRateAt = nil
+                }
+            }
+        }
     }
 
     /// WCSession muitas vezes entrega `NSNumber` em vez de `Double` (transferUserInfo).
@@ -598,7 +640,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
         if let value = Self.double(from: message, key: "heartRate") {
             // Ignora 0 transitório para não apagar a última leitura válida do sensor.
             if value > 0 {
-                watchHeartRate = value
+                noteWatchHeartRateUpdate(value)
                 heartRate = watchHeartRate
             }
         }
@@ -721,8 +763,9 @@ extension WatchConnectivityManager: WCSessionDelegate {
             ?? ((message["autoDetected"] as? NSNumber)?.boolValue ?? false)
 
         guard let workoutStore else {
+            pendingWatchStartedSession = message
             #if DEBUG
-            print("[HealthFit] watchStartedSession sem WorkoutStore ligado — abra o app no iPhone")
+            print("[HealthFit] watchStartedSession enfileirado — aguardando WorkoutStore")
             #endif
             return
         }
@@ -743,10 +786,9 @@ extension WatchConnectivityManager: WCSessionDelegate {
         )
 
         if started {
-            NotificationService.shared.deliverWorkoutStartNotification(
-                workoutTitle: autoDetected ? "\(workoutName) (detectado no Watch)" : workoutName,
-                athleteName: "Atleta"
-            )
+            // Pede métricas frescas e confirma sync iPhone ↔ Watch.
+            Task { _ = await attemptSyncWithWatch() }
+            sendToWatch(["action": "requestMetrics"])
         }
     }
 }

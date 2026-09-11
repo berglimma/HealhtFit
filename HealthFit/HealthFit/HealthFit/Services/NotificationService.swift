@@ -661,6 +661,35 @@ final class NotificationService {
             body: trimmed,
             category: "DUO_TEAM",
             identifier: "duo_team_\(UUID().uuidString)",
+            immediate: true,
+            userInfo: userInfo
+        )
+    }
+
+    /// Chat Coach ↔ aluno — banner na tela bloqueada + espelho no Apple Watch.
+    func deliverCoachChatNotification(
+        title: String,
+        body: String,
+        linkId: String,
+        messageId: String? = nil
+    ) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        var userInfo: [AnyHashable: Any] = [
+            "type": "coachChatMessage",
+            "kind": "coachChatMessage",
+            "linkId": linkId,
+            "category": "HEALTHFIT_COACH"
+        ]
+        if let messageId, !messageId.isEmpty {
+            userInfo["messageId"] = messageId
+        }
+        deliverImmediately(
+            title: title,
+            body: trimmed,
+            category: "HEALTHFIT_COACH",
+            identifier: "coach_chat_\(messageId ?? UUID().uuidString)",
+            immediate: true,
             userInfo: userInfo
         )
     }
@@ -688,12 +717,9 @@ final class NotificationService {
     }
 
     func deliverWorkoutStartNotification(workoutTitle: String, athleteName: String) {
-        deliverImmediately(
-            title: "Treino iniciado! 🔥",
-            body: MotivationMessages.workoutStartMessage(workoutTitle: workoutTitle, athleteName: athleteName),
-            category: "WORKOUT_START",
-            identifier: "workout_start_\(UUID().uuidString)"
-        )
+        // Desativado: não notifica início de exercício/treino.
+        _ = workoutTitle
+        _ = athleteName
     }
 
     /// Feedback imediato ao tentar iniciar outro treino enquanto já há sessão ativa.
@@ -750,49 +776,22 @@ final class NotificationService {
     }
 
     func deliverCardioStartNotification(sessionTitle: String, athleteName: String) {
-        deliverImmediately(
-            title: "Cardio iniciado! 🏃",
-            body: MotivationMessages.cardioStartMessage(sessionTitle: sessionTitle, athleteName: athleteName),
-            category: "CARDIO_START",
-            identifier: "cardio_start_\(UUID().uuidString)"
-        )
+        // Desativado: não notifica início de cardio.
+        _ = sessionTitle
+        _ = athleteName
     }
 
     func deliverMeditationStartNotification(sessionTitle: String, athleteName: String) {
-        deliverImmediately(
-            title: "Meditação iniciada 🧘",
-            body: MotivationMessages.meditationStartMessage(sessionTitle: sessionTitle, athleteName: athleteName),
-            category: "MEDITATION_START",
-            identifier: "meditation_start_\(UUID().uuidString)"
-        )
+        // Desativado: não notifica início de meditação.
+        _ = sessionTitle
+        _ = athleteName
     }
 
     func deliverWorkoutEndNotification(session: WorkoutSession, athleteName: String) {
+        // Mantém só o alerta de treino esquecido (auto-fim por inatividade).
         if session.autoEndedByInactivity {
             deliverForgottenWorkoutEndNotification(session: session, athleteName: athleteName)
-            return
         }
-
-        let titleLower = session.workoutTitle.lowercased()
-        let title: String
-        let category: String
-        if titleLower.hasPrefix("meditação") || titleLower.hasPrefix("meditacao") {
-            title = "Meditação concluída 🧘‍♀️"
-            category = "MEDITATION_END"
-        } else if titleLower.hasPrefix("cardio") {
-            title = "Cardio finalizado! 🏆"
-            category = "CARDIO_END"
-        } else {
-            title = "Treino finalizado! 🏆"
-            category = "WORKOUT_END"
-        }
-
-        deliverImmediately(
-            title: title,
-            body: MotivationMessages.workoutEndMessage(session: session, athleteName: athleteName),
-            category: category,
-            identifier: "session_end_\(UUID().uuidString)"
-        )
     }
 
     /// Notificação triste/alerta quando o treino passa de 2h30 sem finalizar.
@@ -915,7 +914,7 @@ final class NotificationService {
     }
 
     func deliverRestCompleteNotification(exerciseName: String) {
-        // Só notifica o iPhone aqui; o Watch já recebe restOvertime / restTimer.
+        // iPhone (tela bloqueada) + Apple Watch.
         let content = UNMutableNotificationContent()
         content.title = Self.restCompleteTitle
         content.body = Self.restCompleteBody(exerciseName: exerciseName)
@@ -924,11 +923,20 @@ final class NotificationService {
         content.interruptionLevel = .timeSensitive
 
         let request = UNNotificationRequest(
-            identifier: Self.restEndReminderIdentifier,
+            identifier: "rest_complete_\(UUID().uuidString)",
             content: content,
             trigger: nil
         )
         UNUserNotificationCenter.current().add(request)
+
+        WatchConnectivityManager.shared.deliverNotificationToWatch(
+            title: Self.restCompleteTitle,
+            body: Self.restCompleteBody(exerciseName: exerciseName),
+            category: "REST_COMPLETE",
+            identifier: Self.restEndReminderIdentifier,
+            exerciseName: exerciseName
+        )
+        WatchConnectivityManager.shared.sendRestOvertimeAlert(exerciseName: exerciseName)
     }
 
     /// Agenda lembrete exatamente para o fim da pausa (não notifica no início).
@@ -949,6 +957,12 @@ final class NotificationService {
             trigger: UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
         )
         UNUserNotificationCenter.current().add(request)
+
+        // Espelha no Watch no momento do fim (o Watch agenda haptic localmente se receber restTimer).
+        WatchConnectivityManager.shared.sendRestTimerStart(
+            seconds: Int(delay.rounded(.up)),
+            exerciseName: exerciseName
+        )
     }
 
     func scheduleRestReminder(after seconds: TimeInterval, exerciseName: String) {

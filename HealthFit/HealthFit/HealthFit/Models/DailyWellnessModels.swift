@@ -171,8 +171,17 @@ struct DailyWellnessEntry: Codable, Equatable {
 }
 
 extension UserProfile {
-    /// Recomendação: 35 ml de água por kg de peso corporal por dia (teto 10 L).
+    /// Meta diária efetiva: valor definido pelo personal, senão 35 ml/kg (mín. 1,5 L, teto 10 L).
     var recommendedDailyWaterML: Int {
+        if let custom = customDailyWaterML {
+            return min(max(custom, 500), WaterServing.maxDailyIntakeML)
+        }
+        let raw = max(Int((weight * 35).rounded()), 1500)
+        return min(raw, WaterServing.maxDailyIntakeML)
+    }
+
+    /// Sugestão automática por peso (ignora override do personal).
+    var weightBasedDailyWaterML: Int {
         let raw = max(Int((weight * 35).rounded()), 1500)
         return min(raw, WaterServing.maxDailyIntakeML)
     }

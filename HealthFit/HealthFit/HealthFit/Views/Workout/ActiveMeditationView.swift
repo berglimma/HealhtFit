@@ -82,6 +82,17 @@ struct ActiveMeditationView: View {
                 finishMeditation(autoEndedByInactivity: true)
             }
         }
+        .onChange(of: scenePhase) { _, phase in
+            // Ao voltar do background: atualiza o contador e desbloqueia Encerrar se travou.
+            guard phase == .active else { return }
+            elapsedSeconds = wallClockElapsedSeconds()
+            if isFinishing, finishedSession == nil, workoutStore.activeSession != nil {
+                isFinishing = false
+            }
+            if elapsedSeconds >= config.targetDurationSeconds, finishedSession == nil {
+                finishMeditation()
+            }
+        }
         .onReceive(workoutStore.sessionAutoEnded) { ended in
             guard finishedSession == nil, !isFinishing else { return }
             isFinishing = true
@@ -89,6 +100,7 @@ struct ActiveMeditationView: View {
             finishedSession = ended
         }
         .onAppear {
+            isFinishing = false
             elapsedSeconds = wallClockElapsedSeconds()
             watchConnectivity.syncMeditationProgress(
                 elapsedSeconds: elapsedSeconds,
@@ -205,17 +217,30 @@ struct ActiveMeditationView: View {
     }
 
     private func finishMeditation(autoEndedByInactivity: Bool = false) {
-        guard !isFinishing else { return }
+        // Evita deadlock: se já finalizou e o sheet sumiu, ainda permite fechar o host.
+        if finishedSession != nil {
+            closeMeditationHost()
+            return
+        }
+        guard !isFinishing else {
+            // Estado preso após background — força encerramento do host.
+            if workoutStore.activeSession == nil {
+                closeMeditationHost()
+            }
+            return
+        }
         isFinishing = true
 
         watchConnectivity.stopWorkoutOnWatch()
 
+        elapsedSeconds = wallClockElapsedSeconds()
+
         guard var session = workoutStore.activeSession else {
-            if finishedSession == nil,
-               let last = workoutStore.sessionHistory.first,
+            if let last = workoutStore.sessionHistory.first,
                last.autoEndedByInactivity {
                 finishedSession = last
-            } else if finishedSession == nil {
+            } else {
+                isFinishing = false
                 closeMeditationHost()
             }
             return

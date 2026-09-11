@@ -940,6 +940,9 @@
     "Atual" : {
 
     },
+    "Atualização necessária" : {
+
+    },
     "Atualizado %@" : {
 
     },
@@ -953,6 +956,9 @@
 
     },
     "Atualizar localização" : {
+
+    },
+    "Atualizar na App Store" : {
 
     },
     "Atualizar nível na musculação" : {
@@ -4178,6 +4184,9 @@
 
     },
     "O exercício entra só nesta ficha do aluno. Use Conjugado ou Drop set quando fizer parte da prescrição." : {
+
+    },
+    "O HealthFit precisa da versão mais recente para funcionar corretamente." : {
 
     },
     "O ícone do app na tela inicial usa a mesma cor." : {

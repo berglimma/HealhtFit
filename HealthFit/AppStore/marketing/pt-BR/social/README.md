@@ -32,7 +32,12 @@ Link de download: **https://apps.apple.com/br/app/id6798621208**
 | `HealthFit-card-foco-shape-demo-feed.png` | 1:1 | Foco no Shape — demonstrações |
 | `HealthFit-card-foco-shape-masculino-feminino-feed.png` | 1:1 | Foco no Shape — M/F |
 | `HealthFit-card-foco-shape-tecnica-feed.png` | 1:1 | Foco no Shape — técnica |
-| `HealthFit-card-duo-feed.png` | 1:1 | Duo (dupla / equipe) |
+| `HealthFit-card-duo-feed.png` | 1:1 | Duo (dupla / equipe) — card geral |
+| `HealthFit-card-duo-equipes-feed.png` | 1:1 | Duo — treino em dupla / equipe |
+| `HealthFit-card-duo-criar-feed.png` | 1:1 | Duo — criar equipe + modalidades |
+| `HealthFit-card-duo-chat-feed.png` | 1:1 | Duo — chat para marcar treinos |
+| `HealthFit-card-duo-ranking-feed.png` | 1:1 | Duo — ranking da equipe |
+| `HealthFit-card-duo-modo-equipe-feed.png` | 1:1 | Duo — ativar modo equipe + card |
 | `HealthFit-card-nutricao-feed.png` | 1:1 | Nutrição com IA |
 | `HealthFit-card-watch-feed.png` | 1:1 | Apple Watch |
 | `HealthFit-card-corrida-feed.png` | 1:1 | Corrida (GPS · ritmo · Watch) |
@@ -93,16 +98,20 @@ https://apps.apple.com/br/app/id6798621208
 
 ---
 
-## Legenda — Duo
+## Legenda — Duo / Treino em equipe
 
 ```
-👥 Treine em dupla ou equipe com o Duo.
+👥 Treino em dupla ou equipe no HealthFit.
 
-Chat, metas e motivação no HealthFit.
+✅ Crie equipes e escolha modalidades (corrida, caminhada…)
+✅ Chat para marcar treinos
+✅ Ranking e relatório da equipe
+✅ Ative o modo equipe — conta no ranking e gera o card
+
 Comece grátis 👇
 https://apps.apple.com/br/app/id6798621208
 
-#HealthFit #Duo #TreinoEmDupla #Fitness #Motivação
+#HealthFit #Duo #TreinoEmDupla #TreinoEmEquipe #Ranking #Corrida #Fitness #Motivação
 ```
 
 ---

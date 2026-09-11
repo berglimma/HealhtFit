@@ -17,7 +17,7 @@ enum LiveHeartRateSource: String, Equatable {
     }
 }
 
-/// Unifica BPM / kcal / passos com prioridade: Apple Watch > BLE > HealthKit.
+/// Unifica BPM / kcal / passos com prioridade: Apple Watch (fresco) > BLE > HealthKit.
 @MainActor
 final class LiveMetricsHub: ObservableObject {
     static let shared = LiveMetricsHub()
@@ -29,25 +29,28 @@ final class LiveMetricsHub: ObservableObject {
     @Published private(set) var todayActiveCalories: Double = 0
 
     private var cancellables = Set<AnyCancellable>()
+    private var freshnessTimer: Timer?
 
     private init() {
         let watch = WatchConnectivityManager.shared
         let ble = BluetoothHeartRateService.shared
         let health = HealthKitManager.shared
 
-        Publishers.CombineLatest3(
+        Publishers.CombineLatest4(
             watch.$watchHeartRate,
             ble.$heartRateBPM,
-            health.$currentHeartRate
+            health.$currentHeartRate,
+            health.$restingHeartRate
         )
-        .combineLatest(health.$restingHeartRate)
+        .combineLatest(watch.$lastWatchHeartRateAt)
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] heartRates, resting in
+        .sink { [weak self] rates, lastWatchAt in
             self?.resolveHeartRate(
-                watchBPM: heartRates.0,
-                bleBPM: heartRates.1,
-                healthBPM: heartRates.2,
-                restingBPM: resting
+                watchBPM: rates.0,
+                bleBPM: rates.1,
+                healthBPM: rates.2,
+                restingBPM: rates.3,
+                lastWatchAt: lastWatchAt
             )
         }
         .store(in: &cancellables)
@@ -67,15 +70,34 @@ final class LiveMetricsHub: ObservableObject {
             self.todayActiveCalories = max(0, todayCalories)
         }
         .store(in: &cancellables)
+
+        // Reavalia periodicamente para expirar BPM congelado do Watch.
+        let box = WeakMainActorBox(self)
+        freshnessTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { _ in
+            box.run { this in
+                let watch = WatchConnectivityManager.shared
+                this.resolveHeartRate(
+                    watchBPM: watch.watchHeartRate,
+                    bleBPM: BluetoothHeartRateService.shared.heartRateBPM,
+                    healthBPM: HealthKitManager.shared.currentHeartRate,
+                    restingBPM: HealthKitManager.shared.restingHeartRate,
+                    lastWatchAt: watch.lastWatchHeartRateAt
+                )
+            }
+        }
     }
 
     private func resolveHeartRate(
         watchBPM: Double,
         bleBPM: Double,
         healthBPM: Double,
-        restingBPM: Double
+        restingBPM: Double,
+        lastWatchAt: Date?
     ) {
-        if watchBPM > 0 {
+        let watchFresh = watchBPM > 0
+            && lastWatchAt.map { Date().timeIntervalSince($0) <= WatchConnectivityManager.watchHeartRateStaleInterval } == true
+
+        if watchFresh {
             heartRateBPM = watchBPM
             heartRateSource = .appleWatch
             return

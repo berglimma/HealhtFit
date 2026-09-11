@@ -645,6 +645,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var gender: Gender
     var weight: Double
     var height: Double
+    /// Meta diária de água definida pelo personal (ml). `nil` = usa 35 ml/kg.
+    var customDailyWaterML: Int?
     var age: Int
     /// Data de nascimento (obrigatória). Idade é recalculada a partir dela quando presente.
     var dateOfBirth: Date?
@@ -691,6 +693,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         gender: Gender = .male,
         weight: Double = 75,
         height: Double = 175,
+        customDailyWaterML: Int? = nil,
         age: Int = 28,
         dateOfBirth: Date? = nil,
         countryCode: String = CountryOption.defaultCode(),
@@ -721,6 +724,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         self.gender = gender
         self.weight = weight
         self.height = height
+        self.customDailyWaterML = customDailyWaterML.map { min(max(500, $0), WaterServing.maxDailyIntakeML) }
         self.dateOfBirth = dateOfBirth
         if let dateOfBirth {
             self.age = Self.age(from: dateOfBirth)
@@ -761,6 +765,11 @@ struct UserProfile: Codable, Identifiable, Equatable {
         gender = try container.decodeIfPresent(Gender.self, forKey: .gender) ?? .male
         weight = try container.decode(Double.self, forKey: .weight)
         height = try container.decode(Double.self, forKey: .height)
+        if let customWater = try container.decodeIfPresent(Int.self, forKey: .customDailyWaterML) {
+            customDailyWaterML = min(max(500, customWater), WaterServing.maxDailyIntakeML)
+        } else {
+            customDailyWaterML = nil
+        }
         dateOfBirth = try container.decodeIfPresent(Date.self, forKey: .dateOfBirth)
         let decodedAge = try container.decode(Int.self, forKey: .age)
         if let dateOfBirth {
@@ -795,10 +804,44 @@ struct UserProfile: Codable, Identifiable, Equatable {
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
     }
 
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(displayName, forKey: .displayName)
+        try container.encode(email, forKey: .email)
+        try container.encode(personalTrainerName, forKey: .personalTrainerName)
+        try container.encode(personalTrainerEmail, forKey: .personalTrainerEmail)
+        try container.encode(usesPersonalTrainer, forKey: .usesPersonalTrainer)
+        try container.encode(nutritionistName, forKey: .nutritionistName)
+        try container.encode(nutritionistEmail, forKey: .nutritionistEmail)
+        try container.encode(usesNutritionist, forKey: .usesNutritionist)
+        try container.encode(accountRole, forKey: .accountRole)
+        try container.encode(biotype, forKey: .biotype)
+        try container.encode(goal, forKey: .goal)
+        try container.encode(gender, forKey: .gender)
+        try container.encode(weight, forKey: .weight)
+        try container.encode(height, forKey: .height)
+        try container.encodeIfPresent(customDailyWaterML, forKey: .customDailyWaterML)
+        try container.encode(age, forKey: .age)
+        try container.encodeIfPresent(dateOfBirth, forKey: .dateOfBirth)
+        try container.encode(countryCode, forKey: .countryCode)
+        try container.encode(caloricDeficit, forKey: .caloricDeficit)
+        try container.encode(bodyMeasurements, forKey: .bodyMeasurements)
+        try container.encodeIfPresent(previousBodyMeasurements, forKey: .previousBodyMeasurements)
+        try container.encode(bodyMeasurementHistory, forKey: .bodyMeasurementHistory)
+        try container.encode(menstrualCycle, forKey: .menstrualCycle)
+        try container.encode(practicedModalityIDs, forKey: .practicedModalityIDs)
+        try container.encodeIfPresent(musculacaoTrainingExperience, forKey: .musculacaoTrainingExperience)
+        try container.encodeIfPresent(lastTrainerReportSentAt, forKey: .lastTrainerReportSentAt)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(updatedAt, forKey: .updatedAt)
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id, name, displayName, email, personalTrainerName, personalTrainerEmail, usesPersonalTrainer
         case nutritionistName, nutritionistEmail, usesNutritionist, accountRole
-        case biotype, goal, gender, weight, height, age, dateOfBirth, countryCode, caloricDeficit
+        case biotype, goal, gender, weight, height, customDailyWaterML, age, dateOfBirth, countryCode, caloricDeficit
         case bodyMeasurements, previousBodyMeasurements, bodyMeasurementHistory, menstrualCycle
         case practicedModalityIDs, musculacaoTrainingExperience, lastTrainerReportSentAt, createdAt, updatedAt
     }

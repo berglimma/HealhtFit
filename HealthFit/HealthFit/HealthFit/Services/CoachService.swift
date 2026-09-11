@@ -27,6 +27,10 @@ final class CoachService: ObservableObject {
     private var chatListeners: [String: ListenerRegistration] = [:]
     private var methodsListener: ListenerRegistration?
     private var interestMessagesListener: ListenerRegistration?
+    /// Evita spam de notificação local para a mesma mensagem.
+    private var notifiedCoachChatMessageIds: Set<String> = []
+    /// Primeiro snapshot do listener não deve disparar notificação (histórico).
+    private var chatListenerPrimed: Set<String> = []
 
     private init() {}
 
@@ -721,6 +725,7 @@ final class CoachService: ObservableObject {
                 Task { @MainActor in
                     guard let self else { return }
                     let active = Self.filterActiveMessages(messages)
+                    self.notifyIncomingCoachChatIfNeeded(linkId: linkId, messages: active)
                     self.chatMessages[linkId] = active
                     self.acknowledgeDeliveredIfNeeded(linkId: linkId, messages: active)
                     await self.purgeExpiredMessages(linkId: linkId, from: messages)
@@ -728,6 +733,33 @@ final class CoachService: ObservableObject {
             }
         } else if let messages = chatMessages[linkId] {
             acknowledgeDeliveredIfNeeded(linkId: linkId, messages: messages)
+        }
+    }
+
+    private func notifyIncomingCoachChatIfNeeded(linkId: String, messages: [CoachChatMessage]) {
+        // Primeiro snapshot = histórico; não notifica.
+        guard chatListenerPrimed.contains(linkId) else {
+            chatListenerPrimed.insert(linkId)
+            notifiedCoachChatMessageIds.formUnion(messages.map(\.id))
+            return
+        }
+        guard let uid = currentUid else { return }
+        let viewingThisChat = CoachNavigationRouter.shared.presentedChat?.linkId == linkId
+        for message in messages where message.senderUid != uid {
+            guard !notifiedCoachChatMessageIds.contains(message.id) else { continue }
+            notifiedCoachChatMessageIds.insert(message.id)
+            // Com o chat aberto e app em foreground, o bubble já mostra a mensagem.
+            if viewingThisChat { continue }
+            let preview = String(message.text.prefix(120))
+            NotificationService.shared.deliverCoachChatNotification(
+                title: message.senderName.isEmpty ? "HealthFit Coach" : message.senderName,
+                body: preview,
+                linkId: linkId,
+                messageId: message.id
+            )
+        }
+        if notifiedCoachChatMessageIds.count > 400 {
+            notifiedCoachChatMessageIds = Set(notifiedCoachChatMessageIds.suffix(200))
         }
     }
 
@@ -951,13 +983,7 @@ final class CoachService: ObservableObject {
                 }
             }
             // Chat em tempo real para vínculos ativos (aluno e coach).
-            if chatListeners[linkId] == nil {
-                chatListeners[linkId] = CoachFirestoreService.listenMessages(linkId: linkId) { [weak self] messages in
-                    Task { @MainActor in
-                        self?.chatMessages[linkId] = messages
-                    }
-                }
-            }
+            ensureChatListening(linkId: linkId)
         }
     }
 

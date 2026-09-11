@@ -382,11 +382,15 @@ struct ActiveCardioView: View {
                     runTracker.handleAppBecameActive()
                 }
                 UIApplication.shared.isIdleTimerDisabled = isOutdoorGPS && !isPaused && finishedSession == nil
-            } else if phase == .background || phase == .inactive {
-                // Mantém GPS em background; idle timer volta ao normal fora da tela ativa.
+            } else if phase == .background {
+                // Não reinicia o GPS no lock — só garante entrega em background.
+                UIApplication.shared.isIdleTimerDisabled = false
                 if isOutdoorGPS {
-                    runTracker.handleAppBecameActive()
+                    runTracker.ensureBackgroundLocationDelivery()
                 }
+            } else if phase == .inactive {
+                // Transição de lock: evita restart + requestLocation (causa jank no unlock).
+                UIApplication.shared.isIdleTimerDisabled = false
             }
         }
         .onReceive(workoutStore.sessionAutoEnded) { ended in
@@ -1090,7 +1094,7 @@ struct ActiveCardioView: View {
                 Text(DurationFormatting.formatElapsedClock(seconds: activeElapsedSeconds(at: context.date)))
                     .font(.system(size: 44, weight: .bold, design: .monospaced))
                     .foregroundStyle(isPaused ? AppTheme.textSecondary : AppTheme.textPrimary)
-                    .contentTransition(.numericText())
+                    // Sem numericText: sob carga pós-unlock a transição deixa o contador parecer lento.
             }
             Text(isPaused ? "Treino pausado" : "Tempo em tempo real")
                 .font(.caption)

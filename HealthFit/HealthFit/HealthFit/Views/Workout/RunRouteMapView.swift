@@ -27,6 +27,8 @@ struct RunRouteMapView: View {
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var is3DEnabled = false
     @State private var didApplyInitialMode = false
+    @State private var lastCameraUpdateAt: Date = .distantPast
+    @State private var lastFollowedLatitude: CLLocationDegrees?
 
     private var coordinates: [CLLocationCoordinate2D] {
         routePoints.map(\.coordinate)
@@ -217,23 +219,30 @@ struct RunRouteMapView: View {
                     is3DEnabled = true
                     didApplyInitialMode = true
                 }
+                updateCamera(animated: false, force: true)
+            }
+            .onChange(of: routePoints.count) { oldCount, newCount in
+                // Após unlock o GPS pode entregar dezenas de pontos de uma vez —
+                // anima só se o salto for pequeno (update ao vivo normal).
+                let burst = newCount - oldCount >= 4
+                updateCamera(animated: !burst && followUser, force: burst)
+            }
+            .onChange(of: userCoordinate?.latitude) { _, newLat in
+                guard followUser, let newLat else { return }
+                if let prev = lastFollowedLatitude, abs(prev - newLat) < 0.00005 {
+                    return
+                }
+                lastFollowedLatitude = newLat
                 updateCamera(animated: false)
             }
-            .onChange(of: routePoints.count) { _, _ in
-                updateCamera(animated: true)
-            }
-            .onChange(of: userCoordinate?.latitude) { _, _ in
-                guard followUser else { return }
-                updateCamera(animated: true)
-            }
             .onChange(of: is3DEnabled) { _, _ in
-                updateCamera(animated: true)
+                updateCamera(animated: true, force: true)
             }
             .onChange(of: jumpEvents.count) { _, _ in
                 updateCamera(animated: true)
             }
             .onChange(of: spotCoordinate?.latitude) { _, _ in
-                updateCamera(animated: true)
+                updateCamera(animated: true, force: true)
             }
 
             if !jumpArcs.isEmpty {
@@ -350,7 +359,14 @@ struct RunRouteMapView: View {
         }
     }
 
-    private func updateCamera(animated: Bool) {
+    private func updateCamera(animated: Bool, force: Bool = false) {
+        let now = Date()
+        // Seguir usuário ao vivo: no máximo ~1 Hz (evita animação em rajada pós-unlock).
+        if !force, followUser, now.timeIntervalSince(lastCameraUpdateAt) < 1.0 {
+            return
+        }
+        lastCameraUpdateAt = now
+
         if is3DEnabled {
             apply3DCamera(animated: animated)
             return

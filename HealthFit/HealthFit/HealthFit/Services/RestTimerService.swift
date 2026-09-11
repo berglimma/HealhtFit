@@ -167,9 +167,15 @@ final class RestTimerService: ObservableObject {
     func handleAppEnteredBackground() {
         syncFromWallClock(announceCompletion: false)
         persistRestState()
-        // Sem UI: para som/vibração e timer de display; a notificação local cobre o aviso.
+        // Mantém o lembrete agendado (tela bloqueada). Para o loop de UI; vibração vem do som da notificação + Watch.
         stopReminderSoundLoop()
         stopDisplayTimer()
+        // Se o descanso já acabou enquanto ia para background, reforça notificação + Watch.
+        if isAwaitingResumeAcknowledgment || (isRunning && remainingSeconds == 0) {
+            if notificationEnabled {
+                NotificationService.shared.deliverRestCompleteNotification(exerciseName: currentExerciseName)
+            }
+        }
     }
 
     private func stopDisplayTimer() {

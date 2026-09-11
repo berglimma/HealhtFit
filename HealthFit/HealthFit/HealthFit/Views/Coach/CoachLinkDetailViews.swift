@@ -559,21 +559,34 @@ struct CoachPrescribeWorkoutView: View {
                             HStack {
                                 Stepper("Reps \(exercise.reps)", value: $exercise.reps, in: 1...30)
                             }
-                            HStack(spacing: 8) {
+                            HStack(spacing: 12) {
                                 Text("Carga")
                                     .font(.subheadline)
-                                TextField(
-                                    "kg",
-                                    text: Binding(
-                                        get: { ExerciseLoadEditor.text(from: exercise.recommendedWeight) },
-                                        set: { exercise.recommendedWeight = ExerciseLoadEditor.weight(from: $0) }
-                                    )
-                                )
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
+                                Spacer()
+                                Button {
+                                    nudgeLoad(for: $exercise, by: -1.25)
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(AppTheme.accent)
+                                }
+                                .buttonStyle(.plain)
+                                Text(ExerciseLoadEditor.text(from: exercise.recommendedWeight).isEmpty
+                                     ? "0"
+                                     : ExerciseLoadEditor.text(from: exercise.recommendedWeight))
+                                    .font(.body.monospacedDigit().weight(.semibold))
+                                    .frame(minWidth: 48, alignment: .center)
                                 Text("kg")
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.secondary)
+                                Button {
+                                    nudgeLoad(for: $exercise, by: 1.25)
+                                } label: {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(AppTheme.accent)
+                                }
+                                .buttonStyle(.plain)
                             }
                             Picker("Técnica", selection: $exercise.techniqueMode) {
                                 ForEach(ExerciseTechniqueMode.allCases) { mode in
@@ -628,11 +641,30 @@ struct CoachPrescribeWorkoutView: View {
                         }
                         Stepper("Séries \(customSets)", value: $customSets, in: 1...8)
                         Stepper("Repetições \(customReps)", value: $customReps, in: 1...30)
-                        HStack {
-                            TextField("Carga (kg)", text: $customWeightText)
-                                .keyboardType(.decimalPad)
+                        HStack(spacing: 12) {
+                            Text("Carga")
+                            Spacer()
+                            Button {
+                                nudgeCustomLoad(by: -1.25)
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+                            .buttonStyle(.plain)
+                            Text(customWeightText.isEmpty ? "0" : customWeightText)
+                                .font(.body.monospacedDigit().weight(.semibold))
+                                .frame(minWidth: 48, alignment: .center)
                             Text("kg")
                                 .foregroundStyle(.secondary)
+                            Button {
+                                nudgeCustomLoad(by: 1.25)
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+                            .buttonStyle(.plain)
                         }
                         Picker("Técnica", selection: $customTechnique) {
                             ForEach(ExerciseTechniqueMode.allCases) { mode in
@@ -759,6 +791,19 @@ struct CoachPrescribeWorkoutView: View {
             .filter { !existingNames.contains($0.name) }
             .map { WorkoutStore.copyExerciseForWorkout($0) }
         exercises.append(contentsOf: additions)
+    }
+
+    private func nudgeLoad(for exercise: Binding<Exercise>, by delta: Double) {
+        let current = exercise.wrappedValue.recommendedWeight ?? 0
+        // Passos de 1,25 kg (alinhado a anilha fracionada comum).
+        let value = max(0, ((current + delta) * 4).rounded() / 4)
+        exercise.wrappedValue.recommendedWeight = value == 0 ? nil : value
+    }
+
+    private func nudgeCustomLoad(by delta: Double) {
+        let current = ExerciseLoadEditor.weight(from: customWeightText) ?? 0
+        let value = max(0, ((current + delta) * 4).rounded() / 4)
+        customWeightText = value == 0 ? "" : ExerciseLoadEditor.text(from: value)
     }
 
     private func addCustomExercise() {
@@ -1525,7 +1570,7 @@ struct CoachStudentMetricsView: View {
         .alert("Salvo", isPresented: $showSavedAlert) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Peso, altura e medidas do aluno foram atualizados.")
+            Text("Peso, altura, água e medidas do aluno foram atualizados.")
         }
         .alert("Sem dados para o PDF", isPresented: $showEmptyPDFAlert) {
             Button("OK", role: .cancel) {}
@@ -1563,6 +1608,50 @@ struct CoachStudentMetricsView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(maxWidth: 120)
                 }
+            }
+
+            Section {
+                HStack {
+                    Text("Meta diária")
+                    Spacer()
+                    Text(waterGoalLabel)
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+                HStack(spacing: 16) {
+                    Button {
+                        adjustWaterGoal(by: -250)
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Diminuir meta de água")
+
+                    Button {
+                        adjustWaterGoal(by: 250)
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Aumentar meta de água")
+
+                    Spacer()
+
+                    if student?.customDailyWaterML != nil {
+                        Button("Usar 35 ml/kg") {
+                            resetWaterGoalToWeightBased()
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                }
+            } header: {
+                Text("Água diária do aluno")
+            } footer: {
+                Text("O personal define a meta em ml. Sem override, o app usa 35 ml por kg de peso.")
             }
 
             Section("Circunferências") {
@@ -1627,6 +1716,28 @@ struct CoachStudentMetricsView: View {
         .prefix(4)
         .map { "\($0.0) \($0.1)" }
         return filled.joined(separator: " · ")
+    }
+
+    private var waterGoalLabel: String {
+        guard let student else { return "—" }
+        let ml = student.recommendedDailyWaterML
+        let liters = Double(ml) / 1000.0
+        let source = student.customDailyWaterML != nil ? "personal" : "35 ml/kg"
+        return String(format: "%.1f L (%d ml · %@)", liters, ml, source)
+    }
+
+    private func adjustWaterGoal(by delta: Int) {
+        guard var profile = student else { return }
+        let base = profile.customDailyWaterML ?? profile.weightBasedDailyWaterML
+        let next = min(max(base + delta, 500), WaterServing.maxDailyIntakeML)
+        profile.customDailyWaterML = next
+        student = profile
+    }
+
+    private func resetWaterGoalToWeightBased() {
+        guard var profile = student else { return }
+        profile.customDailyWaterML = nil
+        student = profile
     }
 
     private func loadStudent() async {

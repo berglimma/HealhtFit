@@ -63,7 +63,12 @@ struct RootView: View {
                 // o endEditing global cancela a digitação em TextFields.
                 if authService.isAuthenticated {
                     prepareWelcomeIfAuthenticated(trigger: .returnFromBackground)
-                    DuoTeamService.shared.handleAppBecameActive()
+                    let outdoorCardioRunning =
+                        workoutStore.activeSession != nil
+                        && (workoutStore.resolvedActiveCardioConfig()?.isOutdoorGPSCardio == true)
+                    if !outdoorCardioRunning {
+                        DuoTeamService.shared.handleAppBecameActive()
+                    }
                     Task { await runForegroundRefreshPipeline() }
                 } else {
                     WorkoutLiveActivitySync.end()
@@ -198,6 +203,10 @@ struct RootView: View {
 
     /// Foreground return: stagger the same heavy work that used to run synchronously in onChange.
     private func runForegroundRefreshPipeline() async {
+        let outdoorCardioRunning =
+            workoutStore.activeSession != nil
+            && (workoutStore.resolvedActiveCardioConfig()?.isOutdoorGPSCardio == true)
+
         wellnessService.configure(for: authService.currentUser)
         wellnessService.checkInOnAppOpen()
         _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
@@ -214,7 +223,13 @@ struct RootView: View {
         }
         AppIconInactivityService.shared.handleAppBecameActive()
 
-        await Task.yield()
+        // Corrida/caminhada/bike com GPS: adia cloud/catálogo para a UI do treino estabilizar.
+        if outdoorCardioRunning {
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            DuoTeamService.shared.handleAppBecameActive()
+        } else {
+            await Task.yield()
+        }
 
         mealPlanService.bind(userId: authService.currentUser?.id)
         ClimbingGearService.shared.bind(userId: authService.currentUser?.id)
@@ -242,10 +257,10 @@ struct RootView: View {
             Task { await CoachService.shared.refreshLinkStatusesForPlan() }
         }
 
-        try? await Task.sleep(nanoseconds: 250_000_000)
+        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 600_000_000 : 250_000_000)
         NotificationService.shared.refreshRecurringNotifications()
 
-        try? await Task.sleep(nanoseconds: 400_000_000)
+        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 800_000_000 : 400_000_000)
         Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
         Task { await healthKitManager.refreshFromHealthKit() }
         ExternalWorkoutSyncService.shared.bind(
