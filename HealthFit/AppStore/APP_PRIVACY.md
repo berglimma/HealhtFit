@@ -28,8 +28,8 @@ Marque apenas o que o app realmente coleta. Base: `privacy_notes.txt` + Firebase
 ### User Content
 | Tipo | Coleta | Vinculado | Tracking | Finalidade |
 |------|--------|-----------|----------|------------|
-| Photos or Videos | Sim (perfil / evolução, opcional) | Sim | Não | App Functionality |
-| Other User Content | Sim (check-ins, notas, chat Duo) | Sim | Não | App Functionality |
+| Photos or Videos | Sim (perfil / evolução / Pulse posts&stories, opcional) | Sim | Não | App Functionality |
+| Other User Content | Sim (check-ins, notas, chat Duo, Pulse captions/comentários/follows) | Sim | Não | App Functionality |
 
 ### Identifiers
 | Tipo | Coleta | Vinculado | Tracking | Finalidade |
@@ -52,4 +52,4 @@ Declare Crash Data + Product Interaction. **Não** marque como tracking (sem IDF
 - Purchases history as sold to third parties
 
 ## Account deletion
-Disponível em **Perfil → Excluir conta** (Guideline 5.1.1(v)). Apaga Auth, Firestore (perfil, treinos, wellness, meal plan, evolução, presença Spot Buddy) e Storage do usuário.
+Disponível em **Perfil → Excluir conta** (Guideline 5.1.1(v)). Apaga Auth, Firestore (perfil, treinos, wellness, meal plan, evolução, presença Spot Buddy, dados Pulse do usuário quando aplicável) e Storage do usuário.

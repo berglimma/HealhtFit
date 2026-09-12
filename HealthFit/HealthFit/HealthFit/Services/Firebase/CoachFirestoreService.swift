@@ -167,25 +167,47 @@ enum CoachFirestoreService {
         profession: CoachProfession?
     ) async throws -> [CoachProfessionalProfile] {
         guard isAvailable else { throw CoachFirestoreError.unavailable }
-        var query: Query = profiles().whereField("isDirectoryVisible", isEqualTo: true)
-        if let stateCode, !stateCode.isEmpty {
-            query = query.whereField("stateCode", isEqualTo: stateCode.uppercased())
-        }
-        let limit = (name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false) ? 80 : 40
+        // Busca ampla (sem filtrar UF no Firestore) para poder priorizar região e ainda listar outros locais.
+        let query: Query = profiles().whereField("isDirectoryVisible", isEqualTo: true)
+        let limit = (name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false) ? 120 : 80
         let snap = try await query.limit(to: limit).getDocuments()
         var results = snap.documents.compactMap { try? decode(CoachProfessionalProfile.self, from: $0.data()) }
         if let name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             let needle = name.trimmingCharacters(in: .whitespacesAndNewlines)
             results = results.filter { $0.displayName.localizedCaseInsensitiveContains(needle) }
         }
-        if let city, !city.isEmpty {
-            let needle = city.lowercased()
-            results = results.filter { $0.city.lowercased().contains(needle) }
-        }
         if let profession {
             results = results.filter { $0.professions.contains(profession) }
         }
-        return results.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+
+        let preferState = stateCode?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() ?? ""
+        let preferCity = city?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        return results.sorted { lhs, rhs in
+            let left = coachLocalityScore(profile: lhs, preferState: preferState, preferCity: preferCity)
+            let right = coachLocalityScore(profile: rhs, preferState: preferState, preferCity: preferCity)
+            if left != right { return left > right }
+            return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+        }
+    }
+
+    /// 3 = mesma cidade+UF, 2 = mesma UF, 1 = sem local informado, 0 = outra região.
+    private static func coachLocalityScore(
+        profile: CoachProfessionalProfile,
+        preferState: String,
+        preferCity: String
+    ) -> Int {
+        guard !preferState.isEmpty || !preferCity.isEmpty else { return 0 }
+        let state = profile.stateCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let city = profile.city.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sameState = !preferState.isEmpty && !state.isEmpty && state == preferState
+        let sameCity = !preferCity.isEmpty && !city.isEmpty
+            && city.localizedCaseInsensitiveContains(preferCity)
+        if sameState && sameCity { return 3 }
+        if sameState { return 2 }
+        if sameCity { return 2 }
+        if state.isEmpty && city.isEmpty { return 1 }
+        return 0
     }
 
     // MARK: - Invites & links

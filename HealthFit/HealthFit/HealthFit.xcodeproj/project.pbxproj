@@ -7,6 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B1000P01 /* PulseExperimentalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P01 /* PulseExperimentalModels.swift */; };
+		B1000P02 /* PulseLocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P02 /* PulseLocalStore.swift */; };
+		B1000P03 /* PulseDashboardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P03 /* PulseDashboardCard.swift */; };
+		B1000P04 /* PulseTermsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P04 /* PulseTermsView.swift */; };
+		B1000P05 /* PulseFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P05 /* PulseFeedView.swift */; };
+		B1000P06 /* PulseSocialViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P06 /* PulseSocialViews.swift */; };
+		B1000P07 /* PulseMusicSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P07 /* PulseMusicSearchService.swift */; };
+		B1000P08 /* PulseMusicViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P08 /* PulseMusicViews.swift */; };
+		B1000P09 /* PulseFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P09 /* PulseFirestoreService.swift */; };
+		B1000P10 /* PulseImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P10 /* PulseImageCache.swift */; };
+		B1000P11 /* PulseModerationQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P11 /* PulseModerationQueueView.swift */; };
+		B1000P12 /* PulseShareService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P12 /* PulseShareService.swift */; };
 		B1000979 /* ForceAppUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000979 /* ForceAppUpdateView.swift */; };
 		B1000978 /* AppUpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000978 /* AppUpdateService.swift */; };
 		B1000977 /* CoachStudentSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000977 /* CoachStudentSearchView.swift */; };
@@ -385,6 +397,18 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1000P01 /* PulseExperimentalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseExperimentalModels.swift; sourceTree = "<group>"; };
+		F1000P02 /* PulseLocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseLocalStore.swift; sourceTree = "<group>"; };
+		F1000P03 /* PulseDashboardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseDashboardCard.swift; sourceTree = "<group>"; };
+		F1000P04 /* PulseTermsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseTermsView.swift; sourceTree = "<group>"; };
+		F1000P05 /* PulseFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseFeedView.swift; sourceTree = "<group>"; };
+		F1000P06 /* PulseSocialViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseSocialViews.swift; sourceTree = "<group>"; };
+		F1000P07 /* PulseMusicSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseMusicSearchService.swift; sourceTree = "<group>"; };
+		F1000P08 /* PulseMusicViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseMusicViews.swift; sourceTree = "<group>"; };
+		F1000P09 /* PulseFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseFirestoreService.swift; sourceTree = "<group>"; };
+		F1000P10 /* PulseImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseImageCache.swift; sourceTree = "<group>"; };
+		F1000P11 /* PulseModerationQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseModerationQueueView.swift; sourceTree = "<group>"; };
+		F1000P12 /* PulseShareService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseShareService.swift; sourceTree = "<group>"; };
 		F1000979 /* ForceAppUpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceAppUpdateView.swift; sourceTree = "<group>"; };
 		F1000978 /* AppUpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateService.swift; sourceTree = "<group>"; };
 		F1000977 /* CoachStudentSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachStudentSearchView.swift; sourceTree = "<group>"; };
@@ -842,6 +866,7 @@
 				F1000920 /* DuoTeamModels.swift */,
 				F1000960 /* KiteSpotBuddyModels.swift */,
 				F1000970 /* CoachModels.swift */,
+				F1000P01 /* PulseExperimentalModels.swift */,
 				F1000059 /* MealCatalog.swift */,
 				F1000046 /* WeeklyProgressModels.swift */,
 				F1000050 /* MeditationModels.swift */,
@@ -877,6 +902,10 @@
 				F1000921 /* DuoTeamService.swift */,
 				F1000962 /* KiteSpotBuddyService.swift */,
 				F1000972 /* CoachService.swift */,
+				F1000P02 /* PulseLocalStore.swift */,
+				F1000P07 /* PulseMusicSearchService.swift */,
+				F1000P10 /* PulseImageCache.swift */,
+				F1000P12 /* PulseShareService.swift */,
 				F1000935 /* DuoNavigationRouter.swift */,
 				F1000914 /* NutritionNotificationPreferences.swift */,
 				F1000918 /* RecommendedWorkoutCatalog.swift */,
@@ -982,6 +1011,7 @@
 				G1000018 /* Duo */,
 				G1000KITE /* Kite */,
 				G1000COACH /* Coach */,
+				G1000PULSE /* Pulse */,
 				G1000016 /* Shared */,
 			);
 			path = Views;
@@ -1118,6 +1148,19 @@
 			path = Coach;
 			sourceTree = "<group>";
 		};
+		G1000PULSE /* Pulse */ = {
+			isa = PBXGroup;
+			children = (
+				F1000P03 /* PulseDashboardCard.swift */,
+				F1000P04 /* PulseTermsView.swift */,
+				F1000P05 /* PulseFeedView.swift */,
+				F1000P06 /* PulseSocialViews.swift */,
+				F1000P08 /* PulseMusicViews.swift */,
+				F1000P11 /* PulseModerationQueueView.swift */,
+			);
+			path = Pulse;
+			sourceTree = "<group>";
+		};
 		G1000016 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
@@ -1179,6 +1222,7 @@
 				F1000934 /* MarcoCivilAccessLogService.swift */,
 				F1000936 /* PushNotificationService.swift */,
 				F1000944 /* AppFeedbackFirestoreService.swift */,
+				F1000P09 /* PulseFirestoreService.swift */,
 				F1000946 /* CourtesyVoucherService.swift */,
 				F1000071 /* AuthErrorMapper.swift */,
 				F1000072 /* FirebaseAuthProvider.swift */,
@@ -1688,6 +1732,18 @@
 				B1000978 /* AppUpdateService.swift in Sources */,
 				B1000061 /* WelcomeMotivationView.swift in Sources */,
 				B1000979 /* ForceAppUpdateView.swift in Sources */,
+				B1000P01 /* PulseExperimentalModels.swift in Sources */,
+				B1000P02 /* PulseLocalStore.swift in Sources */,
+				B1000P03 /* PulseDashboardCard.swift in Sources */,
+				B1000P04 /* PulseTermsView.swift in Sources */,
+				B1000P05 /* PulseFeedView.swift in Sources */,
+				B1000P06 /* PulseSocialViews.swift in Sources */,
+				B1000P07 /* PulseMusicSearchService.swift in Sources */,
+				B1000P08 /* PulseMusicViews.swift in Sources */,
+				B1000P09 /* PulseFirestoreService.swift in Sources */,
+				B1000P10 /* PulseImageCache.swift in Sources */,
+				B1000P11 /* PulseModerationQueueView.swift in Sources */,
+				B1000P12 /* PulseShareService.swift in Sources */,
 				B1000062 /* MarathonReportBuilder.swift in Sources */,
 				B1000070 /* FirebaseBootstrap.swift in Sources */,
 				B2000070 /* AppAnalytics.swift in Sources */,

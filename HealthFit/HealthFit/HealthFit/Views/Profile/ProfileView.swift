@@ -233,6 +233,17 @@ struct ProfileView: View {
                     integrationsSection
                     nutritionNotificationsSection
                     restTimerSection
+                    #if DEBUG
+                    Section {
+                        NavigationLink {
+                            PulseLabsSettingsView()
+                        } label: {
+                            Label("Labs (DEBUG)", systemImage: "flask.fill")
+                        }
+                    } footer: {
+                        Text("Ferramentas experimentais só em builds de desenvolvimento. Abrir Labs não inicia o Pulse sozinho.")
+                    }
+                    #endif
                     aboutSection
                     Section("Legal") {
                         LegalLinksView(style: .list, showsSupportLink: true)
@@ -2605,3 +2616,104 @@ struct BodyMeasurementsEditorSheet: View {
         }
     }
 }
+
+#if DEBUG
+/// Labs fora da List do Perfil — evita travar o iPhone e garante o tipo no mesmo target.
+struct PulseLabsSettingsView: View {
+    @State private var pulseEnabled = PulseExperimental.isLabEnabled
+    @State private var cloudSync = PulseExperimental.isCloudSyncEnabled
+    @State private var demoContent = PulseExperimental.includeDemoContent
+    @State private var spotifyId = PulseExperimental.spotifyClientId
+    @State private var spotifySecret = PulseExperimental.spotifyClientSecret
+    @State private var statusMessage: String?
+
+    var body: some View {
+        List {
+            Section {
+                Toggle("Ativar HealthFit Pulse", isOn: $pulseEnabled)
+                    .onChange(of: pulseEnabled) { _, value in
+                        PulseExperimental.isLabEnabled = value
+                        AppUpdateService.shared.notifyPulseLocalFlagChange()
+                    }
+                Text("Override local (DEBUG). Em Release a UI segue `appConfig/ios.pulseEnabled` (default off).")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            } header: {
+                Text("Pulse")
+            } footer: {
+                Text(PulseExperimental.tagline)
+            }
+
+            if pulseEnabled {
+                Section("Dados e sync") {
+                    Toggle("Sync nuvem (Firestore mínimo)", isOn: $cloudSync)
+                        .onChange(of: cloudSync) { _, value in
+                            PulseExperimental.isCloudSyncEnabled = value
+                            AppUpdateService.shared.notifyPulseLocalFlagChange()
+                        }
+                    Text("Override local. Produção: `appConfig/ios.pulseCloudSyncEnabled`. Publica em `pulsePosts`.")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    Toggle("Incluir dados demo", isOn: $demoContent)
+                        .onChange(of: demoContent) { _, enabled in
+                            Task { @MainActor in
+                                if enabled {
+                                    PulseLocalStore.shared.loadDemoContent()
+                                    statusMessage = "Dados demo carregados."
+                                } else {
+                                    PulseLocalStore.shared.clearDemoContent()
+                                    statusMessage = "Dados demo removidos."
+                                }
+                            }
+                        }
+                    Text("Posts/pessoas fake só para teste. Desligado por padrão.")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    Button("Resetar dados locais do Pulse", role: .destructive) {
+                        Task { @MainActor in
+                            PulseLocalStore.shared.resetLocalData()
+                            demoContent = PulseExperimental.includeDemoContent
+                            statusMessage = "Dados locais resetados."
+                        }
+                    }
+                }
+
+                Section("Spotify (busca nos stories)") {
+                    TextField("Client ID", text: $spotifyId)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .onChange(of: spotifyId) { _, value in
+                            PulseExperimental.spotifyClientId = value
+                        }
+                    SecureField("Client Secret", text: $spotifySecret)
+                        .onChange(of: spotifySecret) { _, value in
+                            PulseExperimental.spotifyClientSecret = value
+                        }
+                    Text("Deezer é o catálogo de produção. Spotify só via Labs. Apple Music (MusicKit) na v2.")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+
+            if let statusMessage {
+                Section {
+                    Text(statusMessage)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.accent)
+                }
+            }
+        }
+        .navigationTitle("Labs")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            pulseEnabled = PulseExperimental.isLabEnabled
+            cloudSync = PulseExperimental.isCloudSyncEnabled
+            demoContent = PulseExperimental.includeDemoContent
+            spotifyId = PulseExperimental.spotifyClientId
+            spotifySecret = PulseExperimental.spotifyClientSecret
+        }
+    }
+}
+#endif

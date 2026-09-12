@@ -17,6 +17,7 @@ struct WorkoutSummaryView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var shareCardStore: WorkoutShareCardStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @ObservedObject private var appUpdateService = AppUpdateService.shared
 
     let session: WorkoutSession
     let onFinish: () -> Void
@@ -29,6 +30,8 @@ struct WorkoutSummaryView: View {
     @State private var showEmailSentAlert = false
     @State private var showEmailFailedAlert = false
     @State private var emailWasSent = false
+    @State private var showPulsePublishAlert = false
+    @State private var pulsePublishMessage = ""
     @State private var shareImage: UIImage?
     @State private var showShareSheet = false
     @State private var shareItems: [Any] = []
@@ -279,6 +282,11 @@ struct WorkoutSummaryView: View {
                 Text("Relatório enviado com sucesso. Agora você pode compartilhar o card da conquista.")
             }
         }
+        .alert("Pulse", isPresented: $showPulsePublishAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(pulsePublishMessage)
+        }
         .alert("Falha no envio", isPresented: $showEmailFailedAlert) {
             Button("OK") {
                 focusShareCard()
@@ -342,6 +350,19 @@ struct WorkoutSummaryView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .disabled(isPreparingShare)
+
+            if appUpdateService.pulseFlagsEpoch >= 0, PulseExperimental.isUIEnabled {
+                Button {
+                    publishSessionToPulse()
+                } label: {
+                    Label("Compartilhar no Pulse", systemImage: "heart.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.bordered)
+                .tint(AppTheme.accent)
+            }
 
             Button {
                 Task { await saveShareCardToGallery() }
@@ -423,6 +444,20 @@ struct WorkoutSummaryView: View {
                 }
                 .disabled(isPreparingMediaShare)
 
+                if appUpdateService.pulseFlagsEpoch >= 0, PulseExperimental.isUIEnabled {
+                    Button {
+                        Task { await publishResultMediaToPulse() }
+                    } label: {
+                        Label("Compartilhar no Pulse", systemImage: "heart.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(AppTheme.accent)
+                    .disabled(isPreparingMediaShare)
+                }
+
                 Button {
                     Task { await saveResultMediaToGallery() }
                 } label: {
@@ -451,7 +486,7 @@ struct WorkoutSummaryView: View {
                     .disabled(isPreparingMediaShare)
                 }
 
-                Text("Escolha WhatsApp ou Instagram na tela de compartilhar. Dados da sessão e HealthFit já vão na mídia.")
+                Text("Escolha WhatsApp, Instagram ou Pulse. Dados da sessão e HealthFit já vão na mídia.")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
                     .multilineTextAlignment(.center)
@@ -612,6 +647,131 @@ struct WorkoutSummaryView: View {
         )
         shareItems = [image, caption]
         showShareSheet = true
+    }
+
+    @MainActor
+    private func publishSessionToPulse() {
+        guard PulseExperimental.isUIEnabled else { return }
+        let slot: WorkoutShareCardSlot = session.isDuoTeamSession ? .duoTeam : .individual
+        let image = shareCardStore.previewImage(for: slot) ?? WorkoutShareCardRenderer.renderImage(
+            session: session,
+            athleteName: athleteDisplayName,
+            motivationLine: shareMotivation,
+            recentSessions: workoutStore.sessionHistory,
+            profileImage: authService.profileImage
+        )
+        let card = shareCardStore.card(for: slot) ?? LastWorkoutShareCard(
+            sessionId: session.id,
+            workoutSheetId: session.workoutSheetId,
+            workoutTitle: session.workoutTitle,
+            startedAt: session.startedAt,
+            endedAt: session.endedAt ?? Date(),
+            athleteName: athleteDisplayName,
+            motivationLine: shareMotivation,
+            caloriesBurned: session.caloriesBurned,
+            completedExercises: session.completedExercises,
+            totalExercises: session.totalExercises,
+            averageHeartRate: session.averageHeartRate,
+            endedEarly: session.endedEarly,
+            autoEndedByInactivity: session.autoEndedByInactivity,
+            savedAt: Date(),
+            completedDistanceKm: session.completedDistanceKm,
+            averagePaceSecondsPerKm: session.averagePaceSecondsPerKm,
+            stepCount: session.stepCount,
+            routePoints: session.routePoints,
+            duoTeamId: session.duoTeamId,
+            duoTeamName: session.duoTeamName
+        )
+        let community: PulseCommunity = PulseCommunity.fromWorkoutTitle(session.completedModalityTitle)
+        do {
+            try PulseLocalStore.shared.publishWorkoutCard(
+                authorId: authService.currentUser?.id ?? "local",
+                authorName: athleteDisplayName,
+                authorCountryCode: authService.currentUser?.countryCode ?? "BR",
+                card: card,
+                preview: image,
+                community: community,
+                intensity: session.perceivedEffort,
+                caption: nil
+            )
+            pulsePublishMessage = "Treino publicado no HealthFit Pulse."
+        } catch {
+            pulsePublishMessage = error.localizedDescription
+        }
+        showPulsePublishAlert = true
+    }
+
+    @MainActor
+    private func publishResultMediaToPulse() async {
+        guard PulseExperimental.isUIEnabled, let resultMedia else { return }
+        isPreparingMediaShare = true
+        defer { isPreparingMediaShare = false }
+
+        let community = PulseCommunity.fromWorkoutTitle(session.completedModalityTitle)
+        let duration = Int((session.endedAt ?? Date()).timeIntervalSince(session.startedAt))
+        let meta = PulseWorkoutMeta(
+            modality: session.completedModalityTitle,
+            durationSeconds: max(0, duration),
+            intensity: session.perceivedEffort.map { min(max($0, 1), 10) },
+            duoTeamName: session.duoTeamName
+        )
+        let caption = WorkoutResultMediaOverlayRenderer.shareCaption(
+            session: session,
+            athleteName: athleteDisplayName
+        )
+        let authorId = authService.currentUser?.id ?? "local"
+        let authorName = athleteDisplayName
+        let country = authService.currentUser?.countryCode ?? "BR"
+
+        do {
+            if case .video(let url, _) = resultMedia, PulseExperimental.isVideoPostsEnabledInBuild {
+                do {
+                    _ = try await PulseLocalStore.shared.addVideoPost(
+                        authorId: authorId,
+                        authorName: authorName,
+                        authorCountryCode: country,
+                        caption: caption,
+                        sourceURL: url,
+                        community: community,
+                        workoutMeta: meta,
+                        authorAvatar: authService.profileImage
+                    )
+                    pulsePublishMessage = "Vídeo do treino publicado no HealthFit Pulse."
+                    showPulsePublishAlert = true
+                    return
+                } catch PulseStoreError.videoTooLong, PulseStoreError.videoDisabled {
+                    // Continua com a capa composta abaixo.
+                }
+            }
+
+            // Foto, ou capa do vídeo (Release / vídeo longo).
+            guard let composed = WorkoutResultMediaOverlayRenderer.renderComposedImage(
+                image: resultMedia.previewImage,
+                session: session,
+                isCardioSession: isCardioSession || session.isOutdoorGPSCardio,
+                showVideoBadge: false
+            ) else {
+                pulsePublishMessage = "Não foi possível preparar a imagem para o Pulse."
+                showPulsePublishAlert = true
+                return
+            }
+            _ = try PulseLocalStore.shared.addPhotoPost(
+                authorId: authorId,
+                authorName: authorName,
+                authorCountryCode: country,
+                caption: caption,
+                image: composed,
+                community: community,
+                workoutMeta: meta,
+                authorAvatar: authService.profileImage
+            )
+            pulsePublishMessage = resultMedia.isVideo
+                ? "Capa do vídeo publicada no HealthFit Pulse."
+                : "Foto do treino publicada no HealthFit Pulse."
+        } catch {
+            pulsePublishMessage = error.localizedDescription
+        }
+        showPulsePublishAlert = true
     }
 
     private func offerSavePhotoToGallery(_ image: UIImage) {

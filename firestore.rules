@@ -187,7 +187,8 @@ service cloud.firestore {
       allow create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Configuração pública do app (ex.: versão mínima / force update).
+    // Configuração pública do app (ex.: versão mínima / force update / flags do Pulse).
+    // Campos Pulse (bool, default ausente = false): pulseEnabled, pulseCloudSyncEnabled.
     match /appConfig/{docId} {
       allow read: if true;
       allow write: if false;
@@ -454,6 +455,157 @@ service cloud.firestore {
       allow create, update: if canWriteCoachMembership(userId, linkId);
       allow delete: if request.auth != null
         && (request.auth.uid == userId || canWriteCoachMembership(userId, linkId));
+    }
+
+    // HealthFit Pulse — coleções isoladas (não alteram users/duo/coach/etc.).
+    // App Release pode compilar o cliente, mas a UI fica OFF até a flag de produto.
+    // Sync: apenas getDocuments com limit (sem listeners always-on no cliente).
+    function isPulseModerator() {
+      return request.auth != null
+        && request.auth.token.email == 'healthfit.appreview@gmail.com';
+    }
+
+    match /pulsePosts/{postId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.id is string
+        && request.resource.data.authorName is string
+        && request.resource.data.caption is string
+        && request.resource.data.caption.size() <= 350
+        && request.resource.data.source in ['healthfit-pulse', 'healthfit-pulse-labs']
+        && request.resource.data.keys().hasAll([
+          'id', 'authorId', 'authorName', 'caption', 'createdAt', 'expiresAt', 'source'
+        ]);
+      // Autor: update completo (id/authorId imutáveis). Moderador: só isHidden/reportCount.
+      allow update: if request.auth != null
+        && (
+          (
+            resource.data.authorId == request.auth.uid
+            && request.resource.data.authorId == resource.data.authorId
+            && request.resource.data.id == resource.data.id
+          )
+          || (
+            isPulseModerator()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['isHidden', 'reportCount', 'updatedAt'])
+          )
+        );
+      allow delete: if request.auth != null
+        && (resource.data.authorId == request.auth.uid || isPulseModerator());
+
+      // Reações: doc id = uid do autor da reação.
+      match /reactions/{reactorId} {
+        allow read: if request.auth != null;
+        allow create, update: if request.auth != null
+          && request.auth.uid == reactorId
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.emoji is string
+          && request.resource.data.emoji.size() > 0
+          && request.resource.data.emoji.size() <= 16;
+        allow delete: if request.auth != null && request.auth.uid == reactorId;
+      }
+
+      // Comentários: criar próprio; apagar comentador ou autor do post.
+      match /comments/{commentId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.authorName is string
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.keys().hasAll([
+            'id', 'authorId', 'authorName', 'text', 'createdAt'
+          ]);
+        allow update: if false;
+        allow delete: if request.auth != null
+          && (
+            resource.data.authorId == request.auth.uid
+            || get(/databases/$(database)/documents/pulsePosts/$(postId)).data.authorId
+                == request.auth.uid
+            || isPulseModerator()
+          );
+      }
+    }
+
+    // Perfis públicos do Pulse (People).
+    match /pulseProfiles/{userId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.id == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Seguir: doc id preferencial `${fromUid}_${toUid}`; status pending|accepted.
+    match /pulseFollows/{followId} {
+      allow read: if request.auth != null
+        && (resource.data.fromUserId == request.auth.uid
+            || resource.data.toUserId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.fromUserId == request.auth.uid
+        && request.resource.data.toUserId is string
+        && request.resource.data.toUserId != request.auth.uid
+        && request.resource.data.status in ['pending', 'accepted']
+        && request.resource.data.keys().hasAll([
+          'fromUserId', 'toUserId', 'status', 'createdAt'
+        ]);
+      allow update: if request.auth != null
+        && (resource.data.fromUserId == request.auth.uid
+            || resource.data.toUserId == request.auth.uid)
+        && request.resource.data.fromUserId == resource.data.fromUserId
+        && request.resource.data.toUserId == resource.data.toUserId
+        && request.resource.data.status in ['pending', 'accepted'];
+      allow delete: if request.auth != null
+        && (resource.data.fromUserId == request.auth.uid
+            || resource.data.toUserId == request.auth.uid);
+    }
+
+    // Stories (12h). Mesmos source tags dos posts; caption opcional.
+    match /pulseStories/{storyId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.id is string
+        && request.resource.data.authorName is string
+        && request.resource.data.source in ['healthfit-pulse', 'healthfit-pulse-labs']
+        && request.resource.data.keys().hasAll([
+          'id', 'authorId', 'authorName', 'createdAt', 'expiresAt', 'source'
+        ]);
+      allow update: if request.auth != null
+        && resource.data.authorId == request.auth.uid
+        && request.resource.data.authorId == resource.data.authorId
+        && request.resource.data.id == resource.data.id;
+      allow delete: if request.auth != null
+        && (resource.data.authorId == request.auth.uid || isPulseModerator());
+    }
+
+    // Bloqueios: doc id `${blockerId}_${blockedId}`.
+    match /pulseBlocks/{blockId} {
+      allow read: if request.auth != null
+        && resource.data.blockerId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.blockerId == request.auth.uid
+        && request.resource.data.blockedId is string
+        && request.resource.data.blockedId != request.auth.uid
+        && request.resource.data.keys().hasAll(['blockerId', 'blockedId', 'createdAt']);
+      allow update: if false;
+      allow delete: if request.auth != null
+        && resource.data.blockerId == request.auth.uid;
+    }
+
+    match /pulseReports/{reportId} {
+      allow create: if request.auth != null
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.postId is string
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() > 0
+        && request.resource.data.reason.size() <= 80
+        && request.resource.data.keys().hasAll(['postId', 'reporterId', 'reason', 'createdAt']);
+      allow read: if request.auth != null
+        && (resource.data.reporterId == request.auth.uid || isPulseModerator());
+      allow update, delete: if isPulseModerator();
     }
   }
 }

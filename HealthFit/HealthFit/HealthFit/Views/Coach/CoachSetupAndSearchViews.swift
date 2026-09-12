@@ -267,7 +267,7 @@ struct CoachSearchView: View {
             } header: {
                 Text("Filtros")
             } footer: {
-                Text("Busque por nome, cidade e/ou UF. Só aparecem profissionais com perfil visível na busca.")
+                Text("Busque por nome, cidade e/ou UF. A lista prioriza a região informada e depois mostra profissionais de outras localidades (somente perfis visíveis).")
             }
 
             Section("Resultados") {

@@ -411,13 +411,16 @@ final class CoachService: ObservableObject {
     }
 
     /// Busca alunos no diretório do app (nome / apelido / e-mail).
+    /// Prioriza quem está no mesmo país do profissional; depois outros países.
     func searchStudents(query: String) async -> [UserDirectoryEntry] {
         guard let uid = currentUid else { return [] }
+        let preferCountry = authService?.currentUser?.countryCode
         do {
             return try await ProfileFirestoreService.searchUsers(
                 query: query,
                 excludingUserId: uid,
-                limit: 25
+                limit: 25,
+                preferCountryCode: preferCountry
             )
         } catch {
             lastError = error.localizedDescription

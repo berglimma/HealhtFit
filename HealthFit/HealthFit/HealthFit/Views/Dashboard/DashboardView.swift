@@ -14,6 +14,7 @@ struct DashboardView: View {
     @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var shareCardStore: WorkoutShareCardStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @ObservedObject private var appUpdateService = AppUpdateService.shared
 
     @State private var showWeeklyReport = false
     @State private var showMonthlyReport = false
@@ -46,6 +47,9 @@ struct DashboardView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     headerSection
+                    if appUpdateService.pulseFlagsEpoch >= 0, PulseExperimental.isUIEnabled {
+                        PulseDashboardCard()
+                    }
                     weeklyReportBanner
                     monthlyReportBanner
                     shareCardsSection

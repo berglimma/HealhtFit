@@ -15,6 +15,8 @@ final class AppUpdateService: ObservableObject {
     @Published private(set) var installedVersion: String
     @Published private(set) var updateMessage: String
     @Published private(set) var appStoreURL: URL?
+    /// Incrementado quando flags remotas/locais do Pulse mudam — views observam para re-render.
+    @Published private(set) var pulseFlagsEpoch: Int = 0
 
     private var lastCheckedAt: Date?
     private let minimumRecheckInterval: TimeInterval = 90
@@ -40,15 +42,8 @@ final class AppUpdateService: ObservableObject {
     }
 
     /// Checa App Store + Firestore (`appConfig/ios`) ao abrir / voltar ao app.
+    /// Flags do Pulse (`pulseEnabled`, `pulseCloudSyncEnabled`) são aplicadas mesmo em DEBUG.
     func checkForRequiredUpdate(force: Bool = false) async {
-        #if DEBUG
-        // Em debug/simulador não bloqueia o desenvolvimento local.
-        if ProcessInfo.processInfo.environment["HEALTHFIT_FORCE_UPDATE_CHECK"] != "1" {
-            requiresUpdate = false
-            return
-        }
-        #endif
-
         if !force, let lastCheckedAt,
            Date().timeIntervalSince(lastCheckedAt) < minimumRecheckInterval,
            requiresUpdate {
@@ -68,6 +63,16 @@ final class AppUpdateService: ObservableObject {
 
         let storeInfo = await store
         let remoteConfig = await remote
+
+        applyPulseRemoteFlags(remoteConfig)
+
+        #if DEBUG
+        // Em debug/simulador não bloqueia o desenvolvimento local.
+        if ProcessInfo.processInfo.environment["HEALTHFIT_FORCE_UPDATE_CHECK"] != "1" {
+            requiresUpdate = false
+            return
+        }
+        #endif
 
         if let storeInfo {
             storeVersion = storeInfo.version
@@ -110,6 +115,22 @@ final class AppUpdateService: ObservableObject {
         requiresUpdate = needsUpdate
     }
 
+    /// Notifica a UI após toggles locais (Labs).
+    func notifyPulseLocalFlagChange() {
+        pulseFlagsEpoch &+= 1
+    }
+
+    private func applyPulseRemoteFlags(_ remoteConfig: RemoteAppConfig?) {
+        let ui = remoteConfig?.pulseEnabled ?? false
+        let cloud = remoteConfig?.pulseCloudSyncEnabled ?? false
+        let changed = ui != PulseExperimental.remoteUIEnabled
+            || cloud != PulseExperimental.remoteCloudSyncEnabled
+        PulseExperimental.applyRemoteFlags(uiEnabled: ui, cloudSyncEnabled: cloud)
+        if changed {
+            pulseFlagsEpoch &+= 1
+        }
+    }
+
     func openAppStore() {
         let url = appStoreURL
             ?? URL(string: "https://apps.apple.com/app/id\(Self.fallbackAppStoreId)")
@@ -132,6 +153,9 @@ final class AppUpdateService: ObservableObject {
         var appStoreURL: URL?
         /// Default true — bloqueia se a loja tiver versão maior.
         var forceUpdateOnNewerStoreVersion: Bool
+        /// Kill-switch / rollout do Pulse (default false = off para a maioria).
+        var pulseEnabled: Bool
+        var pulseCloudSyncEnabled: Bool
     }
 
     private func fetchAppStoreVersion() async -> AppStoreLookupResult? {
@@ -179,7 +203,11 @@ final class AppUpdateService: ObservableObject {
                 .document("ios")
                 .getDocument()
             guard let data = snap.data() else {
-                return RemoteAppConfig(forceUpdateOnNewerStoreVersion: true)
+                return RemoteAppConfig(
+                    forceUpdateOnNewerStoreVersion: true,
+                    pulseEnabled: false,
+                    pulseCloudSyncEnabled: false
+                )
             }
             let message = data["updateMessage"] as? String
             let appStoreURLString = data["appStoreURL"] as? String
@@ -191,13 +219,19 @@ final class AppUpdateService: ObservableObject {
                 latestVersion: data["latestVersion"] as? String,
                 message: message,
                 appStoreURL: appStoreURLString.flatMap(URL.init(string:)),
-                forceUpdateOnNewerStoreVersion: force
+                forceUpdateOnNewerStoreVersion: force,
+                pulseEnabled: data["pulseEnabled"] as? Bool ?? false,
+                pulseCloudSyncEnabled: data["pulseCloudSyncEnabled"] as? Bool ?? false
             )
         } catch {
             #if DEBUG
             print("[HealthFit] appConfig/ios read failed: \(error.localizedDescription)")
             #endif
-            return RemoteAppConfig(forceUpdateOnNewerStoreVersion: true)
+            return RemoteAppConfig(
+                forceUpdateOnNewerStoreVersion: true,
+                pulseEnabled: false,
+                pulseCloudSyncEnabled: false
+            )
         }
     }
 

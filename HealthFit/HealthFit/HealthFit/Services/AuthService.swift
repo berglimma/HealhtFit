@@ -779,6 +779,8 @@ final class AuthService: ObservableObject {
         try await ProfileFirestoreService.deleteUserDirectory(userId: userId)
         try await WorkoutFirestoreService.deleteAllUserData(userId: userId)
         try await WorkoutFirestoreService.deleteUserDocument(userId: userId)
+        // Pulse: mesmo com flag de sync OFF (pode haver dados de Labs / sync anterior).
+        try await PulseFirestoreService.deleteAllUserData(userId: userId)
     }
 
     private func purgeLocalData(
@@ -817,6 +819,10 @@ final class AuthService: ObservableObject {
         DailyMorningCheckInService.shared.resetForAccountDeletion()
         DailyEveningCheckInService.shared.resetForAccountDeletion()
         AppIconInactivityService.shared.resetForAccountDeletion()
+
+        PulseMusicPreviewPlayer.shared.stop()
+        PulseLocalStore.shared.clearAllLocalPulseData(reloadDemoIfEnabled: false)
+        PulseExperimental.clearAccountPreferences(userId: uid)
 
         UserDataCleaner.clearAllLocalData(uid: uid, email: email)
     }

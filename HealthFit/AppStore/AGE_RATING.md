@@ -28,6 +28,8 @@ Responda **Nenhuma / None** para quase tudo. Ajustes abaixo:
 
 - Conta: login e-mail, Apple, Google
 - Compras: assinaturas auto-renováveis
-- **UGC / chat:** existe chat **privado** em Dupla/equipe (somente membros do grupo; sem feed público)
-- Controles: usuário pode **denunciar mensagem** (e-mail ao suporte), **sair do grupo** e mensagens expiram (~12h)
-- Idade mínima no app: **16 anos** (independente da faixa gerada pelo questionário Age Rating)
+- **UGC Duo:** chat **privado** em Dupla/equipe (somente membros do grupo)
+- **UGC Pulse (quando habilitado):** feed/stories/comunidades — conteúdo gerado por usuários; gate **18+** no app; denunciar / ocultar / bloquear; moderação via conta de suporte
+- Controles Duo: **denunciar mensagem**, **sair do grupo**, mensagens ~12h
+- Controles Pulse: denunciar post, ocultar, bloquear autor; posts ~24h / stories ~12h
+- Idade mínima geral do app: **16 anos**; Pulse UGC: **18 anos**

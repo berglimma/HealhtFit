@@ -272,14 +272,23 @@ enum ProfileFirestoreService {
 
     /// Busca no diretório por nome, apelido ou e-mail (contém, sem acento).
     /// Com base pequena, lista o diretório e filtra no cliente — mais confiável que só prefixo.
+    /// Resultados priorizam o mesmo `preferCountryCode` (país do buscador) e depois outros países.
     static func searchUsers(
         query: String,
         excludingUserId: String?,
-        limit: Int = 20
+        limit: Int = 20,
+        preferCountryCode: String? = nil
     ) async throws -> [UserDirectoryEntry] {
         guard isAvailable else { return [] }
         let needle = searchableText(query)
         guard needle.count >= 2 else { return [] }
+
+        let preferCountry: String? = {
+            guard let raw = preferCountryCode?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+                return nil
+            }
+            return CountryOption.resolvedCode(raw)
+        }()
 
         let snap = try await directoryCollection()
             .order(by: FieldPath.documentID())
@@ -305,13 +314,13 @@ enum ProfileFirestoreService {
             matches.append(entry)
         }
 
-        let limited = Array(
-            matches
-                .sorted {
-                    $0.shownName.localizedCaseInsensitiveCompare($1.shownName) == .orderedAscending
-                }
-                .prefix(limit)
-        )
+        let ranked = matches.sorted { lhs, rhs in
+            let leftScore = directoryLocalityScore(entry: lhs, preferCountry: preferCountry)
+            let rightScore = directoryLocalityScore(entry: rhs, preferCountry: preferCountry)
+            if leftScore != rightScore { return leftScore > rightScore }
+            return lhs.shownName.localizedCaseInsensitiveCompare(rhs.shownName) == .orderedAscending
+        }
+        let limited = Array(ranked.prefix(limit))
 
         // Garante foto + bandeira na busca (repara diretório incompleto).
         return await withTaskGroup(of: UserDirectoryEntry.self) { group in
@@ -324,10 +333,22 @@ enum ProfileFirestoreService {
             for await item in group {
                 enriched.append(item)
             }
-            return enriched.sorted {
-                $0.shownName.localizedCaseInsensitiveCompare($1.shownName) == .orderedAscending
+            return enriched.sorted { lhs, rhs in
+                let leftScore = directoryLocalityScore(entry: lhs, preferCountry: preferCountry)
+                let rightScore = directoryLocalityScore(entry: rhs, preferCountry: preferCountry)
+                if leftScore != rightScore { return leftScore > rightScore }
+                return lhs.shownName.localizedCaseInsensitiveCompare(rhs.shownName) == .orderedAscending
             }
         }
+    }
+
+    /// 2 = mesmo país, 1 = país desconhecido, 0 = outro país.
+    private static func directoryLocalityScore(entry: UserDirectoryEntry, preferCountry: String?) -> Int {
+        guard let preferCountry, !preferCountry.isEmpty else { return 0 }
+        guard let code = entry.countryCode.map({ CountryOption.resolvedCode($0) }), !code.isEmpty else {
+            return 1
+        }
+        return code.caseInsensitiveCompare(preferCountry) == .orderedSame ? 2 : 0
     }
 
     /// Completa `photoURL` / `countryCode` ausentes e republica no diretório.

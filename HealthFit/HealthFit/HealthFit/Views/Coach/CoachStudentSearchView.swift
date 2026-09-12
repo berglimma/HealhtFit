@@ -17,7 +17,7 @@ struct CoachStudentSearchView: View {
     var body: some View {
         Form {
             Section {
-                Text("Busque alunos pelo nome, apelido ou e-mail. Se a pessoa ainda não tem personal, você pode enviar uma mensagem motivacional com seu interesse e um código de vínculo.")
+                Text("Busque alunos pelo nome, apelido ou e-mail. Resultados do seu país aparecem primeiro; em seguida, outros países. Se a pessoa ainda não tem personal, você pode enviar uma mensagem motivacional com seu interesse e um código de vínculo.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

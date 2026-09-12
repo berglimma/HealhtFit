@@ -6,7 +6,7 @@ enum AppLegalConfiguration {
 
     static let privacyPolicyURL = URL(string: "\(publicBase)/privacidade/")!
     static let termsOfUseURL = URL(string: "\(publicBase)/termos/")!
-    static let supportEmail = "berg.limma@gmail.com"
+    static let supportEmail = "healthfit.appreview@gmail.com"
     /// App Store exige URL https (não mailto) no campo Support URL.
     static let supportURL = URL(string: "\(publicBase)/suporte/")!
     static let marketingURL = URL(string: "\(publicBase)/")!

@@ -147,6 +147,12 @@
 	<string>HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
 	<string>HealthFit adiciona ao Calendário os treinos concluídos no dia.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram</string>
+		<string>instagram-stories</string>
+		<string>whatsapp</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

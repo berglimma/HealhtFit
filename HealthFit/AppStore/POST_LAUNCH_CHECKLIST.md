@@ -30,6 +30,7 @@ Bundle: `luan.com.healthfit.app` · Versão **1.0.0 (4)**
 ## Produto (próximas versões)
 
 - [ ] Corrigir discrepância etária: app declara **16+**, loja mostra **13+** (revisar Age Rating)
+- [ ] **Pulse go-live:** seguir `PULSE_PRODUCTION_CHECKLIST.md` (flags OFF até deploy rules + Connect UGC)
 - [ ] Preencher **Acessibilidade do app** no Connect (VoiceOver, contraste, etc.)
 - [ ] Remover/restringir Cloud Functions internas (`seedCourtesyVouchers`, `ensureAppReviewDemoAccount`) se não forem mais necessárias
 - [ ] Planejar **1.0.1** ou **1.1** com correções de feedback real de usuários

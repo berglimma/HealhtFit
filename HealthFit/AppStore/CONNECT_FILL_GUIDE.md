@@ -89,8 +89,8 @@ Use `AGE_RATING.md`:
 
 - Quase tudo **None**
 - Medical/Treatment Information → **Infrequent/Mild**
-- Declare UGC/chat privado da Dupla (sem feed público)
-- Controles: denunciar mensagem/conversa + sair do grupo + idade mínima 16+
+- Declare UGC: chat Duo privado + Pulse (feed/stories) quando for liberar o recurso
+- Controles: denunciar/bloquear + sair do grupo Duo + idade 16+ app / 18+ Pulse
 
 ---
 
