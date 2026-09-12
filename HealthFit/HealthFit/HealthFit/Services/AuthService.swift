@@ -814,6 +814,7 @@ final class AuthService: ObservableObject {
         MonthlyReportService.shared.reset()
         AssistantSupplementNudgeEngine.reset()
         AssistantRestDayEngine.reset()
+        AssistantBirthdayCongratsEngine.reset()
         WorkoutShareCardStore.shared.reset()
         PostWorkoutCheckInService.shared.resetForAccountDeletion()
         DailyMorningCheckInService.shared.resetForAccountDeletion()

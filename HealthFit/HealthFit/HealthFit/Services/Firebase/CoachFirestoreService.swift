@@ -38,6 +38,37 @@ enum CoachFirestoreService {
     private static var db: Firestore { Firestore.firestore() }
     static var isAvailable: Bool { FirebaseBootstrap.isConfigured }
 
+    // MARK: - Consent (users/{uid})
+
+    /// Espelha o aceite da política do Coach no documento do usuário (sincroniza entre devices).
+    static func saveCoachConsentIfPossible(at date: Date = .now) async {
+        guard isAvailable, let uid = Auth.auth().currentUser?.uid else { return }
+        do {
+            try await db.collection("users").document(uid).setData([
+                "coachConsentVersion": CoachPreferences.consentVersion,
+                "coachConsentAt": Timestamp(date: date),
+                "coachConsentGranted": true,
+                "updatedAt": Timestamp(date: date),
+            ], merge: true)
+        } catch {
+            // Consentimento local já está gravado; falha de rede não bloqueia o fluxo.
+        }
+    }
+
+    static func fetchCoachConsentGranted(uid: String) async -> Bool {
+        guard isAvailable else { return false }
+        do {
+            let snap = try await db.collection("users").document(uid).getDocument()
+            guard let data = snap.data() else { return false }
+            if let granted = data["coachConsentGranted"] as? Bool { return granted }
+            if data["coachConsentAt"] != nil { return true }
+            if let version = data["coachConsentVersion"] as? Int, version > 0 { return true }
+            return false
+        } catch {
+            return false
+        }
+    }
+
     // MARK: - Paths
 
     private static func profiles() -> CollectionReference { db.collection("coachProfiles") }

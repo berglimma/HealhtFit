@@ -419,55 +419,12 @@ struct ActiveCardioView: View {
         .onAppear {
             elapsedSeconds = activeElapsedSeconds()
             syncWithWatch()
-            if isOutdoorGPS {
-                UIApplication.shared.isIdleTimerDisabled = true
-                runTracker.prepareForSession(modality: trackingModality)
-                runTracker.start(modality: trackingModality)
-                if isOutdoorCycling {
-                    roadHazards.refreshSeedIfNeeded(near: runTracker.currentLocation?.coordinate)
-                }
-            }
-            if isWaterSport {
-                jumpMetrics.configure(locationProvider: { [weak runTracker] in
-                    runTracker?.currentLocation
-                })
-                jumpMetrics.start()
-                Task {
-                    _ = await watchConnectivity.attemptSyncWithWatch()
-                    watchConnectivity.requestWatchWaterSportSync()
-                }
-            }
-            if isRowing {
-                let boat = config.rowingSetup?.boatType ?? .singleSkiff
-                rowingMetrics.start(boat: boat)
-                Task {
-                    _ = await watchConnectivity.attemptSyncWithWatch()
-                }
-            }
-            if isClimbing {
-                Task { await startClimbingSupport() }
-            }
-            if isTreadmill {
-                treadmillInclinePercent = config.treadmillSetup?.resolvedInclinePercent ?? 0
-            }
-            if isSwimming {
-                Task {
-                    _ = await watchConnectivity.attemptSyncWithWatch()
-                    watchConnectivity.requestWatchSwimSync()
-                }
-            }
-            if isKitesurf, spotBuddy.canStart,
-               let sessionId = workoutStore.activeSession?.id.uuidString {
-                let user = authService.currentUser
-                let photoURL = user.flatMap { KiteSpotBuddyService.resolvedPhotoURL(for: $0.id) }
-                spotBuddy.start(
-                    sessionId: sessionId,
-                    displayName: user?.greetingName ?? user?.name ?? "Atleta",
-                    photoURL: photoURL
-                )
-                syncWithWatch()
-            }
+            startSessionHardwareIfVisible()
             handleExternalFinishTickIfNeeded()
+        }
+        .onChange(of: workoutStore.isActiveWorkoutMinimized) { _, minimized in
+            guard !minimized, finishedSession == nil, !isFinishing else { return }
+            startSessionHardwareIfVisible()
         }
         .onChange(of: runTracker.currentLocation) { _, location in
             guard isKitesurf, let location else { return }
@@ -2213,6 +2170,60 @@ struct ActiveCardioView: View {
         snapshot.temperatureCelsius = weather?.temperatureCelsius
         snapshot.humidityPercent = weather?.humidityPercent
         return snapshot
+    }
+
+    /// Só liga GPS/sensores quando a tela está visível — evita disputa com CardioSetup no iPhone.
+    private func startSessionHardwareIfVisible() {
+        guard !workoutStore.isActiveWorkoutMinimized, finishedSession == nil, !isFinishing else { return }
+
+        if isOutdoorGPS, !runTracker.isTracking {
+            UIApplication.shared.isIdleTimerDisabled = true
+            runTracker.prepareForSession(modality: trackingModality)
+            runTracker.start(modality: trackingModality)
+            if isOutdoorCycling {
+                roadHazards.refreshSeedIfNeeded(near: runTracker.currentLocation?.coordinate)
+            }
+        }
+        if isWaterSport, !jumpMetrics.isRunning {
+            jumpMetrics.configure(locationProvider: { [weak runTracker] in
+                runTracker?.currentLocation
+            })
+            jumpMetrics.start()
+            Task {
+                _ = await watchConnectivity.attemptSyncWithWatch()
+                watchConnectivity.requestWatchWaterSportSync()
+            }
+        }
+        if isRowing, !rowingMetrics.isRunning {
+            let boat = config.rowingSetup?.boatType ?? .singleSkiff
+            rowingMetrics.start(boat: boat)
+            Task {
+                _ = await watchConnectivity.attemptSyncWithWatch()
+            }
+        }
+        if isClimbing, !climbingMotion.isRunning {
+            Task { await startClimbingSupport() }
+        }
+        if isTreadmill {
+            treadmillInclinePercent = config.treadmillSetup?.resolvedInclinePercent ?? 0
+        }
+        if isSwimming {
+            Task {
+                _ = await watchConnectivity.attemptSyncWithWatch()
+                watchConnectivity.requestWatchSwimSync()
+            }
+        }
+        if isKitesurf, spotBuddy.canStart, !spotBuddy.isActive,
+           let sessionId = workoutStore.activeSession?.id.uuidString {
+            let user = authService.currentUser
+            let photoURL = user.flatMap { KiteSpotBuddyService.resolvedPhotoURL(for: $0.id) }
+            spotBuddy.start(
+                sessionId: sessionId,
+                displayName: user?.greetingName ?? user?.name ?? "Atleta",
+                photoURL: photoURL
+            )
+            syncWithWatch()
+        }
     }
 
     private func finishCardio(autoEndedByInactivity: Bool = false) {

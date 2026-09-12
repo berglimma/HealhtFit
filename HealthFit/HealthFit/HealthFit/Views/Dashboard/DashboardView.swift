@@ -31,6 +31,9 @@ struct DashboardView: View {
     @State private var showShareCardSaveAlert = false
     /// Charts / HealthKit refresh after first layout — avoids hitching the home paint.
     @State private var showHealthCharts = false
+    /// Dia selecionado na faixa semanal (padrão: hoje).
+    @State private var selectedWellnessDay: Date = Calendar.current.startOfDay(for: .now)
+    @State private var sleepHoursDraft: Double = 7
 
     /// Live `WorkoutShareCardView` is fixed ~360×464–568; this scale fits dashboard width when expanded.
     private let shareCardExpandedScale: CGFloat = 0.72
@@ -50,8 +53,7 @@ struct DashboardView: View {
                     if appUpdateService.pulseFlagsEpoch >= 0, PulseExperimental.isUIEnabled {
                         PulseDashboardCard()
                     }
-                    weeklyReportBanner
-                    monthlyReportBanner
+                    weekDayWellnessSection
                     shareCardsSection
                     metricsRow
                     if showHealthCharts {
@@ -74,8 +76,22 @@ struct DashboardView: View {
                 try? await Task.sleep(nanoseconds: 250_000_000)
                 await healthKitManager.refreshFromHealthKit()
             }
+            .task(id: authService.currentUser?.id) {
+                await wellnessService.ensureCurrentWeekLoaded()
+                syncSleepDraft(for: selectedWellnessDay)
+            }
+            .onChange(of: selectedWellnessDay) { _, newDay in
+                syncSleepDraft(for: newDay)
+            }
+            .onChange(of: wellnessService.weekEntriesByDayKey) { _, _ in
+                syncSleepDraft(for: selectedWellnessDay)
+            }
+            .onChange(of: wellnessService.todayEntry) { _, _ in
+                syncSleepDraft(for: selectedWellnessDay)
+            }
             .refreshable {
                 await healthKitManager.refreshFromHealthKit()
+                await wellnessService.ensureCurrentWeekLoaded()
             }
             .sheet(isPresented: $showWeeklyReport) {
                 WeeklyReportView()
@@ -108,120 +124,517 @@ struct DashboardView: View {
         }
     }
 
-    private var weeklyReportBanner: some View {
-        Button {
-            showWeeklyReport = true
-        } label: {
-            HStack(spacing: 14) {
+    @ViewBuilder
+    private var weekDayWellnessSection: some View {
+        let dayKey = DailyWellnessEntry.dayKey(for: selectedWellnessDay)
+        let entry = wellnessService.entry(for: dayKey)
+        let isToday = Calendar.current.isDateInToday(selectedWellnessDay)
+        let waterGoal = authService.currentUser?.recommendedDailyWaterML ?? 2_000
+        let sleepHours = entry.sleepHours ?? sleepHoursDraft
+        let sleepGoalHours: Double = 8
+        let waterPercent = waterGoal > 0
+            ? min(Double(entry.waterIntakeMl) / Double(waterGoal), 1)
+            : 0
+
+        VStack(alignment: .leading, spacing: 14) {
+            weekDayStrip
+
+            sleepDashboardCard(
+                entry: entry,
+                dayKey: dayKey,
+                isToday: isToday,
+                sleepHours: sleepHours,
+                sleepGoalHours: sleepGoalHours
+            )
+
+            waterDashboardCard(
+                entry: entry,
+                dayKey: dayKey,
+                waterGoal: waterGoal,
+                waterPercent: waterPercent
+            )
+
+            reportsSideBySideRow
+
+            dashboardMotivationBanner
+        }
+    }
+
+    private var weekDayStrip: some View {
+        HStack(spacing: 6) {
+            ForEach(currentWeekDates, id: \.self) { date in
+                let selected = Calendar.current.isDate(date, inSameDayAs: selectedWellnessDay)
+                Button {
+                    selectedWellnessDay = date
+                } label: {
+                    VStack(spacing: 4) {
+                        Text(weekdayShortLabel(for: date))
+                            .font(.caption2.weight(.bold))
+                        Text(dayNumberLabel(for: date))
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .foregroundStyle(selected ? Color.white : AppTheme.textSecondary)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(selected ? AppTheme.accent : AppTheme.cardBackground)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(
+                                Calendar.current.isDateInToday(date) && !selected
+                                    ? AppTheme.accent.opacity(0.55)
+                                    : Color.clear,
+                                lineWidth: 1.5
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func sleepDashboardCard(
+        entry: DailyWellnessEntry,
+        dayKey: String,
+        isToday: Bool,
+        sleepHours: Double,
+        sleepGoalHours: Double
+    ) -> some View {
+        let schedule = sleepScheduleEstimate(hours: sleepHours, loggedAt: entry.sleepUpdatedAt)
+        let assessment = entry.sleepHours.map { SleepAssessment.evaluate(hours: $0) }
+            ?? SleepAssessment.evaluate(hours: sleepHours)
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                Label(
+                    isToday ? "Sono de hoje" : "Sono · \(weekdayShortLabel(for: selectedWellnessDay))",
+                    systemImage: "moon.zzz.fill"
+                )
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(String(format: "%.1f h", sleepHours))
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(AppTheme.accent)
+                    Text("Meta: \(Int(sleepGoalHours))h")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+
+            HStack {
+                Spacer()
+                Label(assessment.title, systemImage: assessment.icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(assessment.color)
+            }
+
+            Slider(
+                value: Binding(
+                    get: { entry.sleepHours ?? sleepHoursDraft },
+                    set: { newValue in
+                        sleepHoursDraft = newValue
+                        wellnessService.logSleep(hours: newValue, dayKey: dayKey)
+                    }
+                ),
+                in: 0...12,
+                step: 0.5
+            )
+            .tint(AppTheme.accent)
+
+            HStack(spacing: 8) {
+                sleepMetricTile(
+                    icon: "bed.double.fill",
+                    value: schedule.bedtime,
+                    caption: "Horário de sono"
+                )
+                sleepMetricTile(
+                    icon: "sun.max.fill",
+                    value: schedule.wake,
+                    caption: "Acordou às"
+                )
+                sleepMetricTile(
+                    icon: "stopwatch.fill",
+                    value: schedule.total,
+                    caption: "Tempo total"
+                )
+            }
+        }
+        .padding(16)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private func sleepMetricTile(icon: String, value: String, caption: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(AppTheme.textPrimary)
+                .minimumScaleFactor(0.8)
+                .lineLimit(1)
+            Text(caption)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 6)
+        .background(Color.white.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private func waterDashboardCard(
+        entry: DailyWellnessEntry,
+        dayKey: String,
+        waterGoal: Int,
+        waterPercent: Double
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Label("Água", systemImage: "drop.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.blue)
+
+                Spacer(minLength: 8)
+
+                waterStepButton(systemImage: "minus", enabled: entry.waterIntakeMl > 0) {
+                    let next = max(0, entry.waterIntakeMl - WaterServing.glassML)
+                    wellnessService.updateWaterIntake(next, dayKey: dayKey)
+                }
+
+                Text("\(formatMilliliters(entry.waterIntakeMl)) / \(formatMilliliters(waterGoal)) ml")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                waterStepButton(systemImage: "plus", enabled: entry.waterIntakeMl < WaterServing.maxDailyIntakeML) {
+                    wellnessService.addWater(WaterServing.glassML, dayKey: dayKey)
+                }
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.12))
+                        .frame(height: 10)
+                    Capsule()
+                        .fill(Color.blue)
+                        .frame(width: max(8, geo.size.width * waterPercent), height: 10)
+                }
+                .frame(maxHeight: .infinity, alignment: .center)
+            }
+            .frame(height: 14)
+
+            HStack(spacing: 10) {
+                waterQuickAddButton(title: "+1 copo", icon: "cup.and.saucer.fill") {
+                    wellnessService.addWater(WaterServing.glassML, dayKey: dayKey)
+                }
+                waterQuickAddButton(title: "+1 garrafa", icon: "waterbottle") {
+                    wellnessService.addWater(WaterServing.bottleML, dayKey: dayKey)
+                }
+
+                Spacer(minLength: 4)
+
                 ZStack {
                     Circle()
-                        .fill(AppTheme.accent.opacity(0.2))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "chart.bar.doc.horizontal.fill")
-                        .font(.title3)
-                        .foregroundStyle(AppTheme.accent)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text("Relatório Semanal")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(AppTheme.textPrimary)
-                        if weeklyReportService.isReportAvailable {
-                            Text("NOVO")
-                                .font(.caption2.bold())
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(AppTheme.accentSecondary)
-                                .clipShape(Capsule())
-                        }
-                    }
-
-                    if weeklyReportService.isReportAvailable {
-                        Text("Veja seu progresso e o que melhorar esta semana")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    } else if weeklyReportService.daysUntilNextReport > 0 {
-                        Text("Próximo relatório em \(weeklyReportService.daysUntilNextReport) dia(s)")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    } else {
-                        Text("Acompanhe treinos, calorias e sugestões de melhoria")
-                            .font(.caption)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 5)
+                    Circle()
+                        .trim(from: 0, to: waterPercent)
+                        .stroke(
+                            AppTheme.accent,
+                            style: StrokeStyle(lineWidth: 5, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+                    VStack(spacing: 1) {
+                        Text("\(Int((waterPercent * 100).rounded()))%")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(AppTheme.accent)
+                        Text("da meta")
+                            .font(.system(size: 9, weight: .medium))
                             .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(AppTheme.textSecondary)
+                .frame(width: 58, height: 58)
             }
-            .padding()
-            .background(AppTheme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        }
+        .padding(16)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private func waterStepButton(systemImage: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.bold))
+                .foregroundStyle(enabled ? AppTheme.accent : AppTheme.textSecondary.opacity(0.45))
+                .frame(width: 36, height: 36)
+                .background(
+                    Circle()
+                        .strokeBorder(
+                            enabled ? AppTheme.accent.opacity(0.85) : Color.white.opacity(0.18),
+                            lineWidth: 1.5
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel(systemImage == "plus" ? "Aumentar água" : "Diminuir água")
+    }
+
+    private func waterQuickAddButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule(style: .continuous)
+                        .strokeBorder(AppTheme.accent.opacity(0.85), lineWidth: 1.5)
+                )
         }
         .buttonStyle(.plain)
     }
 
-    private var monthlyReportBanner: some View {
-        Button {
-            showMonthlyReport = true
-        } label: {
-            HStack(spacing: 14) {
+    private var reportsSideBySideRow: some View {
+        HStack(spacing: 10) {
+            compactReportCard(
+                title: "Relatório Semanal",
+                subtitle: weeklyReportSubtitle,
+                icon: "chart.bar.doc.horizontal.fill",
+                iconTint: AppTheme.accent,
+                showsNew: weeklyReportService.isReportAvailable
+            ) {
+                showWeeklyReport = true
+            }
+
+            compactReportCard(
+                title: "Relatório Mensal",
+                subtitle: monthlyReportSubtitle,
+                icon: "calendar.badge.clock",
+                iconTint: AppTheme.accentSecondary,
+                showsNew: monthlyReportService.isReportAvailable
+            ) {
+                showMonthlyReport = true
+            }
+        }
+    }
+
+    private var weeklyReportSubtitle: String {
+        if weeklyReportService.isReportAvailable {
+            return "Veja seu progresso da semana"
+        }
+        if weeklyReportService.daysUntilNextReport > 0 {
+            return "Próximo relatório em \(weeklyReportService.daysUntilNextReport) dia(s)"
+        }
+        return "Acompanhe treinos e calorias"
+    }
+
+    private var monthlyReportSubtitle: String {
+        if monthlyReportService.isReportAvailable {
+            return "Sono, suplementos e medidas"
+        }
+        if monthlyReportService.daysUntilNextReport > 0 {
+            return "Próximo relatório em \(monthlyReportService.daysUntilNextReport) dia(s)"
+        }
+        return "Histórico dos últimos 30 dias"
+    }
+
+    private func compactReportCard(
+        title: String,
+        subtitle: String,
+        icon: String,
+        iconTint: Color,
+        showsNew: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(AppTheme.accentSecondary.opacity(0.2))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "calendar.badge.clock")
-                        .font(.title3)
-                        .foregroundStyle(AppTheme.accentSecondary)
+                        .fill(iconTint.opacity(0.2))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: icon)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(iconTint)
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text("Relatório Mensal")
-                            .font(.subheadline.weight(.semibold))
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 4) {
+                        Text(title)
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(AppTheme.textPrimary)
-                        if monthlyReportService.isReportAvailable {
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.85)
+                        if showsNew {
                             Text("NOVO")
-                                .font(.caption2.bold())
+                                .font(.system(size: 8, weight: .bold))
                                 .foregroundStyle(.white)
-                                .padding(.horizontal, 6)
+                                .padding(.horizontal, 4)
                                 .padding(.vertical, 2)
-                                .background(AppTheme.accent)
+                                .background(iconTint)
                                 .clipShape(Capsule())
                         }
                     }
-
-                    if monthlyReportService.isReportAvailable {
-                        Text("Sono, suplementos, medidas e plano de refeições")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    } else if monthlyReportService.daysUntilNextReport > 0 {
-                        Text("Próximo relatório em \(monthlyReportService.daysUntilNextReport) dia(s)")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    } else {
-                        Text("Histórico de 30 dias com gráficos de sono e suplementos")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
+                    Text(subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
                 }
 
-                Spacer()
+                Spacer(minLength: 0)
 
                 Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
+                    .font(.caption2.weight(.semibold))
                     .foregroundStyle(AppTheme.textSecondary)
             }
-            .padding()
+            .padding(12)
+            .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
             .background(AppTheme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
+    }
+
+    private var dashboardMotivationBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "chart.bar.fill")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Disciplina hoje, resultados amanhã.")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("Pequenas escolhas, grandes conquistas.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            Spacer(minLength: 4)
+
+            VStack(spacing: 4) {
+                Image(systemName: "heart.fill")
+                    .font(.title3)
+                    .foregroundStyle(AppTheme.accent)
+                Text("VOCÊ CONSEGUE!")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(16)
+        .background(
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.06, green: 0.22, blue: 0.12),
+                        Color(red: 0.08, green: 0.14, blue: 0.10),
+                        AppTheme.cardBackground
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Circle()
+                    .fill(AppTheme.accent.opacity(0.12))
+                    .frame(width: 140, height: 140)
+                    .blur(radius: 30)
+                    .offset(x: 110, y: -20)
+                Circle()
+                    .fill(AppTheme.accent.opacity(0.08))
+                    .frame(width: 100, height: 100)
+                    .blur(radius: 24)
+                    .offset(x: -90, y: 30)
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    /// Segunda → domingo da semana corrente.
+    private var currentWeekDates: [Date] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let weekday = calendar.component(.weekday, from: today) // 1 = domingo
+        let mondayOffset = (weekday + 5) % 7
+        guard let monday = calendar.date(byAdding: .day, value: -mondayOffset, to: today) else {
+            return [today]
+        }
+        return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: monday) }
+    }
+
+    private func weekdayShortLabel(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.dateFormat = "EEE"
+        let raw = formatter.string(from: date)
+            .replacingOccurrences(of: ".", with: "")
+            .uppercased()
+        if raw.hasPrefix("SÁB") || raw.hasPrefix("SAB") { return "SÁB" }
+        return String(raw.prefix(3))
+    }
+
+    private func dayNumberLabel(for date: Date) -> String {
+        let day = Calendar.current.component(.day, from: date)
+        return String(day)
+    }
+
+    private func syncSleepDraft(for date: Date) {
+        let key = DailyWellnessEntry.dayKey(for: date)
+        sleepHoursDraft = wellnessService.sleepHours(for: key) ?? 7
+    }
+
+    private func formatMilliliters(_ value: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.numberStyle = .decimal
+        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+    }
+
+    /// Estima horário de dormir / acordar a partir das horas registradas.
+    private func sleepScheduleEstimate(hours: Double, loggedAt: Date?) -> (bedtime: String, wake: String, total: String) {
+        let calendar = Calendar.current
+        var wakeComponents = calendar.dateComponents([.year, .month, .day], from: selectedWellnessDay)
+        if let loggedAt {
+            let hour = calendar.component(.hour, from: loggedAt)
+            let minute = calendar.component(.minute, from: loggedAt)
+            if (5..<14).contains(hour) {
+                wakeComponents.hour = hour
+                wakeComponents.minute = minute
+            } else {
+                wakeComponents.hour = 7
+                wakeComponents.minute = 30
+            }
+        } else {
+            wakeComponents.hour = 7
+            wakeComponents.minute = 30
+        }
+        let wakeDate = calendar.date(from: wakeComponents) ?? selectedWellnessDay
+        let bedDate = wakeDate.addingTimeInterval(-max(hours, 0) * 3600)
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.locale = Locale(identifier: "pt_BR")
+        timeFormatter.dateFormat = "HH:mm"
+
+        let totalHours = Int(hours)
+        let totalMinutes = Int(((hours - Double(totalHours)) * 60).rounded())
+        return (
+            bedtime: timeFormatter.string(from: bedDate),
+            wake: timeFormatter.string(from: wakeDate),
+            total: "\(totalHours)h \(totalMinutes)min"
+        )
     }
 
     private var shareCardsSection: some View {

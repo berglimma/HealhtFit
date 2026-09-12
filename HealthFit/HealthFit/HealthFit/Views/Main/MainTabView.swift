@@ -350,6 +350,12 @@ struct MainTabView: View {
         updateAssistantTabVisibility(for: selectedTab)
         checkInService.refreshAssistantBadge()
         profileReminder.evaluate(for: authService.currentUser)
+        // Sessões cardio órfãs (minimizadas sem UI após bugs do Pulse) voltam à tela.
+        if workoutStore.activeSession != nil,
+           workoutStore.resolvedActiveCardioConfig() != nil,
+           workoutStore.isActiveWorkoutMinimized {
+            workoutStore.resumeActiveWorkout()
+        }
         syncActiveWorkoutHosting()
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(700))

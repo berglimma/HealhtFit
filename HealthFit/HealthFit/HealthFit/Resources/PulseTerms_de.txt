@@ -1,0 +1,160 @@
+NUTZUNGSBEDINGUNGEN — HEALTHFIT PULSE
+(Community für nutzergenerierte Inhalte)
+
+Version: \(termsVersion)
+Zuletzt aktualisiert: September 2026
+
+Diese Bedingungen regeln die Nutzung der Funktion „HealthFit Pulse“ („Pulse“) in der HealthFit-Anwendung. HealthFit unterliegt im Allgemeinen weiterhin den Nutzungsbedingungen und der Datenschutzrichtlinie von HealthFit. Bei einem Konflikt in Bezug auf Pulse gelten diese besonderen Regeln, unbeschadet der Verbraucherrechte.
+
+Pulse kann schrittweise eingeführt werden (nach App-Version oder Remote-Konfiguration). Wenn die Funktion in Ihrem Konto nicht verfügbar ist, gelten diese Regeln, sobald Pulse für Sie aktiviert wird.
+
+Indem Sie auf „Ich habe gelesen und akzeptiere“ tippen, bestätigen Sie, dass Sie diese Bedingungen gelesen, verstanden und akzeptiert haben, und dass Sie erklären, 18 (achtzehn) Jahre oder älter zu sein.
+
+—————————————————————
+1. WAS PULSE IST
+—————————————————————
+
+1.1. Pulse ist HealthFits sozialer Raum zum Teilen von Trainings und Motivation: ein Feed mit Beiträgen (Foto oder kurzes Video), Stories, Bildunterschriften und Text, Musikvorschau-Anhängen von Drittanbieterdiensten, thematischen Communities, Personensuche, Follow-Anfragen mit Freigabe, Likes, Kommentaren, Melden, Ausblenden und Blockieren, leichtem Ranking und Herausforderungen sowie Chat, der auf Personen beschränkt ist, die Ihnen nach Freigabe folgen — entsprechend den in Ihrer Version verfügbaren Funktionen.
+
+1.2. Beiträge können nach etwa 24 (vierundzwanzig) Stunden automatisch ablaufen und gelöscht werden. Stories können nach etwa 12 (zwölf) Stunden ablaufen. Zeiträume können aus betrieblichen und Sicherheitsgründen angepasst werden.
+
+1.3. Videos auf Pulse können eine begrenzte Höchstdauer haben (beispielsweise etwa 30 Sekunden). Angehängte Musikclips können begrenzt sein (beispielsweise bis zu 15 Sekunden Vorschau). Stories im Viewer schreiten nach etwa 15 Sekunden automatisch fort.
+
+1.4. Pulse stellt KEINE medizinische, ernährungsbezogene, psychologische oder personalisierte Trainingsberatung dar. Inhalte anderer Nutzer spiegeln persönliche Meinungen oder Erfahrungen wider. Konsultieren Sie qualifizierte Fachkräfte, bevor Sie Training, Ernährung oder Gesundheitsgewohnheiten ändern.
+
+—————————————————————
+2. BERECHTIGUNG UND ALTER
+—————————————————————
+
+2.1. Die HealthFit-Anwendung kann ab 16 (sechzehn) Jahren verfügbar sein, gemäß ihren allgemeinen Regeln.
+
+2.2. Pulse (UGC, Communities, Stories, Beiträge, Chat unter Followern und soziale Interaktionen) erfordert 18 (achtzehn) Jahre oder älter. Personen unter 18 dürfen Pulse nicht nutzen und keine Inhalte auf Pulse veröffentlichen.
+
+2.3. Eine falsche Altersangabe kann zur Sperrung von Pulse, zur Entfernung von Inhalten und zu anderen angemessenen Maßnahmen führen.
+
+2.4. Sie sind dafür verantwortlich, Ihr Konto vertraulich zu halten und für alle Aktivitäten, die damit in Pulse ausgeführt werden.
+
+—————————————————————
+3. KONTO, PROFIL UND BIO
+—————————————————————
+
+3.1. Sie können auf Pulse eine kurze Bio führen (Zeichenlimit in der App definiert). Veröffentlichen Sie keine sensiblen Daten Dritter, Bankdaten, genaue Adressen von Minderjährigen oder Informationen, die gegen das Gesetz verstoßen.
+
+3.2. Profilfotos und Inhalte müssen die Regeln in Abschnitt 5 (Verhalten) einhalten.
+
+—————————————————————
+4. LIZENZ AN IHREN INHALTEN
+—————————————————————
+
+4.1. Sie behalten die Rechte an den von Ihnen veröffentlichten Inhalten, gewähren HealthFit (und seinen technischen Anbietern) jedoch eine weltweite, nicht ausschließliche, gebührenfreie, übertragbare und unterlizenzierbare Lizenz, diese Inhalte innerhalb der App und der für den Betrieb, die Sicherheit und die Verbesserung von Pulse erforderlichen Kanäle zu hosten, zu speichern, zu reproduzieren, anzuzeigen, im Format anzupassen, zu moderieren, zu entfernen und zu verbreiten.
+
+4.2. Sie erklären, dass Sie die erforderlichen Rechte und Genehmigungen für Fotos, Videos, Text, Musik (soweit die Vorschau-Nutzung gilt) und andere veröffentlichte Elemente besitzen und dass die Veröffentlichung keine Rechte Dritter verletzt (Bild, Stimme, Urheberschaft, Marke usw.).
+
+4.3. Wenn Sie Inhalte entfernen oder wenn sie ablaufen, können Restkopien für begrenzte Zeit in Backups oder Caches verbleiben, gemäß angemessenen technischen Abläufen.
+
+—————————————————————
+5. VERHALTEN UND VERBOTENE INHALTE
+—————————————————————
+
+Es ist untersagt, unter anderem zu veröffentlichen, zu teilen, anzufordern oder zu fördern:
+
+a) Nacktheit, Pornografie, sexuelle Ausbeutung oder sexuelle Inhalte mit Minderjährigen (Nulltoleranz);
+b) Hass, Diskriminierung, Belästigung, Drohungen, Mobbing oder Demütigung;
+c) grundlose grafische Gewalt, Anstiftung zur Selbstverletzung oder extrem gefährliche Praktiken;
+d) illegale Drogen, Handel, illegale Waffen oder kriminelle Aktivitäten;
+e) Spam, Betrug, Phishing, Social Engineering oder irreführende Finanzschemata;
+f) Doxxing (Offenlegung personenbezogener Daten Dritter ohne Rechtsgrundlage);
+g) Identitätsdiebstahl, Fake-Konten oder Manipulation von Engagement;
+h) Inhalte, die geistiges Eigentum oder Persönlichkeitsrechte verletzen;
+i) irreführendes medizinisches Material, das als Diagnose oder garantierte Behandlung dargestellt wird.
+
+HealthFit kann Inhalte entfernen, Funktionen einschränken, Pulse im Konto sperren oder andere Maßnahmen ergreifen — mit oder ohne vorherige Mitteilung —, insbesondere bei Risiko für Personen oder für die Integrität der Community.
+
+—————————————————————
+6. MUSIK UND DRITTANBIETERDIENSTE
+—————————————————————
+
+6.1. Musiksuche und Vorschauen können Drittanbieter-APIs oder -dienste nutzen (beispielsweise Deezer und, soweit verfügbar, andere Anbieter) und unterliegen den Bedingungen und Richtlinien dieser Anbieter.
+
+6.2. HealthFit verkauft nicht den vollständigen Track und ersetzt keine Abonnements dieser Dienste. Typische Nutzung auf Pulse ist eine kurze Vorschau zur Begleitung einer Story/eines Posts, innerhalb der verfügbaren technischen und vertraglichen Grenzen.
+
+6.3. Nichtverfügbarkeit, API-Änderungen, fehlende Vorschau oder Login-/Berechtigungsanforderungen des Anbieters liegen in der Verantwortung des Drittanbieterdienstes. HealthFit garantiert nicht die Kontinuität eines Musikkatalogs.
+
+6.4. Sie dürfen Pulse nicht nutzen, um Musik rechtswidrig oder außerhalb des Umfangs einer autorisierten Vorschau weiterzuverbreiten.
+
+—————————————————————
+7. COMMUNITIES, FOLGEN UND CHAT
+—————————————————————
+
+7.1. Thematische Communities und aktive Cardio-Modalitäten können den Feed filtern und auf Beiträgen erscheinen. Die Teilnahme ist optional und kann in der App widerrufen werden.
+
+7.2. Follow-Anfragen nutzen ein Freigabe-Modell. Community-Chat, sofern verfügbar, ist auf Personen beschränkt, die Ihnen nach Freigabe folgen.
+
+7.3. Blockieren, Ausblenden und Melden sind Sicherheitswerkzeuge der Community. Meldungen können manuell und/oder automatisch geprüft werden.
+
+—————————————————————
+8. GESUNDHEITS- UND SPORTRISIKO
+—————————————————————
+
+8.1. Körperliche Aktivität birgt Verletzungsrisiken. Sie nehmen auf eigene Gefahr teil.
+
+8.2. Veröffentlichen Sie keine Herausforderungen, die zu gefährlichem Übermaß, extremer Dehydration, Essstörungen oder kontraindizierten Praktiken anregen.
+
+8.3. Im medizinischen Notfall wenden Sie sich an lokale Gesundheitsdienste — Pulse ist kein Notfallkanal.
+
+—————————————————————
+9. DATENSCHUTZ UND DATEN (LGPD)
+—————————————————————
+
+9.1. Die Verarbeitung personenbezogener Daten in HealthFit folgt der Datenschutzrichtlinie der App und dem brasilianischen Allgemeinen Datenschutzgesetz (LGPD), soweit anwendbar.
+
+9.2. Auf Pulse können Daten aus Beiträgen, Stories, Bios, Follow-Beziehungen und Community-Präferenzen verarbeitet werden, um die Funktion anzuzeigen, Missbrauch zu moderieren, Sicherheit zu gewährleisten und das Produkt zu verbessern.
+
+9.3. Vermeiden Sie die Veröffentlichung sensibler Daten (detaillierte Gesundheitsinformationen Dritter, Dokumente, Finanzdaten). Inhalte, die Sie veröffentlichen, können für andere Pulse-Nutzer sichtbar sein — gemäß Einstellungen und dem Design der Funktion.
+
+9.4. Anfragen betroffener Personen (Zugang, Berichtigung, Löschung usw.) müssen den in der Datenschutzrichtlinie von HealthFit angegebenen Kanälen folgen (einschließlich der Support-E-Mail der App).
+
+—————————————————————
+10. MODERATION UND SANKTIONEN
+—————————————————————
+
+10.1. Wir können nach unserem Ermessen: Inhalte entfernen; die Sichtbarkeit einschränken; Communities, Stories oder Chat beschränken; den Zugang zu Pulse beenden; und Aufzeichnungen aufbewahren, die für Missbrauchsuntersuchungen oder die Einhaltung von Rechtsvorschriften erforderlich sind.
+
+10.2. Das Unterlassen sofortiger Maßnahmen bei bestimmten Inhalten bedeutet keine Genehmigung und keinen Verzicht auf Rechte.
+
+—————————————————————
+11. VERFÜGBARKEIT
+—————————————————————
+
+11.1. Wir können Pulse-Funktionen für Wartung, Produktentwicklung, Sicherheit oder rechtliche Anforderungen ändern, aussetzen oder einstellen — im gesetzlich zulässigen Umfang.
+
+—————————————————————
+12. HAFTUNGSAUSSCHLÜSSE UND HAFTUNGSBESCHRÄNKUNG
+—————————————————————
+
+12.1. Im maximal gesetzlich zulässigen Umfang haftet HealthFit nicht für: (a) von Nutzern veröffentlichte Inhalte; (b) Verhalten Dritter; (c) Trainings-, Ernährungs- oder Gesundheitsentscheidungen auf Grundlage von Beiträgen; (d) vorübergehende Nichtverfügbarkeit oder Datenverlust durch technische Störungen; (e) Ausfälle von Musikdiensten oder anderen Dritten.
+
+12.2. Nichts in diesen Bedingungen schließt eine Haftung aus, die gesetzlich nicht beschränkt werden kann (beispielsweise gesetzliche Fälle vorsätzlichen Fehlverhaltens oder nicht verzichtbarer Verbraucherrechte, soweit anwendbar).
+
+—————————————————————
+13. ÄNDERUNGEN
+—————————————————————
+
+13.1. Wir können diese Bedingungen aktualisieren. Die aktuelle Version wird oben mit „Version“ gekennzeichnet. Wesentliche Änderungen können eine neue Annahme („Ich habe gelesen und akzeptiere“) mit einer neuen Version erfordern.
+
+—————————————————————
+14. KONTAKT
+—————————————————————
+
+Fragen zu Pulse oder diesen Bedingungen: nutzen Sie die in der HealthFit-App (Profil → Feedback) oder in der Datenschutzrichtlinie angegebenen Support-/Kontaktkanäle.
+
+—————————————————————
+15. ANNAHME
+—————————————————————
+
+Indem Sie die Altersangabe ankreuzen und auf „Ich habe gelesen und akzeptiere“ tippen:
+
+(i) erklären Sie, dass Sie 18 Jahre oder älter sind;
+(ii) bestätigen Sie, dass Sie diese Bedingungen vollständig gelesen haben;
+(iii) stimmen Sie den Verhaltensregeln, der Inhaltslizenz und der Nutzung von Musikvorschauen Dritter zu;
+(iv) erkennen Sie an, dass Pulse keine professionelle Gesundheitsberatung ersetzt.

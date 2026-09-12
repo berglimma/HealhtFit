@@ -20,9 +20,9 @@ enum PulseShareService {
             if let modality = meta.modality, !modality.isEmpty { bits.append(modality) }
             if let duration = meta.durationSeconds, duration > 0 {
                 let minutes = max(1, duration / 60)
-                bits.append("\(minutes) min")
+                bits.append(L10n.Pulse.metaMinutes(minutes))
             }
-            if let intensity = meta.intensity { bits.append("intensidade \(intensity)/10") }
+            if let intensity = meta.intensity { bits.append(L10n.Pulse.metaIntensity(intensity)) }
             if let duo = meta.duoTeamName, !duo.isEmpty { bits.append(duo) }
             if !bits.isEmpty { lines.append(bits.joined(separator: " · ")) }
         }
@@ -113,7 +113,7 @@ enum PulseShareService {
             let maxTextWidth = width - inset * 2
 
             drawText(
-                "HealthFit Pulse",
+                L10n.Pulse.featureName,
                 font: .systemFont(ofSize: 28, weight: .bold),
                 color: accent,
                 in: CGRect(x: inset, y: y, width: maxTextWidth, height: 36)

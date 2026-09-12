@@ -173,6 +173,8 @@ struct HealthChatView: View {
                 assistant.checkRoutineInsightsIfNeeded(context: context)
                 assistant.deliverPendingSupplementAcknowledgmentIfNeeded()
                 assistant.deliverPendingRestDayMessageIfNeeded()
+                // Aniversário: após o bootstrap (e com leve atraso se houver check-in/digitação).
+                deliverBirthdayCongratsSoon()
             }
             .task(id: "climbing-hrv") {
                 latestHRVMs = await HealthKitManager.shared.fetchLatestHRV()
@@ -223,6 +225,7 @@ struct HealthChatView: View {
                         context: context,
                         sessions: workoutStore.sessionHistory
                     )
+                    assistant.checkBirthdayCongratsIfNeeded(context: context)
                     assistant.checkRoutineInsightsIfNeeded(context: context)
                 } else if phase == .background || phase == .inactive {
                     dismissChatKeyboard()
@@ -267,6 +270,7 @@ struct HealthChatView: View {
                         context: context,
                         sessions: workoutStore.sessionHistory
                     )
+                    assistant.checkBirthdayCongratsIfNeeded(context: context)
                     assistant.checkRoutineInsightsIfNeeded(context: context)
                 }
             }
@@ -303,6 +307,19 @@ struct HealthChatView: View {
             assistant.deliverPendingBodyEvolutionAnnouncementIfNeeded()
             assistant.deliverPendingSupplementAcknowledgmentIfNeeded()
             assistant.deliverPendingExternalWorkoutAnnouncementIfNeeded()
+            assistant.checkBirthdayCongratsIfNeeded(context: context)
+        }
+    }
+
+    private func deliverBirthdayCongratsSoon() {
+        AssistantBirthdayCongratsEngine.queueIfNeeded(
+            athleteName: authService.currentUser?.greetingName ?? "Atleta",
+            dateOfBirth: authService.currentUser?.dateOfBirth
+        )
+        assistant.checkBirthdayCongratsIfNeeded(context: context)
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            assistant.checkBirthdayCongratsIfNeeded(context: context)
         }
     }
 

@@ -69,7 +69,7 @@ struct PulsePersonProfileCard: View {
                     Text("\(person.flagEmoji) \(person.countryName) · \(person.regionLabel)")
                         .font(.caption2)
                         .foregroundStyle(AppTheme.textSecondary)
-                    Text(person.bio.isEmpty ? "Sem bio ainda" : person.bio)
+                    Text(person.bio.isEmpty ? L10n.Pulse.noBio : person.bio)
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(2)
@@ -90,7 +90,7 @@ struct PulsePersonProfileCard: View {
     private var followButton: some View {
         switch followStatus {
         case .none:
-            Button("Seguir", action: onFollow)
+            Button(L10n.Pulse.follow, action: onFollow)
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 12)
@@ -98,7 +98,7 @@ struct PulsePersonProfileCard: View {
                 .background(AppTheme.accent)
                 .clipShape(Capsule())
         case .requested:
-            Button("Solicitado") { onCancel?() }
+            Button(L10n.Pulse.requested) { onCancel?() }
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppTheme.textSecondary)
                 .padding(.horizontal, 10)
@@ -106,7 +106,7 @@ struct PulsePersonProfileCard: View {
                 .background(Color.white.opacity(0.08))
                 .clipShape(Capsule())
         case .following:
-            Text("Seguindo")
+            Text(L10n.Pulse.following)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppTheme.accent)
                 .padding(.horizontal, 10)
@@ -115,14 +115,14 @@ struct PulsePersonProfileCard: View {
                 .clipShape(Capsule())
         case .incoming:
             HStack(spacing: 6) {
-                Button("Aceitar") { onAccept?() }
+                Button(L10n.Pulse.accept) { onAccept?() }
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
                     .background(AppTheme.accent)
                     .clipShape(Capsule())
-                Button("Recusar") { onDecline?() }
+                Button(L10n.Pulse.decline) { onDecline?() }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(AppTheme.textSecondary)
             }
@@ -154,7 +154,7 @@ struct PulsePeopleSearchView: View {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(AppTheme.accent)
-                TextField("Buscar por nome", text: $query)
+                TextField(L10n.Pulse.searchName, text: $query)
             }
             .padding(12)
             .background(AppTheme.cardBackground)
@@ -164,7 +164,7 @@ struct PulsePeopleSearchView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
                     Menu {
-                        Button("Todos os países") { selectedCountry = "" }
+                        Button(L10n.Pulse.allCountries) { selectedCountry = "" }
                         ForEach(CountryOption.catalog) { country in
                             Button("\(country.flagEmoji) \(country.name)") {
                                 selectedCountry = country.code
@@ -173,7 +173,7 @@ struct PulsePeopleSearchView: View {
                     } label: {
                         Label(
                             selectedCountry.isEmpty
-                                ? "País"
+                                ? L10n.Pulse.country
                                 : "\(CountryOption.flagEmoji(for: selectedCountry)) \(CountryOption.option(for: selectedCountry)?.name ?? selectedCountry)",
                             systemImage: "globe"
                         )
@@ -189,7 +189,7 @@ struct PulsePeopleSearchView: View {
                         locationHelper.requestLocation()
                     } label: {
                         Label(
-                            locationHelper.isResolving ? "Localizando…" : "Usar localização",
+                            locationHelper.isResolving ? "Localizando…" : L10n.Pulse.useLocation,
                             systemImage: "location.fill"
                         )
                         .font(.caption.weight(.semibold))
@@ -203,14 +203,14 @@ struct PulsePeopleSearchView: View {
                 }
 
                 HStack(spacing: 8) {
-                    TextField("Estado", text: $stateQuery)
+                    TextField(L10n.Pulse.state, text: $stateQuery)
                         .font(.caption)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
                         .background(AppTheme.cardBackground)
                         .clipShape(Capsule())
 
-                    TextField("Cidade", text: $cityQuery)
+                    TextField(L10n.Pulse.city, text: $cityQuery)
                         .font(.caption)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
@@ -291,7 +291,7 @@ struct PulsePeopleSearchView: View {
 
     private var myBioEditor: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Sua bio")
+            Text(L10n.Pulse.yourBio)
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(AppTheme.textPrimary)
 
@@ -310,7 +310,7 @@ struct PulsePeopleSearchView: View {
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
                 Spacer()
-                Button("Salvar bio") {
+                Button(L10n.Pulse.saveBio) {
                     store.upsertMyProfile(
                         userId: currentUserId,
                         displayName: currentUserName,
@@ -491,7 +491,7 @@ struct PulseCommunitiesView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Comunidades temáticas")
+                Text(L10n.Pulse.dashboardCommunities)
                     .font(.title3.bold())
                     .foregroundStyle(AppTheme.textPrimary)
                     .padding(.horizontal, 16)
@@ -524,7 +524,7 @@ struct PulseCommunitiesView: View {
                             accent: AppTheme.accent,
                             imageName: community.coverAsset,
                             systemImage: community.systemImage,
-                            eyebrow: isActive ? "ATIVO" : "ENTRAR",
+                            eyebrow: isActive ? L10n.Pulse.active.uppercased() : "ENTRAR",
                             footerLabels: [
                                 (icon: community.systemImage, text: community.title),
                                 (icon: "person.3.fill", text: "Pulse")
@@ -575,7 +575,7 @@ struct PulseCommunitiesView: View {
                     ForEach(activeCommunities) { community in
                         HStack(spacing: 6) {
                             Label(community.title, systemImage: community.systemImage)
-                            Text("ATIVO")
+                            Text(L10n.Pulse.active.uppercased())
                                 .font(.system(size: 9, weight: .bold))
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
@@ -628,7 +628,7 @@ struct PulseCommunitiesView: View {
                                 Text(post.community.title)
                                     .font(.caption2.weight(.bold))
                                     .foregroundStyle(AppTheme.accent)
-                                Text("ATIVO")
+                                Text(L10n.Pulse.active.uppercased())
                                     .font(.system(size: 9, weight: .bold))
                                     .padding(.horizontal, 5)
                                     .padding(.vertical, 2)
@@ -684,9 +684,9 @@ struct PulseCommunitiesView: View {
                         imageName: exercise.coverImageName,
                         systemImage: exercise.icon,
                         coverColors: exercise.coverColors,
-                        eyebrow: isActive ? "COMUNIDADE · ATIVO" : "COMUNIDADE",
+                        eyebrow: isActive ? "COMUNIDADE · \(L10n.Pulse.active.uppercased())" : "COMUNIDADE",
                         footerLabels: [
-                            (icon: exercise.icon, text: "Cardio"),
+                            (icon: exercise.icon, text: L10n.Pulse.communityCardio),
                             (icon: "person.3.fill", text: "Pulse"),
                             (icon: "flame.fill", text: "\(Int(exercise.caloriesPerMinute))/min")
                         ]
@@ -825,7 +825,7 @@ struct PulseCommunityChatView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Fechar") { dismiss() }
+                    Button(L10n.Pulse.close) { dismiss() }
                 }
             }
         }

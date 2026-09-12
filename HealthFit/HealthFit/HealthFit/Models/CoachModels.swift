@@ -40,12 +40,22 @@ enum CoachChatPolicy {
 
 enum CoachPreferences {
     static let consentKey = "healthFitCoach.consent.v1"
+    static let consentVersion = 1
 
     static var hasConsent: Bool {
         UserDefaults.standard.bool(forKey: consentKey)
     }
 
+    /// Consentimento local + espelho em `users/{uid}` no Firebase (quando autenticado).
     static func grantConsent() {
+        UserDefaults.standard.set(true, forKey: consentKey)
+        Task {
+            await CoachFirestoreService.saveCoachConsentIfPossible()
+        }
+    }
+
+    static func applyFromCloud(granted: Bool) {
+        guard granted else { return }
         UserDefaults.standard.set(true, forKey: consentKey)
     }
 }

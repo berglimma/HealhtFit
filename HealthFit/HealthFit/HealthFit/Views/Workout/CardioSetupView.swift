@@ -2231,9 +2231,12 @@ struct CardioSetupView: View {
             sessionTitle: sessionConfig.title,
             athleteName: athleteName
         )
-        // MainTabView hosts ActiveCardioView for the whole session (minimize-safe).
+        // Overlay do cronômetro sobe primeiro; só depois fecha o setup (sem flash dos cards).
         workoutStore.resumeActiveWorkout()
-        dismiss()
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            dismiss()
+        }
     }
 }
 

@@ -30,7 +30,7 @@ struct PulseMusicPickerView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(AppTheme.accent)
-                    TextField("Buscar música, artista…", text: $query)
+                    TextField(L10n.Pulse.musicSearchPlaceholder, text: $query)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .onSubmit { scheduleSearch(immediate: true) }
@@ -43,7 +43,7 @@ struct PulseMusicPickerView: View {
                     scheduleSearch()
                 }
 
-                Text("Prévia via Deezer.")
+                Text(L10n.Pulse.musicDeezerPreview)
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
                     .padding(.horizontal, 16)
@@ -74,11 +74,11 @@ struct PulseMusicPickerView: View {
                 .scrollContentBackground(.hidden)
             }
             .background(AppTheme.background.ignoresSafeArea())
-            .navigationTitle("Música no story")
+            .navigationTitle(L10n.Pulse.musicClipTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Fechar") { dismiss() }
+                    Button(L10n.Pulse.close) { dismiss() }
                 }
                 if selectedTrack != nil {
                     ToolbarItem(placement: .destructiveAction) {
@@ -200,11 +200,13 @@ struct PulseMusicStickerView: View {
                 Button {
                     previewPlayer.toggle(music: music, loop: true)
                 } label: {
-                    Image(systemName: previewPlayer.isPlayingMusic(music) ? "pause.circle.fill" : "play.circle.fill")
+                    Image(systemName: previewPlayer.isPlayingMusic(music) ? "stop.circle.fill" : "play.circle.fill")
                         .font(.title2)
                         .foregroundStyle(AppTheme.accent)
+                        .contentTransition(.symbolEffect(.replace))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(previewPlayer.isPlayingMusic(music) ? L10n.Pulse.stopMusic : L10n.Pulse.playMusic)
             }
             if let external = music.externalURL, let url = URL(string: external) {
                 Link(destination: url) {
@@ -255,7 +257,7 @@ struct PulseMusicClipEditor: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Trecho da música")
+                    Text(L10n.Pulse.musicClipTitle)
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(AppTheme.textPrimary)
                     Text("Arraste a janela · \(music.clipRangeLabel) · \(Int(windowDuration.rounded()))s")
@@ -270,12 +272,14 @@ struct PulseMusicClipEditor: View {
                         player.playClipPreview(music: music)
                     }
                 } label: {
-                    Image(systemName: player.isPlayingMusic(music) ? "pause.circle.fill" : "play.circle.fill")
+                    Image(systemName: player.isPlayingMusic(music) ? "stop.circle.fill" : "play.circle.fill")
                         .font(.title2)
                         .foregroundStyle(AppTheme.accent)
+                        .contentTransition(.symbolEffect(.replace))
                 }
                 .buttonStyle(.plain)
                 .disabled(music.previewURL == nil || isLoadingDuration)
+                .accessibilityLabel(player.isPlayingMusic(music) ? L10n.Pulse.stopMusic : L10n.Pulse.playMusic)
             }
 
             if isLoadingDuration {
@@ -511,17 +515,24 @@ final class PulseMusicPreviewPlayer: ObservableObject {
             music.clipDurationSeconds,
             PulseExperimental.maxMusicClipSeconds
         )
-        activeMusic = music
-        activeMusicID = music.id
-        currentSeconds = clipStartSeconds
 
         if activeURL == urlString, player != nil {
+            activeMusic = music
+            activeMusicID = music.id
+            currentSeconds = clipStartSeconds
+            // Atualiza o botão imediatamente (antes do seek assíncrono).
+            isPlaying = true
             seekAndPlay(to: clipStartSeconds, generation: generation)
             return
         }
 
         stopKeepingGeneration()
         scrubGeneration = generation
+        // Restaurar identidade DEPOIS do stop (senão o sticker fica em “play”).
+        activeMusic = music
+        activeMusicID = music.id
+        currentSeconds = clipStartSeconds
+        isPlaying = true
         let item = AVPlayerItem(url: url)
         let newPlayer = AVPlayer(playerItem: item)
         player = newPlayer

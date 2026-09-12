@@ -136,6 +136,12 @@ struct RootView: View {
     private func runPostLoginStartupPipeline() async {
         // Phase 1 — local UI state only (MainTab can paint)
         wellnessService.configure(for: authService.currentUser)
+        if let user = authService.currentUser {
+            AssistantBirthdayCongratsEngine.queueIfNeeded(
+                athleteName: user.greetingName,
+                dateOfBirth: user.dateOfBirth
+            )
+        }
         _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
             athleteName: authService.currentUser?.greetingName ?? "Atleta"
         )
@@ -209,6 +215,12 @@ struct RootView: View {
 
         wellnessService.configure(for: authService.currentUser)
         wellnessService.checkInOnAppOpen()
+        if let user = authService.currentUser {
+            AssistantBirthdayCongratsEngine.queueIfNeeded(
+                athleteName: user.greetingName,
+                dateOfBirth: user.dateOfBirth
+            )
+        }
         _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
             athleteName: authService.currentUser?.greetingName ?? "Atleta"
         )

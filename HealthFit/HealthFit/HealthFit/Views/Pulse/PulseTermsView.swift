@@ -28,11 +28,11 @@ struct PulseTermsView: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(AppTheme.accent)
 
-                            Text("Documento completo abaixo. Role até o final para aceitar. Ao continuar, você declara ter 18 anos ou mais.")
+                            Text(L10n.Pulse.termsIntro)
                                 .font(.footnote)
                                 .foregroundStyle(AppTheme.textSecondary)
 
-                            Text("Versão \(PulseExperimental.termsVersion)")
+                            Text(L10n.Pulse.termsVersion(PulseExperimental.termsVersion))
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(AppTheme.textSecondary.opacity(0.85))
 
@@ -62,7 +62,7 @@ struct PulseTermsView: View {
                                     proxy.scrollTo("terms-end", anchor: .bottom)
                                 }
                             } label: {
-                                Text("Ir ao final do texto")
+                                Text(L10n.Pulse.termsScrollHint)
                                     .font(.caption.weight(.bold))
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 10)
@@ -78,36 +78,36 @@ struct PulseTermsView: View {
 
                 VStack(spacing: 12) {
                     Toggle(isOn: $confirmedAge) {
-                        Text("Declaro que tenho 18 anos ou mais e li integralmente estes Termos")
+                        Text(L10n.Pulse.termsDeclareAge)
                             .font(.subheadline)
                     }
                     .tint(AppTheme.accent)
 
-                    Button("Li e aceito") {
+                    Button(L10n.Pulse.termsAccept) {
                         onAccept()
                     }
                     .buttonStyle(PrimaryButtonStyle(isEnabled: canAccept))
                     .disabled(!canAccept)
 
                     if !hasScrolledNearEnd {
-                        Text("Role o documento até o final para liberar o aceite.")
+                        Text(L10n.Pulse.termsScrollHint)
                             .font(.caption2)
                             .foregroundStyle(AppTheme.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    Button("Agora não", role: .cancel, action: onCancel)
+                    Button(L10n.Pulse.termsNotNow, role: .cancel, action: onCancel)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
                 .padding(20)
                 .background(AppTheme.cardBackground)
             }
             .background(AppTheme.background.ignoresSafeArea())
-            .navigationTitle("Termos do Pulse")
+            .navigationTitle(L10n.Pulse.termsTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Fechar", action: onCancel)
+                    Button(L10n.Pulse.close, action: onCancel)
                 }
             }
         }

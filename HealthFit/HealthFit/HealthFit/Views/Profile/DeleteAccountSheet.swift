@@ -25,7 +25,7 @@ struct DeleteAccountSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("Esta ação é permanente. Sua conta HealthFit (treinos, perfil, Duo e dados do Pulse — posts, stories e mídia) será removida da nuvem e deste dispositivo.")
+                    Text(L10n.Pulse.deleteAccountWarning)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }

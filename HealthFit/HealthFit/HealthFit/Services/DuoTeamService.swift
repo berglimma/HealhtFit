@@ -210,7 +210,8 @@ final class DuoTeamService: ObservableObject {
         do {
             return try await ProfileFirestoreService.searchUsers(
                 query: query,
-                excludingUserId: boundUserId
+                excludingUserId: boundUserId,
+                preferCountryCode: boundCountryCode
             )
         } catch {
             print("[HealthFit] Duo user search: \(error.localizedDescription)")

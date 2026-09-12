@@ -38,6 +38,8 @@ final class RunTrackingService: NSObject, ObservableObject {
     private var pedometerRawWhenPaused: Int?
     /// Evita restart agressivo do GPS em cada transição inactive/active (lock/unlock).
     private var lastForegroundResumeAt: Date?
+    /// Evita pedir Always em loop no delegate (EXC_BAD_ACCESS / stack overflow).
+    private var didRequestAlwaysAuthorization = false
     /// Distância mínima entre updates GPS em treino ativo (reduz flood na UI após wake).
     private static let activeDistanceFilterMeters: CLLocationDistance = 6
 
@@ -94,6 +96,7 @@ final class RunTrackingService: NSObject, ObservableObject {
         pedometerRawWhenPaused = nil
         isPaused = false
         isTracking = true
+        didRequestAlwaysAuthorization = false
 
         locationManager.activityType = .fitness
         locationManager.pausesLocationUpdatesAutomatically = false
@@ -222,7 +225,10 @@ final class RunTrackingService: NSObject, ObservableObject {
             locationManager.requestWhenInUseAuthorization()
         case .authorizedWhenInUse:
             // Escalona para Always para continuar a rota com a tela bloqueada.
-            locationManager.requestAlwaysAuthorization()
+            if !didRequestAlwaysAuthorization {
+                didRequestAlwaysAuthorization = true
+                locationManager.requestAlwaysAuthorization()
+            }
         case .denied, .restricted:
             locationDeniedMessage = Self.deniedMessage
         case .authorizedAlways:
@@ -558,10 +564,17 @@ extension RunTrackingService: CLLocationManagerDelegate {
         WeakMainActorBox.schedule(nonisolatedWeakSelf) { this in
             this.authorizationStatus = status
             switch status {
-            case .authorizedAlways, .authorizedWhenInUse:
+            case .authorizedAlways:
                 this.locationDeniedMessage = nil
                 if this.isTracking {
-                    if status == .authorizedWhenInUse {
+                    this.startLocationUpdatesIfAuthorized(forceImmediateFix: true)
+                }
+            case .authorizedWhenInUse:
+                this.locationDeniedMessage = nil
+                if this.isTracking {
+                    // Escala para Always só uma vez — pedir em loop estoura a stack no iPhone.
+                    if !this.didRequestAlwaysAuthorization {
+                        this.didRequestAlwaysAuthorization = true
                         this.locationManager.requestAlwaysAuthorization()
                     }
                     this.startLocationUpdatesIfAuthorized(forceImmediateFix: true)

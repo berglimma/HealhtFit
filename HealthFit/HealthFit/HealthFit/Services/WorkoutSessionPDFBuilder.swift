@@ -1,18 +1,19 @@
 import UIKit
 
 /// PDF do relatório de treino (mesmo conteúdo textual do e-mail ao personal).
-@MainActor
+/// Seguro para `Task.detached` — passe `routeMap` já renderizado na main se precisar do mapa.
 enum WorkoutSessionPDFBuilder {
-    static func makePDF(
+    @MainActor static func makePDF(
         session: WorkoutSession,
         athlete: UserProfile,
-        allSessions: [WorkoutSession] = []
+        allSessions: [WorkoutSession] = [],
+        routeMap: UIImage? = nil
     ) -> URL? {
         let body = WorkoutReportBuilder.emailBody(
             session: session,
             athlete: athlete,
             allSessions: allSessions,
-            routeMapAttachmentIncluded: WorkoutReportBuilder.hasRouteMapForEmail(session)
+            routeMapAttachmentIncluded: routeMap != nil || WorkoutReportBuilder.hasRouteMapForEmail(session)
         )
         let subject = WorkoutReportBuilder.emailSubject(
             session: session,
@@ -44,7 +45,7 @@ enum WorkoutSessionPDFBuilder {
                     layout.draw(line, attrs: HealthFitPDFChrome.bodyAttributes())
                 }
 
-                if let map = WorkoutRouteMapRenderer.renderImage(session: session, width: 1024, height: 640) {
+                if let map = routeMap {
                     layout.addVerticalSpace(8)
                     layout.drawImage(map, height: 200, caption: "Mapa da rota")
                 }

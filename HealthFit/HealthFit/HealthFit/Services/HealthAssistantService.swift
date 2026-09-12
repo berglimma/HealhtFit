@@ -1769,6 +1769,7 @@ final class HealthAssistantService: ObservableObject {
     private var coachComplianceNudgeDelivered = false
     private var restDaySevenDayNudgeDelivered = false
     private var tideAlertDelivered = false
+    private var birthdayCongratsDelivered = false
     private var activePostWorkoutCheckIn: PendingPostWorkoutCheckIn?
     private var isDailyMorningCheckInActive = false
     private var isDailyEveningCheckInActive = false
@@ -2005,6 +2006,7 @@ final class HealthAssistantService: ObservableObject {
         coachComplianceNudgeDelivered = false
         restDaySevenDayNudgeDelivered = false
         tideAlertDelivered = false
+        birthdayCongratsDelivered = false
         replyTask?.cancel()
         messages.append(HealthChatMessage(text: trimmed, isUser: true))
 
@@ -3029,6 +3031,7 @@ final class HealthAssistantService: ObservableObject {
         coachComplianceNudgeDelivered = false
         restDaySevenDayNudgeDelivered = false
         tideAlertDelivered = false
+        birthdayCongratsDelivered = false
         resetWorkoutBuilderDraft()
         resetMealPlanBuilderDraft()
 
@@ -3329,6 +3332,55 @@ final class HealthAssistantService: ObservableObject {
 
         deliverAssistantMessage(text)
         tideAlertDelivered = true
+        lastUserInteractionAt = Date()
+    }
+
+    /// Parabéns de aniversário — mostra no chat do IAssistente (não bloqueia por check-in guiado).
+    func checkBirthdayCongratsIfNeeded(context: HealthAssistantContext) {
+        guard !birthdayCongratsDelivered else { return }
+
+        // Se já estiver digitando outra resposta, tenta de novo em seguida.
+        if isTyping {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                checkBirthdayCongratsIfNeeded(context: context)
+            }
+            return
+        }
+
+        if let pending = AssistantBirthdayCongratsEngine.consumePendingMessage() {
+            if let last = messages.last, !last.isUser, last.text == pending {
+                AssistantBirthdayCongratsEngine.markDelivered()
+                birthdayCongratsDelivered = true
+                return
+            }
+            deliverAssistantMessage(pending)
+            AssistantBirthdayCongratsEngine.markDelivered()
+            birthdayCongratsDelivered = true
+            lastUserInteractionAt = Date()
+            return
+        }
+
+        let dob = context.user?.dateOfBirth
+        guard AssistantBirthdayCongratsEngine.shouldDeliver(dateOfBirth: dob) else {
+            if !AssistantBirthdayCongratsEngine.isBirthday(dateOfBirth: dob)
+                || AssistantBirthdayCongratsEngine.hasDelivered() {
+                birthdayCongratsDelivered = true
+            }
+            return
+        }
+
+        let name = context.user?.greetingName ?? "Atleta"
+        let text = AssistantBirthdayCongratsEngine.message(athleteName: name)
+        if let last = messages.last, !last.isUser, last.text == text {
+            AssistantBirthdayCongratsEngine.markDelivered()
+            birthdayCongratsDelivered = true
+            return
+        }
+
+        deliverAssistantMessage(text)
+        AssistantBirthdayCongratsEngine.markDelivered()
+        birthdayCongratsDelivered = true
         lastUserInteractionAt = Date()
     }
 

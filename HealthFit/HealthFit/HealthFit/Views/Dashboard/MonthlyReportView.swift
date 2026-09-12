@@ -13,6 +13,7 @@ struct MonthlyReportView: View {
     @State private var pdfURL: URL?
     @State private var showPDFShare = false
     @State private var pdfFailed = false
+    @State private var isGeneratingPDF = false
 
     private var report: MonthlyProgressReport {
         monthlyReportService.buildReport(
@@ -46,16 +47,24 @@ struct MonthlyReportView: View {
                     }
 
                     Button {
-                        exportPDF()
+                        Task { await exportPDF() }
                     } label: {
-                        Label("Gerar PDF do relatório", systemImage: "doc.richtext")
+                        HStack {
+                            if isGeneratingPDF { ProgressView().tint(.white) }
+                            Label(
+                                isGeneratingPDF ? "Gerando PDF…" : "Gerar PDF do relatório",
+                                systemImage: "doc.richtext"
+                            )
                             .font(.headline)
                             .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(AppTheme.accent)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(AppTheme.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+                    .disabled(isGeneratingPDF)
+                    .opacity(isGeneratingPDF ? 0.75 : 1)
                 }
                 .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                 .adaptiveContentWidth()
@@ -98,8 +107,14 @@ struct MonthlyReportView: View {
         .requiresSubscription(.monthlyReport)
     }
 
-    private func exportPDF() {
-        guard let url = MonthlyReportPDFBuilder.makePDF(report: report, athleteName: athleteName) else {
+    private func exportPDF() async {
+        guard !isGeneratingPDF else { return }
+        isGeneratingPDF = true
+        defer { isGeneratingPDF = false }
+        try? await Task.sleep(nanoseconds: 80_000_000)
+        let snapshot = report
+        let name = athleteName
+        guard let url = await MonthlyReportPDFBuilder.makePDF(report: snapshot, athleteName: name) else {
             pdfFailed = true
             return
         }

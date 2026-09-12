@@ -71,8 +71,12 @@ struct WorkoutShareCardView: View {
         return needsExtraTextSpace ? Self.expandedTextCardHeight : Self.standardCardHeight
     }
 
+    /// Quando false (export ImageRenderer/JPEG), o fundo preenche o retângulo inteiro —
+    /// evita cantos pretos transparentes após compressão.
+    var clipsRoundedCorners: Bool = true
+
     var body: some View {
-        ZStack {
+        let card = ZStack {
             backgroundLayer
 
             if isRunning {
@@ -82,7 +86,12 @@ struct WorkoutShareCardView: View {
             }
         }
         .frame(width: Self.cardWidth, height: cardHeight)
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+
+        if clipsRoundedCorners {
+            card.clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        } else {
+            card
+        }
     }
 
     // MARK: - Standard (força / cardio genérico / meditação)
@@ -911,7 +920,7 @@ struct ShareCardRouteMapView: View {
                         }
                         .stroke(
                             segment.color,
-                            style: StrokeStyle(lineWidth: 3.5, lineCap: .round, lineJoin: .round)
+                            style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round)
                         )
                     }
                 }
@@ -1043,7 +1052,8 @@ enum WorkoutShareCardRenderer {
             athleteName: athleteName,
             motivationLine: motivationLine,
             recentSessions: recentSessions,
-            profileImage: profileImage
+            profileImage: profileImage,
+            clipsRoundedCorners: false
         )
         let renderer = ImageRenderer(content: card)
         renderer.scale = 3

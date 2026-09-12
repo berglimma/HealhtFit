@@ -1,0 +1,850 @@
+{
+  "pulse.feature_name": {
+    "pt-BR": "HealthFit Pulse",
+    "en": "HealthFit Pulse",
+    "es": "HealthFit Pulse",
+    "fr": "HealthFit Pulse",
+    "de": "HealthFit Pulse",
+    "it": "HealthFit Pulse"
+  },
+  "pulse.tagline": {
+    "pt-BR": "Sozinho você treina. Junto, você permanece.",
+    "en": "Alone you train. Together, you stay.",
+    "es": "Solo entrenas. Juntos, permaneces.",
+    "fr": "Seul tu t’entraînes. Ensemble, tu restes.",
+    "de": "Allein trainierst du. Gemeinsam bleibst du.",
+    "it": "Da solo ti alleni. Insieme, resti."
+  },
+  "pulse.community.musculacao": {
+    "pt-BR": "Musculação",
+    "en": "Strength",
+    "es": "Musculación",
+    "fr": "Musculation",
+    "de": "Krafttraining",
+    "it": "Muscolazione"
+  },
+  "pulse.community.cardio": {
+    "pt-BR": "Cardio",
+    "en": "Cardio",
+    "es": "Cardio",
+    "fr": "Cardio",
+    "de": "Cardio",
+    "it": "Cardio"
+  },
+  "pulse.community.kite": {
+    "pt-BR": "Kite",
+    "en": "Kite",
+    "es": "Kite",
+    "fr": "Kite",
+    "de": "Kite",
+    "it": "Kite"
+  },
+  "pulse.community.nutricao": {
+    "pt-BR": "Nutrição",
+    "en": "Nutrition",
+    "es": "Nutrición",
+    "fr": "Nutrition",
+    "de": "Ernährung",
+    "it": "Nutrizione"
+  },
+  "pulse.tab.feed": {
+    "pt-BR": "Feed",
+    "en": "Feed",
+    "es": "Feed",
+    "fr": "Fil",
+    "de": "Feed",
+    "it": "Feed"
+  },
+  "pulse.tab.post": {
+    "pt-BR": "Postar",
+    "en": "Post",
+    "es": "Publicar",
+    "fr": "Publier",
+    "de": "Posten",
+    "it": "Pubblica"
+  },
+  "pulse.tab.community": {
+    "pt-BR": "Comunidade",
+    "en": "Community",
+    "es": "Comunidad",
+    "fr": "Communauté",
+    "de": "Community",
+    "it": "Community"
+  },
+  "pulse.tab.people": {
+    "pt-BR": "Pessoas",
+    "en": "People",
+    "es": "Personas",
+    "fr": "Personnes",
+    "de": "Personen",
+    "it": "Persone"
+  },
+  "pulse.close": {
+    "pt-BR": "Fechar",
+    "en": "Close",
+    "es": "Cerrar",
+    "fr": "Fermer",
+    "de": "Schließen",
+    "it": "Chiudi"
+  },
+  "pulse.ok": {
+    "pt-BR": "OK",
+    "en": "OK",
+    "es": "OK",
+    "fr": "OK",
+    "de": "OK",
+    "it": "OK"
+  },
+  "pulse.cancel": {
+    "pt-BR": "Cancelar",
+    "en": "Cancel",
+    "es": "Cancelar",
+    "fr": "Annuler",
+    "de": "Abbrechen",
+    "it": "Annulla"
+  },
+  "pulse.save": {
+    "pt-BR": "Salvar",
+    "en": "Save",
+    "es": "Guardar",
+    "fr": "Enregistrer",
+    "de": "Speichern",
+    "it": "Salva"
+  },
+  "pulse.active": {
+    "pt-BR": "Ativo",
+    "en": "Active",
+    "es": "Activo",
+    "fr": "Actif",
+    "de": "Aktiv",
+    "it": "Attivo"
+  },
+  "pulse.daily_challenge": {
+    "pt-BR": "Desafio do dia",
+    "en": "Daily challenge",
+    "es": "Desafío del día",
+    "fr": "Défi du jour",
+    "de": "Tägliche Herausforderung",
+    "it": "Sfida del giorno"
+  },
+  "pulse.weekly_highlight": {
+    "pt-BR": "Destaque da semana",
+    "en": "Weekly highlight",
+    "es": "Destacado de la semana",
+    "fr": "Temps fort de la semaine",
+    "de": "Highlight der Woche",
+    "it": "Highlight della settimana"
+  },
+  "pulse.light_ranking": {
+    "pt-BR": "Ranking leve",
+    "en": "Light ranking",
+    "es": "Ranking ligero",
+    "fr": "Classement léger",
+    "de": "Leichtes Ranking",
+    "it": "Classifica leggera"
+  },
+  "pulse.empty_feed_title": {
+    "pt-BR": "Seu feed está quieto",
+    "en": "Your feed is quiet",
+    "es": "Tu feed está tranquilo",
+    "fr": "Votre fil est calme",
+    "de": "Dein Feed ist ruhig",
+    "it": "Il tuo feed è silenzioso"
+  },
+  "pulse.empty_feed_body_no_workout": {
+    "pt-BR": "Complete um treino e compartilhe no Pulse para começar.",
+    "en": "Complete a workout and share it on Pulse to get started.",
+    "es": "Completa un entrenamiento y compártelo en Pulse para empezar.",
+    "fr": "Terminez un entraînement et partagez-le sur Pulse pour commencer.",
+    "de": "Absolviere ein Training und teile es auf Pulse, um loszulegen.",
+    "it": "Completa un allenamento e condividilo su Pulse per iniziare."
+  },
+  "pulse.empty_feed_share_workout": {
+    "pt-BR": "Compartilhar “%@” no Pulse?",
+    "en": "Share “%@” on Pulse?",
+    "es": "¿Compartir “%@” en Pulse?",
+    "fr": "Partager « %@ » sur Pulse ?",
+    "de": "„%@“ auf Pulse teilen?",
+    "it": "Condividere “%@” su Pulse?"
+  },
+  "pulse.publish": {
+    "pt-BR": "Publicar",
+    "en": "Publish",
+    "es": "Publicar",
+    "fr": "Publier",
+    "de": "Veröffentlichen",
+    "it": "Pubblica"
+  },
+  "pulse.publish_workout": {
+    "pt-BR": "Publicar treino",
+    "en": "Publish workout",
+    "es": "Publicar entrenamiento",
+    "fr": "Publier l'entraînement",
+    "de": "Training veröffentlichen",
+    "it": "Pubblica allenamento"
+  },
+  "pulse.share_on_pulse": {
+    "pt-BR": "Compartilhar no Pulse",
+    "en": "Share on Pulse",
+    "es": "Compartir en Pulse",
+    "fr": "Partager sur Pulse",
+    "de": "Auf Pulse teilen",
+    "it": "Condividi su Pulse"
+  },
+  "pulse.share_instagram": {
+    "pt-BR": "Compartilhar no Instagram",
+    "en": "Share on Instagram",
+    "es": "Compartir en Instagram",
+    "fr": "Partager sur Instagram",
+    "de": "Auf Instagram teilen",
+    "it": "Condividi su Instagram"
+  },
+  "pulse.age_gate_title": {
+    "pt-BR": "Pulse é para maiores de %lld anos",
+    "en": "Pulse is for ages %lld+",
+    "es": "Pulse es para mayores de %lld años",
+    "fr": "Pulse est réservé aux %lld ans et plus",
+    "de": "Pulse ist für Nutzer ab %lld Jahren",
+    "it": "Pulse è per chi ha %lld anni o più"
+  },
+  "pulse.age_gate_body_known": {
+    "pt-BR": "Sua idade registrada é %lld. O Pulse exige %lld anos ou mais.",
+    "en": "Your recorded age is %lld. Pulse requires age %lld or older.",
+    "es": "Tu edad registrada es %lld. Pulse exige %lld años o más.",
+    "fr": "Votre âge enregistré est %lld. Pulse exige %lld ans ou plus.",
+    "de": "Dein gespeichertes Alter ist %lld. Pulse erfordert %lld Jahre oder älter.",
+    "it": "La tua età registrata è %lld. Pulse richiede %lld anni o più."
+  },
+  "pulse.age_gate_body_unknown": {
+    "pt-BR": "Para usar o Pulse, você precisa ter %lld anos ou mais.",
+    "en": "To use Pulse, you must be %lld years of age or older.",
+    "es": "Para usar Pulse, debes tener %lld años o más.",
+    "fr": "Pour utiliser Pulse, vous devez avoir %lld ans ou plus.",
+    "de": "Um Pulse zu nutzen, musst du %lld Jahre oder älter sein.",
+    "it": "Per usare Pulse, devi avere %lld anni o più."
+  },
+  "pulse.terms.title": {
+    "pt-BR": "Termos do Pulse",
+    "en": "Pulse Terms",
+    "es": "Términos de Pulse",
+    "fr": "Conditions Pulse",
+    "de": "Pulse-Bedingungen",
+    "it": "Termini di Pulse"
+  },
+  "pulse.terms.intro": {
+    "pt-BR": "Leia até o final e aceite para continuar.",
+    "en": "Read to the end and accept to continue.",
+    "es": "Lee hasta el final y acepta para continuar.",
+    "fr": "Lisez jusqu'à la fin et acceptez pour continuer.",
+    "de": "Lies bis zum Ende und akzeptiere, um fortzufahren.",
+    "it": "Leggi fino alla fine e accetta per continuare."
+  },
+  "pulse.terms.version": {
+    "pt-BR": "Versão %@",
+    "en": "Version %@",
+    "es": "Versión %@",
+    "fr": "Version %@",
+    "de": "Version %@",
+    "it": "Versione %@"
+  },
+  "pulse.terms.scroll_end": {
+    "pt-BR": "Você chegou ao final dos termos.",
+    "en": "You reached the end of the terms.",
+    "es": "Llegaste al final de los términos.",
+    "fr": "Vous avez atteint la fin des conditions.",
+    "de": "Du hast das Ende der Bedingungen erreicht.",
+    "it": "Hai raggiunto la fine dei termini."
+  },
+  "pulse.terms.declare_age": {
+    "pt-BR": "Declaro ter 18 anos ou mais",
+    "en": "I declare that I am 18 or older",
+    "es": "Declaro tener 18 años o más",
+    "fr": "Je déclare avoir 18 ans ou plus",
+    "de": "Ich erkläre, dass ich 18 Jahre oder älter bin",
+    "it": "Dichiaro di avere 18 anni o più"
+  },
+  "pulse.terms.accept": {
+    "pt-BR": "Li e aceito",
+    "en": "I have read and accept",
+    "es": "He leído y acepto",
+    "fr": "J'ai lu et j'accepte",
+    "de": "Ich habe gelesen und akzeptiere",
+    "it": "Ho letto e accetto"
+  },
+  "pulse.terms.scroll_hint": {
+    "pt-BR": "Role até o final para habilitar o aceite",
+    "en": "Scroll to the end to enable acceptance",
+    "es": "Desplázate hasta el final para habilitar la aceptación",
+    "fr": "Faites défiler jusqu'à la fin pour activer l'acceptation",
+    "de": "Scrolle bis zum Ende, um die Annahme zu aktivieren",
+    "it": "Scorri fino alla fine per abilitare l'accettazione"
+  },
+  "pulse.terms.not_now": {
+    "pt-BR": "Agora não",
+    "en": "Not now",
+    "es": "Ahora no",
+    "fr": "Pas maintenant",
+    "de": "Nicht jetzt",
+    "it": "Non ora"
+  },
+  "pulse.story.yours": {
+    "pt-BR": "Seu story",
+    "en": "Your story",
+    "es": "Tu story",
+    "fr": "Votre story",
+    "de": "Deine Story",
+    "it": "La tua story"
+  },
+  "pulse.story.new": {
+    "pt-BR": "Novo story",
+    "en": "New story",
+    "es": "Nuevo story",
+    "fr": "Nouvelle story",
+    "de": "Neue Story",
+    "it": "Nuova story"
+  },
+  "pulse.story.publish": {
+    "pt-BR": "Publicar story",
+    "en": "Publish story",
+    "es": "Publicar story",
+    "fr": "Publier la story",
+    "de": "Story veröffentlichen",
+    "it": "Pubblica story"
+  },
+  "pulse.story.add_music": {
+    "pt-BR": "Adicionar música",
+    "en": "Add music",
+    "es": "Añadir música",
+    "fr": "Ajouter de la musique",
+    "de": "Musik hinzufügen",
+    "it": "Aggiungi musica"
+  },
+  "pulse.story.delete": {
+    "pt-BR": "Excluir story",
+    "en": "Delete story",
+    "es": "Eliminar story",
+    "fr": "Supprimer la story",
+    "de": "Story löschen",
+    "it": "Elimina story"
+  },
+  "pulse.follow": {
+    "pt-BR": "Seguir",
+    "en": "Follow",
+    "es": "Seguir",
+    "fr": "Suivre",
+    "de": "Folgen",
+    "it": "Segui"
+  },
+  "pulse.requested": {
+    "pt-BR": "Solicitado",
+    "en": "Requested",
+    "es": "Solicitado",
+    "fr": "Demandé",
+    "de": "Angefragt",
+    "it": "Richiesto"
+  },
+  "pulse.following": {
+    "pt-BR": "Seguindo",
+    "en": "Following",
+    "es": "Siguiendo",
+    "fr": "Abonné",
+    "de": "Folgend",
+    "it": "Segui già"
+  },
+  "pulse.accept": {
+    "pt-BR": "Aceitar",
+    "en": "Accept",
+    "es": "Aceptar",
+    "fr": "Accepter",
+    "de": "Annehmen",
+    "it": "Accetta"
+  },
+  "pulse.decline": {
+    "pt-BR": "Recusar",
+    "en": "Decline",
+    "es": "Rechazar",
+    "fr": "Refuser",
+    "de": "Ablehnen",
+    "it": "Rifiuta"
+  },
+  "pulse.search_name": {
+    "pt-BR": "Buscar nome",
+    "en": "Search name",
+    "es": "Buscar nombre",
+    "fr": "Rechercher un nom",
+    "de": "Name suchen",
+    "it": "Cerca nome"
+  },
+  "pulse.all_countries": {
+    "pt-BR": "Todos os países",
+    "en": "All countries",
+    "es": "Todos los países",
+    "fr": "Tous les pays",
+    "de": "Alle Länder",
+    "it": "Tutti i paesi"
+  },
+  "pulse.country": {
+    "pt-BR": "País",
+    "en": "Country",
+    "es": "País",
+    "fr": "Pays",
+    "de": "Land",
+    "it": "Paese"
+  },
+  "pulse.state": {
+    "pt-BR": "Estado",
+    "en": "State",
+    "es": "Estado",
+    "fr": "État",
+    "de": "Bundesland",
+    "it": "Stato"
+  },
+  "pulse.city": {
+    "pt-BR": "Cidade",
+    "en": "City",
+    "es": "Ciudad",
+    "fr": "Ville",
+    "de": "Stadt",
+    "it": "Città"
+  },
+  "pulse.use_location": {
+    "pt-BR": "Usar localização",
+    "en": "Use location",
+    "es": "Usar ubicación",
+    "fr": "Utiliser la localisation",
+    "de": "Standort verwenden",
+    "it": "Usa posizione"
+  },
+  "pulse.no_bio": {
+    "pt-BR": "Sem bio",
+    "en": "No bio",
+    "es": "Sin bio",
+    "fr": "Pas de bio",
+    "de": "Keine Bio",
+    "it": "Nessuna bio"
+  },
+  "pulse.your_bio": {
+    "pt-BR": "Sua bio",
+    "en": "Your bio",
+    "es": "Tu bio",
+    "fr": "Votre bio",
+    "de": "Deine Bio",
+    "it": "La tua bio"
+  },
+  "pulse.save_bio": {
+    "pt-BR": "Salvar bio",
+    "en": "Save bio",
+    "es": "Guardar bio",
+    "fr": "Enregistrer la bio",
+    "de": "Bio speichern",
+    "it": "Salva bio"
+  },
+  "pulse.composer.new_post": {
+    "pt-BR": "Novo post",
+    "en": "New post",
+    "es": "Nueva publicación",
+    "fr": "Nouvelle publication",
+    "de": "Neuer Post",
+    "it": "Nuovo post"
+  },
+  "pulse.composer.edit_post": {
+    "pt-BR": "Editar post",
+    "en": "Edit post",
+    "es": "Editar publicación",
+    "fr": "Modifier la publication",
+    "de": "Post bearbeiten",
+    "it": "Modifica post"
+  },
+  "pulse.composer.caption": {
+    "pt-BR": "Legenda",
+    "en": "Caption",
+    "es": "Leyenda",
+    "fr": "Légende",
+    "de": "Bildunterschrift",
+    "it": "Didascalia"
+  },
+  "pulse.composer.community": {
+    "pt-BR": "Comunidade",
+    "en": "Community",
+    "es": "Comunidad",
+    "fr": "Communauté",
+    "de": "Community",
+    "it": "Community"
+  },
+  "pulse.composer.music_optional": {
+    "pt-BR": "Música (opcional)",
+    "en": "Music (optional)",
+    "es": "Música (opcional)",
+    "fr": "Musique (facultatif)",
+    "de": "Musik (optional)",
+    "it": "Musica (opzionale)"
+  },
+  "pulse.composer.media": {
+    "pt-BR": "Mídia",
+    "en": "Media",
+    "es": "Medios",
+    "fr": "Médias",
+    "de": "Medien",
+    "it": "Media"
+  },
+  "pulse.menu.edit": {
+    "pt-BR": "Editar",
+    "en": "Edit",
+    "es": "Editar",
+    "fr": "Modifier",
+    "de": "Bearbeiten",
+    "it": "Modifica"
+  },
+  "pulse.menu.delete": {
+    "pt-BR": "Excluir",
+    "en": "Delete",
+    "es": "Eliminar",
+    "fr": "Supprimer",
+    "de": "Löschen",
+    "it": "Elimina"
+  },
+  "pulse.menu.report": {
+    "pt-BR": "Denunciar",
+    "en": "Report",
+    "es": "Denunciar",
+    "fr": "Signaler",
+    "de": "Melden",
+    "it": "Segnala"
+  },
+  "pulse.menu.hide": {
+    "pt-BR": "Ocultar",
+    "en": "Hide",
+    "es": "Ocultar",
+    "fr": "Masquer",
+    "de": "Ausblenden",
+    "it": "Nascondi"
+  },
+  "pulse.menu.block": {
+    "pt-BR": "Bloquear",
+    "en": "Block",
+    "es": "Bloquear",
+    "fr": "Bloquer",
+    "de": "Blockieren",
+    "it": "Blocca"
+  },
+  "pulse.menu.share_instagram": {
+    "pt-BR": "Compartilhar no Instagram",
+    "en": "Share on Instagram",
+    "es": "Compartir en Instagram",
+    "fr": "Partager sur Instagram",
+    "de": "Auf Instagram teilen",
+    "it": "Condividi su Instagram"
+  },
+  "pulse.error.media_save": {
+    "pt-BR": "Não foi possível salvar a mídia.",
+    "en": "Could not save the media.",
+    "es": "No se pudo guardar el medio.",
+    "fr": "Impossible d'enregistrer le média.",
+    "de": "Medien konnten nicht gespeichert werden.",
+    "it": "Impossibile salvare il media."
+  },
+  "pulse.error.video_too_long": {
+    "pt-BR": "O vídeo deve ter no máximo %d segundos.",
+    "en": "Video must be at most %d seconds.",
+    "es": "El video debe durar como máximo %d segundos.",
+    "fr": "La vidéo doit durer au maximum %d secondes.",
+    "de": "Das Video darf höchstens %d Sekunden lang sein.",
+    "it": "Il video deve durare al massimo %d secondi."
+  },
+  "pulse.error.video_disabled": {
+    "pt-BR": "Vídeo temporariamente indisponível.",
+    "en": "Video temporarily unavailable.",
+    "es": "Video temporalmente no disponible.",
+    "fr": "Vidéo temporairement indisponible.",
+    "de": "Video vorübergehend nicht verfügbar.",
+    "it": "Video temporaneamente non disponibile."
+  },
+  "pulse.notify.report_title": {
+    "pt-BR": "Denúncia recebida",
+    "en": "Report received",
+    "es": "Denuncia recibida",
+    "fr": "Signalement reçu",
+    "de": "Meldung eingegangen",
+    "it": "Segnalazione ricevuta"
+  },
+  "pulse.notify.report_body": {
+    "pt-BR": "Obrigado. Vamos analisar o conteúdo.",
+    "en": "Thank you. We will review the content.",
+    "es": "Gracias. Revisaremos el contenido.",
+    "fr": "Merci. Nous allons examiner le contenu.",
+    "de": "Danke. Wir werden den Inhalt prüfen.",
+    "it": "Grazie. Esamineremo il contenuto."
+  },
+  "pulse.notify.follow_request_title": {
+    "pt-BR": "Novo pedido para seguir",
+    "en": "New follow request",
+    "es": "Nueva solicitud de seguimiento",
+    "fr": "Nouvelle demande de suivi",
+    "de": "Neue Follow-Anfrage",
+    "it": "Nuova richiesta di follow"
+  },
+  "pulse.notify.follow_request_body": {
+    "pt-BR": "%@ quer te seguir no Pulse.",
+    "en": "%@ wants to follow you on Pulse.",
+    "es": "%@ quiere seguirte en Pulse.",
+    "fr": "%@ souhaite vous suivre sur Pulse.",
+    "de": "%@ möchte dir auf Pulse folgen.",
+    "it": "%@ vuole seguirti su Pulse."
+  },
+  "pulse.notify.following_title": {
+    "pt-BR": "Agora você está seguindo",
+    "en": "You are now following",
+    "es": "Ahora estás siguiendo",
+    "fr": "Vous suivez maintenant",
+    "de": "Du folgst jetzt",
+    "it": "Ora stai seguendo"
+  },
+  "pulse.notify.following_body": {
+    "pt-BR": "Seu pedido foi aceito.",
+    "en": "Your request was accepted.",
+    "es": "Tu solicitud fue aceptada.",
+    "fr": "Votre demande a été acceptée.",
+    "de": "Deine Anfrage wurde angenommen.",
+    "it": "La tua richiesta è stata accettata."
+  },
+  "pulse.notify.new_post_title": {
+    "pt-BR": "Novo post no Pulse",
+    "en": "New post on Pulse",
+    "es": "Nueva publicación en Pulse",
+    "fr": "Nouvelle publication sur Pulse",
+    "de": "Neuer Post auf Pulse",
+    "it": "Nuovo post su Pulse"
+  },
+  "pulse.notify.new_post_body": {
+    "pt-BR": "%@ publicou: %@",
+    "en": "%@ posted: %@",
+    "es": "%@ publicó: %@",
+    "fr": "%@ a publié : %@",
+    "de": "%@ hat gepostet: %@",
+    "it": "%@ ha pubblicato: %@"
+  },
+  "pulse.caption.workout_default": {
+    "pt-BR": "Acabei de treinar: %@. %@",
+    "en": "Just finished training: %@. %@",
+    "es": "Acabo de entrenar: %@. %@",
+    "fr": "Je viens de m'entraîner : %@. %@",
+    "de": "Gerade trainiert: %@. %@",
+    "it": "Ho appena allenato: %@. %@"
+  },
+  "pulse.share.hint_default": {
+    "pt-BR": "Adicione uma legenda ou deixe a padrão do treino.",
+    "en": "Add a caption or keep the default workout caption.",
+    "es": "Añade una leyenda o deja la predeterminada del entrenamiento.",
+    "fr": "Ajoutez une légende ou gardez celle par défaut de l'entraînement.",
+    "de": "Füge eine Bildunterschrift hinzu oder behalte die Standard-Unterschrift des Trainings.",
+    "it": "Aggiungi una didascalia o mantieni quella predefinita dell'allenamento."
+  },
+  "pulse.share.hint_music": {
+    "pt-BR": "Você pode anexar uma prévia de música.",
+    "en": "You can attach a music preview.",
+    "es": "Puedes adjuntar una vista previa de música.",
+    "fr": "Vous pouvez joindre un aperçu musical.",
+    "de": "Du kannst eine Musikvorschau anhängen.",
+    "it": "Puoi allegare un'anteprima musicale."
+  },
+  "pulse.published_alert_title": {
+    "pt-BR": "Publicado no Pulse",
+    "en": "Published on Pulse",
+    "es": "Publicado en Pulse",
+    "fr": "Publié sur Pulse",
+    "de": "Auf Pulse veröffentlicht",
+    "it": "Pubblicato su Pulse"
+  },
+  "pulse.moderation.title": {
+    "pt-BR": "Moderação",
+    "en": "Moderation",
+    "es": "Moderación",
+    "fr": "Modération",
+    "de": "Moderation",
+    "it": "Moderazione"
+  },
+  "pulse.moderation.empty": {
+    "pt-BR": "Nada para revisar agora.",
+    "en": "Nothing to review right now.",
+    "es": "Nada que revisar ahora.",
+    "fr": "Rien à examiner pour le moment.",
+    "de": "Zurzeit nichts zu prüfen.",
+    "it": "Niente da revisionare al momento."
+  },
+  "pulse.moderation.hide": {
+    "pt-BR": "Ocultar",
+    "en": "Hide",
+    "es": "Ocultar",
+    "fr": "Masquer",
+    "de": "Ausblenden",
+    "it": "Nascondi"
+  },
+  "pulse.moderation.delete": {
+    "pt-BR": "Excluir",
+    "en": "Delete",
+    "es": "Eliminar",
+    "fr": "Supprimer",
+    "de": "Löschen",
+    "it": "Elimina"
+  },
+  "pulse.dashboard.eyebrow": {
+    "pt-BR": "Comunidade",
+    "en": "Community",
+    "es": "Comunidad",
+    "fr": "Communauté",
+    "de": "Community",
+    "it": "Community"
+  },
+  "pulse.dashboard.stories": {
+    "pt-BR": "Stories",
+    "en": "Stories",
+    "es": "Stories",
+    "fr": "Stories",
+    "de": "Stories",
+    "it": "Stories"
+  },
+  "pulse.dashboard.communities": {
+    "pt-BR": "Comunidades",
+    "en": "Communities",
+    "es": "Comunidades",
+    "fr": "Communautés",
+    "de": "Communities",
+    "it": "Community"
+  },
+  "pulse.dashboard.ranking": {
+    "pt-BR": "Ranking",
+    "en": "Ranking",
+    "es": "Ranking",
+    "fr": "Classement",
+    "de": "Ranking",
+    "it": "Classifica"
+  },
+  "pulse.meta.intensity": {
+    "pt-BR": "Intensidade %d",
+    "en": "Intensity %d",
+    "es": "Intensidad %d",
+    "fr": "Intensité %d",
+    "de": "Intensität %d",
+    "it": "Intensità %d"
+  },
+  "pulse.meta.minutes": {
+    "pt-BR": "%d min",
+    "en": "%d min",
+    "es": "%d min",
+    "fr": "%d min",
+    "de": "%d Min.",
+    "it": "%d min"
+  },
+  "pulse.meta.seconds": {
+    "pt-BR": "%d s",
+    "en": "%d s",
+    "es": "%d s",
+    "fr": "%d s",
+    "de": "%d s",
+    "it": "%d s"
+  },
+  "pulse.someone": {
+    "pt-BR": "Alguém",
+    "en": "Someone",
+    "es": "Alguien",
+    "fr": "Quelqu'un",
+    "de": "Jemand",
+    "it": "Qualcuno"
+  },
+  "pulse.athlete": {
+    "pt-BR": "Atleta",
+    "en": "Athlete",
+    "es": "Atleta",
+    "fr": "Athlète",
+    "de": "Athlet",
+    "it": "Atleta"
+  },
+  "pulse.play_music": {
+    "pt-BR": "Tocar música",
+    "en": "Play music",
+    "es": "Reproducir música",
+    "fr": "Lire la musique",
+    "de": "Musik abspielen",
+    "it": "Riproduci musica"
+  },
+  "pulse.stop_music": {
+    "pt-BR": "Parar música",
+    "en": "Stop music",
+    "es": "Detener música",
+    "fr": "Arrêter la musique",
+    "de": "Musik stoppen",
+    "it": "Interrompi musica"
+  },
+  "pulse.music.search_placeholder": {
+    "pt-BR": "Buscar música",
+    "en": "Search music",
+    "es": "Buscar música",
+    "fr": "Rechercher une musique",
+    "de": "Musik suchen",
+    "it": "Cerca musica"
+  },
+  "pulse.music.deezer_preview": {
+    "pt-BR": "Prévia Deezer",
+    "en": "Deezer preview",
+    "es": "Vista previa Deezer",
+    "fr": "Aperçu Deezer",
+    "de": "Deezer-Vorschau",
+    "it": "Anteprima Deezer"
+  },
+  "pulse.music.clip_title": {
+    "pt-BR": "Clipe",
+    "en": "Clip",
+    "es": "Clip",
+    "fr": "Extrait",
+    "de": "Clip",
+    "it": "Clip"
+  },
+  "pulse.delete_account_warning": {
+    "pt-BR": "Excluir a conta remove permanentemente seu conteúdo e acesso ao Pulse.",
+    "en": "Deleting your account permanently removes your content and access to Pulse.",
+    "es": "Eliminar la cuenta elimina permanentemente tu contenido y el acceso a Pulse.",
+    "fr": "Supprimer le compte retire définitivement votre contenu et l'accès à Pulse.",
+    "de": "Das Löschen deines Kontos entfernt dauerhaft deine Inhalte und den Zugang zu Pulse.",
+    "it": "Eliminare l'account rimuove definitivamente i tuoi contenuti e l'accesso a Pulse."
+  },
+  "pulse.workout_published": {
+    "pt-BR": "Treino publicado",
+    "en": "Workout published",
+    "es": "Entrenamiento publicado",
+    "fr": "Entraînement publié",
+    "de": "Training veröffentlicht",
+    "it": "Allenamento pubblicato"
+  },
+  "pulse.photo_published": {
+    "pt-BR": "Foto publicada",
+    "en": "Photo published",
+    "es": "Foto publicada",
+    "fr": "Photo publiée",
+    "de": "Foto veröffentlicht",
+    "it": "Foto pubblicata"
+  },
+  "pulse.video_published": {
+    "pt-BR": "Vídeo publicado",
+    "en": "Video published",
+    "es": "Video publicado",
+    "fr": "Vidéo publiée",
+    "de": "Video veröffentlicht",
+    "it": "Video pubblicato"
+  },
+  "pulse.cover_published": {
+    "pt-BR": "Capa publicada",
+    "en": "Cover published",
+    "es": "Portada publicada",
+    "fr": "Couverture publiée",
+    "de": "Cover veröffentlicht",
+    "it": "Copertina pubblicata"
+  },
+  "pulse.prepare_image_failed": {
+    "pt-BR": "Não foi possível preparar a imagem.",
+    "en": "Could not prepare the image.",
+    "es": "No se pudo preparar la imagen.",
+    "fr": "Impossible de préparer l'image.",
+    "de": "Bild konnte nicht vorbereitet werden.",
+    "it": "Impossibile preparare l'immagine."
+  }
+}

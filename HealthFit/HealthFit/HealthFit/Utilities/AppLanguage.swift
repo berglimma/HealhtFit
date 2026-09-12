@@ -8,6 +8,8 @@ enum AppLanguage: String, CaseIterable, Identifiable, Hashable {
     case english = "en"
     case spanish = "es"
     case french = "fr"
+    case german = "de"
+    case italian = "it"
 
     static let storageKey = "healthfit_app_language"
     static let defaultLanguage: AppLanguage = .portuguese
@@ -23,6 +25,8 @@ enum AppLanguage: String, CaseIterable, Identifiable, Hashable {
         case .english: return "🇺🇸"
         case .spanish: return "🇪🇸"
         case .french: return "🇫🇷"
+        case .german: return "🇩🇪"
+        case .italian: return "🇮🇹"
         }
     }
 
@@ -32,6 +36,8 @@ enum AppLanguage: String, CaseIterable, Identifiable, Hashable {
         case .english: return "English"
         case .spanish: return "Español"
         case .french: return "Français"
+        case .german: return "Deutsch"
+        case .italian: return "Italiano"
         }
     }
 

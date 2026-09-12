@@ -8,9 +8,11 @@ enum MonthlyReportPDFBuilder {
     static func makePDF(
         report: MonthlyProgressReport,
         athleteName: String
-    ) -> URL? {
+    ) async -> URL? {
+        await Task.yield()
         let view = MonthlyReportPDFContentView(report: report, athleteName: athleteName)
         guard let image = HealthFitPDFSnapshot.render(view) else { return nil }
+        await Task.yield()
         return HealthFitPDFSnapshot.writePaginatedPDF(
             image: image,
             documentTitle: "Relatório Mensal",

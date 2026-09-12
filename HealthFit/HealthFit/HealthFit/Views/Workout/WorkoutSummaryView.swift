@@ -54,6 +54,7 @@ struct WorkoutSummaryView: View {
     @State private var showGallerySaveAlert = false
     @State private var reportPDFURL: URL?
     @State private var showReportPDFShare = false
+    @State private var isGeneratingReportPDF = false
     @State private var pdfExportFailed = false
     @State private var selectedEffort: Int?
 
@@ -282,8 +283,8 @@ struct WorkoutSummaryView: View {
                 Text("Relatório enviado com sucesso. Agora você pode compartilhar o card da conquista.")
             }
         }
-        .alert("Pulse", isPresented: $showPulsePublishAlert) {
-            Button("OK", role: .cancel) {}
+        .alert(L10n.Pulse.featureName, isPresented: $showPulsePublishAlert) {
+            Button(L10n.Common.ok, role: .cancel) {}
         } message: {
             Text(pulsePublishMessage)
         }
@@ -355,7 +356,7 @@ struct WorkoutSummaryView: View {
                 Button {
                     publishSessionToPulse()
                 } label: {
-                    Label("Compartilhar no Pulse", systemImage: "heart.circle.fill")
+                    Label(L10n.Pulse.shareOnPulse, systemImage: "heart.circle.fill")
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
@@ -448,7 +449,7 @@ struct WorkoutSummaryView: View {
                     Button {
                         Task { await publishResultMediaToPulse() }
                     } label: {
-                        Label("Compartilhar no Pulse", systemImage: "heart.circle.fill")
+                        Label(L10n.Pulse.shareOnPulse, systemImage: "heart.circle.fill")
                             .font(.subheadline.weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
@@ -486,7 +487,7 @@ struct WorkoutSummaryView: View {
                     .disabled(isPreparingMediaShare)
                 }
 
-                Text("Escolha WhatsApp, Instagram ou Pulse. Dados da sessão e HealthFit já vão na mídia.")
+                Text(L10n.Pulse.shareHintDefault)
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
                     .multilineTextAlignment(.center)
@@ -694,7 +695,7 @@ struct WorkoutSummaryView: View {
                 intensity: session.perceivedEffort,
                 caption: nil
             )
-            pulsePublishMessage = "Treino publicado no HealthFit Pulse."
+            pulsePublishMessage = L10n.Pulse.workoutPublished
         } catch {
             pulsePublishMessage = error.localizedDescription
         }
@@ -736,7 +737,7 @@ struct WorkoutSummaryView: View {
                         workoutMeta: meta,
                         authorAvatar: authService.profileImage
                     )
-                    pulsePublishMessage = "Vídeo do treino publicado no HealthFit Pulse."
+                    pulsePublishMessage = L10n.Pulse.videoPublished
                     showPulsePublishAlert = true
                     return
                 } catch PulseStoreError.videoTooLong, PulseStoreError.videoDisabled {
@@ -751,7 +752,7 @@ struct WorkoutSummaryView: View {
                 isCardioSession: isCardioSession || session.isOutdoorGPSCardio,
                 showVideoBadge: false
             ) else {
-                pulsePublishMessage = "Não foi possível preparar a imagem para o Pulse."
+                pulsePublishMessage = L10n.Pulse.prepareImageFailed
                 showPulsePublishAlert = true
                 return
             }
@@ -766,8 +767,8 @@ struct WorkoutSummaryView: View {
                 authorAvatar: authService.profileImage
             )
             pulsePublishMessage = resultMedia.isVideo
-                ? "Capa do vídeo publicada no HealthFit Pulse."
-                : "Foto do treino publicada no HealthFit Pulse."
+                ? L10n.Pulse.coverPublished
+                : L10n.Pulse.photoPublished
         } catch {
             pulsePublishMessage = error.localizedDescription
         }
@@ -856,22 +857,35 @@ struct WorkoutSummaryView: View {
         showGallerySaveAlert = true
     }
 
-    @MainActor
     private func exportWorkoutPDF() {
+        guard !isGeneratingReportPDF else { return }
         guard let athlete = authService.currentUser else {
             pdfExportFailed = true
             return
         }
-        guard let url = WorkoutSessionPDFBuilder.makePDF(
-            session: session,
-            athlete: athlete,
-            allSessions: workoutStore.sessionHistory
-        ) else {
-            pdfExportFailed = true
-            return
+        isGeneratingReportPDF = true
+        let sessionSnapshot = session
+        let history = workoutStore.sessionHistory
+        Task { @MainActor in
+            // Libera o toque e mostra o ProgressView antes do trabalho pesado.
+            try? await Task.sleep(nanoseconds: 80_000_000)
+            let routeMap: UIImage? = WorkoutReportBuilder.hasRouteMapForEmail(sessionSnapshot)
+                ? WorkoutRouteMapRenderer.renderImage(session: sessionSnapshot, width: 1024, height: 640)
+                : nil
+            let url = WorkoutSessionPDFBuilder.makePDF(
+                session: sessionSnapshot,
+                athlete: athlete,
+                allSessions: history,
+                routeMap: routeMap
+            )
+            isGeneratingReportPDF = false
+            guard let url else {
+                pdfExportFailed = true
+                return
+            }
+            reportPDFURL = url
+            showReportPDFShare = true
         }
-        reportPDFURL = url
-        showReportPDFShare = true
     }
 
     @ViewBuilder
@@ -933,14 +947,25 @@ struct WorkoutSummaryView: View {
             Button {
                 exportWorkoutPDF()
             } label: {
-                Label("Gerar PDF do relatório", systemImage: "doc.richtext")
+                HStack {
+                    if isGeneratingReportPDF {
+                        ProgressView()
+                            .tint(AppTheme.accent)
+                    }
+                    Label(
+                        isGeneratingReportPDF ? "Gerando PDF…" : "Gerar PDF do relatório",
+                        systemImage: "doc.richtext"
+                    )
                     .font(.headline)
                     .foregroundStyle(AppTheme.accent)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(AppTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+            .disabled(isGeneratingReportPDF)
+            .opacity(isGeneratingReportPDF ? 0.7 : 1)
         }
     }
 
@@ -1574,15 +1599,22 @@ struct WorkoutSummaryView: View {
                 .foregroundStyle(AppTheme.textSecondary)
 
             Button {
-                shareSurfKitePDF(report: report)
+                Task { await shareSurfKitePDF(report: report) }
             } label: {
-                Label("Exportar PDF Surf / Kite", systemImage: "doc.richtext")
+                HStack {
+                    if isGeneratingReportPDF { ProgressView().tint(.white) }
+                    Label(
+                        isGeneratingReportPDF ? "Gerando PDF…" : "Exportar PDF Surf / Kite",
+                        systemImage: "doc.richtext"
+                    )
                     .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
             }
             .buttonStyle(.borderedProminent)
             .tint(AppTheme.accentSecondary)
+            .disabled(isGeneratingReportPDF)
         }
         .foregroundStyle(AppTheme.textPrimary)
         .padding()
@@ -1670,9 +1702,14 @@ struct WorkoutSummaryView: View {
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
-    @MainActor
-    private func shareSurfKitePDF(report: SurfKiteComparisonReport) {
-        guard let url = SurfKiteReportBuilder.makePDF(report: report, athleteName: athleteDisplayName) else {
+    private func shareSurfKitePDF(report: SurfKiteComparisonReport) async {
+        guard !isGeneratingReportPDF else { return }
+        isGeneratingReportPDF = true
+        defer { isGeneratingReportPDF = false }
+        try? await Task.sleep(nanoseconds: 80_000_000)
+        let name = athleteDisplayName
+        guard let url = SurfKiteReportBuilder.makePDF(report: report, athleteName: name) else {
+            pdfExportFailed = true
             return
         }
         shareItems = [url]

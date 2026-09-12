@@ -4,8 +4,8 @@ import Foundation
 /// UI/sync OFF por padrão; produção liga via Firestore `appConfig/ios` (`pulseEnabled` / `pulseCloudSyncEnabled`).
 /// DEBUG: Perfil → Labs pode forçar ON localmente.
 enum PulseExperimental {
-    static let featureName = "HealthFit Pulse"
-    static let tagline = "Sozinho você treina. Junto, você permanece."
+    static var featureName: String { L10n.Pulse.featureName }
+    static var tagline: String { L10n.Pulse.tagline }
     static let maxCaptionCharacters = 350
     static let maxVideoSeconds: TimeInterval = 30
     /// Trecho de música no story/post (máx. 15s).
@@ -191,10 +191,12 @@ enum PulseExperimental {
 
     /// 366 desafios (cobre ano bissexto), embaralhados por seed do usuário/ano.
     private static func challengeSchedule(seed: UInt64) -> [String] {
-        var pool = challengeTemplates
+        let templates = PulseLocalized.challengeTemplates
+        var pool = templates.isEmpty ? challengeTemplatesFallbackPT : templates
         var guardCount = 0
+        let base = pool
         while pool.count < 366 && guardCount < 20 {
-            pool.append(contentsOf: challengeTemplates.map { "\($0) ✨" })
+            pool.append(contentsOf: base.map { "\($0) ✨" })
             guardCount += 1
         }
         pool = Array(pool.prefix(366))
@@ -206,7 +208,8 @@ enum PulseExperimental {
         return pool
     }
 
-    private static let challengeTemplates: [String] = [
+    /// Fallback se o JSON de desafios não estiver no bundle.
+    private static let challengeTemplatesFallbackPT: [String] = [
         "Complete 20 min de movimento consciente hoje.",
         "Poste um treino com intensidade registrada (1–10).",
         "Hidrate-se: registre 2L e compartilhe no Pulse.",
@@ -322,9 +325,11 @@ enum PulseExperimental {
         "FightCoverLuta"
     ]
 
-    /// Texto jurídico exibido na tela “Li e aceito”. Pode ser longo — a UI usa ScrollView.
-    /// Alinhado aos Termos públicos do HealthFit; revisão jurídica recomendada antes de rollout amplo.
-    static let termsBody = """
+    /// Texto jurídico exibido na tela “Li e aceito”. Localizado via `PulseTerms_*.txt`.
+    static var termsBody: String { PulseLocalized.termsBody }
+
+    /// Fallback PT embutido se os arquivos de termos não estiverem no bundle.
+    static let termsBodyFallbackPT = """
     TERMOS DE USO — HEALTHFIT PULSE
     (Comunidade de conteúdo gerado por usuários)
 
@@ -571,10 +576,10 @@ enum PulseCommunity: Hashable, Identifiable, Codable {
 
     var title: String {
         switch self {
-        case .musculacao: return "Musculação"
-        case .cardio: return "Cardio"
-        case .kite: return "Kite"
-        case .nutricao: return "Nutrição"
+        case .musculacao: return L10n.Pulse.communityMusculacao
+        case .cardio: return L10n.Pulse.communityCardio
+        case .kite: return L10n.Pulse.communityKite
+        case .nutricao: return L10n.Pulse.communityNutricao
         case .cardioModality(let name): return name
         }
     }

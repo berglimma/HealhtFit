@@ -16,9 +16,8 @@ struct PulseModerationQueueView: View {
                     ProgressView("Carregando denúncias…")
                 } else if reports.isEmpty {
                     ContentUnavailableView(
-                        "Nenhuma denúncia",
-                        systemImage: "checkmark.shield",
-                        description: Text("Quando alguém denunciar um post, ele aparece aqui.")
+                        L10n.Pulse.moderationEmpty,
+                        systemImage: "checkmark.shield"
                     )
                 } else {
                     List {
@@ -33,14 +32,14 @@ struct PulseModerationQueueView: View {
                                     .font(.caption2)
                                     .foregroundStyle(AppTheme.textSecondary)
                                 HStack(spacing: 12) {
-                                    Button("Ocultar post") {
+                                    Button(L10n.Pulse.moderationHide) {
                                         Task { await hide(report) }
                                     }
                                     .buttonStyle(.borderedProminent)
                                     .tint(.orange)
                                     .disabled(busyPostId == report.postId)
 
-                                    Button("Apagar post", role: .destructive) {
+                                    Button(L10n.Pulse.moderationDelete, role: .destructive) {
                                         Task { await delete(report) }
                                     }
                                     .disabled(busyPostId == report.postId)
@@ -51,11 +50,11 @@ struct PulseModerationQueueView: View {
                     }
                 }
             }
-            .navigationTitle("Moderação Pulse")
+            .navigationTitle(L10n.Pulse.moderationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Fechar") { dismiss() }
+                    Button(L10n.Pulse.close) { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {

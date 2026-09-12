@@ -57,7 +57,7 @@ struct PulseFeedView: View {
     private var authorId: String { authService.currentUser?.id ?? "local" }
     private var authorName: String {
         let name = authService.currentUser?.displayName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return name.isEmpty ? "Atleta" : name
+        return name.isEmpty ? L10n.Pulse.athlete : name
     }
     private var authorCountryCode: String {
         authService.currentUser?.countryCode ?? "BR"
@@ -106,7 +106,7 @@ struct PulseFeedView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Fechar") { dismiss() }
+                    Button(L10n.Pulse.close) { dismiss() }
                 }
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 2) {
@@ -134,7 +134,7 @@ struct PulseFeedView: View {
                                 Image(systemName: "shield.lefthalf.filled")
                                     .foregroundStyle(AppTheme.accentSecondary)
                             }
-                            .accessibilityLabel("Moderação Pulse")
+                            .accessibilityLabel(L10n.Pulse.moderationTitle)
                         }
                         Button {
                             showCompose = true
@@ -142,7 +142,7 @@ struct PulseFeedView: View {
                             Image(systemName: "plus.circle.fill")
                                 .foregroundStyle(AppTheme.accent)
                         }
-                        .accessibilityLabel("Nova publicação")
+                        .accessibilityLabel(L10n.Pulse.composerNewPost)
                         Menu {
                             Button(role: .destructive) {
                                 showDeleteAccountSheet = true
@@ -316,21 +316,21 @@ struct PulseFeedView: View {
                 )
                 .presentationDetents([.medium, .large])
             }
-            .alert("Pulse", isPresented: Binding(
+            .alert(L10n.Pulse.featureName, isPresented: Binding(
                 get: { errorMessage != nil },
                 set: { if !$0 { errorMessage = nil } }
             )) {
-                Button("OK", role: .cancel) { errorMessage = nil }
+                Button(L10n.Common.ok, role: .cancel) { errorMessage = nil }
             } message: {
                 Text(errorMessage ?? "")
             }
-            .alert("Publicado no Pulse", isPresented: $showShareAfterPost) {
-                Button("Compartilhar no Instagram") {
+            .alert(L10n.Pulse.publishedAlertTitle, isPresented: $showShareAfterPost) {
+                Button(L10n.Pulse.shareInstagram) {
                     showPulseShareSheet = true
                 }
-                Button("Agora não", role: .cancel) {}
+                Button(L10n.Pulse.termsNotNow, role: .cancel) {}
             } message: {
-                Text(shareHintMessage ?? "A legenda foi copiada. No Instagram, escolha Stories ou Feed e cole a legenda se quiser.")
+                Text(shareHintMessage ?? L10n.Pulse.shareHintDefault)
             }
             .sheet(isPresented: $showPulseShareSheet) {
                 ActivityShareSheet(items: pendingShareItems) {
@@ -501,7 +501,7 @@ struct PulseFeedView: View {
     private var postComposerHub: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("POST")
+                Text(L10n.Pulse.tabPost)
                     .font(.title3.bold())
                     .foregroundStyle(AppTheme.textPrimary)
                     .padding(.horizontal, 16)
@@ -572,9 +572,9 @@ struct PulseFeedView: View {
             }
             pendingShareItems = package.items
             if post.music != nil {
-                shareHintMessage = "Legenda (com música) copiada. No Instagram, o card já mostra a faixa — cole a legenda se quiser o link."
+                shareHintMessage = L10n.Pulse.shareHintMusic
             } else {
-                shareHintMessage = "Legenda copiada. Escolha Instagram (Stories ou Feed) — o card já inclui o conteúdo da postagem."
+                shareHintMessage = L10n.Pulse.shareHintDefault
             }
             showShareAfterPost = true
         }
@@ -615,10 +615,10 @@ struct PulseFeedView: View {
 
     private var pulseBottomBar: some View {
         HStack(spacing: 0) {
-            bottomItem(.feed, title: "Feed", icon: "rectangle.stack.fill")
-            bottomItem(.post, title: "POST", icon: "plus.rectangle.fill.on.rectangle.fill")
-            bottomItem(.communities, title: "Comunidade", icon: "person.3.fill")
-            bottomItem(.people, title: "Pessoas", icon: "magnifyingglass")
+            bottomItem(.feed, title: L10n.Pulse.tabFeed, icon: "rectangle.stack.fill")
+            bottomItem(.post, title: L10n.Pulse.tabPost, icon: "plus.rectangle.fill.on.rectangle.fill")
+            bottomItem(.communities, title: L10n.Pulse.tabCommunity, icon: "person.3.fill")
+            bottomItem(.people, title: L10n.Pulse.tabPeople, icon: "magnifyingglass")
         }
         .padding(.top, 10)
         .padding(.bottom, 8)
@@ -662,14 +662,14 @@ private struct PulseUGCAgeGateView: View {
             Image(systemName: "lock.shield.fill")
                 .font(.system(size: 44))
                 .foregroundStyle(AppTheme.accent)
-            Text("Pulse a partir de \(PulseExperimental.ugcMinimumAge) anos")
+            Text(L10n.Pulse.ageGateTitle(PulseExperimental.ugcMinimumAge))
                 .font(.title3.bold())
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
             Text(
                 age > 0
-                    ? "Sua idade no perfil é \(age) anos. O Pulse (feed, stories, comunidades e pessoas) é exclusivo para maiores de \(PulseExperimental.ugcMinimumAge)."
-                    : "Confirme sua data de nascimento no Perfil. O Pulse é exclusivo para maiores de \(PulseExperimental.ugcMinimumAge)."
+                    ? L10n.Pulse.ageGateBodyKnown(age, PulseExperimental.ugcMinimumAge)
+                    : L10n.Pulse.ageGateBodyUnknown(PulseExperimental.ugcMinimumAge)
             )
             .font(.subheadline)
             .foregroundStyle(AppTheme.textSecondary)
@@ -693,7 +693,7 @@ private struct PulseDailyChallengeCard: View {
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(AppTheme.accent)
             VStack(alignment: .leading, spacing: 4) {
-                Text("Desafio do dia")
+                Text(L10n.Pulse.dailyChallenge)
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(AppTheme.textPrimary)
                 Text(text)
@@ -761,7 +761,7 @@ private struct PulseCommunityChips: View {
             HStack(spacing: 6) {
                 Label(title, systemImage: systemImage)
                 if showsActiveBadge {
-                    Text("ATIVO")
+                    Text(L10n.Pulse.active.uppercased())
                         .font(.system(size: 9, weight: .bold))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
@@ -791,7 +791,7 @@ private struct PulseWeeklyHighlightSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Destaque da semana")
+            Text(L10n.Pulse.weeklyHighlight)
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(AppTheme.textPrimary)
 
@@ -824,7 +824,7 @@ private struct PulseWeeklyHighlightSection: View {
 
             if !ranking.isEmpty {
                 Divider().overlay(Color.white.opacity(0.08))
-                Text("Ranking leve")
+                Text(L10n.Pulse.lightRanking)
                     .font(.caption.weight(.bold))
                     .foregroundStyle(AppTheme.textSecondary)
                 ForEach(Array(ranking.enumerated()), id: \.offset) { index, entry in
@@ -880,12 +880,12 @@ private struct PulseEmptyFeedState: View {
                 .font(.system(size: 44))
                 .foregroundStyle(AppTheme.accent.opacity(0.8))
 
-            Text("Seu feed está quieto")
+            Text(L10n.Pulse.emptyFeedTitle)
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
 
             if let card {
-                Text("Que tal compartilhar seu último treino \"\(card.workoutTitle)\"?")
+                Text(L10n.Pulse.emptyFeedShareWorkout(card.workoutTitle))
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.textSecondary)
                     .multilineTextAlignment(.center)
@@ -898,10 +898,10 @@ private struct PulseEmptyFeedState: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
-                Button("Publicar no Pulse", action: onPublishWorkout)
+                Button(L10n.Pulse.publishWorkout, action: onPublishWorkout)
                     .buttonStyle(PrimaryButtonStyle())
             } else {
-                Text("Complete um treino e volte para publicar no Pulse.")
+                Text(L10n.Pulse.emptyFeedBodyNoWorkout)
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.textSecondary)
                     .multilineTextAlignment(.center)
@@ -944,7 +944,7 @@ private struct PulseStoriesRail: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 14) {
                 PulseStoryBubble(
-                    title: "Seu story",
+                    title: L10n.Pulse.storyYours,
                     image: currentUserImage,
                     placeholder: "person.fill",
                     ringStyle: ownRingStyle,
@@ -1281,7 +1281,7 @@ private struct PulseStoryViewer: View {
             profileAvatar
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(story.authorName.isEmpty ? "Atleta" : story.authorName)
+                Text(story.authorName.isEmpty ? L10n.Pulse.athlete : story.authorName)
                     .font(.subheadline.bold())
                     .foregroundStyle(.white)
                     .lineLimit(1)
@@ -1316,7 +1316,7 @@ private struct PulseStoryViewer: View {
                         .foregroundStyle(.white, Color.red)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Excluir story")
+                .accessibilityLabel(L10n.Pulse.storyDelete)
             }
 
             Button(action: onClose) {
@@ -1326,7 +1326,7 @@ private struct PulseStoryViewer: View {
                     .foregroundStyle(.black.opacity(0.5), .white)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Fechar")
+            .accessibilityLabel(L10n.Pulse.close)
         }
     }
 
@@ -1515,7 +1515,7 @@ private struct PulseReactionsListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Fechar") { dismiss() }
+                    Button(L10n.Pulse.close) { dismiss() }
                 }
             }
         }
@@ -1569,7 +1569,7 @@ private struct PulseStoryComposeView: View {
                     } label: {
                         Label(
                             selectedMusic.map { "\($0.providerLabel): \($0.title)" }
-                                ?? "Adicionar música (Spotify / Deezer / Apple Music)",
+                                ?? L10n.Pulse.storyAddMusic,
                             systemImage: "music.note.list"
                         )
                         .font(.subheadline.weight(.semibold))
@@ -1586,7 +1586,7 @@ private struct PulseStoryComposeView: View {
                         ))
                     }
 
-                    Button("Publicar story") {
+                    Button(L10n.Pulse.storyPublish) {
                         if let selectedPhoto {
                             onPublish(selectedPhoto, selectedMusic, textOverlays.filter {
                                 !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -1600,11 +1600,11 @@ private struct PulseStoryComposeView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(AppTheme.background.ignoresSafeArea())
-            .navigationTitle("Novo story")
+            .navigationTitle(L10n.Pulse.storyNew)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") {
+                    Button(L10n.Common.cancel) {
                         dismissKeyboard()
                         dismiss()
                     }
@@ -1646,7 +1646,7 @@ private struct PulseStoryComposeView: View {
                     Button("Câmera") { showCamera = true }
                 }
                 Button("Galeria") { showLibrary = true }
-                Button("Cancelar", role: .cancel) {}
+                Button(L10n.Common.cancel, role: .cancel) {}
             }
             .sheet(isPresented: $showLibrary) {
                 LibraryImagePicker { image in
@@ -2134,14 +2134,14 @@ private struct PulsePostCard: View {
                 Spacer(minLength: 8)
                 Menu {
                     if isOwner {
-                        Button("Editar post", action: onEdit)
-                        Button("Excluir post", role: .destructive, action: onDelete)
+                        Button(L10n.Pulse.menuEdit, action: onEdit)
+                        Button(L10n.Pulse.menuDelete, role: .destructive, action: onDelete)
                     }
-                    Button("Compartilhar no Instagram…", action: onShareExternal)
-                    Button("Reportar", action: onReport)
-                    Button("Ocultar", action: onHide)
+                    Button(L10n.Pulse.menuShareInstagram, action: onShareExternal)
+                    Button(L10n.Pulse.menuReport, action: onReport)
+                    Button(L10n.Pulse.menuHide, action: onHide)
                     if !isOwner {
-                        Button("Bloquear autor", role: .destructive, action: onBlockAuthor)
+                        Button(L10n.Pulse.menuBlock, role: .destructive, action: onBlockAuthor)
                     }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -2152,11 +2152,11 @@ private struct PulsePostCard: View {
             }
 
             // Mostra a mídia na proporção real (card de treino é mais alto que 1:1).
-            // Evita cortar rodapé/KCAL; selo HealthFit só em posts sem card de conquista embutido.
+            // Cantos arredondados escondem residual preto de exports JPEG antigos.
             ZStack(alignment: .bottomTrailing) {
                 mediaView
                     .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .clipShape(RoundedRectangle(cornerRadius: post.workoutMeta != nil ? 22 : 14, style: .continuous))
 
                 if post.workoutMeta == nil {
                     Text("HealthFit")
@@ -2345,7 +2345,7 @@ private struct PulsePostCard: View {
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
             if isCommunityActive {
-                Text("ATIVO")
+                Text(L10n.Pulse.active.uppercased())
                     .font(.system(size: 9, weight: .bold))
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
@@ -2546,7 +2546,7 @@ struct PulseComposeView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Mídia") {
+                Section(L10n.Pulse.composerMedia) {
                     Button {
                         showSourceDialog = true
                     } label: {
@@ -2588,12 +2588,12 @@ struct PulseComposeView: View {
                     }
                 }
 
-                Section("Música (opcional)") {
+                Section(L10n.Pulse.composerMusicOptional) {
                     Button {
                         showMusicPicker = true
                     } label: {
                         Label(
-                            selectedMusic.map { "\($0.providerLabel): \($0.title)" } ?? "Adicionar música",
+                            selectedMusic.map { "\($0.providerLabel): \($0.title)" } ?? L10n.Pulse.storyAddMusic,
                             systemImage: "music.note.list"
                         )
                     }
@@ -2609,8 +2609,8 @@ struct PulseComposeView: View {
                     }
                 }
 
-                Section("Comunidade") {
-                    Picker("Comunidade", selection: $selectedCommunity) {
+                Section(L10n.Pulse.composerCommunity) {
+                    Picker(L10n.Pulse.composerCommunity, selection: $selectedCommunity) {
                         ForEach(availableCommunities) { community in
                             Label(community.title, systemImage: community.systemImage)
                                 .tag(community)
@@ -2632,7 +2632,7 @@ struct PulseComposeView: View {
                     }
                 }
 
-                Section("Legenda (\(caption.count)/\(PulseExperimental.maxCaptionCharacters))") {
+                Section("\(L10n.Pulse.composerCaption) (\(caption.count)/\(PulseExperimental.maxCaptionCharacters))") {
                     PulseMentionTextField(
                         text: $caption,
                         candidates: mentionCandidates,
@@ -2645,7 +2645,7 @@ struct PulseComposeView: View {
                 }
 
                 Section {
-                    Button(isEditing ? "Salvar alterações" : "Publicar no Pulse") {
+                    Button(isEditing ? L10n.Common.save : L10n.Pulse.publish) {
                         onPublish(
                             PulseComposePayload(
                                 caption: caption,
@@ -2662,11 +2662,11 @@ struct PulseComposeView: View {
             }
             .scrollContentBackground(.hidden)
             .background(AppTheme.background)
-            .navigationTitle(isEditing ? "Editar post" : "Nova publicação")
+            .navigationTitle(isEditing ? L10n.Pulse.composerEditPost : L10n.Pulse.composerNewPost)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") { dismiss() }
+                    Button(L10n.Common.cancel) { dismiss() }
                 }
             }
             .onAppear {
@@ -2702,7 +2702,7 @@ struct PulseComposeView: View {
                 if PulseExperimental.isVideoPostsEnabledInBuild {
                     Button("Galeria · vídeo") { showLibraryVideo = true }
                 }
-                Button("Cancelar", role: .cancel) {}
+                Button(L10n.Common.cancel, role: .cancel) {}
             }
             .sheet(isPresented: $showLibraryPhoto) {
                 LibraryImagePicker { image in
@@ -2743,11 +2743,11 @@ struct PulseComposeView: View {
             .sheet(isPresented: $showMusicPicker) {
                 PulseMusicPickerView(selectedTrack: $selectedMusic)
             }
-            .alert("Pulse", isPresented: Binding(
+            .alert(L10n.Pulse.featureName, isPresented: Binding(
                 get: { localError != nil },
                 set: { if !$0 { localError = nil } }
             )) {
-                Button("OK", role: .cancel) { localError = nil }
+                Button(L10n.Common.ok, role: .cancel) { localError = nil }
             } message: {
                 Text(localError ?? "")
             }

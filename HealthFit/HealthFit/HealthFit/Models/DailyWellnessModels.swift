@@ -84,8 +84,12 @@ struct DailyWellnessEntry: Codable, Equatable {
     var restDayMarkedAt: Date?
 
     static func empty(for date: Date = .now) -> DailyWellnessEntry {
+        empty(forDayKey: dayKey(for: date))
+    }
+
+    static func empty(forDayKey dayKey: String) -> DailyWellnessEntry {
         DailyWellnessEntry(
-            dayKey: Self.dayKey(for: date),
+            dayKey: dayKey,
             sleepHours: nil,
             waterIntakeMl: 0,
             energyDrinksCount: 0,

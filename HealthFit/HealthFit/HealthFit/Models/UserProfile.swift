@@ -999,6 +999,11 @@ struct UserProfile: Codable, Identifiable, Equatable {
         return years >= Self.minimumAgeYears && years <= Self.maximumAgeYears
     }
 
+    /// Aniversário no calendário de hoje (mês/dia), com ajuste de 29/fev.
+    var isBirthdayToday: Bool {
+        AssistantBirthdayCongratsEngine.isBirthday(dateOfBirth: dateOfBirth)
+    }
+
     var countryFlagEmoji: String {
         CountryOption.flagEmoji(for: countryCode)
     }

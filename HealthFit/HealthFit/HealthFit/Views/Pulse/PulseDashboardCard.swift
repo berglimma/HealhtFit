@@ -61,7 +61,7 @@ struct PulseDashboardCard: View {
             )
 
             VStack(alignment: .leading, spacing: 8) {
-                Label("Comunidade", systemImage: "heart.circle.fill")
+                Label(L10n.Pulse.dashboardEyebrow, systemImage: "heart.circle.fill")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(AppTheme.accent)
 
@@ -75,9 +75,9 @@ struct PulseDashboardCard: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(spacing: 10) {
-                    Label("Stories", systemImage: "circle.dashed")
-                    Label("Comunidades", systemImage: "person.3.fill")
-                    Label("Ranking leve", systemImage: "chart.bar.fill")
+                    Label(L10n.Pulse.dashboardStories, systemImage: "circle.dashed")
+                    Label(L10n.Pulse.dashboardCommunities, systemImage: "person.3.fill")
+                    Label(L10n.Pulse.lightRanking, systemImage: "chart.bar.fill")
                 }
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.88))

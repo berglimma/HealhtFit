@@ -18,9 +18,9 @@ final class AppLanguageTests: XCTestCase {
         super.tearDown()
     }
 
-    func testSupportedLanguagesIncludePortugueseEnglishSpanishFrench() {
+    func testSupportedLanguagesIncludePortugueseEnglishSpanishFrenchGermanItalian() {
         let codes = AppLanguage.allCases.map(\.rawValue)
-        XCTAssertEqual(codes, ["pt-BR", "en", "es", "fr"])
+        XCTAssertEqual(codes, ["pt-BR", "en", "es", "fr", "de", "it"])
     }
 
     func testDefaultIsPortugueseWhenUnset() {
@@ -48,6 +48,8 @@ final class AppLanguageTests: XCTestCase {
     func testResolvedHelper() {
         XCTAssertEqual(AppLanguage.resolved(fromStoredCode: nil), .portuguese)
         XCTAssertEqual(AppLanguage.resolved(fromStoredCode: "es"), .spanish)
+        XCTAssertEqual(AppLanguage.resolved(fromStoredCode: "de"), .german)
+        XCTAssertEqual(AppLanguage.resolved(fromStoredCode: "it"), .italian)
         XCTAssertEqual(AppLanguage.resolved(fromStoredCode: "bogus"), .portuguese)
     }
 

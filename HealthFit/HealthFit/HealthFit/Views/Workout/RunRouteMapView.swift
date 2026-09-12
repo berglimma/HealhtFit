@@ -89,8 +89,8 @@ struct RunRouteMapView: View {
                 if is3DEnabled, coordinates.count >= 2 {
                     MapPolyline(coordinates: coordinates)
                         .stroke(
-                            Color.white.opacity(0.4),
-                            style: StrokeStyle(lineWidth: 11, lineCap: .round, lineJoin: .round)
+                            Color.white.opacity(0.35),
+                            style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round)
                         )
                 }
 
@@ -99,7 +99,7 @@ struct RunRouteMapView: View {
                         .stroke(
                             segment.color,
                             style: StrokeStyle(
-                                lineWidth: is3DEnabled ? 7 : (allows3DMode ? 5.5 : 4.5),
+                                lineWidth: is3DEnabled ? 3.5 : (allows3DMode ? 3 : 2.5),
                                 lineCap: .round,
                                 lineJoin: .round
                             )
@@ -113,7 +113,7 @@ struct RunRouteMapView: View {
                             .stroke(
                                 Color.white.opacity(is3DEnabled ? 0.75 : 0.55),
                                 style: StrokeStyle(
-                                    lineWidth: is3DEnabled ? 5 : 3.5,
+                                    lineWidth: is3DEnabled ? 2.5 : 2,
                                     lineCap: .round,
                                     lineJoin: .round,
                                     dash: [6, 5]
@@ -126,7 +126,7 @@ struct RunRouteMapView: View {
                             .stroke(
                                 Color.cyan,
                                 style: StrokeStyle(
-                                    lineWidth: is3DEnabled ? 6.5 : 5,
+                                    lineWidth: is3DEnabled ? 3.5 : 2.5,
                                     lineCap: .round,
                                     lineJoin: .round
                                 )
@@ -138,7 +138,7 @@ struct RunRouteMapView: View {
                             .stroke(
                                 Color.orange,
                                 style: StrokeStyle(
-                                    lineWidth: is3DEnabled ? 6.5 : 5,
+                                    lineWidth: is3DEnabled ? 3.5 : 2.5,
                                     lineCap: .round,
                                     lineJoin: .round
                                 )

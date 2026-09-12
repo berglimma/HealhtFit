@@ -329,7 +329,7 @@ final class PulseLocalStore: ObservableObject {
             duoTeamName: card.duoTeamName
         )
         let defaultCaption = caption?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-            ?? "Acabei de treinar: \(card.workoutTitle). \(PulseExperimental.tagline)"
+            ?? L10n.Pulse.captionWorkoutDefault(card.workoutTitle, PulseExperimental.tagline)
         insertPost(
             PulsePost(
                 authorId: authorId,
@@ -502,8 +502,8 @@ final class PulseLocalStore: ObservableObject {
             posts[idx].isHidden = true
         }
         pushNotification(
-            title: "Denúncia recebida",
-            body: "Obrigada. Vamos revisar a publicação reportada."
+            title: L10n.Pulse.notifyReportTitle,
+            body: L10n.Pulse.notifyReportBody
         )
         persistPosts()
         Task {
@@ -695,7 +695,7 @@ final class PulseLocalStore: ObservableObject {
         let updated = PulsePerson(
             id: userId,
             displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ? "Atleta"
+                ? L10n.Pulse.athlete
                 : displayName.trimmingCharacters(in: .whitespacesAndNewlines),
             emailHint: emailHint,
             countryCode: countryCode.isEmpty ? (existing?.countryCode ?? "BR") : countryCode,
@@ -879,10 +879,10 @@ final class PulseLocalStore: ObservableObject {
                 PulseFollowRelation(fromUserId: userId, toUserId: targetId, status: .requested, notifyPosts: notifyPosts)
             )
         }
-        let name = people.first(where: { $0.id == userId })?.displayName ?? "Alguém"
+        let name = people.first(where: { $0.id == userId })?.displayName ?? L10n.Pulse.someone
         pushNotification(
-            title: "Novo pedido para seguir",
-            body: "\(name) quer seguir você no Pulse."
+            title: L10n.Pulse.notifyFollowRequestTitle,
+            body: L10n.Pulse.notifyFollowRequestBody(name)
         )
         persistFollows()
         Task {
@@ -898,8 +898,8 @@ final class PulseLocalStore: ObservableObject {
         persistFollows()
         if follows[idx].notifyPosts {
             pushNotification(
-                title: "Agora seguindo",
-                body: "Você verá postagens recentes de quem você aprovou (se a pessoa publicar)."
+                title: L10n.Pulse.notifyFollowingTitle,
+                body: L10n.Pulse.notifyFollowingBody
             )
         }
         Task {
@@ -1183,8 +1183,8 @@ final class PulseLocalStore: ObservableObject {
         }
         guard !watchers.isEmpty else { return }
         pushNotification(
-            title: "Nova postagem no Pulse",
-            body: "\(post.authorName) publicou em \(post.community.title).",
+            title: L10n.Pulse.notifyNewPostTitle,
+            body: L10n.Pulse.notifyNewPostBody(post.authorName, post.community.title),
             scheduleSystemBanner: true
         )
     }
@@ -1473,9 +1473,9 @@ enum PulseStoreError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .encodeFailed: return "Não foi possível salvar a mídia."
-        case .videoTooLong: return "Vídeo deve ter no máximo \(Int(PulseExperimental.maxVideoSeconds)) segundos."
-        case .videoDisabled: return "Posts em vídeo estarão disponíveis em uma próxima versão."
+        case .encodeFailed: return L10n.Pulse.errorMediaSave
+        case .videoTooLong: return L10n.Pulse.errorVideoTooLong(Int(PulseExperimental.maxVideoSeconds))
+        case .videoDisabled: return L10n.Pulse.errorVideoDisabled
         }
     }
 }

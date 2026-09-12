@@ -41,6 +41,8 @@ final class DailyWellnessService: ObservableObject {
     static let staleUpdateThreshold: TimeInterval = 24 * 60 * 60
 
     @Published private(set) var todayEntry: DailyWellnessEntry = .empty()
+    /// Entradas da semana atual (e dias recentes) para o seletor do Dashboard — espelhadas no Firebase.
+    @Published private(set) var weekEntriesByDayKey: [String: DailyWellnessEntry] = [:]
     @Published var pendingSleepHours: Double = 7
     @Published var showSleepCheckIn = false
 
@@ -103,6 +105,7 @@ final class DailyWellnessService: ObservableObject {
             let recent = try await DailyWellnessFirestoreService.fetchRecentEntries(userId: userId, limit: 21)
             if !recent.isEmpty {
                 MonthlyReportService.shared.cacheWellnessEntries(recent)
+                ingestWeekEntries(recent)
             }
 
             evaluateMorningCheckInPresentation()
@@ -123,6 +126,7 @@ final class DailyWellnessService: ObservableObject {
         cloudUserId = nil
         waterGoalMl = nil
         todayEntry = .empty()
+        weekEntriesByDayKey = [:]
         pendingSleepHours = 7
         showSleepCheckIn = false
     }
@@ -239,17 +243,23 @@ final class DailyWellnessService: ObservableObject {
     }
 
     func logSleep(hours: Double) {
+        logSleep(hours: hours, dayKey: DailyWellnessEntry.dayKey(for: .now))
+    }
+
+    /// Registra sono para um dia específico (Dashboard / histórico) e envia ao Firebase.
+    func logSleep(hours: Double, dayKey: String) {
         let clamped = max(0, min(hours, 14))
-        var entry = currentTodayEntry()
+        var entry = entry(for: dayKey)
         if entry.sleepHours == clamped, entry.sleepUpdatedAt != nil {
             return
         }
         entry.sleepHours = clamped
         entry.sleepUpdatedAt = .now
         save(entry)
-        markWaterOrSleepUpdated()
-        markMorningCheckInHandled()
-        // Mantém o sheet aberto para feedback/água; a UI fecha com Continuar ou dismissMorningCheckIn.
+        if dayKey == DailyWellnessEntry.dayKey(for: .now) {
+            markWaterOrSleepUpdated()
+            markMorningCheckInHandled()
+        }
     }
 
     /// Atualiza a meta de água enviada ao Firebase a partir do peso do perfil.
@@ -258,19 +268,80 @@ final class DailyWellnessService: ObservableObject {
     }
 
     func updateWaterIntake(_ milliliters: Int) {
-        var entry = currentTodayEntry()
+        updateWaterIntake(milliliters, dayKey: DailyWellnessEntry.dayKey(for: .now))
+    }
+
+    func updateWaterIntake(_ milliliters: Int, dayKey: String) {
+        var entry = entry(for: dayKey)
         let clamped = min(max(0, milliliters), WaterServing.maxDailyIntakeML)
         guard entry.waterIntakeMl != clamped else { return }
         entry.waterIntakeMl = clamped
         if clamped > 0 {
             entry.waterUpdatedAt = .now
-            markWaterOrSleepUpdated()
+            if dayKey == DailyWellnessEntry.dayKey(for: .now) {
+                markWaterOrSleepUpdated()
+            }
         }
         save(entry)
     }
 
     func addWater(_ milliliters: Int) {
-        updateWaterIntake(min(todayEntry.waterIntakeMl + milliliters, WaterServing.maxDailyIntakeML))
+        addWater(milliliters, dayKey: DailyWellnessEntry.dayKey(for: .now))
+    }
+
+    func addWater(_ milliliters: Int, dayKey: String) {
+        let current = entry(for: dayKey).waterIntakeMl
+        updateWaterIntake(min(current + milliliters, WaterServing.maxDailyIntakeML), dayKey: dayKey)
+    }
+
+    /// Entrada de wellness para o dia (cache da semana + hoje + Firebase).
+    func entry(for dayKey: String) -> DailyWellnessEntry {
+        if dayKey == DailyWellnessEntry.dayKey(for: .now), todayEntry.dayKey == dayKey {
+            return todayEntry
+        }
+        if let cached = weekEntriesByDayKey[dayKey] {
+            return cached
+        }
+        return .empty(forDayKey: dayKey)
+    }
+
+    func sleepHours(for dayKey: String) -> Double? {
+        entry(for: dayKey).sleepHours
+    }
+
+    func waterIntakeMl(for dayKey: String) -> Int {
+        entry(for: dayKey).waterIntakeMl
+    }
+
+    func waterProgress(for user: UserProfile, dayKey: String) -> Double {
+        guard user.recommendedDailyWaterML > 0 else { return 0 }
+        return min(Double(waterIntakeMl(for: dayKey)) / Double(user.recommendedDailyWaterML), 1.0)
+    }
+
+    func hasMetWaterGoal(for user: UserProfile, dayKey: String) -> Bool {
+        waterIntakeMl(for: dayKey) >= user.recommendedDailyWaterML
+    }
+
+    /// Garante cache da semana atual (local + nuvem) para o seletor do Dashboard.
+    func ensureCurrentWeekLoaded() async {
+        let todayKey = DailyWellnessEntry.dayKey(for: .now)
+        if todayEntry.dayKey == todayKey {
+            upsertWeekEntry(todayEntry)
+        }
+        let cached = MonthlyReportService.shared.recentWellnessEntries
+        if !cached.isEmpty {
+            ingestWeekEntries(cached)
+        }
+        guard let userId = cloudUserId, DailyWellnessFirestoreService.isAvailable else { return }
+        do {
+            let recent = try await DailyWellnessFirestoreService.fetchRecentEntries(userId: userId, limit: 14)
+            ingestWeekEntries(recent)
+            if !recent.isEmpty {
+                MonthlyReportService.shared.cacheWellnessEntries(recent)
+            }
+        } catch {
+            print("[HealthFit] Falha ao carregar semana de wellness: \(error.localizedDescription)")
+        }
     }
 
     func updateEnergyDrinksCount(_ count: Int) {
@@ -460,23 +531,67 @@ final class DailyWellnessService: ObservableObject {
             return
         }
         todayEntry = stored
+        upsertWeekEntry(stored)
     }
 
     private func save(_ entry: DailyWellnessEntry) {
-        guard entry != todayEntry else { return }
-        persistLocally(entry)
+        let todayKey = DailyWellnessEntry.dayKey(for: .now)
+        if entry.dayKey == todayKey {
+            guard entry != todayEntry else {
+                upsertWeekEntry(entry)
+                return
+            }
+            persistLocally(entry)
+        } else if weekEntriesByDayKey[entry.dayKey] == entry {
+            return
+        } else {
+            upsertWeekEntry(entry)
+        }
         Task {
             await pushEntryToCloudSafely(entry)
-            await pushMetaToCloudSafely()
+            if entry.dayKey == todayKey {
+                await pushMetaToCloudSafely()
+            }
         }
     }
 
     private func persistLocally(_ entry: DailyWellnessEntry) {
         guard let userEmail else { return }
         todayEntry = entry
+        upsertWeekEntry(entry)
         if let data = try? JSONEncoder().encode(entry) {
             UserDefaults.standard.set(data, forKey: storageKey(email: userEmail))
         }
+    }
+
+    private func upsertWeekEntry(_ entry: DailyWellnessEntry) {
+        var next = weekEntriesByDayKey
+        next[entry.dayKey] = entry
+        weekEntriesByDayKey = next
+    }
+
+    private func ingestWeekEntries(_ entries: [DailyWellnessEntry]) {
+        guard !entries.isEmpty else { return }
+        var next = weekEntriesByDayKey
+        let todayKey = DailyWellnessEntry.dayKey(for: .now)
+        for remote in entries {
+            if remote.dayKey == todayKey, todayEntry.dayKey == todayKey {
+                let merged = mergeEntries(local: todayEntry, remote: remote)
+                if merged != todayEntry {
+                    todayEntry = merged
+                    if let userEmail,
+                       let data = try? JSONEncoder().encode(merged) {
+                        UserDefaults.standard.set(data, forKey: storageKey(email: userEmail))
+                    }
+                }
+                next[remote.dayKey] = todayEntry
+            } else if let local = next[remote.dayKey] {
+                next[remote.dayKey] = mergeEntries(local: local, remote: remote)
+            } else {
+                next[remote.dayKey] = remote
+            }
+        }
+        weekEntriesByDayKey = next
     }
 
     private func pushEntryToCloudSafely(_ entry: DailyWellnessEntry) async {

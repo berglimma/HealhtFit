@@ -75,9 +75,14 @@ final class CoachService: ObservableObject {
             return
         }
         Task {
+            await hydrateConsentFromCloud(uid: uid)
             await refreshProfile(uid: uid)
             if isProfessionalAccount || myProfile != nil {
                 await refreshProfessionalPhotoFromAppProfileIfNeeded()
+            }
+            // Se já aceitou no device mas ainda não está no Firebase, espelha.
+            if CoachPreferences.hasConsent {
+                await CoachFirestoreService.saveCoachConsentIfPossible()
             }
         }
         membershipListener?.remove()
@@ -118,6 +123,13 @@ final class CoachService: ObservableObject {
                 self?.interestMessages = messages
             }
         }
+    }
+
+    /// Restaura consentimento do Coach a partir do Firebase (novo device / reinstalação).
+    private func hydrateConsentFromCloud(uid: String) async {
+        guard !CoachPreferences.hasConsent else { return }
+        let granted = await CoachFirestoreService.fetchCoachConsentGranted(uid: uid)
+        CoachPreferences.applyFromCloud(granted: granted)
     }
 
     // MARK: - Profile

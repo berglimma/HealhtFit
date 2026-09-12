@@ -103,7 +103,6 @@ struct FightHubView: View {
             intensity: .high
         )
         guard workoutStore.startCardioSession(config: config) else { return }
-
         watchConnectivity.startCardioOnWatch(
             workoutName: config.title,
             targetSeconds: 0,
@@ -115,9 +114,11 @@ struct FightHubView: View {
             sessionTitle: config.title,
             athleteName: authService.currentUser?.greetingName ?? "Atleta"
         )
-        // MainTabView hospeda a ActiveCardioView durante toda a sessão.
         workoutStore.resumeActiveWorkout()
-        dismiss()
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            dismiss()
+        }
     }
 }
 
