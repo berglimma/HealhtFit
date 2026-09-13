@@ -3,6 +3,8 @@
 Categoria principal sugerida: **Health & Fitness**  
 Categoria secundária: **Lifestyle**
 
+Idade mínima do app no código: **16+**. HealthFit Pulse (UGC): **18+**.
+
 ## Questionário (Apple Age Rating)
 
 Responda **Nenhuma / None** para quase tudo. Ajustes abaixo:
@@ -16,20 +18,28 @@ Responda **Nenhuma / None** para quase tudo. Ajustes abaixo:
 | Horror/Fear Themes | None | — |
 | Mature/Suggestive Themes | None | — |
 | Medical/Treatment Information | **Infrequent/Mild** | Orientação fitness/nutrição informativa; disclaimer médico |
-| Alcohol, Tobacco, or Drug Use | None | Suplementação mencionada de forma informativa; sem promoção de substâncias ilícitas → None |
+| Alcohol, Tobacco, or Drug Use | None | — |
 | Simulated Gambling | None | — |
-| Sexual Content or Nudity | None | Fotos de evolução corporal são opcionais e privadas (não conteúdo sexual) |
+| Sexual Content or Nudity | None | Fotos de evolução são privadas; Pulse não é conteúdo sexual |
 | Unrestricted Web Access | None | Links legais/suporte apenas |
 | Gambling and Contests | None | — |
 
-**Faixa etária esperada:** 4+ ou 9+ (se Medical Information = Infrequent/Mild, a Apple pode classificar 9+ / 12+ conforme a matriz atual). Aceite a classificação gerada pelo Connect.
+## User-Generated Content (obrigatório com Pulse)
 
-## In-App Controls / UGC
+Marque que o app contém **User-Generated Content** e que há:
+
+- Capacidade de usuários publicar conteúdo (feed / stories / comunidades)
+- Filtro / gate de idade **18+** para o Pulse
+- Mecanismos de **denunciar**, **bloquear** e **ocultar**
+- Moderação / contato: healthfit.appreview@gmail.com
+
+**Faixa etária esperada no Connect:** **16+** (ou a classificação gerada com Medical Information + UGC).  
+Não deixe 4+/9+ se a conta exige 16 anos no cadastro — risco de rejeição por inconsistência.
+
+## In-App Controls
 
 - Conta: login e-mail, Apple, Google
 - Compras: assinaturas auto-renováveis
-- **UGC Duo:** chat **privado** em Dupla/equipe (somente membros do grupo)
-- **UGC Pulse (quando habilitado):** feed/stories/comunidades — conteúdo gerado por usuários; gate **18+** no app; denunciar / ocultar / bloquear; moderação via conta de suporte
-- Controles Duo: **denunciar mensagem**, **sair do grupo**, mensagens ~12h
-- Controles Pulse: denunciar post, ocultar, bloquear autor; posts ~24h / stories ~12h
-- Idade mínima geral do app: **16 anos**; Pulse UGC: **18 anos**
+- **UGC Duo:** chat privado em Dupla/equipe
+- **UGC Pulse:** feed/stories/comunidades; gate 18+; denunciar / ocultar / bloquear
+- Posts ~24h / stories ~12h

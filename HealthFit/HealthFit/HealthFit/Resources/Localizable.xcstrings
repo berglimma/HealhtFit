@@ -852,6 +852,9 @@
     "Ajuda" : {
 
     },
+    "Ajustar foto" : {
+
+    },
     "Ajuste a inclinação conforme a esteira. O gasto calórico estimado acompanha a elevação." : {
 
     },
@@ -945,6 +948,9 @@
     "Áreas de escalada" : {
 
     },
+    "Arraste · pinça para zoom" : {
+
+    },
     "Arraste a janela · %@ · %llds" : {
       "localizations" : {
         "pt-BR" : {
@@ -988,6 +994,9 @@
 
     },
     "Assinaturas" : {
+
+    },
+    "Assine o Básico (R$ 9,90) para continuar" : {
 
     },
     "Assista a demonstração" : {
@@ -2206,12 +2215,12 @@
         }
       }
     },
-    "Cadastre o e-mail do personal no Perfil para enviar o relatório deste treino. O envio exige o app Mail configurado neste %@ (%@)." : {
+    "Cadastre o e-mail do personal em Perfil para gerar o relatório e enviar. O envio usa o app Mail neste %@ (%@)." : {
       "localizations" : {
         "pt-BR" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Cadastre o e-mail do personal no Perfil para enviar o relatório deste treino. O envio exige o app Mail configurado neste %1$@ (%2$@)."
+            "value" : "Cadastre o e-mail do personal em Perfil para gerar o relatório e enviar. O envio usa o app Mail neste %1$@ (%2$@)."
           }
         }
       }
@@ -2225,6 +2234,9 @@
           }
         }
       }
+    },
+    "Cadastre o personal e o e-mail em Perfil para enviar o relatório automaticamente." : {
+
     },
     "Cálculo: 35 ml por kg de peso corporal (%@ kg). Equivale a cerca de %lld copos (%lld ml) ou %lld garrafas (%lld ml)." : {
       "localizations" : {
@@ -2330,6 +2342,9 @@
 
     },
     "Categoria" : {
+
+    },
+    "Centralizar" : {
 
     },
     "Chat" : {
@@ -3197,10 +3212,13 @@
     "É necessário ter %lld anos ou mais para usar o HealthFit" : {
 
     },
+    "É preciso ter rota GPS (2+ pontos) para postar ou salvar o mapa." : {
+
+    },
     "E-mail" : {
 
     },
-    "E-mail do personal não cadastrado" : {
+    "E-mail do personal" : {
 
     },
     "E-mail enviado" : {
@@ -3397,6 +3415,9 @@
 
     },
     "Escolha uma foto para escrever por cima" : {
+
+    },
+    "Escolha WhatsApp ou Instagram na tela de compartilhar. Formato %@." : {
 
     },
     "Escolha WhatsApp ou Instagram na tela de compartilhar. O nome HealthFit já vai no card." : {
@@ -3673,6 +3694,9 @@
     "Fonte atual" : {
 
     },
+    "Formato" : {
+
+    },
     "Foto da refeição" : {
 
     },
@@ -3728,6 +3752,9 @@
     "Gasto diário estimado (TDEE): %lld kcal" : {
 
     },
+    "Gera o relatório do treino e abre o e-mail para o personal com o mapa anexado (quando houver)." : {
+
+    },
     "Gerado pelo IAssistente — sugestão educativa. É essencial consultar um profissional de Educação Física antes de seguir esta ficha." : {
 
     },
@@ -3768,6 +3795,9 @@
 
     },
     "Graduação" : {
+
+    },
+    "Grátis · %lld dia(s) restantes" : {
 
     },
     "Grau" : {
@@ -3868,6 +3898,9 @@
 
     },
     "Incluir intensidade" : {
+
+    },
+    "Incluso no seu plano" : {
 
     },
     "Indicadores na sessão" : {
@@ -5120,6 +5153,9 @@
     "Personal trainer" : {
 
     },
+    "Personal: %@. Falta o e-mail em Perfil para enviar o relatório." : {
+
+    },
     "Personalizado" : {
 
     },
@@ -5221,6 +5257,9 @@
     "Post %@…" : {
 
     },
+    "Postar mapa" : {
+
+    },
     "Postar no WhatsApp / Instagram" : {
 
     },
@@ -5252,6 +5291,9 @@
 
     },
     "Preparando card..." : {
+
+    },
+    "Preparando mapa..." : {
 
     },
     "Preparando mídia..." : {
@@ -5827,6 +5869,9 @@
 
     },
     "Pronto" : {
+
+    },
+    "Pronto (foto)" : {
 
     },
     "Pronto: plano %@ até %@." : {
@@ -10601,6 +10646,9 @@
     "Salvar fotos na Galeria" : {
 
     },
+    "Salvar mapa na Galeria" : {
+
+    },
     "Salvar medidas" : {
 
     },
@@ -10805,6 +10853,12 @@
 
     },
     "Seu personal e nutrição" : {
+
+    },
+    "Seus 15 dias grátis do HealthFit Pulse terminaram. Assine o plano Básico (R$ 9,90/mês) para continuar com stories, comunidades e posts." : {
+
+    },
+    "Seus 15 dias grátis terminaram. Assine o plano Básico (R$ 9,90/mês) para continuar publicando no Pulse." : {
 
     },
     "Seus Dados" : {
@@ -11394,6 +11448,9 @@
     "Treinos Recentes" : {
 
     },
+    "Trial do Pulse encerrado" : {
+
+    },
     "Trocar foto" : {
 
     },
@@ -11524,6 +11581,9 @@
     "Ver comparativo de %lld dia(s)" : {
 
     },
+    "Ver planos" : {
+
+    },
     "Ver planos e assinar" : {
 
     },
@@ -11598,6 +11658,416 @@
     },
     "vs meta diária" : {
 
+    },
+    "wellness.sleep.above.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast mehr als 9 Stunden geschlafen. Extra Erholung kann die Regeneration unterstützen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You slept more than 9 hours. Extra rest can help recovery."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dormiste más de 9 horas. El descanso extra puede ayudar a la recuperación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous avez dormi plus de 9 heures. Un repos supplémentaire peut aider à la récupération."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hai dormito più di 9 ore. Il riposo extra può aiutare il recupero."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você dormiu mais de 9 horas. Descanso extra pode ajudar na recuperação."
+          }
+        }
+      }
+    },
+    "wellness.sleep.above.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langer Schlaf"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Long sleep"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sueño prolongado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sommeil prolongé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonno prolungato"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sono prolongado"
+          }
+        }
+      }
+    },
+    "wellness.sleep.ideal.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Schlaf ist ideal! 7 bis 9 Stunden unterstützen Muskelregeneration und Wohlbefinden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your sleep is ideal! Staying between 7 and 9 hours supports muscle recovery and well-being."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Tu sueño es ideal! Mantener entre 7 y 9 horas ayuda a la recuperación muscular y al bienestar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre sommeil est idéal ! Rester entre 7 et 9 heures favorise la récupération musculaire et le bien-être."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il tuo sonno è ideale! Restare tra 7 e 9 ore aiuta il recupero muscolare e il benessere."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seu sono está ideal! Manter entre 7 e 9 horas ajuda na recuperação muscular e no bem-estar."
+          }
+        }
+      }
+    },
+    "wellness.sleep.ideal.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idealer Schlaf"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ideal sleep"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sueño ideal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sommeil idéal"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonno ideale"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sono ideal"
+          }
+        }
+      }
+    },
+    "wellness.sleep.needs_more.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du brauchst etwas mehr Schlaf. Ideal sind 7 bis 9 Stunden pro Nacht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You need a bit more sleep. The ideal is 7 to 9 hours per night."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Necesitas dormir un poco más. Lo ideal es entre 7 y 9 horas por noche."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous avez besoin de dormir un peu plus. L’idéal se situe entre 7 et 9 heures par nuit."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hai bisogno di dormire un po’ di più. L’ideale è tra 7 e 9 ore a notte."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você precisa dormir um pouco mais. O ideal é entre 7 e 9 horas por noite."
+          }
+        }
+      }
+    },
+    "wellness.sleep.needs_more.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehr Schlaf nötig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Need more sleep"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Necesitas dormir más"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Besoin de plus de sommeil"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serve dormire di più"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Precisa dormir mais"
+          }
+        }
+      }
+    },
+    "wellness.sleep.unregulated.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast weniger als 5 Stunden geschlafen. Dein Schlaf ist nicht reguliert — priorisiere Erholung für bessere Regeneration."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You slept less than 5 hours. Your sleep is not regulated — prioritize rest to recover better from workouts."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dormiste menos de 5 horas. Tu sueño no está regulado: prioriza el descanso para recuperarte mejor de los entrenamientos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous avez dormi moins de 5 heures. Votre sommeil n’est pas régulé — priorisez le repos pour mieux récupérer des entraînements."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hai dormito meno di 5 ore. Il sonno non è regolato: dai priorità al riposo per recuperare meglio dagli allenamenti."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você dormiu menos de 5 horas. Seu sono não está regulado — priorize descanso para recuperar melhor dos treinos."
+          }
+        }
+      }
+    },
+    "wellness.sleep.unregulated.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlaf nicht reguliert"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sleep not regulated"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sueño no regulado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sommeil non régulé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonno non regolato"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sono não regulado"
+          }
+        }
+      }
+    },
+    "wellness.week.a11y_sleep" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlaf erfasst"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sleep logged"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sueño registrado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sommeil enregistré"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sonno registrato"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sono registrado"
+          }
+        }
+      }
+    },
+    "wellness.week.a11y_water" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wasser erfasst"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "water logged"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "agua registrada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "eau enregistrée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "acqua registrata"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "água registrada"
+          }
+        }
+      }
     },
     "workout.female" : {
       "extractionState" : "stale",

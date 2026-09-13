@@ -1538,6 +1538,12 @@ private struct PulseStoryComposeView: View {
     @State private var showLibrary = false
     @State private var showCamera = false
     @State private var showMusicPicker = false
+    /// Ajuste da foto no canvas (pan/zoom) para o texto não cobrir o sujeito.
+    @State private var photoOffset: CGSize = .zero
+    @State private var photoScale: CGFloat = 1
+    @State private var photoDragStart: CGSize = .zero
+    @State private var photoPinchStart: CGFloat = 1
+    @State private var isAdjustingPhoto = false
     @FocusState private var textFieldFocused: Bool
 
     private let colors = ["#FFFFFF", "#A8FF60", "#FFD60A", "#FF6B6B", "#5AC8FA", "#BF5AF2"]
@@ -1588,7 +1594,8 @@ private struct PulseStoryComposeView: View {
 
                     Button(L10n.Pulse.storyPublish) {
                         if let selectedPhoto {
-                            onPublish(selectedPhoto, selectedMusic, textOverlays.filter {
+                            let framed = renderFramedStoryPhoto(from: selectedPhoto) ?? selectedPhoto
+                            onPublish(framed, selectedMusic, textOverlays.filter {
                                 !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             })
                         }
@@ -1651,14 +1658,20 @@ private struct PulseStoryComposeView: View {
             .sheet(isPresented: $showLibrary) {
                 LibraryImagePicker { image in
                     showLibrary = false
-                    if let image { selectedPhoto = image }
+                    if let image {
+                        selectedPhoto = image
+                        resetPhotoFraming()
+                    }
                 }
                 .ignoresSafeArea()
             }
             .sheet(isPresented: $showCamera) {
                 CameraImagePicker { image in
                     showCamera = false
-                    if let image { selectedPhoto = image }
+                    if let image {
+                        selectedPhoto = image
+                        resetPhotoFraming()
+                    }
                 }
                 .ignoresSafeArea()
             }
@@ -1675,28 +1688,35 @@ private struct PulseStoryComposeView: View {
                 GeometryReader { geo in
                     let size = geo.size
                     ZStack {
-                        Image(uiImage: selectedPhoto)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: size.width, height: size.height)
-                            .clipped()
+                        storyPhotoLayer(photo: selectedPhoto, size: size)
 
-                        ForEach($textOverlays) { $overlay in
-                            PulseStoryDraggableText(
-                                overlay: $overlay,
-                                canvasSize: size,
-                                isSelected: overlay.id == selectedOverlayID,
-                                onSelect: { focusKeyboard in
-                                    selectedOverlayID = overlay.id
-                                    draftText = overlay.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                                    selectedFont = overlay.fontStyle
-                                    isBold = overlay.isBold
-                                    selectedColor = overlay.colorHex
-                                    if focusKeyboard {
-                                        textFieldFocused = true
+                        if !isAdjustingPhoto {
+                            ForEach($textOverlays) { $overlay in
+                                PulseStoryDraggableText(
+                                    overlay: $overlay,
+                                    canvasSize: size,
+                                    isSelected: overlay.id == selectedOverlayID,
+                                    onSelect: { focusKeyboard in
+                                        selectedOverlayID = overlay.id
+                                        draftText = overlay.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                                        selectedFont = overlay.fontStyle
+                                        isBold = overlay.isBold
+                                        selectedColor = overlay.colorHex
+                                        if focusKeyboard {
+                                            textFieldFocused = true
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
+                        } else {
+                            ForEach(textOverlays) { overlay in
+                                PulseStoryTextLabel(overlay: overlay, isSelected: false)
+                                    .position(
+                                        x: overlay.x * size.width,
+                                        y: overlay.y * size.height
+                                    )
+                                    .allowsHitTesting(false)
+                            }
                         }
                     }
                 }
@@ -1724,15 +1744,59 @@ private struct PulseStoryComposeView: View {
                 }
             }
             .overlay(alignment: .topTrailing) {
-                Text("Arraste o texto na foto")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.black.opacity(0.45))
-                    .clipShape(Capsule())
-                    .padding(10)
-                    .allowsHitTesting(false)
+                VStack(alignment: .trailing, spacing: 6) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isAdjustingPhoto.toggle()
+                            if isAdjustingPhoto {
+                                textFieldFocused = false
+                                selectedOverlayID = nil
+                            }
+                        }
+                    } label: {
+                        Text(isAdjustingPhoto ? "Pronto (foto)" : "Ajustar foto")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(isAdjustingPhoto ? AppTheme.accent.opacity(0.95) : Color.black.opacity(0.45))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+
+                    if isAdjustingPhoto {
+                        Text("Arraste · pinça para zoom")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.black.opacity(0.45))
+                            .clipShape(Capsule())
+                            .allowsHitTesting(false)
+                        if photoScale > 1.01 || photoOffset != .zero {
+                            Button("Centralizar") {
+                                resetPhotoFraming()
+                            }
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.black.opacity(0.45))
+                            .clipShape(Capsule())
+                            .buttonStyle(.plain)
+                        }
+                    } else {
+                        Text("Arraste o texto na foto")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.black.opacity(0.45))
+                            .clipShape(Capsule())
+                            .allowsHitTesting(false)
+                    }
+                }
+                .padding(10)
             }
         } else {
             RoundedRectangle(cornerRadius: 16)
@@ -1743,6 +1807,74 @@ private struct PulseStoryComposeView: View {
                         .foregroundStyle(AppTheme.textSecondary)
                 }
         }
+    }
+
+    @ViewBuilder
+    private func storyPhotoLayer(photo: UIImage, size: CGSize) -> some View {
+        let image = Image(uiImage: photo)
+            .resizable()
+            .scaledToFill()
+            .scaleEffect(photoScale)
+            .offset(photoOffset)
+            .frame(width: size.width, height: size.height)
+            .clipped()
+            .contentShape(Rectangle())
+
+        if isAdjustingPhoto {
+            image
+                .gesture(
+                    SimultaneousGesture(
+                        DragGesture(minimumDistance: 2)
+                            .onChanged { value in
+                                photoOffset = CGSize(
+                                    width: photoDragStart.width + value.translation.width,
+                                    height: photoDragStart.height + value.translation.height
+                                )
+                            }
+                            .onEnded { _ in
+                                photoDragStart = photoOffset
+                            },
+                        MagnificationGesture()
+                            .onChanged { value in
+                                photoScale = min(3.2, max(1.0, photoPinchStart * value))
+                            }
+                            .onEnded { _ in
+                                photoPinchStart = photoScale
+                            }
+                    )
+                )
+        } else {
+            image.allowsHitTesting(false)
+        }
+    }
+
+    private func resetPhotoFraming() {
+        photoOffset = .zero
+        photoScale = 1
+        photoDragStart = .zero
+        photoPinchStart = 1
+    }
+
+    @MainActor
+    private func renderFramedStoryPhoto(from photo: UIImage) -> UIImage? {
+        // Exporta só o enquadramento (pan/zoom); textos seguem como overlays no viewer.
+        let width: CGFloat = 1080
+        let height: CGFloat = 1920
+        let previewWidth = max(UIScreen.main.bounds.width - 40, 1)
+        let previewHeight: CGFloat = 420
+        let scaleX = width / previewWidth
+        let scaleY = height / previewHeight
+        let canvas = Image(uiImage: photo)
+            .resizable()
+            .scaledToFill()
+            .scaleEffect(photoScale)
+            .offset(x: photoOffset.width * scaleX, y: photoOffset.height * scaleY)
+            .frame(width: width, height: height)
+            .clipped()
+        let renderer = ImageRenderer(content: canvas)
+        renderer.scale = 2
+        renderer.isOpaque = true
+        return renderer.uiImage
     }
 
     private var textTools: some View {
@@ -2561,9 +2693,12 @@ struct PulseComposeView: View {
                     if let selectedPhoto {
                         Image(uiImage: selectedPhoto)
                             .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: 220)
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 280)
+                            .clipped()
                             .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                     } else if selectedVideoURL != nil {
                         Label(
                             "Vídeo selecionado (máx. \(Int(PulseExperimental.maxVideoSeconds))s)",
@@ -2573,8 +2708,10 @@ struct PulseComposeView: View {
                     } else if isEditing, let existingImage {
                         Image(uiImage: existingImage)
                             .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: 220)
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 280)
+                            .clipped()
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                             .overlay(alignment: .topLeading) {
                                 Text("Atual")
@@ -2585,6 +2722,7 @@ struct PulseComposeView: View {
                                     .clipShape(Capsule())
                                     .padding(8)
                             }
+                            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                     }
                 }
 

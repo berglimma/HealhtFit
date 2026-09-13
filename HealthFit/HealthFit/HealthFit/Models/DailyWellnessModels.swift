@@ -9,23 +9,19 @@ enum SleepAssessment: Equatable {
 
     var title: String {
         switch self {
-        case .unregulated: return "Sono não regulado"
-        case .needsMore: return "Precisa dormir mais"
-        case .ideal: return "Sono ideal"
-        case .aboveRecommended: return "Sono prolongado"
+        case .unregulated: return L10n.tr("wellness.sleep.unregulated.title")
+        case .needsMore: return L10n.tr("wellness.sleep.needs_more.title")
+        case .ideal: return L10n.tr("wellness.sleep.ideal.title")
+        case .aboveRecommended: return L10n.tr("wellness.sleep.above.title")
         }
     }
 
     var message: String {
         switch self {
-        case .unregulated:
-            return "Você dormiu menos de 5 horas. Seu sono não está regulado — priorize descanso para recuperar melhor dos treinos."
-        case .needsMore:
-            return "Você precisa dormir um pouco mais. O ideal é entre 7 e 9 horas por noite."
-        case .ideal:
-            return "Seu sono está ideal! Manter entre 7 e 9 horas ajuda na recuperação muscular e no bem-estar."
-        case .aboveRecommended:
-            return "Você dormiu mais de 9 horas. Descanso extra pode ajudar na recuperação."
+        case .unregulated: return L10n.tr("wellness.sleep.unregulated.message")
+        case .needsMore: return L10n.tr("wellness.sleep.needs_more.message")
+        case .ideal: return L10n.tr("wellness.sleep.ideal.message")
+        case .aboveRecommended: return L10n.tr("wellness.sleep.above.message")
         }
     }
 

@@ -51,8 +51,16 @@ Arquivo local de teste: `HealthFit/Configuration/Products.storekit`
 | StoreKit 2 | `Services/SubscriptionService.swift` |
 | Paywall + Meu plano | `Views/Subscription/SubscriptionViews.swift` |
 | Gates on/off | `SubscriptionConfiguration.featureGatesEnabled` |
-| Features novas | `.advancedModalities` (Fit), `.advancedSportAnalytics` (IA+) |
+| Features novas | `.advancedModalities` (Fit), `.advancedSportAnalytics` (IA+), `.healthFitPulse` (Básico) |
 | UI lock | `.requiresSubscription(.feature)` em `SubscriptionViews.swift` |
+| Pulse trial | 15 dias locais (`PulseEntitlement`) — **não** é Introductory Offer da App Store |
+
+### Básico (R$ 9,90) inclui
+
+- Treinos no iPhone e Watch  
+- Duo  
+- **HealthFit Pulse** (após trial de 15 dias no app)  
+
 
 ### Bloqueios na v1.0 (lançamento)
 

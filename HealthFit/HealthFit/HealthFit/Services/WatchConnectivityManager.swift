@@ -274,7 +274,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         let resolvedOutdoor = locationOutdoor
             || swimmingMode
             || waterSportMode
-            || [.walking, .running, .cycling, .rowing, .hiking].contains(resolvedActivity)
+            || [.walking, .running, .rowing, .hiking].contains(resolvedActivity)
         let message: [String: Any] = [
             "action": "startCardio",
             "workoutName": workoutName,

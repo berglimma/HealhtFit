@@ -32,8 +32,10 @@ struct DashboardView: View {
     /// Charts / HealthKit refresh after first layout — avoids hitching the home paint.
     @State private var showHealthCharts = false
     /// Dia selecionado na faixa semanal (padrão: hoje).
-    @State private var selectedWellnessDay: Date = Calendar.current.startOfDay(for: .now)
+    @State private var selectedWellnessDay: Date = Calendar.autoupdatingCurrent.startOfDay(for: .now)
     @State private var sleepHoursDraft: Double = 7
+    /// Força redesenho quando o calendário/região do iPhone muda (meia-noite, locale, fuso).
+    @State private var calendarSyncToken = 0
 
     /// Live `WorkoutShareCardView` is fixed ~360×464–568; this scale fits dashboard width when expanded.
     private let shareCardExpandedScale: CGFloat = 0.72
@@ -50,7 +52,7 @@ struct DashboardView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     headerSection
-                    if appUpdateService.pulseFlagsEpoch >= 0, PulseExperimental.isUIEnabled {
+                    if PulseEntitlement.isPulseVisible {
                         PulseDashboardCard()
                     }
                     weekDayWellnessSection
@@ -89,9 +91,14 @@ struct DashboardView: View {
             .onChange(of: wellnessService.todayEntry) { _, _ in
                 syncSleepDraft(for: selectedWellnessDay)
             }
+            .onChange(of: authService.currentUser?.countryCode) { _, _ in
+                calendarSyncToken &+= 1
+            }
+            .background { deviceCalendarSyncTriggers }
             .refreshable {
                 await healthKitManager.refreshFromHealthKit()
                 await wellnessService.ensureCurrentWeekLoaded()
+                refreshWeekFromDeviceCalendar()
             }
             .sheet(isPresented: $showWeeklyReport) {
                 WeeklyReportView()
@@ -124,11 +131,27 @@ struct DashboardView: View {
         }
     }
 
+    /// Ouvintes do calendário do iPhone, fora do `body` principal (evita type-check lento).
+    private var deviceCalendarSyncTriggers: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
+            .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+                refreshWeekFromDeviceCalendar()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSLocale.currentLocaleDidChangeNotification)) { _ in
+                refreshWeekFromDeviceCalendar()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                refreshWeekFromDeviceCalendar()
+            }
+    }
+
     @ViewBuilder
     private var weekDayWellnessSection: some View {
         let dayKey = DailyWellnessEntry.dayKey(for: selectedWellnessDay)
         let entry = wellnessService.entry(for: dayKey)
-        let isToday = Calendar.current.isDateInToday(selectedWellnessDay)
+        let isToday = regionAwareCalendar.isDateInToday(selectedWellnessDay)
         let waterGoal = authService.currentUser?.recommendedDailyWaterML ?? 2_000
         let sleepHours = entry.sleepHours ?? sleepHoursDraft
         let sleepGoalHours: Double = 8
@@ -161,11 +184,19 @@ struct DashboardView: View {
     }
 
     private var weekDayStrip: some View {
-        HStack(spacing: 6) {
+        // `calendarSyncToken` amarra o redesenho às mudanças de calendário/região do iPhone.
+        let _ = calendarSyncToken
+        let calendar = regionAwareCalendar
+        return HStack(spacing: 6) {
             ForEach(currentWeekDates, id: \.self) { date in
-                let selected = Calendar.current.isDate(date, inSameDayAs: selectedWellnessDay)
+                let selected = calendar.isDate(date, inSameDayAs: selectedWellnessDay)
+                let dayEntry = wellnessService.entry(for: DailyWellnessEntry.dayKey(for: date))
+                let hasSleep = dayEntry.sleepHours != nil
+                let hasWater = dayEntry.waterIntakeMl > 0
+                let isFilled = hasSleep || hasWater
+                let isComplete = hasSleep && hasWater
                 Button {
-                    selectedWellnessDay = date
+                    selectedWellnessDay = calendar.startOfDay(for: date)
                 } label: {
                     VStack(spacing: 4) {
                         Text(weekdayShortLabel(for: date))
@@ -175,15 +206,19 @@ struct DashboardView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .foregroundStyle(selected ? Color.white : AppTheme.textSecondary)
+                    .foregroundStyle(
+                        selected || isFilled
+                            ? Color.white
+                            : AppTheme.textSecondary
+                    )
                     .background(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(selected ? AppTheme.accent : AppTheme.cardBackground)
+                            .fill(weekDayFill(selected: selected, isComplete: isComplete, isFilled: isFilled))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .strokeBorder(
-                                Calendar.current.isDateInToday(date) && !selected
+                                calendar.isDateInToday(date) && !selected
                                     ? AppTheme.accent.opacity(0.55)
                                     : Color.clear,
                                 lineWidth: 1.5
@@ -191,8 +226,23 @@ struct DashboardView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(weekDayAccessibilityLabel(date: date, hasSleep: hasSleep, hasWater: hasWater))
             }
         }
+    }
+
+    private func weekDayFill(selected: Bool, isComplete: Bool, isFilled: Bool) -> Color {
+        if selected { return AppTheme.accent }
+        if isComplete { return AppTheme.accent.opacity(0.72) }
+        if isFilled { return AppTheme.accent.opacity(0.38) }
+        return AppTheme.cardBackground
+    }
+
+    private func weekDayAccessibilityLabel(date: Date, hasSleep: Bool, hasWater: Bool) -> String {
+        var parts = [weekdayShortLabel(for: date), dayNumberLabel(for: date)]
+        if hasSleep { parts.append(L10n.tr("wellness.week.a11y_sleep")) }
+        if hasWater { parts.append(L10n.tr("wellness.week.a11y_water")) }
+        return parts.joined(separator: ", ")
     }
 
     private func sleepDashboardCard(
@@ -587,32 +637,70 @@ struct DashboardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
-    /// Segunda → domingo da semana corrente.
+    /// Calendário do iPhone (Ajustes → Geral → Idioma e Região), com região do perfil quando houver.
+    private var regionAwareCalendar: Calendar {
+        var calendar = Calendar.autoupdatingCurrent
+        calendar.locale = regionLocale
+        calendar.timeZone = .autoupdatingCurrent
+        return calendar
+    }
+
+    /// Locale alinhado à região do usuário (país do perfil) + idioma do app/dispositivo.
+    private var regionLocale: Locale {
+        let country = (authService.currentUser?.countryCode ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+        let languageCode =
+            AppLanguageStore.shared.language.rawValue.split(separator: "-").first.map(String.init)
+            ?? Locale.autoupdatingCurrent.language.languageCode?.identifier
+            ?? "pt"
+
+        if country.count == 2 {
+            return Locale(identifier: "\(languageCode)_\(country)")
+        }
+        return Locale.autoupdatingCurrent
+    }
+
+    /// Semana corrente segundo o calendário do iPhone (`firstWeekday` da região).
     private var currentWeekDates: [Date] {
-        let calendar = Calendar.current
+        let calendar = regionAwareCalendar
         let today = calendar.startOfDay(for: .now)
-        let weekday = calendar.component(.weekday, from: today) // 1 = domingo
-        let mondayOffset = (weekday + 5) % 7
-        guard let monday = calendar.date(byAdding: .day, value: -mondayOffset, to: today) else {
+        guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: today)?.start else {
             return [today]
         }
-        return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: monday) }
+        let start = calendar.startOfDay(for: weekStart)
+        return (0..<7).compactMap { offset in
+            calendar.date(byAdding: .day, value: offset, to: start).map { calendar.startOfDay(for: $0) }
+        }
     }
 
     private func weekdayShortLabel(for date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "pt_BR")
-        formatter.dateFormat = "EEE"
+        formatter.calendar = regionAwareCalendar
+        formatter.locale = regionLocale
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.setLocalizedDateFormatFromTemplate("EEE")
         let raw = formatter.string(from: date)
             .replacingOccurrences(of: ".", with: "")
             .uppercased()
-        if raw.hasPrefix("SÁB") || raw.hasPrefix("SAB") { return "SÁB" }
         return String(raw.prefix(3))
     }
 
     private func dayNumberLabel(for date: Date) -> String {
-        let day = Calendar.current.component(.day, from: date)
-        return String(day)
+        let formatter = DateFormatter()
+        formatter.calendar = regionAwareCalendar
+        formatter.locale = regionLocale
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.setLocalizedDateFormatFromTemplate("d")
+        return formatter.string(from: date)
+    }
+
+    private func refreshWeekFromDeviceCalendar() {
+        let calendar = regionAwareCalendar
+        let today = calendar.startOfDay(for: .now)
+        selectedWellnessDay = today
+        calendarSyncToken &+= 1
+        syncSleepDraft(for: today)
     }
 
     private func syncSleepDraft(for date: Date) {
@@ -622,14 +710,14 @@ struct DashboardView: View {
 
     private func formatMilliliters(_ value: Int) -> String {
         let formatter = NumberFormatter()
-        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.locale = regionLocale
         formatter.numberStyle = .decimal
         return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 
     /// Estima horário de dormir / acordar a partir das horas registradas.
     private func sleepScheduleEstimate(hours: Double, loggedAt: Date?) -> (bedtime: String, wake: String, total: String) {
-        let calendar = Calendar.current
+        let calendar = regionAwareCalendar
         var wakeComponents = calendar.dateComponents([.year, .month, .day], from: selectedWellnessDay)
         if let loggedAt {
             let hour = calendar.component(.hour, from: loggedAt)
@@ -649,8 +737,10 @@ struct DashboardView: View {
         let bedDate = wakeDate.addingTimeInterval(-max(hours, 0) * 3600)
 
         let timeFormatter = DateFormatter()
-        timeFormatter.locale = Locale(identifier: "pt_BR")
-        timeFormatter.dateFormat = "HH:mm"
+        timeFormatter.calendar = calendar
+        timeFormatter.locale = regionLocale
+        timeFormatter.timeZone = .autoupdatingCurrent
+        timeFormatter.setLocalizedDateFormatFromTemplate("Hm")
 
         let totalHours = Int(hours)
         let totalMinutes = Int(((hours - Double(totalHours)) * 60).rounded())

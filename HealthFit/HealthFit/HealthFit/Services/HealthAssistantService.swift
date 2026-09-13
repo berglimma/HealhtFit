@@ -1126,7 +1126,7 @@ enum HealthAssistantEngine {
                 "ficha personalizada", "treino pelo assistente", "sugestao de treino", "sugestão de treino"
             ],
             respond: { ctx in
-                if ctx.user?.hasPersonalTrainer == true {
+                if ctx.user?.hasPersonalTrainerOnProfile == true || ctx.user?.hasPersonalTrainer == true {
                     let name = ctx.user?.personalTrainerName.isEmpty == false
                         ? ctx.user!.personalTrainerName
                         : "seu personal"
@@ -1243,7 +1243,7 @@ enum HealthAssistantEngine {
             keywords: ["treino", "musculacao", "musculação", "forca", "força", "exercicio", "exercício", "academia", "ficha"],
             respond: { ctx in
                 let goal = ctx.user?.goal ?? .maintenance
-                let tip = (ctx.user?.hasPersonalTrainer == true)
+                let tip = (ctx.user?.hasPersonalTrainerOnProfile == true || ctx.user?.hasPersonalTrainer == true)
                     ? "No app: Treinos → Musculação. Escolha a ficha do seu plano."
                     : "Sem personal? Peça “montar treino” ao IAssistente (casa ou academia) para uma sugestão personalizada (sempre valide com um profissional de Educação Física)."
                 return """
@@ -1467,12 +1467,13 @@ enum HealthAssistantEngine {
         HealthAssistantTopic(
             keywords: ["personal", "relatorio", "relatório", "email", "e-mail", "enviar treino"],
             respond: { ctx in
-                let hasTrainer = ctx.user?.hasPersonalTrainer ?? false
+                let hasTrainer = (ctx.user?.hasPersonalTrainerOnProfile == true) || (ctx.user?.hasPersonalTrainer == true)
+                let canEmail = ctx.user?.hasPersonalTrainer == true
                 return """
                 Relatórios de treino no HealthFit:
 
                 • Ao finalizar musculação ou cardio, o app gera o resumo
-                \(hasTrainer ? "• Você envia o relatório para \(ctx.user?.personalTrainerName ?? "o personal") pelo app Mail deste aparelho" : "• Cadastre o e-mail do personal em Perfil")
+                \(canEmail ? "• Você envia o relatório para \(ctx.user?.personalTrainerName ?? "o personal") pelo app Mail deste aparelho" : (hasTrainer ? "• Seu personal já está no perfil — cadastre o e-mail em Perfil para enviar o relatório" : "• Cadastre o e-mail do personal em Perfil"))
                 • O iOS não envia e-mail sozinho: é preciso ter o Mail configurado (Ajustes → Mail → Contas) no iPhone ou iPad
                 • Sem o Mail, use Compartilhar (Gmail, Outlook ou outro app)
                 • Inclui exercícios, séries, cargas, cardio e uso de pré-treino
@@ -1489,7 +1490,7 @@ enum HealthAssistantEngine {
                 "prescricao", "prescrição", "seguir treino", "treino profissional"
             ],
             respond: { ctx in
-                let hasTrainer = ctx.user?.hasPersonalTrainer ?? false
+                let hasTrainer = (ctx.user?.hasPersonalTrainerOnProfile == true) || (ctx.user?.hasPersonalTrainer == true)
                 let trainerName = ctx.user?.personalTrainerName ?? "seu personal"
                 return """
                 Como treinar conforme orientação profissional no HealthFit:
@@ -2313,7 +2314,8 @@ final class HealthAssistantService: ObservableObject {
     }
 
     private func beginWorkoutBuilderFlow(context: HealthAssistantContext, forceDespitePersonal: Bool) {
-        if context.user?.hasPersonalTrainer == true, !forceDespitePersonal {
+        if context.user?.hasPersonalTrainerOnProfile == true || context.user?.hasPersonalTrainer == true,
+           !forceDespitePersonal {
             deliverDelayedWorkoutBuilderMessage("""
             Você tem personal cadastrado\(context.user?.personalTrainerName.isEmpty == false ? " (\(context.user!.personalTrainerName))" : ""). \
             O ideal é seguir a ficha do profissional em Treinos.

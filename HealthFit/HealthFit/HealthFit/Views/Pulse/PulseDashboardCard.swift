@@ -1,25 +1,26 @@
 import SwiftUI
 import UIKit
 
-/// Dashboard entry for HealthFit Pulse (gated by Labs ou `appConfig/ios.pulseEnabled`).
+/// Dashboard entry for HealthFit Pulse (trial 15 dias → plano Básico R$ 9,90).
 struct PulseDashboardCard: View {
     @EnvironmentObject private var authService: AuthService
     @EnvironmentObject private var workoutStore: WorkoutStore
     @EnvironmentObject private var shareCardStore: WorkoutShareCardStore
     @EnvironmentObject private var mealPlanService: MealPlanService
     @EnvironmentObject private var wellnessService: DailyWellnessService
+    @EnvironmentObject private var subscriptionService: SubscriptionService
+    @ObservedObject private var appUpdateService = AppUpdateService.shared
+
     @State private var showTerms = false
     @State private var showFeed = false
+    @State private var showPaywall = false
+    @State private var showTrialExpiredAlert = false
 
     private var userId: String { authService.currentUser?.id ?? "" }
 
     var body: some View {
         Button {
-            if PulseExperimental.hasAcceptedTerms(userId: userId) {
-                showFeed = true
-            } else {
-                showTerms = true
-            }
+            openPulse()
         } label: {
             cardContent
         }
@@ -44,6 +45,37 @@ struct PulseDashboardCard: View {
                 .environmentObject(shareCardStore)
                 .environmentObject(mealPlanService)
                 .environmentObject(wellnessService)
+                .environmentObject(subscriptionService)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(highlight: .healthFitPulse)
+                .environmentObject(subscriptionService)
+        }
+        .alert("Trial do Pulse encerrado", isPresented: $showTrialExpiredAlert) {
+            Button("Ver planos") {
+                showPaywall = true
+            }
+            Button("Agora não", role: .cancel) {}
+        } message: {
+            Text("Seus 15 dias grátis do HealthFit Pulse terminaram. Assine o plano Básico (R$ 9,90/mês) para continuar com stories, comunidades e posts.")
+        }
+    }
+
+    private func openPulse() {
+        _ = appUpdateService.pulseFlagsEpoch
+        PulseEntitlement.markTrialStartedIfNeeded()
+        if PulseEntitlement.needsSubscriptionPrompt {
+            showTrialExpiredAlert = true
+            return
+        }
+        guard PulseEntitlement.canUsePulse else {
+            showTrialExpiredAlert = true
+            return
+        }
+        if PulseExperimental.hasAcceptedTerms(userId: userId) {
+            showFeed = true
+        } else {
+            showTerms = true
         }
     }
 
@@ -80,12 +112,31 @@ struct PulseDashboardCard: View {
                     Label(L10n.Pulse.lightRanking, systemImage: "chart.bar.fill")
                 }
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.88))
+                .foregroundStyle(.white.opacity(0.85))
+
+                trialBadge
             }
             .padding(16)
         }
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
         .shadow(color: AppTheme.accent.opacity(0.35), radius: 12, y: 6)
+    }
+
+    @ViewBuilder
+    private var trialBadge: some View {
+        if PulseEntitlement.hasPaidAccess {
+            Text("Incluso no seu plano")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(AppTheme.accent)
+        } else if PulseEntitlement.trialStartedAt == nil || PulseEntitlement.isTrialActive {
+            Text("Grátis · \(PulseEntitlement.trialDaysRemaining) dia(s) restantes")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(AppTheme.accent)
+        } else {
+            Text("Assine o Básico (R$ 9,90) para continuar")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Color.orange)
+        }
     }
 
     private var sportCollage: some View {

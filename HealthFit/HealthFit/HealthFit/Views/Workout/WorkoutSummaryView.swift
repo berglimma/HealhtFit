@@ -58,6 +58,11 @@ struct WorkoutSummaryView: View {
     @State private var isGeneratingReportPDF = false
     @State private var pdfExportFailed = false
     @State private var selectedEffort: Int?
+    @State private var shareMapStyle: ShareCardRouteMapStyle = .flat2D
+    @State private var isPreparingMapShare = false
+    @State private var showMissingTrainerEmailAlert = false
+    @State private var showPulsePaywall = false
+    @State private var showPulseTrialExpiredAlert = false
 
     private let shareCardAnchorID = "workoutShareCard"
 
@@ -305,6 +310,20 @@ struct WorkoutSummaryView: View {
         } message: {
             Text(MailSetupGuidance.unavailableMessage + " Você também pode compartilhar o card.")
         }
+        .alert("E-mail do personal", isPresented: $showMissingTrainerEmailAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Cadastre o e-mail do personal em Perfil para gerar o relatório e enviar. O envio usa o app Mail neste \(MailSetupGuidance.deviceName) (\(MailSetupGuidance.settingsPath)).")
+        }
+        .sheet(isPresented: $showPulsePaywall) {
+            PaywallView(highlight: .healthFitPulse)
+        }
+        .alert("Trial do Pulse encerrado", isPresented: $showPulseTrialExpiredAlert) {
+            Button("Ver planos") { showPulsePaywall = true }
+            Button("Agora não", role: .cancel) {}
+        } message: {
+            Text("Seus 15 dias grátis terminaram. Assine o plano Básico (R$ 9,90/mês) para continuar publicando no Pulse.")
+        }
     }
 
     private var shareAchievementSection: some View {
@@ -355,9 +374,13 @@ struct WorkoutSummaryView: View {
             }
             .disabled(isPreparingShare)
 
-            if appUpdateService.pulseFlagsEpoch >= 0, PulseExperimental.isUIEnabled {
+            if PulseEntitlement.isPulseVisible {
                 Button {
-                    publishSessionToPulse()
+                    if PulseEntitlement.canUsePulse {
+                        publishSessionToPulse()
+                    } else {
+                        showPulseTrialExpiredAlert = true
+                    }
                 } label: {
                     Label(L10n.Pulse.shareOnPulse, systemImage: "heart.circle.fill")
                         .font(.subheadline.weight(.semibold))
@@ -454,9 +477,13 @@ struct WorkoutSummaryView: View {
                 }
                 .disabled(isPreparingMediaShare)
 
-                if appUpdateService.pulseFlagsEpoch >= 0, PulseExperimental.isUIEnabled {
+                if PulseEntitlement.isPulseVisible {
                     Button {
-                        Task { await publishResultMediaToPulse() }
+                        if PulseEntitlement.canUsePulse {
+                            Task { await publishResultMediaToPulse() }
+                        } else {
+                            showPulseTrialExpiredAlert = true
+                        }
                     } label: {
                         Label(L10n.Pulse.shareOnPulse, systemImage: "heart.circle.fill")
                             .font(.subheadline.weight(.semibold))
@@ -723,6 +750,80 @@ struct WorkoutSummaryView: View {
     }
 
     @MainActor
+    private func shareRouteMapImage() async {
+        guard session.routePoints.count >= 2 else { return }
+        isPreparingMapShare = true
+        defer { isPreparingMapShare = false }
+        guard let image = WorkoutRouteMapRenderer.renderImage(
+            session: session,
+            style: shareMapStyle
+        ) else { return }
+        let caption = "Mapa \(shareMapStyle.title) · \(session.completedModalityTitle) · HealthFit"
+        shareItems = [image, caption]
+        showShareSheet = true
+    }
+
+    @MainActor
+    private func saveRouteMapToGallery() async {
+        guard session.routePoints.count >= 2 else { return }
+        isPreparingMapShare = true
+        defer { isPreparingMapShare = false }
+        guard let image = WorkoutRouteMapRenderer.renderImage(
+            session: session,
+            style: shareMapStyle
+        ) else { return }
+        do {
+            try await PhotoLibrarySaver.saveImage(image)
+            gallerySaveAlertTitle = "Salvo em Fotos"
+            gallerySaveAlertMessage = "O mapa \(shareMapStyle.title) foi salvo na sua Galeria."
+        } catch {
+            gallerySaveAlertTitle = "Não foi possível salvar"
+            gallerySaveAlertMessage = error.localizedDescription
+        }
+        showGallerySaveAlert = true
+    }
+
+    @MainActor
+    private func publishRouteMapToPulse() async {
+        guard PulseExperimental.isUIEnabled, session.routePoints.count >= 2 else { return }
+        isPreparingMapShare = true
+        defer { isPreparingMapShare = false }
+        guard let image = WorkoutRouteMapRenderer.renderImage(
+            session: session,
+            style: shareMapStyle
+        ) else {
+            pulsePublishMessage = L10n.Pulse.prepareImageFailed
+            showPulsePublishAlert = true
+            return
+        }
+        let community = PulseCommunity.fromWorkoutTitle(session.completedModalityTitle)
+        let duration = Int((session.endedAt ?? Date()).timeIntervalSince(session.startedAt))
+        let meta = PulseWorkoutMeta(
+            modality: session.completedModalityTitle,
+            durationSeconds: max(0, duration),
+            intensity: session.perceivedEffort.map { min(max($0, 1), 10) },
+            duoTeamName: session.duoTeamName
+        )
+        let caption = "Mapa \(shareMapStyle.title) · \(session.completedModalityTitle)"
+        do {
+            _ = try PulseLocalStore.shared.addPhotoPost(
+                authorId: authService.currentUser?.id ?? "local",
+                authorName: athleteDisplayName,
+                authorCountryCode: authService.currentUser?.countryCode ?? "BR",
+                caption: caption,
+                image: image,
+                community: community,
+                workoutMeta: meta,
+                authorAvatar: authService.profileImage
+            )
+            pulsePublishMessage = L10n.Pulse.photoPublished
+        } catch {
+            pulsePublishMessage = error.localizedDescription
+        }
+        showPulsePublishAlert = true
+    }
+
+    @MainActor
     private func publishSessionToPulse() {
         guard PulseExperimental.isUIEnabled else { return }
         let slot: WorkoutShareCardSlot = session.isDuoTeamSession ? .duoTeam : .individual
@@ -965,59 +1066,6 @@ struct WorkoutSummaryView: View {
     @ViewBuilder
     private var emailSection: some View {
         VStack(spacing: 12) {
-            if let user = authService.currentUser, user.hasPersonalTrainer {
-                Button {
-                    sendReportToTrainer(user: user)
-                } label: {
-                    Label(
-                        buttonLabel,
-                        systemImage: emailWasSent ? "checkmark.circle.fill" : "envelope.fill"
-                    )
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(emailWasSent ? Color.green : AppTheme.accent)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .disabled(mailDraft != nil || emailWasSent)
-
-                if emailWasSent {
-                    Label("E-mail enviado", systemImage: "checkmark.circle.fill")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.green)
-                }
-
-                MailAccountRequiredNotice(audience: .trainer)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                if !user.personalTrainerName.isEmpty {
-                    Text("Para: \(user.personalTrainerName) · \(user.personalTrainerEmail)")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .multilineTextAlignment(.center)
-                } else {
-                    Text("Para: \(user.personalTrainerEmail)")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-            } else {
-                VStack(spacing: 8) {
-                    Label("E-mail do personal não cadastrado", systemImage: "person.crop.circle.badge.exclamationmark")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.orange)
-                    Text("Cadastre o e-mail do personal no Perfil para enviar o relatório deste treino. O envio exige o app Mail configurado neste \(MailSetupGuidance.deviceName) (\(MailSetupGuidance.settingsPath)).")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(AppTheme.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-
             Button {
                 exportWorkoutPDF()
             } label: {
@@ -1040,6 +1088,69 @@ struct WorkoutSummaryView: View {
             }
             .disabled(isGeneratingReportPDF)
             .opacity(isGeneratingReportPDF ? 0.7 : 1)
+
+            // Sempre visível abaixo do PDF — envia se houver e-mail, senão orienta o cadastro.
+            Button {
+                if let user = authService.currentUser, user.hasPersonalTrainer {
+                    sendReportToTrainer(user: user)
+                } else {
+                    showMissingTrainerEmailAlert = true
+                }
+            } label: {
+                Label(
+                    buttonLabel,
+                    systemImage: emailWasSent ? "checkmark.circle.fill" : "envelope.fill"
+                )
+                .font(.headline)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(emailWasSent ? Color.green : AppTheme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .disabled(mailDraft != nil || emailWasSent || isGeneratingReportPDF)
+
+            if emailWasSent {
+                Label("E-mail enviado", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.green)
+            }
+
+            if let user = authService.currentUser, user.hasPersonalTrainer {
+                MailAccountRequiredNotice(audience: .trainer)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if !user.personalTrainerName.isEmpty {
+                    Text("Para: \(user.personalTrainerName) · \(user.personalTrainerEmail)")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("Para: \(user.personalTrainerEmail)")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                Text("Gera o relatório do treino e abre o e-mail para o personal com o mapa anexado (quando houver).")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            } else if let user = authService.currentUser,
+                      user.hasPersonalTrainerOnProfile || user.usesPersonalTrainer {
+                Text("Personal: \(user.personalTrainerName.isEmpty ? "cadastrado no perfil" : user.personalTrainerName). Falta o e-mail em Perfil para enviar o relatório.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            } else {
+                Text("Cadastre o personal e o e-mail em Perfil para enviar o relatório automaticamente.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
         }
     }
 
@@ -1119,23 +1230,34 @@ struct WorkoutSummaryView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
-    /// Barras 1…10; preenche até a intensidade escolhida.
+    /// Barras 1…10; preenche até a intensidade escolhida. Toque na barra ou no número.
     private var effortIntensityBarChart: some View {
         let selected = selectedEffort ?? 0
         return HStack(alignment: .bottom, spacing: 6) {
             ForEach(1...10, id: \.self) { value in
                 let isFilled = selected > 0 && value <= selected
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(isFilled ? effortColor(for: selected) : AppTheme.background.opacity(0.85))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 18 + CGFloat(value) * 7)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .strokeBorder(
-                                value == selected ? Color.white.opacity(0.35) : Color.clear,
-                                lineWidth: 1.5
-                            )
-                    )
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
+                        selectedEffort = value
+                    }
+                    workoutStore.updatePerceivedEffort(sessionId: session.id, effort: value)
+                    UISelectionFeedbackGenerator().selectionChanged()
+                } label: {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(isFilled ? effortColor(for: selected) : AppTheme.background.opacity(0.85))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 18 + CGFloat(value) * 7)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .strokeBorder(
+                                    value == selected ? Color.white.opacity(0.35) : Color.clear,
+                                    lineWidth: 1.5
+                                )
+                        )
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(value)")
             }
         }
         .frame(height: 96)
@@ -1170,7 +1292,7 @@ struct WorkoutSummaryView: View {
     private var buttonLabel: String {
         if emailWasSent { return "E-mail enviado" }
         if mailDraft != nil { return "Abrindo e-mail..." }
-        return "Enviar e-mail para o Personal"
+        return "Gerar relatório e enviar ao personal"
     }
 
     private func focusShareCard() {
@@ -1841,6 +1963,9 @@ struct WorkoutSummaryView: View {
                     .foregroundStyle(AppTheme.textSecondary)
             }
 
+            // Sempre visível na seção de rota (não depende de ≥2 pontos GPS).
+            mapShareActions
+
             if let distance = session.completedDistanceKm {
                 Text(String(format: "%.2f km percorridos · %d pontos GPS", distance, session.routePoints.count))
                     .font(.caption)
@@ -1855,6 +1980,95 @@ struct WorkoutSummaryView: View {
         .padding()
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private var mapShareActions: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Postar mapa")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+
+            Picker("Formato", selection: $shareMapStyle) {
+                ForEach(ShareCardRouteMapStyle.allCases) { style in
+                    Text(style.title).tag(style)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            ShareCardRouteMapView(
+                routePoints: session.routePoints,
+                distanceKm: session.displayDistanceKm,
+                performanceMetric: session.routePerformanceMetric,
+                style: shareMapStyle
+            )
+            .frame(height: 150)
+
+            Button {
+                Task { await shareRouteMapImage() }
+            } label: {
+                HStack {
+                    if isPreparingMapShare {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Image(systemName: "paperplane.fill")
+                    }
+                    Text(
+                        isPreparingMapShare
+                            ? "Preparando mapa..."
+                            : "Postar no WhatsApp / Instagram"
+                    )
+                    .font(.headline)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(AppTheme.gradientPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .disabled(isPreparingMapShare || session.routePoints.count < 2)
+            .opacity(session.routePoints.count < 2 ? 0.55 : 1)
+
+            if PulseEntitlement.isPulseVisible {
+                Button {
+                    if PulseEntitlement.canUsePulse {
+                        Task { await publishRouteMapToPulse() }
+                    } else {
+                        showPulseTrialExpiredAlert = true
+                    }
+                } label: {
+                    Label(L10n.Pulse.shareOnPulse, systemImage: "heart.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.bordered)
+                .tint(AppTheme.accent)
+                .disabled(isPreparingMapShare || session.routePoints.count < 2)
+            }
+
+            Button {
+                Task { await saveRouteMapToGallery() }
+            } label: {
+                Label("Salvar mapa na Galeria", systemImage: "square.and.arrow.down")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(.bordered)
+            .tint(AppTheme.accent)
+            .disabled(isPreparingMapShare || session.routePoints.count < 2)
+
+            Text(
+                session.routePoints.count < 2
+                    ? "É preciso ter rota GPS (2+ pontos) para postar ou salvar o mapa."
+                    : "Escolha WhatsApp ou Instagram na tela de compartilhar. Formato \(shareMapStyle.title)."
+            )
+            .font(.caption2)
+            .foregroundStyle(AppTheme.textSecondary)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+        }
     }
 
     @ViewBuilder

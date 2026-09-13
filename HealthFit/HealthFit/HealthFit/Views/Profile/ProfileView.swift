@@ -796,6 +796,10 @@ struct ProfileView: View {
         }
         if let personal = coach.activePersonalLink {
             chips.append("Personal · \(personal.status.displayLabel)")
+        } else if authService.currentUser?.hasPersonalTrainerOnProfile == true {
+            let name = authService.currentUser?.personalTrainerName
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            chips.append(name.isEmpty ? "Personal no perfil" : "Personal · \(name)")
         }
         if let nutri = coach.activeNutritionLink {
             chips.append("Nutri · \(nutri.status.displayLabel)")
@@ -822,6 +826,12 @@ struct ProfileView: View {
         }
         if let nutri = coach.activeNutritionLink {
             return "Nutri: \(nutri.coachName) · \(nutri.status.displayLabel)"
+        }
+        if let user = authService.currentUser, user.hasPersonalTrainerOnProfile {
+            let name = user.personalTrainerName.trimmingCharacters(in: .whitespacesAndNewlines)
+            return name.isEmpty
+                ? "Personal cadastrado no perfil."
+                : "Personal no perfil: \(name)"
         }
         return "Vincule personal ou nutri com código ou busca regional."
     }

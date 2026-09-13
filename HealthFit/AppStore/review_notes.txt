@@ -1,17 +1,30 @@
-HealthFit 1.0.4 (Build 11)
+HealthFit 1.0.4 (Build 12)
 
 Conta demo App Review:
 E-mail: healthfit.appreview@gmail.com
 (senha apenas no campo App Review Information do Connect)
+Idade da conta demo: 18+ (necessário para o HealthFit Pulse)
 
 Novidades desta build:
-- Intensidade percebida (1–10) no fim do treino, nos relatórios e no envio ao personal
-- Sync Apple Watch: abertura automática ao iniciar, pausa e fim alinhados com o iPhone
-- Dashboard: tocar em treinos recentes reabre o relatório concluído
-- Musculação: início sem perguntar sobre pré-treino
+- HealthFit Pulse: feed, stories, comunidades e compartilhamento de treinos (18+)
+- Pulse: 15 dias grátis no app; depois incluso no plano Básico (R$ 9,90/mês)
+- Dashboard: semana de sono/água alinhada ao calendário/região do iPhone
+- Treino concluído: postar mapa 2D/3D, WhatsApp/Instagram/Pulse/Galeria; enviar relatório ao personal
+- Sync Apple Watch: musculação, treino em casa, cardio/bike e meditação iPhone ↔ Watch
+- Intensidade percebida (1–10) no fim do treino (toque na barra ou no número)
+
+HealthFit Pulse (App Review):
+- Idade mínima do Pulse: 18+. Menores de 18 veem o age gate.
+- Termos específicos do Pulse são aceitos antes do feed.
+- Denunciar / bloquear / ocultar disponíveis; moderação: healthfit.appreview@gmail.com
+- Liberação remota: Firestore appConfig/ios.pulseEnabled (e pulseCloudSyncEnabled para sync).
+  Para esta review, mantenha pulseEnabled=true enquanto o build estiver em análise.
+  Não altera assinaturas StoreKit; o trial de 15 dias é contagem local no app (não é Introductory Offer da Apple).
 
 Teste sugerido:
-1. Iniciar caminhada/cardio no iPhone → confirmar tela de atividade no Apple Watch
-2. Pausar/finalizar no iPhone → Watch acompanha
-3. Dashboard → Treinos Recentes → abrir relatório
-4. Finalizar musculação → avaliar intensidade 1–10
+1. Dashboard → card HealthFit Pulse → aceitar termos → abrir feed (conta 18+)
+2. Publicar foto ou story; denunciar/bloquear se disponível
+3. Iniciar bike/cardio no iPhone → confirmar atividade no Apple Watch; pausar/finalizar
+4. Finalizar treino outdoor → Postar mapa (2D/3D) → WhatsApp/Instagram ou Pulse
+5. Treino concluído → Gerar PDF → Gerar relatório e enviar ao personal (e-mail cadastrado)
+6. Perfil → Meu plano → plano Básico inclui Pulse após o trial

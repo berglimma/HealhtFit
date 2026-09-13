@@ -276,7 +276,18 @@ struct CoachHubView: View {
 
         interestMessagesSection
 
-        linksSection(title: "Meus profissionais", empty: "Você ainda não tem personal ou nutricionista vinculado no app.")
+        linksSection(
+            title: "Meus profissionais",
+            empty: studentProfessionalsEmptyMessage
+        )
+    }
+
+    private var studentProfessionalsEmptyMessage: String {
+        if authService.currentUser?.hasPersonalTrainerOnProfile == true
+            || authService.currentUser?.usesNutritionist == true {
+            return "Seu personal/nutri está no perfil. Vincule também pelo HealthFit Coach para fichas e chat no app."
+        }
+        return "Você ainda não tem personal ou nutricionista vinculado no app."
     }
 
     @ViewBuilder

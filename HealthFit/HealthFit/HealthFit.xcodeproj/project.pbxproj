@@ -287,6 +287,7 @@
 		B1000L09 /* PulseTerms_it.txt in Resources */ = {isa = PBXBuildFile; fileRef = F1000L09 /* PulseTerms_it.txt */; };
 		B1000P01 /* PulseExperimentalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P01 /* PulseExperimentalModels.swift */; };
 		B1000P02 /* PulseLocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P02 /* PulseLocalStore.swift */; };
+		B1000P0E /* PulseEntitlement.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P0E /* PulseEntitlement.swift */; };
 		B1000P03 /* PulseDashboardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P03 /* PulseDashboardCard.swift */; };
 		B1000P04 /* PulseTermsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P04 /* PulseTermsView.swift */; };
 		B1000P05 /* PulseFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P05 /* PulseFeedView.swift */; };
@@ -688,6 +689,7 @@
 		F1000L09 /* PulseTerms_it.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = PulseTerms_it.txt; sourceTree = "<group>"; };
 		F1000P01 /* PulseExperimentalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseExperimentalModels.swift; sourceTree = "<group>"; };
 		F1000P02 /* PulseLocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseLocalStore.swift; sourceTree = "<group>"; };
+		F1000P0E /* PulseEntitlement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseEntitlement.swift; sourceTree = "<group>"; };
 		F1000P03 /* PulseDashboardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseDashboardCard.swift; sourceTree = "<group>"; };
 		F1000P04 /* PulseTermsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseTermsView.swift; sourceTree = "<group>"; };
 		F1000P05 /* PulseFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseFeedView.swift; sourceTree = "<group>"; };
@@ -923,6 +925,7 @@
 				F1000962 /* KiteSpotBuddyService.swift */,
 				F1000972 /* CoachService.swift */,
 				F1000P02 /* PulseLocalStore.swift */,
+				F1000P0E /* PulseEntitlement.swift */,
 				F1000P07 /* PulseMusicSearchService.swift */,
 				F1000P10 /* PulseImageCache.swift */,
 				F1000P12 /* PulseShareService.swift */,
@@ -1775,6 +1778,7 @@
 				B1000979 /* ForceAppUpdateView.swift in Sources */,
 				B1000P01 /* PulseExperimentalModels.swift in Sources */,
 				B1000P02 /* PulseLocalStore.swift in Sources */,
+				B1000P0E /* PulseEntitlement.swift in Sources */,
 				B1000P03 /* PulseDashboardCard.swift in Sources */,
 				B1000P04 /* PulseTermsView.swift in Sources */,
 				B1000P05 /* PulseFeedView.swift in Sources */,
@@ -2148,7 +2152,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthFit/HealthFitDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -2160,15 +2164,15 @@
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "HealthFit adiciona ao Calendário os treinos concluídos no dia.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para fotos de perfil e evolução corporal, e para escanear fichas de treino impressas.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para fotos de perfil e evolução corporal, escanear fichas de treino e publicar fotos ou stories no HealthFit Pulse.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit precisa acessar seus dados de saúde para exibir métricas de desempenho e sincronizar treinos.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mostrar o mapa e a rota em tempo real.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HealthFit usa o microfone ao gravar vídeo do treino para compartilhar com a legenda da sessão.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal, importar fichas de treino e anexar foto ou vídeo ao compartilhar o resultado do treino.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva na galeria fotos de evolução, cards de treino e mapas que você autorizar.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit acessa suas fotos para perfil, evolução corporal, importar fichas, anexar mídia ao resultado do treino e publicar no HealthFit Pulse.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -2197,7 +2201,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthFit/HealthFit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -2209,15 +2213,15 @@
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "HealthFit adiciona ao Calendário os treinos concluídos no dia.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para fotos de perfil e evolução corporal, e para escanear fichas de treino impressas.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para fotos de perfil e evolução corporal, escanear fichas de treino e publicar fotos ou stories no HealthFit Pulse.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit precisa acessar seus dados de saúde para exibir métricas de desempenho e sincronizar treinos.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mostrar o mapa e a rota em tempo real.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HealthFit usa o microfone ao gravar vídeo do treino para compartilhar com a legenda da sessão.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva fotos de evolução corporal na sua galeria quando você autoriza.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit precisa acessar suas fotos para definir a imagem do perfil, salvar fotos de evolução corporal, importar fichas de treino e anexar foto ou vídeo ao compartilhar o resultado do treino.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva na galeria fotos de evolução, cards de treino e mapas que você autorizar.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "HealthFit acessa suas fotos para perfil, evolução corporal, importar fichas, anexar mídia ao resultado do treino e publicar no HealthFit Pulse.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -2246,7 +2250,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthFitWatch/HealthFitWatch.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = NO;
@@ -2286,7 +2290,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthFitWatch/HealthFitWatch.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = NO;
@@ -2323,7 +2327,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
@@ -2351,7 +2355,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
@@ -2381,7 +2385,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
@@ -2407,7 +2411,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
@@ -2432,7 +2436,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -2457,7 +2461,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

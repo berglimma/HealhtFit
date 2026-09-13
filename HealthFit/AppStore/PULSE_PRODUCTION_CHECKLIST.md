@@ -1,65 +1,62 @@
 # HealthFit Pulse — Production Go-Live Checklist
 
-Pulse ships **OFF by default**. Git/App Store builds do not enable the feature until Firestore flags flip.
+Pulse em produção fica **OFF** até `appConfig/ios.pulseEnabled` ser `true`.  
+Deploy de rules/storage/hosting **não liga** o recurso para o app da loja.
 
-## Defaults (do not change until go-live)
+## Defaults (produção até go-live / review)
 
-| Flag | Firestore path | Production default |
+| Flag | Firestore path | Valor seguro agora |
 |------|----------------|--------------------|
-| UI | `appConfig/ios.pulseEnabled` | `false` |
+| UI | `appConfig/ios.pulseEnabled` | `false` (ligar só na App Review / go-live) |
 | Cloud sync | `appConfig/ios.pulseCloudSyncEnabled` | `false` |
 
-Release builds **ignore** Labs UserDefaults overrides (DEBUG only).
+Release builds **ignoram** Labs (DEBUG only).
 
-## Before first enable
+## Deploy seguro (não altera flags)
 
-### 1. Ship client
-- [ ] Commit Pulse sources + rules + legal copy
-- [ ] Archive **Release** (chat/video compile OFF)
-- [ ] Confirm Dashboard Pulse card hidden with flags false
-- [ ] TestFlight smoke with Labs OFF
-
-### 2. Backend
 ```bash
 firebase deploy --only firestore:rules,storage
 firebase deploy --only hosting
 ```
-- [ ] Rules include `pulsePosts`, `pulseStories`, `pulseProfiles`, `pulseFollows`, `pulseBlocks`, `pulseReports`, Storage `pulse/{uid}/`
-- [ ] Hosting: `/privacidade/`, `/termos/`, `/suporte/` mention Pulse UGC 18+
-- [ ] Support/moderator: `healthfit.appreview@gmail.com`
+
+Depois, no Console, **confirme** que `pulseEnabled` e `pulseCloudSyncEnabled` continuam `false`.
+
+## Before first enable
+
+### 1. Ship client
+- [x] Fontes Pulse + entitlement (trial 15 dias → Básico)
+- [ ] Commit + Archive **Release** 1.0.4 (12)
+- [ ] TestFlight smoke com flags `false` (card oculto) e com `true` (fluxo completo)
+
+### 2. Backend
+- [ ] Rules incluem `pulsePosts`, `pulseStories`, `pulseProfiles`, `pulseFollows`, `pulseBlocks`, `pulseReports`, Storage `pulse/{uid}/`
+- [x] Hosting: `/privacidade/`, `/termos/`, `/suporte/` mencionam Pulse UGC 18+
+- [x] Support/moderator: `healthfit.appreview@gmail.com`
 
 ### 3. Account deletion
-- [ ] Delete account removes Pulse Firestore + Storage + local store (already wired in `AuthService`)
-- [ ] Pulse menu → Excluir conta HealthFit works end-to-end
+- [ ] Delete account remove Pulse Firestore + Storage + local store
+- [ ] Pulse menu → Excluir conta HealthFit
 
-### 4. App Store Connect (when enabling UI)
-- [ ] Age Rating: app **16+**, Pulse UGC **18+** (fix store if still 13+)
+### 4. App Store Connect
+- [ ] Age Rating: app **16+**, Pulse UGC **18+**
 - [ ] Privacy Nutrition Labels: UGC / photos
 - [ ] User-Generated Content questionnaire
-- [ ] Review notes: Pulse gated 18+, report/block/moderation email
+- [ ] Review notes: Pulse 18+, report/block, trial local (não é intro offer Apple)
 
 ### 5. Staged enable
-1. Confirm both flags `false` in Console
-2. Set `pulseEnabled: true` (UI only) → smoke photo post, story, Deezer, share Instagram (music on card), follow, report
-3. Set `pulseCloudSyncEnabled: true` → verify cross-device pull
-4. Moderator opens Moderation queue with support account
+1. Confirmar ambos `false` após o deploy
+2. Na Review / go-live: `pulseEnabled: true` → smoke
+3. `pulseCloudSyncEnabled: true` → sync multi-device
+4. Moderação com conta suporte
 
 ## Smoke tests
 
-- [ ] Publish photo + music → feed autoplay near card
-- [ ] Share to Instagram → card shows music sticker + caption has ♪ + link
-- [ ] Workout summary → Compartilhar no Pulse (card + foto/vídeo)
+- [ ] Publish photo + music → feed
+- [ ] Workout summary → Compartilhar no Pulse
 - [ ] Report / hide / block
 - [ ] Delete account wipes Pulse cloud data
 - [ ] Under-18 sees age gate
 
-## Out of scope for v1 Release
-
-- Native Instagram music sticker (Meta App ID / Stories API)
-- In-app video posts (DEBUG only)
-- Community chat (DEBUG only)
-- Automated CSAM scanner (manual moderation)
-
 ## Rollback
 
-Set both Firestore flags to `false`. No app update required to hide Pulse UI and stop cloud writes from clients that check the flags.
+Set both Firestore flags to `false`. No app update required to hide Pulse UI.

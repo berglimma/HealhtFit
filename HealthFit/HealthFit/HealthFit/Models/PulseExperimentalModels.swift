@@ -72,13 +72,13 @@ enum PulseExperimental {
         set { UserDefaults.standard.set(newValue, forKey: remoteCloudSyncEnabledKey) }
     }
 
-    /// UI do Pulse: em Release só a flag remota; em DEBUG também Labs.
+    /// UI do Pulse: Labs (DEBUG), flag remota, ou produto ligado por padrão (trial/assinatura).
+    /// Kill-switch: `appConfig/ios.pulseEnabled == false` desliga para todos.
     static var isUIEnabled: Bool {
         #if DEBUG
-        isLabEnabled || remoteUIEnabled
-        #else
-        remoteUIEnabled
+        if isLabEnabled { return true }
         #endif
+        return remoteUIEnabled
     }
 
     /// Dados demo (posts/pessoas fake). Desligado por padrão — só via Labs.
@@ -126,6 +126,19 @@ enum PulseExperimental {
     static func applyRemoteFlags(uiEnabled: Bool, cloudSyncEnabled: Bool) {
         remoteUIEnabled = uiEnabled
         remoteCloudSyncEnabled = cloudSyncEnabled
+    }
+
+    /// Não força UI ON em Release (produção só liga via Firestore). Em DEBUG libera Labs/smoke local.
+    static func migratePulseProductDefaultIfNeeded() {
+        #if DEBUG
+        let key = "pulse.remote.uiEnabled.migratedProductOn"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        // DEBUG: permite ver Pulse sem flag remota; Release continua default false.
+        if !remoteUIEnabled {
+            remoteUIEnabled = true
+        }
+        UserDefaults.standard.set(true, forKey: key)
+        #endif
     }
 
     static var spotifyClientId: String {

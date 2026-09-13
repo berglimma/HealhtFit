@@ -1,4 +1,6 @@
-• Perceived workout intensity (1–10) in summaries, reports, and trainer email
-• Apple Watch opens the activity when you start on iPhone; pause and end stay in sync
-• Open completed workout reports from Dashboard recent sessions
-• Faster strength workout start without the pre-workout prompt
+• HealthFit Pulse: workout stories, communities, and posts (18+)
+• 15-day Pulse trial in the app; then included with Basic (R$ 9.90)
+• Dashboard sleep/water week follows your iPhone calendar and region
+• Share route maps (2D/3D) and email the workout report to your trainer
+• Apple Watch stays in sync for strength, home, cardio, and meditation
+• Perceived intensity (1–10) on the workout summary

@@ -188,6 +188,7 @@ enum AppFeature: String, CaseIterable, Identifiable {
     case liveActivityPremium
     case completePriority
     case healthFitCoach
+    case healthFitPulse
 
     var id: String { rawValue }
 
@@ -210,6 +211,7 @@ enum AppFeature: String, CaseIterable, Identifiable {
         case .liveActivityPremium: return "Live Activity e insights premium"
         case .completePriority: return "Acesso prioritário / tudo liberado"
         case .healthFitCoach: return "HealthFit Coach (personal / nutri)"
+        case .healthFitPulse: return "HealthFit Pulse"
         }
     }
 
@@ -250,13 +252,15 @@ enum AppFeature: String, CaseIterable, Identifiable {
             return "Tudo liberado, sem limites."
         case .healthFitCoach:
             return "Receba fichas do personal, cardápio do nutricionista e chat 1:1 — o profissional não paga; você precisa do plano Fit ou superior."
+        case .healthFitPulse:
+            return "Communities, stories e posts de treino no HealthFit Pulse — incluso no plano Básico (R$ 9,90) após 15 dias grátis."
         }
     }
 
     /// Menor plano que libera a feature (alinhado ao ROADMAP).
     var minimumTier: PlanTier {
         switch self {
-        case .fullWorkouts, .appleWatchSync, .duoTeam:
+        case .fullWorkouts, .appleWatchSync, .duoTeam, .healthFitPulse:
             return .basic
         case .customWorkouts, .advancedModalities, .mealPlan, .shoppingList, .aiChatLimited, .healthFitCoach:
             return .fit
@@ -336,7 +340,7 @@ struct PlanMarketingCopy: Identifiable, Hashable {
                 "Sem cartão"
             ]
         case .basic:
-            return ["Treinos guiados e cardio", "Apple Watch", "Treino em dupla (Duo)", "Metas de treino"]
+            return ["Treinos guiados e cardio", "Apple Watch", "Treino em dupla (Duo)", "HealthFit Pulse", "Metas de treino"]
         case .fit:
             return [
                 "Tudo do Básico",

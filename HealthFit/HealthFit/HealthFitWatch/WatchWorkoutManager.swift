@@ -739,11 +739,18 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
 
         if isActive {
+            // Não prende em sessão genérica do launch — deixa o start* do iPhone substituir.
             sendWatchAckStarted(
                 kind: isMeditationWorkout ? "meditation" : (isCardioWorkout ? "cardio" : "strength"),
                 workoutName: workoutName,
                 playHaptic: false
             )
+            // Ainda tenta aplicar o contexto do iPhone se já chegou.
+            if let context = session?.receivedApplicationContext,
+               let action = context["action"] as? String,
+               ["startWorkout", "startCardio", "startMeditation"].contains(action) {
+                handlePhoneMessage(context)
+            }
             return
         }
 
@@ -1523,20 +1530,24 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         switch action {
         case "startWorkout":
             notePhoneStart(timestamp: messageTimestamp)
-            // Já em treino no Watch (iniciado localmente): só espelha progresso do iPhone.
-            if isActive {
+            let name = message["workoutName"] as? String ?? "Treino"
+            let exerciseName = message["exerciseName"] as? String ?? ""
+            // iPhone é a fonte da verdade: substitui sessão genérica do HK launch.
+            if isActive,
+               !isCardioWorkout,
+               !isMeditationWorkout,
+               workoutName == name,
+               (exerciseName.isEmpty || currentExerciseName == exerciseName) {
                 applyPhoneSync(
                     workoutElapsedSeconds: message["workoutElapsedSeconds"] as? Int,
                     exerciseElapsedSeconds: message["exerciseElapsedSeconds"] as? Int,
-                    exerciseName: message["exerciseName"] as? String
+                    exerciseName: exerciseName.isEmpty ? nil : exerciseName
                 )
                 sendWatchAckStarted(kind: "strength", workoutName: workoutName, playHaptic: false)
                 return
             }
             meditationOwnedByWatch = false
             localMeditationPrompts = []
-            let name = message["workoutName"] as? String ?? "Treino"
-            let exerciseName = message["exerciseName"] as? String ?? ""
             startWorkout(name: name, exerciseName: exerciseName)
             applyPhoneSync(
                 workoutElapsedSeconds: message["workoutElapsedSeconds"] as? Int,
@@ -1546,12 +1557,6 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             sendWatchAckStarted(kind: "strength", workoutName: name)
         case "startCardio":
             notePhoneStart(timestamp: messageTimestamp)
-            if isActive {
-                sendWatchAckStarted(kind: "cardio", workoutName: workoutName, playHaptic: false)
-                return
-            }
-            meditationOwnedByWatch = false
-            localMeditationPrompts = []
             let name = message["workoutName"] as? String ?? "Cardio"
             let targetSeconds = message["targetSeconds"] as? Int ?? 0
             let exerciseName = message["exerciseName"] as? String ?? "Cardio"
@@ -1569,6 +1574,20 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 ?? ((message["spotBuddyEnabled"] as? NSNumber)?.boolValue ?? false)
             let outdoor = (message["locationOutdoor"] as? Bool)
                 ?? ((message["locationOutdoor"] as? NSNumber)?.boolValue ?? false)
+            if isActive,
+               isCardioWorkout,
+               workoutName == name,
+               currentExerciseName == exerciseName {
+                applyPhoneSync(
+                    workoutElapsedSeconds: message["elapsedSeconds"] as? Int,
+                    targetSeconds: targetSeconds,
+                    targetCalories: targetCalories
+                )
+                sendWatchAckStarted(kind: "cardio", workoutName: workoutName, playHaptic: false)
+                return
+            }
+            meditationOwnedByWatch = false
+            localMeditationPrompts = []
             startCardio(
                 name: name,
                 targetSeconds: targetSeconds,
@@ -1637,13 +1656,21 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             watchSyncStatus = "Dados do iPhone"
         case "startMeditation":
             notePhoneStart(timestamp: messageTimestamp)
-            if isActive {
+            let name = message["workoutName"] as? String ?? "Meditação"
+            if isActive,
+               isMeditationWorkout,
+               workoutName == name {
+                applyPhoneSync(
+                    workoutElapsedSeconds: message["elapsedSeconds"] as? Int,
+                    targetSeconds: message["targetSeconds"] as? Int,
+                    meditationPrompt: message["currentPrompt"] as? String,
+                    promptIndex: message["promptIndex"] as? Int
+                )
                 sendWatchAckStarted(kind: "meditation", workoutName: workoutName, playHaptic: false)
                 return
             }
             meditationOwnedByWatch = false
             localMeditationPrompts = []
-            let name = message["workoutName"] as? String ?? "Meditação"
             startMeditation(
                 name: name,
                 targetSeconds: message["targetSeconds"] as? Int ?? 0,

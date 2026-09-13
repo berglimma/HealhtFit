@@ -838,11 +838,26 @@ struct WorkoutShareCardView: View {
 
 // MARK: - Mini mapa desenhado (ImageRenderer-safe — sem MapKit)
 
+enum ShareCardRouteMapStyle: String, CaseIterable, Identifiable {
+    case flat2D
+    case perspective3D
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .flat2D: return "2D"
+        case .perspective3D: return "3D"
+        }
+    }
+}
+
 /// Fundo escuro estilo mapa + polyline colorida por desempenho. Sem MapKit (flaky no ImageRenderer).
 struct ShareCardRouteMapView: View {
     let routePoints: [RouteCoordinate]
     var distanceKm: Double = 0
     var performanceMetric: RoutePerformanceMetric = .pace
+    var style: ShareCardRouteMapStyle = .flat2D
 
     private var hasRoute: Bool { routePoints.count >= 2 }
 
@@ -867,8 +882,28 @@ struct ShareCardRouteMapView: View {
 
                 if hasRoute {
                     routeLayer(in: size)
+                        .rotation3DEffect(
+                            .degrees(style == .perspective3D ? 52 : 0),
+                            axis: (x: 1, y: 0, z: 0),
+                            anchor: .center,
+                            perspective: 0.55
+                        )
+                        .scaleEffect(style == .perspective3D ? 0.92 : 1, anchor: .center)
+                        .offset(y: style == .perspective3D ? size.height * 0.04 : 0)
                 } else {
                     placeholderContent
+                }
+
+                if style == .perspective3D, hasRoute {
+                    Text("3D")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Color.black.opacity(0.35))
+                        .clipShape(Capsule())
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .padding(8)
                 }
             }
         }
@@ -1006,13 +1041,15 @@ enum WorkoutRouteMapRenderer {
     static func renderImage(
         session: WorkoutSession,
         width: CGFloat = 900,
-        height: CGFloat = 560
+        height: CGFloat = 560,
+        style: ShareCardRouteMapStyle = .flat2D
     ) -> UIImage? {
         guard session.routePoints.count >= 2 else { return nil }
         let map = ShareCardRouteMapView(
             routePoints: session.routePoints,
             distanceKm: session.displayDistanceKm,
-            performanceMetric: session.routePerformanceMetric
+            performanceMetric: session.routePerformanceMetric,
+            style: style
         )
         .frame(width: width, height: height)
 
@@ -1023,13 +1060,16 @@ enum WorkoutRouteMapRenderer {
     }
 
     @MainActor
-    static func pngData(for session: WorkoutSession) -> Data? {
-        renderImage(session: session)?.pngData()
+    static func pngData(for session: WorkoutSession, style: ShareCardRouteMapStyle = .flat2D) -> Data? {
+        renderImage(session: session, style: style)?.pngData()
     }
 
     @MainActor
-    static func mailAttachment(for session: WorkoutSession) -> MailAttachment? {
-        guard let data = pngData(for: session) else { return nil }
+    static func mailAttachment(
+        for session: WorkoutSession,
+        style: ShareCardRouteMapStyle = .flat2D
+    ) -> MailAttachment? {
+        guard let data = pngData(for: session, style: style) else { return nil }
         return MailAttachment(
             data: data,
             mimeType: emailAttachmentMimeType,

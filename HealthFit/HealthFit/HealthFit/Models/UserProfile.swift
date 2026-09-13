@@ -983,6 +983,15 @@ struct UserProfile: Codable, Identifiable, Equatable {
             && !personalTrainerEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// Personal já informado no perfil (nome e/ou e-mail), mesmo sem e-mail para relatório.
+    var hasPersonalTrainerOnProfile: Bool {
+        usesPersonalTrainer
+            && (
+                !personalTrainerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    || !personalTrainerEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            )
+    }
+
     var hasNutritionist: Bool {
         usesNutritionist
             && !nutritionistEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

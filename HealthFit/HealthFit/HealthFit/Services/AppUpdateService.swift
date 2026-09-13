@@ -28,6 +28,10 @@ final class AppUpdateService: ObservableObject {
         installedVersion = Self.currentMarketingVersion()
         updateMessage = Self.defaultMessage
         appStoreURL = URL(string: "https://apps.apple.com/app/id\(Self.fallbackAppStoreId)")
+        PulseExperimental.migratePulseProductDefaultIfNeeded()
+        if PulseExperimental.remoteUIEnabled {
+            pulseFlagsEpoch &+= 1
+        }
     }
 
     /// ID numérico da App Store (atualize se o app receber outro ID após a publicação).
@@ -153,7 +157,7 @@ final class AppUpdateService: ObservableObject {
         var appStoreURL: URL?
         /// Default true — bloqueia se a loja tiver versão maior.
         var forceUpdateOnNewerStoreVersion: Bool
-        /// Kill-switch / rollout do Pulse (default false = off para a maioria).
+        /// Kill-switch / rollout do Pulse (default false = off até go-live / review).
         var pulseEnabled: Bool
         var pulseCloudSyncEnabled: Bool
     }

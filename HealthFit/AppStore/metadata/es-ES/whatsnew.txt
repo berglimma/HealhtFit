@@ -1,4 +1,6 @@
-• Intensidad percibida (1–10) en el resumen, informes y correo al entrenador
-• Apple Watch abre la actividad al iniciar en el iPhone; pausa y fin sincronizados
-• Informes de entrenamientos recientes desde el Dashboard
-• Inicio de musculación más rápido, sin pregunta de pre-entreno
+• HealthFit Pulse: stories, comunidades y publicaciones de entrenamiento (18+)
+• 15 días gratis de Pulse en la app; luego incluido en el plan Básico (R$ 9,90)
+• Semana de sueño/agua en el Dashboard según el calendario del iPhone
+• Publicar mapa de la ruta (2D/3D) y enviar el informe al entrenador
+• Apple Watch sincronizado con musculación, casa, cardio y meditación
+• Intensidad percibida (1–10) en el resumen
