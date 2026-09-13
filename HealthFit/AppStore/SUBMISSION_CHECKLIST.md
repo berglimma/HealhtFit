@@ -14,33 +14,33 @@ Versão alvo: **1.0.5 (Build 13)** · Bundle `luan.com.healthfit.app`
 - [x] Versão Xcode **1.0.5 (13)** (1.0.4 train fechado / já aprovada)
 - [x] `whatsnew.txt` (pt-BR / en-US / es-ES / fr-FR) com HealthFit Pulse
 - [x] `review_notes.txt` atualizado (Pulse 18+, trial, conta demo)
-- [ ] Commit + Archive + upload build **13** para App Store Connect
+- [x] Commit + Archive + upload build **13** para App Store Connect
 
-## Firebase (sem ligar Pulse na loja ainda)
+## Firebase
 
-- [ ] `firebase deploy --only firestore:rules,storage,hosting`
-- [ ] Confirmar no Console: `appConfig/ios.pulseEnabled = false`
-- [ ] Confirmar: `appConfig/ios.pulseCloudSyncEnabled = false`
-- [ ] **Só na Review:** ligar `pulseEnabled=true` (e sync se necessário); após aprovação manter ou fazer rollout
+- [x] `firebase deploy --only firestore:rules,storage,hosting` (feito antes)
+- [x] `appConfig/ios.pulseEnabled = false`
+- [x] `appConfig/ios.pulseCloudSyncEnabled = false`
+- [ ] **Só na Review / antes do Submit:** `pulseEnabled=true` (e sync se necessário)
 
 ## Você no App Store Connect
 
 1. Abrir https://appstoreconnect.apple.com/apps/6798621208
-2. Versão **1.0.4** → colar What’s New de `metadata/*/whatsnew.txt`
+2. Criar versão **1.0.5** → colar What’s New de `metadata/*/whatsnew.txt`
 3. Colar Review Notes de `review_notes.txt`
 4. Age Rating: app **16+**; UGC / Pulse **18+**
 5. Privacy Nutrition Labels: fotos / conteúdo gerado pelo usuário
 6. Questionário de User-Generated Content
-7. Quando o build **12** processar → selecionar na versão
+7. Quando o build **13** processar → selecionar na versão
 8. Antes de Submit: garantir `pulseEnabled=true` para a Apple ver o Pulse
 9. **Add for Review** → **Submit for Review**
 
 ## Enviar
 
-- [ ] Commit das alterações locais
-- [ ] Archive 1.0.4 (12) Release
-- [ ] Upload build 12
-- [ ] Attach build 12
+- [x] Commit das alterações locais
+- [x] Archive 1.0.5 (13) Release
+- [ ] Upload build 13 (em andamento / confirmar)
+- [ ] Attach build 13
 - [ ] Connect age/privacy/UGC
 - [ ] Flag Pulse ON para review
 - [ ] Submit for Review
