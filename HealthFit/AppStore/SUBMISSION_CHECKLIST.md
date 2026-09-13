@@ -1,6 +1,6 @@
 # Checklist — publicar HealthFit na App Store
 
-Versão alvo: **1.0.4 (Build 12)** · Bundle `luan.com.healthfit.app`
+Versão alvo: **1.0.5 (Build 13)** · Bundle `luan.com.healthfit.app`
 
 ## URLs legais (já no app e metadados)
 
@@ -11,10 +11,10 @@ Versão alvo: **1.0.4 (Build 12)** · Bundle `luan.com.healthfit.app`
 
 ## Pronto no repositório
 
-- [x] Versão Xcode **1.0.4 (12)**
+- [x] Versão Xcode **1.0.5 (13)** (1.0.4 train fechado / já aprovada)
 - [x] `whatsnew.txt` (pt-BR / en-US / es-ES / fr-FR) com HealthFit Pulse
 - [x] `review_notes.txt` atualizado (Pulse 18+, trial, conta demo)
-- [ ] Commit + Archive + upload build **12** para App Store Connect
+- [ ] Commit + Archive + upload build **13** para App Store Connect
 
 ## Firebase (sem ligar Pulse na loja ainda)
 

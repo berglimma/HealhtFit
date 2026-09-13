@@ -25,7 +25,7 @@ Depois, no Console, **confirme** que `pulseEnabled` e `pulseCloudSyncEnabled` co
 
 ### 1. Ship client
 - [x] Fontes Pulse + entitlement (trial 15 dias → Básico)
-- [ ] Commit + Archive **Release** 1.0.4 (12)
+- [ ] Commit + Archive **Release** 1.0.5 (13)
 - [ ] TestFlight smoke com flags `false` (card oculto) e com `true` (fluxo completo)
 
 ### 2. Backend

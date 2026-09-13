@@ -1,4 +1,4 @@
-HealthFit 1.0.4 (Build 12)
+HealthFit 1.0.5 (Build 13)
 
 Conta demo App Review:
 E-mail: healthfit.appreview@gmail.com
