@@ -613,6 +613,9 @@
     "~%lld min" : {
 
     },
+    "− diminui os dados do treino/cardio · arraste para mover na foto" : {
+
+    },
     "▶ %@" : {
 
     },
@@ -1084,6 +1087,9 @@
 
     },
     "Aumentar água" : {
+
+    },
+    "Aumentar dados do treino" : {
 
     },
     "Aumentar meta de água" : {
@@ -2916,6 +2922,9 @@
     "Dados insuficientes para o gráfico" : {
 
     },
+    "Dados na foto" : {
+
+    },
     "Dados salvos" : {
 
     },
@@ -3091,6 +3100,9 @@
 
     },
     "Diminuir água" : {
+
+    },
+    "Diminuir dados do treino" : {
 
     },
     "Diminuir meta de água" : {
@@ -10416,6 +10428,9 @@
 
     },
     "Reps: %lld" : {
+
+    },
+    "Resetar posição e tamanho" : {
 
     },
     "Resgatar 30 dias" : {

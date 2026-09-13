@@ -266,7 +266,14 @@ struct DashboardView: View {
             }
         }
         .padding(16)
-        .background(AppTheme.cardBackground)
+        .background {
+            ZStack {
+                AppTheme.cardBackground
+                if isToday {
+                    SleepNightAtmosphereView()
+                }
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
@@ -338,11 +345,16 @@ struct DashboardView: View {
             .frame(height: 14)
 
             HStack(spacing: 10) {
-                waterQuickAddButton(title: "+1 copo", icon: "cup.and.saucer.fill") {
+                waterQuickAddButton(title: "+1 copo", action: {
                     wellnessService.addWater(WaterServing.glassML, dayKey: dayKey)
+                }) {
+                    WaterGlassGlyph(tint: Color(red: 0.45, green: 0.78, blue: 1.0))
+                        .frame(width: 14, height: 18)
                 }
-                waterQuickAddButton(title: "+1 garrafa", icon: "waterbottle") {
+                waterQuickAddButton(title: "+1 garrafa", action: {
                     wellnessService.addWater(WaterServing.bottleML, dayKey: dayKey)
+                }) {
+                    Image(systemName: "waterbottle")
                 }
 
                 Spacer(minLength: 4)
@@ -370,7 +382,12 @@ struct DashboardView: View {
             }
         }
         .padding(16)
-        .background(AppTheme.cardBackground)
+        .background {
+            ZStack {
+                AppTheme.cardBackground
+                WaterRippleAtmosphereView()
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
@@ -393,17 +410,24 @@ struct DashboardView: View {
         .accessibilityLabel(systemImage == "plus" ? "Aumentar água" : "Diminuir água")
     }
 
-    private func waterQuickAddButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+    private func waterQuickAddButton<Icon: View>(
+        title: String,
+        action: @escaping () -> Void,
+        @ViewBuilder icon: () -> Icon
+    ) -> some View {
         Button(action: action) {
-            Label(title, systemImage: icon)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(AppTheme.accent)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(
-                    Capsule(style: .continuous)
-                        .strokeBorder(AppTheme.accent.opacity(0.85), lineWidth: 1.5)
-                )
+            HStack(spacing: 6) {
+                icon()
+                Text(title)
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(AppTheme.accent)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                Capsule(style: .continuous)
+                    .strokeBorder(AppTheme.accent.opacity(0.85), lineWidth: 1.5)
+            )
         }
         .buttonStyle(.plain)
     }

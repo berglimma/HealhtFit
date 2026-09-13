@@ -30,9 +30,14 @@ struct RunRouteMapView: View {
     @State private var lastCameraUpdateAt: Date = .distantPast
     @State private var lastFollowedLatitude: CLLocationDegrees?
 
-    private var coordinates: [CLLocationCoordinate2D] {
-        routePoints.map(\.coordinate)
-    }
+    // Geometria do mapa fica em cache: recalcular a cada avaliação de `body`
+    // (o treino ao vivo redesenha ~1×/s) travava o app em rotas longas.
+    @State private var coordinates: [CLLocationCoordinate2D] = []
+    @State private var performanceSegments: [RoutePerformancePolyline] = []
+    @State private var jumpArcs: [JumpRouteArc] = []
+    @State private var cachedFittingRegion: MKCoordinateRegion?
+    @State private var jumpArcsRoutePointCount = 0
+    @State private var jumpArcsEventCount = -1
 
     private var startCoordinate: CLLocationCoordinate2D? {
         coordinates.first ?? spotCoordinate
@@ -47,15 +52,6 @@ struct RunRouteMapView: View {
         let endLoc = CLLocation(latitude: last.latitude, longitude: last.longitude)
         guard startLoc.distance(from: endLoc) >= 3 else { return nil }
         return last
-    }
-
-    private var performanceSegments: [RoutePerformanceSegment] {
-        RoutePerformanceColoring.segments(from: routePoints, metric: performanceMetric)
-    }
-
-    /// Arcos de salto (subida/descida) sobre a linha GPS.
-    private var jumpArcs: [JumpRouteArc] {
-        JumpRouteArcBuilder.buildArcs(jumps: jumpEvents, route: routePoints)
     }
 
     private var mapContentHeight: CGFloat {
@@ -95,15 +91,17 @@ struct RunRouteMapView: View {
                 }
 
                 ForEach(performanceSegments) { segment in
-                    MapPolyline(coordinates: segment.coordinates)
-                        .stroke(
-                            segment.color,
-                            style: StrokeStyle(
-                                lineWidth: is3DEnabled ? 3.5 : (allows3DMode ? 3 : 2.5),
-                                lineCap: .round,
-                                lineJoin: .round
+                    if segment.coordinates.count >= 2 {
+                        MapPolyline(coordinates: segment.coordinates)
+                            .stroke(
+                                segment.color,
+                                style: StrokeStyle(
+                                    lineWidth: is3DEnabled ? 3.5 : (allows3DMode ? 3 : 2.5),
+                                    lineCap: .round,
+                                    lineJoin: .round
+                                )
                             )
-                        )
+                    }
                 }
 
                 // Saltos: linha GPS base + arco subida (ciano) e descida (laranja).
@@ -219,13 +217,18 @@ struct RunRouteMapView: View {
                     is3DEnabled = true
                     didApplyInitialMode = true
                 }
+                rebuildGeometry()
                 updateCamera(animated: false, force: true)
             }
             .onChange(of: routePoints.count) { oldCount, newCount in
+                rebuildGeometry()
                 // Após unlock o GPS pode entregar dezenas de pontos de uma vez —
                 // anima só se o salto for pequeno (update ao vivo normal).
                 let burst = newCount - oldCount >= 4
                 updateCamera(animated: !burst && followUser, force: burst)
+            }
+            .onChange(of: performanceMetric) { _, _ in
+                rebuildGeometry()
             }
             .onChange(of: userCoordinate?.latitude) { _, newLat in
                 guard followUser, let newLat else { return }
@@ -239,9 +242,11 @@ struct RunRouteMapView: View {
                 updateCamera(animated: true, force: true)
             }
             .onChange(of: jumpEvents.count) { _, _ in
+                rebuildGeometry()
                 updateCamera(animated: true)
             }
             .onChange(of: spotCoordinate?.latitude) { _, _ in
+                rebuildGeometry()
                 updateCamera(animated: true, force: true)
             }
 
@@ -450,14 +455,57 @@ struct RunRouteMapView: View {
         return (bearing + 360).truncatingRemainder(dividingBy: 360)
     }
 
+    /// Recalcula polylines, arcos e enquadramento. Chamado só quando a rota muda,
+    /// nunca durante a avaliação de `body`.
+    private func rebuildGeometry() {
+        let points = RoutePerformanceColoring.downsampled(routePoints)
+        let coords = points.map(\.coordinate)
+        let arcs = resolvedJumpArcs()
+
+        coordinates = coords
+        performanceSegments = RoutePerformanceColoring.coalescedSegments(
+            from: points,
+            metric: performanceMetric
+        )
+        jumpArcs = arcs
+        cachedFittingRegion = computeFittingRegion(coordinates: coords, arcs: arcs)
+    }
+
+    /// Arcos de salto são O(saltos × rota): refaz só quando há salto novo ou a
+    /// rota cresce de forma relevante (pontos novos não movem arcos antigos).
+    private func resolvedJumpArcs() -> [JumpRouteArc] {
+        guard !jumpEvents.isEmpty else {
+            jumpArcsEventCount = 0
+            jumpArcsRoutePointCount = routePoints.count
+            return []
+        }
+        let routeGrew = routePoints.count - jumpArcsRoutePointCount >= 25
+        guard jumpEvents.count != jumpArcsEventCount || routeGrew else { return jumpArcs }
+        jumpArcsEventCount = jumpEvents.count
+        jumpArcsRoutePointCount = routePoints.count
+        return JumpRouteArcBuilder.buildArcs(jumps: jumpEvents, route: routePoints)
+    }
+
     private func fittingRegion() -> MKCoordinateRegion? {
+        if let cachedFittingRegion { return cachedFittingRegion }
+        guard let user = userCoordinate else { return nil }
+        return MKCoordinateRegion(
+            center: user,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+    }
+
+    private func computeFittingRegion(
+        coordinates: [CLLocationCoordinate2D],
+        arcs: [JumpRouteArc]
+    ) -> MKCoordinateRegion? {
         var coords = coordinates
         for jump in jumpEvents {
             if let c = jump.coordinate {
                 coords.append(c)
             }
         }
-        for arc in jumpArcs {
+        for arc in arcs {
             coords.append(contentsOf: arc.ascentCurve)
             coords.append(contentsOf: arc.descentCurve)
             coords.append(contentsOf: arc.groundPath)
@@ -466,15 +514,7 @@ struct RunRouteMapView: View {
             coords.append(spot)
         }
 
-        guard let first = coords.first else {
-            if let user = userCoordinate {
-                return MKCoordinateRegion(
-                    center: user,
-                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                )
-            }
-            return nil
-        }
+        guard let first = coords.first else { return nil }
         guard coords.count > 1 else {
             return MKCoordinateRegion(
                 center: first,
@@ -501,6 +541,41 @@ struct RunRouteMapView: View {
             longitudeDelta: max((maxLon - minLon) * 1.6, 0.006)
         )
         return MKCoordinateRegion(center: center, span: span)
+    }
+}
+
+// Usado com `.equatable()`: o treino ao vivo reavalia a tela ~1×/s e sem isso o
+// MapKit reconstruía todos os overlays a cada segundo.
+extension RunRouteMapView: Equatable {
+    static func == (lhs: RunRouteMapView, rhs: RunRouteMapView) -> Bool {
+        lhs.routePoints.count == rhs.routePoints.count
+            && lhs.routePoints.last?.id == rhs.routePoints.last?.id
+            && sameCoordinate(lhs.userCoordinate, rhs.userCoordinate)
+            && sameCoordinate(lhs.spotCoordinate, rhs.spotCoordinate)
+            && lhs.jumpEvents.count == rhs.jumpEvents.count
+            && lhs.jumpEvents.last?.id == rhs.jumpEvents.last?.id
+            && lhs.followUser == rhs.followUser
+            && lhs.showsUserLocation == rhs.showsUserLocation
+            && lhs.height == rhs.height
+            && lhs.performanceMetric == rhs.performanceMetric
+            && lhs.allows3DMode == rhs.allows3DMode
+            && lhs.spotTitle == rhs.spotTitle
+            && lhs.prefers3DInitially == rhs.prefers3DInitially
+            && lhs.showsEndPin == rhs.showsEndPin
+    }
+
+    private static func sameCoordinate(
+        _ lhs: CLLocationCoordinate2D?,
+        _ rhs: CLLocationCoordinate2D?
+    ) -> Bool {
+        switch (lhs, rhs) {
+        case (nil, nil):
+            return true
+        case let (a?, b?):
+            return a.latitude == b.latitude && a.longitude == b.longitude
+        default:
+            return false
+        }
     }
 }
 
@@ -597,6 +672,7 @@ private enum JumpRouteArcBuilder {
         }
 
         let apexIndex = max(1, min(curve.count - 2, curve.count / 2))
+        guard curve.indices.contains(apexIndex) else { return nil }
         let ascent = Array(curve[0...apexIndex])
         var descent = Array(curve[apexIndex...])
         if descent.count < 2, let last = ascent.last {
@@ -621,6 +697,7 @@ private enum JumpRouteArcBuilder {
         around index: Int,
         halfSpanMeters: Double
     ) -> [CLLocationCoordinate2D] {
+        guard route.indices.contains(index) else { return [] }
         var before: [CLLocationCoordinate2D] = [route[index].coordinate]
         var accumulated = 0.0
         var i = index
@@ -674,17 +751,22 @@ private enum JumpRouteArcBuilder {
         guard !route.isEmpty else { return nil }
 
         if let jumpCoord = jump.coordinate {
+            // Aproximação planar: evita alocar um CLLocation por ponto da rota
+            // (esta busca é O(saltos × rota) e rodava no thread principal).
+            let metersPerLat = 111_320.0
+            let metersPerLon = metersPerLat * max(cos(jumpCoord.latitude * .pi / 180), 0.01)
             var bestIdx = 0
-            var bestDist = Double.greatestFiniteMagnitude
-            let jumpLoc = CLLocation(latitude: jumpCoord.latitude, longitude: jumpCoord.longitude)
+            var bestSquared = Double.greatestFiniteMagnitude
             for (idx, point) in route.enumerated() {
-                let d = jumpLoc.distance(from: point.clLocation)
-                if d < bestDist {
-                    bestDist = d
+                let dy = (point.latitude - jumpCoord.latitude) * metersPerLat
+                let dx = (point.longitude - jumpCoord.longitude) * metersPerLon
+                let squared = dx * dx + dy * dy
+                if squared < bestSquared {
+                    bestSquared = squared
                     bestIdx = idx
                 }
             }
-            if bestDist <= 250 { return bestIdx }
+            if bestSquared <= 250 * 250 { return bestIdx }
         }
 
         var bestIdx = 0
@@ -730,15 +812,23 @@ private enum JumpRouteArcBuilder {
         distances: [Double],
         targetDistance: Double
     ) -> CLLocationCoordinate2D {
-        guard path.count == distances.count, path.count >= 2 else {
-            return path.last ?? path[0]
+        guard let first = path.first else {
+            return CLLocationCoordinate2D(latitude: 0, longitude: 0)
         }
-        if targetDistance <= 0 { return path[0] }
-        if let last = distances.last, targetDistance >= last { return path[path.count - 1] }
+        guard path.count == distances.count, path.count >= 2 else {
+            return path.last ?? first
+        }
+        if targetDistance <= 0 { return first }
+        if let last = distances.last, targetDistance >= last {
+            return path[path.count - 1]
+        }
 
         var i = 1
         while i < distances.count, distances[i] < targetDistance {
             i += 1
+        }
+        guard i < path.count, i < distances.count, i > 0 else {
+            return path.last ?? first
         }
         let d0 = distances[i - 1]
         let d1 = distances[i]

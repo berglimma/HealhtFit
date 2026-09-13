@@ -144,9 +144,8 @@ struct DailyWellnessCheckInView: View {
                 Divider()
 
                 HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "cup.and.saucer.fill")
-                        .font(.title2)
-                        .foregroundStyle(.blue)
+                    WaterGlassGlyph(tint: Color(red: 0.45, green: 0.78, blue: 1.0))
+                        .frame(width: 26, height: 32)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Comece o dia com um copo d'água")

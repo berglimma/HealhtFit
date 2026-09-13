@@ -323,6 +323,18 @@ struct RoutePerformanceSegment: Identifiable {
     var coordinates: [CLLocationCoordinate2D] { [start, end] }
 }
 
+/// Trecho contíguo de mesma faixa de rendimento — uma polyline por trecho.
+/// O mapa desenha estes trechos; uma polyline por par de pontos travava o
+/// mapa ao vivo (milhares de overlays recriados a cada atualização de GPS).
+struct RoutePerformancePolyline: Identifiable {
+    /// Índice do primeiro ponto do trecho — identidade estável entre renders.
+    let id: Int
+    let band: RoutePerformanceBand
+    let coordinates: [CLLocationCoordinate2D]
+
+    var color: Color { RoutePerformanceColoring.color(for: band) }
+}
+
 enum RoutePerformanceColoring {
     /// Velocidade mínima considerada em movimento (m/s).
     static let movingSpeedFloor = 0.4
@@ -332,6 +344,101 @@ enum RoutePerformanceColoring {
     static let optimalRatio = 1.10
 
     static let legendText = "Verde ótimo · Amarelo intermediário · Vermelho abaixo · Azul pausa"
+
+    /// Pontos máximos desenhados no mapa; rotas maiores são reamostradas.
+    static let maxDrawnRoutePoints = 900
+
+    /// Agrupa pontos vizinhos de mesma faixa em uma polyline só.
+    /// Resultado: dezenas de overlays em vez de um por ponto GPS.
+    static func coalescedSegments(
+        from routePoints: [RouteCoordinate],
+        metric: RoutePerformanceMetric = .pace,
+        maxPoints: Int = maxDrawnRoutePoints
+    ) -> [RoutePerformancePolyline] {
+        let points = downsampled(routePoints, maxPoints: maxPoints)
+        guard points.count >= 2 else { return [] }
+
+        // metric reserved for future pace-specific weighting; faster = better for both.
+        _ = metric
+
+        var speeds: [Double] = []
+        speeds.reserveCapacity(points.count - 1)
+        var isPausedSegment: [Bool] = []
+        isPausedSegment.reserveCapacity(points.count - 1)
+
+        for index in 1..<points.count {
+            let a = points[index - 1]
+            let b = points[index]
+            isPausedSegment.append(a.isPaused || b.isPaused)
+            speeds.append(segmentSpeed(from: a, to: b))
+        }
+
+        let movingSpeeds = zip(speeds, isPausedSegment)
+            .compactMap { speed, paused -> Double? in
+                guard !paused, speed >= movingSpeedFloor else { return nil }
+                return speed
+            }
+        let medianSpeed = median(of: movingSpeeds) ?? movingSpeedFloor
+
+        var bands: [RoutePerformanceBand] = []
+        bands.reserveCapacity(speeds.count)
+        for index in speeds.indices {
+            bands.append(
+                isPausedSegment[index]
+                    ? .paused
+                    : band(forSpeed: speeds[index], medianMovingSpeed: medianSpeed)
+            )
+        }
+
+        var result: [RoutePerformancePolyline] = []
+        var runStart = 0
+        for index in bands.indices {
+            let endsRun = index == bands.count - 1 || bands[index + 1] != bands[index]
+            guard endsRun else { continue }
+            let endPoint = index + 1
+            guard runStart <= endPoint,
+                  points.indices.contains(runStart),
+                  points.indices.contains(endPoint) else {
+                runStart = index + 1
+                continue
+            }
+            let coords = (runStart...endPoint).map { points[$0].coordinate }
+            guard coords.count >= 2 else {
+                runStart = index + 1
+                continue
+            }
+            result.append(
+                RoutePerformancePolyline(
+                    id: runStart,
+                    band: bands[index],
+                    coordinates: coords
+                )
+            )
+            runStart = index + 1
+        }
+        return result
+    }
+
+    /// Reamostra a rota preservando início, fim e fronteiras de pausa (trechos azuis).
+    static func downsampled(
+        _ routePoints: [RouteCoordinate],
+        maxPoints: Int = maxDrawnRoutePoints
+    ) -> [RouteCoordinate] {
+        guard maxPoints > 2, routePoints.count > maxPoints else { return routePoints }
+
+        var keep: Set<Int> = [0, routePoints.count - 1]
+        for index in 1..<routePoints.count
+        where routePoints[index].isPaused != routePoints[index - 1].isPaused {
+            keep.insert(index - 1)
+            keep.insert(index)
+        }
+        // Arredonda para cima: divisão inteira deixaria o total acima de `maxPoints`.
+        let step = max(1, Int((Double(routePoints.count) / Double(maxPoints)).rounded(.up)))
+        for index in stride(from: 0, to: routePoints.count, by: step) {
+            keep.insert(index)
+        }
+        return keep.sorted().map { routePoints[$0] }
+    }
 
     /// Gera segmentos coloridos por faixa relativa à mediana de velocidades em movimento.
     /// Verde = ótimo, amarelo = intermediário, vermelho = abaixo; parado = cinza; pausa = azul.

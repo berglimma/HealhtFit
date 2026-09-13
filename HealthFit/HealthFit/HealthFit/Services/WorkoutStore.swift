@@ -1515,7 +1515,13 @@ final class WorkoutStore: ObservableObject {
         } else {
             activeCardioConfig = nil
         }
-        currentExerciseIndex = UserDefaults.standard.integer(forKey: activeExerciseIndexKey)
+        let restoredIndex = UserDefaults.standard.integer(forKey: activeExerciseIndexKey)
+        let maxIndex = max(activeSessionExercises.count, exerciseRecords.count) - 1
+        if maxIndex < 0 {
+            currentExerciseIndex = 0
+        } else {
+            currentExerciseIndex = min(max(0, restoredIndex), maxIndex)
+        }
         // Sempre reabre o treino ao relançar o app (fechou sem querer).
         isActiveWorkoutMinimized = false
         isExerciseTimerPaused = UserDefaults.standard.bool(forKey: activePausedKey)

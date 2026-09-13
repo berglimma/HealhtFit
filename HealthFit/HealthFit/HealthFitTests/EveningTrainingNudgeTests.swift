@@ -8,6 +8,7 @@ final class EveningTrainingNudgeTests: XCTestCase {
         XCTAssertEqual(EveningTrainingNudgeConfiguration.countdownDuration, 3 * 60 * 60)
     }
 
+    @MainActor
     func testHasTrainedTodayUsesEndedAt() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
@@ -48,6 +49,7 @@ final class EveningTrainingNudgeTests: XCTestCase {
         )
     }
 
+    @MainActor
     func testNudgeWindowIsEighteenToTwentyOne() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current

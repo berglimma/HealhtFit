@@ -96,7 +96,9 @@ final class RunTrackingService: NSObject, ObservableObject {
         pedometerRawWhenPaused = nil
         isPaused = false
         isTracking = true
-        didRequestAlwaysAuthorization = false
+        // `didRequestAlwaysAuthorization` NÃO é zerado aqui: `prepareForSession()`
+        // roda logo antes de `start()` e resetar abriria o alerta de Always duas
+        // vezes seguidas, deixando a tela travada no momento do "Iniciar".
 
         locationManager.activityType = .fitness
         locationManager.pausesLocationUpdatesAutomatically = false

@@ -208,6 +208,7 @@
 		B1000710 /* AssistantTideAlertEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000710 /* AssistantTideAlertEngine.swift */; };
 		B1000711 /* WorkoutProgramHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000711 /* WorkoutProgramHeroCard.swift */; };
 		B1000712 /* TransparentWindLinesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000712 /* TransparentWindLinesView.swift */; };
+		B1000713 /* WellnessCardAtmosphereViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000713 /* WellnessCardAtmosphereViews.swift */; };
 		B1000801 /* RowingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000801 /* RowingModels.swift */; };
 		B1000802 /* RowingMetricsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000802 /* RowingMetricsService.swift */; };
 		B1000803 /* RowingMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000803 /* RowingMetricsTests.swift */; };
@@ -609,6 +610,7 @@
 		F1000710 /* AssistantTideAlertEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantTideAlertEngine.swift; sourceTree = "<group>"; };
 		F1000711 /* WorkoutProgramHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProgramHeroCard.swift; sourceTree = "<group>"; };
 		F1000712 /* TransparentWindLinesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparentWindLinesView.swift; sourceTree = "<group>"; };
+		F1000713 /* WellnessCardAtmosphereViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WellnessCardAtmosphereViews.swift; sourceTree = "<group>"; };
 		F1000801 /* RowingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowingModels.swift; sourceTree = "<group>"; };
 		F1000802 /* RowingMetricsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowingMetricsService.swift; sourceTree = "<group>"; };
 		F1000803 /* RowingMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowingMetricsTests.swift; sourceTree = "<group>"; };
@@ -1148,6 +1150,7 @@
 				F1000412 /* LanguagePickerControl.swift */,
 				F1000708 /* TransparentOceanWavesView.swift */,
 				F1000712 /* TransparentWindLinesView.swift */,
+				F1000713 /* WellnessCardAtmosphereViews.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -1733,6 +1736,7 @@
 				B1000707 /* WaterWindConditionsView.swift in Sources */,
 				B1000708 /* TransparentOceanWavesView.swift in Sources */,
 				B1000712 /* TransparentWindLinesView.swift in Sources */,
+				B1000713 /* WellnessCardAtmosphereViews.swift in Sources */,
 				B1000602 /* SubscriptionViews.swift in Sources */,
 				B1000036 /* MotivationMessages.swift in Sources */,
 				B1000037 /* WorkoutReportBuilder.swift in Sources */,

@@ -238,75 +238,17 @@ struct ActiveCardioView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        if isKitesurf, let alert = spotBuddy.incomingHelpAlert {
-                            KiteSpotBuddyIncomingHelpBanner(peer: alert) {
-                                spotBuddy.dismissIncomingHelp()
-                            }
-                        }
-                        if isOutdoorGPS {
-                            runMapSection
-                            activityStateBanner
-                            liveTimerBanner
-                            if isWaterSport {
-                                waterSportLiveSection
-                            }
-                            if isRowing {
-                                rowingLiveSection
-                            }
-                            if isOutdoorCycling, let hazard = activeHazardAlert {
-                                potholeAlertBanner(hazard)
-                            }
-                        }
-                        intensityBadge
-                        if !isOutdoorGPS {
-                            exerciseInfo
-                            if isTreadmill {
-                                treadmillLiveSection
-                            }
-                            if isRowing {
-                                rowingLiveSection
-                            }
-                            if isClimbing {
-                                climbingWeatherSection
-                                climbingLiveSection
-                                climbingAttemptsSection
-                            }
-                        }
-                        progressRing
-                        if isSwimming {
-                            swimmingLapControls
-                            swimWatchSyncButton
-                        }
-                        calorieEvolutionSection
-                        if let superationMessage {
-                            superationBanner(message: superationMessage)
-                        } else if let progressMessage, config.hasCalorieGoal {
-                            progressBanner(message: progressMessage)
-                        }
-                        metricsRow
-                        if isOutdoorGPS {
-                            runExtraMetricsRow
-                        }
-                        if isRowing {
-                            rowingExtraMetricsGrid
-                            rowingSymmetrySection
-                        }
-                        if isWaterSport {
-                            waterSportChartsSection
-                            waterSportWatchSyncButton
-                        }
-                        if isOutdoorCycling {
-                            reportHazardButton
-                        }
-                        if isSwimming {
-                            swimExtraMetricsRow
-                        }
-                        pauseControls
-                        endButton
+                        liveHeaderSections
+                        modalityDetailSections
+                        progressSections
+                        metricsSections
+                        sessionControlSections
                     }
                     .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                     .adaptiveContentWidth()
                 }
+
+                sessionHooks
             }
             .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
@@ -327,6 +269,124 @@ struct ActiveCardioView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Blocos da tela
+    //
+    // As seções vão em grupos e o ciclo de vida fica numa âncora invisível.
+    // Com os 16 filhos e ~20 modificadores dentro de um único `body`, o frame
+    // de pilha dele era 10× maior e o tipo composto da tela, gigantesco.
+
+    // Cada seção entra como `AnyView`, virando uma folha no tipo composto da
+    // tela. Sem isso o nome mangled do conteúdo do `VStack` fica tão aninhado
+    // que `swift_getTypeByMangledName` estoura a pilha de 1 MB da thread
+    // principal ao instanciar o tipo — o crash ao abrir a sessão.
+    // O `.equatable()` do mapa continua valendo dentro do `AnyView`.
+
+    @ViewBuilder
+    private var liveHeaderSections: some View {
+        if isKitesurf, let alert = spotBuddy.incomingHelpAlert {
+            KiteSpotBuddyIncomingHelpBanner(peer: alert) {
+                spotBuddy.dismissIncomingHelp()
+            }
+        }
+        if isOutdoorGPS {
+            AnyView(runMapSection)
+            AnyView(activityStateBanner)
+            AnyView(liveTimerBanner)
+            if isWaterSport {
+                AnyView(waterSportLiveSection)
+            }
+            if isRowing {
+                AnyView(rowingLiveSection)
+            }
+            if isOutdoorCycling, let hazard = activeHazardAlert {
+                AnyView(potholeAlertBanner(hazard))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var modalityDetailSections: some View {
+        AnyView(intensityBadge)
+        if !isOutdoorGPS {
+            AnyView(exerciseInfo)
+            if isTreadmill {
+                AnyView(treadmillLiveSection)
+            }
+            if isRowing {
+                AnyView(rowingLiveSection)
+            }
+            if isClimbing {
+                AnyView(climbingWeatherSection)
+                AnyView(climbingLiveSection)
+                AnyView(climbingAttemptsSection)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var progressSections: some View {
+        AnyView(progressRing)
+        if isSwimming {
+            AnyView(swimmingLapControls)
+            AnyView(swimWatchSyncButton)
+        }
+        AnyView(calorieEvolutionSection)
+        if let superationMessage {
+            AnyView(superationBanner(message: superationMessage))
+        } else if let progressMessage, config.hasCalorieGoal {
+            AnyView(progressBanner(message: progressMessage))
+        }
+    }
+
+    @ViewBuilder
+    private var metricsSections: some View {
+        AnyView(metricsRow)
+        if isOutdoorGPS {
+            AnyView(runExtraMetricsRow)
+        }
+        if isRowing {
+            AnyView(rowingExtraMetricsGrid)
+            AnyView(rowingSymmetrySection)
+        }
+        if isWaterSport {
+            AnyView(waterSportChartsSection)
+            AnyView(waterSportWatchSyncButton)
+        }
+        if isOutdoorCycling {
+            AnyView(reportHazardButton)
+        }
+        if isSwimming {
+            AnyView(swimExtraMetricsRow)
+        }
+    }
+
+    @ViewBuilder
+    private var sessionControlSections: some View {
+        AnyView(pauseControls)
+        AnyView(endButton)
+    }
+
+    /// Âncora invisível que hospeda os gatilhos de ciclo de vida e as
+    /// apresentações, mantendo-os fora do tipo gigante da tela.
+    private var sessionHookAnchor: some View {
+        Color.clear
+            .frame(width: 1, height: 1)
+            .allowsHitTesting(false)
+    }
+
+    // Três cadeias curtas em vez de uma longa: cada modificador acrescenta um
+    // nível de aninhamento ao tipo, e o runtime o decodifica recursivamente.
+    @ViewBuilder
+    private var sessionHooks: some View {
+        AnyView(sessionClockHooks)
+        AnyView(sessionWatchHooks)
+        AnyView(sessionPresentationHooks)
+    }
+
+    private var sessionClockHooks: some View {
+        sessionHookAnchor
         .onReceive(clock) { _ in
             clockTickCount += 1
             if !isPaused {
@@ -426,6 +486,10 @@ struct ActiveCardioView: View {
             guard !minimized, finishedSession == nil, !isFinishing else { return }
             startSessionHardwareIfVisible()
         }
+    }
+
+    private var sessionWatchHooks: some View {
+        sessionHookAnchor
         .onChange(of: runTracker.currentLocation) { _, location in
             guard isKitesurf, let location else { return }
             spotBuddy.updateLocation(location)
@@ -450,6 +514,10 @@ struct ActiveCardioView: View {
             guard isWaterSport, g > 0 else { return }
             jumpMetrics.ingestWatchAcceleration(g)
         }
+    }
+
+    private var sessionPresentationHooks: some View {
+        sessionHookAnchor
         .sheet(isPresented: $showSpotBuddyHelpConfirm) {
             KiteSpotBuddyHelpConfirmSheet(
                 onConfirm: {
@@ -584,6 +652,8 @@ struct ActiveCardioView: View {
                     spotTitle: isWaterSport ? config.waterSportSetup?.spot.name : nil,
                     prefers3DInitially: false
                 )
+                // Sem isto o tick de 1 s do treino reconstrói o mapa inteiro.
+                .equatable()
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
                         .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)

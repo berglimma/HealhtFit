@@ -369,6 +369,104 @@ final class RunTrackingTests: XCTestCase {
         XCTAssertEqual(segments[0].performanceScore, RoutePerformanceBand.paused.performanceScore)
     }
 
+    func testCoalescedSegmentsGroupContiguousBands() {
+        // Rota com mesma faixa em sequência deve virar UMA polyline, não uma por ponto:
+        // um overlay por ponto GPS travava o mapa ao vivo.
+        var points: [RouteCoordinate] = []
+        for index in 0..<40 {
+            points.append(
+                RouteCoordinate(
+                    latitude: -23.55 + Double(index) * 0.0002,
+                    longitude: -46.63,
+                    timestamp: Date(timeIntervalSince1970: Double(index) * 5),
+                    speedMetersPerSecond: 3.0
+                )
+            )
+        }
+        let polylines = RoutePerformanceColoring.coalescedSegments(from: points, metric: .pace)
+        XCTAssertEqual(polylines.count, 1)
+        XCTAssertEqual(polylines[0].band, .intermediate)
+        XCTAssertEqual(polylines[0].coordinates.count, points.count)
+        XCTAssertEqual(RoutePerformanceColoring.segments(from: points, metric: .pace).count, 39)
+    }
+
+    func testCoalescedSegmentsSplitOnBandChange() {
+        // Mediana em movimento = 3.0: 1.0 → abaixo, 3.0 → intermediário, 6.0 → ótimo.
+        let speeds: [Double] = [3.0, 1.0, 1.0, 3.0, 3.0, 6.0]
+        let points = speeds.enumerated().map { index, speed in
+            RouteCoordinate(
+                latitude: -23.55 + Double(index) * 0.0004,
+                longitude: -46.63,
+                timestamp: Date(timeIntervalSince1970: Double(index) * 10),
+                speedMetersPerSecond: speed
+            )
+        }
+        let polylines = RoutePerformanceColoring.coalescedSegments(from: points)
+        XCTAssertEqual(polylines.map(\.band), [.below, .intermediate, .optimal])
+        // Trechos vizinhos compartilham o ponto de fronteira (linha sem buracos).
+        XCTAssertEqual(polylines[0].coordinates.count, 3)
+        XCTAssertEqual(polylines[1].coordinates.count, 3)
+        XCTAssertEqual(polylines[2].coordinates.count, 2)
+        XCTAssertEqual(polylines.map(\.id), [0, 2, 4])
+    }
+
+    func testCoalescedSegmentsKeepPausedRunContiguous() {
+        let speeds: [Double] = [3.0, 0.5, 0.2, 3.2]
+        let points = speeds.enumerated().map { index, speed in
+            RouteCoordinate(
+                latitude: -23.55 + Double(index) * 0.0002,
+                longitude: -46.63,
+                timestamp: Date(timeIntervalSince1970: Double(index) * 10),
+                speedMetersPerSecond: speed,
+                isPaused: index == 1 || index == 2
+            )
+        }
+        let polylines = RoutePerformanceColoring.coalescedSegments(from: points)
+        // Todos os três segmentos são de pausa → uma única polyline azul.
+        XCTAssertEqual(polylines.count, 1)
+        XCTAssertEqual(polylines[0].band, .paused)
+        XCTAssertEqual(polylines[0].coordinates.count, 4)
+    }
+
+    func testCoalescedSegmentIDsAreStableAcrossCalls() {
+        let points = (0..<30).map { index in
+            RouteCoordinate(
+                latitude: -23.55 + Double(index) * 0.0003,
+                longitude: -46.63,
+                timestamp: Date(timeIntervalSince1970: Double(index) * 4),
+                speedMetersPerSecond: index.isMultiple(of: 2) ? 1.0 : 5.0
+            )
+        }
+        let first = RoutePerformanceColoring.coalescedSegments(from: points)
+        let second = RoutePerformanceColoring.coalescedSegments(from: points)
+        XCTAssertEqual(first.map(\.id), second.map(\.id))
+        XCTAssertEqual(first.map(\.band), second.map(\.band))
+    }
+
+    func testDownsampledRouteCapsPointsAndKeepsPauseBoundaries() {
+        var points: [RouteCoordinate] = []
+        for index in 0..<5_000 {
+            points.append(
+                RouteCoordinate(
+                    latitude: -23.55 + Double(index) * 0.00002,
+                    longitude: -46.63,
+                    timestamp: Date(timeIntervalSince1970: Double(index)),
+                    speedMetersPerSecond: 3.0,
+                    isPaused: (2_000..<2_010).contains(index)
+                )
+            )
+        }
+        let reduced = RoutePerformanceColoring.downsampled(points)
+        XCTAssertLessThanOrEqual(reduced.count, RoutePerformanceColoring.maxDrawnRoutePoints)
+        XCTAssertEqual(reduced.first?.latitude, points.first?.latitude)
+        XCTAssertEqual(reduced.last?.latitude, points.last?.latitude)
+        XCTAssertTrue(reduced.contains { $0.isPaused })
+
+        // Rotas curtas passam intactas.
+        let short = Array(points.prefix(10))
+        XCTAssertEqual(RoutePerformanceColoring.downsampled(short).count, 10)
+    }
+
     func testRouteCoordinatePersistsPausedFlag() throws {
         let point = RouteCoordinate(
             latitude: -23.55,

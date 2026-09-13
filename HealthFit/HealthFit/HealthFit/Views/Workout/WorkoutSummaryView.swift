@@ -47,6 +47,7 @@ struct WorkoutSummaryView: View {
     @State private var showMediaVideoCameraPicker = false
     @State private var isPreparingMediaShare = false
     @State private var mediaLoadFailed = false
+    @State private var resultMediaOverlayLayout = WorkoutResultMediaOverlayLayout.default
     @State private var pendingGalleryImage: UIImage?
     @State private var showSavePhotoToGalleryPrompt = false
     @State private var gallerySaveAlertTitle = ""
@@ -193,6 +194,7 @@ struct WorkoutSummaryView: View {
                 showMediaGalleryPicker = false
                 guard let image else { return }
                 resultMedia = .photo(image)
+                resultMediaOverlayLayout = .default
                 offerSavePhotoToGallery(image)
             }
             .ignoresSafeArea()
@@ -202,6 +204,7 @@ struct WorkoutSummaryView: View {
                 showMediaCameraPicker = false
                 guard let image else { return }
                 resultMedia = .photo(image)
+                resultMediaOverlayLayout = .default
                 offerSavePhotoToGallery(image)
             }
             .ignoresSafeArea()
@@ -404,7 +407,10 @@ struct WorkoutSummaryView: View {
                     image: resultMedia.previewImage,
                     session: session,
                     isCardioSession: isCardioSession || session.isOutdoorGPSCardio,
-                    showVideoBadge: resultMedia.isVideo
+                    showVideoBadge: resultMedia.isVideo,
+                    layout: resultMediaOverlayLayout,
+                    allowsMetricsGestures: true,
+                    onLayoutChange: { resultMediaOverlayLayout = $0 }
                 )
                 .frame(maxWidth: .infinity)
                 .aspectRatio(resultMedia.previewImage.size.width / max(resultMedia.previewImage.size.height, 1), contentMode: .fit)
@@ -413,7 +419,10 @@ struct WorkoutSummaryView: View {
                     RoundedRectangle(cornerRadius: 14)
                         .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
                 )
-                .shadow(color: .black.opacity(0.35), radius: 18, y: 10)
+                .compositingGroup()
+                .shadow(color: .black.opacity(0.28), radius: 14, y: 8)
+
+                mediaOverlaySizeControls
 
                 // Mesmo CTA do card de conquista: postar em redes sociais.
                 Button {
@@ -550,6 +559,66 @@ struct WorkoutSummaryView: View {
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
+    private var mediaOverlaySizeControls: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 10) {
+                Label("Dados na foto", systemImage: "textformat.size")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+
+                Spacer(minLength: 4)
+
+                Button {
+                    var next = resultMediaOverlayLayout
+                    next.bumpScale(-WorkoutResultMediaOverlayLayout.scaleStep)
+                    resultMediaOverlayLayout = next
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(resultMediaOverlayLayout.canDecreaseScale ? AppTheme.accent : AppTheme.textSecondary.opacity(0.45))
+                }
+                .buttonStyle(.plain)
+                .disabled(!resultMediaOverlayLayout.canDecreaseScale)
+                .accessibilityLabel("Diminuir dados do treino")
+
+                Text("\(Int((resultMediaOverlayLayout.scale * 100).rounded()))%")
+                    .font(.caption.weight(.bold).monospacedDigit())
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .frame(minWidth: 40)
+
+                Button {
+                    var next = resultMediaOverlayLayout
+                    next.bumpScale(WorkoutResultMediaOverlayLayout.scaleStep)
+                    resultMediaOverlayLayout = next
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(resultMediaOverlayLayout.canIncreaseScale ? AppTheme.accent : AppTheme.textSecondary.opacity(0.45))
+                }
+                .buttonStyle(.plain)
+                .disabled(!resultMediaOverlayLayout.canIncreaseScale)
+                .accessibilityLabel("Aumentar dados do treino")
+
+                Button {
+                    resultMediaOverlayLayout = .default
+                } label: {
+                    Image(systemName: "arrow.counterclockwise.circle")
+                        .font(.title2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Resetar posição e tamanho")
+            }
+
+            Text("− diminui os dados do treino/cardio · arraste para mover na foto")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .padding(.vertical, 4)
+    }
+
     private func mediaShareLabel(icon: String, title: String, secondary: Bool = false) -> some View {
         HStack {
             if isPreparingMediaShare {
@@ -579,6 +648,7 @@ struct WorkoutSummaryView: View {
     private func applyPickedVideo(url: URL) {
         if let poster = WorkoutResultMediaOverlayRenderer.posterFrame(fromVideoURL: url) {
             resultMedia = .video(url: url, poster: poster)
+            resultMediaOverlayLayout = .default
         } else {
             mediaLoadFailed = true
         }
@@ -589,6 +659,7 @@ struct WorkoutSummaryView: View {
             try? FileManager.default.removeItem(at: url)
         }
         resultMedia = nil
+        resultMediaOverlayLayout = .default
     }
 
     @MainActor
@@ -599,7 +670,8 @@ struct WorkoutSummaryView: View {
             image: resultMedia.previewImage,
             session: session,
             isCardioSession: isCardioSession || session.isOutdoorGPSCardio,
-            showVideoBadge: resultMedia.isVideo
+            showVideoBadge: resultMedia.isVideo,
+            layout: resultMediaOverlayLayout
         )
         let caption = WorkoutResultMediaOverlayRenderer.shareCaption(
             session: session,
@@ -750,7 +822,8 @@ struct WorkoutSummaryView: View {
                 image: resultMedia.previewImage,
                 session: session,
                 isCardioSession: isCardioSession || session.isOutdoorGPSCardio,
-                showVideoBadge: false
+                showVideoBadge: false,
+                layout: resultMediaOverlayLayout
             ) else {
                 pulsePublishMessage = L10n.Pulse.prepareImageFailed
                 showPulsePublishAlert = true
@@ -838,7 +911,8 @@ struct WorkoutSummaryView: View {
             image: resultMedia.previewImage,
             session: session,
             isCardioSession: isCardioSession || session.isOutdoorGPSCardio,
-            showVideoBadge: resultMedia.isVideo
+            showVideoBadge: resultMedia.isVideo,
+            layout: resultMediaOverlayLayout
         )
         guard let composed else {
             gallerySaveAlertTitle = "Não foi possível salvar"

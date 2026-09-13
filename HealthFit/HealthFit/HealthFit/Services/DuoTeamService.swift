@@ -1278,8 +1278,11 @@ final class DuoTeamService: ObservableObject {
         }
         guard let userId = boundUserId else { return }
 
-        for index in teams.indices {
-            guard let memberIndex = teams[index].members.firstIndex(where: { $0.uid == userId }) else {
+        // Snapshot dos IDs: `teams` pode mudar durante o `await` (listener Firestore).
+        let teamIDs = teams.map(\.id)
+        for teamId in teamIDs {
+            guard let index = teams.firstIndex(where: { $0.id == teamId }),
+                  let memberIndex = teams[index].members.firstIndex(where: { $0.uid == userId }) else {
                 continue
             }
             teams[index].members[memberIndex].name = boundUserName
@@ -1293,7 +1296,8 @@ final class DuoTeamService: ObservableObject {
                 teams[index].members[memberIndex].photoURL = boundPhotoURL
             }
             teams[index].updatedAt = .now
-            try? await DuoTeamFirestoreService.saveTeam(teams[index])
+            let snapshot = teams[index]
+            try? await DuoTeamFirestoreService.saveTeam(snapshot)
         }
         persistLocal()
     }
