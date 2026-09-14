@@ -1,4 +1,18 @@
-HealthFit 1.0.5 (Build 13)
+HealthFit 1.0.5 (Build 15)
+
+Resolução da rejeição 14/09/2026:
+- 2.1(a): Sign in with Apple corrigido no iPad (botão nativo em largura total; removido overlay opacity 0.02).
+- 3.1.2(c): Termos de Uso (EULA) https://healthfit-30d87.web.app/termos/ na descrição da App Store (todas as localizações) e links https na paywall/Meu plano.
+
+Como testar Sign in with Apple no iPad:
+1. Abrir o app na tela de login
+2. Tocar em "Sign in with Apple" (botão nativo branco)
+3. Concluir o fluxo Apple ID
+
+EULA / assinaturas:
+- Descrição do app inclui: Termos de Uso (EULA): https://healthfit-30d87.web.app/termos/
+- Privacidade: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
+- No app: Perfil → Meu plano e paywall mostram links https de Termos e Privacidade
 
 Conta demo App Review:
 E-mail: healthfit.appreview@gmail.com

@@ -6,7 +6,7 @@ Bundle: `luan.com.healthfit.app` · Versão `1.0.2` / Build `6`
 URLs legais (16+, renderizam HTML corretamente):
 
 - Site / marketing: https://healthfit-30d87.web.app/
-- Privacidade: https://healthfit-30d87.web.app/privacidade/
+- Privacidade: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
 - Termos: https://healthfit-30d87.web.app/termos/
 - Suporte: https://healthfit-30d87.web.app/suporte/
 
@@ -79,7 +79,7 @@ Marque conforme `APP_PRIVACY.md`:
   - Ver seção Location em `APP_PRIVACY.md`
 
 Privacy Policy URL:
-`https://healthfit-30d87.web.app/privacidade/`
+`https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html`
 
 ---
 

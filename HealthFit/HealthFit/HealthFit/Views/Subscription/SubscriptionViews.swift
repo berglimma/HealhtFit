@@ -46,7 +46,8 @@ struct PaywallView: View {
                     }
                     purchaseButton
                     secondaryActions
-                    LegalLinksView(style: .inline)
+                    subscriptionDisclosure
+                    SubscriptionLegalLinksView()
                         .padding(.top, 4)
                     Text("A assinatura renova automaticamente até cancelar. Gerencie em Ajustes → Apple ID.")
                         .font(.caption2)
@@ -280,6 +281,20 @@ struct PaywallView: View {
         .disabled(subscriptions.purchaseInProgress || selectedIsActive || !canPurchaseSelectedPlan)
     }
 
+    private var subscriptionDisclosure: some View {
+        VStack(spacing: 6) {
+            Text("Assinatura com renovação automática")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+            Text("\(selectedTier.displayName) · \(billingPeriod.displayName) · \(subscriptions.displayPriceHeadline(for: selectedTier, period: billingPeriod))")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 4)
+    }
+
     private var secondaryActions: some View {
         VStack(spacing: 10) {
             Button("Restaurar compras") {
@@ -434,7 +449,28 @@ struct SubscriptionPlanView: View {
                     .foregroundStyle(.orange)
                     .multilineTextAlignment(.center)
             }
+
+            SubscriptionLegalLinksView()
+                .padding(.top, 8)
+
+            Text("Assinaturas renovam automaticamente até cancelar em Ajustes → Apple ID.")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
         }
+    }
+}
+
+/// Links https públicos exigidos pela guideline 3.1.2 (EULA + privacidade).
+struct SubscriptionLegalLinksView: View {
+    var body: some View {
+        VStack(spacing: 6) {
+            Link("Termos de Uso (EULA)", destination: AppLegalConfiguration.termsOfUseURL)
+            Link("Política de Privacidade", destination: AppLegalConfiguration.privacyPolicyURL)
+        }
+        .font(.caption)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
     }
 }
 

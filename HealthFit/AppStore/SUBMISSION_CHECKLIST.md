@@ -5,7 +5,7 @@ Versão alvo: **1.0.5 (Build 13)** · Bundle `luan.com.healthfit.app`
 ## URLs legais (já no app e metadados)
 
 - Site: https://healthfit-30d87.web.app/
-- Privacidade (copiar no Connect): https://healthfit-30d87.web.app/privacidade/
+- Privacidade (copiar no Connect): https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
 - Termos: https://healthfit-30d87.web.app/termos/
 - Suporte: https://healthfit-30d87.web.app/suporte/
 

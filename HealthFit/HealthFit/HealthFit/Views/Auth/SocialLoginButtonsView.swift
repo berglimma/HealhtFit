@@ -14,10 +14,10 @@ struct SocialLoginButtonsView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            switch style {
-            case .full:
+            // iPad: botão nativo em largura total (opacity hack em card quebra toques no iPadOS).
+            if style == .full || DeviceLayout.isPad {
                 fullWidthButtons
-            case .iconCards:
+            } else {
                 iconCardButtons
             }
 
@@ -54,8 +54,8 @@ struct SocialLoginButtonsView: View {
                 Task { await authService.signInWithApple(result: result, rawNonce: currentAppleNonce) }
             }
             .signInWithAppleButtonStyle(.white)
+            .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
             .disabled(authService.isLoading)
         }
     }
@@ -70,18 +70,14 @@ struct SocialLoginButtonsView: View {
             .disabled(authService.isLoading)
             .accessibilityLabel("Entrar com Google")
 
-            ZStack {
-                SocialLoginIconCard(systemImage: "apple.logo")
-
-                SignInWithAppleButton(.signIn) { request in
-                    configureAppleRequest(request)
-                } onCompletion: { result in
-                    Task { await authService.signInWithApple(result: result, rawNonce: currentAppleNonce) }
-                }
-                .signInWithAppleButtonStyle(.white)
-                .opacity(0.02)
-                .frame(width: 64, height: 64)
+            SignInWithAppleButton(.signIn) { request in
+                configureAppleRequest(request)
+            } onCompletion: { result in
+                Task { await authService.signInWithApple(result: result, rawNonce: currentAppleNonce) }
             }
+            .signInWithAppleButtonStyle(.black)
+            .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
             .disabled(authService.isLoading)
             .accessibilityLabel("Entrar com Apple")
         }

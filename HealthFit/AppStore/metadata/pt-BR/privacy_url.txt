@@ -1,1 +1,1 @@
-https://healthfit-30d87.web.app/privacidade/
+https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html

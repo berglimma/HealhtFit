@@ -26,4 +26,4 @@ HealthFit provides informational guidance only. It does not replace medical eval
 
 Privacy: https://healthfit-30d87.web.app/privacidade/
 Support: https://healthfit-30d87.web.app/suporte/
-Terms: https://healthfit-30d87.web.app/termos/
+Terms of Use (EULA): https://healthfit-30d87.web.app/termos/

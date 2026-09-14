@@ -2,7 +2,7 @@
 
 Marque apenas o que o app realmente coleta. Base: `privacy_notes.txt` + Firebase + HealthKit + fotos + Kite Spot Buddy.
 
-**Privacy Policy URL (obrigatório):** `https://healthfit-30d87.web.app/privacidade/`
+**Privacy Policy URL (obrigatório):** `https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html`
 
 ## Data Types
 
