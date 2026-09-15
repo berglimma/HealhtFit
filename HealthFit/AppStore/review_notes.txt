@@ -1,44 +1,29 @@
-HealthFit 1.0.5 (Build 15)
+HealthFit 1.0.5 (Build 16)
 
-Resolução da rejeição 14/09/2026:
-- 2.1(a): Sign in with Apple corrigido no iPad (botão nativo em largura total; removido overlay opacity 0.02).
-- 3.1.2(c): Termos de Uso (EULA) https://healthfit-30d87.web.app/termos/ na descrição da App Store (todas as localizações) e links https na paywall/Meu plano.
+Resolução da rejeição 15/09/2026 — Guideline 3.1.2(c):
+- App Store Description (todas as localizações) inclui o link funcional do Terms of Use (EULA) padrão da Apple:
+  https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+- License Agreement no App Store Connect = EULA padrão da Apple (não usamos EULA custom no campo License Agreement).
+- Privacy Policy URL no Connect preenchido.
+- No app (paywall e Meu plano): título/período/preço + Links "Terms of Use (EULA)" (Apple), Termos HealthFit e Privacidade.
 
-Como testar Sign in with Apple no iPad:
-1. Abrir o app na tela de login
-2. Tocar em "Sign in with Apple" (botão nativo branco)
-3. Concluir o fluxo Apple ID
+Como verificar o EULA nos metadados:
+1. Abrir a descrição da versão 1.0.5
+2. Procurar: Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+3. Abrir o link — Licensed Application End User License Agreement da Apple
 
-EULA / assinaturas:
-- Descrição do app inclui: Termos de Uso (EULA): https://healthfit-30d87.web.app/termos/
-- Privacidade: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
-- No app: Perfil → Meu plano e paywall mostram links https de Termos e Privacidade
+Resolução anterior 14/09/2026:
+- 2.1(a): Sign in with Apple no iPad (botão nativo em largura total)
 
 Conta demo App Review:
 E-mail: healthfit.appreview@gmail.com
-(senha apenas no campo App Review Information do Connect)
-Idade da conta demo: 18+ (necessário para o HealthFit Pulse)
+(senha no campo Sign-in Information do App Store Connect)
 
-Novidades desta build:
-- HealthFit Pulse: feed, stories, comunidades e compartilhamento de treinos (18+)
-- Pulse: 15 dias grátis no app; depois incluso no plano Básico (R$ 9,90/mês)
-- Dashboard: semana de sono/água alinhada ao calendário/região do iPhone
-- Treino concluído: postar mapa 2D/3D, WhatsApp/Instagram/Pulse/Galeria; enviar relatório ao personal
-- Sync Apple Watch: musculação, treino em casa, cardio/bike e meditação iPhone ↔ Watch
-- Intensidade percebida (1–10) no fim do treino (toque na barra ou no número)
-
-HealthFit Pulse (App Review):
-- Idade mínima do Pulse: 18+. Menores de 18 veem o age gate.
-- Termos específicos do Pulse são aceitos antes do feed.
-- Denunciar / bloquear / ocultar disponíveis; moderação: healthfit.appreview@gmail.com
-- Liberação remota: Firestore appConfig/ios.pulseEnabled (e pulseCloudSyncEnabled para sync).
-  Para esta review, mantenha pulseEnabled=true enquanto o build estiver em análise.
-  Não altera assinaturas StoreKit; o trial de 15 dias é contagem local no app (não é Introductory Offer da Apple).
-
-Teste sugerido:
+HealthFit Pulse (18+ UGC):
 1. Dashboard → card HealthFit Pulse → aceitar termos → abrir feed (conta 18+)
-2. Publicar foto ou story; denunciar/bloquear se disponível
-3. Iniciar bike/cardio no iPhone → confirmar atividade no Apple Watch; pausar/finalizar
-4. Finalizar treino outdoor → Postar mapa (2D/3D) → WhatsApp/Instagram ou Pulse
-5. Treino concluído → Gerar PDF → Gerar relatório e enviar ao personal (e-mail cadastrado)
-6. Perfil → Meu plano → plano Básico inclui Pulse após o trial
+2. Criar story / post de treino; denunciar conteúdo inadequado
+3. Assinatura Pulse: 15 dias grátis, depois mensal/anual via StoreKit 2
+
+Assinaturas (StoreKit 2 / Assinaturas Automáticas):
+- Perfil → Meu plano / paywall: nome, duração, preço e links de Termos (EULA) + Privacidade
+- Gerenciar / cancelar: Ajustes → Apple ID → Assinaturas

@@ -463,9 +463,14 @@ struct SubscriptionPlanView: View {
 
 /// Links https públicos exigidos pela guideline 3.1.2 (EULA + privacidade).
 struct SubscriptionLegalLinksView: View {
+    private static let appleStandardEULA = URL(
+        string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+    )!
+
     var body: some View {
         VStack(spacing: 6) {
-            Link("Termos de Uso (EULA)", destination: AppLegalConfiguration.termsOfUseURL)
+            Link("Terms of Use (EULA)", destination: Self.appleStandardEULA)
+            Link("Termos do HealthFit", destination: AppLegalConfiguration.termsOfUseURL)
             Link("Política de Privacidade", destination: AppLegalConfiguration.privacyPolicyURL)
         }
         .font(.caption)

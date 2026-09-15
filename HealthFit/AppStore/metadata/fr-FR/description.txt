@@ -2,6 +2,8 @@ HealthFit — Votre coach personnel intelligent
 
 Entraînez-vous intelligemment, suivez vos progrès et prenez soin de votre santé au même endroit.
 
+Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
 FONCTIONNALITÉS PRINCIPALES
 • Séances personnalisées selon le biotype et l'objectif (hypertrophie, perte de gras, maintien)
 • GIFs de démonstration pour chaque exercice
@@ -20,5 +22,5 @@ IMPORTANT
 HealthFit fournit des conseils informatifs. Il ne remplace pas un avis médical ni un suivi professionnel. Consultez un médecin avant de commencer tout programme d'exercices.
 
 Confidentialité : https://healthfit-30d87.web.app/privacidade/
-Conditions d'utilisation (EULA) : https://healthfit-30d87.web.app/termos/
 Support : https://healthfit-30d87.web.app/suporte/
+Conditions supplémentaires HealthFit : https://healthfit-30d87.web.app/termos/

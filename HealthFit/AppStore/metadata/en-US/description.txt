@@ -2,6 +2,8 @@ HealthFit — Your smart personal trainer
 
 Train smarter, track your progress, and take care of your health in one place.
 
+Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
 KEY FEATURES
 • Personalized workouts by body type and goal (hypertrophy, fat loss, maintenance)
 • Demo GIFs for every exercise
@@ -24,6 +26,6 @@ Beginner and intermediate athletes who want guided training, progress tracking, 
 IMPORTANT
 HealthFit provides informational guidance only. It does not replace medical evaluation, a registered dietitian, or professional coaching. Consult a physician before starting any exercise program.
 
-Privacy: https://healthfit-30d87.web.app/privacidade/
+Privacy Policy: https://healthfit-30d87.web.app/privacidade/
 Support: https://healthfit-30d87.web.app/suporte/
-Terms of Use (EULA): https://healthfit-30d87.web.app/termos/
+Additional HealthFit Terms: https://healthfit-30d87.web.app/termos/

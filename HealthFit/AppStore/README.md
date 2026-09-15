@@ -44,7 +44,8 @@ Ative GitHub Pages: branch `main` → pasta `/docs`.
 
 - Marketing: https://healthfit-30d87.web.app/
 - Privacidade: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
-- Termos: https://healthfit-30d87.web.app/termos/
+- Terms of Use (EULA) na Descrição: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+- Termos adicionais HealthFit: https://healthfit-30d87.web.app/termos/
 - Suporte: https://healthfit-30d87.web.app/suporte/
 
 ## Screenshots

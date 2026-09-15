@@ -2,6 +2,8 @@ HealthFit — Tu entrenador personal inteligente
 
 Entrena con inteligencia, sigue tu evolución y cuida tu salud en un solo lugar.
 
+Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
 FUNCIONES PRINCIPALES
 • Entrenos personalizados por biotipo y objetivo (hipertrofia, pérdida de grasa, mantenimiento)
 • GIFs demostrativos para cada ejercicio
@@ -20,5 +22,5 @@ IMPORTANTE
 HealthFit ofrece orientación informativa. No sustituye evaluación médica ni acompañamiento profesional. Consulta a un médico antes de iniciar cualquier programa de ejercicios.
 
 Privacidad: https://healthfit-30d87.web.app/privacidade/
-Términos de uso (EULA): https://healthfit-30d87.web.app/termos/
 Soporte: https://healthfit-30d87.web.app/suporte/
+Términos adicionales de HealthFit: https://healthfit-30d87.web.app/termos/

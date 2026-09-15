@@ -7,7 +7,8 @@ URLs legais (16+, renderizam HTML corretamente):
 
 - Site / marketing: https://healthfit-30d87.web.app/
 - Privacidade: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
-- Termos: https://healthfit-30d87.web.app/termos/
+- Terms of Use (EULA) na Descrição (obrigatório 3.1.2): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+- Termos adicionais HealthFit: https://healthfit-30d87.web.app/termos/
 - Suporte: https://healthfit-30d87.web.app/suporte/
 
 > Não use jsDelivr para HTML — o CDN envia `text/plain` e o Safari mostra o código-fonte.
