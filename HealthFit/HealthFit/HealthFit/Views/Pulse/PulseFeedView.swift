@@ -276,6 +276,7 @@ struct PulseFeedView: View {
             .fullScreenCover(item: $viewingSession) { session in
                 PulseStoryViewer(
                     session: session,
+                    store: store,
                     imageLoader: { store.loadStoryImage($0) },
                     profileImageLoader: { story in
                         story.authorId == authorId
@@ -294,7 +295,6 @@ struct PulseFeedView: View {
                             avatar: authService.profileImage
                         )
                     },
-                    onShowReactions: { reactionsToShow = $0.filter(\.isHeart) },
                     onDelete: { storyId in
                         store.deleteStory(storyId, by: authorId)
                     },
@@ -1132,12 +1132,12 @@ private struct PulseStoryBrowseSession: Identifiable {
 
 private struct PulseStoryViewer: View {
     let session: PulseStoryBrowseSession
+    @ObservedObject var store: PulseLocalStore
     var imageLoader: (PulseStory) -> UIImage?
     var profileImageLoader: (PulseStory) -> UIImage?
     let currentUserId: String
     var avatarLoader: (PulseReactionEvent) -> UIImage?
     var onHeart: (UUID) -> Void
-    var onShowReactions: ([PulseReactionEvent]) -> Void
     var onDelete: (UUID) -> Void
     var onClose: () -> Void
     var onViewed: (UUID) -> Void
@@ -1147,8 +1147,13 @@ private struct PulseStoryViewer: View {
     @State private var progress: Double = 0
     @State private var isPaused = false
     @State private var tickTask: Task<Void, Never>?
+    @State private var reactionsSheetItem: PulseReactionsSheetItem?
 
-    private var stories: [PulseStory] { session.stories }
+    private var stories: [PulseStory] {
+        session.stories.map { snapshot in
+            store.stories.first(where: { $0.id == snapshot.id }) ?? snapshot
+        }
+    }
 
     private var story: PulseStory {
         let safe = min(max(index, 0), max(stories.count - 1, 0))
@@ -1158,7 +1163,11 @@ private struct PulseStoryViewer: View {
     private var isOwner: Bool { story.authorId == currentUserId }
 
     private var heartReactions: [PulseReactionEvent] {
-        story.reactions.filter(\.isHeart)
+        story.reactions.filter(\.isHeart).sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private var didCurrentUserLike: Bool {
+        heartReactions.contains { $0.userId == currentUserId }
     }
 
     private var viewDuration: TimeInterval { PulseExperimental.storyViewDuration }
@@ -1245,6 +1254,15 @@ private struct PulseStoryViewer: View {
         .onChange(of: index) { _, _ in
             startCurrentStory()
         }
+        .sheet(item: $reactionsSheetItem) { item in
+            PulseReactionsListView(
+                reactions: item.reactions,
+                avatarLoader: avatarLoader
+            )
+            .presentationDetents([.medium, .large])
+            .onAppear { pause() }
+            .onDisappear { resume() }
+        }
     }
 
     private var progressBars: some View {
@@ -1270,9 +1288,9 @@ private struct PulseStoryViewer: View {
     }
 
     private var bottomChromeHeight: CGFloat {
-        var height: CGFloat = 88
+        var height: CGFloat = 96
         if story.music != nil { height += 72 }
-        if !heartReactions.isEmpty { height += 44 }
+        if !heartReactions.isEmpty { height += 48 }
         return height
     }
 
@@ -1358,7 +1376,7 @@ private struct PulseStoryViewer: View {
 
             if !heartReactions.isEmpty {
                 Button {
-                    onShowReactions(heartReactions)
+                    openLikesList()
                 } label: {
                     HStack(spacing: -8) {
                         ForEach(heartReactions.prefix(3)) { reaction in
@@ -1369,10 +1387,11 @@ private struct PulseStoryViewer: View {
                             )
                             .overlay(Circle().strokeBorder(.black, lineWidth: 1.5))
                         }
-                        Text("\(heartReactions.count) curtida\(heartReactions.count == 1 ? "" : "s")")
+                        Text(likesSummaryText)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white)
                             .padding(.leading, 14)
+                            .lineLimit(1)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -1380,21 +1399,68 @@ private struct PulseStoryViewer: View {
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Ver quem curtiu")
             }
 
-            Button {
-                onHeart(story.id)
-            } label: {
-                Image(systemName: "heart.circle.fill")
-                    .font(.system(size: 36))
-                    .foregroundStyle(AppTheme.accent)
-                    .padding(8)
-                    .background(.white.opacity(0.12))
-                    .clipShape(Circle())
+            HStack(spacing: 14) {
+                Button {
+                    onHeart(story.id)
+                } label: {
+                    Image(systemName: didCurrentUserLike ? "heart.circle.fill" : "heart.circle")
+                        .font(.system(size: 36))
+                        .foregroundStyle(didCurrentUserLike ? AppTheme.accent : .white)
+                        .padding(8)
+                        .background(.white.opacity(0.12))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(didCurrentUserLike ? "Remover curtida" : "Curtir")
+                .simultaneousGesture(
+                    LongPressGesture(minimumDuration: 0.35).onEnded { _ in
+                        if !heartReactions.isEmpty {
+                            openLikesList()
+                        }
+                    }
+                )
+
+                if !heartReactions.isEmpty {
+                    Button {
+                        openLikesList()
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(heartReactions.count)")
+                                .font(.headline.monospacedDigit())
+                                .foregroundStyle(.white)
+                            Text(heartReactions.count == 1 ? "curtida" : "curtidas")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.7))
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Abrir lista de curtidas")
+                }
+
+                Spacer(minLength: 0)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Curtir com coração")
         }
+    }
+
+    private var likesSummaryText: String {
+        guard let first = heartReactions.first else { return "0 curtidas" }
+        if heartReactions.count == 1 {
+            return "Curtido por \(first.userName)"
+        }
+        if heartReactions.count == 2, let second = heartReactions.dropFirst().first {
+            return "Curtido por \(first.userName) e \(second.userName)"
+        }
+        let others = heartReactions.count - 1
+        return "Curtido por \(first.userName) e outras \(others)"
+    }
+
+    private func openLikesList() {
+        let hearts = heartReactions
+        guard !hearts.isEmpty else { return }
+        reactionsSheetItem = PulseReactionsSheetItem(reactions: hearts)
     }
 
     private func startCurrentStory() {

@@ -352,6 +352,7 @@ struct ActiveCardioView: View {
         }
         if isWaterSport {
             AnyView(waterSportChartsSection)
+            AnyView(surfProJumpAnalysisSection)
             AnyView(waterSportWatchSyncButton)
         }
         if isOutdoorCycling {
@@ -1029,6 +1030,19 @@ struct ActiveCardioView: View {
         .padding()
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private var surfProJumpAnalysisSection: some View {
+        if !jumpMetrics.jumps.isEmpty {
+            SurfProJumpAnalysisSection(
+                jumps: jumpMetrics.jumps,
+                windAngleDegrees: nil,
+                isKitesurf: isKitesurf,
+                accent: AppTheme.accent,
+                profileImage: authService.profileImage
+            )
+        }
     }
 
     private var waterSportWatchSyncButton: some View {

@@ -1881,7 +1881,7 @@ struct ProfileView: View {
     }
 
     private func currentFormMeasurements(measuredAt: Date = .now) -> BodyMeasurements {
-        BodyMeasurements(
+        var m = BodyMeasurements(
             neckCm: parseMeasurement(neckText),
             shouldersCm: parseMeasurement(shouldersText),
             chestCm: parseMeasurement(chestText),
@@ -1896,6 +1896,19 @@ struct ProfileView: View {
             leftCalfCm: parseMeasurement(leftCalfText),
             measuredAt: measuredAt
         )
+        // Preserva % gordura regional preenchido pelo personal / ficha.
+        if let existing = authService.currentUser?.bodyMeasurements {
+            m.chestFatPercent = existing.chestFatPercent
+            m.coreFatPercent = existing.coreFatPercent
+            m.deltoidsFatPercent = existing.deltoidsFatPercent
+            m.bicepsFatPercent = existing.bicepsFatPercent
+            m.forearmsFatPercent = existing.forearmsFatPercent
+            m.quadsFatPercent = existing.quadsFatPercent
+            m.adductorsFatPercent = existing.adductorsFatPercent
+            m.calvesFatPercent = existing.calvesFatPercent
+            m.bodyFatPercent = existing.bodyFatPercent
+        }
+        return m
     }
 
     private func saveBodyData() {

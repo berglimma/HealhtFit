@@ -888,7 +888,7 @@ private struct AssessmentRow {
             return .above
         }()
 
-        return [
+        let baseRows = [
             AssessmentRow(
                 title: "Peso",
                 mapKey: "Peso",
@@ -915,6 +915,39 @@ private struct AssessmentRow {
             row("Panturrilhas", calves, unit: "cm",
                 low: female ? 30 : 33, high: female ? 40 : 42, caution: female ? 44 : 46)
         ]
+
+        let bodyFat = measurements.resolvedBodyFatPercent(heightCm: profile.height, gender: profile.gender)
+        var withFat = baseRows
+        if let bodyFat {
+            withFat.insert(
+                AssessmentRow(
+                    title: "% Gordura",
+                    mapKey: "Gordura",
+                    value: bodyFat,
+                    unit: "%",
+                    classification: .classify(
+                        bodyFat,
+                        low: female ? 16 : 10,
+                        high: female ? 24 : 20,
+                        caution: female ? 31 : 25
+                    )
+                ),
+                at: 1
+            )
+        }
+        for (label, value) in measurements.regionalFatLabeledValues {
+            guard let value else { continue }
+            withFat.append(
+                AssessmentRow(
+                    title: "\(label) %G",
+                    mapKey: label,
+                    value: value,
+                    unit: "%",
+                    classification: .classify(value, low: female ? 12 : 8, high: female ? 22 : 18, caution: female ? 30 : 25)
+                )
+            )
+        }
+        return withFat
     }
 
     private static func average(_ a: Double?, _ b: Double?) -> Double? {

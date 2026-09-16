@@ -853,6 +853,7 @@ enum ShareCardRouteMapStyle: String, CaseIterable, Identifiable {
 }
 
 /// Fundo escuro estilo mapa + polyline colorida por desempenho. Sem MapKit (flaky no ImageRenderer).
+/// 2D/3D desenhados em Canvas com projeção manual — `rotation3DEffect` não renderiza bem no export.
 struct ShareCardRouteMapView: View {
     let routePoints: [RouteCoordinate]
     var distanceKm: Double = 0
@@ -860,6 +861,11 @@ struct ShareCardRouteMapView: View {
     var style: ShareCardRouteMapStyle = .flat2D
 
     private var hasRoute: Bool { routePoints.count >= 2 }
+
+    /// Limita pontos para ImageRenderer / WhatsApp (rota longa).
+    private var renderPoints: [RouteCoordinate] {
+        Self.downsample(routePoints, maxCount: style == .perspective3D ? 180 : 280)
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -878,19 +884,13 @@ struct ShareCardRouteMapView: View {
                         )
                     )
 
-                mapGrid(in: size)
-
                 if hasRoute {
-                    routeLayer(in: size)
-                        .rotation3DEffect(
-                            .degrees(style == .perspective3D ? 52 : 0),
-                            axis: (x: 1, y: 0, z: 0),
-                            anchor: .center,
-                            perspective: 0.55
-                        )
-                        .scaleEffect(style == .perspective3D ? 0.92 : 1, anchor: .center)
-                        .offset(y: style == .perspective3D ? size.height * 0.04 : 0)
+                    Canvas { context, canvasSize in
+                        drawMapGrid(context: &context, size: canvasSize)
+                        drawRoute(context: &context, size: canvasSize)
+                    }
                 } else {
+                    mapGrid(in: size)
                     placeholderContent
                 }
 
@@ -905,6 +905,18 @@ struct ShareCardRouteMapView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                         .padding(8)
                 }
+
+                if hasRoute, distanceKm > 0 {
+                    Text(String(format: "%.2f km", distanceKm))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color("AccentGreen").opacity(0.95))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.black.opacity(0.35))
+                        .clipShape(Capsule())
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        .padding(8)
+                }
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -914,64 +926,87 @@ struct ShareCardRouteMapView: View {
         )
     }
 
-    private func mapGrid(in _: CGSize) -> some View {
-        Canvas { context, canvasSize in
-            let hStep = canvasSize.width / 6
-            let vStep = canvasSize.height / 4
-            var path = Path()
-            for i in 1..<6 {
-                let x = CGFloat(i) * hStep
-                path.move(to: CGPoint(x: x, y: 0))
-                path.addLine(to: CGPoint(x: x, y: canvasSize.height))
-            }
-            for i in 1..<4 {
-                let y = CGFloat(i) * vStep
-                path.move(to: CGPoint(x: 0, y: y))
-                path.addLine(to: CGPoint(x: canvasSize.width, y: y))
-            }
-            context.stroke(path, with: .color(.white.opacity(0.06)), lineWidth: 1)
-
-            // “Vias” diagonais sutis
-            var roads = Path()
-            roads.move(to: CGPoint(x: 0, y: canvasSize.height * 0.35))
-            roads.addLine(to: CGPoint(x: canvasSize.width, y: canvasSize.height * 0.55))
-            roads.move(to: CGPoint(x: canvasSize.width * 0.2, y: 0))
-            roads.addLine(to: CGPoint(x: canvasSize.width * 0.75, y: canvasSize.height))
-            context.stroke(roads, with: .color(.white.opacity(0.05)), lineWidth: 2)
+    private func drawMapGrid(context: inout GraphicsContext, size: CGSize) {
+        let hStep = size.width / 6
+        let vStep = size.height / 4
+        var path = Path()
+        for i in 1..<6 {
+            let x = CGFloat(i) * hStep
+            path.move(to: CGPoint(x: x, y: 0))
+            path.addLine(to: CGPoint(x: x, y: size.height))
         }
+        for i in 1..<4 {
+            let y = CGFloat(i) * vStep
+            path.move(to: CGPoint(x: 0, y: y))
+            path.addLine(to: CGPoint(x: size.width, y: y))
+        }
+        context.stroke(path, with: .color(.white.opacity(0.06)), lineWidth: 1)
+
+        var roads = Path()
+        roads.move(to: CGPoint(x: 0, y: size.height * 0.35))
+        roads.addLine(to: CGPoint(x: size.width, y: size.height * 0.55))
+        roads.move(to: CGPoint(x: size.width * 0.2, y: 0))
+        roads.addLine(to: CGPoint(x: size.width * 0.75, y: size.height))
+        context.stroke(roads, with: .color(.white.opacity(0.05)), lineWidth: 2)
     }
 
-    private func routeLayer(in size: CGSize) -> some View {
-        let projected = projectedPoints(in: size, padding: 18)
-        let segments = RoutePerformanceColoring.segments(from: routePoints, metric: performanceMetric)
-        return ZStack {
-            if projected.count >= 2 {
-                // Segmentos coloridos por desempenho (verde = melhor, vermelho = pior).
-                ForEach(Array(segments.enumerated()), id: \.offset) { index, segment in
-                    if index + 1 < projected.count {
-                        Path { path in
-                            path.move(to: projected[index])
-                            path.addLine(to: projected[index + 1])
-                        }
-                        .stroke(
-                            segment.color,
-                            style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round)
-                        )
-                    }
-                }
+    private func drawRoute(context: inout GraphicsContext, size: CGSize) {
+        let flat = projectedFlatPoints(renderPoints, in: size, padding: 18)
+        let projected: [CGPoint] = style == .perspective3D
+            ? flat.map { projectPerspective($0, in: size) }
+            : flat
+        guard projected.count >= 2 else { return }
 
-                Circle()
-                    .fill(Color("AccentGreen"))
-                    .frame(width: 9, height: 9)
-                    .overlay(Circle().strokeBorder(.white, lineWidth: 1.5))
-                    .position(projected[0])
+        let segments = RoutePerformanceColoring.segments(from: renderPoints, metric: performanceMetric)
+        let lineWidth: CGFloat = style == .perspective3D ? 3.0 : 2.4
 
-                Circle()
-                    .fill(segments.last?.color ?? Color("AccentOrange"))
-                    .frame(width: 9, height: 9)
-                    .overlay(Circle().strokeBorder(.white, lineWidth: 1.5))
-                    .position(projected[projected.count - 1])
-            }
+        var shadow = Path()
+        shadow.move(to: projected[0])
+        for point in projected.dropFirst() {
+            shadow.addLine(to: point)
+        }
+        context.stroke(
+            shadow,
+            with: .color(.black.opacity(0.45)),
+            style: StrokeStyle(lineWidth: lineWidth + 2.5, lineCap: .round, lineJoin: .round)
+        )
+
+        for index in 0..<(projected.count - 1) {
+            var segmentPath = Path()
+            segmentPath.move(to: projected[index])
+            segmentPath.addLine(to: projected[index + 1])
+            let color = index < segments.count ? segments[index].color : Color("AccentOrange")
+            context.stroke(
+                segmentPath,
+                with: .color(color),
+                style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
+            )
+        }
+
+        let start = projected[0]
+        let end = projected[projected.count - 1]
+        let startRect = CGRect(x: start.x - 5, y: start.y - 5, width: 10, height: 10)
+        let endRect = CGRect(x: end.x - 5, y: end.y - 5, width: 10, height: 10)
+        context.fill(Path(ellipseIn: startRect), with: .color(Color("AccentGreen")))
+        context.stroke(Path(ellipseIn: startRect), with: .color(.white), lineWidth: 1.5)
+        context.fill(Path(ellipseIn: endRect), with: .color(segments.last?.color ?? Color("AccentOrange")))
+        context.stroke(Path(ellipseIn: endRect), with: .color(.white), lineWidth: 1.5)
+    }
+
+    /// Projeção em perspectiva isométrica leve (sem rotation3DEffect).
+    private func projectPerspective(_ point: CGPoint, in size: CGSize) -> CGPoint {
+        let nx = (point.x / max(size.width, 1)) - 0.5
+        let ny = (point.y / max(size.height, 1)) - 0.5
+        let depth = 1.0 + (-ny) * 0.62
+        let scale = 1.0 / max(depth, 0.55)
+        let x = size.width * 0.5 + nx * size.width * scale * 0.92
+        let y = size.height * 0.58 + ny * size.height * scale * 0.42 + size.height * 0.02
+        return CGPoint(x: x, y: y)
+    }
+
+    private func mapGrid(in _: CGSize) -> some View {
+        Canvas { context, canvasSize in
+            drawMapGrid(context: &context, size: canvasSize)
         }
     }
 
@@ -993,8 +1028,7 @@ struct ShareCardRouteMapView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func projectedPoints(in size: CGSize, padding: CGFloat) -> [CGPoint] {
-        let coords = routePoints
+    private func projectedFlatPoints(_ coords: [RouteCoordinate], in size: CGSize, padding: CGFloat) -> [CGPoint] {
         guard let first = coords.first else { return [] }
 
         var minLat = first.latitude
@@ -1013,7 +1047,6 @@ struct ShareCardRouteMapView: View {
         let drawWidth = max(size.width - padding * 2, 1)
         let drawHeight = max(size.height - padding * 2, 1)
 
-        // Mantém proporção geográfica (lon × cos(lat)).
         let midLat = (minLat + maxLat) / 2
         let lonScale = cos(midLat * .pi / 180)
         let aspectLon = lonSpan * max(lonScale, 0.2)
@@ -1025,10 +1058,21 @@ struct ShareCardRouteMapView: View {
 
         return coords.map { point in
             let x = originX + CGFloat((point.longitude - minLon) / lonSpan) * usedWidth
-            // Latitude cresce para cima; Y cresce para baixo.
             let y = originY + CGFloat((maxLat - point.latitude) / latSpan) * usedHeight
             return CGPoint(x: x, y: y)
         }
+    }
+
+    private static func downsample(_ points: [RouteCoordinate], maxCount: Int) -> [RouteCoordinate] {
+        guard points.count > maxCount, maxCount > 2 else { return points }
+        let step = Double(points.count - 1) / Double(maxCount - 1)
+        var result: [RouteCoordinate] = []
+        result.reserveCapacity(maxCount)
+        for i in 0..<maxCount {
+            let index = min(points.count - 1, Int((Double(i) * step).rounded()))
+            result.append(points[index])
+        }
+        return result
     }
 }
 

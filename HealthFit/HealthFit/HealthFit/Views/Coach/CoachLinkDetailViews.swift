@@ -1514,6 +1514,18 @@ struct CoachStudentMetricsView: View {
     @State private var rightCalfText = ""
     @State private var leftCalfText = ""
 
+    @State private var chestFatText = ""
+    @State private var coreFatText = ""
+    @State private var deltoidsFatText = ""
+    @State private var bicepsFatText = ""
+    @State private var forearmsFatText = ""
+    @State private var quadsFatText = ""
+    @State private var adductorsFatText = ""
+    @State private var calvesFatText = ""
+    @State private var bodyFatText = ""
+    @State private var fatMapMeasurements = BodyMeasurements.empty
+    @State private var selectedFatRegion: BodyFatRegion?
+
     @State private var showMeasurementsEditor = false
     @State private var isGeneratingPDF = false
     @State private var pdfURL: URL?
@@ -1665,6 +1677,52 @@ struct CoachStudentMetricsView: View {
                 }
             }
 
+            Section {
+                CoachMuscleFatMapView(
+                    measurements: $fatMapMeasurements,
+                    selectedRegion: $selectedFatRegion
+                )
+                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                .listRowBackground(Color.clear)
+
+                HStack {
+                    Text("% gordura corporal (total)")
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Spacer()
+                    TextField("Auto", text: $bodyFatText)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 90)
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
+                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                .listRowBackground(Color.clear)
+                .onChange(of: bodyFatText) { _, newValue in
+                    fatMapMeasurements.bodyFatPercent = parseNumber(newValue)
+                }
+                .onChange(of: fatMapMeasurements) { _, newValue in
+                    syncFatTexts(from: newValue)
+                }
+
+                if let student {
+                    CoachFatAssessmentInsights(
+                        measurements: currentMeasurements(),
+                        heightCm: parseNumber(heightText) ?? student.height,
+                        gender: student.gender
+                    )
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                    .listRowBackground(Color.clear)
+                }
+            } header: {
+                Text("Ficha de avaliação — gordura regional")
+            } footer: {
+                Text("Preencha circunferências e % por região. O PDF de exportação usa os mesmos dados (US Navy + mapa muscular).")
+            }
+
             if let statusMessage {
                 Section {
                     Text(statusMessage)
@@ -1688,13 +1746,13 @@ struct CoachStudentMetricsView: View {
                 .disabled(isSaving || student == nil)
 
                 Button {
-                    exportPDF()
+                    Task { await exportPDFSynced() }
                 } label: {
                     if isGeneratingPDF {
                         ProgressView()
                             .frame(maxWidth: .infinity)
                     } else {
-                        Label("Exportar relatório em PDF", systemImage: "doc.richtext")
+                        Label("Exportar avaliação em PDF", systemImage: "doc.richtext")
                             .frame(maxWidth: .infinity)
                     }
                 }
@@ -1772,9 +1830,26 @@ struct CoachStudentMetricsView: View {
         leftThighText = formatOptional(m.leftThighCm)
         rightCalfText = formatOptional(m.rightCalfCm)
         leftCalfText = formatOptional(m.leftCalfCm)
+        fatMapMeasurements = m
+        syncFatTexts(from: m)
+        bodyFatText = formatOptional(m.bodyFatPercent)
     }
 
-    private func save(includeMeasurements: Bool) async {
+    private func syncFatTexts(from m: BodyMeasurements) {
+        chestFatText = formatOptional(m.chestFatPercent)
+        coreFatText = formatOptional(m.coreFatPercent)
+        deltoidsFatText = formatOptional(m.deltoidsFatPercent)
+        bicepsFatText = formatOptional(m.bicepsFatPercent)
+        forearmsFatText = formatOptional(m.forearmsFatPercent)
+        quadsFatText = formatOptional(m.quadsFatPercent)
+        adductorsFatText = formatOptional(m.adductorsFatPercent)
+        calvesFatText = formatOptional(m.calvesFatPercent)
+        if let total = m.bodyFatPercent {
+            bodyFatText = formatOptional(total)
+        }
+    }
+
+    private func save(includeMeasurements: Bool, showSuccessAlert: Bool = true) async {
         guard var profile = student else { return }
         isSaving = true
         statusMessage = nil
@@ -1813,10 +1888,17 @@ struct CoachStudentMetricsView: View {
         do {
             try await ProfileFirestoreService.saveProfile(profile)
             apply(profile)
-            showSavedAlert = true
+            if showSuccessAlert {
+                showSavedAlert = true
+            }
         } catch {
             statusMessage = error.localizedDescription
         }
+    }
+
+    private func exportPDFSynced() async {
+        await save(includeMeasurements: true, showSuccessAlert: false)
+        exportPDF()
     }
 
     private func exportPDF() {
@@ -1865,7 +1947,7 @@ struct CoachStudentMetricsView: View {
     }
 
     private func currentMeasurements(measuredAt: Date = .now) -> BodyMeasurements {
-        BodyMeasurements(
+        var m = BodyMeasurements(
             neckCm: parseNumber(neckText),
             shouldersCm: parseNumber(shouldersText),
             chestCm: parseNumber(chestText),
@@ -1880,6 +1962,16 @@ struct CoachStudentMetricsView: View {
             leftCalfCm: parseNumber(leftCalfText),
             measuredAt: measuredAt
         )
+        m.chestFatPercent = fatMapMeasurements.chestFatPercent ?? parseNumber(chestFatText)
+        m.coreFatPercent = fatMapMeasurements.coreFatPercent ?? parseNumber(coreFatText)
+        m.deltoidsFatPercent = fatMapMeasurements.deltoidsFatPercent ?? parseNumber(deltoidsFatText)
+        m.bicepsFatPercent = fatMapMeasurements.bicepsFatPercent ?? parseNumber(bicepsFatText)
+        m.forearmsFatPercent = fatMapMeasurements.forearmsFatPercent ?? parseNumber(forearmsFatText)
+        m.quadsFatPercent = fatMapMeasurements.quadsFatPercent ?? parseNumber(quadsFatText)
+        m.adductorsFatPercent = fatMapMeasurements.adductorsFatPercent ?? parseNumber(adductorsFatText)
+        m.calvesFatPercent = fatMapMeasurements.calvesFatPercent ?? parseNumber(calvesFatText)
+        m.bodyFatPercent = parseNumber(bodyFatText) ?? fatMapMeasurements.bodyFatPercent
+        return m
     }
 
     private func formatField(_ value: Double) -> String {

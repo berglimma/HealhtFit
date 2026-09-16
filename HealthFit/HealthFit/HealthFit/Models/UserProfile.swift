@@ -423,11 +423,27 @@ struct BodyMeasurements: Codable, Equatable {
     var leftCalfCm: Double?
     var measuredAt: Date?
 
+    // Percentual de gordura por região (avaliação profissional, %).
+    var chestFatPercent: Double? = nil
+    var coreFatPercent: Double? = nil
+    var deltoidsFatPercent: Double? = nil
+    var bicepsFatPercent: Double? = nil
+    var forearmsFatPercent: Double? = nil
+    var quadsFatPercent: Double? = nil
+    var adductorsFatPercent: Double? = nil
+    var calvesFatPercent: Double? = nil
+    /// % gordura corporal total (Navy ou média regional / override do personal).
+    var bodyFatPercent: Double? = nil
+
     static let empty = BodyMeasurements()
     static let comparisonIntervalDays = 30
 
     var hasAnyValue: Bool {
-        labeledValues.contains { $0.value != nil }
+        labeledValues.contains { $0.value != nil } || hasAnyFatPercent
+    }
+
+    var hasAnyFatPercent: Bool {
+        regionalFatLabeledValues.contains { $0.value != nil } || (bodyFatPercent ?? 0) > 0
     }
 
     func hasSameCircumferences(as other: BodyMeasurements) -> Bool {
@@ -451,6 +467,51 @@ struct BodyMeasurements: Codable, Equatable {
         ]
     }
 
+    var regionalFatLabeledValues: [(label: String, value: Double?)] {
+        [
+            ("Peito", chestFatPercent),
+            ("Core", coreFatPercent),
+            ("Deltoides", deltoidsFatPercent),
+            ("Bíceps", bicepsFatPercent),
+            ("Antebraços", forearmsFatPercent),
+            ("Quadríceps", quadsFatPercent),
+            ("Adutores", adductorsFatPercent),
+            ("Panturrilhas", calvesFatPercent)
+        ]
+    }
+
+    /// Média ponderada simples das regiões preenchidas.
+    var averageRegionalFatPercent: Double? {
+        let values = regionalFatLabeledValues.compactMap(\.value).filter { $0 > 0 }
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +) / Double(values.count)
+    }
+
+    /// US Navy body-fat estimate (cm). Retorna nil se faltar dado.
+    func navyBodyFatPercent(heightCm: Double, gender: Gender) -> Double? {
+        guard heightCm > 0,
+              let neck = neckCm, neck > 0,
+              let waist = waistCm ?? abdomenCm, waist > 0 else { return nil }
+        let log10 = { (x: Double) -> Double in Foundation.log10(x) }
+        let value: Double
+        if gender == .female {
+            guard let hip = hipCm, hip > 0, waist + hip - neck > 0 else { return nil }
+            value = 495 / (1.29579 - 0.35004 * log10(waist + hip - neck) + 0.22100 * log10(heightCm)) - 450
+        } else {
+            guard waist - neck > 0 else { return nil }
+            value = 495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(heightCm)) - 450
+        }
+        guard value.isFinite, value > 1, value < 70 else { return nil }
+        return (value * 10).rounded() / 10
+    }
+
+    /// Preferência: override manual → Navy → média regional.
+    func resolvedBodyFatPercent(heightCm: Double, gender: Gender) -> Double? {
+        if let bodyFatPercent, bodyFatPercent > 0 { return bodyFatPercent }
+        if let navy = navyBodyFatPercent(heightCm: heightCm, gender: gender) { return navy }
+        return averageRegionalFatPercent
+    }
+
     func reportLines(dateFormatter: DateFormatter) -> [String] {
         guard hasAnyValue else { return [] }
 
@@ -463,6 +524,16 @@ struct BodyMeasurements: Codable, Equatable {
             guard let value else { continue }
             lines.append("\(label): \(Self.formatCm(value))")
         }
+        if hasAnyFatPercent {
+            lines.append("Gordura por região:")
+            for (label, value) in regionalFatLabeledValues {
+                guard let value else { continue }
+                lines.append("\(label): \(Self.formatPercent(value))")
+            }
+            if let total = bodyFatPercent ?? averageRegionalFatPercent {
+                lines.append("Gordura corporal: \(Self.formatPercent(total))")
+            }
+        }
         return lines
     }
 
@@ -470,6 +541,12 @@ struct BodyMeasurements: Codable, Equatable {
         value.truncatingRemainder(dividingBy: 1) == 0
             ? "\(Int(value)) cm"
             : String(format: "%.1f cm", value)
+    }
+
+    static func formatPercent(_ value: Double) -> String {
+        value.truncatingRemainder(dividingBy: 1) == 0
+            ? "\(Int(value))%"
+            : String(format: "%.1f%%", value)
     }
 
     static func formatDelta(_ value: Double) -> String {

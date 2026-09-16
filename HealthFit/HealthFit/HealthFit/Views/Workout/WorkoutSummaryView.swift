@@ -116,6 +116,15 @@ struct WorkoutSummaryView: View {
                         }
                         if let surfKiteReport {
                             surfKitePerformanceSection(report: surfKiteReport)
+                            if let water = surfKiteReport.session.waterSport, !water.jumps.isEmpty {
+                                SurfProJumpAnalysisSection(
+                                    jumps: water.jumps,
+                                    windAngleDegrees: nil,
+                                    isKitesurf: water.isKitesurf,
+                                    accent: AppTheme.accent,
+                                    profileImage: authService.profileImage
+                                )
+                            }
                         }
                         if let rowing = session.rowing {
                             rowingPerformanceSection(rowing)

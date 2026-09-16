@@ -276,6 +276,8 @@
 		B1000979 /* ForceAppUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000979 /* ForceAppUpdateView.swift */; };
 		B1000988 /* ShapeWorkoutCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000988 /* ShapeWorkoutCatalog.swift */; };
 		B1000991 /* AssistantBirthdayCongratsEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000991 /* AssistantBirthdayCongratsEngine.swift */; };
+		B1000A01 /* SurfProJumpAnalysisViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000A01 /* SurfProJumpAnalysisViews.swift */; };
+		B1000A02 /* CoachMuscleFatMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000A02 /* CoachMuscleFatMapView.swift */; };
 		B1000L01 /* PulseLocalized.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000L01 /* PulseLocalized.swift */; };
 		B1000L02 /* L10n+Pulse.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000L02 /* L10n+Pulse.swift */; };
 		B1000L03 /* PulseChallenges.json in Resources */ = {isa = PBXBuildFile; fileRef = F1000L03 /* PulseChallenges.json */; };
@@ -287,7 +289,6 @@
 		B1000L09 /* PulseTerms_it.txt in Resources */ = {isa = PBXBuildFile; fileRef = F1000L09 /* PulseTerms_it.txt */; };
 		B1000P01 /* PulseExperimentalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P01 /* PulseExperimentalModels.swift */; };
 		B1000P02 /* PulseLocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P02 /* PulseLocalStore.swift */; };
-		B1000P0E /* PulseEntitlement.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P0E /* PulseEntitlement.swift */; };
 		B1000P03 /* PulseDashboardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P03 /* PulseDashboardCard.swift */; };
 		B1000P04 /* PulseTermsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P04 /* PulseTermsView.swift */; };
 		B1000P05 /* PulseFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P05 /* PulseFeedView.swift */; };
@@ -295,6 +296,7 @@
 		B1000P07 /* PulseMusicSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P07 /* PulseMusicSearchService.swift */; };
 		B1000P08 /* PulseMusicViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P08 /* PulseMusicViews.swift */; };
 		B1000P09 /* PulseFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P09 /* PulseFirestoreService.swift */; };
+		B1000P0E /* PulseEntitlement.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P0E /* PulseEntitlement.swift */; };
 		B1000P10 /* PulseImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P10 /* PulseImageCache.swift */; };
 		B1000P11 /* PulseModerationQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P11 /* PulseModerationQueueView.swift */; };
 		B1000P12 /* PulseShareService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P12 /* PulseShareService.swift */; };
@@ -678,6 +680,8 @@
 		F1000979 /* ForceAppUpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceAppUpdateView.swift; sourceTree = "<group>"; };
 		F1000988 /* ShapeWorkoutCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapeWorkoutCatalog.swift; sourceTree = "<group>"; };
 		F1000991 /* AssistantBirthdayCongratsEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantBirthdayCongratsEngine.swift; sourceTree = "<group>"; };
+		F1000A01 /* SurfProJumpAnalysisViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfProJumpAnalysisViews.swift; sourceTree = "<group>"; };
+		F1000A02 /* CoachMuscleFatMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachMuscleFatMapView.swift; sourceTree = "<group>"; };
 		F1000L01 /* PulseLocalized.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseLocalized.swift; sourceTree = "<group>"; };
 		F1000L02 /* L10n+Pulse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "L10n+Pulse.swift"; sourceTree = "<group>"; };
 		F1000L03 /* PulseChallenges.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = PulseChallenges.json; sourceTree = "<group>"; };
@@ -689,7 +693,6 @@
 		F1000L09 /* PulseTerms_it.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = PulseTerms_it.txt; sourceTree = "<group>"; };
 		F1000P01 /* PulseExperimentalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseExperimentalModels.swift; sourceTree = "<group>"; };
 		F1000P02 /* PulseLocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseLocalStore.swift; sourceTree = "<group>"; };
-		F1000P0E /* PulseEntitlement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseEntitlement.swift; sourceTree = "<group>"; };
 		F1000P03 /* PulseDashboardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseDashboardCard.swift; sourceTree = "<group>"; };
 		F1000P04 /* PulseTermsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseTermsView.swift; sourceTree = "<group>"; };
 		F1000P05 /* PulseFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseFeedView.swift; sourceTree = "<group>"; };
@@ -697,6 +700,7 @@
 		F1000P07 /* PulseMusicSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseMusicSearchService.swift; sourceTree = "<group>"; };
 		F1000P08 /* PulseMusicViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseMusicViews.swift; sourceTree = "<group>"; };
 		F1000P09 /* PulseFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseFirestoreService.swift; sourceTree = "<group>"; };
+		F1000P0E /* PulseEntitlement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseEntitlement.swift; sourceTree = "<group>"; };
 		F1000P10 /* PulseImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseImageCache.swift; sourceTree = "<group>"; };
 		F1000P11 /* PulseModerationQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseModerationQueueView.swift; sourceTree = "<group>"; };
 		F1000P12 /* PulseShareService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseShareService.swift; sourceTree = "<group>"; };
@@ -1090,6 +1094,7 @@
 				F1000501 /* SwimmingLogbookView.swift */,
 				F1000505 /* BikeLogbookView.swift */,
 				F1000703 /* SurfKiteLogbookView.swift */,
+				F1000A01 /* SurfProJumpAnalysisViews.swift */,
 				F1000707 /* WaterWindConditionsView.swift */,
 				F1000422 /* RunRouteMapView.swift */,
 				F1000913 /* FightHubView.swift */,
@@ -1314,6 +1319,7 @@
 				F1000974 /* CoachSetupAndSearchViews.swift */,
 				F1000977 /* CoachStudentSearchView.swift */,
 				F1000975 /* CoachLinkDetailViews.swift */,
+				F1000A02 /* CoachMuscleFatMapView.swift */,
 			);
 			path = Coach;
 			sourceTree = "<group>";
@@ -1514,7 +1520,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2660;
-				LastUpgradeCheck = 2660;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					T1000001 = {
 						CreatedOnToolsVersion = 15.0;
@@ -1736,6 +1742,7 @@
 				B1000501 /* SwimmingLogbookView.swift in Sources */,
 				B1000505 /* BikeLogbookView.swift in Sources */,
 				B1000703 /* SurfKiteLogbookView.swift in Sources */,
+				B1000A01 /* SurfProJumpAnalysisViews.swift in Sources */,
 				B1000707 /* WaterWindConditionsView.swift in Sources */,
 				B1000708 /* TransparentOceanWavesView.swift in Sources */,
 				B1000712 /* TransparentWindLinesView.swift in Sources */,
@@ -1816,6 +1823,7 @@
 				B1000974 /* CoachSetupAndSearchViews.swift in Sources */,
 				B1000977 /* CoachStudentSearchView.swift in Sources */,
 				B1000975 /* CoachLinkDetailViews.swift in Sources */,
+				B1000A02 /* CoachMuscleFatMapView.swift in Sources */,
 				B1000324 /* BodyEvolutionService.swift in Sources */,
 				B1000204 /* DailyWellnessFirestoreService.swift in Sources */,
 				B1000203 /* KeyboardDismiss.swift in Sources */,
@@ -1941,7 +1949,6 @@
 				B2000044 /* BluetoothHeartRateServiceTests.swift in Sources */,
 				B2000045 /* ExternalWorkoutAssistantEngineTests.swift in Sources */,
 				B2000037 /* RecommendedWorkoutCatalogTests.swift in Sources */,
-				B2000040 /* EveningTrainingNudgeTests.swift in Sources */,
 				B2000041 /* AppLanguageTests.swift in Sources */,
 				B2000042 /* RunTrackingTests.swift in Sources */,
 				B2000012 /* ExerciseVideoCatalogTests.swift in Sources */,
@@ -1960,7 +1967,6 @@
 				B2000025 /* MusculacaoProgramTests.swift in Sources */,
 				B2000026 /* AssistantImprovementAnalysisEngineTests.swift in Sources */,
 				B2000046 /* CourtesyVoucherTests.swift in Sources */,
-				B2000047 /* SubscriptionModelsTests.swift in Sources */,
 				B2000047 /* SubscriptionModelsTests.swift in Sources */,
 				B2000048 /* AssistantMealPlanBuilderTests.swift in Sources */,
 				B2000049 /* PlanAccessRulesTests.swift in Sources */,

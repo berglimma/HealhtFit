@@ -151,6 +151,10 @@ final class PulseLocalStore: ObservableObject {
             let path = mediaURL(for: name).path
             if FileManager.default.fileExists(atPath: path) { return path }
         }
+        if story.remoteMediaURL != nil,
+           let cachedName = cachedRemoteFileName(for: story.id) {
+            return mediaURL(for: cachedName).path
+        }
         return nil
     }
 
@@ -176,9 +180,26 @@ final class PulseLocalStore: ObservableObject {
         }
     }
 
+    func cacheRemoteImageIfNeeded(for story: PulseStory) async {
+        guard let urlString = story.remoteMediaURL,
+              let url = URL(string: urlString) else { return }
+        if storyMediaPath(story) != nil { return }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let name = "remote-\(story.id.uuidString).jpg"
+            try data.write(to: mediaURL(for: name), options: .atomic)
+            if let idx = stories.firstIndex(where: { $0.id == story.id }) {
+                stories[idx].mediaFileName = name
+                persistStories()
+            }
+        } catch {
+            // Offline / URL expirada — rail/viewer usam placeholder.
+        }
+    }
+
     func loadStoryImage(_ story: PulseStory) -> UIImage? {
-        guard let name = story.mediaFileName else { return nil }
-        return UIImage(contentsOfFile: mediaURL(for: name).path)
+        guard let path = storyMediaPath(story) else { return nil }
+        return UIImage(contentsOfFile: path)
     }
 
     func loadReactionAvatar(_ reaction: PulseReactionEvent) -> UIImage? {
@@ -1083,10 +1104,29 @@ final class PulseLocalStore: ObservableObject {
         if !cloudStories.isEmpty {
             var byId = Dictionary(uniqueKeysWithValues: stories.map { ($0.id, $0) })
             for remote in cloudStories {
-                byId[remote.id] = remote
+                if var local = byId[remote.id] {
+                    // Preserva mídia local, curtidas e “já visto”; atualiza meta da nuvem.
+                    local.remoteMediaURL = remote.remoteMediaURL ?? local.remoteMediaURL
+                    local.expiresAt = remote.expiresAt
+                    local.authorName = remote.authorName
+                    local.music = remote.music ?? local.music
+                    if !remote.textOverlays.isEmpty {
+                        local.textOverlays = remote.textOverlays
+                    }
+                    if local.mediaFileName == nil,
+                       let cached = cachedRemoteFileName(for: remote.id) {
+                        local.mediaFileName = cached
+                    }
+                    byId[remote.id] = local
+                } else {
+                    byId[remote.id] = remote
+                }
             }
             stories = Array(byId.values).sorted { $0.createdAt > $1.createdAt }
             persistStories()
+            for story in cloudStories.prefix(20) {
+                await cacheRemoteImageIfNeeded(for: story)
+            }
         }
 
         if !cloudPeople.isEmpty {

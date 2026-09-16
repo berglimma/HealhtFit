@@ -50,6 +50,15 @@
     "#%lld" : {
 
     },
+    "%" : {
+
+    },
+    "% de gordura na região" : {
+
+    },
+    "% gordura corporal (total)" : {
+
+    },
     "%@  %@" : {
       "localizations" : {
         "pt-BR" : {
@@ -82,6 +91,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %@ · %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@ · %3$@"
           }
         }
       }
@@ -259,16 +278,6 @@
     },
     "%lld BPM" : {
 
-    },
-    "%lld curtida%@" : {
-      "localizations" : {
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld curtida%2$@"
-          }
-        }
-      }
     },
     "%lld de %lld tentativas · %lld%% de sucesso" : {
       "localizations" : {
@@ -583,6 +592,9 @@
         }
       }
     },
+    "•" : {
+
+    },
     "• %@" : {
 
     },
@@ -698,6 +710,9 @@
     "A demonstração fica em loop. O cronômetro só começa quando você toca em Começar exercício." : {
 
     },
+    "A distribuição de gordura por região ajuda a equilibrar o treino e ajustar volume entre membros superiores e inferiores." : {
+
+    },
     "A equipe será encerrada porque não haverá mais membros." : {
 
     },
@@ -735,6 +750,9 @@
 
     },
     "Abrir em tela cheia" : {
+
+    },
+    "Abrir lista de curtidas" : {
 
     },
     "Abrir mapa" : {
@@ -882,7 +900,13 @@
     "Alterar fundo" : {
 
     },
+    "Altura" : {
+
+    },
     "Altura (cm)" : {
+
+    },
+    "Altura (m)" : {
 
     },
     "Aluno" : {
@@ -904,6 +928,12 @@
 
     },
     "Análise de refeição" : {
+
+    },
+    "Análise de saltos (Kite)" : {
+
+    },
+    "Análise de saltos (Surf)" : {
 
     },
     "Antes × Depois" : {
@@ -943,6 +973,9 @@
 
     },
     "Apple Watch" : {
+
+    },
+    "Ar" : {
 
     },
     "Áreas de escalada" : {
@@ -993,7 +1026,13 @@
     "Assinatura" : {
 
     },
+    "Assinatura com renovação automática" : {
+
+    },
     "Assinaturas" : {
+
+    },
+    "Assinaturas renovam automaticamente até cancelar em Ajustes → Apple ID." : {
 
     },
     "Assine o Básico (R$ 9,90) para continuar" : {
@@ -2238,6 +2277,9 @@
     "Cadastre o personal e o e-mail em Perfil para enviar o relatório automaticamente." : {
 
     },
+    "Calculado pela fórmula US Navy (pescoço/cintura/quadril/altura)." : {
+
+    },
     "Cálculo: 35 ml por kg de peso corporal (%@ kg). Equivale a cerca de %lld copos (%lld ml) ou %lld garrafas (%lld ml)." : {
       "localizations" : {
         "pt-BR" : {
@@ -2695,6 +2737,9 @@
     "Comparativo de altura disponível após 2+ sessões com saltos." : {
 
     },
+    "Comparativo de altura na sessão" : {
+
+    },
     "Comparativo de sessões" : {
 
     },
@@ -2922,7 +2967,16 @@
     "Cronômetro pausado" : {
 
     },
+    "curtida" : {
+
+    },
+    "curtidas" : {
+
+    },
     "Curtidas" : {
+
+    },
+    "Curtir" : {
 
     },
     "Curtir com coração" : {
@@ -3170,6 +3224,9 @@
     "Dispositivos encontrados" : {
 
     },
+    "Dist." : {
+
+    },
     "Distância da meta" : {
 
     },
@@ -3372,6 +3429,9 @@
         }
       }
     },
+    "Escala" : {
+
+    },
     "Escalar aqui" : {
 
     },
@@ -3514,7 +3574,13 @@
     "Evolução diária" : {
 
     },
+    "ex: 18" : {
+
+    },
     "Ex: 40" : {
+
+    },
+    "ex: 92" : {
 
     },
     "Ex.: 12345" : {
@@ -3604,13 +3670,13 @@
     "Exercícios (%lld)" : {
 
     },
+    "Exportar avaliação em PDF" : {
+
+    },
     "Exportar avaliação PDF" : {
 
     },
     "Exportar PDF Surf / Kite" : {
-
-    },
-    "Exportar relatório em PDF" : {
 
     },
     "Extremos estimados" : {
@@ -3647,6 +3713,9 @@
 
     },
     "FEMININO" : {
+
+    },
+    "Ficha de avaliação — gordura regional" : {
 
     },
     "Ficha vinculada ao programa feminino." : {
@@ -3785,6 +3854,12 @@
     "Gerenciar na App Store" : {
 
     },
+    "Gordura corporal estimada" : {
+
+    },
+    "Gordura por região" : {
+
+    },
     "Gordura: %lld g" : {
 
     },
@@ -3843,6 +3918,9 @@
 
     },
     "Hoje é dia de descanso" : {
+
+    },
+    "Hora" : {
 
     },
     "Hora de treinar!" : {
@@ -4159,6 +4237,9 @@
     "Mapa" : {
 
     },
+    "Mapa corporal completo por região" : {
+
+    },
     "Mapa do SPOT de partida · sem rota GPS completa nesta sessão." : {
 
     },
@@ -4223,6 +4304,9 @@
 
     },
     "Medida" : {
+
+    },
+    "Medida corporal (cm)" : {
 
     },
     "Medidas corporais" : {
@@ -5230,6 +5314,9 @@
     "Plano para %@" : {
 
     },
+    "Política de Privacidade" : {
+
+    },
     "pontos" : {
 
     },
@@ -5285,6 +5372,9 @@
 
     },
     "Precisando de ajuda" : {
+
+    },
+    "Preencha circunferências e % por região. O PDF de exportação usa os mesmos dados (US Navy + mapa muscular)." : {
 
     },
     "Preencha peso ou ao menos uma circunferência para exportar a avaliação em PDF." : {
@@ -10432,6 +10522,9 @@
     "Remover %@" : {
 
     },
+    "Remover curtida" : {
+
+    },
     "Remover da ficha" : {
 
     },
@@ -10574,6 +10667,9 @@
     "Rotas" : {
 
     },
+    "s" : {
+
+    },
     "s/100m" : {
 
     },
@@ -10593,6 +10689,9 @@
 
     },
     "Sair do grupo?" : {
+
+    },
+    "Salto %lld" : {
 
     },
     "Saltos" : {
@@ -10683,6 +10782,9 @@
 
     },
     "Selecionada · toque no círculo para marcar como concluída" : {
+
+    },
+    "Selecionar região" : {
 
     },
     "Selecione a intensidade" : {
@@ -11245,6 +11347,9 @@
     "tempo" : {
 
     },
+    "Tempo (s)" : {
+
+    },
     "Tempo configurado: %llds" : {
 
     },
@@ -11285,6 +11390,12 @@
 
     },
     "Tente outra foto ou vídeo da galeria." : {
+
+    },
+    "Termos do HealthFit" : {
+
+    },
+    "Terms of Use (EULA)" : {
 
     },
     "Texto / emoji" : {
@@ -11361,6 +11472,9 @@
 
     },
     "Toque no círculo “Seu story” no Feed para publicar stories com música e texto." : {
+
+    },
+    "Toque no músculo ou no nome para inserir a medida (cm) e o % de gordura." : {
 
     },
     "Toque para ativar ou desativar o radar de amigos no kitesurf" : {
@@ -11585,6 +11699,9 @@
 
     },
     "Ver planos e assinar" : {
+
+    },
+    "Ver quem curtiu" : {
 
     },
     "Ver quem curtiu · %lld" : {
