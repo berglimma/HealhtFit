@@ -42,6 +42,7 @@ struct DailyWellnessCheckInView: View {
             }
             .onAppear {
                 wellnessService.refreshWaterGoal(from: authService.currentUser)
+                Task { await wellnessService.syncSleepFromAppleHealth() }
             }
             .onChange(of: wellnessService.todaySleepHours) { _, hours in
                 // Sono sincronizado de outro dispositivo/perfil enquanto o sheet pedia registro.
@@ -59,9 +60,18 @@ struct DailyWellnessCheckInView: View {
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
 
-            Text("Informe seu sono da noite passada para acompanharmos sua recuperação.")
+            Text("Informe seu sono da noite passada para acompanharmos sua recuperação. Se o Apple Watch registrou o sono no app Saúde, o HealthFit preenche automaticamente.")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
+
+            if wellnessService.todayEntry.sleepSource == .appleHealth {
+                Label(
+                    wellnessService.todayEntry.sleepSourceLabel ?? "Via Apple Watch / Saúde",
+                    systemImage: "applewatch"
+                )
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+            }
 
             VStack(spacing: 8) {
                 Text(String(format: "%.1f h", wellnessService.pendingSleepHours))

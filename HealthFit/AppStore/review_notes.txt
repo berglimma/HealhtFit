@@ -1,29 +1,29 @@
-HealthFit 1.0.5 (Build 16)
+HealthFit 1.0.5 (Build 17)
 
-Resolução da rejeição 15/09/2026 — Guideline 3.1.2(c):
-- App Store Description (todas as localizações) inclui o link funcional do Terms of Use (EULA) padrão da Apple:
-  https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
-- License Agreement no App Store Connect = EULA padrão da Apple (não usamos EULA custom no campo License Agreement).
-- Privacy Policy URL no Connect preenchido.
-- No app (paywall e Meu plano): título/período/preço + Links "Terms of Use (EULA)" (Apple), Termos HealthFit e Privacidade.
-
-Como verificar o EULA nos metadados:
-1. Abrir a descrição da versão 1.0.5
-2. Procurar: Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
-3. Abrir o link — Licensed Application End User License Agreement da Apple
-
-Resolução anterior 14/09/2026:
-- 2.1(a): Sign in with Apple no iPad (botão nativo em largura total)
+Principais mudanças deste build:
+- Pulse: busca global de usuários com prioridade regional
+- Sono do Apple Watch → HealthKit → wellness (Dashboard / check-in)
+- Coach: aviso CREF/CRN Brasil (CONFEF/CFN) para o aluno
+- Deployment: iOS/iPadOS 18.0, watchOS 11.0; SDK 27
+- Fixes de depreciação (HealthKit, MapKit, AVFoundation, BGTask, UIScreen)
 
 Conta demo App Review:
 E-mail: healthfit.appreview@gmail.com
 (senha no campo Sign-in Information do App Store Connect)
 
 HealthFit Pulse (18+ UGC):
-1. Dashboard → card HealthFit Pulse → aceitar termos → abrir feed (conta 18+)
-2. Criar story / post de treino; denunciar conteúdo inadequado
+1. Dashboard → card HealthFit Pulse → aceitar termos → feed (conta 18+)
+2. Aba Pessoas / lupa: buscar usuários (região primeiro)
 3. Assinatura Pulse: 15 dias grátis, depois mensal/anual via StoreKit 2
 
-Assinaturas (StoreKit 2 / Assinaturas Automáticas):
-- Perfil → Meu plano / paywall: nome, duração, preço e links de Termos (EULA) + Privacidade
-- Gerenciar / cancelar: Ajustes → Apple ID → Assinaturas
+Coach / CREF-CRN:
+1. Perfil → HealthFit Coach → Buscar na região ou Entrar com código
+2. Ver o aviso laranja pedindo verificação do CREF/CRN ativo no Brasil
+
+Sono Watch:
+1. Com Sono autorizado no Saúde, abrir o app de manhã
+2. Dashboard / check-in devem refletir horas do Watch quando disponíveis
+
+EULA / assinaturas:
+Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Privacy: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html

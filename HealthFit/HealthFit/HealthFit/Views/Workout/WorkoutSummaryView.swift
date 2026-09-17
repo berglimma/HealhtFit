@@ -682,11 +682,13 @@ struct WorkoutSummaryView: View {
     }
 
     private func applyPickedVideo(url: URL) {
-        if let poster = WorkoutResultMediaOverlayRenderer.posterFrame(fromVideoURL: url) {
-            resultMedia = .video(url: url, poster: poster)
-            resultMediaOverlayLayout = .default
-        } else {
-            mediaLoadFailed = true
+        Task {
+            if let poster = await WorkoutResultMediaOverlayRenderer.posterFrame(fromVideoURL: url) {
+                resultMedia = .video(url: url, poster: poster)
+                resultMediaOverlayLayout = .default
+            } else {
+                mediaLoadFailed = true
+            }
         }
     }
 

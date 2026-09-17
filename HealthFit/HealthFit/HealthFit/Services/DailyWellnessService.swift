@@ -250,16 +250,82 @@ final class DailyWellnessService: ObservableObject {
     func logSleep(hours: Double, dayKey: String) {
         let clamped = max(0, min(hours, 14))
         var entry = entry(for: dayKey)
-        if entry.sleepHours == clamped, entry.sleepUpdatedAt != nil {
+        if entry.sleepHours == clamped,
+           entry.sleepUpdatedAt != nil,
+           entry.sleepSource == .manual {
             return
         }
         entry.sleepHours = clamped
         entry.sleepUpdatedAt = .now
+        entry.sleepSource = .manual
+        // Mantém bed/wake do HealthKit se o usuário só ajustou as horas.
         save(entry)
         if dayKey == DailyWellnessEntry.dayKey(for: .now) {
             markWaterOrSleepUpdated()
             markMorningCheckInHandled()
         }
+    }
+
+    /// Importa sono do Apple Watch / Saúde. Não sobrescreve registro manual mais recente.
+    @discardableResult
+    func importSleepFromHealthKit(
+        _ summary: HealthKitManager.SleepNightSummary,
+        dayKey: String? = nil
+    ) -> Bool {
+        let key = dayKey ?? DailyWellnessEntry.dayKey(for: .now)
+        let clamped = max(0, min(summary.asleepHours, 14))
+        guard clamped > 0 else { return false }
+
+        var entry = entry(for: key)
+        let existingSource = entry.sleepSource ?? (entry.sleepHours != nil ? .manual : nil)
+
+        if existingSource == .manual {
+            // Prefill do slider no check-in; não grava por cima do manual.
+            if key == DailyWellnessEntry.dayKey(for: .now), entry.sleepHours == nil {
+                pendingSleepHours = (clamped * 2).rounded() / 2
+            }
+            return false
+        }
+
+        if existingSource == .appleHealth,
+           let current = entry.sleepHours,
+           abs(current - clamped) < 0.05,
+           entry.sleepBedtime == summary.bedtime,
+           entry.sleepWakeTime == summary.wakeTime {
+            return false
+        }
+
+        entry.sleepHours = clamped
+        entry.sleepUpdatedAt = .now
+        entry.sleepSource = .appleHealth
+        entry.sleepBedtime = summary.bedtime
+        entry.sleepWakeTime = summary.wakeTime
+        entry.sleepDeepHours = summary.deepHours > 0 ? summary.deepHours : nil
+        entry.sleepREMHours = summary.remHours > 0 ? summary.remHours : nil
+        entry.sleepCoreHours = summary.coreHours > 0 ? summary.coreHours : nil
+        entry.sleepHealthSourceName = summary.sourceName
+        save(entry)
+
+        if key == DailyWellnessEntry.dayKey(for: .now) {
+            pendingSleepHours = (clamped * 2).rounded() / 2
+            markWaterOrSleepUpdated()
+            markMorningCheckInHandled()
+            evaluateMorningCheckInPresentation()
+        }
+        return true
+    }
+
+    /// Busca a noite no HealthKit e integra no wellness do dia.
+    @discardableResult
+    func syncSleepFromAppleHealth() async -> Bool {
+        guard let summary = await HealthKitManager.shared.fetchLastNightSleepSummary() else {
+            return false
+        }
+        // Prefill mesmo quando não importa (ex.: já tem manual).
+        if todayEntry.sleepHours == nil {
+            pendingSleepHours = (summary.asleepHours * 2).rounded() / 2
+        }
+        return importSleepFromHealthKit(summary)
     }
 
     /// Atualiza a meta de água enviada ao Firebase a partir do peso do perfil.
@@ -723,11 +789,33 @@ final class DailyWellnessService: ObservableObject {
         case let (l?, r?) where r >= l:
             merged.sleepHours = remote.sleepHours
             merged.sleepUpdatedAt = remote.sleepUpdatedAt
+            merged.sleepSource = remote.sleepSource ?? local.sleepSource
+            merged.sleepBedtime = remote.sleepBedtime ?? local.sleepBedtime
+            merged.sleepWakeTime = remote.sleepWakeTime ?? local.sleepWakeTime
+            merged.sleepDeepHours = remote.sleepDeepHours ?? local.sleepDeepHours
+            merged.sleepREMHours = remote.sleepREMHours ?? local.sleepREMHours
+            merged.sleepCoreHours = remote.sleepCoreHours ?? local.sleepCoreHours
+            merged.sleepHealthSourceName = remote.sleepHealthSourceName ?? local.sleepHealthSourceName
         case (nil, .some):
             merged.sleepHours = remote.sleepHours
             merged.sleepUpdatedAt = remote.sleepUpdatedAt
+            merged.sleepSource = remote.sleepSource
+            merged.sleepBedtime = remote.sleepBedtime
+            merged.sleepWakeTime = remote.sleepWakeTime
+            merged.sleepDeepHours = remote.sleepDeepHours
+            merged.sleepREMHours = remote.sleepREMHours
+            merged.sleepCoreHours = remote.sleepCoreHours
+            merged.sleepHealthSourceName = remote.sleepHealthSourceName
         default:
-            break
+            if merged.sleepSource == nil { merged.sleepSource = remote.sleepSource }
+            if merged.sleepBedtime == nil { merged.sleepBedtime = remote.sleepBedtime }
+            if merged.sleepWakeTime == nil { merged.sleepWakeTime = remote.sleepWakeTime }
+            if merged.sleepDeepHours == nil { merged.sleepDeepHours = remote.sleepDeepHours }
+            if merged.sleepREMHours == nil { merged.sleepREMHours = remote.sleepREMHours }
+            if merged.sleepCoreHours == nil { merged.sleepCoreHours = remote.sleepCoreHours }
+            if merged.sleepHealthSourceName == nil {
+                merged.sleepHealthSourceName = remote.sleepHealthSourceName
+            }
         }
 
         if remote.waterIntakeMl > merged.waterIntakeMl {

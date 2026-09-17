@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreLocation
 import Combine
+import MapKit
 
 struct PulsePersonProfileCard: View {
     let person: PulsePerson
@@ -139,12 +140,14 @@ struct PulsePeopleSearchView: View {
 
     @StateObject private var locationHelper = PulsePeopleLocationHelper()
     @State private var query = ""
-    @State private var selectedCountry = ""
-    @State private var stateQuery = ""
-    @State private var cityQuery = ""
+    @State private var preferCountry = ""
+    @State private var preferState = ""
+    @State private var preferCity = ""
     @State private var notifyOnFollow = true
     @State private var locationStatus = ""
     @State private var bioDraft = ""
+    @State private var isSearchingRemote = false
+    @State private var searchTask: Task<Void, Never>?
     @FocusState private var bioFocused: Bool
 
     var body: some View {
@@ -154,27 +157,49 @@ struct PulsePeopleSearchView: View {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(AppTheme.accent)
-                TextField(L10n.Pulse.searchName, text: $query)
+                TextField("Buscar todos os usuários…", text: $query)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                if isSearchingRemote {
+                    ProgressView()
+                        .controlSize(.small)
+                } else if !query.isEmpty {
+                    Button {
+                        query = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
             }
             .padding(12)
             .background(AppTheme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(.horizontal, 16)
 
+            Text("Resultados da sua região primeiro; depois outros países.")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
                     Menu {
-                        Button(L10n.Pulse.allCountries) { selectedCountry = "" }
+                        Button("Usar país do perfil") {
+                            preferCountry = resolvedProfileCountry
+                        }
+                        Button(L10n.Pulse.allCountries) { preferCountry = "" }
                         ForEach(CountryOption.catalog) { country in
                             Button("\(country.flagEmoji) \(country.name)") {
-                                selectedCountry = country.code
+                                preferCountry = country.code
                             }
                         }
                     } label: {
                         Label(
-                            selectedCountry.isEmpty
+                            preferCountry.isEmpty
                                 ? L10n.Pulse.country
-                                : "\(CountryOption.flagEmoji(for: selectedCountry)) \(CountryOption.option(for: selectedCountry)?.name ?? selectedCountry)",
+                                : "\(CountryOption.flagEmoji(for: preferCountry)) \(CountryOption.option(for: preferCountry)?.name ?? preferCountry)",
                             systemImage: "globe"
                         )
                         .font(.caption.weight(.semibold))
@@ -203,14 +228,14 @@ struct PulsePeopleSearchView: View {
                 }
 
                 HStack(spacing: 8) {
-                    TextField(L10n.Pulse.state, text: $stateQuery)
+                    TextField(L10n.Pulse.state, text: $preferState)
                         .font(.caption)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
                         .background(AppTheme.cardBackground)
                         .clipShape(Capsule())
 
-                    TextField(L10n.Pulse.city, text: $cityQuery)
+                    TextField(L10n.Pulse.city, text: $preferCity)
                         .font(.caption)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
@@ -228,11 +253,19 @@ struct PulsePeopleSearchView: View {
             .onChange(of: locationHelper.resolvedPlace) { _, place in
                 guard let place else { return }
                 if let code = place.countryCode, !code.isEmpty {
-                    selectedCountry = code
+                    preferCountry = code
                 }
-                stateQuery = place.state
-                cityQuery = place.city
+                preferState = place.state
+                preferCity = place.city
                 locationStatus = place.summary
+                store.upsertMyProfile(
+                    userId: currentUserId,
+                    displayName: currentUserName,
+                    emailHint: currentUserEmail,
+                    countryCode: preferCountry.isEmpty ? currentCountryCode : preferCountry,
+                    state: preferState,
+                    city: preferCity
+                )
             }
             .onChange(of: locationHelper.statusMessage) { _, message in
                 if locationHelper.resolvedPlace == nil {
@@ -252,25 +285,24 @@ struct PulsePeopleSearchView: View {
             }
 
             ScrollView {
-                LazyVStack(spacing: 12) {
-                    ForEach(filteredPeople) { person in
-                        PulsePersonProfileCard(
-                            person: person,
-                            followStatus: store.followStatus(from: currentUserId, to: person.id),
-                            notifyPosts: notifyOnFollow,
-                            onFollow: {
-                                store.requestFollow(from: currentUserId, to: person.id, notifyPosts: notifyOnFollow)
-                            },
-                            onAccept: {
-                                store.acceptFollow(from: person.id, to: currentUserId)
-                            },
-                            onDecline: {
-                                store.declineFollow(from: person.id, to: currentUserId)
-                            },
-                            onCancel: {
-                                store.cancelFollowRequest(from: currentUserId, to: person.id)
-                            }
-                        )
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    if nearbyPeople.isEmpty && worldwidePeople.isEmpty {
+                        emptySearchState
+                    } else {
+                        if !nearbyPeople.isEmpty {
+                            peopleSection(
+                                title: "Na sua região",
+                                subtitle: regionSectionSubtitle,
+                                people: nearbyPeople
+                            )
+                        }
+                        if !worldwidePeople.isEmpty {
+                            peopleSection(
+                                title: "Outros países",
+                                subtitle: "Usuários do app fora da sua região",
+                                people: worldwidePeople
+                            )
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -286,6 +318,175 @@ struct PulsePeopleSearchView: View {
                 countryCode: currentCountryCode
             )
             bioDraft = store.person(id: currentUserId)?.bio ?? ""
+            if preferCountry.isEmpty {
+                preferCountry = resolvedProfileCountry
+            }
+            if preferState.isEmpty {
+                preferState = store.person(id: currentUserId)?.state ?? ""
+            }
+            if preferCity.isEmpty {
+                preferCity = store.person(id: currentUserId)?.city ?? ""
+            }
+            Task { await store.refreshFromCloud(currentUserId: currentUserId) }
+        }
+        .onChange(of: query) { _, _ in
+            scheduleRemoteSearch()
+        }
+        .onChange(of: preferCountry) { _, _ in
+            scheduleRemoteSearch()
+        }
+        .onChange(of: preferState) { _, _ in
+            scheduleRemoteSearch()
+        }
+        .onChange(of: preferCity) { _, _ in
+            scheduleRemoteSearch()
+        }
+        .onDisappear {
+            searchTask?.cancel()
+        }
+    }
+
+    private var resolvedProfileCountry: String {
+        let fromProfile = store.person(id: currentUserId)?.countryCode ?? ""
+        if !fromProfile.isEmpty { return fromProfile }
+        return currentCountryCode
+    }
+
+    private var activePreferCountry: String {
+        preferCountry.isEmpty ? resolvedProfileCountry : preferCountry
+    }
+
+    private var activePreferState: String? {
+        preferState.isEmpty ? nil : preferState
+    }
+
+    private var activePreferCity: String? {
+        preferCity.isEmpty ? nil : preferCity
+    }
+
+    private var regionSectionSubtitle: String {
+        var parts: [String] = []
+        if let city = activePreferCity { parts.append(city) }
+        if let state = activePreferState { parts.append(state) }
+        if !activePreferCountry.isEmpty {
+            parts.append(CountryOption.option(for: activePreferCountry)?.name ?? activePreferCountry)
+        }
+        return parts.isEmpty
+            ? "Prioridade por proximidade"
+            : "Prioridade: \(parts.joined(separator: ", "))"
+    }
+
+    private var rankedPeople: [PulsePerson] {
+        // Sem filtro duro de país — lista todos e ordena por região.
+        store.searchPeople(
+            query: query,
+            countryCode: nil,
+            state: nil,
+            city: nil,
+            preferCountryCode: activePreferCountry,
+            preferState: activePreferState,
+            preferCity: activePreferCity
+        )
+        .filter { $0.id != currentUserId }
+    }
+
+    private var nearbyPeople: [PulsePerson] {
+        store.partitionPeopleByLocality(
+            rankedPeople,
+            preferCountryCode: activePreferCountry,
+            preferState: activePreferState,
+            preferCity: activePreferCity
+        ).nearby
+    }
+
+    private var worldwidePeople: [PulsePerson] {
+        store.partitionPeopleByLocality(
+            rankedPeople,
+            preferCountryCode: activePreferCountry,
+            preferState: activePreferState,
+            preferCity: activePreferCity
+        ).worldwide
+    }
+
+    private var emptySearchState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "person.2.crop.square.stack")
+                .font(.title2)
+                .foregroundStyle(AppTheme.textSecondary)
+            Text(query.trimmingCharacters(in: .whitespacesAndNewlines).count < 2
+                 ? "Digite pelo menos 2 letras para buscar no app inteiro."
+                 : "Nenhum usuário encontrado.")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 28)
+        }
+    }
+
+    private func peopleSection(title: String, subtitle: String, people: [PulsePerson]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            ForEach(people) { person in
+                personCard(person)
+            }
+        }
+    }
+
+    private func personCard(_ person: PulsePerson) -> some View {
+        PulsePersonProfileCard(
+            person: person,
+            followStatus: store.followStatus(from: currentUserId, to: person.id),
+            notifyPosts: notifyOnFollow,
+            onFollow: {
+                store.requestFollow(from: currentUserId, to: person.id, notifyPosts: notifyOnFollow)
+            },
+            onAccept: {
+                store.acceptFollow(from: person.id, to: currentUserId)
+            },
+            onDecline: {
+                store.declineFollow(from: person.id, to: currentUserId)
+            },
+            onCancel: {
+                store.cancelFollowRequest(from: currentUserId, to: person.id)
+            }
+        )
+    }
+
+    private func scheduleRemoteSearch() {
+        searchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else {
+            isSearchingRemote = false
+            return
+        }
+        let country = activePreferCountry
+        let state = activePreferState
+        let city = activePreferCity
+        let userId = currentUserId
+        searchTask = Task {
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run { isSearchingRemote = true }
+            _ = await store.searchPeopleRemotely(
+                query: trimmed,
+                currentUserId: userId,
+                countryCode: nil,
+                state: nil,
+                city: nil,
+                preferCountryCode: country,
+                preferState: state,
+                preferCity: city
+            )
+            guard !Task.isCancelled else { return }
+            await MainActor.run { isSearchingRemote = false }
         }
     }
 
@@ -315,7 +516,9 @@ struct PulsePeopleSearchView: View {
                         userId: currentUserId,
                         displayName: currentUserName,
                         emailHint: currentUserEmail,
-                        countryCode: currentCountryCode,
+                        countryCode: preferCountry.isEmpty ? currentCountryCode : preferCountry,
+                        state: preferState,
+                        city: preferCity,
                         bio: bioDraft
                     )
                     bioFocused = false
@@ -329,22 +532,6 @@ struct PulsePeopleSearchView: View {
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal, 16)
-    }
-
-    private var filteredPeople: [PulsePerson] {
-        let myProfile = store.person(id: currentUserId)
-        return store.searchPeople(
-            query: query,
-            countryCode: selectedCountry.isEmpty ? nil : selectedCountry,
-            state: stateQuery.isEmpty ? nil : stateQuery,
-            city: cityQuery.isEmpty ? nil : cityQuery,
-            preferCountryCode: selectedCountry.isEmpty
-                ? (myProfile?.countryCode.isEmpty == false ? myProfile?.countryCode : currentCountryCode)
-                : selectedCountry,
-            preferState: stateQuery.isEmpty ? myProfile?.state : stateQuery,
-            preferCity: cityQuery.isEmpty ? myProfile?.city : cityQuery
-        )
-        .filter { $0.id != currentUserId }
     }
 
     private var incomingSection: some View {
@@ -449,6 +636,46 @@ final class PulsePeopleLocationHelper: NSObject, ObservableObject, CLLocationMan
     }
 
     private func reverseGeocode(_ location: CLLocation) {
+        if #available(iOS 26.0, *) {
+            guard let request = MKReverseGeocodingRequest(location: location) else {
+                isResolving = false
+                statusMessage = "Não foi possível obter cidade/estado."
+                return
+            }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    let mapItems = try await request.mapItems
+                    self.isResolving = false
+                    guard let item = mapItems.first else {
+                        self.statusMessage = "Não foi possível obter cidade/estado."
+                        return
+                    }
+                    let reps = item.addressRepresentations
+                    let city = reps?.cityName ?? ""
+                    let state: String = {
+                        guard let context = reps?.cityWithContext, !context.isEmpty else { return "" }
+                        guard let cityName = reps?.cityName, !cityName.isEmpty else { return context }
+                        var rest = context
+                        if rest.hasPrefix(cityName) {
+                            rest = String(rest.dropFirst(cityName.count))
+                        }
+                        return rest.trimmingCharacters(in: CharacterSet(charactersIn: ", "))
+                    }()
+                    let code = reps?.region?.identifier.uppercased()
+                    self.resolvedPlace = PulseResolvedPlace(
+                        countryCode: code,
+                        state: state,
+                        city: city
+                    )
+                } catch {
+                    self.isResolving = false
+                    self.statusMessage = error.localizedDescription
+                }
+            }
+            return
+        }
+
         CLGeocoder().reverseGeocodeLocation(location) { [weak self] placemarks, error in
             let errorDescription = error?.localizedDescription
             let hasPlace = placemarks?.first != nil

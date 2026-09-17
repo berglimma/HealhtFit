@@ -1201,6 +1201,16 @@ struct ProfileView: View {
                 }
             }
 
+            if let source = wellnessService.todayEntry.sleepSourceLabel {
+                Label(source, systemImage: wellnessService.todayEntry.sleepSource == .appleHealth ? "applewatch" : "pencil")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(
+                        wellnessService.todayEntry.sleepSource == .appleHealth
+                            ? AppTheme.accent
+                            : AppTheme.textSecondary
+                    )
+            }
+
             Slider(
                 value: Binding(
                     get: { wellnessService.todaySleepHours ?? sleepHoursInput },
@@ -1219,7 +1229,7 @@ struct ProfileView: View {
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
             } else {
-                Text("Registre seu sono ao abrir o app ou ajuste o controle acima.")
+                Text("O Apple Watch sincroniza o sono pelo app Saúde. Você também pode ajustar o controle acima.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
             }
@@ -1387,6 +1397,7 @@ struct ProfileView: View {
         if let hours = wellnessService.todaySleepHours {
             sleepHoursInput = hours
         }
+        Task { _ = await wellnessService.syncSleepFromAppleHealth() }
     }
 
     private func syncPreWorkoutFromWorkouts() {

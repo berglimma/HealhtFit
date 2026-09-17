@@ -38,9 +38,12 @@ final class HealthKitManager: ObservableObject {
     private var stepsObserverQuery: HKQuery?
     private var caloriesObserverQuery: HKQuery?
     private var workoutObserverQuery: HKQuery?
+    private var sleepObserverQuery: HKQuery?
     private var isRefreshing = false
     /// Callback disparado quando novos treinos aparecem no Saúde (background/foreground).
     var onExternalWorkoutsChanged: (() -> Void)?
+    /// Callback quando novos dados de sono chegam do Apple Watch / Saúde.
+    var onSleepAnalysisChanged: (() -> Void)?
 
     /// BPM preferindo valor ao vivo (Watch/HealthKit); fallback para FC de repouso.
     var displayedHeartRate: Double {
@@ -96,7 +99,7 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    /// Atualiza passos, calorias e BPM a partir do HealthKit (e dados já sincronizados do Watch).
+    /// Atualiza passos, calorias, BPM e sono a partir do HealthKit (Watch incluso).
     func refreshFromHealthKit() async {
         guard isHealthKitAvailable else { return }
         if !isAuthorized {
@@ -105,6 +108,7 @@ final class HealthKitManager: ObservableObject {
         }
         await fetchWeeklyMetrics()
         await fetchLatestHeartRate()
+        onSleepAnalysisChanged?()
     }
 
     /// Aplica métricas ao vivo vindas do Apple Watch (mantém dashboard e treino alinhados).
@@ -261,6 +265,7 @@ final class HealthKitManager: ObservableObject {
     private func startMetricObservers() {
         startHeartRateObserver()
         startWorkoutObserver()
+        startSleepObserver()
         startQuantityObserver(for: .stepCount, storingIn: &stepsObserverQuery) {
             await HealthKitManager.shared.refreshTodayStepsAndCalories()
         }
@@ -285,6 +290,23 @@ final class HealthKitManager: ObservableObject {
         workoutObserverQuery = query
         healthStore.execute(query)
         // Horário (não immediate): evita acordar o app a cada amostra e poupa bateria.
+        healthStore.enableBackgroundDelivery(for: type, frequency: .hourly) { _, _ in }
+    }
+
+    private func startSleepObserver() {
+        guard let type = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return }
+        if let existing = sleepObserverQuery {
+            healthStore.stop(existing)
+        }
+        let query = HKObserverQuery(sampleType: type, predicate: nil) { _, completionHandler, error in
+            defer { completionHandler() }
+            guard error == nil else { return }
+            Task { @MainActor in
+                HealthKitManager.shared.onSleepAnalysisChanged?()
+            }
+        }
+        sleepObserverQuery = query
+        healthStore.execute(query)
         healthStore.enableBackgroundDelivery(for: type, frequency: .hourly) { _, _ in }
     }
 
@@ -469,6 +491,17 @@ final class HealthKitManager: ObservableObject {
         )
     }
 
+    /// Resumo da noite anterior lido do Apple Saúde (Watch / iPhone Sleep).
+    struct SleepNightSummary: Equatable, Sendable {
+        var asleepHours: Double
+        var deepHours: Double
+        var remHours: Double
+        var coreHours: Double
+        var bedtime: Date?
+        var wakeTime: Date?
+        var sourceName: String?
+    }
+
     /// HRV SDNN mais recente das últimas 24 h — a leitura que o Watch grava durante o sono.
     func fetchLatestHRV() async -> Double? {
         await HealthKitQueryClient.latestHRV(store: healthStore)
@@ -476,10 +509,23 @@ final class HealthKitManager: ObservableObject {
 
     /// Horas de sono da noite anterior, somando apenas as fases realmente adormecidas.
     func fetchLastNightSleepHours() async -> Double? {
+        await fetchLastNightSleepSummary()?.asleepHours
+    }
+
+    /// Resumo completo da noite (horas, fases, horário de dormir/acordar, fonte).
+    func fetchLastNightSleepSummary() async -> SleepNightSummary? {
+        guard isHealthKitAvailable, isAuthorized else { return nil }
         let calendar = Calendar.current
         let startOfToday = calendar.startOfDay(for: .now)
-        guard let windowStart = calendar.date(byAdding: .hour, value: -6, to: startOfToday) else { return nil }
-        return await HealthKitQueryClient.lastNightSleepHours(store: healthStore, from: windowStart, to: .now)
+        // Janela ampla: dormiu ontem à tarde até agora (cobre turnos e Watch Sleep).
+        guard let windowStart = calendar.date(byAdding: .hour, value: -18, to: startOfToday) else {
+            return nil
+        }
+        return await HealthKitQueryClient.lastNightSleepSummary(
+            store: healthStore,
+            from: windowStart,
+            to: .now
+        )
     }
 
     private func loadMockData() {
@@ -683,6 +729,14 @@ private enum HealthKitQueryClient {
     }
 
     static func lastNightSleepHours(store: HKHealthStore, from start: Date, to end: Date) async -> Double? {
+        await lastNightSleepSummary(store: store, from: start, to: end)?.asleepHours
+    }
+
+    static func lastNightSleepSummary(
+        store: HKHealthStore,
+        from start: Date,
+        to end: Date
+    ) async -> HealthKitManager.SleepNightSummary? {
         guard let type = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return nil }
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
         return await withTimeout(fallback: nil) { resume in
@@ -690,22 +744,74 @@ private enum HealthKitQueryClient {
                 sampleType: type,
                 predicate: predicate,
                 limit: sleepSampleLimit,
-                sortDescriptors: nil
+                sortDescriptors: [
+                    NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+                ]
             ) { _, samples, _ in
                 guard let samples = samples as? [HKCategorySample], !samples.isEmpty else {
                     resume(nil)
                     return
                 }
-                let asleepValues: Set<Int> = [
-                    HKCategoryValueSleepAnalysis.asleepCore.rawValue,
-                    HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
-                    HKCategoryValueSleepAnalysis.asleepREM.rawValue,
-                    HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue
-                ]
-                let seconds = samples
-                    .filter { asleepValues.contains($0.value) }
-                    .reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) }
-                resume(seconds > 0 ? seconds / 3600 : nil)
+
+                let core = HKCategoryValueSleepAnalysis.asleepCore.rawValue
+                let deep = HKCategoryValueSleepAnalysis.asleepDeep.rawValue
+                let rem = HKCategoryValueSleepAnalysis.asleepREM.rawValue
+                let unspecified = HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue
+                let inBed = HKCategoryValueSleepAnalysis.inBed.rawValue
+                let asleepValues: Set<Int> = [core, deep, rem, unspecified]
+
+                var deepSeconds = 0.0
+                var remSeconds = 0.0
+                var coreSeconds = 0.0
+                var asleepSeconds = 0.0
+                var bedtime: Date?
+                var wakeTime: Date?
+                var sourceName: String?
+
+                for sample in samples {
+                    let duration = sample.endDate.timeIntervalSince(sample.startDate)
+                    guard duration > 0 else { continue }
+
+                    if sample.value == inBed || asleepValues.contains(sample.value) {
+                        if bedtime == nil || sample.startDate < bedtime! {
+                            bedtime = sample.startDate
+                        }
+                    }
+
+                    guard asleepValues.contains(sample.value) else { continue }
+                    asleepSeconds += duration
+                    if wakeTime == nil || sample.endDate > wakeTime! {
+                        wakeTime = sample.endDate
+                    }
+                    if sourceName == nil {
+                        let name = sample.sourceRevision.source.name
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !name.isEmpty { sourceName = name }
+                    }
+                    switch sample.value {
+                    case deep: deepSeconds += duration
+                    case rem: remSeconds += duration
+                    case core, unspecified: coreSeconds += duration
+                    default: break
+                    }
+                }
+
+                guard asleepSeconds > 0 else {
+                    resume(nil)
+                    return
+                }
+
+                resume(
+                    HealthKitManager.SleepNightSummary(
+                        asleepHours: asleepSeconds / 3600,
+                        deepHours: deepSeconds / 3600,
+                        remHours: remSeconds / 3600,
+                        coreHours: coreSeconds / 3600,
+                        bedtime: bedtime,
+                        wakeTime: wakeTime,
+                        sourceName: sourceName
+                    )
+                )
             }
             store.execute(query)
             return query
@@ -731,7 +837,10 @@ private enum HealthKitQueryClient {
                 let mapped = workouts.map { workout -> QueriedWorkout in
                     let origin = (workout.metadata?[HealthKitManager.healthFitOriginMetadataKey] as? Bool) == true
                         || (workout.metadata?[HealthKitManager.healthFitOriginMetadataKey] as? NSNumber)?.boolValue == true
-                    let calories = workout.totalEnergyBurned?.doubleValue(for: .kilocalorie()) ?? 0
+                    let energyType = HKQuantityType(.activeEnergyBurned)
+                    let calories = workout.statistics(for: energyType)?
+                        .sumQuantity()?
+                        .doubleValue(for: .kilocalorie()) ?? 0
                     let avgHR = (workout.metadata?["HKAverageHeartRate"] as? Double)
                         ?? (workout.metadata?["averageHeartRate"] as? Double)
                         ?? 0

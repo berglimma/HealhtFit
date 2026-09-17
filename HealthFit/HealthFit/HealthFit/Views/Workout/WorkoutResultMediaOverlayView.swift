@@ -360,7 +360,7 @@ enum WorkoutResultMediaOverlayRenderer {
     }
 
     /// First (or near-first) frame for video poster overlays.
-    static func posterFrame(fromVideoURL url: URL) -> UIImage? {
+    static func posterFrame(fromVideoURL url: URL) async -> UIImage? {
         let asset = AVURLAsset(url: url)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
@@ -373,11 +373,26 @@ enum WorkoutResultMediaOverlayRenderer {
         ]
 
         for time in times {
-            if let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) {
-                return UIImage(cgImage: cgImage)
+            if let image = await generatePosterFrame(generator: generator, at: time) {
+                return image
             }
         }
         return nil
+    }
+
+    private static func generatePosterFrame(
+        generator: AVAssetImageGenerator,
+        at time: CMTime
+    ) async -> UIImage? {
+        await withCheckedContinuation { continuation in
+            generator.generateCGImageAsynchronously(for: time) { cgImage, _, _ in
+                if let cgImage {
+                    continuation.resume(returning: UIImage(cgImage: cgImage))
+                } else {
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
     }
 
     static func shareCaption(session: WorkoutSession, athleteName: String) -> String {

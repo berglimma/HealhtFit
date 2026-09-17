@@ -77,6 +77,7 @@ struct DashboardView: View {
                 // Let charts mount before HealthKit batch updates @Published metrics.
                 try? await Task.sleep(nanoseconds: 250_000_000)
                 await healthKitManager.refreshFromHealthKit()
+                _ = await wellnessService.syncSleepFromAppleHealth()
             }
             .task(id: authService.currentUser?.id) {
                 await wellnessService.ensureCurrentWeekLoaded()
@@ -97,6 +98,7 @@ struct DashboardView: View {
             .background { deviceCalendarSyncTriggers }
             .refreshable {
                 await healthKitManager.refreshFromHealthKit()
+                _ = await wellnessService.syncSleepFromAppleHealth()
                 await wellnessService.ensureCurrentWeekLoaded()
                 refreshWeekFromDeviceCalendar()
             }
@@ -252,7 +254,7 @@ struct DashboardView: View {
         sleepHours: Double,
         sleepGoalHours: Double
     ) -> some View {
-        let schedule = sleepScheduleEstimate(hours: sleepHours, loggedAt: entry.sleepUpdatedAt)
+        let schedule = sleepScheduleEstimate(for: entry, hours: sleepHours)
         let assessment = entry.sleepHours.map { SleepAssessment.evaluate(hours: $0) }
             ?? SleepAssessment.evaluate(hours: sleepHours)
 
@@ -274,6 +276,11 @@ struct DashboardView: View {
                     Text("Meta: \(Int(sleepGoalHours))h")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(AppTheme.textSecondary)
+                    if let source = entry.sleepSourceLabel {
+                        Text(source)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(entry.sleepSource == .appleHealth ? AppTheme.accent : AppTheme.textSecondary)
+                    }
                 }
             }
 
@@ -314,6 +321,21 @@ struct DashboardView: View {
                     caption: "Tempo total"
                 )
             }
+
+            if entry.sleepSource == .appleHealth,
+               (entry.sleepDeepHours != nil || entry.sleepREMHours != nil || entry.sleepCoreHours != nil) {
+                HStack(spacing: 8) {
+                    if let deep = entry.sleepDeepHours {
+                        sleepStageChip(title: "Profundo", hours: deep)
+                    }
+                    if let rem = entry.sleepREMHours {
+                        sleepStageChip(title: "REM", hours: rem)
+                    }
+                    if let core = entry.sleepCoreHours {
+                        sleepStageChip(title: "Core", hours: core)
+                    }
+                }
+            }
         }
         .padding(16)
         .background {
@@ -325,6 +347,21 @@ struct DashboardView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private func sleepStageChip(title: String, hours: Double) -> some View {
+        VStack(spacing: 2) {
+            Text(title)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(AppTheme.textSecondary)
+            Text(String(format: "%.1fh", hours))
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AppTheme.textPrimary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(AppTheme.background.opacity(0.65))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func sleepMetricTile(icon: String, value: String, caption: String) -> some View {
@@ -715,11 +752,32 @@ struct DashboardView: View {
         return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 
-    /// Estima horário de dormir / acordar a partir das horas registradas.
-    private func sleepScheduleEstimate(hours: Double, loggedAt: Date?) -> (bedtime: String, wake: String, total: String) {
+    /// Usa horários reais do Apple Watch / Saúde quando existirem; senão estima.
+    private func sleepScheduleEstimate(
+        for entry: DailyWellnessEntry,
+        hours: Double
+    ) -> (bedtime: String, wake: String, total: String) {
         let calendar = regionAwareCalendar
+        let timeFormatter = DateFormatter()
+        timeFormatter.calendar = calendar
+        timeFormatter.locale = regionLocale
+        timeFormatter.timeZone = .autoupdatingCurrent
+        timeFormatter.setLocalizedDateFormatFromTemplate("Hm")
+
+        let totalHours = Int(hours)
+        let totalMinutes = Int(((hours - Double(totalHours)) * 60).rounded())
+        let totalLabel = "\(totalHours)h \(totalMinutes)min"
+
+        if let bed = entry.sleepBedtime, let wake = entry.sleepWakeTime {
+            return (
+                bedtime: timeFormatter.string(from: bed),
+                wake: timeFormatter.string(from: wake),
+                total: totalLabel
+            )
+        }
+
         var wakeComponents = calendar.dateComponents([.year, .month, .day], from: selectedWellnessDay)
-        if let loggedAt {
+        if let loggedAt = entry.sleepUpdatedAt {
             let hour = calendar.component(.hour, from: loggedAt)
             let minute = calendar.component(.minute, from: loggedAt)
             if (5..<14).contains(hour) {
@@ -736,18 +794,10 @@ struct DashboardView: View {
         let wakeDate = calendar.date(from: wakeComponents) ?? selectedWellnessDay
         let bedDate = wakeDate.addingTimeInterval(-max(hours, 0) * 3600)
 
-        let timeFormatter = DateFormatter()
-        timeFormatter.calendar = calendar
-        timeFormatter.locale = regionLocale
-        timeFormatter.timeZone = .autoupdatingCurrent
-        timeFormatter.setLocalizedDateFormatFromTemplate("Hm")
-
-        let totalHours = Int(hours)
-        let totalMinutes = Int(((hours - Double(totalHours)) * 60).rounded())
         return (
             bedtime: timeFormatter.string(from: bedDate),
             wake: timeFormatter.string(from: wakeDate),
-            total: "\(totalHours)h \(totalMinutes)min"
+            total: totalLabel
         )
     }
 

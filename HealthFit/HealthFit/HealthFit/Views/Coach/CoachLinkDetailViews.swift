@@ -78,6 +78,14 @@ struct CoachLinkDetailView: View {
                 .padding(.vertical, 4)
             }
 
+            if !isCoach {
+                Section {
+                    CoachStudentCredentialWarning(compact: true)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color.clear)
+                }
+            }
+
             if liveLink.status == .blockedPlan {
                 Section {
                     Text("O aluno precisa do plano Fit ou superior para liberar fichas, dietas e chat.")

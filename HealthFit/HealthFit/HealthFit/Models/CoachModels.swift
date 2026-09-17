@@ -16,6 +16,19 @@ enum CoachPrivacy {
     """
 
     static let shortLabel = "Vínculo profissional para fichas, dietas e chat (sem mapa ao vivo)."
+
+    /// Aviso ao aluno (Brasil): o app não valida registro ativo nos conselhos.
+    static let studentCredentialVerificationNotice = """
+    Confira se o CREF (personal — CONFEF/CREFs) ou o CRN (nutricionista — CFN/CRNs) \
+    informado está ativo no conselho brasileiro. O HealthFit exibe o número cadastrado \
+    pelo profissional, mas não valida a regularidade junto ao CONFEF, CFN ou conselhos regionais.
+    """
+
+    /// Versão curta para sheets de vínculo / aceite.
+    static let studentCredentialVerificationNoticeCompact = """
+    Antes de vincular, confira no Brasil se o CREF (CONFEF) ou o CRN (CFN) do profissional \
+    está ativo. O HealthFit não substitui a consulta oficial nos conselhos.
+    """
 }
 
 /// Política do chat Coach (personal / nutri).

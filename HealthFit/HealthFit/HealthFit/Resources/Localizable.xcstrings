@@ -2220,6 +2220,9 @@
     "Buscar sensores" : {
 
     },
+    "Buscar todos os usuários…" : {
+
+    },
     "Busque alunos pelo nome, apelido ou e-mail. Resultados do seu país aparecem primeiro; em seguida, outros países. Se a pessoa ainda não tem personal, você pode enviar uma mensagem motivacional com seu interesse e um código de vínculo." : {
 
     },
@@ -3160,6 +3163,9 @@
 
     },
     "Digite pelo menos 2 letras do nome, apelido ou e-mail." : {
+
+    },
+    "Digite pelo menos 2 letras para buscar no app inteiro." : {
 
     },
     "Digite pelo menos 2 letras." : {
@@ -4628,6 +4634,9 @@
 
     },
     "Nenhum treino realizado ainda." : {
+
+    },
+    "Nenhum usuário encontrado." : {
 
     },
     "Nenhuma análise registrada hoje." : {
@@ -10607,6 +10616,9 @@
     "Resultados" : {
 
     },
+    "Resultados da sua região primeiro; depois outros países." : {
+
+    },
     "Resumo" : {
 
     },
@@ -11623,6 +11635,9 @@
 
     },
     "Usar meta sugerida (%lld kcal)" : {
+
+    },
+    "Usar país do perfil" : {
 
     },
     "Use + e − para ajustar a quantidade. O número aparece ao lado e entra na lista de compras." : {

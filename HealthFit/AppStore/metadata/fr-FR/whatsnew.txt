@@ -1,6 +1,5 @@
-• HealthFit Pulse : stories, communautés et publications d’entraînement (18+)
-• 15 jours gratuits de Pulse dans l’app ; puis inclus dans le plan Basique (R$ 9,90)
-• Semaine sommeil/eau du Dashboard selon le calendrier de l’iPhone
-• Publier la carte du parcours (2D/3D) et envoyer le rapport au coach
-• Apple Watch synchronisé pour musculation, maison, cardio et méditation
-• Intensité perçue (1–10) dans le résumé
+• Pulse : recherche d’utilisateurs dans toute l’app (votre région d’abord)
+• Sommeil Apple Watch synchronisé avec Dashboard, check-in et profil
+• Avertissement élève pour vérifier CREF/CRN actifs au Brésil
+• iOS / iPadOS 18+ et watchOS 11+ ; compatibilité Xcode 27
+• Corrections d’API dépréciées et améliorations Pulse / Coach

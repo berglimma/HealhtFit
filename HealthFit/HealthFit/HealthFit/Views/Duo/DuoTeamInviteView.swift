@@ -403,9 +403,13 @@ struct DuoTeamInviteView: View {
             recipients: emailRecipients,
             subject: result.copy.emailSubject,
             body: result.copy.emailBody
-        ), UIApplication.shared.canOpenURL(url) {
-            await UIApplication.shared.open(url)
-            statusMessage = "Abrindo o app de e-mail com o convite motivador."
+        ) {
+            let opened = await UIApplication.shared.open(url)
+            if opened {
+                statusMessage = "Abrindo o app de e-mail com o convite motivador."
+            } else {
+                showMailUnavailable = true
+            }
         } else {
             showMailUnavailable = true
         }

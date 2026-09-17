@@ -149,6 +149,79 @@ enum PulseFirestoreService {
         }
     }
 
+    /// Busca usuários no Pulse (e no diretório geral) por nome/região.
+    /// Ordenação de proximidade fica no `PulseLocalStore` após o merge.
+    static func searchProfiles(
+        query: String,
+        excludingUserId: String? = nil,
+        preferCountryCode: String? = nil,
+        limit: Int = 60
+    ) async -> [PulsePerson] {
+        guard PulseExperimental.isCloudSyncEffective, isAvailable else { return [] }
+        let needle = query
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+            .lowercased()
+        guard needle.count >= 2 else { return [] }
+
+        var byId: [String: PulsePerson] = [:]
+
+        // 1) Perfis Pulse indexados
+        do {
+            let snap = try await profiles()
+                .order(by: "displayName")
+                .limit(to: 300)
+                .getDocuments()
+            for doc in snap.documents {
+                guard let person = decodePerson(doc.data(), documentId: doc.documentID) else { continue }
+                if let excludingUserId, person.id == excludingUserId { continue }
+                let hay = [
+                    person.displayName,
+                    person.city,
+                    person.state,
+                    person.countryName,
+                    person.regionLabel,
+                    person.emailHint
+                ]
+                .map {
+                    $0.folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR")).lowercased()
+                }
+                guard hay.contains(where: { $0.contains(needle) }) else { continue }
+                byId[person.id] = person
+            }
+        } catch {
+            print("[Pulse] Falha na busca de perfis Pulse: \(error.localizedDescription)")
+        }
+
+        // 2) Diretório geral do app (todos os usuários HealthFit)
+        do {
+            let directory = try await ProfileFirestoreService.searchUsers(
+                query: query,
+                excludingUserId: excludingUserId,
+                limit: limit,
+                preferCountryCode: preferCountryCode
+            )
+            for entry in directory {
+                if byId[entry.uid] != nil { continue }
+                byId[entry.uid] = PulsePerson(
+                    id: entry.uid,
+                    displayName: entry.shownName,
+                    emailHint: "",
+                    countryCode: entry.countryCode.map { CountryOption.resolvedCode($0) } ?? "",
+                    state: "",
+                    city: "",
+                    bio: "",
+                    communityFocus: .musculacao,
+                    notifyOnPosts: true
+                )
+            }
+        } catch {
+            print("[Pulse] Falha na busca do diretório: \(error.localizedDescription)")
+        }
+
+        return Array(byId.values.prefix(limit))
+    }
+
     // MARK: - Follows
 
     /// Status cloud: `pending` | `accepted` (mapeado de `requested` / `following`).

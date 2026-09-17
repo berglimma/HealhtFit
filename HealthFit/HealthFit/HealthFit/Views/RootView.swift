@@ -200,6 +200,8 @@ struct RootView: View {
             athleteName: authService.currentUser?.greetingName
         )
         Task { await ExternalWorkoutSyncService.shared.syncRecentExternalWorkouts(reason: .startup) }
+        bindAppleSleepSync()
+        Task { await wellnessService.syncSleepFromAppleHealth() }
 
         try? await Task.sleep(nanoseconds: 700_000_000)
 
@@ -280,6 +282,16 @@ struct RootView: View {
             athleteName: authService.currentUser?.greetingName
         )
         Task { await ExternalWorkoutSyncService.shared.syncRecentExternalWorkouts(reason: .foreground) }
+        bindAppleSleepSync()
+        Task { await wellnessService.syncSleepFromAppleHealth() }
+    }
+
+    private func bindAppleSleepSync() {
+        healthKitManager.onSleepAnalysisChanged = {
+            Task { @MainActor in
+                _ = await DailyWellnessService.shared.syncSleepFromAppleHealth()
+            }
+        }
     }
 
     private func syncWorkoutCloudHistory() {

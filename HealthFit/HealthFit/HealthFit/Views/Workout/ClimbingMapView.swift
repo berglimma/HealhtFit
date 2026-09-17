@@ -168,8 +168,13 @@ struct ClimbingMapView: View {
     }
 
     private func openInMaps(_ area: ClimbingArea) {
-        let placemark = MKPlacemark(coordinate: area.coordinate)
-        let item = MKMapItem(placemark: placemark)
+        let location = CLLocation(latitude: area.coordinate.latitude, longitude: area.coordinate.longitude)
+        let item: MKMapItem
+        if #available(iOS 26.0, *) {
+            item = MKMapItem(location: location, address: nil)
+        } else {
+            item = MKMapItem(placemark: MKPlacemark(coordinate: area.coordinate))
+        }
         item.name = area.name
         item.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving])
     }

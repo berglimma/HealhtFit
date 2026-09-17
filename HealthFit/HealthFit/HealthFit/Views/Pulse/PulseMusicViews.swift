@@ -613,7 +613,7 @@ final class PulseMusicPreviewPlayer: ObservableObject {
         }
 
         endObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
+            forName: AVPlayerItem.didPlayToEndTimeNotification,
             object: item,
             queue: .main
         ) { [box = WeakMainActorBox(self)] _ in

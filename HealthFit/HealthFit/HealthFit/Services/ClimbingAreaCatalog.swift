@@ -180,16 +180,34 @@ final class ClimbingAreaCatalog: ObservableObject {
         }
 
         nearbyResults = response.mapItems.compactMap { item in
-            guard let name = item.name, let location = item.placemark.location else { return nil }
-            let region = [item.placemark.locality, item.placemark.administrativeArea]
-                .compactMap { $0 }
-                .joined(separator: " · ")
+            guard let name = item.name else { return nil }
+
+            let coordinate: CLLocationCoordinate2D
+            let region: String
+            if #available(iOS 26.0, *) {
+                coordinate = item.location.coordinate
+                if let cityContext = item.addressRepresentations?.cityWithContext, !cityContext.isEmpty {
+                    region = cityContext
+                } else if let city = item.addressRepresentations?.cityName, !city.isEmpty {
+                    region = city
+                } else if let short = item.address?.shortAddress, !short.isEmpty {
+                    region = short
+                } else {
+                    region = ""
+                }
+            } else {
+                guard let location = item.placemark.location else { return nil }
+                coordinate = location.coordinate
+                region = [item.placemark.locality, item.placemark.administrativeArea]
+                    .compactMap { $0 }
+                    .joined(separator: " · ")
+            }
 
             return ClimbingArea(
                 name: name,
                 region: region.isEmpty ? "Encontrado no mapa" : region,
-                latitude: location.coordinate.latitude,
-                longitude: location.coordinate.longitude,
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude,
                 disciplines: [.sport],
                 routeCount: 0,
                 gradeRange: "Não catalogado",

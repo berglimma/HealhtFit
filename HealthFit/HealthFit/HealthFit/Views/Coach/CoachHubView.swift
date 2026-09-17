@@ -280,6 +280,8 @@ struct CoachHubView: View {
             title: "Meus profissionais",
             empty: studentProfessionalsEmptyMessage
         )
+
+        CoachStudentCredentialWarning(compact: true)
     }
 
     private var studentProfessionalsEmptyMessage: String {
@@ -321,6 +323,7 @@ struct CoachHubView: View {
                         Text(message.text)
                             .font(.caption)
                             .foregroundStyle(AppTheme.textPrimary)
+                        CoachStudentCredentialWarning(compact: true)
                         HStack(spacing: 10) {
                             if message.inviteCode != nil {
                                 Button("Aceitar vínculo") {
@@ -407,6 +410,11 @@ struct CoachHubView: View {
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                 }
+                Section {
+                    CoachStudentCredentialWarning(compact: true)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                        .listRowBackground(Color.clear)
+                }
                 if let joinStatus {
                     Text(joinStatus).foregroundStyle(.secondary)
                 }
@@ -425,7 +433,7 @@ struct CoachHubView: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
     }
 }
 

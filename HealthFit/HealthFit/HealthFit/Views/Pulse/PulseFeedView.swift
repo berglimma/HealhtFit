@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private enum PulseBottomTab: Hashable {
     case feed
@@ -27,6 +28,19 @@ private struct PulsePostVisibilityKey: PreferenceKey {
         nextValue: () -> [UUID: PulseMusicVisibility]
     ) {
         value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
+/// Substitui `UIScreen.main` (depreciado no iOS 26) usando a scene ativa.
+@MainActor
+private enum PulseScreenMetrics {
+    static var bounds: CGRect {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        if let screen = scenes.first(where: { $0.activationState == .foregroundActive })?.screen
+            ?? scenes.first?.screen {
+            return screen.bounds
+        }
+        return CGRect(x: 0, y: 0, width: 393, height: 852)
     }
 }
 
@@ -127,6 +141,13 @@ struct PulseFeedView: View {
                 }
                 if canAccessPulseUGC {
                     ToolbarItemGroup(placement: .primaryAction) {
+                        Button {
+                            selectedTab = .people
+                        } label: {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                        .accessibilityLabel(L10n.Pulse.tabPeople)
                         if PulseModerationAccess.canModerate(email: authService.currentUser?.email) {
                             Button {
                                 showModerationQueue = true
@@ -1926,7 +1947,7 @@ private struct PulseStoryComposeView: View {
         // Exporta só o enquadramento (pan/zoom); textos seguem como overlays no viewer.
         let width: CGFloat = 1080
         let height: CGFloat = 1920
-        let previewWidth = max(UIScreen.main.bounds.width - 40, 1)
+        let previewWidth = max(PulseScreenMetrics.bounds.width - 40, 1)
         let previewHeight: CGFloat = 420
         let scaleX = width / previewWidth
         let scaleY = height / previewHeight
@@ -2478,7 +2499,7 @@ private struct PulsePostCard: View {
         .background {
             GeometryReader { geo in
                 let frame = geo.frame(in: .global)
-                let screen = UIScreen.main.bounds
+                let screen = PulseScreenMetrics.bounds
                 let report = Self.musicVisibility(
                     postId: post.id,
                     hasPreview: post.music?.previewURL != nil,

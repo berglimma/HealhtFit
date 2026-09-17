@@ -1,6 +1,6 @@
-• HealthFit Pulse: workout stories, communities, and posts (18+)
-• 15-day Pulse trial in the app; then included with Basic (R$ 9.90)
-• Dashboard sleep/water week follows your iPhone calendar and region
-• Share route maps (2D/3D) and email the workout report to your trainer
-• Apple Watch stays in sync for strength, home, cardio, and meditation
-• Perceived intensity (1–10) on the workout summary
+• Pulse: search everyone in the app (your region first, then other countries)
+• Apple Watch sleep synced into Dashboard, morning check-in, and profile
+• Student notice to verify active CREF/CRN with Brazilian councils
+• Requires iOS / iPadOS 18+ and watchOS 11+; Xcode 27 compatibility
+• Deprecated API fixes (HealthKit, MapKit, BackgroundTasks, and more)
+• SurfPro jump charts, coach body-fat map, and Pulse improvements

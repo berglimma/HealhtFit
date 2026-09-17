@@ -239,7 +239,7 @@ final class AppIconInactivityService {
 
         let request = BGAppRefreshTaskRequest(identifier: Self.backgroundTaskHealthSync)
         request.earliestBeginDate = redFireDate
-        try? scheduler.submit(request)
+        Self.submitBackgroundTask(request, on: scheduler)
     }
 
     private func scheduleBrokenAlertIfNeeded(from referenceDate: Date) {
@@ -251,7 +251,17 @@ final class AppIconInactivityService {
 
         let request = BGAppRefreshTaskRequest(identifier: Self.backgroundTaskBroken)
         request.earliestBeginDate = fireDate
-        try? scheduler.submit(request)
+        Self.submitBackgroundTask(request, on: scheduler)
+    }
+
+    private static func submitBackgroundTask(_ request: BGAppRefreshTaskRequest, on scheduler: BGTaskScheduler) {
+        if #available(iOS 27.0, *) {
+            Task {
+                try? await scheduler.submitTaskRequest(request)
+            }
+        } else {
+            try? scheduler.submit(request)
+        }
     }
 
     private func currentDisplayState() -> IconState {

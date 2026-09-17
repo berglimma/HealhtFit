@@ -358,6 +358,8 @@ struct CoachSearchResultCard: View {
                     .lineLimit(3)
             }
 
+            CoachStudentCredentialWarning()
+
             Text("Peça o código de convite ao profissional para vincular.")
                 .font(.caption2)
                 .foregroundStyle(AppTheme.textSecondary)
@@ -370,5 +372,40 @@ struct CoachSearchResultCard: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(AppTheme.accent.opacity(0.15), lineWidth: 1)
         )
+    }
+}
+
+/// Aviso padrão para o aluno verificar CREF/CRN nos conselhos oficiais do Brasil.
+struct CoachStudentCredentialWarning: View {
+    var compact: Bool = false
+
+    private var notice: String {
+        compact
+            ? CoachPrivacy.studentCredentialVerificationNoticeCompact
+            : CoachPrivacy.studentCredentialVerificationNotice
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.shield.fill")
+                .font(compact ? .caption.weight(.semibold) : .subheadline.weight(.semibold))
+                .foregroundStyle(.orange)
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(compact ? "CREF / CRN — Brasil" : "Verifique o registro profissional (Brasil)")
+                    .font((compact ? Font.caption : Font.subheadline).weight(.bold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text(notice)
+                    .font(compact ? .caption2 : .caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(compact ? 10 : 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 }

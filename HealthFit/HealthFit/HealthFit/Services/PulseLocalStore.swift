@@ -77,6 +77,8 @@ final class PulseLocalStore: ObservableObject {
     }
 
     var visiblePosts: [PulsePost] {
+        // Visibilidade por comunidade (grupo), não por país/região —
+        // membros do mesmo grupo veem posts de qualquer localidade.
         posts
             .filter(\.isActive)
             .filter { !$0.isHidden }
@@ -732,6 +734,38 @@ final class PulseLocalStore: ObservableObject {
             people.append(updated)
         }
         persistPeople()
+        Task {
+            await PulseFirestoreService.upsertProfile(updated)
+        }
+    }
+
+    /// Incorpora perfis remotos sem apagar dados locais mais ricos (cidade/estado/bio).
+    func mergePeople(_ remote: [PulsePerson]) {
+        guard !remote.isEmpty else { return }
+        var byId = Dictionary(uniqueKeysWithValues: people.map { ($0.id, $0) })
+        for person in remote {
+            if var local = byId[person.id] {
+                if local.displayName != person.displayName, !person.displayName.isEmpty {
+                    local.displayName = person.displayName
+                }
+                if local.countryCode.isEmpty, !person.countryCode.isEmpty {
+                    local.countryCode = person.countryCode
+                }
+                if local.state.isEmpty, !person.state.isEmpty { local.state = person.state }
+                if local.city.isEmpty, !person.city.isEmpty { local.city = person.city }
+                if local.bio.isEmpty, !person.bio.isEmpty { local.bio = person.bio }
+                if local.emailHint.isEmpty, !person.emailHint.isEmpty {
+                    local.emailHint = person.emailHint
+                }
+                byId[person.id] = local
+            } else {
+                byId[person.id] = person
+            }
+        }
+        people = Array(byId.values).sorted {
+            $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+        }
+        persistPeople()
     }
 
     func updateMyBio(userId: String, bio: String) {
@@ -833,12 +867,26 @@ final class PulseLocalStore: ObservableObject {
         return people
             .filter { person in
                 if blockedUserIds.contains(person.id) { return false }
+                // Filtro duro só quando o usuário escolhe país/estado/cidade explicitamente.
+                if !filterCountry.isEmpty,
+                   person.countryCode.caseInsensitiveCompare(filterCountry) != .orderedSame {
+                    return false
+                }
+                if !filterState.isEmpty,
+                   !person.state.localizedCaseInsensitiveContains(filterState) {
+                    return false
+                }
+                if !filterCity.isEmpty,
+                   !person.city.localizedCaseInsensitiveContains(filterCity) {
+                    return false
+                }
                 guard !q.isEmpty else { return true }
                 return person.displayName.localizedCaseInsensitiveContains(q)
                     || person.city.localizedCaseInsensitiveContains(q)
                     || person.state.localizedCaseInsensitiveContains(q)
                     || person.countryName.localizedCaseInsensitiveContains(q)
                     || person.regionLabel.localizedCaseInsensitiveContains(q)
+                    || person.emailHint.localizedCaseInsensitiveContains(q)
             }
             .sorted { lhs, rhs in
                 let left = peopleLocalityScore(
@@ -856,6 +904,68 @@ final class PulseLocalStore: ObservableObject {
                 if left != right { return left > right }
                 return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
             }
+    }
+
+    /// Busca local + nuvem (Pulse + diretório do app). Prioriza a região do buscador.
+    @discardableResult
+    func searchPeopleRemotely(
+        query: String,
+        currentUserId: String,
+        countryCode: String?,
+        state: String?,
+        city: String?,
+        preferCountryCode: String?,
+        preferState: String?,
+        preferCity: String?
+    ) async -> [PulsePerson] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count >= 2 {
+            let remote = await PulseFirestoreService.searchProfiles(
+                query: trimmed,
+                excludingUserId: currentUserId,
+                preferCountryCode: preferCountryCode,
+                limit: 80
+            )
+            mergePeople(remote)
+        }
+        return searchPeople(
+            query: query,
+            countryCode: countryCode,
+            state: state,
+            city: city,
+            preferCountryCode: preferCountryCode,
+            preferState: preferState,
+            preferCity: preferCity
+        )
+    }
+
+    /// Agrupa resultados: região/país próximo vs demais países.
+    func partitionPeopleByLocality(
+        _ people: [PulsePerson],
+        preferCountryCode: String?,
+        preferState: String?,
+        preferCity: String?
+    ) -> (nearby: [PulsePerson], worldwide: [PulsePerson]) {
+        let country = preferCountryCode?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let state = preferState?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let city = preferCity?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        var nearby: [PulsePerson] = []
+        var worldwide: [PulsePerson] = []
+        for person in people {
+            let score = peopleLocalityScore(
+                person: person,
+                preferCountry: country,
+                preferState: state,
+                preferCity: city
+            )
+            // score >= 2 → mesmo país (região priorizada); demais → outros países
+            if score >= 2 {
+                nearby.append(person)
+            } else {
+                worldwide.append(person)
+            }
+        }
+        return (nearby, worldwide)
     }
 
     /// 4 = país+estado+cidade, 3 = país+estado/cidade, 2 = mesmo país, 1 = sem país, 0 = outro país.
@@ -1071,7 +1181,7 @@ final class PulseLocalStore: ObservableObject {
 
         async let remotePosts = PulseFirestoreService.fetchActivePosts(limit: 40)
         async let remoteStories = PulseFirestoreService.fetchActiveStories(limit: 40)
-        async let remotePeople = PulseFirestoreService.fetchProfiles(limit: 80)
+        async let remotePeople = PulseFirestoreService.fetchProfiles(limit: 200)
         async let remoteFollows = PulseFirestoreService.fetchFollows(for: currentUserId)
         async let remoteBlocks = PulseFirestoreService.fetchBlocks()
 
@@ -1130,12 +1240,7 @@ final class PulseLocalStore: ObservableObject {
         }
 
         if !cloudPeople.isEmpty {
-            var byId = Dictionary(uniqueKeysWithValues: people.map { ($0.id, $0) })
-            for person in cloudPeople { byId[person.id] = person }
-            people = Array(byId.values).sorted {
-                $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
-            }
-            persistPeople()
+            mergePeople(cloudPeople)
         }
 
         if !cloudFollows.isEmpty {
