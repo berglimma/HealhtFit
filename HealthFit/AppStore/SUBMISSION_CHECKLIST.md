@@ -15,7 +15,7 @@ Versão alvo: **1.0.6 (Build 18)** · Bundle `luan.com.healthfit.app`
 - [x] Versão Xcode **1.0.6 (18)**
 - [x] `whatsnew.txt` atualizado (pt-BR / en-US / es-ES / fr-FR)
 - [x] `review_notes.txt` atualizado
-- [ ] Archive + upload build **18**
+- [x] Archive + upload build **18**
 - [ ] Attach build 18 na versão 1.0.6
 - [ ] Submit for Review
 
