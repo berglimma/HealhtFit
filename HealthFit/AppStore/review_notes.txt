@@ -1,4 +1,4 @@
-HealthFit 1.0.5 (Build 17)
+HealthFit 1.0.6 (Build 18)
 
 Principais mudanças deste build:
 - Pulse: busca global de usuários com prioridade regional
