@@ -15,18 +15,15 @@ Versão alvo: **1.0.7 (Build 19)** · Bundle `luan.com.healthfit.app`
 - [x] Versão Xcode **1.0.7 (19)**
 - [x] `whatsnew.txt` atualizado (pt-BR / en-US / es-ES / fr-FR)
 - [x] `review_notes.txt` atualizado
-- [ ] Archive + upload build **19**
-- [ ] Attach build 19 na versão 1.0.7
-- [ ] Enviado para revisão
+- [x] Archive + upload build **19**
+- [x] Attach build 19 na versão 1.0.7
+- [x] Enviado para revisão (**Aguardando revisão**)
 
 ## App Store Connect
 
 1. https://appstoreconnect.apple.com/apps/6798621208
-2. Se **1.0.6** ainda estiver “Aguardando revisão”, cancelar/remover da fila antes de criar **1.0.7**
-3. Versão **1.0.7** → What’s New de `metadata/*/whatsnew.txt`
-4. Review Notes de `review_notes.txt`
-5. Selecionar build **19** quando processar
-6. **Submit for Review**
+2. Versão **1.0.7** com build **19** — Aguardando revisão
+3. **1.0.6** permanece Pronto para distribuição (lançamento agendado 17/09 22:00)
 
 ## Itens alterados (1.0.7)
 
