@@ -1,5 +1,5 @@
-• Apple Watch: calories and heart rate synced across all workouts (strength, cardio, meditation)
-• Fix for frozen BPM on iPhone during active workouts
-• Pulse: Deezer playback fix and story music resume when returning to the feed
-• Sleep: “monitoring enabled” status and when the sleep card updates; manual entry still available
-• Apple Watch sleep on Dashboard, morning check-in, and Profile (when synced via Health)
+• Pulse: people search from the first letter, with profile photo and tappable search
+• Pulse: follow-request notifications arrive even with the screen locked
+• Pulse slogan visible under the name
+• Apple Watch: cleaner workout screen without modality labels
+• Sleep on Dashboard: Watch monitoring and manual logging

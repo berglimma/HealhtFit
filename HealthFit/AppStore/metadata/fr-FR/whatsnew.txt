@@ -1,5 +1,5 @@
-• Apple Watch : calories et BPM synchronisés pour tous les exercices (musculation, cardio, méditation)
-• Correction du BPM figé sur iPhone pendant l’entraînement
-• Pulse : correction de la lecture Deezer et reprise de la musique des stories au retour au fil
-• Sommeil : statut « surveillance activée » et info sur la mise à jour de la carte ; saisie manuelle toujours possible
-• Sommeil Apple Watch sur le Dashboard, le check-in et le profil (si synchronisé via Santé)
+• Pulse : recherche de personnes dès la 1ʳᵉ lettre, avec photo de profil et loupe
+• Pulse : la notification de demande d’abonnement arrive même écran verrouillé
+• Slogan Pulse visible sous le nom
+• Apple Watch : écran d’entraînement sans libellé de modalité
+• Sommeil sur le Dashboard : suivi Watch et saisie manuelle

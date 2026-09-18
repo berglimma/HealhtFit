@@ -1134,6 +1134,8 @@ struct PulsePerson: Identifiable, Codable, Hashable {
     var bio: String
     var communityFocus: PulseCommunity
     var notifyOnPosts: Bool
+    /// URL da foto de perfil (userDirectory / Storage).
+    var photoURL: String?
 
     var flagEmoji: String { CountryOption.flagEmoji(for: countryCode) }
     var countryName: String { CountryOption.option(for: countryCode)?.name ?? countryCode }
@@ -1161,7 +1163,8 @@ struct PulsePerson: Identifiable, Codable, Hashable {
         city: String,
         bio: String,
         communityFocus: PulseCommunity,
-        notifyOnPosts: Bool = true
+        notifyOnPosts: Bool = true,
+        photoURL: String? = nil
     ) {
         self.id = id
         self.displayName = displayName
@@ -1172,6 +1175,7 @@ struct PulsePerson: Identifiable, Codable, Hashable {
         self.bio = String(bio.prefix(PulseExperimental.maxBioCharacters))
         self.communityFocus = communityFocus
         self.notifyOnPosts = notifyOnPosts
+        self.photoURL = photoURL
     }
 
     init(from decoder: Decoder) throws {
@@ -1183,6 +1187,7 @@ struct PulsePerson: Identifiable, Codable, Hashable {
         bio = String((try container.decode(String.self, forKey: .bio)).prefix(PulseExperimental.maxBioCharacters))
         communityFocus = try container.decode(PulseCommunity.self, forKey: .communityFocus)
         notifyOnPosts = try container.decodeIfPresent(Bool.self, forKey: .notifyOnPosts) ?? true
+        photoURL = try container.decodeIfPresent(String.self, forKey: .photoURL)
 
         let decodedState = try container.decodeIfPresent(String.self, forKey: .state)
         let decodedCity = try container.decodeIfPresent(String.self, forKey: .city)
@@ -1216,10 +1221,11 @@ struct PulsePerson: Identifiable, Codable, Hashable {
         try container.encode(bio, forKey: .bio)
         try container.encode(communityFocus, forKey: .communityFocus)
         try container.encode(notifyOnPosts, forKey: .notifyOnPosts)
+        try container.encodeIfPresent(photoURL, forKey: .photoURL)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, displayName, emailHint, countryCode, state, city, region, bio, communityFocus, notifyOnPosts
+        case id, displayName, emailHint, countryCode, state, city, region, bio, communityFocus, notifyOnPosts, photoURL
     }
 }
 

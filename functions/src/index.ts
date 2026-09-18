@@ -2,7 +2,7 @@ import {initializeApp} from "firebase-admin/app";
 import {getAuth} from "firebase-admin/auth";
 import {getFirestore, Timestamp} from "firebase-admin/firestore";
 import {getMessaging} from "firebase-admin/messaging";
-import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import {onDocumentCreated, onDocumentWritten} from "firebase-functions/v2/firestore";
 import {onCall, HttpsError, onRequest} from "firebase-functions/v2/https";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {logger} from "firebase-functions";
@@ -209,6 +209,134 @@ export const onDuoChatMessageCreated = onDocumentCreated(
 
     logger.info("onDuoChatMessageCreated push", {
       teamId,
+      successCount: response.successCount,
+      failureCount: response.failureCount,
+    });
+  },
+);
+
+/**
+ * Push FCM quando alguém solicita seguir no HealthFit Pulse (`pulseFollows` status pending).
+ * Dispara na criação ou na transição para pending (ex.: novo pedido após cancelamento).
+ * Entrega APNs priority 10 — chega com app em background / tela bloqueada.
+ */
+export const onPulseFollowWritten = onDocumentWritten(
+  {
+    document: "pulseFollows/{followId}",
+    timeoutSeconds: 30,
+    memory: "256MiB",
+    concurrency: 20,
+  },
+  async (event) => {
+    const afterSnap = event.data?.after;
+    if (!afterSnap?.exists) return;
+    const after = afterSnap.data() as Record<string, unknown> | undefined;
+    if (!after) return;
+
+    const status = String(after.status ?? "");
+    if (status !== "pending") return;
+
+    const before = event.data?.before?.exists
+      ? (event.data.before.data() as Record<string, unknown> | undefined)
+      : undefined;
+    if (before && String(before.status ?? "") === "pending") {
+      // Já era pending — evita spam em merges sem mudança de status.
+      return;
+    }
+
+    const fromUserId = String(after.fromUserId ?? "").trim();
+    const toUserId = String(after.toUserId ?? "").trim();
+    if (!fromUserId || !toUserId || fromUserId === toUserId) return;
+
+    let fromName = String(after.fromName ?? "").trim();
+    if (!fromName) {
+      try {
+        const dir = await db.collection("userDirectory").doc(fromUserId).get();
+        const d = dir.data() ?? {};
+        const display = String(d.displayName ?? "").trim();
+        const legal = String(d.name ?? "").trim();
+        fromName = display || legal;
+      } catch (err) {
+        logger.warn("onPulseFollowWritten: directory lookup failed", err);
+      }
+    }
+    if (!fromName) fromName = "Alguém";
+
+    const title = "HealthFit Pulse";
+    const body = `${fromName} quer te seguir`;
+
+    const tokenSnap = await db
+      .collection("users")
+      .doc(toUserId)
+      .collection("fcmTokens")
+      .limit(8)
+      .get();
+    const tokens: string[] = [];
+    for (const doc of tokenSnap.docs) {
+      const token = doc.data().token as string | undefined;
+      if (token && token.length > 20) tokens.push(token);
+    }
+    const uniqueTokens = Array.from(new Set(tokens));
+    if (uniqueTokens.length === 0) {
+      logger.info("onPulseFollowWritten: no FCM tokens", {toUserId, fromUserId});
+      return;
+    }
+
+    const response = await getMessaging().sendEachForMulticast({
+      tokens: uniqueTokens,
+      notification: {title, body},
+      data: {
+        type: "pulseFollowRequest",
+        kind: "pulseFollowRequest",
+        category: "PULSE_FOLLOW",
+        fromUserId,
+        toUserId,
+        fromName,
+        followId: String(event.params.followId ?? ""),
+      },
+      android: {priority: "high"},
+      apns: {
+        headers: {
+          "apns-priority": "10",
+          "apns-push-type": "alert",
+        },
+        payload: {
+          aps: {
+            alert: {title, body},
+            sound: "default",
+            badge: 1,
+            category: "PULSE_FOLLOW",
+          },
+        },
+      },
+    });
+
+    for (let i = 0; i < response.responses.length; i++) {
+      const res = response.responses[i];
+      if (res.success) continue;
+      const code = res.error?.code ?? "";
+      if (
+        !code.includes("registration-token-not-registered") &&
+        !code.includes("invalid-registration-token")
+      ) {
+        continue;
+      }
+      const badToken = uniqueTokens[i];
+      const hit = await db
+        .collection("users")
+        .doc(toUserId)
+        .collection("fcmTokens")
+        .where("token", "==", badToken)
+        .limit(3)
+        .get();
+      const batch = db.batch();
+      hit.docs.forEach((d) => batch.delete(d.ref));
+      if (!hit.empty) await batch.commit();
+    }
+
+    logger.info("onPulseFollowWritten push", {
+      followId: event.params.followId,
+      toUserId,
       successCount: response.successCount,
       failureCount: response.failureCount,
     });

@@ -726,7 +726,8 @@ final class PulseLocalStore: ObservableObject {
             city: city.isEmpty ? (existing?.city ?? "") : city,
             bio: trimmedBio,
             communityFocus: focus,
-            notifyOnPosts: existing?.notifyOnPosts ?? true
+            notifyOnPosts: existing?.notifyOnPosts ?? true,
+            photoURL: existing?.photoURL
         )
         if let idx = people.firstIndex(where: { $0.id == userId }) {
             people[idx] = updated
@@ -756,6 +757,10 @@ final class PulseLocalStore: ObservableObject {
                 if local.bio.isEmpty, !person.bio.isEmpty { local.bio = person.bio }
                 if local.emailHint.isEmpty, !person.emailHint.isEmpty {
                     local.emailHint = person.emailHint
+                }
+                if (local.photoURL == nil || local.photoURL?.isEmpty == true),
+                   let remotePhoto = person.photoURL, !remotePhoto.isEmpty {
+                    local.photoURL = remotePhoto
                 }
                 byId[person.id] = local
             } else {
@@ -907,6 +912,7 @@ final class PulseLocalStore: ObservableObject {
     }
 
     /// Busca local + nuvem (Pulse + diretório do app). Prioriza a região do buscador.
+    /// Hits remotos já validados no diretório/Pulse não são descartados pelo re-filtro local de texto.
     @discardableResult
     func searchPeopleRemotely(
         query: String,
@@ -919,16 +925,19 @@ final class PulseLocalStore: ObservableObject {
         preferCity: String?
     ) async -> [PulsePerson] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.count >= 2 {
+        var remoteMatchedIds = Set<String>()
+        if !trimmed.isEmpty {
             let remote = await PulseFirestoreService.searchProfiles(
                 query: trimmed,
                 excludingUserId: currentUserId,
                 preferCountryCode: preferCountryCode,
                 limit: 80
             )
+            remoteMatchedIds = Set(remote.map(\.id))
             mergePeople(remote)
         }
-        return searchPeople(
+
+        let localFiltered = searchPeople(
             query: query,
             countryCode: countryCode,
             state: state,
@@ -937,6 +946,51 @@ final class PulseLocalStore: ObservableObject {
             preferState: preferState,
             preferCity: preferCity
         )
+        guard !remoteMatchedIds.isEmpty else { return localFiltered }
+
+        let alreadyShown = Set(localFiltered.map(\.id))
+        let filterCountry = countryCode?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let filterState = state?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let filterCity = city?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let boostCountry = (preferCountryCode ?? filterCountry).trimmingCharacters(in: .whitespacesAndNewlines)
+        let boostState = (preferState ?? filterState).trimmingCharacters(in: .whitespacesAndNewlines)
+        let boostCity = (preferCity ?? filterCity).trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let recovered = people.filter { person in
+            guard remoteMatchedIds.contains(person.id), !alreadyShown.contains(person.id) else { return false }
+            if blockedUserIds.contains(person.id) { return false }
+            if !filterCountry.isEmpty,
+               person.countryCode.caseInsensitiveCompare(filterCountry) != .orderedSame {
+                return false
+            }
+            if !filterState.isEmpty,
+               !person.state.localizedCaseInsensitiveContains(filterState) {
+                return false
+            }
+            if !filterCity.isEmpty,
+               !person.city.localizedCaseInsensitiveContains(filterCity) {
+                return false
+            }
+            return true
+        }
+        guard !recovered.isEmpty else { return localFiltered }
+
+        return (localFiltered + recovered).sorted { lhs, rhs in
+            let left = peopleLocalityScore(
+                person: lhs,
+                preferCountry: boostCountry,
+                preferState: boostState,
+                preferCity: boostCity
+            )
+            let right = peopleLocalityScore(
+                person: rhs,
+                preferCountry: boostCountry,
+                preferState: boostState,
+                preferCity: boostCity
+            )
+            if left != right { return left > right }
+            return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+        }
     }
 
     /// Agrupa resultados: região/país próximo vs demais países.
@@ -1011,13 +1065,23 @@ final class PulseLocalStore: ObservableObject {
             )
         }
         let name = people.first(where: { $0.id == userId })?.displayName ?? L10n.Pulse.someone
-        pushNotification(
-            title: L10n.Pulse.notifyFollowRequestTitle,
-            body: L10n.Pulse.notifyFollowRequestBody(name)
+        // Inbox local do remetente: confirmação. O push ao destinatário vem via FCM (Cloud Function).
+        notifications.insert(
+            PulseSocialNotification(
+                title: L10n.Pulse.notifyFollowRequestTitle,
+                body: L10n.Pulse.notifyFollowRequestBody(name)
+            ),
+            at: 0
         )
+        persistNotifications()
         persistFollows()
         Task {
-            await PulseFirestoreService.upsertFollow(from: userId, to: targetId, status: .requested)
+            await PulseFirestoreService.upsertFollow(
+                from: userId,
+                to: targetId,
+                status: .requested,
+                fromName: name
+            )
         }
     }
 
@@ -1041,11 +1105,17 @@ final class PulseLocalStore: ObservableObject {
     func declineFollow(from requesterId: String, to userId: String) {
         follows.removeAll { $0.fromUserId == requesterId && $0.toUserId == userId && $0.status == .requested }
         persistFollows()
+        Task {
+            await PulseFirestoreService.deleteFollow(from: requesterId, to: userId)
+        }
     }
 
     func cancelFollowRequest(from userId: String, to targetId: String) {
         follows.removeAll { $0.fromUserId == userId && $0.toUserId == targetId }
         persistFollows()
+        Task {
+            await PulseFirestoreService.deleteFollow(from: userId, to: targetId)
+        }
     }
 
     func incomingFollowRequests(for userId: String) -> [PulseFollowRelation] {
@@ -1173,22 +1243,43 @@ final class PulseLocalStore: ObservableObject {
     }
 
     /// Pull-based sync (sem listeners). Mescla nuvem no store local respeitando expiresAt.
+    /// Follows sincronizam sempre que o Firebase estiver disponível (push de pedido de follow).
     func refreshFromCloud(currentUserId: String) async {
-        guard PulseExperimental.isCloudSyncEffective else { return }
         guard !isRefreshingCloud else { return }
         isRefreshingCloud = true
         defer { isRefreshingCloud = false }
 
+        let cloudFollows = await PulseFirestoreService.fetchFollows(for: currentUserId)
+        if !cloudFollows.isEmpty {
+            var keys = Set(follows.map { "\($0.fromUserId)_\($0.toUserId)" })
+            for rel in cloudFollows {
+                let key = "\(rel.fromUserId)_\(rel.toUserId)"
+                if keys.contains(key) {
+                    if let idx = follows.firstIndex(where: { $0.fromUserId == rel.fromUserId && $0.toUserId == rel.toUserId }) {
+                        follows[idx].status = rel.status
+                    }
+                } else {
+                    follows.append(rel)
+                    keys.insert(key)
+                }
+            }
+            persistFollows()
+        }
+
+        guard PulseExperimental.isCloudSyncEffective else {
+            resetFeedPagination()
+            pruneExpiredContent()
+            return
+        }
+
         async let remotePosts = PulseFirestoreService.fetchActivePosts(limit: 40)
         async let remoteStories = PulseFirestoreService.fetchActiveStories(limit: 40)
         async let remotePeople = PulseFirestoreService.fetchProfiles(limit: 200)
-        async let remoteFollows = PulseFirestoreService.fetchFollows(for: currentUserId)
         async let remoteBlocks = PulseFirestoreService.fetchBlocks()
 
         let cloudPosts = await remotePosts
         let cloudStories = await remoteStories
         let cloudPeople = await remotePeople
-        let cloudFollows = await remoteFollows
         let cloudBlocks = await remoteBlocks
 
         if !cloudPosts.isEmpty {
@@ -1215,7 +1306,6 @@ final class PulseLocalStore: ObservableObject {
             var byId = Dictionary(uniqueKeysWithValues: stories.map { ($0.id, $0) })
             for remote in cloudStories {
                 if var local = byId[remote.id] {
-                    // Preserva mídia local, curtidas e “já visto”; atualiza meta da nuvem.
                     local.remoteMediaURL = remote.remoteMediaURL ?? local.remoteMediaURL
                     local.expiresAt = remote.expiresAt
                     local.authorName = remote.authorName
@@ -1241,22 +1331,6 @@ final class PulseLocalStore: ObservableObject {
 
         if !cloudPeople.isEmpty {
             mergePeople(cloudPeople)
-        }
-
-        if !cloudFollows.isEmpty {
-            var keys = Set(follows.map { "\($0.fromUserId)_\($0.toUserId)" })
-            for rel in cloudFollows {
-                let key = "\(rel.fromUserId)_\(rel.toUserId)"
-                if keys.contains(key) {
-                    if let idx = follows.firstIndex(where: { $0.fromUserId == rel.fromUserId && $0.toUserId == rel.toUserId }) {
-                        follows[idx].status = rel.status
-                    }
-                } else {
-                    follows.append(rel)
-                    keys.insert(key)
-                }
-            }
-            persistFollows()
         }
 
         if !cloudBlocks.isEmpty {

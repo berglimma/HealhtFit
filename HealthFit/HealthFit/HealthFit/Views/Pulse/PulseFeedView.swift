@@ -45,6 +45,9 @@ private enum PulseScreenMetrics {
 }
 
 struct PulseFeedView: View {
+    /// Abre direto na aba Pessoas (ex.: toque em notificação de follow).
+    var initialPeopleTab: Bool = false
+
     @EnvironmentObject private var authService: AuthService
     @EnvironmentObject private var workoutStore: WorkoutStore
     @EnvironmentObject private var shareCardStore: WorkoutShareCardStore
@@ -86,6 +89,16 @@ struct PulseFeedView: View {
             Group {
                 if canAccessPulseUGC {
                     VStack(spacing: 0) {
+                        Text(PulseExperimental.tagline)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(AppTheme.background)
+
                         Group {
                             switch selectedTab {
                             case .feed:
@@ -123,21 +136,14 @@ struct PulseFeedView: View {
                     Button(L10n.Pulse.close) { dismiss() }
                 }
                 ToolbarItem(placement: .principal) {
-                    VStack(spacing: 2) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "heart.circle.fill")
-                                .foregroundStyle(AppTheme.accent)
-                            Text("Pulse")
-                                .font(.headline.weight(.bold))
-                        }
-                        if canAccessPulseUGC {
-                            Text(PulseExperimental.tagline)
-                                .font(.caption2)
-                                .foregroundStyle(AppTheme.textSecondary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
+                    HStack(spacing: 6) {
+                        Image(systemName: "heart.circle.fill")
+                            .foregroundStyle(AppTheme.accent)
+                        Text("Pulse")
+                            .font(.headline.weight(.bold))
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Pulse. \(PulseExperimental.tagline)")
                 }
                 if canAccessPulseUGC {
                     ToolbarItemGroup(placement: .primaryAction) {
@@ -368,6 +374,9 @@ struct PulseFeedView: View {
                     if PulseExperimental.isChatEnabledInBuild {
                         store.ensureCommunityChatDemoFollowers(for: authorId)
                     }
+                }
+                if initialPeopleTab {
+                    selectedTab = .people
                 }
                 store.requestPulseNotificationPermission()
                 Task { await store.refreshFromCloud(currentUserId: authorId) }

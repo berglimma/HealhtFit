@@ -223,13 +223,9 @@ struct WatchContentView: View {
     private var activeMetricsPage: some View {
         ScrollView {
             VStack(spacing: 8) {
-                HStack(spacing: 4) {
-                    Text(workoutManager.workoutName)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    if workoutManager.isPaused {
+                if workoutManager.isPaused {
+                    HStack {
+                        Spacer(minLength: 0)
                         Text("PAUSADO")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.orange)
@@ -588,13 +584,6 @@ struct WatchContentView: View {
                     )
                     .tint(.orange)
                 }
-            }
-
-            if !workoutManager.currentExerciseName.isEmpty {
-                Text(workoutManager.currentExerciseName)
-                    .font(.caption)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
             }
         }
     }

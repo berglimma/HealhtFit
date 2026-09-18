@@ -1,21 +1,21 @@
-HealthFit 1.0.7 (Build 19)
+HealthFit 1.0.8 (Build 20)
 
 Principais mudanças deste build:
-- Watch ↔ iPhone: calorias e BPM em todos os exercícios (musculação, cardio, meditação)
-- Fix BPM travado no iPhone (freshness de amostras do Watch; sem fallback resting em treino ativo)
-- Pulse: Deezer tocando de novo; música dos stories retoma ao voltar ao feed
-- Sono: banner “Monitoramento de sono ativado” + quando o card atualiza; slider manual permanece
-- Sono Watch via Saúde no Dashboard / check-in / Perfil (sem sobrescrever registro manual)
+- Pulse: busca de pessoas (1ª letra, foto de perfil, lupa clicável)
+- Pulse: push FCM de solicitação de follow (tela bloqueada / app em background)
+- Slogan Pulse visível abaixo do título
+- Apple Watch: remove rótulo de modalidade na sessão ativa
+- Screenshots novas: Dashboard sono (manual + Watch)
 
 Conta demo App Review:
 E-mail: healthfit.appreview@gmail.com
 (senha no campo Sign-in Information do App Store Connect)
 
 Testes sugeridos:
-1. Treino ativo (cardio ou musculação) com Watch pareado — BPM e kcal atualizam no iPhone; pausar não deixa BPM “congelado”
-2. Meditação ativa — métricas ao vivo de BPM/kcal do Watch
-3. Pulse → música Deezer; abrir story com música, sair e voltar — áudio retoma
-4. Dashboard → card Sono: status de monitoramento; ajustar slider manual se não houver Watch
+1. Pulse → Pessoas → digitar 1 letra → resultados com foto; tocar lupa
+2. Conta A solicita seguir conta B → B recebe push com tela bloqueada (notificações ON)
+3. Pulse aberto → slogan abaixo de “Pulse”
+4. Dashboard → card Sono (manual e/ou Watch)
 
 HealthFit Pulse (18+ UGC):
 Dashboard → card HealthFit Pulse → aceitar termos → feed (conta 18+)

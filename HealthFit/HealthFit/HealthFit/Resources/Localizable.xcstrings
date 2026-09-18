@@ -3171,10 +3171,10 @@
     "Digite as circunferências em centímetros. Campos vazios não entram no relatório nem no PDF." : {
 
     },
-    "Digite pelo menos 2 letras do nome, apelido ou e-mail." : {
+    "Digite pelo menos 1 letra para buscar no app inteiro." : {
 
     },
-    "Digite pelo menos 2 letras para buscar no app inteiro." : {
+    "Digite pelo menos 2 letras do nome, apelido ou e-mail." : {
 
     },
     "Digite pelo menos 2 letras." : {
@@ -4177,6 +4177,9 @@
 
     },
     "Limites" : {
+
+    },
+    "Limpar busca" : {
 
     },
     "Limpar conversa" : {
@@ -6020,6 +6023,9 @@
 
     },
     "Pulse" : {
+
+    },
+    "Pulse. %@" : {
 
     },
     "pulse.accept" : {

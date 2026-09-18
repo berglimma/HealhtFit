@@ -216,7 +216,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
 
-        let title = "Cardio — \(activity.name)"
+        let title = activity.name
         startCardio(
             name: title,
             targetSeconds: 0,
@@ -274,9 +274,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         setupModeName: String,
         setupBoardName: String
     ) {
-        let title = activity.isWaterSport
-            ? "Cardio — \(activity.name)"
-            : "Cardio — \(activity.name)"
+        let title = activity.name
         startCardio(
             name: title,
             targetSeconds: targetSeconds,
@@ -363,7 +361,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         localMeditationPrompts = topic.prompts
         meditationOwnedByWatch = true
         startMeditation(
-            name: "Meditação — \(topic.name)",
+            name: topic.name,
             targetSeconds: targetSeconds,
             topicName: topic.name,
             topicIcon: topic.icon,
@@ -374,7 +372,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         )
         notifyPhoneWatchStarted(
             kind: "meditation",
-            workoutName: "Meditação — \(topic.name)",
+            workoutName: topic.name,
             exerciseName: topic.name,
             targetSeconds: targetSeconds,
             topicIcon: topic.icon,

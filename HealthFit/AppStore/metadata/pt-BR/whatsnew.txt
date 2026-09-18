@@ -1,5 +1,5 @@
-• Apple Watch: calorias e BPM sincronizados em todos os exercícios (musculação, cardio, meditação)
-• Correção do BPM travado no iPhone durante o treino
-• Pulse: correção da música Deezer e retomada nos stories ao voltar ao feed
-• Sono: status “monitoramento ativado” e aviso de quando o card atualiza; registro manual continua disponível
-• Sono do Apple Watch no Dashboard, check-in e perfil (quando sincronizado no Saúde)
+• Pulse: busca de pessoas a partir da 1ª letra, com foto de perfil e lupa clicável
+• Pulse: notificação de pedido para seguir chega mesmo com a tela bloqueada
+• Slogan do Pulse visível abaixo do nome
+• Apple Watch: tela de treino sem rótulo de modalidade (mais limpa)
+• Sono no Dashboard: monitoramento pelo Watch e registro manual

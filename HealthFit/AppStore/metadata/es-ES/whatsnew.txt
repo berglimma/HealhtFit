@@ -1,5 +1,5 @@
-• Apple Watch: calorías y BPM sincronizados en todos los ejercicios (fuerza, cardio, meditación)
-• Corrección del BPM congelado en el iPhone durante el entrenamiento
-• Pulse: corrección de música Deezer y reanudación en stories al volver al feed
-• Sueño: estado “monitoreo activado” y aviso de cuándo se actualiza la tarjeta; el registro manual sigue disponible
-• Sueño del Apple Watch en Dashboard, check-in y perfil (si se sincroniza en Salud)
+• Pulse: búsqueda de personas desde la 1ª letra, con foto de perfil y lupa
+• Pulse: la notificación de solicitud de seguimiento llega con la pantalla bloqueada
+• Eslogan de Pulse visible bajo el nombre
+• Apple Watch: pantalla de entrenamiento sin etiqueta de modalidad
+• Sueño en el Dashboard: monitoreo con Watch y registro manual

@@ -5,6 +5,9 @@ struct MainTabView: View {
     @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
+    @EnvironmentObject var shareCardStore: WorkoutShareCardStore
+    @EnvironmentObject var mealPlanService: MealPlanService
+    @EnvironmentObject var subscriptionService: SubscriptionService
     @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var checkInService = PostWorkoutCheckInService.shared
     @ObservedObject private var dailyMorningService = DailyMorningCheckInService.shared
@@ -12,6 +15,7 @@ struct MainTabView: View {
     @ObservedObject private var profileReminder = ProfileDataReminderService.shared
     @ObservedObject private var duoNavigation = DuoNavigationRouter.shared
     @ObservedObject private var coachNavigation = CoachNavigationRouter.shared
+    @ObservedObject private var pulseNavigation = PulseNavigationRouter.shared
     @ObservedObject private var coachService = CoachService.shared
     @State private var selectedTab = 0
     /// Only mount heavy tab roots after first visit — TabView otherwise builds all 5 eagerly.
@@ -128,6 +132,19 @@ struct MainTabView: View {
             .onChange(of: coachNavigation.focusProfileTabTick) { _, _ in
                 loadedTabs.insert(profileTabTag)
                 selectedTab = profileTabTag
+            }
+            .onChange(of: pulseNavigation.focusHomeTabTick) { _, _ in
+                loadedTabs.insert(homeTabTag)
+                selectedTab = homeTabTag
+            }
+            .fullScreenCover(item: $pulseNavigation.presentedPulse) { destination in
+                PulseFeedView(initialPeopleTab: destination.openPeople)
+                    .environmentObject(authService)
+                    .environmentObject(workoutStore)
+                    .environmentObject(shareCardStore)
+                    .environmentObject(mealPlanService)
+                    .environmentObject(wellnessService)
+                    .environmentObject(subscriptionService)
             }
             .sheet(item: $duoNavigation.presentedChat) { destination in
                 NavigationStack {

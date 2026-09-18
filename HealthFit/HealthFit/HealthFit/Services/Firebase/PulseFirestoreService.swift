@@ -5,7 +5,8 @@ import Foundation
 import UIKit
 
 /// Backend do Pulse: metadados em Firestore + mídia opcional no Storage.
-/// Só envia/lê se `isCloudSyncEffective` (Labs local ou `pulseCloudSyncEnabled` remoto; default OFF).
+/// Posts/follows/stories exigem `isCloudSyncEffective` (Labs ou `pulseCloudSyncEnabled`; default OFF).
+/// Busca de pessoas no diretório (`userDirectory`) funciona com Firebase disponível, mesmo sem sync Pulse.
 /// Sempre pull-based (`getDocuments` / `getDocument`) — nunca `addSnapshotListener`.
 enum PulseFirestoreService {
     static var isAvailable: Bool { FirebaseBootstrap.isConfigured }
@@ -122,6 +123,9 @@ enum PulseFirestoreService {
             "updatedAt": FieldValue.serverTimestamp(),
             "source": PulseExperimental.cloudSourceTag,
         ]
+        if let photoURL = person.photoURL?.trimmingCharacters(in: .whitespacesAndNewlines), !photoURL.isEmpty {
+            data["photoURL"] = photoURL
+        }
 
         do {
             let ref = profiles().document(uid)
@@ -150,6 +154,8 @@ enum PulseFirestoreService {
     }
 
     /// Busca usuários no Pulse (e no diretório geral) por nome/região.
+    /// O diretório (`userDirectory`) funciona sempre que o Firebase estiver disponível.
+    /// `pulseProfiles` só entra quando o cloud sync do Pulse está efetivo.
     /// Ordenação de proximidade fica no `PulseLocalStore` após o merge.
     static func searchProfiles(
         query: String,
@@ -157,43 +163,45 @@ enum PulseFirestoreService {
         preferCountryCode: String? = nil,
         limit: Int = 60
     ) async -> [PulsePerson] {
-        guard PulseExperimental.isCloudSyncEffective, isAvailable else { return [] }
+        guard isAvailable else { return [] }
         let needle = query
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
             .lowercased()
-        guard needle.count >= 2 else { return [] }
+        guard !needle.isEmpty else { return [] }
 
         var byId: [String: PulsePerson] = [:]
 
-        // 1) Perfis Pulse indexados
-        do {
-            let snap = try await profiles()
-                .order(by: "displayName")
-                .limit(to: 300)
-                .getDocuments()
-            for doc in snap.documents {
-                guard let person = decodePerson(doc.data(), documentId: doc.documentID) else { continue }
-                if let excludingUserId, person.id == excludingUserId { continue }
-                let hay = [
-                    person.displayName,
-                    person.city,
-                    person.state,
-                    person.countryName,
-                    person.regionLabel,
-                    person.emailHint
-                ]
-                .map {
-                    $0.folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR")).lowercased()
+        // 1) Perfis Pulse indexados (só com sync nuvem ligado)
+        if PulseExperimental.isCloudSyncEffective {
+            do {
+                let snap = try await profiles()
+                    .order(by: "displayName")
+                    .limit(to: 300)
+                    .getDocuments()
+                for doc in snap.documents {
+                    guard let person = decodePerson(doc.data(), documentId: doc.documentID) else { continue }
+                    if let excludingUserId, person.id == excludingUserId { continue }
+                    let hay = [
+                        person.displayName,
+                        person.city,
+                        person.state,
+                        person.countryName,
+                        person.regionLabel,
+                        person.emailHint
+                    ]
+                    .map {
+                        $0.folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR")).lowercased()
+                    }
+                    guard hay.contains(where: { $0.contains(needle) }) else { continue }
+                    byId[person.id] = person
                 }
-                guard hay.contains(where: { $0.contains(needle) }) else { continue }
-                byId[person.id] = person
+            } catch {
+                print("[Pulse] Falha na busca de perfis Pulse: \(error.localizedDescription)")
             }
-        } catch {
-            print("[Pulse] Falha na busca de perfis Pulse: \(error.localizedDescription)")
         }
 
-        // 2) Diretório geral do app (todos os usuários HealthFit)
+        // 2) Diretório geral do app (todos os usuários HealthFit) — independente do sync Pulse
         do {
             let directory = try await ProfileFirestoreService.searchUsers(
                 query: query,
@@ -202,17 +210,35 @@ enum PulseFirestoreService {
                 preferCountryCode: preferCountryCode
             )
             for entry in directory {
-                if byId[entry.uid] != nil { continue }
+                let legalName = entry.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                let shown = entry.shownName
+                let searchableExtra: String = {
+                    guard !legalName.isEmpty,
+                          legalName.caseInsensitiveCompare(shown) != .orderedSame else { return "" }
+                    return legalName
+                }()
+                let photo = entry.photoURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let photoURL = (photo?.isEmpty == false) ? photo : nil
+
+                if var existing = byId[entry.uid] {
+                    // Enriquecer perfil Pulse com foto do diretório quando faltar.
+                    if (existing.photoURL == nil || existing.photoURL?.isEmpty == true), let photoURL {
+                        existing.photoURL = photoURL
+                        byId[entry.uid] = existing
+                    }
+                    continue
+                }
                 byId[entry.uid] = PulsePerson(
                     id: entry.uid,
-                    displayName: entry.shownName,
-                    emailHint: "",
+                    displayName: shown,
+                    emailHint: searchableExtra,
                     countryCode: entry.countryCode.map { CountryOption.resolvedCode($0) } ?? "",
                     state: "",
                     city: "",
                     bio: "",
                     communityFocus: .musculacao,
-                    notifyOnPosts: true
+                    notifyOnPosts: true,
+                    photoURL: photoURL
                 )
             }
         } catch {
@@ -226,8 +252,15 @@ enum PulseFirestoreService {
 
     /// Status cloud: `pending` | `accepted` (mapeado de `requested` / `following`).
     /// Criação exige auth == from; aceite (`accepted`) também pode ser feito pelo toUserId.
-    static func upsertFollow(from fromUserId: String, to toUserId: String, status: PulseFollowStatus) async {
-        guard PulseExperimental.isCloudSyncEffective, isAvailable else { return }
+    /// Follows sincronizam com Firebase disponível (independente do sync completo de posts).
+    /// Necessário para push FCM de solicitação de seguir.
+    static func upsertFollow(
+        from fromUserId: String,
+        to toUserId: String,
+        status: PulseFollowStatus,
+        fromName: String? = nil
+    ) async {
+        guard isAvailable else { return }
         guard let uid = Auth.auth().currentUser?.uid, !uid.isEmpty else { return }
         guard fromUserId != toUserId else { return }
         guard let cloudStatus = cloudFollowStatus(from: status) else { return }
@@ -244,6 +277,9 @@ enum PulseFirestoreService {
             "updatedAt": FieldValue.serverTimestamp(),
             "source": PulseExperimental.cloudSourceTag,
         ]
+        if let raw = fromName?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty {
+            data["fromName"] = String(raw.prefix(80))
+        }
 
         do {
             let ref = follows().document(followId)
@@ -262,8 +298,21 @@ enum PulseFirestoreService {
         }
     }
 
+    /// Remove pedido/relação (cancelar ou recusar) para permitir novo pending + push.
+    static func deleteFollow(from fromUserId: String, to toUserId: String) async {
+        guard isAvailable else { return }
+        guard let uid = Auth.auth().currentUser?.uid, !uid.isEmpty else { return }
+        guard fromUserId == uid || toUserId == uid else { return }
+        let followId = "\(fromUserId)_\(toUserId)"
+        do {
+            try await follows().document(followId).delete()
+        } catch {
+            print("[Pulse] Falha ao apagar follow: \(error.localizedDescription)")
+        }
+    }
+
     static func fetchFollows(for userId: String) async -> [PulseFollowRelation] {
-        guard PulseExperimental.isCloudSyncEffective, isAvailable else { return [] }
+        guard isAvailable else { return [] }
         guard Auth.auth().currentUser?.uid != nil else { return [] }
 
         do {
@@ -796,6 +845,7 @@ enum PulseFirestoreService {
         let id = (data["id"] as? String) ?? documentId
         guard let displayName = data["displayName"] as? String else { return nil }
         let community = PulseCommunity(storageKey: data["communityFocus"] as? String ?? "musculacao") ?? .musculacao
+        let photo = data["photoURL"] as? String
         return PulsePerson(
             id: id,
             displayName: displayName,
@@ -805,7 +855,8 @@ enum PulseFirestoreService {
             city: data["city"] as? String ?? "",
             bio: data["bio"] as? String ?? "",
             communityFocus: community,
-            notifyOnPosts: data["notifyOnPosts"] as? Bool ?? true
+            notifyOnPosts: data["notifyOnPosts"] as? Bool ?? true,
+            photoURL: (photo?.isEmpty == false) ? photo : nil
         )
     }
 

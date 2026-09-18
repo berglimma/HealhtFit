@@ -45,21 +45,12 @@ struct PulsePersonProfileCard: View {
             }
 
             HStack(alignment: .center, spacing: 12) {
-                ZStack(alignment: .bottomTrailing) {
-                    Circle()
-                        .fill(AppTheme.accent.opacity(0.25))
-                        .frame(width: 56, height: 56)
-                        .overlay {
-                            Text(String(person.displayName.prefix(1)).uppercased())
-                                .font(.title3.bold())
-                                .foregroundStyle(AppTheme.accent)
-                        }
-                    Text(person.flagEmoji)
-                        .font(.caption)
-                        .padding(2)
-                        .background(Circle().fill(AppTheme.cardBackground))
-                        .offset(x: 4, y: 4)
-                }
+                DuoMemberAvatarView(
+                    name: person.displayName,
+                    photoURL: person.photoURL,
+                    countryCode: person.countryCode,
+                    size: 56
+                )
                 .offset(y: -18)
                 .padding(.bottom, -18)
 
@@ -149,17 +140,27 @@ struct PulsePeopleSearchView: View {
     @State private var isSearchingRemote = false
     @State private var searchTask: Task<Void, Never>?
     @FocusState private var bioFocused: Bool
+    @FocusState private var searchFocused: Bool
 
     var body: some View {
         VStack(spacing: 12) {
             myBioEditor
 
             HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(AppTheme.accent)
+                Button {
+                    searchFocused = true
+                    runPeopleSearch(immediate: true)
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(AppTheme.accent)
+                }
+                .accessibilityLabel("Buscar")
                 TextField("Buscar todos os usuários…", text: $query)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .focused($searchFocused)
+                    .submitLabel(.search)
+                    .onSubmit { runPeopleSearch(immediate: true) }
                 if isSearchingRemote {
                     ProgressView()
                         .controlSize(.small)
@@ -170,6 +171,7 @@ struct PulsePeopleSearchView: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(AppTheme.textSecondary)
                     }
+                    .accessibilityLabel("Limpar busca")
                 }
             }
             .padding(12)
@@ -330,16 +332,16 @@ struct PulsePeopleSearchView: View {
             Task { await store.refreshFromCloud(currentUserId: currentUserId) }
         }
         .onChange(of: query) { _, _ in
-            scheduleRemoteSearch()
+            runPeopleSearch()
         }
         .onChange(of: preferCountry) { _, _ in
-            scheduleRemoteSearch()
+            runPeopleSearch()
         }
         .onChange(of: preferState) { _, _ in
-            scheduleRemoteSearch()
+            runPeopleSearch()
         }
         .onChange(of: preferCity) { _, _ in
-            scheduleRemoteSearch()
+            runPeopleSearch()
         }
         .onDisappear {
             searchTask?.cancel()
@@ -413,8 +415,8 @@ struct PulsePeopleSearchView: View {
             Image(systemName: "person.2.crop.square.stack")
                 .font(.title2)
                 .foregroundStyle(AppTheme.textSecondary)
-            Text(query.trimmingCharacters(in: .whitespacesAndNewlines).count < 2
-                 ? "Digite pelo menos 2 letras para buscar no app inteiro."
+            Text(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                 ? "Digite pelo menos 1 letra para buscar no app inteiro."
                  : "Nenhum usuário encontrado.")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
@@ -460,10 +462,10 @@ struct PulsePeopleSearchView: View {
         )
     }
 
-    private func scheduleRemoteSearch() {
+    private func runPeopleSearch(immediate: Bool = false) {
         searchTask?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 2 else {
+        guard !trimmed.isEmpty else {
             isSearchingRemote = false
             return
         }
@@ -472,7 +474,9 @@ struct PulsePeopleSearchView: View {
         let city = activePreferCity
         let userId = currentUserId
         searchTask = Task {
-            try? await Task.sleep(nanoseconds: 350_000_000)
+            if !immediate {
+                try? await Task.sleep(nanoseconds: 250_000_000)
+            }
             guard !Task.isCancelled else { return }
             await MainActor.run { isSearchingRemote = true }
             _ = await store.searchPeopleRemotely(

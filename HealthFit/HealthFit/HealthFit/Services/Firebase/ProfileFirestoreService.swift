@@ -281,7 +281,7 @@ enum ProfileFirestoreService {
     ) async throws -> [UserDirectoryEntry] {
         guard isAvailable else { return [] }
         let needle = searchableText(query)
-        guard needle.count >= 2 else { return [] }
+        guard !needle.isEmpty else { return [] }
 
         let preferCountry: String? = {
             guard let raw = preferCountryCode?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
