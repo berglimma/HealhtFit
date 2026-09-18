@@ -1,6 +1,6 @@
 # Checklist — publicar HealthFit na App Store
 
-Versão alvo: **1.0.6 (Build 18)** · Bundle `luan.com.healthfit.app`
+Versão alvo: **1.0.7 (Build 19)** · Bundle `luan.com.healthfit.app`
 
 ## URLs legais
 
@@ -12,17 +12,25 @@ Versão alvo: **1.0.6 (Build 18)** · Bundle `luan.com.healthfit.app`
 
 ## Build
 
-- [x] Versão Xcode **1.0.6 (18)**
+- [x] Versão Xcode **1.0.7 (19)**
 - [x] `whatsnew.txt` atualizado (pt-BR / en-US / es-ES / fr-FR)
 - [x] `review_notes.txt` atualizado
-- [x] Archive + upload build **18**
-- [ ] Attach build 18 na versão 1.0.6
-- [ ] Submit for Review
+- [ ] Archive + upload build **19**
+- [ ] Attach build 19 na versão 1.0.7
+- [ ] Enviado para revisão
 
 ## App Store Connect
 
 1. https://appstoreconnect.apple.com/apps/6798621208
-2. Versão  **1.0.6** → What’s New de `metadata/*/whatsnew.txt`
-3. Review Notes de `review_notes.txt`
-4. Selecionar build **18** quando processar
-5. **Submit for Review**
+2. Se **1.0.6** ainda estiver “Aguardando revisão”, cancelar/remover da fila antes de criar **1.0.7**
+3. Versão **1.0.7** → What’s New de `metadata/*/whatsnew.txt`
+4. Review Notes de `review_notes.txt`
+5. Selecionar build **19** quando processar
+6. **Submit for Review**
+
+## Itens alterados (1.0.7)
+
+1. Sync Watch de calorias + BPM em todos os exercícios
+2. Correção BPM travado no iPhone
+3. Pulse: Deezer + resume de música nos stories
+4. UI de monitoramento de sono (status + quando atualiza; manual ok)

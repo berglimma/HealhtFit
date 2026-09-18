@@ -64,6 +64,8 @@ struct DailyWellnessCheckInView: View {
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
 
+            SleepMonitoringStatusView(entry: wellnessService.todayEntry, style: .compact)
+
             if wellnessService.todayEntry.sleepSource == .appleHealth {
                 Label(
                     wellnessService.todayEntry.sleepSourceLabel ?? "Via Apple Watch / Saúde",

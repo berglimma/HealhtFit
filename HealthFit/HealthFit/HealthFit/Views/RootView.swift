@@ -43,6 +43,7 @@ struct RootView: View {
                         DailyWellnessCheckInView()
                             .environmentObject(authService)
                             .environmentObject(wellnessService)
+                            .environmentObject(healthKitManager)
                     }
             }
         }

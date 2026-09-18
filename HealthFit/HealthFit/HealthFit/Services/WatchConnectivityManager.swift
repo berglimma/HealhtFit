@@ -428,11 +428,20 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         if name.contains("corrida") || name.contains("run") || name.contains("esteira") { return .running }
         if name.contains("caminh") || name.contains("walk") { return .walking }
         if name.contains("bike") || name.contains("cicl") || name.contains("cycling") { return .cycling }
+        if name.contains("elip") || name.contains("elliptical") { return .elliptical }
         if name.contains("escal") || name.contains("climb") { return .climbing }
         if name.contains("remo") || name.contains("row") { return .rowing }
-        if name.contains("luta") || name.contains("fight") || name.contains("box") { return .martialArts }
+        if name.contains("corda") || name.contains("jump rope") || name.contains("pular") { return .jumpRope }
+        if name.contains("escada") || name.contains("stair") { return .stairClimbing }
+        if name.contains("hiit") || name.contains("burpee") || name.contains("polichinel") {
+            return .highIntensityIntervalTraining
+        }
+        if name.contains("luta") || name.contains("fight") || name.contains("box") || name.contains("mma") {
+            return .martialArts
+        }
         if name.contains("surf") { return .surfingSports }
         if name.contains("kite") { return .paddleSports }
+        if name.contains("yoga") || name.contains("pilates") || name.contains("mobil") { return .yoga }
         return .other
     }
 
@@ -610,14 +619,27 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         // Passos do dia permanecem; vêm do HealthKit/Watch ao longo do dia.
     }
 
-    private func noteWatchHeartRateUpdate(_ value: Double) {
+    private func noteWatchHeartRateUpdate(_ value: Double, sampleAt: Date? = nil) {
+        let previous = watchHeartRate
+        let changed = abs(previous - value) >= 0.5
         watchHeartRate = value
-        lastWatchHeartRateAt = .now
+        // Só renova a “frescura” quando o BPM muda ou a amostra do Watch é mais nova.
+        // Rebroadcast idêntico a cada 2s não deve manter o relógio vivo (BPM congelado).
+        if changed || sampleAt != nil {
+            if let sampleAt {
+                if let existing = lastWatchHeartRateAt, sampleAt <= existing, !changed {
+                    // Amostra antiga repetida — não estende o prazo.
+                } else {
+                    lastWatchHeartRateAt = sampleAt
+                }
+            } else if changed {
+                lastWatchHeartRateAt = .now
+            }
+        }
         watchHeartRateStaleTimer?.invalidate()
         let box = WeakMainActorBox(self)
         watchHeartRateStaleTimer = Timer.scheduledTimer(withTimeInterval: Self.watchHeartRateStaleInterval + 0.5, repeats: false) { _ in
             box.run { this in
-                // Expira BPM antigo para o hub cair em BLE/HealthKit.
                 if let at = this.lastWatchHeartRateAt,
                    Date().timeIntervalSince(at) >= Self.watchHeartRateStaleInterval {
                     this.watchHeartRate = 0
@@ -852,10 +874,22 @@ extension WatchConnectivityManager: WCSessionDelegate {
         var steps: Int?
 
         if let value = Self.double(from: message, key: "heartRate") {
-            // Ignora 0 transitório para não apagar a última leitura válida do sensor.
-            if value > 0 {
-                noteWatchHeartRateUpdate(value)
+            let sampleAt = Self.double(from: message, key: "heartRateSampleAt")
+                .map { Date(timeIntervalSince1970: $0) }
+            let freshFlag = (message["heartRateFresh"] as? Bool)
+                ?? (message["heartRateFresh"] as? NSNumber)?.boolValue
+            if value > 0, freshFlag != false {
+                noteWatchHeartRateUpdate(value, sampleAt: sampleAt)
                 heartRate = watchHeartRate
+            } else if freshFlag == false || value <= 0 {
+                // Watch sinalizou amostra velha / pausa — expira BPM no iPhone.
+                if watchHeartRate > 0 {
+                    watchHeartRate = 0
+                    lastWatchHeartRateAt = nil
+                    watchHeartRateStaleTimer?.invalidate()
+                    watchHeartRateStaleTimer = nil
+                }
+                HealthKitManager.shared.clearLiveWatchHeartRate()
             }
         }
         if let value = Self.double(from: message, key: "calories") {

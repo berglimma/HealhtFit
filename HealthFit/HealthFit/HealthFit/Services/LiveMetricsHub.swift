@@ -17,7 +17,7 @@ enum LiveHeartRateSource: String, Equatable {
     }
 }
 
-/// Unifica BPM / kcal / passos com prioridade: Apple Watch (fresco) > BLE > HealthKit.
+/// Unifica BPM / kcal / passos com prioridade: Apple Watch (fresco) > BLE > HealthKit ao vivo.
 @MainActor
 final class LiveMetricsHub: ObservableObject {
     static let shared = LiveMetricsHub()
@@ -43,14 +43,17 @@ final class LiveMetricsHub: ObservableObject {
             health.$restingHeartRate
         )
         .combineLatest(watch.$lastWatchHeartRateAt)
+        .combineLatest(watch.$isWorkoutActiveOnWatch)
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] rates, lastWatchAt in
+        .sink { [weak self] ratesAndWatchAt, workoutActive in
+            let (rates, lastWatchAt) = ratesAndWatchAt
             self?.resolveHeartRate(
                 watchBPM: rates.0,
                 bleBPM: rates.1,
                 healthBPM: rates.2,
                 restingBPM: rates.3,
-                lastWatchAt: lastWatchAt
+                lastWatchAt: lastWatchAt,
+                workoutActive: workoutActive
             )
         }
         .store(in: &cancellables)
@@ -81,7 +84,8 @@ final class LiveMetricsHub: ObservableObject {
                     bleBPM: BluetoothHeartRateService.shared.heartRateBPM,
                     healthBPM: HealthKitManager.shared.currentHeartRate,
                     restingBPM: HealthKitManager.shared.restingHeartRate,
-                    lastWatchAt: watch.lastWatchHeartRateAt
+                    lastWatchAt: watch.lastWatchHeartRateAt,
+                    workoutActive: watch.isWorkoutActiveOnWatch
                 )
             }
         }
@@ -92,7 +96,8 @@ final class LiveMetricsHub: ObservableObject {
         bleBPM: Double,
         healthBPM: Double,
         restingBPM: Double,
-        lastWatchAt: Date?
+        lastWatchAt: Date?,
+        workoutActive: Bool
     ) {
         let watchFresh = watchBPM > 0
             && lastWatchAt.map { Date().timeIntervalSince($0) <= WatchConnectivityManager.watchHeartRateStaleInterval } == true
@@ -107,15 +112,24 @@ final class LiveMetricsHub: ObservableObject {
             heartRateSource = .bluetooth
             return
         }
-        if healthBPM > 0 {
-            heartRateBPM = healthBPM
+        // Em treino ativo: não usar resting/HealthKit do dia (parece BPM travado).
+        let liveHK = HealthKitManager.shared.freshLiveHeartRate
+        if liveHK > 0 {
+            heartRateBPM = liveHK
             heartRateSource = .healthKit
             return
         }
-        if restingBPM > 0 {
-            heartRateBPM = restingBPM
-            heartRateSource = .healthKit
-            return
+        if !workoutActive {
+            if healthBPM > 0 {
+                heartRateBPM = healthBPM
+                heartRateSource = .healthKit
+                return
+            }
+            if restingBPM > 0 {
+                heartRateBPM = restingBPM
+                heartRateSource = .healthKit
+                return
+            }
         }
         heartRateBPM = 0
         heartRateSource = .none

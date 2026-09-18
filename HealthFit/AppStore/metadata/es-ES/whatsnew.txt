@@ -1,5 +1,5 @@
-• Pulse: busca de usuarios en toda la app (tu región primero, luego otros países)
-• Sueño del Apple Watch sincronizado con Dashboard, check-in y perfil
-• Aviso para que el alumno verifique CREF/CRN activo en Brasil
-• iOS / iPadOS 18+ y watchOS 11+; compatibilidad con Xcode 27
-• Correcciones de APIs obsoletas y mejoras en Pulse y Coach
+• Apple Watch: calorías y BPM sincronizados en todos los ejercicios (fuerza, cardio, meditación)
+• Corrección del BPM congelado en el iPhone durante el entrenamiento
+• Pulse: corrección de música Deezer y reanudación en stories al volver al feed
+• Sueño: estado “monitoreo activado” y aviso de cuándo se actualiza la tarjeta; el registro manual sigue disponible
+• Sueño del Apple Watch en Dashboard, check-in y perfil (si se sincroniza en Salud)

@@ -13,6 +13,9 @@
     "—" : {
 
     },
+    "— BPM" : {
+
+    },
     "…" : {
 
     },
@@ -2145,6 +2148,9 @@
     "Batimentos ao vivo vêm de sensores Bluetooth com Heart Rate Service (cintas e alguns relógios). Passos e calorias do dia continuam vindo do Apple Saúde — ative a sincronização do app do seu relógio para o Saúde." : {
 
     },
+    "Batimentos e calorias do Apple Watch" : {
+
+    },
     "Beber 1 copo agora" : {
 
     },
@@ -2911,6 +2917,9 @@
       }
     },
     "CREF (personal)" : {
+
+    },
+    "CREF / CRN — Brasil" : {
 
     },
     "Criando…" : {
@@ -4011,7 +4020,7 @@
     "Informe o primeiro dia de sangramento do ciclo mais recente." : {
 
     },
-    "Informe seu sono da noite passada para acompanharmos sua recuperação." : {
+    "Informe seu sono da noite passada para acompanharmos sua recuperação. Se o Apple Watch registrou o sono no app Saúde, o HealthFit preenche automaticamente." : {
 
     },
     "Ingredientes" : {
@@ -4514,6 +4523,12 @@
 
     },
     "Modo: %@" : {
+
+    },
+    "Monitoramento de sono ativado" : {
+
+    },
+    "Monitoramento de sono pendente" : {
 
     },
     "Montando ranking…" : {
@@ -10480,9 +10495,6 @@
     "Registre o que você ingeriu hoje. Os dados ficam salvos no dia atual." : {
 
     },
-    "Registre seu sono ao abrir o app ou ajuste o controle acima." : {
-
-    },
     "Registros" : {
 
     },
@@ -11725,6 +11737,9 @@
     "Ver treino" : {
 
     },
+    "Verifique o registro profissional (Brasil)" : {
+
+    },
     "Versão" : {
 
     },
@@ -11789,6 +11804,9 @@
 
     },
     "vs meta diária" : {
+
+    },
+    "Watch" : {
 
     },
     "wellness.sleep.above.message" : {

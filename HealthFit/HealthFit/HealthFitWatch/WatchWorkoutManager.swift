@@ -30,6 +30,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var heartRate: Double = 0
     @Published var calories: Double = 0
     @Published var todaySteps: Int = 0
+    /// Momento da última amostra de BPM aceita (builder ou query recente).
+    private var lastHeartRateSampleAt: Date?
+    /// Idade máxima da amostra de BPM para ainda ser considerada “ao vivo”.
+    private static let heartRateSampleMaxAge: TimeInterval = 10
     @Published var restRemainingSeconds = 0
     @Published var isResting = false
     @Published var isRestOvertime = false
@@ -311,7 +315,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         setupModeName: String = "",
         setupBoardName: String = "",
         spotBuddyEnabled: Bool = false,
-        locationOutdoor: Bool = false
+        locationOutdoor: Bool = false,
+        activityTypeRaw: UInt? = nil
     ) {
         resetWorkoutState()
         meditationOwnedByWatch = false
@@ -330,7 +335,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         waterSetupModeName = setupModeName
         waterSetupBoardName = setupBoardName
         isActive = true
-        let activity = cardioActivityType(
+        let activity = Self.resolveCardioActivityType(
+            activityTypeRaw: activityTypeRaw,
             exerciseName: exerciseName,
             swimmingMode: swimmingMode,
             waterSportMode: waterSportMode,
@@ -509,6 +515,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
         calories = 0
         heartRate = 0
+        lastHeartRateSampleAt = nil
         workoutStartedAt = nil
         secondsSincePhoneSync = 0
         isPaused = false
@@ -1016,7 +1023,12 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         let metricsBox = WeakMainActorBox(self)
         let timer = Timer(timeInterval: 2, repeats: true) { _ in
             metricsBox.run { this in
-                this.fetchHeartRate()
+                // Builder já alimenta BPM; poll só se a amostra builder estiver velha.
+                let builderFresh = this.lastHeartRateSampleAt
+                    .map { Date().timeIntervalSince($0) < 5 } == true
+                if !builderFresh {
+                    this.fetchHeartRate()
+                }
                 this.fetchActiveCalories()
                 this.fetchTodaySteps()
                 this.applySimulatorMetricsIfNeeded()
@@ -1035,10 +1047,12 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             heartRate = isMeditationWorkout
                 ? Double.random(in: 58...72)
                 : Double.random(in: 118...142)
+            lastHeartRateSampleAt = Date()
         } else {
             let jitter = Double.random(in: -3...3)
             let base = isMeditationWorkout ? 65.0 : 130.0
             heartRate = min(175, max(50, heartRate + jitter * 0.4 + (base - heartRate) * 0.05))
+            lastHeartRateSampleAt = Date()
         }
         let burnRate: Double = isMeditationWorkout ? 0.15 : (isCardioWorkout ? 1.1 : 0.7)
         calories += burnRate + Double.random(in: 0...0.25)
@@ -1092,6 +1106,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     private func fetchHeartRate() {
         guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return }
+        // Em pausa não atualiza BPM — evita rebroadcast da última amostra congelada.
+        guard !isPaused else { return }
 
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
         // Janela um pouco antes do start: o sensor pode entregar a 1ª amostra com atraso.
@@ -1105,12 +1121,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             sortDescriptors: [sortDescriptor]
         ) { [box = WeakMainActorBox(self)] _, samples, _ in
             box.run { this in
-                if let sample = samples?.first as? HKQuantitySample {
-                    let bpm = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
-                    if bpm > 0 {
-                        this.heartRate = bpm
-                    }
-                }
+                guard let sample = samples?.first as? HKQuantitySample else { return }
+                let age = Date().timeIntervalSince(sample.endDate)
+                guard age <= Self.heartRateSampleMaxAge else { return }
+                let bpm = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
+                guard bpm > 0 else { return }
+                this.heartRate = bpm
+                this.lastHeartRateSampleAt = sample.endDate
             }
         }
         healthStore.execute(query)
@@ -1156,12 +1173,19 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     private func sendMetricsToPhone() {
         guard let session else { return }
+        let sampleAge = lastHeartRateSampleAt.map { Date().timeIntervalSince($0) } ?? .infinity
+        let hrFresh = !isPaused && heartRate > 0 && sampleAge <= Self.heartRateSampleMaxAge
         var payload: [String: Any] = [
-            "heartRate": heartRate,
+            // 0 = iPhone deve expirar BPM (não rebroadcast de valor travado).
+            "heartRate": hrFresh ? heartRate : 0,
+            "heartRateFresh": hrFresh,
             "calories": calories,
             "steps": todaySteps,
             "timestamp": Date().timeIntervalSince1970
         ]
+        if let lastHeartRateSampleAt {
+            payload["heartRateSampleAt"] = lastHeartRateSampleAt.timeIntervalSince1970
+        }
         if isSwimmingMode {
             payload["action"] = "swimMetrics"
             payload["swimLapCount"] = swimLapCount
@@ -1268,7 +1292,25 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         hkLiveBuilder = nil
     }
 
-    private func cardioActivityType(
+    private static func resolveCardioActivityType(
+        activityTypeRaw: UInt?,
+        exerciseName: String,
+        swimmingMode: Bool,
+        waterSportMode: Bool,
+        isKitesurf: Bool
+    ) -> HKWorkoutActivityType {
+        if let raw = activityTypeRaw, let typed = HKWorkoutActivityType(rawValue: raw), typed != .other {
+            return typed
+        }
+        return cardioActivityType(
+            exerciseName: exerciseName,
+            swimmingMode: swimmingMode,
+            waterSportMode: waterSportMode,
+            isKitesurf: isKitesurf
+        )
+    }
+
+    private static func cardioActivityType(
         exerciseName: String,
         swimmingMode: Bool,
         waterSportMode: Bool,
@@ -1279,14 +1321,19 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         if waterSportMode { return .surfingSports }
 
         let name = exerciseName.folding(options: .diacriticInsensitive, locale: .current).lowercased()
-        if name.contains("corrida") || name.contains("run") { return .running }
+        if name.contains("corrida") || name.contains("run") || name.contains("esteira") { return .running }
         if name.contains("caminh") || name.contains("walk") { return .walking }
         if name.contains("bike") || name.contains("cicl") || name.contains("cycling") { return .cycling }
+        if name.contains("elip") || name.contains("elliptical") { return .elliptical }
         if name.contains("escal") || name.contains("climb") { return .climbing }
         if name.contains("remo") || name.contains("row") { return .rowing }
-        if name.contains("luta") || name.contains("fight") || name.contains("box") { return .martialArts }
+        if name.contains("corda") || name.contains("jump rope") || name.contains("pular") { return .jumpRope }
+        if name.contains("escada") || name.contains("stair") { return .stairClimbing }
+        if name.contains("hiit") || name.contains("burpee") || name.contains("polichinel") { return .highIntensityIntervalTraining }
+        if name.contains("luta") || name.contains("fight") || name.contains("box") || name.contains("mma") { return .martialArts }
         if name.contains("surf") { return .surfingSports }
         if name.contains("kite") { return .paddleSports }
+        if name.contains("yoga") || name.contains("pilates") || name.contains("mobil") { return .yoga }
         return .other
     }
 
@@ -1574,6 +1621,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 ?? ((message["spotBuddyEnabled"] as? NSNumber)?.boolValue ?? false)
             let outdoor = (message["locationOutdoor"] as? Bool)
                 ?? ((message["locationOutdoor"] as? NSNumber)?.boolValue ?? false)
+            let activityRaw = (message["activityTypeRaw"] as? UInt)
+                ?? (message["activityTypeRaw"] as? NSNumber)?.uintValue
             if isActive,
                isCardioWorkout,
                workoutName == name,
@@ -1598,7 +1647,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 swimmingMode: swimMode,
                 poolLengthMeters: poolLen,
                 spotBuddyEnabled: spotBuddy,
-                locationOutdoor: outdoor
+                locationOutdoor: outdoor,
+                activityTypeRaw: activityRaw
             )
             sendWatchAckStarted(kind: "cardio", workoutName: name)
         case "syncWorkoutProgress":
@@ -1638,6 +1688,14 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                     "timestamp": Date().timeIntervalSince1970
                 ])
             }
+        case "requestMetrics":
+            sendMetricsToPhone()
+            sendToPhone([
+                "action": "watchAckMetrics",
+                "heartRate": heartRate,
+                "calories": calories,
+                "timestamp": Date().timeIntervalSince1970
+            ])
             watchSyncStatus = "iPhone sincronizado"
         case "requestSwimSync":
             sendMetricsToPhone()
@@ -1873,6 +1931,7 @@ extension WatchWorkoutManager: HKLiveWorkoutBuilderDelegate {
             }
             if let bpmSnapshot, bpmSnapshot > 0 {
                 manager.heartRate = bpmSnapshot
+                manager.lastHeartRateSampleAt = Date()
             }
             manager.sendMetricsToPhone()
         }

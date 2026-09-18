@@ -1,5 +1,5 @@
-• Pulse : recherche d’utilisateurs dans toute l’app (votre région d’abord)
-• Sommeil Apple Watch synchronisé avec Dashboard, check-in et profil
-• Avertissement élève pour vérifier CREF/CRN actifs au Brésil
-• iOS / iPadOS 18+ et watchOS 11+ ; compatibilité Xcode 27
-• Corrections d’API dépréciées et améliorations Pulse / Coach
+• Apple Watch : calories et BPM synchronisés pour tous les exercices (musculation, cardio, méditation)
+• Correction du BPM figé sur iPhone pendant l’entraînement
+• Pulse : correction de la lecture Deezer et reprise de la musique des stories au retour au fil
+• Sommeil : statut « surveillance activée » et info sur la mise à jour de la carte ; saisie manuelle toujours possible
+• Sommeil Apple Watch sur le Dashboard, le check-in et le profil (si synchronisé via Santé)

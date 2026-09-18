@@ -1,28 +1,24 @@
-HealthFit 1.0.6 (Build 18)
+HealthFit 1.0.7 (Build 19)
 
 Principais mudanças deste build:
-- Pulse: busca global de usuários com prioridade regional
-- Sono do Apple Watch → HealthKit → wellness (Dashboard / check-in)
-- Coach: aviso CREF/CRN Brasil (CONFEF/CFN) para o aluno
-- Deployment: iOS/iPadOS 18.0, watchOS 11.0; SDK 27
-- Fixes de depreciação (HealthKit, MapKit, AVFoundation, BGTask, UIScreen)
+- Watch ↔ iPhone: calorias e BPM em todos os exercícios (musculação, cardio, meditação)
+- Fix BPM travado no iPhone (freshness de amostras do Watch; sem fallback resting em treino ativo)
+- Pulse: Deezer tocando de novo; música dos stories retoma ao voltar ao feed
+- Sono: banner “Monitoramento de sono ativado” + quando o card atualiza; slider manual permanece
+- Sono Watch via Saúde no Dashboard / check-in / Perfil (sem sobrescrever registro manual)
 
 Conta demo App Review:
 E-mail: healthfit.appreview@gmail.com
 (senha no campo Sign-in Information do App Store Connect)
 
+Testes sugeridos:
+1. Treino ativo (cardio ou musculação) com Watch pareado — BPM e kcal atualizam no iPhone; pausar não deixa BPM “congelado”
+2. Meditação ativa — métricas ao vivo de BPM/kcal do Watch
+3. Pulse → música Deezer; abrir story com música, sair e voltar — áudio retoma
+4. Dashboard → card Sono: status de monitoramento; ajustar slider manual se não houver Watch
+
 HealthFit Pulse (18+ UGC):
-1. Dashboard → card HealthFit Pulse → aceitar termos → feed (conta 18+)
-2. Aba Pessoas / lupa: buscar usuários (região primeiro)
-3. Assinatura Pulse: 15 dias grátis, depois mensal/anual via StoreKit 2
-
-Coach / CREF-CRN:
-1. Perfil → HealthFit Coach → Buscar na região ou Entrar com código
-2. Ver o aviso laranja pedindo verificação do CREF/CRN ativo no Brasil
-
-Sono Watch:
-1. Com Sono autorizado no Saúde, abrir o app de manhã
-2. Dashboard / check-in devem refletir horas do Watch quando disponíveis
+Dashboard → card HealthFit Pulse → aceitar termos → feed (conta 18+)
 
 EULA / assinaturas:
 Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/

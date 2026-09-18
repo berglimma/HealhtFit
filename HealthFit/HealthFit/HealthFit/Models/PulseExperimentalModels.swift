@@ -917,6 +917,12 @@ struct PulseMusicAttachment: Codable, Hashable, Identifiable {
 
     var providerLabel: String { provider.title }
 
+    /// Deezer pode regenerar preview via `trackId` mesmo se a URL assinada expirou.
+    var canPlayPreview: Bool {
+        if let previewURL, !previewURL.isEmpty { return true }
+        return provider == .deezer && !trackId.isEmpty
+    }
+
     var clipEndSeconds: Double { clipStartSeconds + clipDurationSeconds }
 
     var clipRangeLabel: String {

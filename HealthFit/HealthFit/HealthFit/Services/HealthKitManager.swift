@@ -13,9 +13,12 @@ final class HealthKitManager: ObservableObject {
     @Published var todayCalories: Double = 0
     @Published var currentHeartRate: Double = 0
     @Published var restingHeartRate: Double = 0
+    /// Quando `currentHeartRate` foi atualizado por Watch/BLE ao vivo.
+    @Published private(set) var lastLiveHeartRateAt: Date?
 
     private var lastWeeklyFetchAt: Date?
     private static let weeklyFetchMinInterval: TimeInterval = 75
+    static let liveHeartRateStaleInterval: TimeInterval = 15
 
     /// Snapshot de treino externo (Fitness / outros apps) lido do Apple Saúde.
     struct ExternalWorkoutSample: Identifiable, Equatable {
@@ -115,6 +118,7 @@ final class HealthKitManager: ObservableObject {
     func applyLiveWatchMetrics(heartRate: Double?, calories: Double?, steps: Int?) {
         if let heartRate, heartRate > 0 {
             currentHeartRate = heartRate
+            lastLiveHeartRateAt = .now
         }
         if let calories, calories >= 0 {
             // Não substitui o total do dia; só garante BPM/contexto ao vivo.
@@ -123,6 +127,20 @@ final class HealthKitManager: ObservableObject {
         if let steps, steps > todaySteps {
             todaySteps = steps
         }
+    }
+
+    /// BPM do Saúde só conta como “ao vivo” se atualizado recentemente pelo Watch.
+    var freshLiveHeartRate: Double {
+        guard currentHeartRate > 0,
+              let at = lastLiveHeartRateAt,
+              Date().timeIntervalSince(at) <= Self.liveHeartRateStaleInterval else {
+            return 0
+        }
+        return currentHeartRate
+    }
+
+    func clearLiveWatchHeartRate() {
+        lastLiveHeartRateAt = nil
     }
 
     func fetchWeeklyMetrics(force: Bool = false) async {

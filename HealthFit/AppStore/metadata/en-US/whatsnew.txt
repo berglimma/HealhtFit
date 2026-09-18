@@ -1,6 +1,5 @@
-• Pulse: search everyone in the app (your region first, then other countries)
-• Apple Watch sleep synced into Dashboard, morning check-in, and profile
-• Student notice to verify active CREF/CRN with Brazilian councils
-• Requires iOS / iPadOS 18+ and watchOS 11+; Xcode 27 compatibility
-• Deprecated API fixes (HealthKit, MapKit, BackgroundTasks, and more)
-• SurfPro jump charts, coach body-fat map, and Pulse improvements
+• Apple Watch: calories and heart rate synced across all workouts (strength, cardio, meditation)
+• Fix for frozen BPM on iPhone during active workouts
+• Pulse: Deezer playback fix and story music resume when returning to the feed
+• Sleep: “monitoring enabled” status and when the sleep card updates; manual entry still available
+• Apple Watch sleep on Dashboard, morning check-in, and Profile (when synced via Health)

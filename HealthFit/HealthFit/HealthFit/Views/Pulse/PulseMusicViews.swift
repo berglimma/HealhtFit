@@ -125,7 +125,7 @@ struct PulseMusicTrackRow: View {
                     .lineLimit(1)
                 HStack(spacing: 6) {
                     Label(track.providerLabel, systemImage: track.provider.systemImage)
-                    if track.previewURL != nil {
+                    if track.canPlayPreview {
                         Text("· preview")
                     }
                 }
@@ -196,7 +196,7 @@ struct PulseMusicStickerView: View {
                     .foregroundStyle(AppTheme.accent)
             }
             Spacer(minLength: 8)
-            if music.previewURL != nil {
+            if music.canPlayPreview {
                 Button {
                     previewPlayer.toggle(music: music, loop: true)
                 } label: {
@@ -466,7 +466,7 @@ final class PulseMusicPreviewPlayer: ObservableObject {
     private var clipStartSeconds: Double = 0
     private var shouldLoop = true
     private var activeMusic: PulseMusicAttachment?
-    private var scrubGeneration = 0
+    private var playGeneration = 0
 
     private init() {}
 
@@ -504,46 +504,39 @@ final class PulseMusicPreviewPlayer: ObservableObject {
 
     /// Scrub Instagram-like: sempre busca o início do trecho e toca.
     func playClipPreview(music: PulseMusicAttachment) {
-        scrubGeneration += 1
-        let generation = scrubGeneration
-        guard let urlString = music.previewURL, let url = URL(string: urlString) else { return }
-
-        activateAudioSession()
+        playGeneration += 1
+        let generation = playGeneration
         shouldLoop = true
         clipStartSeconds = max(0, music.clipStartSeconds)
         clipEndSeconds = music.clipStartSeconds + min(
             music.clipDurationSeconds,
             PulseExperimental.maxMusicClipSeconds
         )
-
-        if activeURL == urlString, player != nil {
-            activeMusic = music
-            activeMusicID = music.id
-            currentSeconds = clipStartSeconds
-            // Atualiza o botão imediatamente (antes do seek assíncrono).
-            isPlaying = true
-            seekAndPlay(to: clipStartSeconds, generation: generation)
-            return
-        }
-
-        stopKeepingGeneration()
-        scrubGeneration = generation
-        // Restaurar identidade DEPOIS do stop (senão o sticker fica em “play”).
         activeMusic = music
         activeMusicID = music.id
         currentSeconds = clipStartSeconds
-        isPlaying = true
-        let item = AVPlayerItem(url: url)
-        let newPlayer = AVPlayer(playerItem: item)
-        player = newPlayer
-        activeURL = urlString
-        attachObservers(to: newPlayer, item: item)
-        seekAndPlay(to: clipStartSeconds, generation: generation)
+
+        Task { @MainActor in
+            await self.startPlayback(music: music, generation: generation)
+        }
     }
 
     func play(music: PulseMusicAttachment, loop: Bool = true) {
         shouldLoop = loop
         playClipPreview(music: music)
+    }
+
+    /// Retoma após `pause()` (stories / voltar ao Pulse) sem recriar o item.
+    func resume() {
+        guard activeMusic != nil, player != nil else {
+            if let music = activeMusic {
+                play(music: music, loop: shouldLoop)
+            }
+            return
+        }
+        activateAudioSession()
+        player?.play()
+        isPlaying = true
     }
 
     func seekToClipStart(music: PulseMusicAttachment, autoplay: Bool) {
@@ -565,15 +558,15 @@ final class PulseMusicPreviewPlayer: ObservableObject {
     func pause() {
         player?.pause()
         isPlaying = false
-        deactivateAudioSession()
+        // Mantém a sessão ativa — desativar aqui impede o resume ao voltar ao Pulse.
     }
 
     func stop() {
-        scrubGeneration += 1
-        stopKeepingGeneration()
+        playGeneration += 1
+        tearDownPlayer(deactivateSession: true)
     }
 
-    private func stopKeepingGeneration() {
+    private func tearDownPlayer(deactivateSession: Bool) {
         if let timeObserver, let player {
             player.removeTimeObserver(timeObserver)
         }
@@ -589,11 +582,120 @@ final class PulseMusicPreviewPlayer: ObservableObject {
         activeMusicID = nil
         activeMusic = nil
         currentSeconds = 0
-        deactivateAudioSession()
+        if deactivateSession {
+            deactivateAudioSession()
+        }
     }
 
     private func deactivateAudioSession() {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    private func startPlayback(music: PulseMusicAttachment, generation: Int) async {
+        guard generation == playGeneration else { return }
+
+        guard let url = await resolvePlayableURL(for: music) else {
+            if generation == playGeneration {
+                isPlaying = false
+            }
+            return
+        }
+        guard generation == playGeneration else { return }
+
+        activateAudioSession()
+
+        // Mesma faixa já carregada e pronta → só seek + play.
+        if activeURL == url.absoluteString,
+           let existing = player,
+           existing.currentItem?.status == .readyToPlay {
+            activeMusic = music
+            activeMusicID = music.id
+            await seekAndPlay(to: clipStartSeconds, generation: generation)
+            return
+        }
+
+        // Recria o player sem invalidar esta geração.
+        if let timeObserver, let player {
+            player.removeTimeObserver(timeObserver)
+        }
+        timeObserver = nil
+        if let endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+            self.endObserver = nil
+        }
+        player?.pause()
+        player = nil
+
+        let item = AVPlayerItem(url: url)
+        let newPlayer = AVPlayer(playerItem: item)
+        player = newPlayer
+        activeURL = url.absoluteString
+        activeMusic = music
+        activeMusicID = music.id
+        attachObservers(to: newPlayer, item: item)
+
+        let ready = await waitUntilReady(item: item, generation: generation)
+        guard generation == playGeneration else { return }
+
+        if !ready {
+            // URL assinada Deezer pode ter expirado — tenta refresh uma vez.
+            if music.provider == .deezer,
+               let fresh = await PulseMusicSearchService.shared.refreshDeezerPreviewURL(trackId: music.trackId),
+               let freshURL = URL(string: fresh),
+               freshURL.absoluteString != url.absoluteString {
+                guard generation == playGeneration else { return }
+                let retryItem = AVPlayerItem(url: freshURL)
+                let retryPlayer = AVPlayer(playerItem: retryItem)
+                if let timeObserver {
+                    newPlayer.removeTimeObserver(timeObserver)
+                    self.timeObserver = nil
+                }
+                if let endObserver {
+                    NotificationCenter.default.removeObserver(endObserver)
+                    self.endObserver = nil
+                }
+                player = retryPlayer
+                activeURL = freshURL.absoluteString
+                attachObservers(to: retryPlayer, item: retryItem)
+                let retryReady = await waitUntilReady(item: retryItem, generation: generation)
+                guard generation == playGeneration, retryReady else {
+                    if generation == playGeneration { isPlaying = false }
+                    return
+                }
+                await seekAndPlay(to: clipStartSeconds, generation: generation)
+                return
+            }
+            if generation == playGeneration { isPlaying = false }
+            return
+        }
+
+        await seekAndPlay(to: clipStartSeconds, generation: generation)
+    }
+
+    private func resolvePlayableURL(for music: PulseMusicAttachment) async -> URL? {
+        if music.provider == .deezer {
+            if let fresh = await PulseMusicSearchService.shared.refreshDeezerPreviewURL(trackId: music.trackId),
+               let url = URL(string: fresh) {
+                return url
+            }
+        }
+        if let preview = music.previewURL, !preview.isEmpty, let url = URL(string: preview) {
+            return url
+        }
+        return nil
+    }
+
+    private func waitUntilReady(item: AVPlayerItem, generation: Int) async -> Bool {
+        if item.status == .readyToPlay { return true }
+        if item.status == .failed { return false }
+
+        for _ in 0..<50 {
+            guard generation == playGeneration else { return false }
+            if item.status == .readyToPlay { return true }
+            if item.status == .failed { return false }
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        return item.status == .readyToPlay
     }
 
     private func attachObservers(to newPlayer: AVPlayer, item: AVPlayerItem) {
@@ -623,17 +725,29 @@ final class PulseMusicPreviewPlayer: ObservableObject {
         }
     }
 
-    private func seekAndPlay(to seconds: Double, generation: Int) {
+    private func seekAndPlay(to seconds: Double, generation: Int) async {
+        guard generation == playGeneration, let player else { return }
         let start = CMTime(seconds: seconds, preferredTimescale: 600)
-        player?.seek(to: start, toleranceBefore: .zero, toleranceAfter: .zero) { [box = WeakMainActorBox(self)] finished in
-            guard finished else { return }
-            box.run { this in
-                guard this.scrubGeneration == generation else { return }
-                this.player?.play()
-                this.isPlaying = true
-                this.currentSeconds = seconds
+
+        // Skip seek when already near start — seek antes de ready falhava em silêncio.
+        let current = player.currentTime().seconds
+        let needsSeek = !current.isFinite || abs(current - seconds) > 0.15
+
+        if needsSeek {
+            let finished = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+                player.seek(to: start, toleranceBefore: .zero, toleranceAfter: .zero) { done in
+                    continuation.resume(returning: done)
+                }
             }
+            guard generation == playGeneration else { return }
+            // Mesmo se o seek reportar false, tenta play — item já está ready.
+            _ = finished
         }
+
+        guard generation == playGeneration else { return }
+        player.play()
+        isPlaying = true
+        currentSeconds = seconds
     }
 
     private func handleClipEnd() {
@@ -646,10 +760,11 @@ final class PulseMusicPreviewPlayer: ObservableObject {
 
     private func activateAudioSession() {
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
-            try AVAudioSession.sharedInstance().setActive(true)
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, options: [])
+            try session.setActive(true)
         } catch {
-            // Preview still attempts to play with system defaults.
+            // Tenta mesmo assim — o sistema pode já estar ativo.
         }
     }
 

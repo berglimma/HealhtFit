@@ -58,16 +58,36 @@ final class PulseMusicSearchService: ObservableObject {
         guard let url = components.url else { throw PulseMusicSearchError.invalidURL }
         let (data, _) = try await URLSession.shared.data(from: url)
         let decoded = try JSONDecoder().decode(DeezerSearchResponse.self, from: data)
-        return decoded.data.map { track in
-            PulseMusicAttachment(
+        // Só faixas com preview — sem áudio a UI parece “quebrada”.
+        return decoded.data.compactMap { track in
+            guard let preview = track.preview, !preview.isEmpty else { return nil }
+            return PulseMusicAttachment(
                 provider: .deezer,
                 trackId: String(track.id),
                 title: track.title,
                 artistName: track.artist.name,
                 artworkURL: track.album?.cover_medium ?? track.album?.cover,
-                previewURL: track.preview.flatMap { $0.isEmpty ? nil : $0 },
+                previewURL: preview,
                 externalURL: track.link
             )
+        }
+    }
+
+    /// Deezer assina as URLs de preview (`hdnea=exp=…`); regenera a partir do track id.
+    func refreshDeezerPreviewURL(trackId: String) async -> String? {
+        let trimmed = trackId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let url = URL(string: "https://api.deezer.com/track/\(trimmed)") else { return nil }
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                return nil
+            }
+            let decoded = try JSONDecoder().decode(DeezerTrackDetail.self, from: data)
+            guard let preview = decoded.preview, !preview.isEmpty else { return nil }
+            return preview
+        } catch {
+            return nil
         }
     }
 
@@ -182,6 +202,11 @@ private struct DeezerTrack: Decodable {
     let preview: String?
     let artist: DeezerArtist
     let album: DeezerAlbum?
+}
+
+private struct DeezerTrackDetail: Decodable {
+    let id: Int
+    let preview: String?
 }
 
 private struct DeezerArtist: Decodable {

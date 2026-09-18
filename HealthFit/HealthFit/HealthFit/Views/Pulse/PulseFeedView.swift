@@ -372,6 +372,9 @@ struct PulseFeedView: View {
                 store.requestPulseNotificationPermission()
                 Task { await store.refreshFromCloud(currentUserId: authorId) }
             }
+            .onDisappear {
+                PulseMusicPreviewPlayer.shared.stop()
+            }
         }
     }
 
@@ -492,7 +495,10 @@ struct PulseFeedView: View {
             musicVisibilityTask?.cancel()
             musicVisibilityTask = nil
             autoPlayMusicPostId = nil
-            PulseMusicPreviewPlayer.shared.pause()
+            // Não pausar se o story viewer (fullScreenCover) ainda estiver aberto.
+            if viewingSession == nil {
+                PulseMusicPreviewPlayer.shared.pause()
+            }
         }
     }
 
@@ -509,7 +515,9 @@ struct PulseFeedView: View {
             guard let best = eligible.min(by: { $0.centerDistance < $1.centerDistance }) else {
                 if autoPlayMusicPostId != nil {
                     autoPlayMusicPostId = nil
-                    PulseMusicPreviewPlayer.shared.pause()
+                    if viewingSession == nil {
+                        PulseMusicPreviewPlayer.shared.pause()
+                    }
                 }
                 return
             }
@@ -1275,6 +1283,15 @@ private struct PulseStoryViewer: View {
         .onChange(of: index) { _, _ in
             startCurrentStory()
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            // Ao voltar do background / reabrir o app, retoma a faixa do story atual.
+            guard !isPaused, let music = story.music, music.canPlayPreview else { return }
+            if musicPlayer.isPlayingMusic(music) {
+                musicPlayer.resume()
+            } else {
+                musicPlayer.play(music: music, loop: true)
+            }
+        }
         .sheet(item: $reactionsSheetItem) { item in
             PulseReactionsListView(
                 reactions: item.reactions,
@@ -1490,7 +1507,7 @@ private struct PulseStoryViewer: View {
         isPaused = false
         onViewed(story.id)
         musicPlayer.stop()
-        if let music = story.music {
+        if let music = story.music, music.canPlayPreview {
             musicPlayer.play(music: music, loop: true)
         }
         tickTask = Task { @MainActor in
@@ -1510,8 +1527,20 @@ private struct PulseStoryViewer: View {
         }
     }
 
-    private func pause() { isPaused = true }
-    private func resume() { isPaused = false }
+    private func pause() {
+        isPaused = true
+        musicPlayer.pause()
+    }
+
+    private func resume() {
+        isPaused = false
+        guard let music = story.music, music.canPlayPreview else { return }
+        if musicPlayer.activeMusicID == music.id {
+            musicPlayer.resume()
+        } else {
+            musicPlayer.play(music: music, loop: true)
+        }
+    }
 
     private func goPrevious() {
         guard index > 0 else {
@@ -2502,7 +2531,7 @@ private struct PulsePostCard: View {
                 let screen = PulseScreenMetrics.bounds
                 let report = Self.musicVisibility(
                     postId: post.id,
-                    hasPreview: post.music?.previewURL != nil,
+                    hasPreview: post.music?.canPlayPreview == true,
                     card: frame,
                     screen: screen
                 )
@@ -2521,12 +2550,12 @@ private struct PulsePostCard: View {
         }
         .onAppear {
             onAppearIndex?()
-            if shouldAutoPlayMusic, let music = post.music {
+            if shouldAutoPlayMusic, let music = post.music, music.canPlayPreview {
                 musicPlayer.play(music: music, loop: true)
             }
         }
         .onChange(of: shouldAutoPlayMusic) { _, shouldPlay in
-            guard let music = post.music else { return }
+            guard let music = post.music, music.canPlayPreview else { return }
             if shouldPlay {
                 musicPlayer.play(music: music, loop: true)
             } else if musicPlayer.isPlayingMusic(music) {

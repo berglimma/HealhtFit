@@ -336,6 +336,10 @@ struct DashboardView: View {
                     }
                 }
             }
+
+            if isToday {
+                SleepMonitoringStatusView(entry: entry, style: .card)
+            }
         }
         .padding(16)
         .background {

@@ -8,6 +8,7 @@ struct ActiveMeditationView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
+    @ObservedObject private var liveMetrics = LiveMetricsHub.shared
 
     let config: MeditationWorkoutConfig
     var onReturnToWorkoutList: (() -> Void)? = nil
@@ -39,6 +40,9 @@ struct ActiveMeditationView: View {
         max(config.targetDurationSeconds - elapsedSeconds, 0)
     }
 
+    private var liveHeartRateBPM: Double { liveMetrics.heartRateBPM }
+    private var liveCalories: Double { max(liveMetrics.liveCalories, watchConnectivity.watchCalories) }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -46,6 +50,7 @@ struct ActiveMeditationView: View {
 
                 VStack(spacing: 28) {
                     topicBadge
+                    liveWatchMetricsBar
                     timerRing
                     guidanceCard
                     Spacer()
@@ -75,6 +80,7 @@ struct ActiveMeditationView: View {
             // Em background: só encerra por tempo; evita sync Watch a cada segundo.
             if scenePhase == .active {
                 ensureWatchMeditationActive()
+                syncLiveWatchSamples()
             }
             if elapsedSeconds >= config.targetDurationSeconds && !isFinishing {
                 finishMeditation()
@@ -158,6 +164,45 @@ struct ActiveMeditationView: View {
         .padding(.vertical, 8)
         .background(config.topic.color.opacity(0.15))
         .clipShape(Capsule())
+    }
+
+    private var liveWatchMetricsBar: some View {
+        HStack(spacing: 16) {
+            Label {
+                Text(liveHeartRateBPM > 0 ? "\(Int(liveHeartRateBPM)) BPM" : "— BPM")
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+            } icon: {
+                Image(systemName: "heart.fill")
+                    .foregroundStyle(.red)
+            }
+            Label {
+                Text("\(Int(liveCalories)) kcal")
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+            } icon: {
+                Image(systemName: "flame.fill")
+                    .foregroundStyle(.orange)
+            }
+            if watchConnectivity.isWatchConnected {
+                Image(systemName: "applewatch")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+            }
+        }
+        .foregroundStyle(AppTheme.textPrimary)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(AppTheme.cardBackground)
+        .clipShape(Capsule())
+        .accessibilityLabel("Batimentos e calorias do Apple Watch")
+    }
+
+    private func syncLiveWatchSamples() {
+        if liveHeartRateBPM > 0 {
+            workoutStore.addHeartRateSample(liveHeartRateBPM)
+        }
+        if liveCalories > 0 {
+            workoutStore.updateCalories(liveCalories)
+        }
     }
 
     private var timerRing: some View {

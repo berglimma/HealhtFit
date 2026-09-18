@@ -1228,11 +1228,9 @@ struct ProfileView: View {
                 Text(assessment.message)
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
-            } else {
-                Text("O Apple Watch sincroniza o sono pelo app Saúde. Você também pode ajustar o controle acima.")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
             }
+
+            SleepMonitoringStatusView(entry: wellnessService.todayEntry, style: .compact)
         }
         .padding(.vertical, 4)
 
