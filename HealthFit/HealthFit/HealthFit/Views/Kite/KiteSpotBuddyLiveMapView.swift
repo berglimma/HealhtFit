@@ -520,11 +520,23 @@ struct KiteSpotBuddyEntryCard: View {
                         .foregroundStyle(.orange)
                 } else {
                     Button(action: onRequestHelp) {
-                        Label("Ajuda", systemImage: "sos")
+                        Label("SOS", systemImage: "sos")
                             .font(.caption.weight(.bold))
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.orange)
+                }
+            }
+
+            if !service.needsHelp {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("SOS no Apple Watch")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Text("1) Abra Spot Buddy no Watch · 2) Gire a Digital Crown até o fim ou toque SOS · 3) Amigos Duo no Spot (≤2 km) recebem o alerta · 4) “Estou bem” cancela.")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }

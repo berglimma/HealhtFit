@@ -179,7 +179,8 @@ struct WorkoutShareCardView: View {
             ShareCardRouteMapView(
                 routePoints: session.routePoints,
                 distanceKm: session.displayDistanceKm,
-                performanceMetric: session.routePerformanceMetric
+                performanceMetric: session.routePerformanceMetric,
+                markMaxSpeedArrow: session.isKitesurfSession
             )
             .frame(height: needsExtraTextSpace ? 118 : 138)
             .layoutPriority(2)
@@ -230,30 +231,54 @@ struct WorkoutShareCardView: View {
         return "\(displayName) fechou \(outdoorSessionNoun)"
     }
 
+    @ViewBuilder
     private var runningStatsGrid: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 6) {
-                shareStat(value: runningBPMValue, label: "BPM")
-                shareStat(value: runningKcalValue, label: "KCAL")
-                shareStat(value: runningPaceValue, label: "RITMO")
-            }
-            HStack(spacing: 6) {
-                shareStat(value: runningStepsValue, label: "PASSOS")
-                shareStat(value: runningKmValue, label: "KM")
-                shareStat(value: runningTempoValue, label: "TEMPO")
-            }
-            if session.pausedDurationSeconds > 0 {
+        if session.isKitesurfSession {
+            kiteStatsGrid
+        } else {
+            VStack(spacing: 6) {
                 HStack(spacing: 6) {
-                    shareStat(
-                        value: DurationFormatting.format(seconds: session.pausedDurationSeconds),
-                        label: "PAUSA"
-                    )
-                    shareStat(
-                        value: DurationFormatting.format(seconds: session.activeDurationSeconds),
-                        label: "ATIVO"
-                    )
-                    Color.clear.frame(maxWidth: .infinity)
+                    shareStat(value: runningBPMValue, label: "BPM")
+                    shareStat(value: runningKcalValue, label: "KCAL")
+                    shareStat(value: runningPaceValue, label: "RITMO")
                 }
+                HStack(spacing: 6) {
+                    shareStat(value: runningStepsValue, label: "PASSOS")
+                    shareStat(value: runningKmValue, label: "KM")
+                    shareStat(value: runningTempoValue, label: "TEMPO")
+                }
+                if session.pausedDurationSeconds > 0 {
+                    HStack(spacing: 6) {
+                        shareStat(
+                            value: DurationFormatting.format(seconds: session.pausedDurationSeconds),
+                            label: "PAUSA"
+                        )
+                        shareStat(
+                            value: DurationFormatting.format(seconds: session.activeDurationSeconds),
+                            label: "ATIVO"
+                        )
+                        Color.clear.frame(maxWidth: .infinity)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Card de postagem Kitesurf: altura, tempo no ar, distância e vel. máxima (com seta).
+    private var kiteStatsGrid: some View {
+        let metrics = KitePostingMetrics.make(from: session)
+        return VStack(spacing: 6) {
+            HStack(spacing: 6) {
+                shareStat(value: metrics.heightText, label: "ALTURA")
+                shareStat(value: metrics.airtimeText, label: "TEMPO NO AR")
+            }
+            HStack(spacing: 6) {
+                shareStat(value: metrics.distanceText, label: "DISTÂNCIA")
+                shareStat(
+                    value: metrics.maxSpeedText,
+                    label: "VEL. MÁX",
+                    showsPeakArrow: metrics.maxSpeedKmh > 0
+                )
             }
         }
     }
@@ -797,13 +822,20 @@ struct WorkoutShareCardView: View {
         }
     }
 
-    private func shareStat(value: String, label: String) -> some View {
+    private func shareStat(value: String, label: String, showsPeakArrow: Bool = false) -> some View {
         VStack(spacing: needsExtraTextSpace ? 2 : 3) {
-            Text(value)
-                .font(.system(size: needsExtraTextSpace ? 11 : 13, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .minimumScaleFactor(0.65)
-                .lineLimit(1)
+            HStack(spacing: 3) {
+                if showsPeakArrow {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: needsExtraTextSpace ? 8 : 10, weight: .heavy))
+                        .foregroundStyle(Color("AccentOrange"))
+                }
+                Text(value)
+                    .font(.system(size: needsExtraTextSpace ? 11 : 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .minimumScaleFactor(0.65)
+                    .lineLimit(1)
+            }
             Text(label)
                 .font(.system(size: 7, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.5))
@@ -859,12 +891,19 @@ struct ShareCardRouteMapView: View {
     var distanceKm: Double = 0
     var performanceMetric: RoutePerformanceMetric = .pace
     var style: ShareCardRouteMapStyle = .flat2D
+    /// Kitesurf: marca o ponto da maior velocidade com seta.
+    var markMaxSpeedArrow: Bool = false
 
     private var hasRoute: Bool { routePoints.count >= 2 }
 
     /// Limita pontos para ImageRenderer / WhatsApp (rota longa).
     private var renderPoints: [RouteCoordinate] {
         Self.downsample(routePoints, maxCount: style == .perspective3D ? 180 : 280)
+    }
+
+    private var maxSpeedIndex: Int? {
+        guard markMaxSpeedArrow else { return nil }
+        return KitePostingMetrics.maxSpeedRouteIndex(in: renderPoints)
     }
 
     var body: some View {
@@ -991,6 +1030,22 @@ struct ShareCardRouteMapView: View {
         context.stroke(Path(ellipseIn: startRect), with: .color(.white), lineWidth: 1.5)
         context.fill(Path(ellipseIn: endRect), with: .color(segments.last?.color ?? Color("AccentOrange")))
         context.stroke(Path(ellipseIn: endRect), with: .color(.white), lineWidth: 1.5)
+
+        if let maxIdx = maxSpeedIndex, maxIdx >= 0, maxIdx < projected.count {
+            let peak = projected[maxIdx]
+            // Seta apontando para o ponto da maior velocidade.
+            let tip = CGPoint(x: peak.x, y: peak.y - 14)
+            var arrow = Path()
+            arrow.move(to: tip)
+            arrow.addLine(to: CGPoint(x: peak.x - 6, y: peak.y - 4))
+            arrow.addLine(to: CGPoint(x: peak.x + 6, y: peak.y - 4))
+            arrow.closeSubpath()
+            context.fill(arrow, with: .color(Color("AccentOrange")))
+            context.stroke(arrow, with: .color(.white.opacity(0.9)), lineWidth: 1)
+            let peakDot = CGRect(x: peak.x - 4, y: peak.y - 4, width: 8, height: 8)
+            context.fill(Path(ellipseIn: peakDot), with: .color(Color("AccentOrange")))
+            context.stroke(Path(ellipseIn: peakDot), with: .color(.white), lineWidth: 1.2)
+        }
     }
 
     /// Projeção em perspectiva isométrica leve (sem rotation3DEffect).
@@ -1093,7 +1148,8 @@ enum WorkoutRouteMapRenderer {
             routePoints: session.routePoints,
             distanceKm: session.displayDistanceKm,
             performanceMetric: session.routePerformanceMetric,
-            style: style
+            style: style,
+            markMaxSpeedArrow: session.isKitesurfSession
         )
         .frame(width: width, height: height)
 

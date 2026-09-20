@@ -42,6 +42,9 @@ final class RunTrackingService: NSObject, ObservableObject {
     private var didRequestAlwaysAuthorization = false
     /// Distância mínima entre updates GPS em treino ativo (reduz flood na UI após wake).
     private static let activeDistanceFilterMeters: CLLocationDistance = 6
+    /// Surf/Kite: prioriza GPS do Apple Watch (iPhone em terra).
+    private var prefersWatchGPS = false
+    private var lastWatchGPSAt: Date?
 
     var distanceKm: Double { distanceMeters / 1_000.0 }
 
@@ -68,6 +71,8 @@ final class RunTrackingService: NSObject, ObservableObject {
 
     func prepareForSession(modality: OutdoorCardioModality = .running) {
         self.modality = modality
+        prefersWatchGPS = modality.isWaterSport
+        lastWatchGPSAt = nil
         locationDeniedMessage = nil
         requestLocationPermissionIfNeeded()
     }
@@ -96,6 +101,8 @@ final class RunTrackingService: NSObject, ObservableObject {
         pedometerRawWhenPaused = nil
         isPaused = false
         isTracking = true
+        lastWatchGPSAt = nil
+        prefersWatchGPS = self.modality.isWaterSport
         // `didRequestAlwaysAuthorization` NÃO é zerado aqui: `prepareForSession()`
         // roda logo antes de `start()` e resetar abriria o alerta de Always duas
         // vezes seguidas, deixando a tela travada no momento do "Iniciar".
@@ -343,7 +350,34 @@ final class RunTrackingService: NSObject, ObservableObject {
     }
 
     private func accept(_ location: CLLocation) {
+        // Surf/Kite: se o Watch está mandando GPS recente, ignora o iPhone (em terra).
+        if prefersWatchGPS,
+           let watchAt = lastWatchGPSAt,
+           Date().timeIntervalSince(watchAt) < 45 {
+            return
+        }
         _ = ingest(location)
+    }
+
+    /// Injeta pontos GPS vindos do Apple Watch (rota no mar).
+    func ingestWatchGPSPoints(_ points: [WatchGPSRoutePoint]) {
+        guard isTracking, !points.isEmpty else { return }
+        prefersWatchGPS = true
+        let previousPaused = isPaused
+        for point in points {
+            // Alinha o flag de pausa com o segmento vindo do Watch.
+            if point.isPaused != isPaused {
+                isPaused = point.isPaused
+            }
+            if ingest(point.location) {
+                lastWatchGPSAt = point.location.timestamp
+            }
+        }
+        isPaused = previousPaused
+        if let last = points.last {
+            lastWatchGPSAt = max(lastWatchGPSAt ?? .distantPast, last.location.timestamp)
+            currentLocation = last.location
+        }
     }
 
     /// Aplica um ponto no estado interno. Retorna `true` se algo relevante mudou.
@@ -353,7 +387,10 @@ final class RunTrackingService: NSObject, ObservableObject {
         // Warm-up: primeiros 90s aceitam precisão mais frouxa (GPS frio / tela bloqueada).
         let elapsedSinceStart = sessionStartDate.map { location.timestamp.timeIntervalSince($0) } ?? 0
         let maxAccuracy: CLLocationAccuracy
-        if lastAcceptedLocation == nil {
+        if prefersWatchGPS {
+            // GPS no mar via Watch costuma ser mais ruidoso — tolerância maior.
+            maxAccuracy = lastAcceptedLocation == nil ? 150 : 85
+        } else if lastAcceptedLocation == nil {
             maxAccuracy = 120
         } else if elapsedSinceStart < 90 {
             maxAccuracy = 75

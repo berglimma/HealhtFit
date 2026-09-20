@@ -158,6 +158,9 @@ struct WorkoutSummaryView: View {
             }
             .onAppear {
                 selectedEffort = session.perceivedEffort
+                if session.isKitesurfSession || session.isSurfSession {
+                    shareMapStyle = .perspective3D
+                }
                 shareCardStore.remember(
                     session: session,
                     athleteName: athleteDisplayName,
@@ -440,6 +443,7 @@ struct WorkoutSummaryView: View {
                     session: session,
                     isCardioSession: isCardioSession || session.isOutdoorGPSCardio,
                     showVideoBadge: resultMedia.isVideo,
+                    videoURL: resultMedia.videoURL,
                     layout: resultMediaOverlayLayout,
                     allowsMetricsGestures: true,
                     onLayoutChange: { resultMediaOverlayLayout = $0 }
@@ -1968,8 +1972,8 @@ struct WorkoutSummaryView: View {
                     .foregroundStyle(AppTheme.textSecondary)
             } else if session.isWaterSportSession, session.routePoints.isEmpty {
                 Text(waterSpotCoordinate != nil
-                     ? "Mapa do SPOT de partida · sem rota GPS completa nesta sessão."
-                     : "Sem pontos GPS registrados nesta sessão.")
+                     ? "Mapa do SPOT de partida · sem rota GPS ainda. No Surf/Kitesurf o GPS vem do Apple Watch na água e sincroniza com o iPhone."
+                     : "Sem pontos GPS. No Surf/Kitesurf use o Apple Watch na água — a rota sincroniza com o iPhone.")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
             }
@@ -1999,6 +2003,12 @@ struct WorkoutSummaryView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.textPrimary)
 
+            if session.isKitesurfSession || session.isSurfSession {
+                Text("Rota do \(session.isKitesurfSession ? "kitesurf" : "surf") · escolha 2D ou 3D para Stories.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
             Picker("Formato", selection: $shareMapStyle) {
                 ForEach(ShareCardRouteMapStyle.allCases) { style in
                     Text(style.title).tag(style)
@@ -2010,9 +2020,10 @@ struct WorkoutSummaryView: View {
                 routePoints: session.routePoints,
                 distanceKm: session.displayDistanceKm,
                 performanceMetric: session.routePerformanceMetric,
-                style: shareMapStyle
+                style: shareMapStyle,
+                markMaxSpeedArrow: session.isKitesurfSession
             )
-            .frame(height: 150)
+            .frame(height: shareMapStyle == .perspective3D ? 170 : 150)
 
             Button {
                 Task { await shareRouteMapImage() }

@@ -157,6 +157,56 @@ enum RecommendedWorkoutCatalog {
                     Exercise(name: "Face Pull", sets: 3, reps: 15, weight: 22, restSeconds: 60, muscleGroup: .back),
                     Exercise(name: "Crucifixo Inverso", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .shoulders)
                 ]
+            ),
+            sheet(
+                title: "Masculino E — Superior Completo",
+                description: "Peito, costas, ombros e braços — hipertrofia de membros superiores",
+                gender: .male,
+                warmup: .upper,
+                abs: .plankCrunch,
+                main: [
+                    Exercise(name: "Supino Reto", sets: 4, reps: 8, weight: 70, restSeconds: 90, muscleGroup: .chest),
+                    Exercise(name: "Supino Inclinado com Halteres", sets: 3, reps: 10, weight: 28, restSeconds: 75, muscleGroup: .chest),
+                    Exercise(name: "Puxada Frontal", sets: 4, reps: 10, weight: 50, restSeconds: 75, muscleGroup: .back),
+                    Exercise(name: "Remada Curvada", sets: 4, reps: 8, weight: 60, restSeconds: 90, muscleGroup: .back),
+                    Exercise(name: "Desenvolvimento com Halteres", sets: 3, reps: 10, weight: 20, restSeconds: 75, muscleGroup: .shoulders),
+                    Exercise(name: "Elevação Lateral", sets: 3, reps: 12, weight: 10, restSeconds: 45, muscleGroup: .shoulders),
+                    Exercise(name: "Rosca Direta", sets: 3, reps: 10, weight: 16, restSeconds: 45, muscleGroup: .arms),
+                    Exercise(name: "Tríceps Pulley", sets: 3, reps: 12, weight: 28, restSeconds: 45, muscleGroup: .arms)
+                ]
+            ),
+            sheet(
+                title: "Masculino F — Inferior Completo",
+                description: "Quadríceps, posteriores, glúteos e panturrilhas — membros inferiores",
+                gender: .male,
+                warmup: .lower,
+                abs: .plankOblique,
+                main: [
+                    Exercise(name: "Agachamento Livre", sets: 4, reps: 8, weight: 90, restSeconds: 120, muscleGroup: .legs),
+                    Exercise(name: "Leg Press 45°", sets: 4, reps: 10, weight: 180, restSeconds: 90, muscleGroup: .legs),
+                    Exercise(name: "Stiff", sets: 4, reps: 8, weight: 70, restSeconds: 90, muscleGroup: .legs),
+                    Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 3, reps: 10, weight: 80, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Afundo Búlgaro", sets: 3, reps: 10, weight: 22, restSeconds: 60, muscleGroup: .legs),
+                    Exercise(name: "Mesa Flexora", sets: 3, reps: 12, weight: 40, restSeconds: 60, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha em Pé", sets: 4, reps: 15, weight: 90, restSeconds: 40, muscleGroup: .legs)
+                ]
+            ),
+            sheet(
+                title: "Masculino G — Pernas Hipertrofia",
+                description: "Volume alto de pernas para crescimento — perfil masculino",
+                gender: .male,
+                warmup: .lower,
+                abs: .legsBicycle,
+                main: [
+                    Exercise(name: "Hack Squat", sets: 4, reps: 10, weight: 120, restSeconds: 90, muscleGroup: .legs),
+                    Exercise(name: "Leg Press 45°", sets: 4, reps: 12, weight: 170, restSeconds: 90, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Extensora", sets: 4, reps: 12, weight: 45, restSeconds: 60, muscleGroup: .legs),
+                    Exercise(name: "Mesa Flexora", sets: 4, reps: 12, weight: 40, restSeconds: 60, muscleGroup: .legs),
+                    Exercise(name: "Afundo", sets: 3, reps: 12, weight: 24, restSeconds: 60, muscleGroup: .legs),
+                    Exercise(name: "Stiff", sets: 3, reps: 10, weight: 60, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha Sentado", sets: 4, reps: 15, weight: 55, restSeconds: 40, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha em Pé", sets: 3, reps: 15, weight: 80, restSeconds: 40, muscleGroup: .legs)
+                ]
             )
         ],
         // Coorte 1 — variação push/pull/legs
@@ -227,6 +277,55 @@ enum RecommendedWorkoutCatalog {
                     Exercise(name: "Encolhimento com Halteres", sets: 4, reps: 15, weight: 28, restSeconds: 45, muscleGroup: .back),
                     Exercise(name: "Remada Alta", sets: 3, reps: 12, weight: 30, restSeconds: 60, muscleGroup: .shoulders)
                 ]
+            ),
+            sheet(
+                title: "Masculino E — Superior Densidade",
+                description: "Membros superiores com volume — ciclo mensal 2",
+                gender: .male,
+                warmup: .upper,
+                abs: .plankCrunch,
+                main: [
+                    Exercise(name: "Supino Inclinado", sets: 4, reps: 10, weight: 55, restSeconds: 75, muscleGroup: .chest),
+                    Exercise(name: "Crossover", sets: 3, reps: 12, weight: 12, restSeconds: 45, muscleGroup: .chest),
+                    Exercise(name: "Barra Fixa", sets: 4, reps: 8, restSeconds: 90, muscleGroup: .back),
+                    Exercise(name: "Remada Unilateral", sets: 3, reps: 10, weight: 26, restSeconds: 60, muscleGroup: .back),
+                    Exercise(name: "Desenvolvimento Militar", sets: 3, reps: 8, weight: 40, restSeconds: 75, muscleGroup: .shoulders),
+                    Exercise(name: "Elevação Lateral", sets: 4, reps: 12, weight: 10, restSeconds: 45, muscleGroup: .shoulders),
+                    Exercise(name: "Rosca Martelo", sets: 3, reps: 12, weight: 14, restSeconds: 45, muscleGroup: .arms),
+                    Exercise(name: "Tríceps Testa", sets: 3, reps: 10, weight: 25, restSeconds: 45, muscleGroup: .arms)
+                ]
+            ),
+            sheet(
+                title: "Masculino F — Inferior Densidade",
+                description: "Membros inferiores com densidade — ciclo mensal 2",
+                gender: .male,
+                warmup: .lower,
+                abs: .plankLegs,
+                main: [
+                    Exercise(name: "Agachamento Livre", sets: 4, reps: 10, weight: 85, restSeconds: 120, muscleGroup: .legs),
+                    Exercise(name: "Hack Squat", sets: 3, reps: 10, weight: 120, restSeconds: 90, muscleGroup: .legs),
+                    Exercise(name: "Stiff", sets: 4, reps: 10, weight: 65, restSeconds: 90, muscleGroup: .legs),
+                    Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 3, reps: 12, weight: 70, restSeconds: 60, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Extensora", sets: 3, reps: 12, weight: 40, restSeconds: 45, muscleGroup: .legs),
+                    Exercise(name: "Mesa Flexora", sets: 3, reps: 12, weight: 35, restSeconds: 45, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha em Pé", sets: 4, reps: 15, weight: 85, restSeconds: 35, muscleGroup: .legs)
+                ]
+            ),
+            sheet(
+                title: "Masculino G — Pernas Volume",
+                description: "Pernas com alto volume — ciclo mensal 2",
+                gender: .male,
+                warmup: .lower,
+                abs: .infraBicycle,
+                main: [
+                    Exercise(name: "Leg Press 45°", sets: 4, reps: 12, weight: 180, restSeconds: 90, muscleGroup: .legs),
+                    Exercise(name: "Agachamento Livre", sets: 3, reps: 10, weight: 80, restSeconds: 100, muscleGroup: .legs),
+                    Exercise(name: "Afundo", sets: 3, reps: 12, weight: 20, restSeconds: 60, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Extensora", sets: 4, reps: 15, weight: 40, restSeconds: 45, muscleGroup: .legs),
+                    Exercise(name: "Mesa Flexora", sets: 4, reps: 12, weight: 38, restSeconds: 45, muscleGroup: .legs),
+                    Exercise(name: "Stiff", sets: 3, reps: 10, weight: 60, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha Sentado", sets: 4, reps: 15, weight: 50, restSeconds: 35, muscleGroup: .legs)
+                ]
             )
         ],
         // Coorte 2 — força / full body
@@ -291,6 +390,52 @@ enum RecommendedWorkoutCatalog {
                     Exercise(name: "Stiff", sets: 3, reps: 8, weight: 70, restSeconds: 90, muscleGroup: .legs),
                     Exercise(name: "Afundo Búlgaro", sets: 3, reps: 10, weight: 20, restSeconds: 60, muscleGroup: .legs),
                     Exercise(name: "Panturrilha em Pé", sets: 4, reps: 12, weight: 100, restSeconds: 40, muscleGroup: .legs)
+                ]
+            ),
+            sheet(
+                title: "Masculino E — Superior Força",
+                description: "Membros superiores com cargas maiores — ciclo mensal 3",
+                gender: .male,
+                warmup: .upper,
+                abs: .plankCrunch,
+                main: [
+                    Exercise(name: "Supino Reto", sets: 4, reps: 6, weight: 80, restSeconds: 120, muscleGroup: .chest),
+                    Exercise(name: "Remada Curvada", sets: 4, reps: 6, weight: 70, restSeconds: 120, muscleGroup: .back),
+                    Exercise(name: "Desenvolvimento Militar", sets: 4, reps: 6, weight: 45, restSeconds: 100, muscleGroup: .shoulders),
+                    Exercise(name: "Barra Fixa", sets: 3, reps: 6, restSeconds: 100, muscleGroup: .back),
+                    Exercise(name: "Elevação Lateral", sets: 3, reps: 12, weight: 10, restSeconds: 45, muscleGroup: .shoulders),
+                    Exercise(name: "Rosca Direta", sets: 3, reps: 8, weight: 18, restSeconds: 60, muscleGroup: .arms),
+                    Exercise(name: "Tríceps Pulley", sets: 3, reps: 10, weight: 32, restSeconds: 60, muscleGroup: .arms)
+                ]
+            ),
+            sheet(
+                title: "Masculino F — Inferior Força",
+                description: "Membros inferiores com força — ciclo mensal 3",
+                gender: .male,
+                warmup: .lower,
+                abs: .plankOblique,
+                main: [
+                    Exercise(name: "Agachamento Livre", sets: 4, reps: 5, weight: 110, restSeconds: 150, muscleGroup: .legs),
+                    Exercise(name: "Levantamento Terra", sets: 3, reps: 5, weight: 120, restSeconds: 180, muscleGroup: .fullBody),
+                    Exercise(name: "Hack Squat", sets: 3, reps: 8, weight: 140, restSeconds: 120, muscleGroup: .legs),
+                    Exercise(name: "Stiff", sets: 3, reps: 8, weight: 80, restSeconds: 100, muscleGroup: .legs),
+                    Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 3, reps: 8, weight: 100, restSeconds: 90, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha em Pé", sets: 4, reps: 12, weight: 100, restSeconds: 40, muscleGroup: .legs)
+                ]
+            ),
+            sheet(
+                title: "Masculino G — Pernas Potência",
+                description: "Pernas com potência e volume — ciclo mensal 3",
+                gender: .male,
+                warmup: .lower,
+                abs: .legsBicycle,
+                main: [
+                    Exercise(name: "Agachamento Livre", sets: 4, reps: 6, weight: 100, restSeconds: 140, muscleGroup: .legs),
+                    Exercise(name: "Leg Press 45°", sets: 4, reps: 8, weight: 200, restSeconds: 100, muscleGroup: .legs),
+                    Exercise(name: "Afundo Búlgaro", sets: 3, reps: 8, weight: 24, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Extensora", sets: 3, reps: 12, weight: 45, restSeconds: 50, muscleGroup: .legs),
+                    Exercise(name: "Mesa Flexora", sets: 3, reps: 10, weight: 42, restSeconds: 50, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha Sentado", sets: 4, reps: 12, weight: 60, restSeconds: 35, muscleGroup: .legs)
                 ]
             )
         ]
@@ -366,6 +511,72 @@ enum RecommendedWorkoutCatalog {
                     Exercise(name: "Remada Unilateral", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .back),
                     Exercise(name: "Kettlebell Swing", sets: 3, reps: 15, weight: 12, restSeconds: 60, muscleGroup: .fullBody)
                 ]
+            ),
+            sheet(
+                title: "Feminino E — Superior",
+                description: "Costas, ombros, peito e braços — membros superiores feminino",
+                gender: .female,
+                warmup: .upper,
+                abs: .plankOblique,
+                main: [
+                    Exercise(name: "Puxada Frontal", sets: 4, reps: 12, weight: 30, restSeconds: 70, muscleGroup: .back),
+                    Exercise(name: "Remada Unilateral", sets: 3, reps: 12, weight: 12, restSeconds: 55, muscleGroup: .back),
+                    Exercise(name: "Desenvolvimento com Halteres", sets: 3, reps: 12, weight: 8, restSeconds: 60, muscleGroup: .shoulders),
+                    Exercise(name: "Elevação Lateral", sets: 4, reps: 15, weight: 5, restSeconds: 40, muscleGroup: .shoulders),
+                    Exercise(name: "Supino Inclinado com Halteres", sets: 3, reps: 12, weight: 10, restSeconds: 60, muscleGroup: .chest),
+                    Exercise(name: "Face Pull", sets: 3, reps: 15, weight: 10, restSeconds: 40, muscleGroup: .back),
+                    Exercise(name: "Rosca Direta", sets: 3, reps: 12, weight: 8, restSeconds: 40, muscleGroup: .arms),
+                    Exercise(name: "Tríceps Pulley", sets: 3, reps: 12, weight: 14, restSeconds: 40, muscleGroup: .arms)
+                ]
+            ),
+            sheet(
+                title: "Feminino F — Inferior",
+                description: "Quadríceps, posteriores e glúteos — membros inferiores feminino",
+                gender: .female,
+                warmup: .lower,
+                abs: .plankCrunch,
+                main: [
+                    Exercise(name: "Agachamento Livre", sets: 4, reps: 12, weight: 35, restSeconds: 90, muscleGroup: .legs),
+                    Exercise(name: "Leg Press 45°", sets: 4, reps: 12, weight: 80, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Stiff", sets: 3, reps: 12, weight: 30, restSeconds: 70, muscleGroup: .legs),
+                    Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 4, reps: 12, weight: 40, restSeconds: 70, muscleGroup: .legs),
+                    Exercise(name: "Afundo", sets: 3, reps: 12, weight: 10, restSeconds: 55, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Extensora", sets: 3, reps: 15, weight: 28, restSeconds: 45, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha em Pé", sets: 3, reps: 15, weight: 40, restSeconds: 35, muscleGroup: .legs)
+                ]
+            ),
+            sheet(
+                title: "Feminino G — Glúteos Crescimento",
+                description: "Alto volume para hipertrofia de glúteos — perfil feminino",
+                gender: .female,
+                warmup: .lower,
+                abs: .plankCrunch,
+                main: [
+                    Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 5, reps: 12, weight: 45, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Agachamento Sumô", sets: 4, reps: 12, weight: 40, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Afundo Búlgaro", sets: 4, reps: 12, weight: 12, restSeconds: 60, muscleGroup: .legs),
+                    Exercise(name: "Stiff", sets: 4, reps: 10, weight: 30, restSeconds: 70, muscleGroup: .legs),
+                    Exercise(name: "Coice na Polia", sets: 4, reps: 15, weight: 14, restSeconds: 40, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Abdutora", sets: 4, reps: 15, weight: 40, restSeconds: 40, muscleGroup: .legs),
+                    Exercise(name: "Mesa Flexora", sets: 3, reps: 12, weight: 25, restSeconds: 50, muscleGroup: .legs)
+                ]
+            ),
+            sheet(
+                title: "Feminino H — Pernas Crescimento",
+                description: "Volume de pernas para crescimento — perfil feminino",
+                gender: .female,
+                warmup: .lower,
+                abs: .infraBicycle,
+                main: [
+                    Exercise(name: "Agachamento Livre", sets: 4, reps: 10, weight: 40, restSeconds: 90, muscleGroup: .legs),
+                    Exercise(name: "Hack Squat", sets: 4, reps: 12, weight: 55, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Leg Press 45°", sets: 4, reps: 12, weight: 90, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Extensora", sets: 4, reps: 15, weight: 30, restSeconds: 45, muscleGroup: .legs),
+                    Exercise(name: "Mesa Flexora", sets: 4, reps: 12, weight: 28, restSeconds: 45, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Adutora", sets: 3, reps: 15, weight: 40, restSeconds: 40, muscleGroup: .legs),
+                    Exercise(name: "Afundo", sets: 3, reps: 12, weight: 10, restSeconds: 50, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha Sentado", sets: 4, reps: 15, weight: 30, restSeconds: 30, muscleGroup: .legs)
+                ]
             )
         ],
         [
@@ -430,6 +641,69 @@ enum RecommendedWorkoutCatalog {
                     Exercise(name: "Kettlebell Swing", sets: 3, reps: 15, weight: 10, restSeconds: 45, muscleGroup: .fullBody),
                     Exercise(name: "Mountain Climber", sets: 3, reps: 20, restSeconds: 35, muscleGroup: .fullBody)
                 ]
+            ),
+            sheet(
+                title: "Feminino E — Superior Tomado",
+                description: "Membros superiores com definição — ciclo mensal 2",
+                gender: .female,
+                warmup: .upper,
+                abs: .plankOblique,
+                main: [
+                    Exercise(name: "Puxada Frontal", sets: 4, reps: 12, weight: 28, restSeconds: 60, muscleGroup: .back),
+                    Exercise(name: "Remada Curvada", sets: 3, reps: 12, weight: 20, restSeconds: 55, muscleGroup: .back),
+                    Exercise(name: "Elevação Lateral", sets: 4, reps: 15, weight: 5, restSeconds: 35, muscleGroup: .shoulders),
+                    Exercise(name: "Desenvolvimento com Halteres", sets: 3, reps: 12, weight: 7, restSeconds: 50, muscleGroup: .shoulders),
+                    Exercise(name: "Flexão de Braços", sets: 3, reps: 10, restSeconds: 45, muscleGroup: .chest),
+                    Exercise(name: "Rosca Martelo", sets: 3, reps: 12, weight: 6, restSeconds: 40, muscleGroup: .arms),
+                    Exercise(name: "Tríceps Pulley", sets: 3, reps: 12, weight: 12, restSeconds: 40, muscleGroup: .arms)
+                ]
+            ),
+            sheet(
+                title: "Feminino F — Inferior Tomado",
+                description: "Membros inferiores com densidade — ciclo mensal 2",
+                gender: .female,
+                warmup: .lower,
+                abs: .legsBicycle,
+                main: [
+                    Exercise(name: "Agachamento Livre", sets: 4, reps: 12, weight: 30, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Leg Press 45°", sets: 4, reps: 15, weight: 75, restSeconds: 60, muscleGroup: .legs),
+                    Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 3, reps: 12, weight: 35, restSeconds: 55, muscleGroup: .legs),
+                    Exercise(name: "Stiff", sets: 3, reps: 12, weight: 25, restSeconds: 55, muscleGroup: .legs),
+                    Exercise(name: "Afundo Búlgaro", sets: 3, reps: 12, weight: 8, restSeconds: 50, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Extensora", sets: 3, reps: 15, weight: 25, restSeconds: 40, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha em Pé", sets: 3, reps: 15, weight: 35, restSeconds: 30, muscleGroup: .legs)
+                ]
+            ),
+            sheet(
+                title: "Feminino G — Glúteos Hipertrofia",
+                description: "Crescimento de glúteos com volume — ciclo mensal 2",
+                gender: .female,
+                warmup: .lower,
+                abs: .plankCrunch,
+                main: [
+                    Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 5, reps: 10, weight: 50, restSeconds: 80, muscleGroup: .legs),
+                    Exercise(name: "Agachamento Sumô", sets: 4, reps: 10, weight: 40, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Coice na Polia", sets: 4, reps: 15, weight: 12, restSeconds: 35, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Abdutora", sets: 4, reps: 15, weight: 38, restSeconds: 35, muscleGroup: .legs),
+                    Exercise(name: "Stiff", sets: 4, reps: 10, weight: 28, restSeconds: 65, muscleGroup: .legs),
+                    Exercise(name: "Afundo Búlgaro", sets: 3, reps: 12, weight: 10, restSeconds: 55, muscleGroup: .legs)
+                ]
+            ),
+            sheet(
+                title: "Feminino H — Pernas Hipertrofia",
+                description: "Crescimento de pernas com volume — ciclo mensal 2",
+                gender: .female,
+                warmup: .lower,
+                abs: .infraBicycle,
+                main: [
+                    Exercise(name: "Hack Squat", sets: 4, reps: 12, weight: 50, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Leg Press 45°", sets: 4, reps: 12, weight: 85, restSeconds: 70, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Extensora", sets: 4, reps: 15, weight: 28, restSeconds: 40, muscleGroup: .legs),
+                    Exercise(name: "Mesa Flexora", sets: 4, reps: 12, weight: 25, restSeconds: 40, muscleGroup: .legs),
+                    Exercise(name: "Agachamento Livre", sets: 3, reps: 12, weight: 30, restSeconds: 70, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Adutora", sets: 3, reps: 15, weight: 35, restSeconds: 35, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha Sentado", sets: 4, reps: 15, weight: 28, restSeconds: 30, muscleGroup: .legs)
+                ]
             )
         ],
         [
@@ -492,6 +766,70 @@ enum RecommendedWorkoutCatalog {
                     Exercise(name: "Crucifixo Inverso", sets: 3, reps: 15, weight: 5, restSeconds: 40, muscleGroup: .shoulders),
                     Exercise(name: "Puxada Frontal", sets: 3, reps: 12, weight: 25, restSeconds: 55, muscleGroup: .back),
                     Exercise(name: "Agachamento Livre", sets: 3, reps: 12, weight: 25, restSeconds: 50, muscleGroup: .legs)
+                ]
+            ),
+            sheet(
+                title: "Feminino E — Superior Força",
+                description: "Membros superiores com progressão — ciclo mensal 3",
+                gender: .female,
+                warmup: .upper,
+                abs: .plankCrunch,
+                main: [
+                    Exercise(name: "Puxada Frontal", sets: 4, reps: 10, weight: 32, restSeconds: 70, muscleGroup: .back),
+                    Exercise(name: "Remada Unilateral", sets: 4, reps: 10, weight: 12, restSeconds: 55, muscleGroup: .back),
+                    Exercise(name: "Desenvolvimento com Halteres", sets: 4, reps: 10, weight: 8, restSeconds: 60, muscleGroup: .shoulders),
+                    Exercise(name: "Elevação Lateral", sets: 3, reps: 12, weight: 6, restSeconds: 40, muscleGroup: .shoulders),
+                    Exercise(name: "Supino Inclinado com Halteres", sets: 3, reps: 10, weight: 12, restSeconds: 60, muscleGroup: .chest),
+                    Exercise(name: "Rosca Direta", sets: 3, reps: 10, weight: 8, restSeconds: 40, muscleGroup: .arms),
+                    Exercise(name: "Tríceps Pulley", sets: 3, reps: 10, weight: 14, restSeconds: 40, muscleGroup: .arms)
+                ]
+            ),
+            sheet(
+                title: "Feminino F — Inferior Força",
+                description: "Membros inferiores com progressão — ciclo mensal 3",
+                gender: .female,
+                warmup: .lower,
+                abs: .plankLegs,
+                main: [
+                    Exercise(name: "Agachamento Livre", sets: 4, reps: 8, weight: 40, restSeconds: 100, muscleGroup: .legs),
+                    Exercise(name: "Hack Squat", sets: 3, reps: 10, weight: 60, restSeconds: 80, muscleGroup: .legs),
+                    Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 4, reps: 10, weight: 45, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Stiff", sets: 3, reps: 10, weight: 32, restSeconds: 70, muscleGroup: .legs),
+                    Exercise(name: "Afundo Búlgaro", sets: 3, reps: 10, weight: 12, restSeconds: 55, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha em Pé", sets: 3, reps: 12, weight: 40, restSeconds: 35, muscleGroup: .legs)
+                ]
+            ),
+            sheet(
+                title: "Feminino G — Glúteos Máximo Volume",
+                description: "Máximo volume para crescimento de glúteos — ciclo mensal 3",
+                gender: .female,
+                warmup: .lower,
+                abs: .plankCrunch,
+                main: [
+                    Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 5, reps: 12, weight: 50, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Agachamento Sumô", sets: 4, reps: 12, weight: 40, restSeconds: 70, muscleGroup: .legs),
+                    Exercise(name: "Afundo Búlgaro", sets: 4, reps: 12, weight: 12, restSeconds: 55, muscleGroup: .legs),
+                    Exercise(name: "Coice na Polia", sets: 4, reps: 15, weight: 14, restSeconds: 35, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Abdutora", sets: 4, reps: 20, weight: 40, restSeconds: 35, muscleGroup: .legs),
+                    Exercise(name: "Stiff", sets: 3, reps: 12, weight: 28, restSeconds: 60, muscleGroup: .legs),
+                    Exercise(name: "Mesa Flexora", sets: 3, reps: 12, weight: 25, restSeconds: 45, muscleGroup: .legs)
+                ]
+            ),
+            sheet(
+                title: "Feminino H — Pernas Máximo Volume",
+                description: "Máximo volume para crescimento de pernas — ciclo mensal 3",
+                gender: .female,
+                warmup: .lower,
+                abs: .infraBicycle,
+                main: [
+                    Exercise(name: "Agachamento Livre", sets: 4, reps: 10, weight: 40, restSeconds: 90, muscleGroup: .legs),
+                    Exercise(name: "Leg Press 45°", sets: 4, reps: 12, weight: 95, restSeconds: 75, muscleGroup: .legs),
+                    Exercise(name: "Hack Squat", sets: 3, reps: 12, weight: 55, restSeconds: 70, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Extensora", sets: 4, reps: 15, weight: 30, restSeconds: 40, muscleGroup: .legs),
+                    Exercise(name: "Mesa Flexora", sets: 4, reps: 12, weight: 28, restSeconds: 40, muscleGroup: .legs),
+                    Exercise(name: "Afundo", sets: 3, reps: 12, weight: 10, restSeconds: 50, muscleGroup: .legs),
+                    Exercise(name: "Cadeira Adutora", sets: 3, reps: 15, weight: 40, restSeconds: 35, muscleGroup: .legs),
+                    Exercise(name: "Panturrilha Sentado", sets: 4, reps: 15, weight: 30, restSeconds: 30, muscleGroup: .legs)
                 ]
             )
         ]

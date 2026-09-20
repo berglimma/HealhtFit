@@ -80,6 +80,34 @@ private struct KiteSpotBuddyWatchAvatar: View {
     }
 }
 
+// MARK: - Avatar + seta (foto + direção)
+
+private struct KiteSpotBuddyWatchPeerMarker: View {
+    let name: String
+    var photoURL: String?
+    var bearingDegrees: Double?
+    var needsHelp: Bool = false
+    var avatarSize: CGFloat = 22
+    var showsArrow: Bool = true
+
+    private var tint: Color { needsHelp ? .orange : .green }
+
+    var body: some View {
+        HStack(spacing: 3) {
+            KiteSpotBuddyWatchAvatar(name: name, photoURL: photoURL, size: avatarSize)
+                .overlay(Circle().stroke(tint, lineWidth: 1.2))
+
+            if showsArrow {
+                Image(systemName: "location.north.fill")
+                    .font(.system(size: max(9, avatarSize * 0.42), weight: .bold))
+                    .foregroundStyle(tint)
+                    .rotationEffect(.degrees(bearingDegrees ?? 0))
+                    .frame(width: max(12, avatarSize * 0.55), height: max(12, avatarSize * 0.55))
+            }
+        }
+    }
+}
+
 // MARK: - Radar
 
 struct KiteSpotBuddyWatchRadarView: View {
@@ -99,7 +127,7 @@ struct KiteSpotBuddyWatchRadarView: View {
                 header
                 radarDisk
                 peerList
-                footer
+                sosFlowFooter
             }
             .padding(.horizontal, 4)
         }
@@ -209,17 +237,28 @@ struct KiteSpotBuddyWatchRadarView: View {
 
     private func radarBlip(peer: KiteSpotBuddyPeer, radius: CGFloat) -> some View {
         let bearing = (peer.bearingDegrees ?? 0) * .pi / 180
-        // Mantém blips para dentro — nome/seta não saem da tela
         let distFactor = min(max(peer.distanceMeters / radarMaxMeters, 0.15), 0.78)
         let x = sin(bearing) * radius * distFactor
         let y = -cos(bearing) * radius * distFactor
 
-        return Image(systemName: "location.north.fill")
-            .font(.system(size: 9, weight: .bold))
-            .foregroundStyle(peer.needsHelp ? .orange : .green)
-            .rotationEffect(.degrees(peer.bearingDegrees ?? 0))
-            .offset(x: x, y: y)
-            .accessibilityLabel("\(shortName(peer.displayName)), \(formatDistanceShort(peer.distanceMeters))")
+        return ZStack {
+            KiteSpotBuddyWatchAvatar(
+                name: peer.displayName,
+                photoURL: peer.photoURL,
+                size: 14
+            )
+            .overlay(
+                Circle().stroke(peer.needsHelp ? Color.orange : Color.green, lineWidth: 1)
+            )
+
+            Image(systemName: "location.north.fill")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(peer.needsHelp ? Color.orange : Color.green)
+                .offset(y: -11)
+                .rotationEffect(.degrees(peer.bearingDegrees ?? 0))
+        }
+        .offset(x: x, y: y)
+        .accessibilityLabel("\(shortName(peer.displayName)), \(formatDistanceShort(peer.distanceMeters))")
     }
 
     private var peerList: some View {
@@ -227,10 +266,13 @@ struct KiteSpotBuddyWatchRadarView: View {
             ForEach(peers.prefix(4)) { peer in
                 Button { onSelectPeer(peer) } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "location.north.fill")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(peer.needsHelp ? .orange : .green)
-                            .rotationEffect(.degrees(peer.bearingDegrees ?? 0))
+                        KiteSpotBuddyWatchPeerMarker(
+                            name: peer.displayName,
+                            photoURL: peer.photoURL,
+                            bearingDegrees: peer.bearingDegrees,
+                            needsHelp: peer.needsHelp,
+                            avatarSize: 22
+                        )
                         Text(peer.displayName)
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.white)
@@ -249,32 +291,72 @@ struct KiteSpotBuddyWatchRadarView: View {
         }
     }
 
-    private var footer: some View {
-        VStack(spacing: 6) {
+    /// Fluxo SOS: coroa digital + botão explícito.
+    private var sosFlowFooter: some View {
+        VStack(alignment: .leading, spacing: 5) {
             if needsHelp {
-                Text("Pedido de ajuda enviado")
-                    .font(.system(size: 10, weight: .bold))
+                Text("SOS enviado")
+                    .font(.system(size: 11, weight: .heavy))
                     .foregroundStyle(.orange)
-                Button("Estou bem") { onCancelHelp() }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                Text("Amigos no Spot receberam seu alerta.")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                Button("Estou bem — cancelar") { onCancelHelp() }
                     .font(.system(size: 11, weight: .semibold))
                     .buttonStyle(.bordered)
                     .tint(.orange)
+                    .frame(maxWidth: .infinity)
             } else if spotBuddyEnabled {
-                HStack(spacing: 4) {
-                    Image(systemName: "digitalcrown.horizontal.arrow.counterclockwise.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.cyan)
-                    Text("Girar coroa = Pedir ajuda")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.cyan)
-                }
+                Label("Como acionar o SOS", systemImage: "sos")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                sosStep(number: "1", text: "Gire a Digital Crown até o fim")
+                sosStep(number: "2", text: "Ou toque no botão SOS abaixo")
+                sosStep(number: "3", text: "Amigos Duo no Spot (até 2 km) recebem alerta")
+                sosStep(number: "4", text: "“Estou bem” cancela o pedido")
+
                 if crownValue > 0.05 {
-                    ProgressView(value: min(crownValue, 1))
-                        .tint(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Coroa · \(Int((min(crownValue, 1) * 100).rounded()))%")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.orange)
+                        ProgressView(value: min(crownValue, 1))
+                            .tint(.orange)
+                    }
                 }
+
+                Button {
+                    onRequestHelp()
+                    crownValue = 0
+                } label: {
+                    Label("SOS · Pedir ajuda", systemImage: "sos")
+                        .font(.system(size: 12, weight: .bold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
             }
         }
         .padding(.top, 2)
+    }
+
+    private func sosStep(number: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 5) {
+            Text(number)
+                .font(.system(size: 9, weight: .heavy, design: .rounded))
+                .foregroundStyle(.black)
+                .frame(width: 14, height: 14)
+                .background(Circle().fill(Color.orange))
+            Text(text)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private func shortName(_ name: String) -> String {
@@ -375,13 +457,21 @@ struct KiteSpotBuddyWatchCompassView: View {
             let roseSize = min(w * 0.78, h * 0.48, 92)
 
             VStack(spacing: 2) {
-                // Header compacto
-                HStack(spacing: 2) {
+                // Header compacto: foto + seta de direção
+                HStack(spacing: 4) {
                     Button(action: onBack) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 11, weight: .bold))
                     }
                     .buttonStyle(.plain)
+
+                    KiteSpotBuddyWatchPeerMarker(
+                        name: peer.displayName,
+                        photoURL: peer.photoURL,
+                        bearingDegrees: bearing,
+                        needsHelp: peer.needsHelp,
+                        avatarSize: 22
+                    )
 
                     Text(firstName(peer.displayName))
                         .font(.system(size: 12, weight: .semibold))
@@ -399,13 +489,12 @@ struct KiteSpotBuddyWatchCompassView: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 2)
 
-                // Rosa + seta (sem texto rotacionando — evita sair da tela)
+                // Rosa: foto no centro + seta girando na direção do amigo
                 ZStack {
                     Circle()
                         .stroke(Color.white.opacity(0.18), lineWidth: 1)
                         .frame(width: roseSize, height: roseSize)
 
-                    // Apenas 4 pontos cardeais — cabem no Watch
                     ForEach(cardinalPoints, id: \.label) { point in
                         Text(point.label)
                             .font(.system(size: 8, weight: .bold))
@@ -416,15 +505,21 @@ struct KiteSpotBuddyWatchCompassView: View {
                             )
                     }
 
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 5, height: 5)
+                    // Foto fixa no centro + seta girando na direção do amigo
+                    KiteSpotBuddyWatchAvatar(
+                        name: peer.displayName,
+                        photoURL: peer.photoURL,
+                        size: max(22, roseSize * 0.30)
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(peer.needsHelp ? Color.orange : Color.green, lineWidth: 1.5)
+                    )
 
-                    // Seta apontando para o amigo (só ícone, sem nome)
                     Image(systemName: "location.north.fill")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.green)
-                        .offset(y: -(roseSize * 0.22))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(peer.needsHelp ? Color.orange : Color.green)
+                        .offset(y: -(roseSize * 0.30))
                         .rotationEffect(.degrees(bearing))
                 }
                 .frame(width: roseSize + 8, height: roseSize + 8)

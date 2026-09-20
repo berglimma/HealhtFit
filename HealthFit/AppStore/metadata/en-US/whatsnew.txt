@@ -1,5 +1,5 @@
 • Pulse: people search from the first letter, with profile photo and tappable search
 • Pulse: follow-request notifications arrive even with the screen locked
-• Pulse slogan visible under the name
-• Apple Watch: cleaner workout screen without modality labels
 • Sleep on Dashboard: Watch monitoring and manual logging
+• Apple Watch: GPS for surf/kite, Spot Buddy, and Water Eject
+• Updated recommended workouts (M/F) and kite share card with metrics and logo

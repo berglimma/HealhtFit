@@ -661,6 +661,9 @@
     "1. Tipo de equipamento (kite)" : {
 
     },
+    "1) Abra Spot Buddy no Watch · 2) Gire a Digital Crown até o fim ou toque SOS · 3) Amigos Duo no Spot (≤2 km) recebem o alerta · 4) “Estou bem” cancela." : {
+
+    },
     "2. Modo de velejo" : {
 
     },
@@ -4258,7 +4261,7 @@
     "Mapa corporal completo por região" : {
 
     },
-    "Mapa do SPOT de partida · sem rota GPS completa nesta sessão." : {
+    "Mapa do SPOT de partida · sem rota GPS ainda. No Surf/Kitesurf o GPS vem do Apple Watch na água e sincroniza com o iPhone." : {
 
     },
     "Mapa e amigos da equipe com Spot Buddy ativo (até 2 km)." : {
@@ -4721,6 +4724,9 @@
 
     },
     "No treino: altura de saltos via giroscópio Apple Watch + iPhone, pontos no mapa, gráficos e relatório PDF." : {
+
+    },
+    "No Watch: gire a Digital Crown até o fim ou toque SOS na tela Spot Buddy." : {
 
     },
     "Nome" : {
@@ -5211,9 +5217,6 @@
 
     },
     "Pedidos para seguir você" : {
-
-    },
-    "Pedir ajuda aos amigos" : {
 
     },
     "Pendente" : {
@@ -10685,6 +10688,9 @@
     "Rota da corrida" : {
 
     },
+    "Rota do %@ · escolha 2D ou 3D para Stories." : {
+
+    },
     "Rota do kitesurf" : {
 
     },
@@ -10865,7 +10871,7 @@
     "Sem personal no app" : {
 
     },
-    "Sem pontos GPS registrados nesta sessão." : {
+    "Sem pontos GPS. No Surf/Kitesurf use o Apple Watch na água — a rota sincroniza com o iPhone." : {
 
     },
     "Sem tentativas registradas." : {
@@ -11081,6 +11087,15 @@
 
     },
     "Sono e Hidratação" : {
+
+    },
+    "SOS" : {
+
+    },
+    "SOS · Pedir ajuda aos amigos" : {
+
+    },
+    "SOS no Apple Watch" : {
 
     },
     "Sou iniciante" : {

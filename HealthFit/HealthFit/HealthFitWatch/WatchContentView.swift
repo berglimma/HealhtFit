@@ -100,6 +100,17 @@ struct WatchContentView: View {
                             .font(.caption)
                     }
                 }
+                Button {
+                    workoutManager.ejectWaterFromSpeaker()
+                } label: {
+                    Label(
+                        workoutManager.isEjectingWater ? "Ejetando água…" : "Retirar água",
+                        systemImage: "drop.fill"
+                    )
+                    .font(.caption)
+                }
+                .disabled(workoutManager.isEjectingWater)
+                .foregroundStyle(.cyan)
             }
 
             Section("Cardio") {
@@ -291,6 +302,19 @@ struct WatchContentView: View {
                     .multilineTextAlignment(.center)
                 }
 
+                if workoutManager.waterGPSPointCount > 0 {
+                    Label(
+                        String(format: "GPS Watch · %d pts", workoutManager.waterGPSPointCount),
+                        systemImage: "location.fill"
+                    )
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.green)
+                } else if workoutManager.isWaterSportMode {
+                    Text("GPS Watch traçando rota no mar…")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+
                 HStack(spacing: 10) {
                     waterStat("\(workoutManager.waterJumpCount)", "saltos")
                     waterStat(String(format: "%.1f", workoutManager.waterMaxJumpMeters), "m max")
@@ -345,6 +369,8 @@ struct WatchContentView: View {
                 .tint(.orange)
                 .disabled(workoutManager.isPaused)
 
+                ejectWaterButton
+
                 Button {
                     workoutManager.requestPhoneSyncFromWatch()
                 } label: {
@@ -358,6 +384,14 @@ struct WatchContentView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+
+                if !workoutManager.waterEjectionStatus.isEmpty {
+                    Text(workoutManager.waterEjectionStatus)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.cyan)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                }
 
                 if !workoutManager.watchSyncStatus.isEmpty {
                     Text(workoutManager.watchSyncStatus)
@@ -643,7 +677,26 @@ struct WatchContentView: View {
                 .font(.system(size: 9))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+
+            ejectWaterButton
         }
+    }
+
+    /// Botão compartilhado: Surf, Kitesurf e Natação.
+    private var ejectWaterButton: some View {
+        Button {
+            workoutManager.ejectWaterFromSpeaker()
+        } label: {
+            Label(
+                workoutManager.isEjectingWater ? "Ejetando água…" : "Retirar água",
+                systemImage: "drop.fill"
+            )
+            .font(.caption2.weight(.semibold))
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(.cyan)
+        .disabled(workoutManager.isEjectingWater)
     }
 
     private var restSection: some View {

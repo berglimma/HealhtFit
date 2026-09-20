@@ -25,9 +25,25 @@ final class RecommendedWorkoutCatalogTests: XCTestCase {
     func testMaleCohortsHaveDistinctTitles() {
         let c0 = RecommendedWorkoutCatalog.titles(for: .male, cohort: 0)
         let c1 = RecommendedWorkoutCatalog.titles(for: .male, cohort: 1)
-        XCTAssertEqual(c0.count, 4)
-        XCTAssertEqual(c1.count, 4)
+        XCTAssertEqual(c0.count, 7)
+        XCTAssertEqual(c1.count, 7)
         XCTAssertTrue(c0.isDisjoint(with: c1))
+    }
+
+    func testFemaleCohortsIncludeGluteAndLegGrowthSheets() {
+        let c0 = RecommendedWorkoutCatalog.titles(for: .female, cohort: 0)
+        XCTAssertEqual(c0.count, 8)
+        XCTAssertTrue(c0.contains("Feminino G — Glúteos Crescimento"))
+        XCTAssertTrue(c0.contains("Feminino H — Pernas Crescimento"))
+        XCTAssertTrue(c0.contains("Feminino E — Superior"))
+        XCTAssertTrue(c0.contains("Feminino F — Inferior"))
+    }
+
+    func testMaleCohortsIncludeSuperiorInferiorLegsSheets() {
+        let c0 = RecommendedWorkoutCatalog.titles(for: .male, cohort: 0)
+        XCTAssertTrue(c0.contains("Masculino E — Superior Completo"))
+        XCTAssertTrue(c0.contains("Masculino F — Inferior Completo"))
+        XCTAssertTrue(c0.contains("Masculino G — Pernas Hipertrofia"))
     }
 
     func testBaselineSheetsIncludeTwoWarmupExercises() {

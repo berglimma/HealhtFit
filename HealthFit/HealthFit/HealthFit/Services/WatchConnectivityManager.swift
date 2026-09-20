@@ -2,6 +2,7 @@ import Foundation
 import WatchConnectivity
 import Combine
 import HealthKit
+import CoreLocation
 
 enum WatchSyncResult: Equatable {
     case synced
@@ -71,6 +72,9 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     @Published private(set) var isWatchSessionPaused = false
     /// Incrementado quando o Watch encerra uma sessão que estava espelhada — o iPhone fecha o overlay.
     @Published private(set) var watchForcedSessionCloseTick: Int = 0
+    /// Batch de GPS do Watch (Surf / Kitesurf) — rota na água quando o iPhone fica em terra.
+    @Published private(set) var lastWatchGPSBatch: [WatchGPSRoutePoint] = []
+    @Published private(set) var watchGPSBatchTick: Int = 0
 
     private var session: WCSession?
     /// Store de treinos do iPhone — necessário para espelhar início no Watch.
@@ -933,6 +937,9 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 lastWatchAccelG = g
             }
         }
+        if action == "waterSportGPSBatch" {
+            ingestWatchGPSBatch(from: message)
+        }
         if action == "requestPhoneSync" {
             Task { _ = await attemptSyncWithWatch() }
         }
@@ -1047,5 +1054,68 @@ extension WatchConnectivityManager: WCSessionDelegate {
             Task { _ = await attemptSyncWithWatch() }
             sendToWatch(["action": "requestMetrics"])
         }
+    }
+
+    /// Converte batch GPS do Watch em pontos tipados e publica para o `RunTrackingService`.
+    private func ingestWatchGPSBatch(from message: [String: Any]) {
+        let rawPoints: [[String: Any]]
+        if let typed = message["points"] as? [[String: Any]] {
+            rawPoints = typed
+        } else if let anyArray = message["points"] as? [Any] {
+            rawPoints = anyArray.compactMap { $0 as? [String: Any] }
+        } else {
+            return
+        }
+
+        var points: [WatchGPSRoutePoint] = []
+        points.reserveCapacity(rawPoints.count)
+        for point in rawPoints {
+            let lat = (point["lat"] as? Double)
+                ?? (point["lat"] as? NSNumber)?.doubleValue
+            let lon = (point["lon"] as? Double)
+                ?? (point["lon"] as? NSNumber)?.doubleValue
+            guard let lat, let lon else { continue }
+            let ts = (point["ts"] as? Double)
+                ?? (point["ts"] as? NSNumber)?.doubleValue
+                ?? Date().timeIntervalSince1970
+            let acc = (point["acc"] as? Double)
+                ?? (point["acc"] as? NSNumber)?.doubleValue
+                ?? 25
+            let spd = (point["spd"] as? Double)
+                ?? (point["spd"] as? NSNumber)?.doubleValue
+                ?? -1
+            let alt = (point["alt"] as? Double)
+                ?? (point["alt"] as? NSNumber)?.doubleValue
+                ?? 0
+            let pausedFlag = (point["paused"] as? Double)
+                ?? (point["paused"] as? NSNumber)?.doubleValue
+                ?? 0
+            let location = CLLocation(
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                altitude: alt,
+                horizontalAccuracy: acc,
+                verticalAccuracy: -1,
+                course: -1,
+                speed: spd,
+                timestamp: Date(timeIntervalSince1970: ts)
+            )
+            points.append(WatchGPSRoutePoint(location: location, isPaused: pausedFlag > 0.5))
+        }
+        guard !points.isEmpty else { return }
+        lastWatchGPSBatch = points
+        watchGPSBatchTick += 1
+    }
+}
+
+/// Ponto GPS enviado pelo Apple Watch durante Surf / Kitesurf.
+struct WatchGPSRoutePoint: Equatable {
+    let location: CLLocation
+    let isPaused: Bool
+
+    static func == (lhs: WatchGPSRoutePoint, rhs: WatchGPSRoutePoint) -> Bool {
+        lhs.location.coordinate.latitude == rhs.location.coordinate.latitude
+            && lhs.location.coordinate.longitude == rhs.location.coordinate.longitude
+            && lhs.location.timestamp == rhs.location.timestamp
+            && lhs.isPaused == rhs.isPaused
     }
 }

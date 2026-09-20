@@ -306,6 +306,7 @@
 		B100W412 /* WatchCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100W412 /* WatchCatalog.swift */; };
 		B100W960 /* KiteSpotBuddyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000960 /* KiteSpotBuddyModels.swift */; };
 		B100W965 /* KiteSpotBuddyWatchViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100W965 /* KiteSpotBuddyWatchViews.swift */; };
+		B100W966 /* WatchWaterEjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100W966 /* WatchWaterEjection.swift */; };
 		B2000001 /* TestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000010 /* TestFixtures.swift */; };
 		B2000002 /* UserProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000011 /* UserProfileTests.swift */; };
 		B2000003 /* MarathonReportBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000012 /* MarathonReportBuilderTests.swift */; };
@@ -712,6 +713,7 @@
 		F100W002 /* HealthFitWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HealthFitWatch.entitlements; sourceTree = "<group>"; };
 		F100W412 /* WatchCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchCatalog.swift; sourceTree = "<group>"; };
 		F100W965 /* KiteSpotBuddyWatchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KiteSpotBuddyWatchViews.swift; sourceTree = "<group>"; };
+		F100W966 /* WatchWaterEjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWaterEjection.swift; sourceTree = "<group>"; };
 		F2000001 /* HealthFitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2000002 /* HealthFitUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthFitUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2000010 /* TestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFixtures.swift; sourceTree = "<group>"; };
@@ -853,6 +855,7 @@
 				F1000032 /* WatchWorkoutManager.swift */,
 				F100W412 /* WatchCatalog.swift */,
 				F100W965 /* KiteSpotBuddyWatchViews.swift */,
+				F100W966 /* WatchWaterEjection.swift */,
 				F1000033 /* Assets.xcassets */,
 				F100W001 /* Info.plist */,
 				F100W002 /* HealthFitWatch.entitlements */,
@@ -1922,6 +1925,7 @@
 				B100W412 /* WatchCatalog.swift in Sources */,
 				B100W960 /* KiteSpotBuddyModels.swift in Sources */,
 				B100W965 /* KiteSpotBuddyWatchViews.swift in Sources */,
+				B100W966 /* WatchWaterEjection.swift in Sources */,
 				B100W411 /* WeakMainActorBox.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2166,7 +2170,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthFit/HealthFitDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -2215,7 +2219,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthFit/HealthFit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -2264,7 +2268,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthFitWatch/HealthFitWatch.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = NO;
@@ -2304,7 +2308,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthFitWatch/HealthFitWatch.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = NO;
@@ -2341,7 +2345,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
@@ -2369,7 +2373,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
@@ -2399,7 +2403,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -2425,7 +2429,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -2450,7 +2454,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -2475,7 +2479,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;

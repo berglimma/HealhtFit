@@ -1,5 +1,5 @@
 • Pulse: búsqueda de personas desde la 1ª letra, con foto de perfil y lupa
 • Pulse: la notificación de solicitud de seguimiento llega con la pantalla bloqueada
-• Eslogan de Pulse visible bajo el nombre
-• Apple Watch: pantalla de entrenamiento sin etiqueta de modalidad
 • Sueño en el Dashboard: monitoreo con Watch y registro manual
+• Apple Watch: GPS en surf/kite, Spot Buddy y Expulsar agua
+• Entrenamientos recomendados actualizados (M/F) y card de kite con métricas y logo

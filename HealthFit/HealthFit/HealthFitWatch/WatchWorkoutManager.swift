@@ -5,6 +5,7 @@ import Combine
 import UserNotifications
 import WatchKit
 import CoreMotion
+import CoreLocation
 
 @MainActor
 final class WatchWorkoutManager: NSObject, ObservableObject {
@@ -77,6 +78,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var isPaused = false
     /// Último salto detectado automaticamente (giroscópio / acelerômetro).
     @Published var lastAutoJumpNote = ""
+    /// Última posição GPS do Watch (Surf / Kitesurf) — usada no Spot Buddy e no mapa.
+    @Published var waterGPSLatitude: Double?
+    @Published var waterGPSLongitude: Double?
+    @Published var waterGPSPointCount: Int = 0
+    /// Ejeção de água do alto-falante (Surf / Kite / Natação).
+    @Published var isEjectingWater = false
+    @Published var waterEjectionStatus = ""
 
     private var session: WCSession?
     private var heartRateTimer: Timer?
@@ -107,6 +115,12 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var waterPeakG: Double = 1
     private var waterBaselineAltitude: Double?
     private let altimeter = CMAltimeter()
+    /// GPS do Watch para Surf / Kitesurf (iPhone fica em terra).
+    private let waterLocationManager = CLLocationManager()
+    private var waterGPSPendingBatch: [[String: Double]] = []
+    private var lastWaterGPSAccepted: CLLocation?
+    private var lastWaterGPSFlushAt: Date = .distantPast
+    private var isWaterGPSTracking = false
     private var hkWorkoutSession: HKWorkoutSession?
     private var hkLiveBuilder: HKLiveWorkoutBuilder?
     private var swimEventLapCount = 0
@@ -114,9 +128,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     /// Safe hop for nonisolated HK/WC callbacks (no captured `var self`).
     nonisolated(unsafe) private var mainActorBox: WeakMainActorBox<WatchWorkoutManager>?
 
-    override init() {
+        override init() {
         super.init()
         mainActorBox = WeakMainActorBox(self)
+        waterLocationManager.delegate = self
+        waterLocationManager.desiredAccuracy = kCLLocationAccuracyBest
+        waterLocationManager.distanceFilter = 5
+        waterLocationManager.activityType = .fitness
         if WCSession.isSupported() {
             session = WCSession.default
             session?.delegate = self
@@ -353,6 +371,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         startWorkoutClock()
         if waterSportMode {
             startWaterSportMotion()
+            startWaterSportGPS()
         }
     }
 
@@ -462,6 +481,19 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         watchSyncStatus = "Sincronizando…"
     }
 
+    /// Toca tons no speaker do Watch para retirar água (esportes aquáticos).
+    func ejectWaterFromSpeaker() {
+        guard !isEjectingWater else { return }
+        isEjectingWater = true
+        waterEjectionStatus = "Ejetando água do alto-falante…"
+        WatchWaterEjection.shared.play { [weak self] in
+            guard let self else { return }
+            self.isEjectingWater = false
+            self.waterEjectionStatus = "Água ejetada"
+            self.watchSyncStatus = "Água ejetada do speaker"
+        }
+    }
+
     func stopWorkout() {
         isActive = false
         isPaused = false
@@ -470,6 +502,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         meditationOwnedByWatch = false
         localMeditationPrompts = []
         stopWaterSportMotion()
+        stopWaterSportGPS(flush: true)
         stopLiveWorkoutSession()
         heartRateTimer?.invalidate()
         heartRateTimer = nil
@@ -525,6 +558,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         spotBuddyIncomingHelp = nil
         spotBuddyMyLatitude = nil
         spotBuddyMyLongitude = nil
+        waterGPSLatitude = nil
+        waterGPSLongitude = nil
+        waterGPSPointCount = 0
         waterSetupModeName = ""
         waterSetupBoardName = ""
         isSwimmingMode = false
@@ -1528,6 +1564,106 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         resetAirborneJumpState()
     }
 
+    // MARK: - GPS Watch (Surf / Kitesurf)
+
+    private func startWaterSportGPS() {
+        guard !isWaterGPSTracking else { return }
+        isWaterGPSTracking = true
+        waterGPSPendingBatch = []
+        lastWaterGPSAccepted = nil
+        lastWaterGPSFlushAt = .now
+        waterGPSPointCount = 0
+        waterGPSLatitude = nil
+        waterGPSLongitude = nil
+
+        let status = waterLocationManager.authorizationStatus
+        switch status {
+        case .notDetermined:
+            waterLocationManager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways:
+            waterLocationManager.startUpdatingLocation()
+            watchSyncStatus = "GPS Watch ativo"
+        case .denied, .restricted:
+            watchSyncStatus = "GPS Watch sem permissão"
+            isWaterGPSTracking = false
+        @unknown default:
+            waterLocationManager.requestWhenInUseAuthorization()
+        }
+    }
+
+    private func stopWaterSportGPS(flush: Bool) {
+        waterLocationManager.stopUpdatingLocation()
+        if flush {
+            flushWaterGPSBatch(force: true)
+        }
+        isWaterGPSTracking = false
+        lastWaterGPSAccepted = nil
+        waterGPSPendingBatch = []
+    }
+
+    private func acceptWaterGPSLocation(_ location: CLLocation) {
+        guard isWaterGPSTracking, isWaterSportMode else { return }
+        guard location.horizontalAccuracy >= 0, location.horizontalAccuracy <= 65 else { return }
+
+        if let last = lastWaterGPSAccepted {
+            let dt = location.timestamp.timeIntervalSince(last.timestamp)
+            let moved = location.distance(from: last)
+            if dt <= 0 { return }
+            // Descarta saltos absurdos no mar (ex.: glitch GPS).
+            if moved > 120, dt < 2.5 { return }
+            if moved < 3, dt < 2.0 { return }
+        }
+
+        lastWaterGPSAccepted = location
+        waterGPSLatitude = location.coordinate.latitude
+        waterGPSLongitude = location.coordinate.longitude
+        waterGPSPointCount += 1
+
+        // Spot Buddy no Watch: usa GPS do relógio como “eu”.
+        if isKitesurfMode, spotBuddyEnabled {
+            spotBuddyMyLatitude = location.coordinate.latitude
+            spotBuddyMyLongitude = location.coordinate.longitude
+        }
+
+        var point: [String: Double] = [
+            "lat": location.coordinate.latitude,
+            "lon": location.coordinate.longitude,
+            "ts": location.timestamp.timeIntervalSince1970,
+            "acc": location.horizontalAccuracy,
+            "paused": isPaused ? 1 : 0
+        ]
+        if location.speed >= 0 {
+            point["spd"] = location.speed
+        }
+        if location.altitude.isFinite {
+            point["alt"] = location.altitude
+        }
+        waterGPSPendingBatch.append(point)
+
+        let shouldFlush = waterGPSPendingBatch.count >= 4
+            || Date().timeIntervalSince(lastWaterGPSFlushAt) >= 4
+        if shouldFlush {
+            flushWaterGPSBatch(force: false)
+        }
+    }
+
+    private func flushWaterGPSBatch(force: Bool) {
+        guard !waterGPSPendingBatch.isEmpty else { return }
+        if !force, Date().timeIntervalSince(lastWaterGPSFlushAt) < 1.5,
+           waterGPSPendingBatch.count < 8 {
+            return
+        }
+        let batch = waterGPSPendingBatch
+        waterGPSPendingBatch = []
+        lastWaterGPSFlushAt = .now
+        sendToPhone([
+            "action": "waterSportGPSBatch",
+            "points": batch,
+            "timestamp": Date().timeIntervalSince1970
+        ])
+        watchSyncStatus = String(format: "GPS · %d pts", waterGPSPointCount)
+    }
+
     private func estimatedHeightFromPeakG() -> Double {
         max(0.3, (waterPeakG - 1.0) * 0.55)
     }
@@ -1828,6 +1964,9 @@ extension WatchWorkoutManager: WCSessionDelegate {
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         Task { @MainActor in
             refreshPhoneReachability()
+            if session.isReachable {
+                flushWaterGPSBatch(force: true)
+            }
         }
     }
 
@@ -1949,6 +2088,37 @@ extension WatchWorkoutManager: HKLiveWorkoutBuilderDelegate {
                     source: "lapEvent"
                 )
             }
+        }
+    }
+}
+
+extension WatchWorkoutManager: CLLocationManagerDelegate {
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        Task { @MainActor in
+            guard isWaterGPSTracking else { return }
+            switch manager.authorizationStatus {
+            case .authorizedWhenInUse, .authorizedAlways:
+                waterLocationManager.startUpdatingLocation()
+                watchSyncStatus = "GPS Watch ativo"
+            case .denied, .restricted:
+                watchSyncStatus = "GPS Watch sem permissão"
+            default:
+                break
+            }
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        Task { @MainActor in
+            for location in locations {
+                acceptWaterGPSLocation(location)
+            }
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        Task { @MainActor in
+            watchSyncStatus = "GPS Watch: \(error.localizedDescription)"
         }
     }
 }

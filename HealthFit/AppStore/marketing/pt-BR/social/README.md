@@ -16,6 +16,17 @@ Link de download: **https://apps.apple.com/br/app/id6798621208**
 | `HealthFit-card-instagram-story.png` | 9:16 | Story institucional |
 | `HealthFit-card-comece-gratis-story.png` | 9:16 | CTA “Comece grátis” |
 
+### HealthFit Pulse (Stories 9:16)
+
+| Arquivo | Tema | Benefícios em destaque |
+|---------|------|------------------------|
+| `HealthFit-Pulse-story-01-slogan.png` | Slogan + feed | Publicar treinos · stories · constância juntos |
+| `HealthFit-Pulse-story-02-desafio.png` | Desafio do dia | Desafios diários · filtros de modalidade · stories |
+| `HealthFit-Pulse-story-03-comunidades.png` | Comunidades | Temas ATIVO · Musculação/Cardio · mesmo foco |
+| `HealthFit-Pulse-story-04-coach-biotipo.png` | Coach + Pulse | Fichas/dietas/chat · biotipo · rede social Pulse |
+
+Slogan: *Sozinho você treina. Junto, você permanece.*
+
 ### Por recurso
 
 | Arquivo | Formato | Tema |

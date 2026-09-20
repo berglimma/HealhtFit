@@ -273,6 +273,16 @@ struct WaterSportSessionSnapshot: Codable, Hashable {
         jumps.map(\.heightMeters).max() ?? 0
     }
 
+    /// Maior tempo no ar registrado (usa estimativa leve se o salto não trouxe airtime).
+    var maxAirtimeSeconds: Double {
+        guard !jumps.isEmpty else { return 0 }
+        return jumps.map { jump in
+            if let air = jump.airtimeSeconds, air > 0 { return air }
+            let g = 9.81
+            return max(0.6, 2 * sqrt(max(0.1, 2 * jump.heightMeters / g)) * 0.85)
+        }.max() ?? 0
+    }
+
     var averageJumpHeightMeters: Double {
         guard !jumps.isEmpty else { return 0 }
         return jumps.map(\.heightMeters).reduce(0, +) / Double(jumps.count)

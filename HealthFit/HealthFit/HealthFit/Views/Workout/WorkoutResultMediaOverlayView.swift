@@ -9,10 +9,17 @@ struct WorkoutResultMediaStat: Identifiable, Equatable {
     let id: String
     let value: String
     let label: String
+    /// Destaca o valor com seta (ex.: velocidade máxima no kitesurf).
+    var showsPeakArrow: Bool = false
 }
 
 enum WorkoutResultMediaStats {
     static func stats(for session: WorkoutSession, isCardio: Bool) -> [WorkoutResultMediaStat] {
+        // Kitesurf: altura, tempo no ar, distância e velocidade máxima (com seta no pico).
+        if session.isKitesurfSession {
+            return kiteStats(for: session)
+        }
+
         var result: [WorkoutResultMediaStat] = []
 
         result.append(WorkoutResultMediaStat(
@@ -79,6 +86,127 @@ enum WorkoutResultMediaStats {
         // Cap for clean Strava-like layout.
         return Array(result.prefix(4))
     }
+
+    /// Métricas exclusivas do card de postagem de Kitesurf.
+    static func kiteStats(for session: WorkoutSession) -> [WorkoutResultMediaStat] {
+        let metrics = KitePostingMetrics.make(from: session)
+        return [
+            WorkoutResultMediaStat(
+                id: "height",
+                value: metrics.heightText,
+                label: "Altura"
+            ),
+            WorkoutResultMediaStat(
+                id: "airtime",
+                value: metrics.airtimeText,
+                label: "Tempo no ar"
+            ),
+            WorkoutResultMediaStat(
+                id: "distance",
+                value: metrics.distanceText,
+                label: "Distância"
+            ),
+            WorkoutResultMediaStat(
+                id: "maxSpeed",
+                value: metrics.maxSpeedText,
+                label: "Vel. máxima",
+                showsPeakArrow: metrics.maxSpeedKmh > 0
+            )
+        ]
+    }
+}
+
+/// Snapshot das 4 métricas do card de postagem Kitesurf (altura / ar / distância / vel. máx).
+enum KitePostingMetrics {
+    struct Snapshot: Equatable {
+        var heightMeters: Double
+        var airtimeSeconds: Double
+        var distanceMeters: Double
+        var maxSpeedKmh: Double
+        /// `true` quando a distância veio do GPS da sessão (sem salto estimado).
+        var distanceIsSessionGPS: Bool
+
+        var heightText: String {
+            heightMeters > 0.05 ? String(format: "%.1f m", heightMeters) : "—"
+        }
+
+        var airtimeText: String {
+            airtimeSeconds > 0.05 ? String(format: "%.1f s", airtimeSeconds) : "—"
+        }
+
+        var distanceText: String {
+            if distanceMeters <= 0.5 { return "—" }
+            if distanceIsSessionGPS {
+                let km = distanceMeters / 1000
+                return km >= 10
+                    ? String(format: "%.1f km", km)
+                    : String(format: "%.2f km", km)
+            }
+            return String(format: "%.0f m", distanceMeters)
+        }
+
+        var maxSpeedText: String {
+            maxSpeedKmh > 0.5 ? String(format: "%.0f km/h", maxSpeedKmh) : "—"
+        }
+    }
+
+    static func make(from session: WorkoutSession) -> Snapshot {
+        let windAngle = session.waterSport?.conditions?.windDirectionDegrees
+        let jumpCards = SurfProJumpCardModel.make(
+            from: session.waterSport?.jumps ?? [],
+            windAngleDegrees: windAngle
+        )
+        let bestJump = jumpCards.max(by: {
+            if abs($0.heightMeters - $1.heightMeters) > 0.05 {
+                return $0.heightMeters < $1.heightMeters
+            }
+            return $0.maxSpeedKmh < $1.maxSpeedKmh
+        })
+
+        let gpsMaxKmh = session.routePoints
+            .compactMap(\.speedMetersPerSecond)
+            .filter { $0 > 0 }
+            .map { $0 * 3.6 }
+            .max() ?? 0
+
+        let jumpMaxKmh = bestJump?.maxSpeedKmh ?? 0
+        let maxSpeed = max(gpsMaxKmh, jumpMaxKmh)
+
+        let sessionDistanceM = session.displayDistanceKm * 1000
+        if let best = bestJump, best.heightMeters > 0.05 {
+            let useGPSDistance = best.distanceMeters < 1 && sessionDistanceM > 5
+            return Snapshot(
+                heightMeters: best.heightMeters,
+                airtimeSeconds: best.airtimeSeconds,
+                distanceMeters: useGPSDistance ? sessionDistanceM : best.distanceMeters,
+                maxSpeedKmh: maxSpeed,
+                distanceIsSessionGPS: useGPSDistance
+            )
+        }
+
+        return Snapshot(
+            heightMeters: session.waterSport?.maxJumpHeightMeters ?? 0,
+            airtimeSeconds: session.waterSport?.maxAirtimeSeconds ?? 0,
+            distanceMeters: sessionDistanceM,
+            maxSpeedKmh: maxSpeed,
+            distanceIsSessionGPS: true
+        )
+    }
+
+    /// Índice do ponto GPS com maior velocidade (para seta no mapa).
+    static func maxSpeedRouteIndex(in points: [RouteCoordinate]) -> Int? {
+        guard points.count >= 2 else { return nil }
+        var bestIndex: Int?
+        var bestSpeed = 0.0
+        for (index, point) in points.enumerated() {
+            let speed = point.speedMetersPerSecond ?? 0
+            if speed > bestSpeed {
+                bestSpeed = speed
+                bestIndex = index
+            }
+        }
+        return bestSpeed > 0.4 ? bestIndex : nil
+    }
 }
 
 // MARK: - Overlay layout (preview + export share the same values)
@@ -117,6 +245,8 @@ struct WorkoutResultMediaOverlayView: View {
     let session: WorkoutSession
     var isCardioSession: Bool = false
     var showVideoBadge: Bool = false
+    /// Quando definido, o preview reproduz o vídeo em loop (mudo) em vez da capa estática.
+    var videoURL: URL? = nil
     /// Layout dos dados (mover / diminuir / aumentar).
     var layout: WorkoutResultMediaOverlayLayout = .default
     /// Quando true, permite arrastar o bloco de dados (preview interativo).
@@ -140,6 +270,8 @@ struct WorkoutResultMediaOverlayView: View {
             let w = geo.size.width
             let h = geo.size.height
             let pad = max(14, min(w, h) * 0.04)
+            // Instagram Stories cobre o topo — logo mais baixa na foto/vídeo.
+            let brandTopPad = pad + max(36, h * 0.07)
             let brandSize = max(13, min(w, h) * 0.038)
             let titleSize = max(15, min(w, h) * 0.048)
             let statValueSize = max(16, min(w, h) * 0.052)
@@ -150,11 +282,7 @@ struct WorkoutResultMediaOverlayView: View {
             )
 
             ZStack(alignment: .topLeading) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: w, height: h)
-                    .clipped()
+                mediaBackground(width: w, height: h)
 
                 LinearGradient(
                     colors: [
@@ -182,7 +310,7 @@ struct WorkoutResultMediaOverlayView: View {
                     }
                 }
                 .padding(.horizontal, pad)
-                .padding(.top, pad)
+                .padding(.top, brandTopPad)
                 .allowsHitTesting(false)
 
                 metricsBlock(
@@ -208,6 +336,22 @@ struct WorkoutResultMediaOverlayView: View {
                 .padding(.bottom, pad)
             }
             .compositingGroup()
+        }
+    }
+
+    @ViewBuilder
+    private func mediaBackground(width: CGFloat, height: CGFloat) -> some View {
+        if let videoURL, allowsMetricsGestures {
+            // Preview interativo: reproduz o vídeo. Export/capa permanece com a imagem.
+            LoopingMutedVideoPlayer(url: videoURL)
+                .frame(width: width, height: height)
+                .clipped()
+        } else {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: width, height: height)
+                .clipped()
         }
     }
 
@@ -237,11 +381,18 @@ struct WorkoutResultMediaOverlayView: View {
                             .padding(.horizontal, 6)
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(stat.value)
-                            .font(.system(size: statValueSize, weight: .heavy, design: .rounded))
-                            .foregroundStyle(.white)
-                            .minimumScaleFactor(0.7)
-                            .lineLimit(1)
+                        HStack(spacing: 3) {
+                            if stat.showsPeakArrow {
+                                Image(systemName: "arrow.up")
+                                    .font(.system(size: statValueSize * 0.55, weight: .heavy))
+                                    .foregroundStyle(Color("AccentOrange"))
+                            }
+                            Text(stat.value)
+                                .font(.system(size: statValueSize, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.white)
+                                .minimumScaleFactor(0.7)
+                                .lineLimit(1)
+                        }
                         Text(stat.label)
                             .font(.system(size: statLabelSize, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.78))
@@ -421,5 +572,75 @@ enum WorkoutResultPickedMedia {
     var isVideo: Bool {
         if case .video = self { return true }
         return false
+    }
+
+    var videoURL: URL? {
+        if case .video(let url, _) = self { return url }
+        return nil
+    }
+}
+
+// MARK: - Looping muted video (preview)
+
+/// Player leve para preview do overlay: loop, mudo, aspect-fill.
+private struct LoopingMutedVideoPlayer: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> LoopingMutedPlayerView {
+        let view = LoopingMutedPlayerView()
+        view.configure(url: url)
+        return view
+    }
+
+    func updateUIView(_ uiView: LoopingMutedPlayerView, context: Context) {
+        uiView.configure(url: url)
+    }
+
+    static func dismantleUIView(_ uiView: LoopingMutedPlayerView, coordinator: ()) {
+        uiView.tearDown()
+    }
+}
+
+private final class LoopingMutedPlayerView: UIView {
+    private var player: AVQueuePlayer?
+    private var looper: AVPlayerLooper?
+    private var configuredURL: URL?
+
+    override class var layerClass: AnyClass { AVPlayerLayer.self }
+
+    private var avLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+
+    func configure(url: URL) {
+        guard configuredURL != url else {
+            if player?.timeControlStatus != .playing {
+                player?.play()
+            }
+            return
+        }
+        tearDown()
+        configuredURL = url
+
+        let template = AVPlayerItem(url: url)
+        let queue = AVQueuePlayer()
+        queue.isMuted = true
+        queue.actionAtItemEnd = .none
+        looper = AVPlayerLooper(player: queue, templateItem: template)
+        player = queue
+        avLayer.player = queue
+        avLayer.videoGravity = .resizeAspectFill
+        queue.play()
+    }
+
+    func tearDown() {
+        player?.pause()
+        looper?.disableLooping()
+        looper = nil
+        avLayer.player = nil
+        player = nil
+        configuredURL = nil
+    }
+
+    deinit {
+        tearDown()
     }
 }

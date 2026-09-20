@@ -57,11 +57,15 @@ struct KiteSpotBuddySessionView: View {
                 Button {
                     onRequestHelp()
                 } label: {
-                    Label("Pedir ajuda aos amigos", systemImage: "sos")
+                    Label("SOS · Pedir ajuda aos amigos", systemImage: "sos")
                         .font(.caption.weight(.semibold))
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.orange)
+
+                Text("No Watch: gire a Digital Crown até o fim ou toque SOS na tela Spot Buddy.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
         }
         .padding(14)

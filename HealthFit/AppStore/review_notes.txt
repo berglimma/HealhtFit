@@ -1,11 +1,11 @@
-HealthFit 1.0.8 (Build 20)
+HealthFit 1.0.8 (Build 21)
 
 Principais mudanças deste build:
 - Pulse: busca de pessoas (1ª letra, foto de perfil, lupa clicável)
 - Pulse: push FCM de solicitação de follow (tela bloqueada / app em background)
-- Slogan Pulse visível abaixo do título
-- Apple Watch: remove rótulo de modalidade na sessão ativa
-- Screenshots novas: Dashboard sono (manual + Watch)
+- Sono no Dashboard: monitoramento Watch + registro manual
+- Apple Watch: GPS preferencial em surf/kite, Spot Buddy e Retirar água
+- Treinos recomendados M/F atualizados; card de kite com métricas e logo
 
 Conta demo App Review:
 E-mail: healthfit.appreview@gmail.com
@@ -14,8 +14,9 @@ E-mail: healthfit.appreview@gmail.com
 Testes sugeridos:
 1. Pulse → Pessoas → digitar 1 letra → resultados com foto; tocar lupa
 2. Conta A solicita seguir conta B → B recebe push com tela bloqueada (notificações ON)
-3. Pulse aberto → slogan abaixo de “Pulse”
-4. Dashboard → card Sono (manual e/ou Watch)
+3. Dashboard → card Sono (manual e/ou Watch)
+4. Watch: iniciar kite/surf → GPS do Watch; menu Retirar água
+5. Kite Spot Buddy (sessão ativa) → ver Duo ≤2 km no mapa
 
 HealthFit Pulse (18+ UGC):
 Dashboard → card HealthFit Pulse → aceitar termos → feed (conta 18+)

@@ -17,6 +17,11 @@
 	<key>WKBackgroundModes</key>
 	<array>
 		<string>workout-processing</string>
+		<string>location</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>HealthFit usa o GPS do Apple Watch no Surf e Kitesurf para traçar a rota na água quando o iPhone fica em terra.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>HealthFit mantém o GPS do Watch durante a sessão de Surf/Kitesurf para gravar a rota no mar e sincronizar com o iPhone.</string>
 </dict>
 </plist>

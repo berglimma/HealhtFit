@@ -482,6 +482,13 @@ struct ActiveCardioView: View {
             syncWithWatch()
             startSessionHardwareIfVisible()
             handleExternalFinishTickIfNeeded()
+            // Aplica GPS do Watch que chegou enquanto a tela estava em background.
+            if isWaterSport, !watchConnectivity.lastWatchGPSBatch.isEmpty {
+                runTracker.ingestWatchGPSPoints(watchConnectivity.lastWatchGPSBatch)
+                if isKitesurf, let last = watchConnectivity.lastWatchGPSBatch.last {
+                    spotBuddy.updateLocation(last.location)
+                }
+            }
         }
         .onChange(of: workoutStore.isActiveWorkoutMinimized) { _, minimized in
             guard !minimized, finishedSession == nil, !isFinishing else { return }
@@ -494,6 +501,15 @@ struct ActiveCardioView: View {
         .onChange(of: runTracker.currentLocation) { _, location in
             guard isKitesurf, let location else { return }
             spotBuddy.updateLocation(location)
+        }
+        .onChange(of: watchConnectivity.watchGPSBatchTick) { _, tick in
+            guard isWaterSport, tick > 0 else { return }
+            let batch = watchConnectivity.lastWatchGPSBatch
+            guard !batch.isEmpty else { return }
+            runTracker.ingestWatchGPSPoints(batch)
+            if isKitesurf, let last = batch.last {
+                spotBuddy.updateLocation(last.location)
+            }
         }
         .onChange(of: watchConnectivity.watchSwimLapTick) { _, tick in
             guard isSwimming, tick > lastWatchSwimLapTick else { return }
