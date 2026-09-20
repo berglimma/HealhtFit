@@ -1,6 +1,6 @@
 # Checklist — publicar HealthFit na App Store
 
-Versão alvo: **1.0.8 (Build 21)** · Bundle `luan.com.healthfit.app`
+Versão alvo: **1.0.9 (Build 21)** · Bundle `luan.com.healthfit.app`
 
 ## URLs legais
 
@@ -12,24 +12,24 @@ Versão alvo: **1.0.8 (Build 21)** · Bundle `luan.com.healthfit.app`
 
 ## Build
 
-- [x] Versão Xcode **1.0.8 (21)**
+- [x] Versão Xcode **1.0.9 (21)**
 - [x] `whatsnew.txt` atualizado (pt-BR / en-US / es-ES / fr-FR)
 - [x] `review_notes.txt` atualizado
-- [x] Screenshots novas: `07_sono_manual.png`, `08_sono_watch.png` (6.7")
-- [ ] Archive + upload build **21**
-- [ ] Attach build 21 na versão 1.0.8
-- [ ] Screenshots enviadas no Connect (`07`/`08` sono) — arquivos em `builds/asc-tmp/`
+- [x] Screenshots sono (6.7") em `builds/asc-tmp/`
+- [ ] Archive + upload build **21** (1.0.9)
+- [ ] Attach build 21 na versão 1.0.9
+- [ ] Screenshots enviadas no Connect se necessário
 - [ ] Enviado para revisão
 
 ## App Store Connect
 
 1. https://appstoreconnect.apple.com/apps/6798621208
-2. Versão **1.0.8** com build **21**
+2. Versão **1.0.9** com build **21**
 
-## Itens alterados (1.0.8)
+## Itens alterados (1.0.9)
 
-1. Pulse busca pessoas (1ª letra, foto, lupa)
-2. Push de solicitação de follow (tela bloqueada)
-3. Screenshots Dashboard sono (manual + Watch)
-4. Watch GPS surf/kite + Spot Buddy + Retirar água
-5. Treinos recomendados M/F + card kite (métricas/logo)
+1. Watch GPS preferencial em surf/kite + Spot Buddy
+2. Watch Retirar água
+3. Treinos recomendados M/F atualizados
+4. Card de kite com métricas e logo
+5. Fix WKBackgroundModes no Watch (somente workout-processing)
