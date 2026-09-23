@@ -15,7 +15,6 @@ struct PaywallView: View {
     @State private var selectedTier: PlanTier = .complete
     @State private var billingPeriod: SubscriptionBillingPeriod = .yearly
     @State private var showManage = false
-    @State private var showCourtesyRedeem = false
 
     private let plans: [PlanMarketingCopy] = PlanTier.allCases
         .filter(\.isPaid)
@@ -76,10 +75,6 @@ struct PaywallView: View {
                 }
             }
             .manageSubscriptionsSheet(isPresented: $showManage)
-            .sheet(isPresented: $showCourtesyRedeem) {
-                CourtesyRedeemSheet()
-                    .environmentObject(subscriptions)
-            }
         }
     }
 
@@ -195,9 +190,7 @@ struct PaywallView: View {
                                     .clipShape(Capsule())
                             }
                             if isCurrent {
-                                Text(subscriptions.isCourtesyActive && subscriptions.courtesyGrant?.plan == plan.tier
-                                     ? "Cortesia"
-                                     : "Atual")
+                                Text("Atual")
                                     .font(.caption2.weight(.bold))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 3)
@@ -303,12 +296,6 @@ struct PaywallView: View {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(AppTheme.accent)
 
-            Button("Tenho um código de cortesia") {
-                showCourtesyRedeem = true
-            }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(AppTheme.accent)
-
             Button("Gerenciar assinatura") {
                 showManage = true
             }
@@ -325,7 +312,6 @@ struct SubscriptionPlanView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showPaywall = false
     @State private var showManage = false
-    @State private var showCourtesyRedeem = false
 
     var body: some View {
         ScrollView {
@@ -345,10 +331,6 @@ struct SubscriptionPlanView: View {
             PaywallView()
                 .environmentObject(subscriptions)
         }
-        .sheet(isPresented: $showCourtesyRedeem) {
-            CourtesyRedeemSheet()
-                .environmentObject(subscriptions)
-        }
         .manageSubscriptionsSheet(isPresented: $showManage)
     }
 
@@ -363,11 +345,6 @@ struct SubscriptionPlanView: View {
             Text(subscriptions.currentTier.tagline)
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
-            if let grant = subscriptions.courtesyGrant, grant.isActive {
-                Text("Cortesia \(grant.plan.displayName) até \(grant.expirationDateText). Sem renovação automática.")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.accent)
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
@@ -427,12 +404,6 @@ struct SubscriptionPlanView: View {
 
             Button("Restaurar compras") {
                 Task { await subscriptions.restore() }
-            }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(AppTheme.accent)
-
-            Button("Tenho um código de cortesia") {
-                showCourtesyRedeem = true
             }
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(AppTheme.accent)
@@ -577,70 +548,3 @@ struct PlanRequirementBadge: View {
     }
 }
 
-// MARK: - Resgate de cortesia
-
-struct CourtesyRedeemSheet: View {
-    @EnvironmentObject private var subscriptions: SubscriptionService
-    @Environment(\.dismiss) private var dismiss
-    @State private var code = ""
-    @State private var didSucceed = false
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Cole o código que você recebeu. Cada voucher libera 30 dias do plano, sem cobrança e sem renovação automática.")
-                    .font(.subheadline)
-                    .foregroundStyle(AppTheme.textSecondary)
-
-                TextField("HF-BASIC-XXXXXX", text: $code)
-                    .textInputAutocapitalization(.characters)
-                    .autocorrectionDisabled()
-                    .textFieldStyle(HealthFitTextFieldStyle())
-
-                if didSucceed, let grant = subscriptions.courtesyGrant {
-                    Text("Pronto: plano \(grant.plan.displayName) até \(grant.expirationDateText).")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.green)
-                } else if let message = subscriptions.lastErrorMessage, !message.isEmpty {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                }
-
-                Spacer()
-
-                Button {
-                    Task {
-                        let ok = await subscriptions.redeemCourtesyCode(code)
-                        if ok {
-                            didSucceed = true
-                        }
-                    }
-                } label: {
-                    if subscriptions.courtesyRedeemInProgress {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                    } else {
-                        Text("Resgatar 30 dias")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                    }
-                }
-                .buttonStyle(PrimaryButtonStyle())
-                .disabled(subscriptions.courtesyRedeemInProgress || CourtesyVoucher.normalize(code).isEmpty)
-            }
-            .padding(20)
-            .background(AppTheme.background)
-            .navigationTitle("Código de cortesia")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Fechar") { dismiss() }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-}

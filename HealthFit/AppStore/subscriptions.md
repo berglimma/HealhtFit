@@ -76,26 +76,12 @@ if subscriptions.canAccess(.aiChatUnlimited) { ... }
 
 Locks recomendados v1.1: `.advancedModalities`, `.mealPlan`, `.mealPhotoAnalysis`, `.aiChatUnlimited`, `.monthlyReport`, `.advancedSportAnalytics`, `.customWorkouts`.
 
-## Cortesia (20 vouchers × 4 planos, 30 dias)
+## Cortesia (removido do app — Guideline 3.1.1)
 
-Códigos de **brinde** do HealthFit (não passam pela App Store; não são venda). Uso único, 30 dias, sem renovação.
+Resgate in-app de vouchers/promo codes foi **removido** na 1.0.10 (23).
+Descontos/acesso gratuito devem usar **Offer Codes** oficiais da App Store Connect.
 
-- Resgate no app: **Perfil → Meu plano → Tenho um código de cortesia**
-- Formato: `HF-BASIC-XXXXXX`, `HF-FIT-…`, `HF-AI-…`, `HF-COMPLETE-…`
-- Lista local (não commitada): `HealthFit/AppStore/courtesy-vouchers.local.md`
-- Seed / reimpressão:
-
-```bash
-gcloud auth application-default login --project healthfit-30d87
-cd functions
-npm run seed:courtesy
-```
-
-Deploy da Function `redeemCourtesyVoucher` + regras:
-
-```bash
-firebase deploy --only functions:redeemCourtesyVoucher,firestore:rules
-```
+Backend legado (`redeemCourtesyVoucher`) pode permanecer desligado; o cliente não aplica grants.
 
 ## Firebase (fase 4 — ainda não implementado)
 

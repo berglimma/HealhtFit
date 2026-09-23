@@ -3,3 +3,4 @@
 • Tarjeta para compartir: con 3+ ejercicios hechos cuenta como entrenamiento concluido
 • Flyover de la ruta en vídeo
 • Mejoras de sync Pulse y Stage Manager en iPad
+• Eliminados códigos de cortesía en la app; suscripciones solo por App Store

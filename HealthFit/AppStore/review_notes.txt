@@ -1,12 +1,16 @@
-HealthFit 1.0.10 (22)
+HealthFit 1.0.10 (23)
 
-What's new for review:
-- Apple Watch segmented chronometer for outdoor walk/run/bike/MTB (green/orange/red by pace performance).
-- Fix: finishing cardio on iPhone stops the Watch companion session (stale WCSession starts ignored).
-- Share card treats 3+ completed strength exercises as "completed" for social posting motivation.
-- Route flyover video share; Pulse/iPad Stage Manager polish.
+Resolution for Guideline 3.1.1:
+- Removed in-app courtesy/promo code redemption UI ("Tenho um código de cortesia").
+- App no longer unlocks plans via custom voucher codes.
+- Subscriptions and restores use App Store / StoreKit only.
+- Future discounts/free access will use official App Store Offer Codes.
 
-Demo account: use existing review credentials on file (same as prior submissions).
-Pulse: 18+ social features; trial then Basic plan.
+Other changes in this train:
+- Apple Watch segmented chronometer (walk/run/bike/MTB).
+- Fix: finishing cardio on iPhone stops the Watch session.
+- Share card: 3+ exercises count as completed.
+- Route flyover video share; Pulse/Stage Manager polish.
 
-No encryption changes. Watch background mode remains workout-processing only.
+Demo account: use existing review credentials on file.
+No encryption changes.

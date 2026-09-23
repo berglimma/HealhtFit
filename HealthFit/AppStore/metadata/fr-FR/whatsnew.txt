@@ -3,3 +3,4 @@
 • Carte de partage : 3+ exercices terminés comptent comme entraînement conclu
 • Flyover de parcours en vidéo
 • Améliorations sync Pulse et Stage Manager sur iPad
+• Codes de courtoisie retirés de l’app ; abonnements uniquement via App Store

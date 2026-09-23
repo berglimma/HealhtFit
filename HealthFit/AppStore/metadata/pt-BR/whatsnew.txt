@@ -3,3 +3,4 @@
 • Card de conquista: com 3+ exercícios feitos, mostra treino concluído para motivar a postagem
 • Flyover da rota para compartilhar em vídeo
 • Melhorias de sync Pulse e Stage Manager no iPad
+• Removidos códigos de cortesia no app; assinaturas só via App Store

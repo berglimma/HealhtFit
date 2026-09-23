@@ -3,3 +3,4 @@
 • Share card: 3+ completed exercises count as a finished workout to encourage posting
 • Route flyover video sharing
 • Pulse sync and iPad Stage Manager improvements
+• Removed in-app courtesy codes; subscriptions via App Store only
