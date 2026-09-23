@@ -15,9 +15,9 @@ Versão alvo: **1.0.10 (Build 23)** · Bundle `luan.com.healthfit.app`
 - [x] Versão Xcode **1.0.10 (23)**
 - [x] Removido resgate de códigos de cortesia (Guideline 3.1.1)
 - [x] `whatsnew.txt` / `review_notes.txt` atualizados
-- [ ] Archive + upload build **23**
-- [ ] Attach build 23 na versão 1.0.10
-- [ ] Reenviado para revisão
+- [x] Archive + upload build **23**
+- [x] Attach build 23 na versão 1.0.10
+- [x] Reenviado para revisão — **Waiting for Review** (2026-09-23)
 
 ## App Store Connect
 
