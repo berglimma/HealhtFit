@@ -569,6 +569,21 @@ struct WorkoutSession: Identifiable, Codable {
         return !duoTeamId.isEmpty
     }
 
+    /// Mínimo de exercícios concluídos para o card social tratar a sessão como “concluiu”.
+    static let shareCardMinCompletedExercises = 3
+
+    /// Card / legenda de postagem: com 3+ exercícios feitos, motiva como treino concluído
+    /// mesmo se a ficha foi encerrada antes do fim (melhor para compartilhar e atrair usuários).
+    var presentsAsCompletedOnShareCard: Bool {
+        if !endedEarly && !autoEndedByInactivity { return true }
+        return completedExercises >= Self.shareCardMinCompletedExercises
+    }
+
+    /// Tom de “não concluiu” no card — só quando encerrou cedo E fez menos de 3 exercícios.
+    var presentsAsIncompleteOnShareCard: Bool {
+        !presentsAsCompletedOnShareCard
+    }
+
     init(
         id: UUID = UUID(),
         workoutSheetId: UUID,

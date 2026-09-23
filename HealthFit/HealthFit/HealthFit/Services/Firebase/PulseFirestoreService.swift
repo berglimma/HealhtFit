@@ -5,7 +5,8 @@ import Foundation
 import UIKit
 
 /// Backend do Pulse: metadados em Firestore + mídia opcional no Storage.
-/// Posts/follows/stories exigem `isCloudSyncEffective` (Labs ou `pulseCloudSyncEnabled`; default OFF).
+/// Posts/follows/stories exigem `isCloudSyncEffective` (Pulse UI ligada ou `pulseCloudSyncEnabled`).
+/// Com Pulse ativo, iPhone e iPad da mesma conta sincronizam posts/stories via Firestore.
 /// Busca de pessoas no diretório (`userDirectory`) funciona com Firebase disponível, mesmo sem sync Pulse.
 /// Sempre pull-based (`getDocuments` / `getDocument`) — nunca `addSnapshotListener`.
 enum PulseFirestoreService {

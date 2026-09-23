@@ -63,6 +63,7 @@ struct WorkoutSummaryView: View {
     @State private var showMissingTrainerEmailAlert = false
     @State private var showPulsePaywall = false
     @State private var showPulseTrialExpiredAlert = false
+    @State private var showRouteFlyover = false
 
     private let shareCardAnchorID = "workoutShareCard"
 
@@ -148,7 +149,11 @@ struct WorkoutSummaryView: View {
                     .adaptiveContentWidth()
                 }
                 .background(AppTheme.background)
-                .navigationTitle(session.endedEarly ? "Treino Encerrado" : "Treino Concluído")
+                .navigationTitle(
+                    session.presentsAsIncompleteOnShareCard
+                        ? "Treino Encerrado"
+                        : "Treino Concluído"
+                )
                 .navigationBarTitleDisplayMode(.inline)
                 .onChange(of: scrollToShareToken) { _, _ in
                     withAnimation(.easeInOut(duration: 0.35)) {
@@ -180,6 +185,9 @@ struct WorkoutSummaryView: View {
             ActivityShareSheet(items: shareItems) {
                 showShareSheet = false
             }
+        }
+        .sheet(isPresented: $showRouteFlyover) {
+            RouteFlyoverSheet(session: session, athleteName: athleteDisplayName)
         }
         .confirmationDialog(
             "Adicionar mídia do treino",
@@ -341,14 +349,16 @@ struct WorkoutSummaryView: View {
     private var shareAchievementSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Label(
-                session.endedEarly ? "Compartilhar o que você fez hoje" : "Compartilhar conquista",
+                session.presentsAsIncompleteOnShareCard
+                    ? "Compartilhar o que você fez hoje"
+                    : "Compartilhar conquista",
                 systemImage: "square.and.arrow.up"
             )
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
 
             Text(
-                session.endedEarly
+                session.presentsAsIncompleteOnShareCard
                     ? "Você não concluiu o treino, mas cada sessão conta — card pronto para Stories e status."
                     : "Card pronto para Stories e status — WhatsApp ou Instagram."
             )
@@ -414,6 +424,19 @@ struct WorkoutSummaryView: View {
             .buttonStyle(.bordered)
             .tint(AppTheme.accent)
             .disabled(isPreparingShare)
+
+            if session.routePoints.count >= 2 {
+                Button {
+                    showRouteFlyover = true
+                } label: {
+                    Label("Flyover 3D do percurso", systemImage: "film.stack")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.bordered)
+                .tint(AppTheme.accent)
+            }
 
             Text("Escolha WhatsApp ou Instagram na tela de compartilhar. O nome HealthFit já vai no card.")
                 .font(.caption2)
@@ -1481,24 +1504,33 @@ struct WorkoutSummaryView: View {
 
     private var summaryHeader: some View {
         VStack(spacing: 12) {
-            Image(systemName: session.endedEarly ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+            Image(systemName: session.presentsAsIncompleteOnShareCard
+                  ? "exclamationmark.circle.fill"
+                  : "checkmark.circle.fill")
                 .font(.system(size: 56))
-                .foregroundStyle(session.endedEarly ? Color.red : AppTheme.accent)
+                .foregroundStyle(session.presentsAsIncompleteOnShareCard ? Color.red : AppTheme.accent)
 
             Text(session.workoutTitle)
                 .font(.title2.bold())
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
 
-            if session.autoEndedByInactivity {
-                Text("Encerrado automaticamente — você esqueceu de finalizar (mais de 2h30)")
+            if session.presentsAsIncompleteOnShareCard {
+                if session.autoEndedByInactivity {
+                    Text("Encerrado automaticamente — você esqueceu de finalizar (mais de 2h30)")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.orange)
+                        .multilineTextAlignment(.center)
+                } else if session.endedEarly {
+                    Text("Treino encerrado sem conclusão completa")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                }
+            } else if session.endedEarly || session.autoEndedByInactivity {
+                Text("Você concluiu \(session.completedExercises) exercícios — sessão para postar!")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.orange)
-                    .multilineTextAlignment(.center)
-            } else if session.endedEarly {
-                Text("Treino encerrado sem conclusão completa")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.red)
+                    .foregroundStyle(AppTheme.accent)
                     .multilineTextAlignment(.center)
             }
 
@@ -1978,6 +2010,10 @@ struct WorkoutSummaryView: View {
                     .foregroundStyle(AppTheme.textSecondary)
             }
 
+            if session.routePoints.count >= 2 {
+                flyoverEntryCard
+            }
+
             // Sempre visível na seção de rota (não depende de ≥2 pontos GPS).
             mapShareActions
 
@@ -1995,6 +2031,61 @@ struct WorkoutSummaryView: View {
         .padding()
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private var flyoverEntryCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "film.stack")
+                    .foregroundStyle(AppTheme.accent)
+                Text("Flyover 3D")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                Text("NOVO")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(AppTheme.accent)
+                    .clipShape(Capsule())
+            }
+
+            Text("Transforme o percurso em um sobrevoo 3D com a marca HealthFit e os dados da \(flyoverModalityNoun) — salve ou poste no Instagram Stories e WhatsApp.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            Button {
+                showRouteFlyover = true
+            } label: {
+                HStack {
+                    Image(systemName: "play.circle.fill")
+                    Text("Ver Flyover")
+                        .font(.headline)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(AppTheme.gradientPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(12)
+        .background(AppTheme.background.opacity(0.55))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var flyoverModalityNoun: String {
+        if session.isOutdoorCyclingSession {
+            return session.completedModalityTitle.localizedCaseInsensitiveContains("mountain")
+                ? "mountain bike"
+                : "bike"
+        }
+        if session.isOutdoorWalkingSession { return "caminhada" }
+        if session.isWaterSportSession {
+            return session.isKitesurfSession ? "sessão de kite" : "sessão de surf"
+        }
+        return "corrida"
     }
 
     private var mapShareActions: some View {

@@ -28,6 +28,10 @@ struct HealthFitApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
+                // Fundo realista da marca — janelas Stage Manager / Organizer visual.
+                AppTheme.background
+                    .ignoresSafeArea()
+
                 RootView()
                     .environmentObject(authService)
                     .environmentObject(healthKitManager)
@@ -50,6 +54,7 @@ struct HealthFitApp: App {
                     .environment(\.locale, languageStore.locale)
                     // Avoid `.id(language)` — full view remount freezes tab navigation on language bind.
                     .preferredColorScheme(.dark)
+                    .tint(AppTheme.accent)
 
                 if appUpdateService.requiresUpdate {
                     ForceAppUpdateView(updateService: appUpdateService)
@@ -57,6 +62,7 @@ struct HealthFitApp: App {
                         .zIndex(1000)
                 }
             }
+            .background(AppTheme.background)
             .onOpenURL { url in
                 _ = SocialSignInService.handleIncomingURL(url)
             }
@@ -68,9 +74,11 @@ struct HealthFitApp: App {
                     mealPlanService: mealPlanService
                 )
                 Task { await appUpdateService.checkForRequiredUpdate(force: true) }
+                StageManagerSupport.applyWindowChrome()
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                 Task { await appUpdateService.checkForRequiredUpdate() }
+                StageManagerSupport.applyWindowChrome()
             }
             .task(priority: .utility) {
                 await Task.yield()
@@ -83,5 +91,8 @@ struct HealthFitApp: App {
                 await appUpdateService.checkForRequiredUpdate(force: true)
             }
         }
+        // Stage Manager / Organizer visual — tamanho inicial e redimensionamento profissional.
+        .defaultSize(width: StageManagerSupport.defaultWidth, height: StageManagerSupport.defaultHeight)
+        .windowResizability(.automatic)
     }
 }

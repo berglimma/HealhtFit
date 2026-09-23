@@ -1,5 +1,5 @@
-• Pulse : recherche de personnes dès la 1ʳᵉ lettre, avec photo de profil et loupe
-• Pulse : la notification de demande d’abonnement arrive même écran verrouillé
-• Sommeil sur le Dashboard : suivi Watch et saisie manuelle
-• Apple Watch : GPS surf/kite, Spot Buddy et Évacuer l’eau
-• Entraînements recommandés mis à jour (H/F) et carte kite avec métriques et logo
+• Chronomètre circulaire segmenté sur Apple Watch (marche, course, vélo, VTT) avec couleurs de performance
+• Terminer le cardio sur iPhone arrête correctement la session Watch
+• Carte de partage : 3+ exercices terminés comptent comme entraînement conclu
+• Flyover de parcours en vidéo
+• Améliorations sync Pulse et Stage Manager sur iPad

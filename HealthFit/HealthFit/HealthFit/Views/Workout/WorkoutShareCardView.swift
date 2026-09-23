@@ -37,7 +37,7 @@ struct WorkoutShareCardView: View {
 
     /// Early-end / inactivity headlines + motivation are longer and need room to wrap.
     private var needsExtraTextSpace: Bool {
-        session.endedEarly || session.autoEndedByInactivity
+        session.presentsAsIncompleteOnShareCard
     }
 
     private var formattedDate: String {
@@ -222,10 +222,10 @@ struct WorkoutShareCardView: View {
     }
 
     private var runningHeadline: String {
-        if session.autoEndedByInactivity {
-            return "\(displayName) pausou \(outdoorSessionNoun)"
-        }
-        if session.endedEarly {
+        if session.presentsAsIncompleteOnShareCard {
+            if session.autoEndedByInactivity {
+                return "\(displayName) pausou \(outdoorSessionNoun)"
+            }
             return "\(displayName) \(outdoorSessionVerb), mas não concluiu"
         }
         return "\(displayName) fechou \(outdoorSessionNoun)"
@@ -326,10 +326,10 @@ struct WorkoutShareCardView: View {
     }
 
     private var headline: String {
-        if session.autoEndedByInactivity {
-            return "\(displayName) pausou o treino"
-        }
-        if session.endedEarly {
+        if session.presentsAsIncompleteOnShareCard {
+            if session.autoEndedByInactivity {
+                return "\(displayName) pausou o treino"
+            }
             return "\(displayName) treinou, mas não concluiu"
         }
         if isMeditation {
@@ -490,14 +490,14 @@ struct WorkoutShareCardView: View {
 
     /// SF Symbol da modalidade do treino (cardio catálogo, outdoor, meditação ou força).
     private var badgeIcon: String {
-        if session.endedEarly || session.autoEndedByInactivity {
+        if session.presentsAsIncompleteOnShareCard {
             return "flame.fill"
         }
         return Self.modalitySystemImage(for: session)
     }
 
     private var modalityAccentColor: Color {
-        if session.endedEarly || session.autoEndedByInactivity {
+        if session.presentsAsIncompleteOnShareCard {
             return Color("AccentOrange")
         }
         if isMeditation {
@@ -1215,7 +1215,7 @@ enum WorkoutShareCardRenderer {
             let km = session.displayDistanceKm
             let kmPart = km > 0 ? String(format: " · %.2f km", km) : ""
             let (noun, verb, tag) = outdoorShareCopy(for: session)
-            if session.endedEarly || session.autoEndedByInactivity {
+            if session.presentsAsIncompleteOnShareCard {
                 return """
                 \(who) \(verb) (não concluiu): \(modality) · \(duration)\(kmPart)\(teamPart)
                 Cada sessão conta — HealthFit 💪
@@ -1228,7 +1228,7 @@ enum WorkoutShareCardRenderer {
             #HealthFit \(tag) #Treino\(teamTags)
             """
         }
-        if session.endedEarly || session.autoEndedByInactivity {
+        if session.presentsAsIncompleteOnShareCard {
             return """
             \(who) treinou (não concluiu): \(modality) · \(duration)\(teamPart)
             Cada sessão conta — HealthFit 💪
@@ -1263,10 +1263,10 @@ enum WorkoutShareCardRenderer {
     }
 
     static func motivationLine(for session: WorkoutSession) -> String {
-        if session.autoEndedByInactivity {
-            return "O importante é mostrar up. O próximo você fecha com chave de ouro."
-        }
-        if session.endedEarly {
+        if session.presentsAsIncompleteOnShareCard {
+            if session.autoEndedByInactivity {
+                return "O importante é mostrar up. O próximo você fecha com chave de ouro."
+            }
             let lines = [
                 "Cada sessão conta. Voltar amanhã já é vitória.",
                 "Você apareceu hoje — isso já é progresso. O próximo fecha forte.",

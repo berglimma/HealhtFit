@@ -113,13 +113,16 @@ enum PulseExperimental {
         }
     }
 
-    /// Sync nuvem efetivo: em Release só remoto; em DEBUG Labs **ou** remoto.
+    /// Sync nuvem efetivo entre iPhone e iPad (posts/stories).
+    /// - DEBUG: Labs ou flag remota
+    /// - Release: flag remota **ou** Pulse UI ligada (produto) — sincroniza dispositivos da mesma conta
     static var isCloudSyncEffective: Bool {
         #if DEBUG
-        isCloudSyncEnabled || remoteCloudSyncEnabled
-        #else
-        remoteCloudSyncEnabled
+        if isCloudSyncEnabled { return true }
         #endif
+        if remoteCloudSyncEnabled { return true }
+        // Mesma conta, iPhone ↔ iPad: com Pulse visível, posts/stories sobem/baixam da nuvem.
+        return remoteUIEnabled
     }
 
     /// Aplica flags lidas de `appConfig/ios` (sem alterar overrides de Labs).

@@ -6,8 +6,21 @@ enum DeviceLayout {
         UIDevice.current.userInterfaceIdiom == .pad
     }
 
+    /// Janela estreita do Stage Manager / Split View (compact width).
+    static var isStageManagerCompact: Bool {
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive })
+        else { return false }
+        return scene.coordinateSpace.bounds.width < 700
+    }
+
     static func contentMaxWidth(for horizontalSizeClass: UserInterfaceSizeClass?) -> CGFloat? {
-        guard isPad else { return nil }
+        guard isPad || isStageManagerCompact else {
+            // iPhone em Stage Manager: limita largura para leitura confortável.
+            if horizontalSizeClass == .regular { return 560 }
+            return nil
+        }
         switch horizontalSizeClass {
         case .regular:
             return 720

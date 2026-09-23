@@ -523,20 +523,22 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     }
 
     func stopWorkoutOnWatch() {
+        // Cancela retries de start e suprime sync ANTES de enviar stop —
+        // evita republish de startCardio sobrescrevendo o applicationContext.
         startRetryTask?.cancel()
         startRetryTask = nil
         stopRetryTask?.cancel()
+        isWorkoutActiveOnWatch = false
+        isWatchSessionPaused = false
+        lastWorkoutName = ""
+        suppressWatchSessionCommandsUntil = Date().addingTimeInterval(12)
+        clearWatchMetrics()
 
         let timestamp = Date().timeIntervalSince1970
         let message: [String: Any] = [
             "action": "stopWorkout",
             "timestamp": timestamp
         ]
-        isWorkoutActiveOnWatch = false
-        isWatchSessionPaused = false
-        lastWorkoutName = ""
-        suppressWatchSessionCommandsUntil = Date().addingTimeInterval(8)
-        clearWatchMetrics()
 
         // Entrega redundante: sendMessage + transferUserInfo + applicationContext.
         sendToWatch(message, realtime: true)
@@ -545,7 +547,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
 
         // Reenvia o stop — cancelado automaticamente no próximo start.
         stopRetryTask = Task { @MainActor in
-            for delayMs in [350, 900, 1800] as [UInt64] {
+            for delayMs in [350, 900, 1800, 3200] as [UInt64] {
                 do {
                     try await Task.sleep(for: .milliseconds(delayMs))
                     try Task.checkCancellation()
@@ -557,8 +559,9 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
                     "timestamp": Date().timeIntervalSince1970
                 ]
                 sendToWatch(retry, realtime: true)
-                // Não republica applicationContext nos retries — um start novo pode já ter
-                // publicado o contexto de treino ativo.
+                // Republica contexto nos retries para manter stop como último contexto
+                // (fila transferUserInfo / simulador pode entregar start atrasado).
+                publishWorkoutContext(retry)
                 session?.transferUserInfo(retry)
             }
         }
@@ -598,6 +601,8 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
                 } catch {
                     return
                 }
+                // Após finalizar no iPhone, não republicar start (sobrescreveria o stop).
+                guard !shouldSuppressWatchSessionCommands else { return }
                 guard !isWorkoutActiveOnWatch else { return }
                 sendToWatch(message, realtime: true)
                 publishWorkoutContext(message)
@@ -961,9 +966,16 @@ extension WatchConnectivityManager: WCSessionDelegate {
             lastWorkoutName = ""
             clearWatchMetrics()
             refreshConnectionStatus()
-            if workoutStore?.sessionOriginatedFromWatch == true {
-                workoutStore?.endSessionMirroredFromWatch()
-                watchForcedSessionCloseTick += 1
+            // Encerrar no Watch deve finalizar a sessão ativa no iPhone também
+            // (caminhada/corrida/bike iniciadas no telefone e espelhadas no Watch).
+            guard workoutStore?.activeSession != nil else { return }
+            watchForcedSessionCloseTick += 1
+            // Fallback se nenhuma tela Active* consumir o tick (ex.: host já foi fechado).
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 900_000_000)
+                if workoutStore?.activeSession != nil {
+                    workoutStore?.endSessionMirroredFromWatch()
+                }
             }
         }
         if action == "watchPausedSession" {

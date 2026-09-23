@@ -243,6 +243,10 @@ struct ActiveWorkoutView: View {
                 }
             }
         }
+        .onChange(of: watchConnectivity.watchForcedSessionCloseTick) { _, tick in
+            guard tick > 0, !isFinishing, finishedSession == nil else { return }
+            finishWorkout()
+        }
         .confirmationDialog(
             "Adicionar exercício?",
             isPresented: $showAddExercisePrompt,

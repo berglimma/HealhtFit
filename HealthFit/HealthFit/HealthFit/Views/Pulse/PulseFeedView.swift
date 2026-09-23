@@ -52,6 +52,7 @@ struct PulseFeedView: View {
     @EnvironmentObject private var workoutStore: WorkoutStore
     @EnvironmentObject private var shareCardStore: WorkoutShareCardStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var store = PulseLocalStore.shared
 
     @State private var selectedTab: PulseBottomTab = .feed
@@ -379,6 +380,11 @@ struct PulseFeedView: View {
                     selectedTab = .people
                 }
                 store.requestPulseNotificationPermission()
+                Task { await store.refreshFromCloud(currentUserId: authorId) }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                // iPhone ↔ iPad: ao voltar ao app, puxa posts/stories da nuvem.
+                guard phase == .active, canAccessPulseUGC else { return }
                 Task { await store.refreshFromCloud(currentUserId: authorId) }
             }
             .onDisappear {

@@ -105,6 +105,10 @@ struct ActiveMeditationView: View {
             watchConnectivity.stopWorkoutOnWatch()
             finishedSession = ended
         }
+        .onChange(of: watchConnectivity.watchForcedSessionCloseTick) { _, tick in
+            guard tick > 0, !isFinishing, finishedSession == nil else { return }
+            finishMeditation()
+        }
         .fullScreenCover(item: $finishedSession) { session in
             WorkoutSummaryView(
                 session: session,

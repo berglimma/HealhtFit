@@ -85,6 +85,12 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     /// Ejeção de água do alto-falante (Surf / Kite / Natação).
     @Published var isEjectingWater = false
     @Published var waterEjectionStatus = ""
+    /// Cronômetro circular segmentado (caminhada / corrida / bike / MTB).
+    @Published var usesSegmentedChronometer = false
+    @Published var chronometerPerformance: WatchChronometerPerformance = .unknown
+    @Published var chronometerSecondaryText = ""
+    @Published var cardioDistanceMeters: Double = 0
+    @Published var currentSpeedMps: Double = 0
 
     private var session: WCSession?
     private var heartRateTimer: Timer?
@@ -95,6 +101,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var secondsSincePhoneSync = 0
     /// Ignora `stopWorkout` atrasado que chega depois de um start mais novo.
     private var lastPhoneStartTimestamp: TimeInterval = 0
+    /// Ignora `start*` atrasado (fila transferUserInfo) depois de um stop do iPhone.
+    private var lastPhoneStopTimestamp: TimeInterval = 0
     private var hasSentRestOvertimeNotification = false
     private var workoutStartedAt: Date?
     private var localMeditationPrompts: [String] = []
@@ -121,12 +129,22 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var lastWaterGPSAccepted: CLLocation?
     private var lastWaterGPSFlushAt: Date = .distantPast
     private var isWaterGPSTracking = false
+    /// GPS leve para ritmo/velocidade do cronômetro segmentado (terra).
+    private var isLandCardioGPSTracking = false
+    private var landCardioRecentSpeeds: [Double] = []
+    private var lastLandDistanceMeters: Double = 0
+    private var lastLandDistanceAt: Date?
+    private var isBikeStyleCardio = false
     private var hkWorkoutSession: HKWorkoutSession?
     private var hkLiveBuilder: HKLiveWorkoutBuilder?
     private var swimEventLapCount = 0
     private var lastSwimMetricsSentAt: Date = .distantPast
     /// Safe hop for nonisolated HK/WC callbacks (no captured `var self`).
     nonisolated(unsafe) private var mainActorBox: WeakMainActorBox<WatchWorkoutManager>?
+
+    private static let landMovingSpeedFloor = 0.4
+    private static let landBelowRatio = 0.90
+    private static let landOptimalRatio = 1.10
 
         override init() {
         super.init()
@@ -358,9 +376,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             waterSportMode: waterSportMode,
             isKitesurf: isKitesurf
         )
+        usesSegmentedChronometer = Self.shouldUseSegmentedChronometer(
+            exerciseName: exerciseName,
+            swimmingMode: swimmingMode,
+            waterSportMode: waterSportMode
+        )
+        isBikeStyleCardio = Self.isBikeStyleCardio(exerciseName: exerciseName)
         let outdoor = locationOutdoor
             || swimmingMode
             || waterSportMode
+            || usesSegmentedChronometer
             || [.walking, .running, .cycling, .rowing, .hiking].contains(activity)
         startLiveWorkoutSession(
             activityType: activity,
@@ -373,6 +398,34 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             startWaterSportMotion()
             startWaterSportGPS()
         }
+        if usesSegmentedChronometer {
+            startLandCardioGPS()
+        }
+    }
+
+    /// Caminhada, corrida, bike e mountain bike — anel segmentado com cor por desempenho.
+    private static func shouldUseSegmentedChronometer(
+        exerciseName: String,
+        swimmingMode: Bool,
+        waterSportMode: Bool
+    ) -> Bool {
+        if swimmingMode || waterSportMode { return false }
+        let name = exerciseName.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+        if name.contains("ergometr") || name.contains("indoor") { return false }
+        if name.contains("corrida") || name.contains("run") || name.contains("esteira") { return true }
+        if name.contains("caminh") || name.contains("walk") { return true }
+        if name.contains("mountain") || name.contains("mtb") { return true }
+        if name.contains("bike") || name.contains("cicl") || name.contains("bicicleta") { return true }
+        return false
+    }
+
+    private static func isBikeStyleCardio(exerciseName: String) -> Bool {
+        let name = exerciseName.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+        return name.contains("bike")
+            || name.contains("cicl")
+            || name.contains("bicicleta")
+            || name.contains("mountain")
+            || name.contains("mtb")
     }
 
     /// Inicia meditação escolhida no Watch.
@@ -450,6 +503,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isPaused = paused
         if isPaused {
             resetAirborneJumpState()
+            if usesSegmentedChronometer {
+                chronometerPerformance = .paused
+            }
             hkWorkoutSession?.pause()
             WKInterfaceDevice.current().play(.stop)
             if notifyPhone {
@@ -460,6 +516,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
             watchSyncStatus = "Pausado"
         } else {
+            if usesSegmentedChronometer, chronometerPerformance == .paused {
+                chronometerPerformance = landCardioRecentSpeeds.count >= 3 ? .fair : .unknown
+            }
             hkWorkoutSession?.resume()
             WKInterfaceDevice.current().play(.start)
             if notifyPhone {
@@ -501,8 +560,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isMeditationWorkout = false
         meditationOwnedByWatch = false
         localMeditationPrompts = []
+        lastPhoneStopTimestamp = max(lastPhoneStopTimestamp, Date().timeIntervalSince1970)
         stopWaterSportMotion()
         stopWaterSportGPS(flush: true)
+        stopLandCardioGPS()
         stopLiveWorkoutSession()
         heartRateTimer?.invalidate()
         heartRateTimer = nil
@@ -578,6 +639,15 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         waterSensorStatus = ""
         watchSyncStatus = ""
         lastAutoJumpNote = ""
+        usesSegmentedChronometer = false
+        chronometerPerformance = .unknown
+        chronometerSecondaryText = ""
+        cardioDistanceMeters = 0
+        currentSpeedMps = 0
+        landCardioRecentSpeeds = []
+        lastLandDistanceMeters = 0
+        lastLandDistanceAt = nil
+        isBikeStyleCardio = false
         resetAirborneJumpState()
     }
 
@@ -769,14 +839,18 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     /// iPhone pediu abertura do app Watch (`startWatchApp`) — sobe a tela de atividade.
     func handleHealthKitLaunch(configuration: HKWorkoutConfiguration) {
-        notePhoneStart(timestamp: Date().timeIntervalSince1970)
-
+        // Preferência: contexto WCSession (pode ser stop recente — não reabrir).
         if let context = session?.receivedApplicationContext,
-           let action = context["action"] as? String,
-           ["startWorkout", "startCardio", "startMeditation"].contains(action) {
-            handlePhoneMessage(context)
-            WKInterfaceDevice.current().play(.start)
-            return
+           let action = context["action"] as? String {
+            if action == "stopWorkout" {
+                handlePhoneMessage(context)
+                return
+            }
+            if ["startWorkout", "startCardio", "startMeditation"].contains(action) {
+                handlePhoneMessage(context)
+                WKInterfaceDevice.current().play(.start)
+                return
+            }
         }
 
         if isActive {
@@ -794,6 +868,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
             return
         }
+
+        notePhoneStart(timestamp: Date().timeIntervalSince1970)
 
         switch configuration.activityType {
         case .mindAndBody:
@@ -854,6 +930,24 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
         lastPhoneStartTimestamp = max(lastPhoneStartTimestamp, timestamp)
+    }
+
+    private func notePhoneStop(timestamp: TimeInterval) {
+        if timestamp > 0 {
+            lastPhoneStopTimestamp = max(lastPhoneStopTimestamp, timestamp)
+        } else {
+            lastPhoneStopTimestamp = max(lastPhoneStopTimestamp, Date().timeIntervalSince1970)
+        }
+    }
+
+    /// `start*` atrasado na fila WCSession após um stop do iPhone — não reabre o treino.
+    private func shouldIgnoreStalePhoneStart(timestamp: TimeInterval) -> Bool {
+        guard lastPhoneStopTimestamp > 0 else { return false }
+        if timestamp <= 0 {
+            // Sem timestamp: ignore se paramos recentemente (fila / simulador).
+            return Date().timeIntervalSince1970 - lastPhoneStopTimestamp < 45
+        }
+        return timestamp < lastPhoneStopTimestamp
     }
 
     private static func timeInterval(from message: [String: Any], key: String) -> TimeInterval? {
@@ -1287,6 +1381,12 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             if let energyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
                 dataSource.enableCollection(for: energyType, predicate: nil)
             }
+            if let walkRun = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) {
+                dataSource.enableCollection(for: walkRun, predicate: nil)
+            }
+            if let cycling = HKQuantityType.quantityType(forIdentifier: .distanceCycling) {
+                dataSource.enableCollection(for: cycling, predicate: nil)
+            }
             builder.dataSource = dataSource
             hkSession.delegate = self
             builder.delegate = self
@@ -1599,6 +1699,148 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isWaterGPSTracking = false
         lastWaterGPSAccepted = nil
         waterGPSPendingBatch = []
+        // Se o cronômetro de terra ainda precisa de GPS, reinicia.
+        if isLandCardioGPSTracking {
+            waterLocationManager.startUpdatingLocation()
+        }
+    }
+
+    // MARK: - GPS / desempenho do cronômetro segmentado (terra)
+
+    private func startLandCardioGPS() {
+        isLandCardioGPSTracking = true
+        landCardioRecentSpeeds = []
+        lastLandDistanceMeters = 0
+        lastLandDistanceAt = nil
+        chronometerPerformance = .unknown
+        chronometerSecondaryText = ""
+        currentSpeedMps = 0
+        cardioDistanceMeters = 0
+
+        let status = waterLocationManager.authorizationStatus
+        switch status {
+        case .authorizedAlways, .authorizedWhenInUse:
+            waterLocationManager.startUpdatingLocation()
+            watchSyncStatus = "Cronômetro · GPS ativo"
+        case .notDetermined:
+            waterLocationManager.requestWhenInUseAuthorization()
+        case .denied, .restricted:
+            watchSyncStatus = "Cronômetro · sem GPS (HealthKit)"
+        @unknown default:
+            break
+        }
+    }
+
+    private func stopLandCardioGPS() {
+        isLandCardioGPSTracking = false
+        if !isWaterGPSTracking {
+            waterLocationManager.stopUpdatingLocation()
+        }
+    }
+
+    private func acceptLandCardioGPSLocation(_ location: CLLocation) {
+        guard isLandCardioGPSTracking, usesSegmentedChronometer, isActive else { return }
+        guard location.horizontalAccuracy >= 0, location.horizontalAccuracy <= 40 else { return }
+
+        if location.speed >= 0 {
+            ingestLandCardioSpeed(location.speed)
+        }
+    }
+
+    private func applyLandCardioDistanceMeters(_ meters: Double) {
+        guard usesSegmentedChronometer, isActive else { return }
+        let distance = max(0, meters)
+        cardioDistanceMeters = distance
+
+        let now = Date()
+        if let lastAt = lastLandDistanceAt, lastLandDistanceMeters >= 0 {
+            let dt = now.timeIntervalSince(lastAt)
+            let delta = distance - lastLandDistanceMeters
+            if dt >= 2.0, delta >= 0 {
+                let speed = delta / dt
+                // Preferência: GPS; distância HK é backup quando GPS fraco.
+                if currentSpeedMps < Self.landMovingSpeedFloor || locationSpeedStale() {
+                    ingestLandCardioSpeed(speed)
+                }
+            }
+        }
+        lastLandDistanceMeters = distance
+        lastLandDistanceAt = now
+    }
+
+    private func locationSpeedStale() -> Bool {
+        // Sem amostra GPS recente de movimento — usa distância HK.
+        landCardioRecentSpeeds.isEmpty
+    }
+
+    private func ingestLandCardioSpeed(_ speed: Double) {
+        guard usesSegmentedChronometer, isActive else { return }
+        if isPaused {
+            chronometerPerformance = .paused
+            return
+        }
+
+        currentSpeedMps = max(0, speed)
+        updateChronometerSecondaryText(speed: currentSpeedMps)
+
+        guard speed >= Self.landMovingSpeedFloor else {
+            chronometerPerformance = .stopped
+            return
+        }
+
+        landCardioRecentSpeeds.append(speed)
+        if landCardioRecentSpeeds.count > 48 {
+            landCardioRecentSpeeds.removeFirst(landCardioRecentSpeeds.count - 48)
+        }
+
+        // Precisa de baseline da sessão antes de classificar.
+        guard landCardioRecentSpeeds.count >= 4 else {
+            chronometerPerformance = .unknown
+            return
+        }
+
+        let median = Self.medianSpeed(of: landCardioRecentSpeeds) ?? Self.landMovingSpeedFloor
+        let baseline = max(median, Self.landMovingSpeedFloor)
+        let ratio = speed / baseline
+        if ratio >= Self.landOptimalRatio {
+            chronometerPerformance = .good
+        } else if ratio < Self.landBelowRatio {
+            chronometerPerformance = .poor
+        } else {
+            chronometerPerformance = .fair
+        }
+    }
+
+    private func updateChronometerSecondaryText(speed: Double) {
+        guard speed >= Self.landMovingSpeedFloor else {
+            chronometerSecondaryText = formatClockLike(workoutElapsedSeconds)
+            return
+        }
+        if isBikeStyleCardio {
+            chronometerSecondaryText = String(format: "%.1f km/h", speed * 3.6)
+        } else {
+            let paceSeconds = 1000.0 / speed
+            let minutes = Int(paceSeconds) / 60
+            let secs = Int(paceSeconds) % 60
+            chronometerSecondaryText = String(format: "%d'%02d\"/km", minutes, secs)
+        }
+    }
+
+    private func formatClockLike(_ seconds: Int) -> String {
+        let total = max(seconds, 0)
+        let minutes = (total % 3600) / 60
+        let secs = total % 60
+        return String(format: "%02d:%02d", minutes, secs)
+    }
+
+    private static func medianSpeed(of values: [Double]) -> Double? {
+        guard !values.isEmpty else { return nil }
+        let sorted = values.sorted()
+        let mid = sorted.count / 2
+        if sorted.count.isMultiple(of: 2) {
+            return (sorted[mid - 1] + sorted[mid]) / 2
+        }
+        return sorted[mid]
     }
 
     private func acceptWaterGPSLocation(_ location: CLLocation) {
@@ -1710,6 +1952,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
         switch action {
         case "startWorkout":
+            if shouldIgnoreStalePhoneStart(timestamp: messageTimestamp) { return }
             notePhoneStart(timestamp: messageTimestamp)
             let name = message["workoutName"] as? String ?? "Treino"
             let exerciseName = message["exerciseName"] as? String ?? ""
@@ -1737,6 +1980,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             )
             sendWatchAckStarted(kind: "strength", workoutName: name)
         case "startCardio":
+            if shouldIgnoreStalePhoneStart(timestamp: messageTimestamp) { return }
             notePhoneStart(timestamp: messageTimestamp)
             let name = message["workoutName"] as? String ?? "Cardio"
             let targetSeconds = message["targetSeconds"] as? Int ?? 0
@@ -1847,6 +2091,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
             watchSyncStatus = "Dados do iPhone"
         case "startMeditation":
+            if shouldIgnoreStalePhoneStart(timestamp: messageTimestamp) { return }
             notePhoneStart(timestamp: messageTimestamp)
             let name = message["workoutName"] as? String ?? "Meditação"
             if isActive,
@@ -1891,6 +2136,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             if messageTimestamp > 0, messageTimestamp + 0.05 < lastPhoneStartTimestamp {
                 return
             }
+            notePhoneStop(timestamp: messageTimestamp)
             if !isActive { return }
             WKInterfaceDevice.current().play(.success)
             stopWorkout()
@@ -1953,8 +2199,9 @@ extension WatchWorkoutManager: WCSessionDelegate {
             guard activationState == .activated else { return }
             let context = session.receivedApplicationContext
             guard !context.isEmpty else { return }
-            // Contexto antigo de stop não deve impedir o próximo start.
-            if let action = context["action"] as? String, action == "stopWorkout", !isActive {
+            // Contexto antigo de stop: registra timestamp e não reabre.
+            if let action = context["action"] as? String, action == "stopWorkout" {
+                handlePhoneMessage(context)
                 return
             }
             handlePhoneMessage(context)
@@ -2044,6 +2291,14 @@ extension WatchWorkoutManager: HKLiveWorkoutBuilderDelegate {
                let sum = stats?.sumQuantity() {
                 distanceMeters = sum.doubleValue(for: .meter())
             }
+            if quantityType == HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning),
+               let sum = stats?.sumQuantity() {
+                distanceMeters = sum.doubleValue(for: .meter())
+            }
+            if quantityType == HKQuantityType.quantityType(forIdentifier: .distanceCycling),
+               let sum = stats?.sumQuantity() {
+                distanceMeters = sum.doubleValue(for: .meter())
+            }
             if quantityType == HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned),
                let sum = stats?.sumQuantity() {
                 energyKcal = sum.doubleValue(for: .kilocalorie())
@@ -2061,6 +2316,9 @@ extension WatchWorkoutManager: HKLiveWorkoutBuilderDelegate {
             guard manager.isActive else { return }
             if manager.isSwimmingMode, let distanceSnapshot {
                 manager.applySwimDistanceMeters(distanceSnapshot)
+            }
+            if manager.usesSegmentedChronometer, let distanceSnapshot {
+                manager.applyLandCardioDistanceMeters(distanceSnapshot)
             }
             if let energySnapshot, energySnapshot >= manager.calories {
                 manager.calories = energySnapshot
@@ -2095,11 +2353,11 @@ extension WatchWorkoutManager: HKLiveWorkoutBuilderDelegate {
 extension WatchWorkoutManager: CLLocationManagerDelegate {
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         Task { @MainActor in
-            guard isWaterGPSTracking else { return }
+            guard isWaterGPSTracking || isLandCardioGPSTracking else { return }
             switch manager.authorizationStatus {
             case .authorizedWhenInUse, .authorizedAlways:
                 waterLocationManager.startUpdatingLocation()
-                watchSyncStatus = "GPS Watch ativo"
+                watchSyncStatus = isWaterGPSTracking ? "GPS Watch ativo" : "Cronômetro · GPS ativo"
             case .denied, .restricted:
                 watchSyncStatus = "GPS Watch sem permissão"
             default:
@@ -2111,7 +2369,12 @@ extension WatchWorkoutManager: CLLocationManagerDelegate {
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         Task { @MainActor in
             for location in locations {
-                acceptWaterGPSLocation(location)
+                if isWaterGPSTracking {
+                    acceptWaterGPSLocation(location)
+                }
+                if isLandCardioGPSTracking {
+                    acceptLandCardioGPSLocation(location)
+                }
             }
         }
     }

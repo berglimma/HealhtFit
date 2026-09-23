@@ -257,7 +257,9 @@ struct WatchContentView: View {
                     strengthSection
                 }
 
-                if !workoutManager.isMeditationWorkout {
+                // BPM/Kcal já vão dentro do cronômetro segmentado — evita sobreposição.
+                if !workoutManager.isMeditationWorkout,
+                   !(workoutManager.isCardioWorkout && workoutManager.usesSegmentedChronometer) {
                     compactMetricsRow
                 }
 
@@ -571,7 +573,26 @@ struct WatchContentView: View {
                 swimmingCardioExtras
             }
 
-            if hasCalorieGoal {
+            if workoutManager.usesSegmentedChronometer {
+                segmentedChronometerCardio
+                if hasCalorieGoal {
+                    ProgressView(value: calorieProgress)
+                        .tint(.orange)
+                    if !workoutManager.cardioSuperationMessage.isEmpty {
+                        Text(workoutManager.cardioSuperationMessage)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.orange)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                    }
+                } else if workoutManager.cardioTargetSeconds > 0 {
+                    ProgressView(
+                        value: Double(workoutManager.workoutElapsedSeconds),
+                        total: Double(max(workoutManager.cardioTargetSeconds, 1))
+                    )
+                    .tint(workoutManager.chronometerPerformance.accent)
+                }
+            } else if hasCalorieGoal {
                 Label("Meta calórica", systemImage: "flame.fill")
                     .font(.caption2)
                     .foregroundStyle(.orange)
@@ -619,6 +640,27 @@ struct WatchContentView: View {
                     .tint(.orange)
                 }
             }
+        }
+    }
+
+    /// Anel de 60 segmentos + timers + BPM/Kcal — layout da imagem, sem sobreposições.
+    private var segmentedChronometerCardio: some View {
+        VStack(spacing: 8) {
+            WatchSegmentedChronometer(
+                elapsedSeconds: workoutManager.workoutElapsedSeconds,
+                performance: workoutManager.isPaused
+                    ? .paused
+                    : workoutManager.chronometerPerformance,
+                secondaryText: workoutManager.chronometerSecondaryText,
+                statusOverride: workoutManager.isPaused
+                    ? "Pausado"
+                    : (workoutManager.chronometerPerformance == .unknown ? "Registrando" : nil)
+            )
+
+            WatchChronometerMetricsRow(
+                heartRate: workoutManager.heartRate,
+                calories: workoutManager.calories
+            )
         }
     }
 

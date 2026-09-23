@@ -749,6 +749,9 @@
     "A senha deve conter:" : {
 
     },
+    "Abra o Instagram ou use Compartilhar para enviar o Flyover." : {
+
+    },
     "Abrindo chat Coach…" : {
 
     },
@@ -2764,6 +2767,12 @@
     "Compartilhar convite" : {
 
     },
+    "Compartilhar de outro jeito" : {
+
+    },
+    "Compartilhar no WhatsApp / Instagram" : {
+
+    },
     "Compartilhar o que você fez hoje" : {
 
     },
@@ -3778,6 +3787,15 @@
     "Firebase não configurado. Substitua o GoogleService-Info.plist pelo arquivo do Firebase Console." : {
 
     },
+    "Flyover" : {
+
+    },
+    "Flyover 3D" : {
+
+    },
+    "Flyover 3D do percurso" : {
+
+    },
     "Fonte atual" : {
 
     },
@@ -3845,7 +3863,13 @@
     "Gerado pelo IAssistente — sugestão educativa. É essencial consultar um profissional de Educação Física antes de seguir esta ficha." : {
 
     },
+    "Gerando Flyover…" : {
+
+    },
     "Gerando PDF…" : {
+
+    },
+    "Gerando vídeo… %lld%%" : {
 
     },
     "Gerar Cardápio" : {
@@ -3857,10 +3881,16 @@
     "Gerar convite" : {
 
     },
+    "Gerar novamente" : {
+
+    },
     "Gerar outro código" : {
 
     },
     "Gerar PDF do relatório" : {
+
+    },
+    "Gerar vídeo Flyover" : {
 
     },
     "Gere um cardápio pelo objetivo ou monte um personalizado refeição por refeição." : {
@@ -3915,6 +3945,9 @@
 
     },
     "HealthFit Coach" : {
+
+    },
+    "HealthFit Flyover" : {
 
     },
     "HealthKit" : {
@@ -4069,6 +4102,9 @@
 
     },
     "Inspecionei" : {
+
+    },
+    "Instagram Stories" : {
 
     },
     "Integrações" : {
@@ -10589,6 +10625,9 @@
         }
       }
     },
+    "Reproduzir" : {
+
+    },
     "Reps" : {
 
     },
@@ -10791,6 +10830,9 @@
 
     },
     "Salvar na Galeria?" : {
+
+    },
+    "Salvar no dispositivo" : {
 
     },
     "Salvar no perfil do aluno" : {
@@ -11071,6 +11113,9 @@
     "Sobre você" : {
 
     },
+    "Sobrevoo 3D" : {
+
+    },
     "Somente kitesurf · somente durante a sessão · opt-in separado do Duo." : {
 
     },
@@ -11117,6 +11162,9 @@
 
     },
     "Stories continuam no topo do Feed" : {
+
+    },
+    "Stories do Instagram" : {
 
     },
     "Stroke rate em remadas por minuto. Split /500 m (quanto menor, melhor) e eficiência saem da distância, remadas e sensores." : {
@@ -11549,6 +11597,9 @@
     "Total histórico com pré-treino" : {
 
     },
+    "Transforme o percurso em um sobrevoo 3D com a marca HealthFit e os dados da %@ — salve ou poste no Instagram Stories e WhatsApp." : {
+
+    },
     "Trecho %@ · %llds" : {
       "localizations" : {
         "pt-BR" : {
@@ -11743,6 +11794,9 @@
     "Ver comparativo de %lld dia(s)" : {
 
     },
+    "Ver Flyover" : {
+
+    },
     "Ver planos" : {
 
     },
@@ -11779,6 +11833,9 @@
     "Vídeo selecionado (máx. %llds)" : {
 
     },
+    "Vídeo vertical (Stories) com marca HealthFit, %@ e métricas do percurso." : {
+
+    },
     "Vinculado via HealthFit Coach" : {
 
     },
@@ -11786,6 +11843,9 @@
 
     },
     "Visível na busca regional" : {
+
+    },
+    "Você concluiu %lld exercícios — sessão para postar!" : {
 
     },
     "Você concluiu a ficha recomendada. Deseja incluir mais algum exercício nesta sessão?" : {

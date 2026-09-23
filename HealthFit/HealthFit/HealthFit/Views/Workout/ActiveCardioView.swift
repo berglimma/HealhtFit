@@ -477,6 +477,10 @@ struct ActiveCardioView: View {
                 resumeCardio(fromWatch: true)
             }
         }
+        .onChange(of: watchConnectivity.watchForcedSessionCloseTick) { _, tick in
+            guard tick > 0, !isFinishing, finishedSession == nil else { return }
+            finishCardio()
+        }
         .onAppear {
             elapsedSeconds = activeElapsedSeconds()
             syncWithWatch()

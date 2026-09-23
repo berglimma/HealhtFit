@@ -1,24 +1,12 @@
-HealthFit 1.0.9 (Build 21)
+HealthFit 1.0.10 (22)
 
-Principais mudanças deste build:
-- Apple Watch: GPS preferencial em surf/kite, Spot Buddy e Retirar água
-- Treinos recomendados M/F atualizados; card de kite com métricas e logo
-- Pulse: busca de pessoas + push de follow (herdado de 1.0.8)
-- Sono no Dashboard: monitoramento Watch + registro manual
+What's new for review:
+- Apple Watch segmented chronometer for outdoor walk/run/bike/MTB (green/orange/red by pace performance).
+- Fix: finishing cardio on iPhone stops the Watch companion session (stale WCSession starts ignored).
+- Share card treats 3+ completed strength exercises as "completed" for social posting motivation.
+- Route flyover video share; Pulse/iPad Stage Manager polish.
 
-Conta demo App Review:
-E-mail: healthfit.appreview@gmail.com
-(senha no campo Sign-in Information do App Store Connect)
+Demo account: use existing review credentials on file (same as prior submissions).
+Pulse: 18+ social features; trial then Basic plan.
 
-Testes sugeridos:
-1. Pulse → Pessoas → digitar 1 letra → resultados com foto; tocar lupa
-2. Dashboard → card Sono (manual e/ou Watch)
-3. Watch: iniciar kite/surf → GPS do Watch; menu Retirar água
-4. Kite Spot Buddy (sessão ativa) → ver Duo ≤2 km no mapa
-
-HealthFit Pulse (18+ UGC):
-Dashboard → card HealthFit Pulse → aceitar termos → feed (conta 18+)
-
-EULA / assinaturas:
-Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
-Privacy: https://cdn.jsdelivr.net/gh/berglimma/HealhtFit@main/Docs/privacidade/index.html
+No encryption changes. Watch background mode remains workout-processing only.
