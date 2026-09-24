@@ -53,8 +53,8 @@ struct StrengthPerformanceView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Desempenho")
-                    .font(.title2.weight(.bold))
+                Text("Desempenho Carga Treinos")
+                    .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
             }

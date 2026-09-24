@@ -60,6 +60,7 @@ struct DashboardView: View {
                     metricsRow
                     if showHealthCharts {
                         HealthChartsView()
+                        // Direto abaixo de Desempenho Semanal: 1RM estimado + volume por grupo muscular.
                         StrengthPerformanceView()
                     } else {
                         Color.clear.frame(height: 280)
