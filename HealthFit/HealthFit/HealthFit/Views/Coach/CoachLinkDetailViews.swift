@@ -432,7 +432,10 @@ struct CoachLinkDetailView: View {
         }
         .sheet(isPresented: $showScheduleConsultation) {
             NavigationStack {
-                CoachScheduleConsultationView(link: liveLink)
+                CoachScheduleConsultationView(
+                    link: liveLink,
+                    showCoachWideAgenda: isCoach
+                )
             }
         }
         .alert("Excluir ficha?", isPresented: deletionAlertBinding) {

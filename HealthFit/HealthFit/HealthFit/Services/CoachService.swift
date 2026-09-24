@@ -919,13 +919,23 @@ final class CoachService: ObservableObject {
         }
     }
 
+    /// Todos os compromissos ativos (propostos/confirmados) do profissional, em todos os vínculos.
+    func allActiveConsultations(forCoachUid coachUid: String) -> [ConsultationBooking] {
+        myLinks
+            .filter { $0.coachUid == coachUid }
+            .flatMap { consultationsByLink[$0.id] ?? [] }
+            .filter { $0.status == .proposed || $0.status == .confirmed }
+            .sorted { $0.startAt < $1.startAt }
+    }
+
     func openConsultationSlots(
         for link: CoachLink,
         daysAhead: Int = 14,
         limit: Int = 48
     ) async -> [ConsultationOpenSlot] {
         let availability = availability(for: link.coachUid)
-        let existing = consultationsByLink[link.id] ?? []
+        // Conflita com qualquer aluno do mesmo profissional, não só o vínculo atual.
+        let existing = allActiveConsultations(forCoachUid: link.coachUid)
         let from = Date()
         let to = Calendar.current.date(byAdding: .day, value: daysAhead, to: from) ?? from.addingTimeInterval(14 * 86400)
         let busy = await ConsultationCalendarService.busyIntervals(from: from, to: to)

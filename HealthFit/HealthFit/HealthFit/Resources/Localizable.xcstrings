@@ -82,6 +82,9 @@
         }
       }
     },
+    "%@ — cardápio prescrito" : {
+
+    },
     "%@ — escolha um cardápio" : {
 
     },
@@ -674,6 +677,12 @@
     "1 unidade" : {
 
     },
+    "1. Escolha a foto da refeição" : {
+
+    },
+    "1. Escolha ou tire a foto da refeição" : {
+
+    },
     "1. Tipo de equipamento (kite)" : {
 
     },
@@ -702,13 +711,25 @@
     "1RM projetado ao longo do tempo" : {
 
     },
+    "2. Envie com o nome da refeição" : {
+
+    },
+    "2. Informe o nome (ex.: Almoço) e observação opcional" : {
+
+    },
     "2. Modo de velejo" : {
 
     },
     "2D" : {
 
     },
+    "3. Nutricionista abre uma vez na Revisão IAssistente" : {
+
+    },
     "3. Tipo de prancha" : {
+
+    },
+    "3. Toque em Enviar" : {
 
     },
     "3D" : {
@@ -721,6 +742,12 @@
 
     },
     "3D: vista inclinada do local" : {
+
+    },
+    "4. Foto apagada após visualização" : {
+
+    },
+    "4. Nutri abre 1× e a foto some" : {
 
     },
     "4. SPOT de partida" : {
@@ -776,13 +803,13 @@
     "A ficha será salva em Personalizados deste programa." : {
 
     },
+    "A grade mostra todos os alunos; abaixo só os deste paciente." : {
+
+    },
     "A menstruação começou hoje" : {
 
     },
     "A mídia recebe duração, kcal e outros dados da sessão com a marca HealthFit. Opcional — não impede fechar o treino." : {
-
-    },
-    "A nutricionista vê a foto só hoje. Depois de abrir, ela é apagada automaticamente." : {
 
     },
     "A partir do %@" : {
@@ -922,6 +949,9 @@
     "Adicione exercícios do catálogo, crie um personalizado ou use os grupos acima." : {
 
     },
+    "Agenda completa · este aluno + demais pacientes · horários disponíveis e ocupados" : {
+
+    },
     "Agenda de consultas" : {
 
     },
@@ -1016,7 +1046,13 @@
     "Alimentos" : {
 
     },
+    "Alimentos e comentários do nutricionista aparecem em cada refeição. Marque quando concluir." : {
+
+    },
     "Alimentos identificados" : {
+
+    },
+    "Alimentos prescritos" : {
 
     },
     "Alterar fundo" : {
@@ -2625,6 +2661,9 @@
     "Comece o dia com um copo d'água" : {
 
     },
+    "Comentário do nutricionista" : {
+
+    },
     "Comentários" : {
 
     },
@@ -2950,6 +2989,9 @@
 
     },
     "Comprimento" : {
+
+    },
+    "Compromissos com %@" : {
 
     },
     "Concluídas" : {
@@ -3484,6 +3526,9 @@
     "Duração: %lld min · toque num horário livre (07:00–20:00)" : {
 
     },
+    "Duração: %lld min · verde = disponível · laranja = ocupado no calendário · toque num horário livre" : {
+
+    },
     "É doce / sobremesa" : {
 
     },
@@ -3542,6 +3587,9 @@
 
     },
     "Elevação" : {
+
+    },
+    "Em cada refeição abaixo: alimentos e comentários do nutricionista ficam visíveis. Toque na refeição só para marcar como feita." : {
 
     },
     "Em Perfil, marque as modalidades que você pratica para montar a lista de treinos." : {
@@ -3620,6 +3668,12 @@
 
     },
     "Enviar foto da refeição (só hoje)" : {
+
+    },
+    "Enviar foto da refeição agora" : {
+
+    },
+    "Enviar foto para o nutricionista" : {
 
     },
     "Enviar interesse" : {
@@ -4026,6 +4080,12 @@
     "Firebase não configurado. Substitua o GoogleService-Info.plist pelo arquivo do Firebase Console." : {
 
     },
+    "Fluxo: você envia → nutri vê só hoje → ao abrir, a foto é apagada." : {
+
+    },
+    "Fluxo: você envia a foto → o nutricionista vê só hoje → ao abrir, a foto é apagada automaticamente." : {
+
+    },
     "Flyover" : {
 
     },
@@ -4054,6 +4114,9 @@
 
     },
     "Foto da refeição" : {
+
+    },
+    "Foto da refeição para o nutricionista" : {
 
     },
     "Foto de fundo" : {
@@ -4724,9 +4787,6 @@
     "Mensagem na comunidade…" : {
 
     },
-    "Mesmo calendário do aluno · sincronizado em tempo real" : {
-
-    },
     "Mesmo conteúdo da aba Nutrição → Acompanhar do aluno. Preencha anamnese, questionários e metas; publique para sincronizar." : {
 
     },
@@ -4866,6 +4926,9 @@
     "Modo de agendamento" : {
 
     },
+    "Modo de preparo" : {
+
+    },
     "Modo de preparo (opcional)" : {
 
     },
@@ -4962,6 +5025,9 @@
     "Nenhum" : {
 
     },
+    "Nenhum alimento listado nesta refeição." : {
+
+    },
     "Nenhum aluno encontrado com este termo." : {
 
     },
@@ -4975,6 +5041,9 @@
 
     },
     "Nenhum cardápio ativo. Gere seu plano em Nutrição." : {
+
+    },
+    "Nenhum compromisso futuro com %@. Toque num horário disponível para agendar." : {
 
     },
     "Nenhum exercício encontrado." : {

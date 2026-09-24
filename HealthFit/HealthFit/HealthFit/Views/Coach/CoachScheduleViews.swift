@@ -126,6 +126,10 @@ private enum HFCalTheme {
     static let accentSecondary = AppTheme.accentSecondary
     static let eventGreen = AppTheme.accent
     static let eventGreenDark = AppTheme.accent.opacity(0.55)
+    static let availableFill = AppTheme.accent.opacity(0.14)
+    static let unavailableFill = Color.white.opacity(0.04)
+    static let busyFill = Color.orange.opacity(0.35)
+    static let otherStudentFill = AppTheme.accentSecondary.opacity(0.75)
     static let selection = AppTheme.accentSecondary
     static let gridLine = Color.white.opacity(0.12)
     static let muted = AppTheme.textSecondary
@@ -150,6 +154,8 @@ struct CoachScheduleConsultationView: View {
     let link: CoachLink
     /// Quando true (painel profissional), usa a barra de navegação do container.
     var isEmbedded: Bool = false
+    /// Agenda do profissional: mostra todos os compromissos do coach + horários livres/ocupados.
+    var showCoachWideAgenda: Bool = false
 
     @ObservedObject private var coach = CoachService.shared
     @EnvironmentObject private var authService: AuthService
@@ -178,15 +184,33 @@ struct CoachScheduleConsultationView: View {
         max(availability.slotDurationMinutes, 15)
     }
 
-    private var bookings: [ConsultationBooking] {
+    /// Compromissos deste vínculo (aluno selecionado).
+    private var linkBookings: [ConsultationBooking] {
         (coach.consultationsByLink[link.id] ?? []).filter {
             $0.status == .proposed || $0.status == .confirmed
         }
     }
 
-    private var upcoming: [ConsultationBooking] {
-        bookings.filter(\.isUpcoming).sorted { $0.startAt < $1.startAt }
+    /// Todos os compromissos do profissional (todos os alunos), para grade e conflitos.
+    private var coachWideBookings: [ConsultationBooking] {
+        coach.allActiveConsultations(forCoachUid: link.coachUid)
     }
+
+    /// Eventos desenhados no calendário.
+    private var calendarBookings: [ConsultationBooking] {
+        showCoachWideAgenda ? coachWideBookings : linkBookings
+    }
+
+    /// Conflitos ao marcar horário (sempre agenda completa do coach quando wide).
+    private var conflictBookings: [ConsultationBooking] {
+        showCoachWideAgenda ? coachWideBookings : linkBookings
+    }
+
+    private var upcoming: [ConsultationBooking] {
+        linkBookings.filter(\.isUpcoming).sorted { $0.startAt < $1.startAt }
+    }
+
+    private var usesAvailabilityOverlay: Bool { showCoachWideAgenda || isEmbedded }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -327,13 +351,42 @@ struct CoachScheduleConsultationView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
 
-            Text("Duração: \(durationMinutes) min · toque num horário livre (07:00–20:00)")
+            Text(usesAvailabilityOverlay
+                 ? "Duração: \(durationMinutes) min · verde = disponível · laranja = ocupado no calendário · toque num horário livre"
+                 : "Duração: \(durationMinutes) min · toque num horário livre (07:00–20:00)")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 16)
-                .padding(.bottom, 6)
+
+            if usesAvailabilityOverlay {
+                agendaLegend
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 6)
+            } else {
+                Color.clear.frame(height: 6)
+            }
         }
         .background(AppTheme.background)
+    }
+
+    private var agendaLegend: some View {
+        HStack(spacing: 10) {
+            legendSwatch(HFCalTheme.availableFill, "Disponível")
+            legendSwatch(HFCalTheme.eventGreenDark, "Este aluno")
+            legendSwatch(HFCalTheme.otherStudentFill, "Outro aluno")
+            legendSwatch(HFCalTheme.busyFill, "Ocupado")
+        }
+    }
+
+    private func legendSwatch(_ color: Color, _ title: String) -> some View {
+        HStack(spacing: 4) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(color)
+                .frame(width: 12, height: 12)
+            Text(title)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(HFCalTheme.muted)
+        }
     }
 
     private var headerTitle: String {
@@ -358,14 +411,32 @@ struct CoachScheduleConsultationView: View {
         Group {
             if !upcoming.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Agendamentos")
+                    Text(showCoachWideAgenda
+                         ? "Compromissos com \(link.studentName)"
+                         : "Agendamentos")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(HFCalTheme.muted)
-                    ForEach(upcoming.prefix(5)) { item in
+                    if showCoachWideAgenda {
+                        Text("A grade mostra todos os alunos; abaixo só os deste paciente.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    ForEach(upcoming) { item in
                         VStack(alignment: .leading, spacing: 6) {
-                            Text(item.confirmedScheduleLabel)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
+                            HStack {
+                                Text(item.confirmedScheduleLabel)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Spacer(minLength: 8)
+                                Text(item.status.title)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(HFCalTheme.eventGreen)
+                            }
+                            if !item.note.isEmpty {
+                                Text(item.note)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                             Text("Lembretes automáticos: 24h, 1h e 15 min antes")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
@@ -394,6 +465,12 @@ struct CoachScheduleConsultationView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
+            } else if showCoachWideAgenda {
+                Text("Nenhum compromisso futuro com \(link.studentName). Toque num horário disponível para agendar.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
             }
         }
     }
@@ -541,25 +618,43 @@ struct CoachScheduleConsultationView: View {
         let inMonth = calendar.isDate(day, equalTo: focusedDay, toGranularity: .month)
         let isToday = calendar.isDateInToday(day)
         let isSelected = calendar.isDate(day, inSameDayAs: focusedDay)
-        let dayBookings = bookings.filter { calendar.isDate($0.startAt, inSameDayAs: day) }
+        let dayBookings = calendarBookings.filter { calendar.isDate($0.startAt, inSameDayAs: day) }
         let hasDraft = selectedStart.map { calendar.isDate($0, inSameDayAs: day) } ?? false
+        let hasAvailable = !availableDateRanges(on: day).isEmpty
+        let dayBusy = busyIntervals.filter {
+            calendar.isDate($0.start, inSameDayAs: day) || calendar.isDate($0.end, inSameDayAs: day)
+                || ($0.start < calendar.startOfDay(for: day).addingTimeInterval(86400)
+                    && $0.end > calendar.startOfDay(for: day))
+        }
 
         return Button {
             focusedDay = calendar.startOfDay(for: day)
             scope = .day
         } label: {
             VStack(alignment: .trailing, spacing: 3) {
-                Text("\(calendar.component(.day, from: day))")
-                    .font(.subheadline.weight(isToday || isSelected ? .bold : .regular))
-                    .foregroundStyle(inMonth ? .white : HFCalTheme.muted)
-                    .frame(width: 28, height: 28)
-                    .background(Circle().fill(isToday ? HFCalTheme.accent : Color.clear))
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                HStack(spacing: 4) {
+                    if usesAvailabilityOverlay {
+                        if hasAvailable {
+                            Circle().fill(HFCalTheme.eventGreen).frame(width: 5, height: 5)
+                        }
+                        if !dayBusy.isEmpty {
+                            Circle().fill(Color.orange).frame(width: 5, height: 5)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    Text("\(calendar.component(.day, from: day))")
+                        .font(.subheadline.weight(isToday || isSelected ? .bold : .regular))
+                        .foregroundStyle(inMonth ? .white : HFCalTheme.muted)
+                        .frame(width: 28, height: 28)
+                        .background(Circle().fill(isToday ? HFCalTheme.accent : Color.clear))
+                }
 
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(dayBookings.prefix(2)) { item in
                         HStack(spacing: 3) {
-                            Capsule().fill(HFCalTheme.eventGreenDark).frame(width: 2, height: 10)
+                            Capsule()
+                                .fill(item.linkId == link.id ? HFCalTheme.eventGreenDark : HFCalTheme.otherStudentFill)
+                                .frame(width: 2, height: 10)
                             Text(shortEventTitle(item))
                                 .font(.system(size: 8))
                                 .foregroundStyle(.white.opacity(0.85))
@@ -586,6 +681,11 @@ struct CoachScheduleConsultationView: View {
             }
             .padding(4)
             .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .top)
+            .background(
+                usesAvailabilityOverlay && hasAvailable
+                    ? HFCalTheme.availableFill.opacity(0.35)
+                    : Color.clear
+            )
             .overlay(Rectangle().stroke(HFCalTheme.gridLine, lineWidth: 0.5))
             .contentShape(Rectangle())
         }
@@ -676,8 +776,29 @@ struct CoachScheduleConsultationView: View {
     }
 
     private func dayColumn(day: Date, showNowLine: Bool, wide: Bool = false) -> some View {
-        let dayBookings = bookings.filter { calendar.isDate($0.startAt, inSameDayAs: day) }
+        let dayBookings = calendarBookings.filter { calendar.isDate($0.startAt, inSameDayAs: day) }
+        let dayBusy = busyIntervalsOnDay(day)
+        let available = availableDateRanges(on: day)
         return ZStack(alignment: .topLeading) {
+            // Fundo: indisponível vs disponível
+            if usesAvailabilityOverlay {
+                Rectangle()
+                    .fill(HFCalTheme.unavailableFill)
+                    .frame(height: HFCalTheme.dayGridHeight)
+                ForEach(Array(available.enumerated()), id: \.offset) { _, range in
+                    availabilityBlock(start: range.start, end: range.end, wide: wide)
+                }
+                ForEach(Array(dayBusy.enumerated()), id: \.offset) { _, range in
+                    eventBlock(
+                        start: range.start,
+                        end: range.end,
+                        title: "Ocupado",
+                        color: HFCalTheme.busyFill,
+                        wide: wide
+                    )
+                }
+            }
+
             VStack(spacing: 0) {
                 ForEach(HFCalTheme.dayStartHour..<HFCalTheme.dayEndHour, id: \.self) { _ in
                     Rectangle()
@@ -701,7 +822,7 @@ struct CoachScheduleConsultationView: View {
                     start: item.startAt,
                     end: item.endAt,
                     title: shortEventTitle(item),
-                    color: HFCalTheme.eventGreenDark,
+                    color: item.linkId == link.id ? HFCalTheme.eventGreenDark : HFCalTheme.otherStudentFill,
                     wide: wide
                 )
             }
@@ -724,6 +845,19 @@ struct CoachScheduleConsultationView: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: HFCalTheme.dayGridHeight)
+    }
+
+    private func availabilityBlock(start: Date, end: Date, wide: Bool) -> some View {
+        let top = yOffset(for: start)
+        let bottom = yOffset(for: end)
+        let height = max(bottom - top, 4)
+        return RoundedRectangle(cornerRadius: 4)
+            .fill(HFCalTheme.availableFill)
+            .frame(maxWidth: .infinity)
+            .frame(height: height, alignment: .top)
+            .padding(.horizontal, wide ? 4 : 1)
+            .offset(y: top)
+            .allowsHitTesting(false)
     }
 
     private func eventBlock(start: Date, end: Date, title: String, color: Color, wide: Bool) -> some View {
@@ -779,13 +913,61 @@ struct CoachScheduleConsultationView: View {
         guard let start = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: calendar.startOfDay(for: day)) else { return }
         let end = start.addingTimeInterval(TimeInterval(durationMinutes * 60))
         if end <= Date() { return }
-        let overlapsBooking = bookings.contains { start < $0.endAt && end > $0.startAt }
+        let overlapsBooking = conflictBookings.contains {
+            if let bookingToReschedule, $0.id == bookingToReschedule.id { return false }
+            return start < $0.endAt && end > $0.startAt
+        }
         let overlapsBusy = busyIntervals.contains { start < $0.end && end > $0.start }
-        guard !overlapsBooking, !overlapsBusy else { return }
+        if overlapsBooking || overlapsBusy {
+            statusMessage = overlapsBusy
+                ? "Horário ocupado no calendário do dispositivo."
+                : "Horário já reservado com outro aluno ou neste paciente."
+            return
+        }
+        if usesAvailabilityOverlay, !isWithinAvailability(start: start, end: end, on: day) {
+            statusMessage = "Fora da sua disponibilidade. Ajuste em Horários ou escolha um bloco verde."
+            return
+        }
         selectedStart = start
         focusedDay = calendar.startOfDay(for: day)
+        statusMessage = nil
         if bookingToReschedule != nil {
             Task { await schedule() }
+        }
+    }
+
+    private func availableDateRanges(on day: Date) -> [(start: Date, end: Date)] {
+        let weekday = calendar.component(.weekday, from: day)
+        let dayStart = calendar.startOfDay(for: day)
+        let gridStartMin = HFCalTheme.dayStartHour * 60
+        let gridEndMin = HFCalTheme.dayEndHour * 60
+        return availability.ranges(forWeekday: weekday).compactMap { range in
+            let startMin = max(range.startMinutes, gridStartMin)
+            let endMin = min(range.endMinutes, gridEndMin)
+            guard endMin > startMin else { return nil }
+            guard let start = calendar.date(byAdding: .minute, value: startMin, to: dayStart),
+                  let end = calendar.date(byAdding: .minute, value: endMin, to: dayStart)
+            else { return nil }
+            return (start, end)
+        }
+    }
+
+    private func isWithinAvailability(start: Date, end: Date, on day: Date) -> Bool {
+        let ranges = availableDateRanges(on: day)
+        guard !ranges.isEmpty else { return false }
+        return ranges.contains { start >= $0.start && end <= $0.end }
+    }
+
+    private func busyIntervalsOnDay(_ day: Date) -> [(start: Date, end: Date)] {
+        let dayStart = calendar.startOfDay(for: day)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86400)
+        let gridStart = calendar.date(bySettingHour: HFCalTheme.dayStartHour, minute: 0, second: 0, of: dayStart) ?? dayStart
+        let gridEnd = calendar.date(bySettingHour: HFCalTheme.dayEndHour, minute: 0, second: 0, of: dayStart) ?? dayEnd
+        return busyIntervals.compactMap { interval in
+            let start = max(interval.start, gridStart)
+            let end = min(interval.end, gridEnd)
+            guard end > start, start < dayEnd, end > dayStart else { return nil }
+            return (start, end)
         }
     }
 
@@ -1003,7 +1185,7 @@ struct CoachProfessionalAgendaView: View {
                 VStack(spacing: 0) {
                     studentPicker
                     syncedBanner
-                    CoachScheduleConsultationView(link: link, isEmbedded: true)
+                    CoachScheduleConsultationView(link: link, isEmbedded: true, showCoachWideAgenda: true)
                 }
             }
         }
@@ -1095,7 +1277,7 @@ struct CoachProfessionalAgendaView: View {
         HStack(spacing: 8) {
             Image(systemName: "arrow.triangle.2.circlepath")
                 .foregroundStyle(AppTheme.accent)
-            Text("Mesmo calendário do aluno · sincronizado em tempo real")
+            Text("Agenda completa · este aluno + demais pacientes · horários disponíveis e ocupados")
                 .font(.caption2)
                 .foregroundStyle(AppTheme.textSecondary)
             Spacer()
