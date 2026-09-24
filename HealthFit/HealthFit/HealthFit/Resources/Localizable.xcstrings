@@ -2625,6 +2625,12 @@
     "Comece o dia com um copo d'água" : {
 
     },
+    "Comentários" : {
+
+    },
+    "Comentários gerais" : {
+
+    },
     "common.cancel" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3508,6 +3514,9 @@
     "Editar" : {
 
     },
+    "Editar alimentos e comentários" : {
+
+    },
     "Editar equipamento" : {
 
     },
@@ -3841,6 +3850,9 @@
 
     },
     "Ex.: Foco no Shape, Hipertrofia 12 semanas, Emagrecimento. Você pode vincular fichas a este método ao prescrever." : {
+
+    },
+    "Ex.: priorizar proteína no jantar, evitar fritura, substituir arroz por batata…" : {
 
     },
     "Excluindo conta…" : {
@@ -4355,6 +4367,9 @@
     "Inicie um cardio de Natação, defina o tamanho da piscina e use o Apple Watch para contar as voltas automaticamente. O histórico aparece aqui." : {
 
     },
+    "Inserir alimentos e comentários" : {
+
+    },
     "Inserir medidas" : {
 
     },
@@ -4494,6 +4509,9 @@
 
     },
     "Limpar conversa" : {
+
+    },
+    "Limpar texto desta refeição" : {
 
     },
     "Lista de Compras" : {
@@ -5085,6 +5103,9 @@
     "Nome completo: %@" : {
 
     },
+    "Nome da refeição" : {
+
+    },
     "Nome da via" : {
 
     },
@@ -5469,7 +5490,13 @@
     "Orientações" : {
 
     },
+    "Orientações, substituições, horários, restrições…" : {
+
+    },
     "Origem" : {
+
+    },
+    "Os comentários gerais serão anexados ao enviar. Para editar alimentos por refeição, use a aba Montar." : {
 
     },
     "Os planos pagos ainda estão sendo ativados na App Store. O app funciona gratuitamente — assine quando os preços aparecerem aqui." : {
@@ -10865,7 +10892,7 @@
     "Refeição" : {
 
     },
-    "Refeições (toque para trocar)" : {
+    "Refeições" : {
 
     },
     "Refeições: %lld/%lld concluídas" : {
@@ -11907,6 +11934,12 @@
     "Texto / emoji" : {
 
     },
+    "Texto livre" : {
+
+    },
+    "Texto livre para o aluno. Aparece junto ao cardápio prescrito." : {
+
+    },
     "Tipo" : {
 
     },
@@ -11966,6 +11999,9 @@
 
     },
     "Toque em um marcador para ver o setor." : {
+
+    },
+    "Toque em uma refeição para trocar o modelo. Use “Inserir alimentos e comentários” para texto livre (ex.: 150g frango, 4 claras…)." : {
 
     },
     "Toque na refeição para selecionar e marque como concluída quando comer." : {
@@ -12125,6 +12161,9 @@
     "ÚLTIMOS TREINOS" : {
 
     },
+    "Um alimento por linha. Ex.: 150g peito de frango · 100g arroz · salada à vontade." : {
+
+    },
     "Usado nas saudações, motivação e mensagens do app." : {
 
     },
@@ -12268,6 +12307,9 @@
 
     },
     "Vincule um aluno para agendar consultas. Os horários ficam sincronizados com o calendário do aluno." : {
+
+    },
+    "Visível ao aluno ao expandir a refeição no cardápio." : {
 
     },
     "Visível na busca regional" : {

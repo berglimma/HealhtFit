@@ -1091,41 +1091,57 @@ struct CoachPrescribeMealView: View {
                             lactoseTolerance: lactose
                         )
                         if let selected = selectedTemplate(for: mealType, in: options) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Picker(mealType.rawValue, selection: binding(for: mealType, fallback: selected.id)) {
-                                    ForEach(options) { template in
-                                        if mealType.isFasting {
-                                            Text(template.name).tag(template.id)
-                                        } else {
-                                            Text("\(template.name) · \(template.calories) kcal").tag(template.id)
-                                        }
+                            // Picker e botão em linhas separadas: no Form, VStack+Picker
+                            // faz o toque no botão abrir o seletor de modelos.
+                            Picker(mealType.rawValue, selection: binding(for: mealType, fallback: selected.id)) {
+                                ForEach(options) { template in
+                                    if mealType.isFasting {
+                                        Text(template.name).tag(template.id)
+                                    } else {
+                                        Text("\(template.name) · \(template.calories) kcal").tag(template.id)
                                     }
                                 }
-                                if hasCustomText(for: mealType) {
-                                    Text(customSummary(for: mealType))
-                                        .font(.caption2)
+                            }
+
+                            Button {
+                                seedEditorIfNeeded(for: mealType, template: selected)
+                                editingMealType = mealType
+                            } label: {
+                                HStack(alignment: .top, spacing: 10) {
+                                    Image(systemName: "text.badge.plus")
                                         .foregroundStyle(AppTheme.coachNutrition)
-                                        .lineLimit(2)
-                                }
-                                Button {
-                                    seedEditorIfNeeded(for: mealType, template: selected)
-                                    editingMealType = mealType
-                                } label: {
-                                    Label(
-                                        hasCustomText(for: mealType)
-                                            ? "Editar alimentos e comentários"
-                                            : "Inserir alimentos e comentários",
-                                        systemImage: "text.badge.plus"
-                                    )
-                                    .font(.caption.weight(.semibold))
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(
+                                            hasCustomText(for: mealType)
+                                                ? "Editar alimentos e comentários"
+                                                : "Inserir alimentos e comentários"
+                                        )
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.coachNutrition)
+                                        if hasCustomText(for: mealType) {
+                                            Text(customSummary(for: mealType))
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(2)
+                                        } else {
+                                            Text("Texto livre: alimentos e orientações para o aluno")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    Spacer(minLength: 0)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
                                 }
                             }
+                            .buttonStyle(.borderless)
                         }
                     }
                 } header: {
                     Text("Refeições")
                 } footer: {
-                    Text("Toque em uma refeição para trocar o modelo. Use “Inserir alimentos e comentários” para texto livre (ex.: 150g frango, 4 claras…).")
+                    Text("Toque no nome da refeição para trocar o modelo. Use a linha abaixo para inserir alimentos e comentários em texto livre.")
                 }
 
                 if !draftPlan.isEmpty {
