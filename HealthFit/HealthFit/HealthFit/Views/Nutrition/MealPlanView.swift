@@ -180,17 +180,6 @@ struct MealPlanView: View {
                         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                         .padding(.top, 8)
                         .adaptiveContentWidth()
-
-                    if let link = coach.activeCareLink ?? coach.activeNutritionLink {
-                        studentMealPhotoFlowCard(link: link)
-                            .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                            .adaptiveContentWidth()
-                    }
-                } else if nutritionTab <= 2, let link = coach.activeCareLink ?? coach.activeNutritionLink {
-                    studentMealPhotoFlowCard(link: link)
-                        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                        .padding(.top, 8)
-                        .adaptiveContentWidth()
                 }
 
                 if mealPlanService.createdByAssistant, nutritionTab <= 1 {
@@ -215,6 +204,15 @@ struct MealPlanView: View {
                 } else {
                     MealPhotoAnalysisView()
                         .requiresSubscription(.mealPhotoAnalysis)
+                }
+
+                // Card de foto no final (Plano / Cardápio). Em Acompanhar fica no fim do hub.
+                if nutritionTab <= 1, let link = coach.activeCareLink ?? coach.activeNutritionLink {
+                    studentMealPhotoFlowCard(link: link)
+                        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                        .padding(.top, 8)
+                        .padding(.bottom, 16)
+                        .adaptiveContentWidth()
                 }
             }
         }

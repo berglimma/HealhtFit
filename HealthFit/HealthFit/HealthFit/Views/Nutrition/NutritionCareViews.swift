@@ -36,6 +36,10 @@ struct NutritionCareHubView: View {
                     .font(.caption)
                     .foregroundStyle(AppTheme.accent)
             }
+
+            if hasNutritionist, let link = careLink {
+                studentPhotoFlowCard(link: link)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 24)
@@ -93,10 +97,6 @@ struct NutritionCareHubView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle(isEnabled: !isSyncing))
                 .disabled(isSyncing)
-
-                if let link = careLink {
-                    studentPhotoFlowCard(link: link)
-                }
             }
         }
     }
