@@ -727,7 +727,7 @@ struct CoachScheduleConsultationView: View {
                 .padding(.leading, 44)
                 .padding(.bottom, 4)
 
-            ScrollView {
+            ScrollView(.vertical, showsIndicators: true) {
                 HStack(alignment: .top, spacing: 0) {
                     timeGutter
                     ForEach(weekDays, id: \.self) { day in
@@ -735,9 +735,11 @@ struct CoachScheduleConsultationView: View {
                             .overlay(Rectangle().stroke(HFCalTheme.gridLine, lineWidth: 0.5))
                     }
                 }
-                .frame(height: HFCalTheme.dayGridHeight)
+                .frame(minHeight: HFCalTheme.dayGridHeight)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Day (foto 4)
@@ -752,14 +754,16 @@ struct CoachScheduleConsultationView: View {
                 .padding(.vertical, 6)
             Divider().overlay(HFCalTheme.gridLine)
 
-            ScrollView {
+            ScrollView(.vertical, showsIndicators: true) {
                 HStack(alignment: .top, spacing: 0) {
                     timeGutter
                     dayColumn(day: focusedDay, showNowLine: calendar.isDateInToday(focusedDay), wide: true)
                 }
-                .frame(height: HFCalTheme.dayGridHeight)
+                .frame(minHeight: HFCalTheme.dayGridHeight)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var timeGutter: some View {
@@ -773,6 +777,7 @@ struct CoachScheduleConsultationView: View {
                     .offset(y: -6)
             }
         }
+        .frame(height: HFCalTheme.dayGridHeight, alignment: .top)
     }
 
     private func dayColumn(day: Date, showNowLine: Bool, wide: Bool = false) -> some View {
@@ -785,6 +790,7 @@ struct CoachScheduleConsultationView: View {
                 Rectangle()
                     .fill(HFCalTheme.unavailableFill)
                     .frame(height: HFCalTheme.dayGridHeight)
+                    .allowsHitTesting(false)
                 ForEach(Array(available.enumerated()), id: \.offset) { _, range in
                     availabilityBlock(start: range.start, end: range.end, wide: wide)
                 }
@@ -799,6 +805,7 @@ struct CoachScheduleConsultationView: View {
                 }
             }
 
+            // Grade clicável — só toque (não DragGesture), para o ScrollView rolar os horários.
             VStack(spacing: 0) {
                 ForEach(HFCalTheme.dayStartHour..<HFCalTheme.dayEndHour, id: \.self) { _ in
                     Rectangle()
@@ -810,12 +817,10 @@ struct CoachScheduleConsultationView: View {
                         .contentShape(Rectangle())
                 }
             }
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onEnded { value in
-                        selectSlot(atY: value.location.y, on: day)
-                    }
-            )
+            .contentShape(Rectangle())
+            .onTapGesture(count: 1, coordinateSpace: .local) { location in
+                selectSlot(atY: location.y, on: day)
+            }
 
             ForEach(dayBookings) { item in
                 eventBlock(
@@ -879,6 +884,7 @@ struct CoachScheduleConsultationView: View {
         .background(RoundedRectangle(cornerRadius: 5).fill(color.opacity(0.85)))
         .padding(.horizontal, wide ? 6 : 2)
         .offset(y: top)
+        .allowsHitTesting(false)
     }
 
     @ViewBuilder
