@@ -1014,6 +1014,13 @@ struct CoachPrescribeMealView: View {
     @State private var draftPlan: [DailyMealPlan] = []
     @State private var isPublishing = false
     @State private var mode: Mode = .builder
+    /// Comentários gerais do nutricionista (visíveis ao aluno).
+    @State private var generalNotes = ""
+    /// Overrides por refeição: nome, alimentos (um por linha) e comentários.
+    @State private var mealNameOverrides: [MealType: String] = [:]
+    @State private var mealFoodsText: [MealType: String] = [:]
+    @State private var mealComments: [MealType: String] = [:]
+    @State private var editingMealType: MealType?
 
     private enum Mode: String, CaseIterable, Identifiable {
         case builder = "Montar"
@@ -1033,11 +1040,28 @@ struct CoachPrescribeMealView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section {
+                TextField(
+                    "Ex.: priorizar proteína no jantar, evitar fritura, substituir arroz por batata…",
+                    text: $generalNotes,
+                    axis: .vertical
+                )
+                .lineLimit(3...8)
+            } header: {
+                Text("Comentários gerais")
+            } footer: {
+                Text("Texto livre para o aluno. Aparece junto ao cardápio prescrito.")
+            }
+
             if mode == .local {
                 Section("Plano neste aparelho") {
                     Text("\(mealPlanService.weeklyPlan.count) dia(s) prontos para enviar")
                     if mealPlanService.weeklyPlan.isEmpty {
                         Text("Monte um cardápio em Nutrição ou use a aba Montar.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Os comentários gerais serão anexados ao enviar. Para editar alimentos por refeição, use a aba Montar.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -1058,7 +1082,7 @@ struct CoachPrescribeMealView: View {
                     }
                 }
 
-                Section("Refeições (toque para trocar)") {
+                Section {
                     ForEach(MealType.planSlots) { mealType in
                         let options = MealCatalog.templates(
                             for: mealType,
@@ -1067,17 +1091,41 @@ struct CoachPrescribeMealView: View {
                             lactoseTolerance: lactose
                         )
                         if let selected = selectedTemplate(for: mealType, in: options) {
-                            Picker(mealType.rawValue, selection: binding(for: mealType, fallback: selected.id)) {
-                                ForEach(options) { template in
-                                    if mealType.isFasting {
-                                        Text(template.name).tag(template.id)
-                                    } else {
-                                        Text("\(template.name) · \(template.calories) kcal").tag(template.id)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Picker(mealType.rawValue, selection: binding(for: mealType, fallback: selected.id)) {
+                                    ForEach(options) { template in
+                                        if mealType.isFasting {
+                                            Text(template.name).tag(template.id)
+                                        } else {
+                                            Text("\(template.name) · \(template.calories) kcal").tag(template.id)
+                                        }
                                     }
+                                }
+                                if hasCustomText(for: mealType) {
+                                    Text(customSummary(for: mealType))
+                                        .font(.caption2)
+                                        .foregroundStyle(AppTheme.coachNutrition)
+                                        .lineLimit(2)
+                                }
+                                Button {
+                                    seedEditorIfNeeded(for: mealType, template: selected)
+                                    editingMealType = mealType
+                                } label: {
+                                    Label(
+                                        hasCustomText(for: mealType)
+                                            ? "Editar alimentos e comentários"
+                                            : "Inserir alimentos e comentários",
+                                        systemImage: "text.badge.plus"
+                                    )
+                                    .font(.caption.weight(.semibold))
                                 }
                             }
                         }
                     }
+                } header: {
+                    Text("Refeições")
+                } footer: {
+                    Text("Toque em uma refeição para trocar o modelo. Use “Inserir alimentos e comentários” para texto livre (ex.: 150g frango, 4 claras…).")
                 }
 
                 if !draftPlan.isEmpty {
@@ -1085,15 +1133,34 @@ struct CoachPrescribeMealView: View {
                         let day = draftPlan[0]
                         Text("\(day.totalCalories) kcal · \(day.totalProtein)g proteína")
                             .font(.subheadline.weight(.semibold))
+                        if !generalNotes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text(generalNotes)
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.coachNutrition)
+                        }
                         ForEach(day.meals) { meal in
-                            HStack {
-                                Text(meal.mealType.shortLabel)
-                                Spacer()
-                                Text(meal.name)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack {
+                                    Text(meal.mealType.shortLabel)
+                                    Spacer()
+                                    Text(meal.name)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                                .font(.caption)
+                                if !meal.ingredients.isEmpty {
+                                    Text(meal.ingredients.prefix(3).joined(separator: " · "))
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                        .lineLimit(1)
+                                }
+                                if !meal.instructions.isEmpty {
+                                    Text(meal.instructions)
+                                        .font(.caption2)
+                                        .foregroundStyle(AppTheme.coachNutrition)
+                                        .lineLimit(2)
+                                }
                             }
-                            .font(.caption)
                         }
                     }
                 }
@@ -1112,16 +1179,46 @@ struct CoachPrescribeMealView: View {
                 .disabled(isPublishing || planToPublish.isEmpty)
             }
         }
+        .sheet(item: $editingMealType) { mealType in
+            CoachPrescribeMealTextEditor(
+                mealType: mealType,
+                name: Binding(
+                    get: { mealNameOverrides[mealType] ?? "" },
+                    set: { mealNameOverrides[mealType] = $0 }
+                ),
+                foodsText: Binding(
+                    get: { mealFoodsText[mealType] ?? "" },
+                    set: { mealFoodsText[mealType] = $0 }
+                ),
+                comments: Binding(
+                    get: { mealComments[mealType] ?? "" },
+                    set: { mealComments[mealType] = $0 }
+                ),
+                onClear: {
+                    mealNameOverrides[mealType] = nil
+                    mealFoodsText[mealType] = nil
+                    mealComments[mealType] = nil
+                    rebuildDraft()
+                }
+            )
+        }
         .onAppear { ensureDefaults(); rebuildDraft() }
         .onChange(of: calorieTarget) { _, _ in rebuildDraft() }
         .onChange(of: goal) { _, _ in ensureDefaults(); rebuildDraft() }
         .onChange(of: sweetLevel) { _, _ in ensureDefaults(); rebuildDraft() }
         .onChange(of: lactose) { _, _ in ensureDefaults(); rebuildDraft() }
         .onChange(of: selectedTemplateIDs) { _, _ in rebuildDraft() }
+        .onChange(of: mealNameOverrides) { _, _ in rebuildDraft() }
+        .onChange(of: mealFoodsText) { _, _ in rebuildDraft() }
+        .onChange(of: mealComments) { _, _ in rebuildDraft() }
+        .onChange(of: generalNotes) { _, _ in rebuildDraft() }
     }
 
     private var planToPublish: [DailyMealPlan] {
-        mode == .local ? mealPlanService.weeklyPlan : draftPlan
+        if mode == .local {
+            return applyGeneralNotes(to: mealPlanService.weeklyPlan)
+        }
+        return draftPlan
     }
 
     private func binding(for mealType: MealType, fallback: UUID) -> Binding<UUID> {
@@ -1137,6 +1234,47 @@ struct CoachPrescribeMealView: View {
             return match
         }
         return options.first
+    }
+
+    private func hasCustomText(for mealType: MealType) -> Bool {
+        let name = mealNameOverrides[mealType]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let foods = mealFoodsText[mealType]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let comments = mealComments[mealType]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !name.isEmpty || !foods.isEmpty || !comments.isEmpty
+    }
+
+    private func customSummary(for mealType: MealType) -> String {
+        var parts: [String] = []
+        if let name = mealNameOverrides[mealType]?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+            parts.append(name)
+        }
+        let foodLines = foodsLines(from: mealFoodsText[mealType] ?? "")
+        if !foodLines.isEmpty {
+            parts.append("\(foodLines.count) alimento(s)")
+        }
+        if let c = mealComments[mealType]?.trimmingCharacters(in: .whitespacesAndNewlines), !c.isEmpty {
+            parts.append("com comentário")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private func seedEditorIfNeeded(for mealType: MealType, template: MealTemplate) {
+        if mealFoodsText[mealType] == nil || mealFoodsText[mealType]?.isEmpty == true {
+            mealFoodsText[mealType] = template.ingredients.joined(separator: "\n")
+        }
+        if mealNameOverrides[mealType] == nil || mealNameOverrides[mealType]?.isEmpty == true {
+            mealNameOverrides[mealType] = template.name
+        }
+        if mealComments[mealType] == nil {
+            mealComments[mealType] = template.instructions
+        }
+    }
+
+    private func foodsLines(from text: String) -> [String] {
+        text
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 
     private func ensureDefaults() {
@@ -1156,9 +1294,48 @@ struct CoachPrescribeMealView: View {
         }
     }
 
+    private func optionSubtitle() -> String {
+        let notes = generalNotes.trimmingCharacters(in: .whitespacesAndNewlines)
+        if notes.isEmpty {
+            return "Enviado por \(link.coachName)"
+        }
+        return "Enviado por \(link.coachName)\n\(notes)"
+    }
+
+    private func applyGeneralNotes(to plan: [DailyMealPlan]) -> [DailyMealPlan] {
+        let subtitle = optionSubtitle()
+        return plan.map { day in
+            var copy = day
+            copy.options = day.options.map { opt in
+                var o = opt
+                o.subtitle = subtitle
+                return o
+            }
+            return copy
+        }
+    }
+
+    private func applyTextOverrides(to meal: Meal) -> Meal {
+        var result = meal
+        if let name = mealNameOverrides[meal.mealType]?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !name.isEmpty {
+            result.name = name
+        }
+        let foods = foodsLines(from: mealFoodsText[meal.mealType] ?? "")
+        if !foods.isEmpty {
+            result.ingredients = foods
+        }
+        if let comments = mealComments[meal.mealType]?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !comments.isEmpty {
+            result.instructions = comments
+        }
+        return result
+    }
+
     private func rebuildDraft() {
         let days = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
         let proteins = goal == .muscleGain ? 2 : 1
+        let subtitle = optionSubtitle()
         draftPlan = days.map { day in
             let meals: [Meal] = MealType.planSlots.compactMap { mealType in
                 let options = MealCatalog.templates(
@@ -1168,18 +1345,21 @@ struct CoachPrescribeMealView: View {
                     lactoseTolerance: lactose
                 )
                 guard let template = selectedTemplate(for: mealType, in: options) else { return nil }
+                let base: Meal
                 if mealType.isFasting {
-                    return template.scaled(to: 0)
+                    base = template.scaled(to: 0)
+                } else {
+                    let target = max(Int(Double(calorieTarget) * mealType.calorieShare), 120)
+                    base = template.scaled(to: target, proteinMultiplier: proteins)
                 }
-                let target = max(Int(Double(calorieTarget) * mealType.calorieShare), 120)
-                return template.scaled(to: target, proteinMultiplier: proteins)
+                return applyTextOverrides(to: base)
             }
             return DailyMealPlan(
                 dayOfWeek: day,
                 options: [
                     MealPlanOption(
                         name: "Prescrição Coach",
-                        subtitle: "Enviado por \(link.coachName)",
+                        subtitle: subtitle,
                         meals: meals
                     )
                 ]
@@ -1192,6 +1372,67 @@ struct CoachPrescribeMealView: View {
         defer { isPublishing = false }
         let ok = await coach.publishMealPlan(link: link, weeklyPlan: planToPublish)
         onFinished(ok)
+    }
+}
+
+/// Editor de texto livre: alimentos (um por linha) + comentários da refeição.
+private struct CoachPrescribeMealTextEditor: View {
+    let mealType: MealType
+    @Binding var name: String
+    @Binding var foodsText: String
+    @Binding var comments: String
+    var onClear: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Nome da refeição", text: $name)
+                } header: {
+                    Text(mealType.rawValue)
+                }
+
+                Section {
+                    TextEditor(text: $foodsText)
+                        .frame(minHeight: 140)
+                } header: {
+                    Text("Alimentos")
+                } footer: {
+                    Text("Um alimento por linha. Ex.: 150g peito de frango · 100g arroz · salada à vontade.")
+                }
+
+                Section {
+                    TextField(
+                        "Orientações, substituições, horários, restrições…",
+                        text: $comments,
+                        axis: .vertical
+                    )
+                    .lineLimit(3...10)
+                } header: {
+                    Text("Comentários")
+                } footer: {
+                    Text("Visível ao aluno ao expandir a refeição no cardápio.")
+                }
+
+                Section {
+                    Button("Limpar texto desta refeição", role: .destructive) {
+                        onClear()
+                        dismiss()
+                    }
+                }
+            }
+            .navigationTitle("Texto livre")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Pronto") { dismiss() }
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 

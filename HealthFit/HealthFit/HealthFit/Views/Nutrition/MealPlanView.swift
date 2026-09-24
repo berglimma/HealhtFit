@@ -243,7 +243,8 @@ struct MealPlanView: View {
     }
 
     private func coachPrescribedBanner(name: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        let notes = coachPrescriptionNotes
+        return HStack(alignment: .top, spacing: 12) {
             Image(systemName: "leaf.fill")
                 .foregroundStyle(AppTheme.coachNutrition)
                 .frame(width: 36, height: 36)
@@ -256,6 +257,12 @@ struct MealPlanView: View {
                 Text("Prescrito por \(name) · sincronizado via HealthFit Coach")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
+                if let notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .padding(.top, 2)
+                }
             }
             Spacer(minLength: 0)
         }
@@ -275,6 +282,17 @@ struct MealPlanView: View {
             RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
                 .stroke(AppTheme.coachNutrition.opacity(0.55), lineWidth: 1)
         )
+    }
+
+    /// Comentários gerais do nutricionista (subtitle após a linha “Enviado por …”).
+    private var coachPrescriptionNotes: String? {
+        guard let subtitle = mealPlanService.weeklyPlan.first?.options.first?.subtitle else { return nil }
+        let lines = subtitle
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map(String.init)
+        guard lines.count > 1 else { return nil }
+        let notes = lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        return notes.isEmpty ? nil : notes
     }
 
     private var assistantSuggestedBanner: some View {
