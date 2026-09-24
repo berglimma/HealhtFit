@@ -18,10 +18,19 @@ final class SubscriptionService: ObservableObject {
     @Published var lastErrorMessage: String?
     @Published private(set) var isConfigured = false
 
-    /// Plano efetivo — apenas StoreKit / App Store (Guideline 3.1.1).
-    var currentTier: PlanTier { storeTier }
+    /// Plano efetivo: maior entre StoreKit e cortesia ativa.
+    var currentTier: PlanTier {
+        PlanTier.highest(of: [storeTier, activeCourtesyTier])
+    }
 
-    var isCourtesyActive: Bool { false }
+    var isCourtesyActive: Bool {
+        courtesyGrant?.isActive == true
+    }
+
+    private var activeCourtesyTier: PlanTier {
+        guard let grant = courtesyGrant, grant.isActive else { return .free }
+        return grant.plan
+    }
 
     var isSubscribed: Bool { currentTier.isPaid }
 
@@ -110,14 +119,24 @@ final class SubscriptionService: ObservableObject {
            product.tier == tier {
             return product.billingPeriod == period
         }
-        return false
+        // Cortesia não tem período da loja — marca o plano nas duas abas.
+        return isCourtesyActive && activeCourtesyTier == tier
     }
 
-    /// Removido do app (Guideline 3.1.1). Use Offer Codes da App Store Connect.
+    /// Resgata voucher de cortesia (Cloud Function + Firestore). Uso único, 30 dias, sem renovação.
     @discardableResult
     func redeemCourtesyCode(_ code: String) async -> Bool {
-        lastErrorMessage = "Códigos de cortesia não estão disponíveis. Use Assinar ou Restaurar compras."
-        return false
+        courtesyRedeemInProgress = true
+        lastErrorMessage = nil
+        defer { courtesyRedeemInProgress = false }
+        do {
+            let grant = try await CourtesyVoucherService.redeem(code: code)
+            courtesyGrant = grant.isActive ? grant : nil
+            return grant.isActive
+        } catch {
+            lastErrorMessage = error.localizedDescription
+            return false
+        }
     }
 
     func clearCourtesyState(userId: String?) {
@@ -133,8 +152,7 @@ final class SubscriptionService: ObservableObject {
 
         await loadProducts()
         await updateEntitlementsFromStore()
-        // Cortesia desligada no cliente (3.1.1) — não carrega nem aplica grants.
-        courtesyGrant = nil
+        await refreshCourtesyGrant()
         isConfigured = true
     }
 
@@ -245,7 +263,14 @@ final class SubscriptionService: ObservableObject {
     }
 
     private func refreshCourtesyGrant() async {
-        courtesyGrant = nil
+        guard let uid = FirebaseAuthProvider.currentUser?.uid else {
+            courtesyGrant = nil
+            return
+        }
+        if courtesyGrant == nil {
+            courtesyGrant = CourtesyVoucherService.cachedGrant(userId: uid)
+        }
+        courtesyGrant = await CourtesyVoucherService.fetchGrant(userId: uid)
     }
 
     private func apply(transaction: Transaction) async {

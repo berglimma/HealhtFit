@@ -70,6 +70,7 @@ struct ProfileView: View {
     @State private var showPhysicalAssessmentEmptyAlert = false
     @State private var isGeneratingPhysicalAssessmentPDF = false
     @State private var showMeasurementsEditor = false
+    @State private var showCoachProfessionalSetup = false
 
     var body: some View {
         NavigationStack {
@@ -640,6 +641,12 @@ struct ProfileView: View {
         guard var user = authService.currentUser, user.accountRole != role else { return }
         user.accountRole = role
         authService.updateProfile(user)
+        if role.isPersonalProfessional || role.isNutritionProfessional {
+            coach.start()
+            if coach.myProfile == nil {
+                showCoachProfessionalSetup = true
+            }
+        }
     }
 
     @ViewBuilder
@@ -767,7 +774,9 @@ struct ProfileView: View {
                     statusChips: coachStatusChips,
                     isFitLocked: {
                         let role = authService.currentUser?.accountRole ?? .student
-                        let isPro = role.isPersonalProfessional || role.isNutritionProfessional
+                        let isPro = role.isPersonalProfessional
+                            || role.isNutritionProfessional
+                            || coach.myProfile != nil
                         return !isPro && !subscriptions.canAccess(.healthFitCoach)
                     }()
                 )
@@ -778,6 +787,14 @@ struct ProfileView: View {
             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
             .listRowBackground(Color.clear)
             .onAppear { coach.start() }
+        }
+        .sheet(isPresented: $showCoachProfessionalSetup) {
+            NavigationStack {
+                CoachProfileSetupView {
+                    showCoachProfessionalSetup = false
+                    Task { await coach.refreshProfile() }
+                }
+            }
         }
     }
 
@@ -812,11 +829,23 @@ struct ProfileView: View {
 
     private var coachHubSubtitle: String {
         let role = authService.currentUser?.accountRole ?? .student
-        if role.isPersonalProfessional || role.isNutritionProfessional {
+        if role == .personalAndNutritionist {
             let count = coach.myLinks.filter { $0.coachUid == authService.currentUser?.id }.count
             return count == 0
-                ? "Cadastre alunos, envie fichas e cardápios."
-                : "\(count) aluno(s) vinculado(s) · fichas, dietas e chat"
+                ? "Cadastre alunos, envie fichas, avaliações e cardápios."
+                : "\(count) aluno(s) · treinos, avaliações e nutrição"
+        }
+        if role == .personal {
+            let count = coach.myLinks.filter { $0.coachUid == authService.currentUser?.id && $0.profession == .personal }.count
+            return count == 0
+                ? "Cadastre alunos, envie fichas e avaliações físicas."
+                : "\(count) aluno(s) · fichas, medidas e PDF"
+        }
+        if role == .nutritionist {
+            let count = coach.myLinks.filter { $0.coachUid == authService.currentUser?.id && $0.profession == .nutritionist }.count
+            return count == 0
+                ? "Cadastre alunos, envie cardápios e acompanhe em Nutrição."
+                : "\(count) aluno(s) · cardápio, anamnese e check-in"
         }
         if let personal = coach.activePersonalLink, let nutri = coach.activeNutritionLink {
             return "\(personal.coachName) · \(nutri.coachName)"
@@ -1075,7 +1104,7 @@ struct ProfileView: View {
             )
 
             if nutritionNotifPrefs.mealRemindersEnabled {
-                ForEach(MealType.allCases) { meal in
+                ForEach(MealType.planSlots.filter { !$0.isFasting }) { meal in
                     DatePicker(
                         meal.rawValue,
                         selection: Binding(

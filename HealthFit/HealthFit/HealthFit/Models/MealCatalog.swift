@@ -9,6 +9,7 @@ enum MealCatalog {
         + dinnerOptions
         + supperOptions
         + fatLossOptions
+        + fastingOptions
 
     static func templates(
         for mealType: MealType,
@@ -16,6 +17,10 @@ enum MealCatalog {
         goal: FitnessGoal,
         lactoseTolerance: LactoseTolerance
     ) -> [MealTemplate] {
+        if mealType == .fasting {
+            return fastingOptions
+        }
+
         var base = allTemplates.filter { $0.mealType == mealType }
 
         if lactoseTolerance == .intolerant {
@@ -59,11 +64,29 @@ enum MealCatalog {
         index: Int
     ) -> MealTemplate {
         let options = templates(for: mealType, sweetLevel: sweetLevel, goal: goal, lactoseTolerance: lactoseTolerance)
-        guard !options.isEmpty else {
-            return allTemplates.first { $0.mealType == mealType }!
+        if let first = options.isEmpty ? nil : options[index % options.count] {
+            return first
         }
-        return options[index % options.count]
+        if mealType == .fasting {
+            return fastingOptions[0]
+        }
+        return allTemplates.first { $0.mealType == mealType } ?? fastingOptions[0]
     }
+
+    // MARK: - Jejum
+
+    private static let fastingOptions: [MealTemplate] = [
+        MealTemplate(
+            id: UUID(uuidString: "F1000001-0000-4000-8000-000000000001")!,
+            name: "Jejum",
+            mealType: .fasting,
+            calories: 0, protein: 0, carbs: 0, fat: 0,
+            ingredients: ["Água", "Chá sem açúcar (opcional)"],
+            instructions: "Janela de jejum. Hidrate-se; evite calorias neste horário.",
+            isSweet: false,
+            isSimpleBasic: true
+        )
+    ]
 
     // MARK: - Opção simples (alimentos básicos, serve todos os objetivos)
 

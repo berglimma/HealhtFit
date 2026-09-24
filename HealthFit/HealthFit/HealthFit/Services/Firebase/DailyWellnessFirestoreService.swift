@@ -132,6 +132,22 @@ enum DailyWellnessFirestoreService {
         )
     }
 
+    static func listenEntry(
+        userId: String,
+        dayKey: String,
+        handler: @escaping (DailyWellnessEntry?) -> Void
+    ) -> ListenerRegistration? {
+        guard isAvailable else { return nil }
+        return entriesCollection(userId: userId).document(dayKey)
+            .addSnapshotListener { snap, _ in
+                guard let data = snap?.data() else {
+                    handler(nil)
+                    return
+                }
+                handler(decodeEntry(from: data))
+            }
+    }
+
     static func deleteAllEntries(userId: String) async throws {
         guard isAvailable else { return }
 

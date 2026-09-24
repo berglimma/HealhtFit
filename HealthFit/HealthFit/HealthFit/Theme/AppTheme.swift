@@ -4,6 +4,9 @@ import Foundation
 enum AppTheme {
     static let accent = Color("AccentGreen")
     static let accentSecondary = Color("AccentOrange")
+    /// Cardápio prescrito pelo nutricionista (diferente do verde/laranja padrão).
+    static let coachNutrition = Color(red: 0.22, green: 0.62, blue: 0.72)
+    static let coachNutritionMuted = Color(red: 0.12, green: 0.28, blue: 0.34)
     static let background = Color("Background")
     static let cardBackground = Color("CardBackground")
     static let textPrimary = Color.white

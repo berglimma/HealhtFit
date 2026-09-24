@@ -171,8 +171,12 @@ struct MealPlanView: View {
                         .adaptiveContentWidth()
                 }
 
-                if let nutri = coach.activeNutritionLink, nutri.status == .active, nutritionTab <= 1, !mealPlanService.weeklyPlan.isEmpty {
-                    coachPrescribedBanner(name: nutri.coachName)
+                if mealPlanService.isCoachPrescribed, nutritionTab <= 1, !mealPlanService.weeklyPlan.isEmpty {
+                    coachPrescribedBanner(
+                        name: mealPlanService.coachPrescribedByName
+                            ?? coach.activeNutritionLink?.coachName
+                            ?? "seu nutricionista"
+                    )
                         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                         .padding(.top, 8)
                         .adaptiveContentWidth()
@@ -194,6 +198,8 @@ struct MealPlanView: View {
                 } else if nutritionTab == 1 {
                     nutritionTabBody
                 } else if nutritionTab == 2 {
+                    NutritionCareHubView()
+                } else if nutritionTab == 3 {
                     SupplementsLogView()
                 } else {
                     MealPhotoAnalysisView()
@@ -239,9 +245,9 @@ struct MealPlanView: View {
     private func coachPrescribedBanner(name: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "leaf.fill")
-                .foregroundStyle(AppTheme.accent)
+                .foregroundStyle(AppTheme.coachNutrition)
                 .frame(width: 36, height: 36)
-                .background(AppTheme.accent.opacity(0.15))
+                .background(AppTheme.coachNutrition.opacity(0.2))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             VStack(alignment: .leading, spacing: 4) {
                 Text("Cardápio do nutricionista")
@@ -254,8 +260,21 @@ struct MealPlanView: View {
             Spacer(minLength: 0)
         }
         .padding()
-        .background(AppTheme.cardBackground)
+        .background(
+            LinearGradient(
+                colors: [
+                    AppTheme.coachNutritionMuted.opacity(0.95),
+                    AppTheme.coachNutrition.opacity(0.22)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .stroke(AppTheme.coachNutrition.opacity(0.55), lineWidth: 1)
+        )
     }
 
     private var assistantSuggestedBanner: some View {
@@ -285,8 +304,9 @@ struct MealPlanView: View {
         Picker("Modo", selection: $nutritionTab) {
             Text("Plano").tag(0)
             Text("Cardápio").tag(1)
-            Text("Suplementos").tag(2)
-            Text("Análise").tag(3)
+            Text("Acompanhar").tag(2)
+            Text("Suplementos").tag(3)
+            Text("Análise").tag(4)
         }
         .pickerStyle(.segmented)
         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
@@ -503,6 +523,7 @@ struct MealPlanView: View {
                             MealCard(
                                 meal: meal,
                                 isSelected: selectedMealId == meal.id,
+                                style: mealPlanService.isCoachPrescribed ? .coachPrescribed : .standard,
                                 onSelect: {
                                     selectedMealId = meal.id
                                 },
@@ -758,7 +779,7 @@ struct MealPlanView: View {
                     .foregroundStyle(AppTheme.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                ForEach(MealType.allCases) { mealType in
+                ForEach(MealType.planSlots) { mealType in
                     mealSlotBuilder(mealType: mealType, profile: profile)
                 }
 
@@ -1400,11 +1421,31 @@ struct MealPlanView: View {
 }
 
 struct MealCard: View {
+    enum Style {
+        case standard
+        case coachPrescribed
+    }
+
     let meal: Meal
     var isSelected: Bool = false
+    var style: Style = .standard
     var onSelect: (() -> Void)? = nil
     var onToggleCompleted: (() -> Void)? = nil
     @State private var isExpanded = false
+
+    private var accentColor: Color {
+        style == .coachPrescribed ? AppTheme.coachNutrition : AppTheme.accent
+    }
+
+    private var secondaryAccent: Color {
+        style == .coachPrescribed ? AppTheme.coachNutrition : AppTheme.accentSecondary
+    }
+
+    private var cardFill: Color {
+        style == .coachPrescribed
+            ? AppTheme.coachNutritionMuted.opacity(0.85)
+            : AppTheme.cardBackground
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -1414,7 +1455,7 @@ struct MealCard: View {
                 } label: {
                     Image(systemName: meal.isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.title2)
-                        .foregroundStyle(meal.isCompleted ? AppTheme.accent : AppTheme.textSecondary)
+                        .foregroundStyle(meal.isCompleted ? accentColor : AppTheme.textSecondary)
                         .frame(width: 36, height: 36)
                         .contentShape(Rectangle())
                 }
@@ -1427,19 +1468,28 @@ struct MealCard: View {
                 } label: {
                     HStack {
                         Image(systemName: meal.mealType.icon)
-                            .foregroundStyle(meal.isCompleted ? AppTheme.accent : AppTheme.accentSecondary)
+                            .foregroundStyle(meal.isCompleted ? accentColor : secondaryAccent)
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 6) {
                                 Text(meal.mealType.rawValue)
                                     .font(.caption)
                                     .foregroundStyle(AppTheme.textSecondary)
+                                if style == .coachPrescribed {
+                                    Text("Nutri")
+                                        .font(.caption2.weight(.bold))
+                                        .foregroundStyle(AppTheme.coachNutrition)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(AppTheme.coachNutrition.opacity(0.18))
+                                        .clipShape(Capsule())
+                                }
                                 if meal.isCompleted {
                                     Text(L10n.Nutrition.mealCompleted)
                                         .font(.caption2.weight(.bold))
-                                        .foregroundStyle(AppTheme.accent)
+                                        .foregroundStyle(accentColor)
                                         .padding(.horizontal, 6)
                                         .padding(.vertical, 2)
-                                        .background(AppTheme.accent.opacity(0.15))
+                                        .background(accentColor.opacity(0.15))
                                         .clipShape(Capsule())
                                 }
                             }
@@ -1452,7 +1502,7 @@ struct MealCard: View {
                         VStack(alignment: .trailing) {
                             Text("\(meal.calories) kcal")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(AppTheme.accentSecondary)
+                                .foregroundStyle(secondaryAccent)
                             Text("P:\(meal.protein)g C:\(meal.carbs)g G:\(meal.fat)g")
                                 .font(.caption2)
                                 .foregroundStyle(AppTheme.textSecondary)
@@ -1469,7 +1519,7 @@ struct MealCard: View {
                      ? "Selecionada · toque no círculo para desmarcar a conclusão"
                      : "Selecionada · toque no círculo para marcar como concluída")
                     .font(.caption2)
-                    .foregroundStyle(AppTheme.accent)
+                    .foregroundStyle(accentColor)
             }
 
             if isExpanded {
@@ -1504,7 +1554,7 @@ struct MealCard: View {
                     .foregroundStyle(meal.isCompleted ? AppTheme.textSecondary : .white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(meal.isCompleted ? AppTheme.background : AppTheme.accent)
+                    .background(meal.isCompleted ? AppTheme.background : accentColor)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
@@ -1512,12 +1562,16 @@ struct MealCard: View {
             }
         }
         .padding()
-        .background(AppTheme.cardBackground)
+        .background(cardFill)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
                 .stroke(
-                    isSelected ? AppTheme.accent.opacity(0.8) : (meal.isCompleted ? AppTheme.accent.opacity(0.35) : Color.clear),
+                    isSelected
+                        ? accentColor.opacity(0.85)
+                        : (style == .coachPrescribed
+                            ? AppTheme.coachNutrition.opacity(0.45)
+                            : (meal.isCompleted ? accentColor.opacity(0.35) : Color.clear)),
                     lineWidth: isSelected ? 2 : 1
                 )
         )

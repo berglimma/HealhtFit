@@ -14,9 +14,14 @@ final class MealPlanService: ObservableObject {
     @Published var userMealLibrary: [MealTemplate] = []
     /// Plano gerado pelo fluxo do IAssistente (badge em Nutrição).
     @Published private(set) var createdByAssistant = false
+    /// Cardápio prescrito pelo nutricionista via HealthFit Coach.
+    @Published private(set) var isCoachPrescribed = false
+    @Published private(set) var coachPrescribedByName: String?
 
     private let planKey = "healthfit_meal_plan"
     private let assistantOriginKey = "healthfit_meal_plan_assistant"
+    private let coachOriginKey = "healthfit_meal_plan_coach"
+    private let coachNameKey = "healthfit_meal_plan_coach_name"
     private let shoppingKey = "healthfit_shopping_list"
     private let customMenuKey = "healthfit_custom_menu"
     private let userMealLibraryKey = "healthfit_user_meal_library"
@@ -31,6 +36,8 @@ final class MealPlanService: ObservableObject {
         static let purchaseStats = "shopping_purchase_stats"
         static let cloudUpdatedAt = "meal_plan_cloud_updated_at"
         static let createdByAssistant = "meal_plan_created_by_assistant"
+        static let isCoachPrescribed = "meal_plan_coach_prescribed"
+        static let coachPrescribedByName = "meal_plan_coach_name"
     }
 
     @Published private(set) var purchaseStats: [ShoppingPurchaseStat] = []
@@ -55,8 +62,12 @@ final class MealPlanService: ObservableObject {
         userMealLibrary = []
         purchaseStats = []
         createdByAssistant = false
+        isCoachPrescribed = false
+        coachPrescribedByName = nil
         UserScopedDefaults.remove(logicalKey: ScopedKey.plan, uid: boundUserId, legacyKey: planKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.createdByAssistant, uid: boundUserId, legacyKey: assistantOriginKey)
+        UserScopedDefaults.remove(logicalKey: ScopedKey.isCoachPrescribed, uid: boundUserId, legacyKey: coachOriginKey)
+        UserScopedDefaults.remove(logicalKey: ScopedKey.coachPrescribedByName, uid: boundUserId, legacyKey: coachNameKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.shopping, uid: boundUserId, legacyKey: shoppingKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.customMenu, uid: boundUserId, legacyKey: customMenuKey)
         UserScopedDefaults.remove(logicalKey: ScopedKey.userMealLibrary, uid: boundUserId, legacyKey: userMealLibraryKey)
@@ -70,6 +81,7 @@ final class MealPlanService: ObservableObject {
         guard customMenuSelection.isReadyToBuild else { return }
 
         createdByAssistant = fromAssistant
+        clearCoachOrigin(persist: false)
 
         basalMetabolicRate = profile.basalMetabolicRate
         estimatedTDEE = profile.estimatedTDEE
@@ -89,10 +101,16 @@ final class MealPlanService: ObservableObject {
     }
 
     /// Aplica cardápio semanal prescrito pelo nutricionista (HealthFit Coach).
-    func applyCoachPrescribedPlan(_ plan: [DailyMealPlan]) {
+    func applyCoachPrescribedPlan(_ plan: [DailyMealPlan], coachName: String? = nil) {
         guard !plan.isEmpty else { return }
         weeklyPlan = plan
         createdByAssistant = false
+        isCoachPrescribed = true
+        if let coachName, !coachName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            coachPrescribedByName = coachName
+        }
+        persistAssistantOrigin()
+        persistCoachOrigin()
         saveData()
         Task { await pushToCloudIfNeeded() }
     }
@@ -114,6 +132,7 @@ final class MealPlanService: ObservableObject {
     func clearWeeklyPlan() {
         weeklyPlan = []
         shoppingList = []
+        clearCoachOrigin(persist: true)
         saveData()
         syncMealReminders()
     }
@@ -167,7 +186,7 @@ final class MealPlanService: ObservableObject {
 
     func deleteUserMeal(id: UUID, profile: UserProfile?) {
         userMealLibrary.removeAll { $0.id == id }
-        for mealType in MealType.allCases {
+        for mealType in MealType.planSlots {
             if customMenuSelection.selectedTemplateID(for: mealType) == id {
                 customMenuSelection.selections.removeValue(forKey: mealType.rawValue)
             }
@@ -541,6 +560,7 @@ final class MealPlanService: ObservableObject {
         }
         loadPurchaseStats()
         loadAssistantOrigin()
+        loadCoachOrigin()
         syncMealReminders()
     }
 
@@ -565,6 +585,64 @@ final class MealPlanService: ObservableObject {
                 uid: boundUserId,
                 legacyKey: assistantOriginKey
             )
+        }
+    }
+
+    private func loadCoachOrigin() {
+        if let data = UserScopedDefaults.data(
+            forLogicalKey: ScopedKey.isCoachPrescribed,
+            uid: boundUserId,
+            legacyKey: coachOriginKey
+        ),
+           let flag = try? JSONDecoder().decode(Bool.self, from: data) {
+            isCoachPrescribed = flag
+        } else {
+            isCoachPrescribed = false
+        }
+        if let data = UserScopedDefaults.data(
+            forLogicalKey: ScopedKey.coachPrescribedByName,
+            uid: boundUserId,
+            legacyKey: coachNameKey
+        ),
+           let name = try? JSONDecoder().decode(String.self, from: data),
+           !name.isEmpty {
+            coachPrescribedByName = name
+        } else if !isCoachPrescribed {
+            coachPrescribedByName = nil
+        }
+    }
+
+    private func persistCoachOrigin() {
+        if let data = try? JSONEncoder().encode(isCoachPrescribed) {
+            UserScopedDefaults.setData(
+                data,
+                forLogicalKey: ScopedKey.isCoachPrescribed,
+                uid: boundUserId,
+                legacyKey: coachOriginKey
+            )
+        }
+        if let name = coachPrescribedByName,
+           let data = try? JSONEncoder().encode(name) {
+            UserScopedDefaults.setData(
+                data,
+                forLogicalKey: ScopedKey.coachPrescribedByName,
+                uid: boundUserId,
+                legacyKey: coachNameKey
+            )
+        } else {
+            UserScopedDefaults.remove(
+                logicalKey: ScopedKey.coachPrescribedByName,
+                uid: boundUserId,
+                legacyKey: coachNameKey
+            )
+        }
+    }
+
+    private func clearCoachOrigin(persist: Bool) {
+        isCoachPrescribed = false
+        coachPrescribedByName = nil
+        if persist {
+            persistCoachOrigin()
         }
     }
 
@@ -615,6 +693,7 @@ final class MealPlanService: ObservableObject {
             )
         }
         persistAssistantOrigin()
+        persistCoachOrigin()
         let now = Date()
         setLocalMealPlanUpdatedAt(now)
         Task {
@@ -658,6 +737,8 @@ final class MealPlanService: ObservableObject {
         estimatedTDEE = remote.estimatedTDEE
         caloricDeficit = remote.caloricDeficit
         createdByAssistant = remote.createdByAssistant
+        isCoachPrescribed = remote.isCoachPrescribed
+        coachPrescribedByName = remote.coachPrescribedByName
         if let data = try? JSONEncoder().encode(weeklyPlan) {
             UserScopedDefaults.setData(data, forLogicalKey: ScopedKey.plan, uid: boundUserId, legacyKey: planKey)
         }
@@ -676,6 +757,7 @@ final class MealPlanService: ObservableObject {
             )
         }
         persistAssistantOrigin()
+        persistCoachOrigin()
         syncMealReminders()
     }
 
@@ -690,7 +772,9 @@ final class MealPlanService: ObservableObject {
             estimatedTDEE: estimatedTDEE,
             caloricDeficit: caloricDeficit,
             userMealLibrary: userMealLibrary,
-            createdByAssistant: createdByAssistant
+            createdByAssistant: createdByAssistant,
+            isCoachPrescribed: isCoachPrescribed,
+            coachPrescribedByName: coachPrescribedByName
         )
         try? await MealPlanFirestoreService.savePlan(snapshot, userId: userId)
         setLocalMealPlanUpdatedAt(updatedAt)
@@ -712,7 +796,7 @@ final class MealPlanService: ObservableObject {
     private func ensureDefaultSelections(goal: FitnessGoal = .maintenance) {
         guard let lactose = customMenuSelection.lactoseTolerance else { return }
 
-        for mealType in MealType.allCases {
+        for mealType in MealType.planSlots {
             if customMenuSelection.selectedTemplateID(for: mealType) == nil {
                 let template = MealCatalog.defaultTemplate(
                     for: mealType,
@@ -761,7 +845,7 @@ final class MealPlanService: ObservableObject {
     }
 
     private var mealTypeCalorieOrder: [MealType] {
-        MealType.allCases
+        MealType.planSlots.filter { !$0.isFasting }
     }
 
     private static let weeklyStaples: [(name: String, quantity: String, category: ShoppingCategory)] = [
@@ -945,7 +1029,18 @@ final class MealPlanService: ObservableObject {
     ) -> [Meal] {
         let proteins = goal == .muscleGain ? 2 : 1
 
-        return MealType.allCases.map { mealType in
+        return MealType.planSlots.map { mealType in
+            if mealType.isFasting {
+                let fasting = MealCatalog.defaultTemplate(
+                    for: .fasting,
+                    sweetLevel: sweetLevel,
+                    goal: goal,
+                    lactoseTolerance: lactoseTolerance,
+                    index: 0
+                )
+                return fasting.scaled(to: 0)
+            }
+
             let targetCalories = max(Int(Double(calorieBase) * mealType.calorieShare), 120)
             let template: MealTemplate
 

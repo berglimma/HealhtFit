@@ -92,6 +92,7 @@ enum MealReminderConfiguration {
         case .lunch: return (12, 30)
         case .afternoonSnack: return (16, 0)
         case .dinner: return (19, 0)
+        case .fasting: return (12, 0)
         case .supper: return (21, 30)
         }
     }
@@ -425,7 +426,7 @@ final class NotificationService {
         // recém-agendados a cada refresh (ex.: app voltando ao foreground).
         cancelMealReminders()
 
-        for mealType in MealType.allCases {
+        for mealType in MealType.planSlots where !mealType.isFasting {
             let clock = MealReminderConfiguration.reminderClock(for: mealType)
             let components = localTimeComponents(hour: clock.hour, minute: clock.minute)
 
@@ -1031,6 +1032,80 @@ final class NotificationService {
 
     private func postWorkoutCheckInIdentifier(_ sessionId: UUID) -> String {
         "post_workout_checkin_\(sessionId.uuidString)"
+    }
+
+    // MARK: - Consultas (Coach)
+
+    private static let consultationReminderPrefix = "consultation_reminder_"
+
+    /// Confirmação imediata + lembretes automáticos (24h, 1h e 15 min antes).
+    func scheduleConsultationReminders(for booking: ConsultationBooking) {
+        cancelConsultationReminders(bookingId: booking.id)
+        guard booking.isUpcoming else { return }
+
+        deliverImmediately(
+            title: "HealthFit Coach",
+            body: booking.confirmedScheduleLabel,
+            category: "CONSULTATION",
+            identifier: "\(Self.consultationReminderPrefix)\(booking.id)_confirm",
+            immediate: true,
+            userInfo: [
+                "type": "consultationConfirmed",
+                "bookingId": booking.id,
+                "linkId": booking.linkId
+            ]
+        )
+
+        let offsets: [(seconds: TimeInterval, suffix: String, title: String)] = [
+            (24 * 3600, "24h", "Lembrete: consulta amanhã"),
+            (60 * 60, "1h", "Lembrete: consulta em 1 hora"),
+            (15 * 60, "15m", "Lembrete: consulta em 15 minutos")
+        ]
+        for item in offsets {
+            let fire = booking.startAt.addingTimeInterval(-item.seconds)
+            let interval = fire.timeIntervalSinceNow
+            guard interval > 5 else { continue }
+            scheduleOnPhone(
+                title: item.title,
+                body: booking.confirmedScheduleLabel,
+                category: "CONSULTATION",
+                identifier: "\(Self.consultationReminderPrefix)\(booking.id)_\(item.suffix)",
+                trigger: UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false),
+                userInfo: [
+                    "type": "consultationReminder",
+                    "bookingId": booking.id,
+                    "linkId": booking.linkId
+                ]
+            )
+        }
+    }
+
+    func cancelConsultationReminders(bookingId: String) {
+        let prefix = "\(Self.consultationReminderPrefix)\(bookingId)"
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let ids = requests.filter { $0.identifier.hasPrefix(prefix) }.map(\.identifier)
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        }
+        UNUserNotificationCenter.current().getDeliveredNotifications { notes in
+            let ids = notes.filter { $0.request.identifier.hasPrefix(prefix) }.map(\.request.identifier)
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ids)
+        }
+    }
+
+    /// Aviso imediato (cancelamento / remarcação) — usado no aparelho local e espelhado via chat no outro lado.
+    func deliverConsultationStatusNotification(title: String, body: String, linkId: String, bookingId: String) {
+        deliverImmediately(
+            title: title,
+            body: body,
+            category: "CONSULTATION",
+            identifier: "\(Self.consultationReminderPrefix)\(bookingId)_status_\(UUID().uuidString)",
+            immediate: true,
+            userInfo: [
+                "type": "consultationStatus",
+                "bookingId": bookingId,
+                "linkId": linkId
+            ]
+        )
     }
 
     // MARK: - Inspeção de equipamento de escalada

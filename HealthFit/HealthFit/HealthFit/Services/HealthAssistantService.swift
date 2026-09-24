@@ -52,6 +52,16 @@ struct HealthAssistantContext {
     var isTodayRestDay: Bool = false
     /// Dias consecutivos com treino (meditação não conta).
     var consecutiveTrainingDays: Int = 0
+    /// Vínculos Coach ativos (personal / nutri) para agenda.
+    var activeCoachLinks: [CoachLink] = []
+    /// Consultas próximas (propostas/confirmadas).
+    var upcomingConsultations: [ConsultationBooking] = []
+    /// Horários livres sugeridos (já calculados na UI).
+    var openConsultationSlots: [ConsultationOpenSlot] = []
+    /// Nome do personal vinculado via Coach, se houver.
+    var coachPersonalName: String? = nil
+    /// Nome do nutricionista vinculado via Coach, se houver.
+    var coachNutritionistName: String? = nil
 }
 
 enum HealthAssistantEngine {
@@ -78,6 +88,9 @@ enum HealthAssistantEngine {
         "Quantas séries e repetições?",
         "O que fazer no déficit calórico?",
         "Posso beber álcool ou cerveja?",
+        "Horários livres para consulta",
+        "Agendar consulta com personal",
+        "Agendar consulta com nutricionista",
         "Cerveja zero álcool é liberada?",
         "Cerveja light faz mal?",
         "Treino, cardio ou meditação?",
@@ -290,6 +303,63 @@ enum HealthAssistantEngine {
         }
 
         return fallbackAnswer(context)
+    }
+
+    private static func consultationAgendaReply(_ ctx: HealthAssistantContext) -> String {
+        let personal = ctx.coachPersonalName
+        let nutri = ctx.coachNutritionistName
+        let hasLinks = !ctx.activeCoachLinks.isEmpty
+
+        var lines: [String] = [
+            "Agenda de consultas no HealthFit Coach:",
+            "",
+            "• Modo inteligente: sugere horários livres da agenda do profissional (e do Calendário do iPhone, se autorizado).",
+            "• Modo manual: você escolhe data e hora.",
+            "• Personal e nutricionista têm agendas separadas no vínculo."
+        ]
+
+        if !hasLinks {
+            lines.append("")
+            lines.append("Você ainda não tem personal ou nutricionista vinculado no Coach.")
+            lines.append("Em Perfil → HealthFit Coach, entre com o código do profissional (plano Fit+).")
+            return lines.joined(separator: "\n")
+        }
+
+        lines.append("")
+        if let personal {
+            lines.append("• Personal: \(personal)")
+        }
+        if let nutri {
+            lines.append("• Nutricionista: \(nutri)")
+        }
+
+        let upcoming = ctx.upcomingConsultations.sorted { $0.startAt < $1.startAt }
+        if !upcoming.isEmpty {
+            lines.append("")
+            lines.append("Próximas consultas:")
+            for item in upcoming.prefix(5) {
+                let when = item.startAt.formatted(date: .abbreviated, time: .shortened)
+                lines.append("• \(when) · \(item.profession.title) · \(item.status.title)")
+            }
+        }
+
+        if !ctx.openConsultationSlots.isEmpty {
+            lines.append("")
+            lines.append("Horários livres sugeridos:")
+            for slot in ctx.openConsultationSlots.prefix(8) {
+                lines.append("• \(slot.label)")
+            }
+            lines.append("")
+            lines.append("Para marcar: abra o vínculo em HealthFit Coach → Agendar consulta → escolha Inteligente ou Manual.")
+        } else {
+            lines.append("")
+            lines.append("Para ver horários livres e agendar: HealthFit Coach → seu profissional → Agendar consulta.")
+            lines.append("O profissional precisa salvar a agenda semanal (Coach → Agenda de consultas).")
+        }
+
+        lines.append("")
+        lines.append("Consultas confirmadas podem ir para o Calendário do celular automaticamente.")
+        return lines.joined(separator: "\n")
     }
 
     private static func normalize(_ text: String) -> String {
@@ -1480,6 +1550,15 @@ enum HealthAssistantEngine {
 
                 Relatório semanal em Início → Progresso Semanal.
                 """
+            }
+        ),
+        HealthAssistantTopic(
+            keywords: [
+                "consulta", "agendar", "agendamento", "horario livre", "horário livre", "horarios livres", "horários livres",
+                "agenda", "marcar consulta", "nutricionista consulta", "personal consulta", "slot", "disponibilidade"
+            ],
+            respond: { ctx in
+                Self.consultationAgendaReply(ctx)
             }
         ),
         HealthAssistantTopic(

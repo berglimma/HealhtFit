@@ -96,6 +96,18 @@ enum CoachFirestoreService {
         links().document(linkId).collection("mealPlan").document("current")
     }
 
+    private static func nutritionCareDoc(linkId: String) -> DocumentReference {
+        links().document(linkId).collection("nutritionCare").document("current")
+    }
+
+    private static func consultations(linkId: String) -> CollectionReference {
+        links().document(linkId).collection("consultations")
+    }
+
+    private static func availabilityDoc(coachUid: String) -> DocumentReference {
+        profiles().document(coachUid).collection("settings").document("availability")
+    }
+
     private static func interestMessages(studentUid: String) -> CollectionReference {
         db.collection("users").document(studentUid).collection("coachInterestMessages")
     }
@@ -427,6 +439,94 @@ enum CoachFirestoreService {
         return mealPlanDoc(linkId: linkId).addSnapshotListener { snap, _ in
             handler(snap?.data())
         }
+    }
+
+    // MARK: - Nutrition care (anamnesis, questionnaires, goals, check-ins)
+
+    static func publishNutritionCare(
+        linkId: String,
+        careJSON: [String: Any],
+        actorUid: String,
+        actorName: String
+    ) async throws {
+        guard isAvailable else { throw CoachFirestoreError.unavailable }
+        var payload = careJSON
+        payload["linkId"] = linkId
+        payload["actorUid"] = actorUid
+        payload["actorName"] = actorName
+        payload["updatedAt"] = FieldValue.serverTimestamp()
+        try await nutritionCareDoc(linkId: linkId).setData(payload, merge: true)
+    }
+
+    static func listenNutritionCare(
+        linkId: String,
+        handler: @escaping ([String: Any]?) -> Void
+    ) -> ListenerRegistration? {
+        guard isAvailable else { return nil }
+        return nutritionCareDoc(linkId: linkId).addSnapshotListener { snap, _ in
+            handler(snap?.data())
+        }
+    }
+
+    // MARK: - Consultations & availability
+
+    static func saveAvailability(_ availability: CoachAvailability) async throws {
+        guard isAvailable else { throw CoachFirestoreError.unavailable }
+        var payload = try encode(availability)
+        payload["updatedAt"] = FieldValue.serverTimestamp()
+        try await availabilityDoc(coachUid: availability.coachUid).setData(payload, merge: true)
+    }
+
+    static func fetchAvailability(coachUid: String) async throws -> CoachAvailability? {
+        guard isAvailable else { throw CoachFirestoreError.unavailable }
+        let snap = try await availabilityDoc(coachUid: coachUid).getDocument()
+        guard let data = snap.data() else { return nil }
+        return try? decode(CoachAvailability.self, from: data)
+    }
+
+    static func listenAvailability(
+        coachUid: String,
+        handler: @escaping (CoachAvailability?) -> Void
+    ) -> ListenerRegistration? {
+        guard isAvailable else { return nil }
+        return availabilityDoc(coachUid: coachUid).addSnapshotListener { snap, _ in
+            guard let data = snap?.data() else {
+                handler(nil)
+                return
+            }
+            handler(try? decode(CoachAvailability.self, from: data))
+        }
+    }
+
+    static func publishConsultation(_ booking: ConsultationBooking) async throws {
+        guard isAvailable else { throw CoachFirestoreError.unavailable }
+        var payload = try encode(booking)
+        payload["startAt"] = Timestamp(date: booking.startAt)
+        payload["endAt"] = Timestamp(date: booking.endAt)
+        payload["createdAt"] = Timestamp(date: booking.createdAt)
+        payload["updatedAt"] = FieldValue.serverTimestamp()
+        try await consultations(linkId: booking.linkId).document(booking.id).setData(payload, merge: true)
+    }
+
+    static func listenConsultations(
+        linkId: String,
+        handler: @escaping ([ConsultationBooking]) -> Void
+    ) -> ListenerRegistration? {
+        guard isAvailable else { return nil }
+        return consultations(linkId: linkId)
+            .order(by: "startAt", descending: false)
+            .addSnapshotListener { snap, _ in
+                let items = (snap?.documents ?? []).compactMap { doc -> ConsultationBooking? in
+                    decodeConsultation(from: doc.data(), documentId: doc.documentID)
+                }
+                handler(items)
+            }
+    }
+
+    private static func decodeConsultation(from data: [String: Any], documentId: String) -> ConsultationBooking? {
+        var mutable = data
+        mutable["id"] = documentId
+        return try? decode(ConsultationBooking.self, from: mutable)
     }
 
     // MARK: - Chat

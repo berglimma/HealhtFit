@@ -68,8 +68,9 @@ struct CoachHubView: View {
         authService.currentUser?.accountRole ?? .student
     }
 
+    /// Profissional se o papel da conta ou o cadastro Coach já existir (evita sumir o painel do nutri).
     private var isPro: Bool {
-        role.isPersonalProfessional || role.isNutritionProfessional
+        role.isPersonalProfessional || role.isNutritionProfessional || coach.myProfile != nil
     }
 
     var body: some View {
@@ -96,6 +97,12 @@ struct CoachHubView: View {
                 await coach.refreshLinkStatusesForPlan()
                 if isPro {
                     await coach.refreshProfessionalPhotoFromAppProfileIfNeeded()
+                }
+                // Nutri/Personal com papel certo mas sem cadastro → abre setup.
+                if (role.isPersonalProfessional || role.isNutritionProfessional),
+                   coach.myProfile == nil,
+                   CoachPreferences.hasConsent {
+                    showProfileSetup = true
                 }
             }
         }
@@ -159,11 +166,25 @@ struct CoachHubView: View {
             Text(isPro ? "Painel do profissional" : "Seu personal e nutrição")
                 .font(.title3.bold())
                 .foregroundStyle(AppTheme.textPrimary)
-            Text(isPro
-                 ? "Cadastre alunos, envie fichas e cardápios, e converse no chat."
-                 : "Com plano Fit ou superior, receba fichas do personal, dietas e chat 1:1. Cardio continua livre.")
+            Text(professionalHeaderSubtitle)
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
+        }
+    }
+
+    private var professionalHeaderSubtitle: String {
+        if !isPro {
+            return "Com plano Fit ou superior, receba fichas do personal, dietas e chat 1:1. Cardio continua livre."
+        }
+        switch role {
+        case .nutritionist:
+            return "Cadastre alunos, envie cardápios atualizados, anamnese, metas e acompanhe check-ins. Chat e PDF de medidas inclusos."
+        case .personal:
+            return "Cadastre alunos, envie fichas de treino, avaliações e converse no chat."
+        case .personalAndNutritionist:
+            return "Cadastre alunos, envie fichas e avaliações, cardápios e acompanhamento nutricional."
+        default:
+            return "Cadastre alunos, envie fichas e cardápios, e converse no chat."
         }
     }
 
@@ -215,6 +236,17 @@ struct CoachHubView: View {
             }
             .buttonStyle(.bordered)
 
+            NavigationLink {
+                CoachProfessionalAgendaView()
+            } label: {
+                Label(
+                    role == .nutritionist ? "Agenda de consultas (nutrição)" : "Agenda de consultas",
+                    systemImage: "calendar"
+                )
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+
             Button(role: .destructive) {
                 showDeleteCadastroConfirm = true
             } label: {
@@ -241,7 +273,12 @@ struct CoachHubView: View {
             }
         }
 
-        linksSection(title: "Meus alunos", empty: "Nenhum aluno vinculado ainda. Gere um código de convite.")
+        linksSection(
+            title: role == .nutritionist ? "Meus pacientes (nutrição)" : "Meus alunos",
+            empty: role == .nutritionist
+                ? "Nenhum paciente vinculado. Gere um código de convite como nutricionista."
+                : "Nenhum aluno vinculado ainda. Gere um código de convite."
+        )
     }
 
     @ViewBuilder
@@ -383,16 +420,38 @@ struct CoachHubView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
+    private var displayedCoachLinks: [CoachLink] {
+        let uid = authService.currentUser?.id ?? ""
+        let links = coach.myLinks
+        guard isPro else { return links }
+        let asCoach = links.filter { $0.coachUid == uid }
+        let pool = asCoach.isEmpty ? links : asCoach
+        // Personal + nutri: lista todos os alunos (personal e nutrição).
+        if role == .personalAndNutritionist {
+            return pool
+        }
+        // Como nutri, prioriza vínculos de nutrição; se ainda não houver, mostra os demais.
+        if role == .nutritionist {
+            let nutri = pool.filter { $0.profession == .nutritionist }
+            return nutri.isEmpty ? pool : nutri
+        }
+        if role == .personal {
+            let personal = pool.filter { $0.profession == .personal }
+            return personal.isEmpty ? pool : personal
+        }
+        return pool
+    }
+
     private func linksSection(title: String, empty: String) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.headline)
-            if coach.myLinks.isEmpty {
+            if displayedCoachLinks.isEmpty {
                 Text(empty)
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
             } else {
-                ForEach(coach.myLinks) { link in
+                ForEach(displayedCoachLinks) { link in
                     Button { selectedLink = link } label: {
                         CoachLinkRow(link: link, viewerUid: authService.currentUser?.id ?? "")
                     }
@@ -493,7 +552,12 @@ struct HealthFitCoachProfileCard: View {
     }
 
     private var title: String {
-        isPro ? "HealthFit Coach" : "Seu personal e nutrição"
+        switch role {
+        case .nutritionist: return "HealthFit Coach · Nutrição"
+        case .personal: return "HealthFit Coach · Personal"
+        case .personalAndNutritionist: return "HealthFit Coach · Personal e Nutri"
+        default: return isPro ? "HealthFit Coach" : "Seu personal e nutrição"
+        }
     }
 
     var body: some View {

@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import FirebaseFirestore
 
 enum WellnessHealthIconStatus: Equatable {
     case green
@@ -49,6 +50,8 @@ final class DailyWellnessService: ObservableObject {
     private var userEmail: String?
     private var cloudUserId: String?
     private var wellnessCloudSyncInFlight = false
+    private var todayEntryListener: ListenerRegistration?
+    private var listenedDayKey: String?
     /// Meta diária de água (ml), derivada do perfil; enviada ao Firebase junto com o dia.
     private var waterGoalMl: Int?
     private let storagePrefix = "healthfit_wellness"
@@ -75,6 +78,9 @@ final class DailyWellnessService: ObservableObject {
 
     func configureCloudSync(userId: String?) {
         cloudUserId = userId
+        stopTodayEntryListener()
+        guard userId != nil else { return }
+        startTodayEntryListenerIfNeeded()
     }
 
     /// Carrega o dia atual (e metadados) do Firebase e mescla com o cache local.
@@ -88,8 +94,7 @@ final class DailyWellnessService: ObservableObject {
             let todayKey = DailyWellnessEntry.dayKey(for: .now)
             if let remote = try await DailyWellnessFirestoreService.fetchEntry(userId: userId, dayKey: todayKey) {
                 let merged = mergeEntries(local: todayEntry.dayKey == todayKey ? todayEntry : .empty(), remote: remote)
-                save(merged)
-                reconcileIconAnchorFromEntry(merged)
+                applyRemoteTodayEntry(merged)
             }
 
             let meta = try await DailyWellnessFirestoreService.fetchMeta(userId: userId)
@@ -108,6 +113,7 @@ final class DailyWellnessService: ObservableObject {
                 ingestWeekEntries(recent)
             }
 
+            startTodayEntryListenerIfNeeded()
             evaluateMorningCheckInPresentation()
             refreshHealthIconNotifications()
         } catch {
@@ -115,7 +121,48 @@ final class DailyWellnessService: ObservableObject {
         }
     }
 
+    private func startTodayEntryListenerIfNeeded() {
+        guard let userId = cloudUserId, DailyWellnessFirestoreService.isAvailable else { return }
+        let todayKey = DailyWellnessEntry.dayKey(for: .now)
+        if listenedDayKey == todayKey, todayEntryListener != nil { return }
+        stopTodayEntryListener()
+        listenedDayKey = todayKey
+        todayEntryListener = DailyWellnessFirestoreService.listenEntry(userId: userId, dayKey: todayKey) { [weak self] remote in
+            Task { @MainActor in
+                guard let self else { return }
+                let currentKey = DailyWellnessEntry.dayKey(for: .now)
+                if currentKey != todayKey {
+                    self.startTodayEntryListenerIfNeeded()
+                    return
+                }
+                guard let remote else { return }
+                let local = self.todayEntry.dayKey == currentKey ? self.todayEntry : .empty(forDayKey: currentKey)
+                let merged = self.mergeEntries(local: local, remote: remote)
+                guard merged != self.todayEntry else { return }
+                self.applyRemoteTodayEntry(merged)
+            }
+        }
+    }
+
+    private func stopTodayEntryListener() {
+        todayEntryListener?.remove()
+        todayEntryListener = nil
+        listenedDayKey = nil
+    }
+
+    private func applyRemoteTodayEntry(_ entry: DailyWellnessEntry) {
+        todayEntry = entry
+        upsertWeekEntry(entry)
+        if let userEmail,
+           let data = try? JSONEncoder().encode(entry) {
+            UserDefaults.standard.set(data, forKey: storageKey(email: userEmail))
+        }
+        reconcileIconAnchorFromEntry(entry)
+        refreshHealthIconNotifications()
+    }
+
     func clearAllLocalData() {
+        stopTodayEntryListener()
         if let userEmail {
             UserDefaults.standard.removeObject(forKey: storageKey(email: userEmail))
             UserDefaults.standard.removeObject(forKey: lastUpdateKey(email: userEmail))
@@ -342,11 +389,9 @@ final class DailyWellnessService: ObservableObject {
         let clamped = min(max(0, milliliters), WaterServing.maxDailyIntakeML)
         guard entry.waterIntakeMl != clamped else { return }
         entry.waterIntakeMl = clamped
-        if clamped > 0 {
-            entry.waterUpdatedAt = .now
-            if dayKey == DailyWellnessEntry.dayKey(for: .now) {
-                markWaterOrSleepUpdated()
-            }
+        entry.waterUpdatedAt = .now
+        if dayKey == DailyWellnessEntry.dayKey(for: .now) {
+            markWaterOrSleepUpdated()
         }
         save(entry)
     }
@@ -818,11 +863,24 @@ final class DailyWellnessService: ObservableObject {
             }
         }
 
-        if remote.waterIntakeMl > merged.waterIntakeMl {
+        // Água / hidratação: usa o timestamp mais recente (inclui redução de volume no outro device).
+        switch (local.waterUpdatedAt, remote.waterUpdatedAt) {
+        case let (l?, r?) where r >= l:
             merged.waterIntakeMl = remote.waterIntakeMl
-            merged.waterUpdatedAt = remote.waterUpdatedAt ?? merged.waterUpdatedAt
-        } else if merged.waterUpdatedAt == nil {
             merged.waterUpdatedAt = remote.waterUpdatedAt
+        case (nil, .some):
+            merged.waterIntakeMl = remote.waterIntakeMl
+            merged.waterUpdatedAt = remote.waterUpdatedAt
+        case (.some, nil):
+            break
+        default:
+            if remote.waterIntakeMl != merged.waterIntakeMl {
+                // Sem timestamp confiável: mantém o maior registro (legado).
+                if remote.waterIntakeMl > merged.waterIntakeMl {
+                    merged.waterIntakeMl = remote.waterIntakeMl
+                    merged.waterUpdatedAt = remote.waterUpdatedAt ?? merged.waterUpdatedAt
+                }
+            }
         }
 
         merged.energyDrinksCount = max(local.energyDrinksCount, remote.energyDrinksCount)

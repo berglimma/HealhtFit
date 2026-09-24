@@ -11,6 +11,7 @@ struct CoachLinkDetailView: View {
     @State private var showPrescribeWorkout = false
     @State private var showPrescribeMeal = false
     @State private var showChat = false
+    @State private var showScheduleConsultation = false
     @State private var statusMessage: String?
     @State private var assignmentToEdit: CoachAssignedWorkout?
     @State private var assignmentPendingDeletion: CoachAssignedWorkout?
@@ -24,12 +25,48 @@ struct CoachLinkDetailView: View {
     @State private var methodDraftNotes = ""
     @State private var isSavingMethod = false
 
+    @State private var isEnablingNutrition = false
+
     private var liveLink: CoachLink {
         coach.myLinks.first(where: { $0.id == link.id }) ?? link
     }
 
     private var isCoach: Bool {
         authService.currentUser?.id == liveLink.coachUid
+    }
+
+    private var canPrescribeMeals: Bool {
+        isCoach && coach.canPrescribeMeals(on: liveLink)
+    }
+
+    private var canPrescribeWorkouts: Bool {
+        isCoach && coach.canPrescribeWorkouts(on: liveLink)
+    }
+
+    /// Aluno já vinculado só como personal; coach dual (personal + nutri) ainda sem vínculo de nutrição.
+    private var canEnableNutritionOnExistingStudent: Bool {
+        guard isCoach, liveLink.profession == .personal, liveLink.isActiveLike,
+              coach.isDualProfessional else { return false }
+        return !coach.myLinks.contains {
+            $0.coachUid == liveLink.coachUid
+                && $0.studentUid == liveLink.studentUid
+                && $0.profession == .nutritionist
+                && $0.isActiveLike
+        }
+    }
+
+    /// Preferência: vínculo de nutrição do mesmo aluno; senão o vínculo atual.
+    private var mealPrescribeLink: CoachLink {
+        if liveLink.profession == .nutritionist { return liveLink }
+        if let nutri = coach.myLinks.first(where: {
+            $0.coachUid == liveLink.coachUid
+                && $0.studentUid == liveLink.studentUid
+                && $0.profession == .nutritionist
+                && $0.isActiveLike
+        }) {
+            return nutri
+        }
+        return liveLink
     }
 
     private var assigned: [CoachAssignedWorkout] {
@@ -94,9 +131,49 @@ struct CoachLinkDetailView: View {
                 }
             }
 
+            if liveLink.isActiveLike {
+                Section("Consultas") {
+                    Button {
+                        showScheduleConsultation = true
+                    } label: {
+                        Label(
+                            liveLink.profession == .nutritionist
+                                ? "Agendar consulta nutricional"
+                                : "Agendar consulta com personal",
+                            systemImage: "calendar.badge.clock"
+                        )
+                    }
+                    let upcoming = (coach.consultationsByLink[liveLink.id] ?? []).filter(\.isUpcoming)
+                    ForEach(upcoming.prefix(5)) { item in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(item.confirmedScheduleLabel)
+                                .font(.subheadline.weight(.semibold))
+                            Text("Lembretes: 24h · 1h · 15 min antes")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            HStack(spacing: 16) {
+                                Button("Remarcar") {
+                                    showScheduleConsultation = true
+                                }
+                                .font(.caption.weight(.semibold))
+                                Button("Excluir", role: .destructive) {
+                                    Task {
+                                        let ok = await coach.cancelConsultation(item)
+                                        statusMessage = ok
+                                            ? "Consulta cancelada. O outro lado foi notificado."
+                                            : (coach.lastError ?? "Falha ao cancelar.")
+                                    }
+                                }
+                                .font(.caption.weight(.semibold))
+                            }
+                        }
+                    }
+                }
+            }
+
             if isCoach, liveLink.isActiveLike {
                 Section("Prescrever") {
-                    if liveLink.profession == .personal {
+                    if canPrescribeWorkouts {
                         Button {
                             assignmentToEdit = nil
                             showPrescribeWorkout = true
@@ -109,17 +186,61 @@ struct CoachLinkDetailView: View {
                             Label("Medidas, peso e relatório PDF", systemImage: "figure.stand")
                         }
                     }
-                    if liveLink.profession == .nutritionist {
+                    if canEnableNutritionOnExistingStudent {
+                        Button {
+                            Task {
+                                isEnablingNutrition = true
+                                if let nutriLink = await coach.enableNutritionistLink(forExisting: liveLink) {
+                                    statusMessage = "Nutrição ativada para \(liveLink.studentName). Agora você pode enviar cardápio."
+                                    showPrescribeMeal = true
+                                    _ = nutriLink
+                                } else {
+                                    statusMessage = coach.lastError ?? "Não foi possível ativar nutrição."
+                                }
+                                isEnablingNutrition = false
+                            }
+                        } label: {
+                            Label(
+                                isEnablingNutrition
+                                    ? "Ativando nutrição…"
+                                    : "Ativar função nutricionista + cardápio",
+                                systemImage: "leaf.fill"
+                            )
+                        }
+                        .disabled(isEnablingNutrition)
+                    }
+                    if canPrescribeMeals {
                         Button {
                             showPrescribeMeal = true
                         } label: {
                             Label("Montar / enviar cardápio", systemImage: "fork.knife")
                         }
+                        NavigationLink {
+                            CoachNutritionCarePanelView(link: mealPrescribeLink)
+                        } label: {
+                            Label("Anamnese, questionários e metas", systemImage: "clipboard.fill")
+                        }
+                        if !canPrescribeWorkouts {
+                            NavigationLink {
+                                CoachStudentMetricsView(link: liveLink)
+                            } label: {
+                                Label("Medidas, peso e relatório PDF", systemImage: "figure.stand")
+                            }
+                        }
+                    }
+                    if canPrescribeWorkouts || canPrescribeMeals {
+                        NavigationLink {
+                            CoachProfessionalReviewView(
+                                link: canPrescribeMeals ? mealPrescribeLink : liveLink
+                            )
+                        } label: {
+                            Label("Revisão IAssistente", systemImage: "waveform.path.ecg")
+                        }
                     }
                 }
             }
 
-            if isCoach, liveLink.isActiveLike, liveLink.profession == .personal {
+            if isCoach, liveLink.isActiveLike, canPrescribeWorkouts {
                 Section {
                     ForEach(coach.myTrainingMethods) { method in
                         VStack(alignment: .leading, spacing: 4) {
@@ -298,7 +419,7 @@ struct CoachLinkDetailView: View {
         }
         .sheet(isPresented: $showPrescribeMeal) {
             NavigationStack {
-                CoachPrescribeMealView(link: liveLink) { ok in
+                CoachPrescribeMealView(link: mealPrescribeLink) { ok in
                     statusMessage = ok ? "Cardápio enviado e sincronizado com o aluno." : (coach.lastError ?? "Falha ao enviar.")
                     showPrescribeMeal = false
                 }
@@ -307,6 +428,11 @@ struct CoachLinkDetailView: View {
         .sheet(isPresented: $showChat) {
             NavigationStack {
                 CoachChatView(link: liveLink)
+            }
+        }
+        .sheet(isPresented: $showScheduleConsultation) {
+            NavigationStack {
+                CoachScheduleConsultationView(link: liveLink)
             }
         }
         .alert("Excluir ficha?", isPresented: deletionAlertBinding) {
@@ -933,7 +1059,7 @@ struct CoachPrescribeMealView: View {
                 }
 
                 Section("Refeições (toque para trocar)") {
-                    ForEach(MealType.allCases) { mealType in
+                    ForEach(MealType.planSlots) { mealType in
                         let options = MealCatalog.templates(
                             for: mealType,
                             sweetLevel: sweetLevel,
@@ -943,7 +1069,11 @@ struct CoachPrescribeMealView: View {
                         if let selected = selectedTemplate(for: mealType, in: options) {
                             Picker(mealType.rawValue, selection: binding(for: mealType, fallback: selected.id)) {
                                 ForEach(options) { template in
-                                    Text("\(template.name) · \(template.calories) kcal").tag(template.id)
+                                    if mealType.isFasting {
+                                        Text(template.name).tag(template.id)
+                                    } else {
+                                        Text("\(template.name) · \(template.calories) kcal").tag(template.id)
+                                    }
                                 }
                             }
                         }
@@ -1010,7 +1140,7 @@ struct CoachPrescribeMealView: View {
     }
 
     private func ensureDefaults() {
-        for mealType in MealType.allCases {
+        for mealType in MealType.planSlots {
             let options = MealCatalog.templates(
                 for: mealType,
                 sweetLevel: sweetLevel,
@@ -1030,7 +1160,7 @@ struct CoachPrescribeMealView: View {
         let days = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
         let proteins = goal == .muscleGain ? 2 : 1
         draftPlan = days.map { day in
-            let meals: [Meal] = MealType.allCases.compactMap { mealType in
+            let meals: [Meal] = MealType.planSlots.compactMap { mealType in
                 let options = MealCatalog.templates(
                     for: mealType,
                     sweetLevel: sweetLevel,
@@ -1038,6 +1168,9 @@ struct CoachPrescribeMealView: View {
                     lactoseTolerance: lactose
                 )
                 guard let template = selectedTemplate(for: mealType, in: options) else { return nil }
+                if mealType.isFasting {
+                    return template.scaled(to: 0)
+                }
                 let target = max(Int(Double(calorieTarget) * mealType.calorieShare), 120)
                 return template.scaled(to: target, proteinMultiplier: proteins)
             }

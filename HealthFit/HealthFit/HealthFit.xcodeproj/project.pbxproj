@@ -49,6 +49,20 @@
 		B1000043 /* ActiveCardioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000045 /* ActiveCardioView.swift */; };
 		B1000044 /* WeeklyProgressModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000046 /* WeeklyProgressModels.swift */; };
 		B1000045 /* WeeklyProgressAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000047 /* WeeklyProgressAnalyzer.swift */; };
+		B1000992 /* StrengthPerformanceAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000992 /* StrengthPerformanceAnalyzer.swift */; };
+		B1000993 /* StrengthPerformanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000993 /* StrengthPerformanceView.swift */; };
+		B1000994 /* NutritionCareModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000994 /* NutritionCareModels.swift */; };
+		B1000995 /* NutritionCareStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000995 /* NutritionCareStore.swift */; };
+		B1000996 /* NutritionCareViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000996 /* NutritionCareViews.swift */; };
+		B1000997 /* ConsultationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000997 /* ConsultationModels.swift */; };
+		B1000998 /* ConsultationCalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000998 /* ConsultationCalendarService.swift */; };
+		B1000999 /* CoachScheduleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000999 /* CoachScheduleViews.swift */; };
+		B1000B01 /* ProfessionalReviewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000B01 /* ProfessionalReviewModels.swift */; };
+		B1000B02 /* ProfessionalReviewEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000B02 /* ProfessionalReviewEngine.swift */; };
+		B1000B03 /* ProfessionalReviewFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000B03 /* ProfessionalReviewFirestoreService.swift */; };
+		B1000B04 /* ConsultationAttendanceAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000B04 /* ConsultationAttendanceAnalyzer.swift */; };
+		B1000B05 /* ConsultationReportPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000B05 /* ConsultationReportPDFBuilder.swift */; };
+		B1000B06 /* CoachProfessionalReviewViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000B06 /* CoachProfessionalReviewViews.swift */; };
 		B1000046 /* WeeklyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000048 /* WeeklyReportService.swift */; };
 		B1000047 /* WeeklyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000049 /* WeeklyReportView.swift */; };
 		B1000048 /* MeditationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000050 /* MeditationModels.swift */; };
@@ -462,6 +476,14 @@
 		F1000045 /* ActiveCardioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveCardioView.swift; sourceTree = "<group>"; };
 		F1000046 /* WeeklyProgressModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressModels.swift; sourceTree = "<group>"; };
 		F1000047 /* WeeklyProgressAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressAnalyzer.swift; sourceTree = "<group>"; };
+		F1000992 /* StrengthPerformanceAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrengthPerformanceAnalyzer.swift; sourceTree = "<group>"; };
+		F1000993 /* StrengthPerformanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrengthPerformanceView.swift; sourceTree = "<group>"; };
+		F1000994 /* NutritionCareModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionCareModels.swift; sourceTree = "<group>"; };
+		F1000995 /* NutritionCareStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionCareStore.swift; sourceTree = "<group>"; };
+		F1000996 /* NutritionCareViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionCareViews.swift; sourceTree = "<group>"; };
+		F1000997 /* ConsultationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsultationModels.swift; sourceTree = "<group>"; };
+		F1000998 /* ConsultationCalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsultationCalendarService.swift; sourceTree = "<group>"; };
+		F1000999 /* CoachScheduleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachScheduleViews.swift; sourceTree = "<group>"; };
 		F1000048 /* WeeklyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportService.swift; sourceTree = "<group>"; };
 		F1000049 /* WeeklyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportView.swift; sourceTree = "<group>"; };
 		F1000050 /* MeditationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationModels.swift; sourceTree = "<group>"; };
@@ -694,6 +716,12 @@
 		F1000991 /* AssistantBirthdayCongratsEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantBirthdayCongratsEngine.swift; sourceTree = "<group>"; };
 		F1000A01 /* SurfProJumpAnalysisViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfProJumpAnalysisViews.swift; sourceTree = "<group>"; };
 		F1000A02 /* CoachMuscleFatMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachMuscleFatMapView.swift; sourceTree = "<group>"; };
+		F1000B01 /* ProfessionalReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfessionalReviewModels.swift; sourceTree = "<group>"; };
+		F1000B02 /* ProfessionalReviewEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfessionalReviewEngine.swift; sourceTree = "<group>"; };
+		F1000B03 /* ProfessionalReviewFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfessionalReviewFirestoreService.swift; sourceTree = "<group>"; };
+		F1000B04 /* ConsultationAttendanceAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsultationAttendanceAnalyzer.swift; sourceTree = "<group>"; };
+		F1000B05 /* ConsultationReportPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsultationReportPDFBuilder.swift; sourceTree = "<group>"; };
+		F1000B06 /* CoachProfessionalReviewViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachProfessionalReviewViews.swift; sourceTree = "<group>"; };
 		F1000L01 /* PulseLocalized.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseLocalized.swift; sourceTree = "<group>"; };
 		F1000L02 /* L10n+Pulse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "L10n+Pulse.swift"; sourceTree = "<group>"; };
 		F1000L03 /* PulseChallenges.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = PulseChallenges.json; sourceTree = "<group>"; };
@@ -904,6 +932,9 @@
 				F1000945 /* CourtesyVoucher.swift */,
 				F1000420 /* RunTrackingModels.swift */,
 				F1000004 /* MealModels.swift */,
+				F1000994 /* NutritionCareModels.swift */,
+				F1000997 /* ConsultationModels.swift */,
+				F1000B01 /* ProfessionalReviewModels.swift */,
 				F1000352 /* MealPhotoAnalysisModels.swift */,
 				F1000920 /* DuoTeamModels.swift */,
 				F1000960 /* KiteSpotBuddyModels.swift */,
@@ -967,6 +998,12 @@
 				F1000039 /* MotivationMessages.swift */,
 				F1000040 /* WorkoutReportBuilder.swift */,
 				F1000047 /* WeeklyProgressAnalyzer.swift */,
+				F1000992 /* StrengthPerformanceAnalyzer.swift */,
+				F1000995 /* NutritionCareStore.swift */,
+				F1000998 /* ConsultationCalendarService.swift */,
+				F1000B02 /* ProfessionalReviewEngine.swift */,
+				F1000B04 /* ConsultationAttendanceAnalyzer.swift */,
+				F1000B05 /* ConsultationReportPDFBuilder.swift */,
 				F1000500 /* SwimmingMetricsAnalyzer.swift */,
 				F1000503 /* BikeMaintenanceService.swift */,
 				F1000504 /* RoadHazardService.swift */,
@@ -1088,6 +1125,7 @@
 			children = (
 				F1000018 /* DashboardView.swift */,
 				F1000019 /* HealthChartsView.swift */,
+				F1000993 /* StrengthPerformanceView.swift */,
 				F1000049 /* WeeklyReportView.swift */,
 				F1000350 /* MonthlyReportView.swift */,
 			);
@@ -1143,6 +1181,7 @@
 			isa = PBXGroup;
 			children = (
 				F1000026 /* MealPlanView.swift */,
+				F1000996 /* NutritionCareViews.swift */,
 				F1000948 /* CreateUserMealSheet.swift */,
 				F1000027 /* ShoppingListView.swift */,
 				F1000345 /* SupplementsLogView.swift */,
@@ -1235,6 +1274,7 @@
 				F1000922 /* DuoTeamFirestoreService.swift */,
 				F1000961 /* KiteSpotBuddyFirestoreService.swift */,
 				F1000971 /* CoachFirestoreService.swift */,
+				F1000B03 /* ProfessionalReviewFirestoreService.swift */,
 				F1000932 /* ProfilePhotoStorageService.swift */,
 				F1000934 /* MarcoCivilAccessLogService.swift */,
 				F1000936 /* PushNotificationService.swift */,
@@ -1340,6 +1380,8 @@
 				F1000974 /* CoachSetupAndSearchViews.swift */,
 				F1000977 /* CoachStudentSearchView.swift */,
 				F1000975 /* CoachLinkDetailViews.swift */,
+				F1000999 /* CoachScheduleViews.swift */,
+				F1000B06 /* CoachProfessionalReviewViews.swift */,
 				F1000A02 /* CoachMuscleFatMapView.swift */,
 			);
 			path = Coach;
@@ -1784,6 +1826,20 @@
 				B100034C /* WorkoutCalendarService.swift in Sources */,
 				B1000044 /* WeeklyProgressModels.swift in Sources */,
 				B1000045 /* WeeklyProgressAnalyzer.swift in Sources */,
+				B1000992 /* StrengthPerformanceAnalyzer.swift in Sources */,
+				B1000993 /* StrengthPerformanceView.swift in Sources */,
+				B1000994 /* NutritionCareModels.swift in Sources */,
+				B1000995 /* NutritionCareStore.swift in Sources */,
+				B1000996 /* NutritionCareViews.swift in Sources */,
+				B1000997 /* ConsultationModels.swift in Sources */,
+				B1000998 /* ConsultationCalendarService.swift in Sources */,
+				B1000999 /* CoachScheduleViews.swift in Sources */,
+				B1000B01 /* ProfessionalReviewModels.swift in Sources */,
+				B1000B02 /* ProfessionalReviewEngine.swift in Sources */,
+				B1000B03 /* ProfessionalReviewFirestoreService.swift in Sources */,
+				B1000B04 /* ConsultationAttendanceAnalyzer.swift in Sources */,
+				B1000B05 /* ConsultationReportPDFBuilder.swift in Sources */,
+				B1000B06 /* CoachProfessionalReviewViews.swift in Sources */,
 				B1000046 /* WeeklyReportService.swift in Sources */,
 				B1000330 /* WorkoutShareCardStore.swift in Sources */,
 				B1000340 /* GuidedWorkoutCatalog.swift in Sources */,

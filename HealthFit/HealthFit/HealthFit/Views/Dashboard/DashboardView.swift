@@ -60,6 +60,7 @@ struct DashboardView: View {
                     metricsRow
                     if showHealthCharts {
                         HealthChartsView()
+                        StrengthPerformanceView()
                     } else {
                         Color.clear.frame(height: 280)
                     }

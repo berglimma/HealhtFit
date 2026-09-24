@@ -1,13 +1,13 @@
 # HealthFit
 
-Aplicativo iOS + watchOS de saúde e fitness desenvolvido em **Swift** e **SwiftUI**. O HealthFit integra treinos de musculação, cardio (corrida, bike, surf, kite, escalada e outras modalidades), meditação, nutrição personalizada, IAssistente, **treino em dupla/equipe** (convites, chat e ranking), métricas do Apple Health, sincronização com Apple Watch, assinaturas App Store, relatórios de progresso e ícone dinâmico por inatividade. Idade mínima de uso: **16 anos**.
+Aplicativo iOS + watchOS de saúde e fitness desenvolvido em **Swift** e **SwiftUI**. O HealthFit integra treinos de musculação, cardio (corrida, bike, surf, kite, escalada e outras modalidades), meditação, nutrição personalizada, IAssistente, **Coach / profissionais** (personal e nutricionista), agenda de consultas, **treino em dupla/equipe**, métricas do Apple Health, sincronização com Apple Watch, assinaturas App Store, relatórios de progresso e ícone dinâmico por inatividade. Idade mínima de uso: **16 anos**.
 
 | Plataforma | Versão mínima | Bundle ID |
 |------------|---------------|-----------|
 | iOS        | 17.0          | `luan.com.healthfit.app` |
 | watchOS    | 10.0          | `luan.com.healthfit.app.watchkitapp` |
 
-**Versão:** 1.0.0  
+**Versão:** 1.0.11  
 **Linguagem:** Swift 5  
 **UI:** SwiftUI (tema escuro por padrão)  
 **Desenvolvimento:** BERG / LUAN
@@ -21,6 +21,7 @@ Aplicativo iOS + watchOS de saúde e fitness desenvolvido em **Swift** e **Swift
 - [Arquitetura](#arquitetura)
 - [Estrutura do projeto](#estrutura-do-projeto)
 - [Módulos e funcionalidades](#módulos-e-funcionalidades)
+- [Coach e profissionais](#coach-e-profissionais)
 - [Ícone dinâmico do app](#ícone-dinâmico-do-app)
 - [Sincronização com Apple Watch](#sincronização-com-apple-watch)
 - [Persistência de dados](#persistência-de-dados)
@@ -105,10 +106,10 @@ O projeto segue uma organização **MVVM simplificada** com serviços singleton 
 ┌─────────────────────────▼───────────────────────────────┐
 │                        Services                          │
 │  WorkoutStore · AuthService · HealthKitManager            │
-│  DuoTeamService · DuoNavigationRouter · SubscriptionService │
+│  CoachService · DuoTeamService · SubscriptionService      │
 │  WatchConnectivityManager · WeeklyReportService           │
-│  HealthAssistantService · AppIconInactivityService        │
-│  DailyWellnessService · MarcoCivilAccessLogService        │
+│  HealthAssistantService · ProfessionalReviewEngine        │
+│  DailyWellnessService · NutritionCareStore                │
 └─────────────────────────┬───────────────────────────────┘
                           │
 ┌─────────────────────────▼───────────────────────────────┐
@@ -121,6 +122,7 @@ O projeto segue uma organização **MVVM simplificada** com serviços singleton 
 - `@MainActor` nos serviços observáveis
 - Estado compartilhado via `ObservableObject` + `@Published`
 - Análise de relatório semanal desacoplada em `WeeklyProgressAnalyzer` (funções estáticas puras)
+- Revisão profissional cruzada em `ProfessionalReviewEngine` (indicadores para o coach, não diagnóstico)
 - Protocolo de mensagens Watch baseado em dicionários com chave `"action"`
 - Assistente de saúde baseado em base de conhecimento local (`HealthAssistantService`)
 
@@ -164,27 +166,36 @@ HealhtFit/
 | `DailyWellnessModels.swift` | Sono, hidratação, metas por peso |
 | `UserProfile.swift` | Perfil, biotipo, objetivo fitness, personal trainer |
 | `MealModels.swift` | Plano alimentar semanal e lista de compras |
+| `ConsultationModels.swift` | Agenda, disponibilidade e status de consultas |
+| `NutritionCareModels.swift` | Anamnese, questionários, metas e check-ins do nutri |
+| `ProfessionalReviewModels.swift` | Snapshot IAssistente + foto nutricional do dia |
 
 ### Services (`HealthFit/Services/`)
 
 | Serviço | Função |
 |---------|--------|
 | `WorkoutStore` | CRUD de fichas, sessões ativas, histórico |
-| `AuthService` | Login/registro local, perfil do usuário |
+| `AuthService` | Login/registro, perfil do usuário (Firebase) |
+| `CoachService` | Vínculos aluno↔profissional, prescrição, agenda |
 | `HealthKitManager` | Autorização, métricas diárias, salvamento de treinos |
 | `WatchConnectivityManager` | Bridge iPhone ↔ Watch (BPM, calorias, progresso) |
 | `WeeklyReportService` | Disponibilidade do relatório (ciclo de 7 dias) |
 | `WeeklyProgressAnalyzer` | Score, tendências, meditação e sugestões |
+| `ProfessionalReviewEngine` | Cruza nutrição, sono, treino, peso, medidas e metas |
+| `ProfessionalReviewFirestoreService` | Publica revisão e fotos do dia (view-once) |
+| `ConsultationAttendanceAnalyzer` | Agregados de atendimento (30 dias) |
+| `ConsultationReportPDFBuilder` | Export PDF do relatório de consultas |
+| `NutritionCareStore` | Bundle de cuidados nutricionais por vínculo |
 | `HealthAssistantService` | Chat de dúvidas (dieta, treinos, IMC, biotipos, sono) |
 | `WelcomeMotivationService` | Mensagens da tela pós-login por inatividade |
 | `AppIconInactivityService` | Ícone alternativo verde/amarelo/vermelho/quebrado + pulso |
 | `MarathonReportBuilder` | Relatório de performance para maratona |
 | `WorkoutReportBuilder` | Relatório de treino/cardio para e-mail |
-| `DailyWellnessService` | Check-in de sono e consumo de água |
-| `MealPlanService` | Geração e persistência do plano alimentar |
+| `DailyWellnessService` | Check-in de sono, água e sync Apple Health |
+| `MealPlanService` | Geração, cardápio prescrito e persistência |
 | `VisionWorkoutService` | Câmera + Vision para contagem de reps |
 | `RestTimerService` | Timer de descanso entre séries |
-| `NotificationService` | Notificações locais e lembretes de inatividade |
+| `NotificationService` | Lembretes de treino, consultas e inatividade |
 | `MotivationMessages` | Textos motivacionais (treino, ícone, superação calórica) |
 
 ### Views (`HealthFit/Views/`)
@@ -192,9 +203,10 @@ HealhtFit/
 | Pasta | Telas principais |
 |-------|------------------|
 | `Auth/` | Login, registro |
-| `Dashboard/` | Dashboard, gráficos HealthKit, relatório semanal |
+| `Dashboard/` | Dashboard, gráficos HealthKit, relatório semanal, força |
 | `Workout/` | Musculação, cardio, meditação, resumo, corrida por distância |
-| `Nutrition/` | Plano alimentar, lista de compras |
+| `Nutrition/` | Plano alimentar, lista de compras, cuidados nutricionais, foto do dia |
+| `Coach/` | Hub, vínculos, agenda estilo calendário, revisão IAssistente, relatório |
 | `Assistant/` | Chat de dúvidas com indicador de digitação |
 | `Profile/` | Perfil, sono, hidratação, estado do ícone do app |
 | `Camera/` | Treino com visão computacional |
@@ -275,7 +287,10 @@ HealhtFit/
 ### Nutrição
 
 - Plano alimentar semanal gerado com base no perfil (biotipo + objetivo)
+- Cardápio prescrito pelo nutricionista (destaque visual distinto no app)
 - Lista de compras derivada do plano
+- Análise fotográfica de refeições e cuidados nutricionais (anamnese, questionários, metas)
+- Foto nutricional do dia: aluno envia; nutricionista visualiza **apenas no dia**; após abrir, a foto é apagada
 
 ### Conta, legal e conformidade
 
@@ -295,6 +310,57 @@ HealhtFit/
 - Modos visuais distintos: verde (musculação), laranja (cardio), roxo (meditação)
 - BPM e calorias do relógio retornam ao iPhone durante cardio/musculação
 - Cardio com meta calórica: progresso e alerta de superação no relógio
+
+---
+
+## Coach e profissionais
+
+Vínculos Firebase entre aluno e **personal trainer** e/ou **nutricionista**, com regras de prescrição por profissão.
+
+### Papéis e prescrição
+
+| Profissão | Pode enviar |
+|-----------|-------------|
+| Personal | Fichas de musculação |
+| Nutricionista | Cardápio / plano alimentar |
+| Ambos (vínculos ativos) | Cada um no seu escopo; aluno existente pode ativar nutrição + cardápio |
+
+### Agenda de consultas
+
+- Calendário estilo iPhone (ano / mês / semana / dia), slots 07h–20h
+- Confirmação, lembretes, remarcação e cancelamento com notificação ao outro lado
+- Agenda unificada aluno ↔ profissional (cores HealthFit)
+- Sync de hidratação / recomendações via wellness em nuvem
+
+### Revisão IAssistente (para o profissional)
+
+Indicadores cruzados a partir de nutrição, Apple Health (sono), treinos, peso, medidas e **metas do profissional** (quando houver). **Não constitui diagnóstico.**
+
+Exemplo de resumo:
+
+- Adesão alimentar: xx%
+- Proteína média / meta: xx g/dia
+- Sono médio: xh xxmin
+- Treinos realizados: x/7
+- Peso: ±x kg em 30 dias
+- Circunferência abdominal: ±x,x cm
+- Seção **Pontos que merecem revisão pelo profissional**
+
+O aluno publica o snapshot ao abrir o app (`publishProfessionalReviewSnapshotsIfStudent`).
+
+### Relatório de atendimento
+
+- Gráficos de volume (Charts) nos últimos 30 dias
+- Exportação de PDF (`ConsultationReportPDFBuilder`) a partir da agenda do profissional
+
+### Firebase (coleções relevantes)
+
+| Caminho | Uso |
+|---------|-----|
+| `coachLinks/{linkId}` | Vínculo e membros |
+| `coachLinks/{linkId}/professionalReview/current` | Snapshot da revisão |
+| `coachLinks/{linkId}/dailyMealPhotos/{id}` | Foto do dia (apagada após visualização) |
+| Storage `coachLinks/.../dailyMealPhotos/` | JPEG da refeição |
 
 ---
 
@@ -501,10 +567,11 @@ python3 generate_report.py
 
 | Área | Situação atual |
 |------|----------------|
-| Autenticação | Local/simulada — sem API, JWT ou Keychain |
+| Autenticação | Firebase Auth + perfil em Firestore |
 | Assistente de dúvidas | Base de conhecimento local — não é LLM externo |
-| Sincronização de dados | Apenas entre iPhone e Watch durante sessão ativa |
-| Backup | Dados em UserDefaults — não há sync iCloud |
+| Revisão profissional | Indicadores de apoio; não substitui avaliação clínica |
+| Sincronização de dados | Firebase (vínculos, cardápio, wellness) + Watch na sessão |
+| Backup | Cache local + nuvem parcial; sem sync iCloud completo |
 | Ícone animado | Pulsação via alternância de frames estáticos (limitação do iOS) |
 | Testes automatizados | Sem target de unit/UI tests no projeto |
 | Internacionalização | pt-BR, en, es, fr (App Store + catálogo de strings) |

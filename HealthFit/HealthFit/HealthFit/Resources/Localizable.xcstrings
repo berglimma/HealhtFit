@@ -138,6 +138,16 @@
         }
       }
     },
+    "%@ · %lld/%lld" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld/%3$lld"
+          }
+        }
+      }
+    },
     "%@ · 24h" : {
 
     },
@@ -218,6 +228,9 @@
 
     },
     "%@ em tela cheia" : {
+
+    },
+    "%@ kg" : {
 
     },
     "%@ pediu ajuda" : {
@@ -547,6 +560,9 @@
         }
       }
     },
+    "%lld%% preenchida" : {
+
+    },
     "%lld°" : {
 
     },
@@ -664,6 +680,28 @@
     "1) Abra Spot Buddy no Watch · 2) Gire a Digital Crown até o fim ou toque SOS · 3) Amigos Duo no Spot (≤2 km) recebem o alerta · 4) “Estou bem” cancela." : {
 
     },
+    "1RM" : {
+
+    },
+    "1RM estimado" : {
+
+    },
+    "1RM estimado: %@ kg" : {
+
+    },
+    "1RM estimado: %@ kg em %@. Continue treinando para ver a evolução." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "1RM estimado: %1$@ kg em %2$@. Continue treinando para ver a evolução."
+          }
+        }
+      }
+    },
+    "1RM projetado ao longo do tempo" : {
+
+    },
     "2. Modo de velejo" : {
 
     },
@@ -710,8 +748,15 @@
     "A ~%lld m de você" : {
 
     },
-    "A assinatura renova automaticamente até cancelar. Gerencie em Ajustes → Apple ID." : {
-
+    "A consulta de %@ será cancelada e %@ será notificado." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A consulta de %1$@ será cancelada e %2$@ será notificado."
+          }
+        }
+      }
     },
     "A demonstração fica em loop. O cronômetro só começa quando você toca em Começar exercício." : {
 
@@ -735,6 +780,9 @@
 
     },
     "A mídia recebe duração, kcal e outros dados da sessão com a marca HealthFit. Opcional — não impede fechar o treino." : {
+
+    },
+    "A nutricionista vê a foto só hoje. Depois de abrir, ela é apagada automaticamente." : {
 
     },
     "A partir do %@" : {
@@ -785,6 +833,12 @@
     "Ações" : {
 
     },
+    "Acompanhamento" : {
+
+    },
+    "Acompanhar" : {
+
+    },
     "Acompanhar ciclo menstrual" : {
 
     },
@@ -795,6 +849,32 @@
 
     },
     "Acompanhe livremente — encerre quando quiser." : {
+
+    },
+    "Acompanhe suas cargas" : {
+
+    },
+    "Adesão %lld · Fome %lld · Energia %lld" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adesão %1$lld · Fome %2$lld · Energia %3$lld"
+          }
+        }
+      }
+    },
+    "Adesão %lld/5 · Fome %lld/5 · Energia %lld/5" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adesão %1$lld/5 · Fome %2$lld/5 · Energia %3$lld/5"
+          }
+        }
+      }
+    },
+    "Adesão ao cardápio: %lld/5" : {
 
     },
     "Adicionar" : {
@@ -842,6 +922,30 @@
     "Adicione exercícios do catálogo, crie um personalizado ou use os grupos acima." : {
 
     },
+    "Agenda de consultas" : {
+
+    },
+    "Agenda de consultas (nutrição)" : {
+
+    },
+    "Agendamentos" : {
+
+    },
+    "Agendamentos recentes" : {
+
+    },
+    "Agendar" : {
+
+    },
+    "Agendar consulta" : {
+
+    },
+    "Agendar consulta com personal" : {
+
+    },
+    "Agendar consulta nutricional" : {
+
+    },
     "Agora não" : {
 
     },
@@ -876,6 +980,12 @@
     "Ainda não há posts nas suas comunidades ativas." : {
 
     },
+    "Ainda sem check-ins do aluno." : {
+
+    },
+    "Ainda sem resumo do aluno. Peça para abrir o app (o IAssistente publica automaticamente)." : {
+
+    },
     "Ajuda" : {
 
     },
@@ -900,6 +1010,9 @@
     "Alerta OMS" : {
 
     },
+    "Alimentação" : {
+
+    },
     "Alimentos" : {
 
     },
@@ -919,6 +1032,9 @@
 
     },
     "Aluno" : {
+
+    },
+    "Aluno / paciente" : {
 
     },
     "Aluno treina com o app. Personal e nutricionista usam como profissionais — dá para marcar os dois." : {
@@ -945,6 +1061,18 @@
     "Análise de saltos (Surf)" : {
 
     },
+    "Anamnese" : {
+
+    },
+    "Anamnese completa" : {
+
+    },
+    "Anamnese do aluno" : {
+
+    },
+    "Anamnese, questionários e metas" : {
+
+    },
     "Antes × Depois" : {
 
     },
@@ -952,6 +1080,12 @@
 
     },
     "Anual com %lld%% de desconto" : {
+
+    },
+    "Ao concluir treinos com o peso registrado em cada exercício, você verá aqui o 1RM estimado e o volume semanal por parte do corpo." : {
+
+    },
+    "Ao fechar, esta foto será apagada." : {
 
     },
     "Ao salvar, a ficha é atualizada no app do aluno." : {
@@ -1022,12 +1156,12 @@
         }
       }
     },
-    "Assinar %@ %@" : {
+    "Assinar %@ %@ — %@" : {
       "localizations" : {
         "pt-BR" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Assinar %1$@ %2$@"
+            "value" : "Assinar %1$@ %2$@ — %3$@"
           }
         }
       }
@@ -1039,9 +1173,6 @@
 
     },
     "Assinaturas" : {
-
-    },
-    "Assinaturas renovam automaticamente até cancelar em Ajustes → Apple ID." : {
 
     },
     "Assine o Básico (R$ 9,90) para continuar" : {
@@ -1065,6 +1196,9 @@
     "Atenção ao consumo de doces" : {
 
     },
+    "Atendimentos por dia da semana" : {
+
+    },
     "Atingida" : {
 
     },
@@ -1072,6 +1206,12 @@
 
     },
     "Ativado" : {
+
+    },
+    "Ativando nutrição…" : {
+
+    },
+    "Ativar função nutricionista + cardápio" : {
 
     },
     "Ativar nesta sessão" : {
@@ -2256,9 +2396,6 @@
     "Cadastrar" : {
 
     },
-    "Cadastre alunos, envie fichas e cardápios, e converse no chat." : {
-
-    },
     "Cadastre nome e e-mail do nutricionista no Perfil para enviar o relatório desta aba. O envio exige o app Mail configurado neste %@ (%@)." : {
       "localizations" : {
         "pt-BR" : {
@@ -2347,6 +2484,9 @@
     "Caminhada livre — encerre quando quiser · Ritmo ref. %@" : {
 
     },
+    "Canceladas" : {
+
+    },
     "Cancelar" : {
 
     },
@@ -2380,6 +2520,9 @@
     "Carregando denúncias…" : {
 
     },
+    "Carregando foto…" : {
+
+    },
     "Carregando histórico…" : {
 
     },
@@ -2387,6 +2530,9 @@
 
     },
     "Carregando preview…" : {
+
+    },
+    "Carregando resumo…" : {
 
     },
     "Carregando seu perfil…" : {
@@ -2416,7 +2562,16 @@
     "Chat liberado com vínculo ativo e plano Fit+ do aluno." : {
 
     },
+    "Check-in" : {
+
+    },
     "Check-in da manhã" : {
+
+    },
+    "Check-in nutricional" : {
+
+    },
+    "Check-ins recentes" : {
 
     },
     "Cidade" : {
@@ -2453,9 +2608,6 @@
 
     },
     "Com o setor definido, eu busco chuva, vento e risco de raios durante a sessão." : {
-
-    },
-    "Com plano Fit ou superior, receba fichas do personal, dietas e chat 1:1. Cardio continua livre." : {
 
     },
     "Começar" : {
@@ -2797,6 +2949,9 @@
     "Concluídas" : {
 
     },
+    "Concluir" : {
+
+    },
     "Concluir Exercício" : {
 
     },
@@ -2836,6 +2991,9 @@
     "Confirmação" : {
 
     },
+    "Confirmadas" : {
+
+    },
     "Confirmar encerramento" : {
 
     },
@@ -2849,6 +3007,9 @@
 
     },
     "Confirme sua senha" : {
+
+    },
+    "Consultas" : {
 
     },
     "Consumo dentro do limite diário recomendado." : {
@@ -2961,6 +3122,9 @@
     "Criar ficha personalizada" : {
 
     },
+    "Criar meta para o paciente" : {
+
+    },
     "Criar método rápido" : {
 
     },
@@ -2971,6 +3135,9 @@
 
     },
     "Criar story" : {
+
+    },
+    "Crie metas (ex.: reduzir açúcar, beber 3 L de água). Com nutricionista, sincronize para acompanhamento." : {
 
     },
     "Crie um card com foto ou vídeo para aparecer no feed do Pulse (24h)." : {
@@ -3027,6 +3194,9 @@
     "Data" : {
 
     },
+    "Data alvo" : {
+
+    },
     "Data de nascimento" : {
 
     },
@@ -3049,6 +3219,9 @@
 
     },
     "Déficit: −%lld kcal" : {
+
+    },
+    "Defina quando você atende. Alunos e o IAssistente usam isso para sugerir horários livres." : {
 
     },
     "Defina quantas calorias pretende gastar. Ao atingir a meta o treino continua — ele só encerra quando você tocar em Finalizar." : {
@@ -3111,6 +3284,9 @@
     "Deseja salvar este PDF de medidas em Arquivos (ou compartilhar)? O arquivo fica só no seu dispositivo se você escolher Arquivos." : {
 
     },
+    "Desempenho" : {
+
+    },
     "Desempenho Semanal" : {
 
     },
@@ -3153,6 +3329,9 @@
     "Dia" : {
 
     },
+    "dia inteiro" : {
+
+    },
     "Diário da bike" : {
 
     },
@@ -3172,6 +3351,9 @@
 
     },
     "Difícil" : {
+
+    },
+    "Digestão e hábitos" : {
 
     },
     "Digite — aparece na foto na hora" : {
@@ -3278,6 +3460,9 @@
     "Duração (minutos)" : {
 
     },
+    "Duração da consulta" : {
+
+    },
     "Duração do ciclo: %lld dias" : {
 
     },
@@ -3290,7 +3475,13 @@
     "Duração sugerida" : {
 
     },
+    "Duração: %lld min · toque num horário livre (07:00–20:00)" : {
+
+    },
     "É doce / sobremesa" : {
+
+    },
+    "e mais %lld" : {
 
     },
     "É necessário ter %lld anos ou mais para usar o HealthFit" : {
@@ -3392,6 +3583,9 @@
     "Energéticos por semana" : {
 
     },
+    "Energia: %lld/5" : {
+
+    },
     "Entendi" : {
 
     },
@@ -3416,6 +3610,9 @@
     "Enviar comentário" : {
 
     },
+    "Enviar foto da refeição (só hoje)" : {
+
+    },
     "Enviar interesse" : {
 
     },
@@ -3423,6 +3620,9 @@
 
     },
     "Enviar mensagem motivacional" : {
+
+    },
+    "Enviar para nutricionista" : {
 
     },
     "Enviar pedido de ajuda" : {
@@ -3510,6 +3710,12 @@
     "Escolha WhatsApp ou Instagram na tela de compartilhar. O nome HealthFit já vai no card." : {
 
     },
+    "Escolher foto" : {
+
+    },
+    "Escolher horário manualmente" : {
+
+    },
     "Escolher no mapa de áreas" : {
 
     },
@@ -3517,6 +3723,9 @@
 
     },
     "Escolher outro" : {
+
+    },
+    "Escopo" : {
 
     },
     "Escreva sua reclamação, sugestão, melhoria ou dúvida…" : {
@@ -3576,6 +3785,9 @@
     "Estou bem — cancelar ajuda" : {
 
     },
+    "Estresse: %lld/10" : {
+
+    },
     "Etapa %lld de %lld" : {
       "localizations" : {
         "pt-BR" : {
@@ -3622,6 +3834,9 @@
     "Ex.: ABC123" : {
 
     },
+    "Ex.: Almoço, Jantar…" : {
+
+    },
     "Ex.: buraco profundo na direita" : {
 
     },
@@ -3635,6 +3850,9 @@
 
     },
     "Excluir “%@”? Você pode manter as fichas (sem o nome do método) ou removê-las também deste aluno." : {
+
+    },
+    "Excluir agendamento?" : {
 
     },
     "Excluir cadastro" : {
@@ -3697,6 +3915,9 @@
     "Exercícios (%lld)" : {
 
     },
+    "Exportar" : {
+
+    },
     "Exportar avaliação em PDF" : {
 
     },
@@ -3704,6 +3925,9 @@
 
     },
     "Exportar PDF Surf / Kite" : {
+
+    },
+    "Exportar relatório PDF" : {
 
     },
     "Extremos estimados" : {
@@ -3725,6 +3949,9 @@
 
     },
     "Fechar" : {
+
+    },
+    "Fechar e apagar" : {
 
     },
     "Fechar teclado" : {
@@ -3796,16 +4023,31 @@
     "Flyover 3D do percurso" : {
 
     },
+    "Folga" : {
+
+    },
+    "Fome: %lld/5" : {
+
+    },
     "Fonte atual" : {
 
     },
+    "Fontes cruzadas" : {
+
+    },
     "Formato" : {
+
+    },
+    "Foto" : {
 
     },
     "Foto da refeição" : {
 
     },
     "Foto de fundo" : {
+
+    },
+    "Foto do dia" : {
 
     },
     "Foto do perfil" : {
@@ -3929,6 +4171,9 @@
     "Gravar vídeo" : {
 
     },
+    "Grupo" : {
+
+    },
     "Grupo muscular" : {
 
     },
@@ -3968,6 +4213,9 @@
     "Histórico recente" : {
 
     },
+    "Hoje" : {
+
+    },
     "Hoje é dia de descanso" : {
 
     },
@@ -3978,6 +4226,12 @@
 
     },
     "Horário da atualização: %@" : {
+
+    },
+    "Horários" : {
+
+    },
+    "Horários por dia" : {
 
     },
     "Horas" : {
@@ -4030,6 +4284,12 @@
 
     },
     "Incluso no seu plano" : {
+
+    },
+    "Indicadores" : {
+
+    },
+    "Indicadores gerados pelo IAssistente a partir de nutrição, sono, treino, peso, medidas e metas do profissional. Não constitui diagnóstico." : {
 
     },
     "Indicadores na sessão" : {
@@ -4108,6 +4368,9 @@
 
     },
     "Integrações" : {
+
+    },
+    "Inteligente (horários livres)" : {
 
     },
     "Intensidade" : {
@@ -4197,6 +4460,12 @@
     "Legal" : {
 
     },
+    "Lembretes automáticos: 24h, 1h e 15 min antes" : {
+
+    },
+    "Lembretes: 24h · 1h · 15 min antes" : {
+
+    },
     "Lendo a ficha…" : {
 
     },
@@ -4216,6 +4485,9 @@
 
     },
     "Limites" : {
+
+    },
+    "Limpar" : {
 
     },
     "Limpar busca" : {
@@ -4286,6 +4558,9 @@
 
     },
     "Mais registrados" : {
+
+    },
+    "Manter" : {
 
     },
     "Manutenção" : {
@@ -4431,6 +4706,15 @@
     "Mensagem na comunidade…" : {
 
     },
+    "Mesmo calendário do aluno · sincronizado em tempo real" : {
+
+    },
+    "Mesmo conteúdo da aba Nutrição → Acompanhar do aluno. Preencha anamnese, questionários e metas; publique para sincronizar." : {
+
+    },
+    "Meta" : {
+
+    },
     "Meta %@ km" : {
 
     },
@@ -4495,6 +4779,15 @@
     "Metabolismo Basal" : {
 
     },
+    "Metas do profissional" : {
+
+    },
+    "Metas e objetivos" : {
+
+    },
+    "Metas prescritas" : {
+
+    },
     "Método" : {
 
     },
@@ -4511,6 +4804,9 @@
 
     },
     "Meu plano" : {
+
+    },
+    "Minha agenda" : {
 
     },
     "Minhas refeições" : {
@@ -4547,6 +4843,9 @@
 
     },
     "Modo ativo para: %@. Outras modalidades ficam individuais (sem card/ranking de grupo)." : {
+
+    },
+    "Modo de agendamento" : {
 
     },
     "Modo de preparo (opcional)" : {
@@ -4648,6 +4947,9 @@
     "Nenhum aluno encontrado com este termo." : {
 
     },
+    "Nenhum aluno vinculado" : {
+
+    },
     "Nenhum amigo com Spot Buddy ativo por perto (até 2 km). Convide a equipe Duo com modalidade kitesurf." : {
 
     },
@@ -4706,6 +5008,9 @@
 
     },
     "Nenhuma equipe ainda" : {
+
+    },
+    "Nenhuma foto nutricional pendente hoje. Após visualizada, a foto é apagada." : {
 
     },
     "Nenhuma foto selecionada" : {
@@ -4840,10 +5145,16 @@
     "Notificações de suplementos" : {
 
     },
+    "Nova consulta" : {
+
+    },
     "Nova dupla / equipe" : {
 
     },
     "Nova Ficha" : {
+
+    },
+    "Nova meta" : {
 
     },
     "NOVO" : {
@@ -4864,7 +5175,13 @@
     "Novo texto" : {
 
     },
+    "Nutri" : {
+
+    },
     "Nutrição" : {
+
+    },
+    "Nutrição fotográfica do dia" : {
 
     },
     "Nutricionista" : {
@@ -5065,6 +5382,15 @@
 
     },
     "O método fica disponível para outras fichas deste personal." : {
+
+    },
+    "O nutricionista visualiza apenas no dia. Depois de abrir, a foto é excluída." : {
+
+    },
+    "O pagamento será cobrado na Conta Apple ao confirmar a compra. A assinatura renova automaticamente, a menos que a renovação automática seja desativada pelo menos 24 horas antes do fim do período vigente. A Conta Apple será cobrada pela renovação nas 24 horas anteriores ao fim do período. Você pode gerenciar e cancelar em Ajustes → [seu nome] → Assinaturas." : {
+
+    },
+    "O pagamento será cobrado na Conta Apple ao confirmar a compra. A assinatura renova automaticamente, a menos que a renovação automática seja desativada pelo menos 24 horas antes do fim do período vigente. Gerencie ou cancele em Ajustes → [seu nome] → Assinaturas." : {
 
     },
     "O personal define a meta em ml. Sem override, o app usa 35 ml por kg de peso." : {
@@ -5294,7 +5620,13 @@
     "Performance Surf" : {
 
     },
+    "Perguntas" : {
+
+    },
     "Perigo na pista" : {
+
+    },
+    "Período" : {
 
     },
     "Personal" : {
@@ -5380,10 +5712,10 @@
     "Plano para %@" : {
 
     },
-    "Política de Privacidade" : {
+    "pontos" : {
 
     },
-    "pontos" : {
+    "Pontos que merecem revisão pelo profissional" : {
 
     },
     "Pontuação %lld" : {
@@ -5396,6 +5728,9 @@
 
     },
     "Por segurança o HealthFit não usa localização em tempo real." : {
+
+    },
+    "Por semana, com o volume de cada série atribuído à parte do corpo do exercício" : {
 
     },
     "Porção consumida" : {
@@ -5428,6 +5763,9 @@
     "Prancha: %@" : {
 
     },
+    "Prazo" : {
+
+    },
     "Pré-treino" : {
 
     },
@@ -5444,6 +5782,9 @@
 
     },
     "Preencha peso ou ao menos uma circunferência para exportar a avaliação em PDF." : {
+
+    },
+    "Preencha questionários e metas. Ao vincular um nutricionista, você pode sincronizar." : {
 
     },
     "Preparando card..." : {
@@ -5464,6 +5805,12 @@
     "Prescrever ficha" : {
 
     },
+    "Prescrever meta" : {
+
+    },
+    "Prescrita pelo nutri" : {
+
+    },
     "Prescrito por %@ · sincronizado via HealthFit Coach" : {
 
     },
@@ -5476,7 +5823,13 @@
     "Primeiro dia da última menstruação" : {
 
     },
+    "Primeiro registro de carga" : {
+
+    },
     "Prioridade de batimentos no treino: Apple Watch → Bluetooth → Apple Saúde." : {
+
+    },
+    "Privacy Policy" : {
 
     },
     "Problema" : {
@@ -6053,6 +6406,12 @@
 
     },
     "Próximas horas" : {
+
+    },
+    "Publicando…" : {
+
+    },
+    "Publicar acompanhamento no vínculo" : {
 
     },
     "Publique algo esta semana para aparecer aqui." : {
@@ -10446,6 +10805,18 @@
     "Quedas: %lld" : {
 
     },
+    "Queixa e histórico" : {
+
+    },
+    "Questionários" : {
+
+    },
+    "Questionários de saúde" : {
+
+    },
+    "Questionários, anamnese e metas sincronizam com seu nutricionista." : {
+
+    },
     "Rajadas" : {
 
     },
@@ -10552,6 +10923,9 @@
     "Relatório de compras da semana" : {
 
     },
+    "Relatório de consultas" : {
+
+    },
     "Relatório e ranking da equipe" : {
 
     },
@@ -10568,6 +10942,9 @@
 
     },
     "Relatório Semanal" : {
+
+    },
+    "Remarcar" : {
 
     },
     "Remo ao vivo" : {
@@ -10655,6 +11032,9 @@
     "Responder depois" : {
 
     },
+    "Resposta" : {
+
+    },
     "Respostas desta semana" : {
 
     },
@@ -10695,6 +11075,9 @@
 
     },
     "Retomar treino em andamento" : {
+
+    },
+    "Revisão IAssistente" : {
 
     },
     "Revise os nomes e volumes antes de salvar. Você poderá editar depois em Personalizados." : {
@@ -10862,6 +11245,9 @@
     "Selecionada · toque no círculo para marcar como concluída" : {
 
     },
+    "Selecionado" : {
+
+    },
     "Selecionar região" : {
 
     },
@@ -10875,6 +11261,9 @@
 
     },
     "Sem Apple Watch · 0 kcal" : {
+
+    },
+    "Sem cargas registradas neste exercício no período." : {
 
     },
     "Sem dados para o PDF" : {
@@ -10917,6 +11306,9 @@
 
     },
     "Sem tentativas registradas." : {
+
+    },
+    "Sem volume de carga no período. Registre o peso nos exercícios ao treinar." : {
 
     },
     "Semana" : {
@@ -11068,7 +11460,19 @@
     "Sincronização ativa" : {
 
     },
+    "Sincronizada" : {
+
+    },
+    "Sincronizando…" : {
+
+    },
     "Sincronizar Apple Watch" : {
+
+    },
+    "Sincronizar com Calendário do iPhone" : {
+
+    },
+    "Sincronizar com nutricionista" : {
 
     },
     "Sincronizar partida com GPS (mapa)" : {
@@ -11134,6 +11538,9 @@
     "Sono e Hidratação" : {
 
     },
+    "Sono, estresse e ciclo" : {
+
+    },
     "SOS" : {
 
     },
@@ -11171,6 +11578,9 @@
 
     },
     "Sua carga" : {
+
+    },
+    "Sua meta" : {
 
     },
     "Sugerido pelo IAssistente" : {
@@ -11428,6 +11838,9 @@
     "Tamanho da piscina" : {
 
     },
+    "Taxa de conclusão" : {
+
+    },
     "TDEE: %lld kcal" : {
 
     },
@@ -11570,6 +11983,9 @@
     "Toque no músculo ou no nome para inserir a medida (cm) e o % de gordura." : {
 
     },
+    "Toque num horário livre para remarcar · %@" : {
+
+    },
     "Toque para ativar ou desativar o radar de amigos no kitesurf" : {
 
     },
@@ -11700,6 +12116,9 @@
     "Último treino: %@" : {
 
     },
+    "Últimos 30 dias" : {
+
+    },
     "Últimos treinos" : {
 
     },
@@ -11791,6 +12210,12 @@
     "Vento: %@" : {
 
     },
+    "Ver / preencher anamnese (%lld%%)" : {
+
+    },
+    "Ver 1×" : {
+
+    },
     "Ver comparativo de %lld dia(s)" : {
 
     },
@@ -11842,6 +12267,9 @@
     "Vincular" : {
 
     },
+    "Vincule um aluno para agendar consultas. Os horários ficam sincronizados com o calendário do aluno." : {
+
+    },
     "Visível na busca regional" : {
 
     },
@@ -11879,6 +12307,12 @@
 
     },
     "voltas · %lld m" : {
+
+    },
+    "Volume" : {
+
+    },
+    "Volume diário" : {
 
     },
     "Volume semanal" : {

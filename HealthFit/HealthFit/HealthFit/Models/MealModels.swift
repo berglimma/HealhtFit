@@ -59,13 +59,22 @@ struct Meal: Identifiable, Codable, Hashable {
 
 enum MealType: String, CaseIterable, Codable, Identifiable, Hashable {
     case breakfast = "Café da Manhã"
-    case morningSnack = "Lanche"
+    case morningSnack = "Colação"
     case lunch = "Almoço"
     case afternoonSnack = "Lanche da Tarde"
     case dinner = "Jantar"
+    case fasting = "Jejum"
+    /// Mantido para planos antigos; novos cardápios usam `planSlots`.
     case supper = "Ceia"
 
     var id: String { rawValue }
+
+    /// Slots padrão do cardápio (inclui Jejum).
+    static var planSlots: [MealType] {
+        [.breakfast, .morningSnack, .lunch, .afternoonSnack, .dinner, .fasting]
+    }
+
+    var isFasting: Bool { self == .fasting }
 
     var icon: String {
         switch self {
@@ -74,6 +83,7 @@ enum MealType: String, CaseIterable, Codable, Identifiable, Hashable {
         case .lunch: return "sun.max.fill"
         case .afternoonSnack: return "leaf.fill"
         case .dinner: return "moon.stars.fill"
+        case .fasting: return "timer"
         case .supper: return "moon.zzz.fill"
         }
     }
@@ -81,10 +91,11 @@ enum MealType: String, CaseIterable, Codable, Identifiable, Hashable {
     var shortLabel: String {
         switch self {
         case .breakfast: return "Café"
-        case .morningSnack: return "Lanche"
+        case .morningSnack: return "Colação"
         case .lunch: return "Almoço"
         case .afternoonSnack: return "Lanche T."
         case .dinner: return "Janta"
+        case .fasting: return "Jejum"
         case .supper: return "Ceia"
         }
     }
@@ -92,11 +103,12 @@ enum MealType: String, CaseIterable, Codable, Identifiable, Hashable {
     /// Participação aproximada nas calorias diárias.
     var calorieShare: Double {
         switch self {
-        case .breakfast: return 0.20
+        case .breakfast: return 0.22
         case .morningSnack: return 0.10
-        case .lunch: return 0.30
-        case .afternoonSnack: return 0.10
-        case .dinner: return 0.22
+        case .lunch: return 0.32
+        case .afternoonSnack: return 0.12
+        case .dinner: return 0.24
+        case .fasting: return 0
         case .supper: return 0.08
         }
     }
@@ -105,15 +117,14 @@ enum MealType: String, CaseIterable, Codable, Identifiable, Hashable {
         let value = try decoder.singleValueContainer().decode(String.self)
         switch value {
         case MealType.breakfast.rawValue: self = .breakfast
-        case MealType.morningSnack.rawValue, "Lanche da Manhã": self = .morningSnack
+        case MealType.morningSnack.rawValue, "Lanche", "Lanche da Manhã": self = .morningSnack
         case MealType.lunch.rawValue: self = .lunch
         case MealType.afternoonSnack.rawValue: self = .afternoonSnack
-        case MealType.dinner.rawValue: self = .dinner
+        case MealType.dinner.rawValue, "Jantar": self = .dinner
+        case MealType.fasting.rawValue: self = .fasting
         case MealType.supper.rawValue: self = .supper
         default:
-            if value == "Lanche" { self = .morningSnack }
-            else if value == "Jantar" { self = .dinner }
-            else { self = .breakfast }
+            self = .breakfast
         }
     }
 }
@@ -259,6 +270,18 @@ struct MealTemplate: Identifiable, Codable, Hashable {
     }
 
     func scaled(to targetCalories: Int, proteinMultiplier: Int = 1) -> Meal {
+        if mealType.isFasting || calories == 0 {
+            return Meal(
+                name: name,
+                mealType: mealType,
+                calories: 0,
+                protein: 0,
+                carbs: 0,
+                fat: 0,
+                ingredients: ingredients,
+                instructions: instructions
+            )
+        }
         let factor = targetCalories > 0 ? Double(targetCalories) / Double(max(calories, 1)) : 1
         return Meal(
             name: name,

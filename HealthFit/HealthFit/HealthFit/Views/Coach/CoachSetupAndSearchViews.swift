@@ -184,6 +184,7 @@ struct CoachProfileSetupView: View {
 
 struct CoachInviteCreateView: View {
     @ObservedObject private var coach = CoachService.shared
+    @EnvironmentObject private var authService: AuthService
     @Environment(\.dismiss) private var dismiss
     @State private var profession: CoachProfession = .personal
     @State private var created: CoachInvite?
@@ -193,8 +194,17 @@ struct CoachInviteCreateView: View {
         Form {
             Section("Tipo de vínculo") {
                 Picker("Profissão", selection: $profession) {
-                    Text(CoachProfession.personal.title).tag(CoachProfession.personal)
-                    Text(CoachProfession.nutritionist.title).tag(CoachProfession.nutritionist)
+                    if authService.currentUser?.accountRole.isPersonalProfessional == true {
+                        Text(CoachProfession.personal.title).tag(CoachProfession.personal)
+                    }
+                    if authService.currentUser?.accountRole.isNutritionProfessional == true {
+                        Text(CoachProfession.nutritionist.title).tag(CoachProfession.nutritionist)
+                    }
+                    if authService.currentUser?.accountRole.isPersonalProfessional != true
+                        && authService.currentUser?.accountRole.isNutritionProfessional != true {
+                        Text(CoachProfession.personal.title).tag(CoachProfession.personal)
+                        Text(CoachProfession.nutritionist.title).tag(CoachProfession.nutritionist)
+                    }
                 }
                 .pickerStyle(.segmented)
             }
@@ -230,6 +240,14 @@ struct CoachInviteCreateView: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Fechar") { dismiss() }
+            }
+        }
+        .onAppear {
+            let role = authService.currentUser?.accountRole ?? .student
+            if role.isNutritionProfessional && !role.isPersonalProfessional {
+                profession = .nutritionist
+            } else if role.isPersonalProfessional && !role.isNutritionProfessional {
+                profession = .personal
             }
         }
     }

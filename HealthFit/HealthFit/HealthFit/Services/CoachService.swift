@@ -11,6 +11,8 @@ final class CoachService: ObservableObject {
     @Published private(set) var myLinks: [CoachLink] = []
     @Published private(set) var myTrainingMethods: [CoachTrainingMethod] = []
     @Published private(set) var assignedWorkoutsByLink: [String: [CoachAssignedWorkout]] = [:]
+    @Published private(set) var consultationsByLink: [String: [ConsultationBooking]] = [:]
+    @Published private(set) var availabilityByCoachUid: [String: CoachAvailability] = [:]
     @Published private(set) var chatMessages: [String: [CoachChatMessage]] = [:]
     @Published private(set) var interestMessages: [CoachInterestMessage] = []
     @Published private(set) var isSyncing = false
@@ -24,6 +26,9 @@ final class CoachService: ObservableObject {
     private var linkListeners: [String: ListenerRegistration] = [:]
     private var workoutListeners: [String: ListenerRegistration] = [:]
     private var mealListeners: [String: ListenerRegistration] = [:]
+    private var careListeners: [String: ListenerRegistration] = [:]
+    private var consultationListeners: [String: ListenerRegistration] = [:]
+    private var availabilityListeners: [String: ListenerRegistration] = [:]
     private var chatListeners: [String: ListenerRegistration] = [:]
     private var methodsListener: ListenerRegistration?
     private var interestMessagesListener: ListenerRegistration?
@@ -59,6 +64,15 @@ final class CoachService: ObservableObject {
         myLinks.first { $0.profession == .nutritionist && ($0.status == .active || $0.status == .blockedPlan) }
     }
 
+    /// Preferência: vínculo de nutrição; senão personal ativo do aluno (coach dual).
+    var activeCareLink: CoachLink? {
+        if let nutri = activeNutritionLink { return nutri }
+        guard let uid = currentUid else { return nil }
+        return myLinks.first {
+            $0.studentUid == uid && $0.isActiveLike
+        }
+    }
+
     var hasActiveCoachChat: Bool {
         myLinks.contains { $0.status == .active }
     }
@@ -74,6 +88,7 @@ final class CoachService: ObservableObject {
             stop()
             return
         }
+        NutritionCareStore.shared.bind(userId: uid)
         Task {
             await hydrateConsentFromCloud(uid: uid)
             await refreshProfile(uid: uid)
@@ -89,9 +104,39 @@ final class CoachService: ObservableObject {
         membershipListener = CoachFirestoreService.listenMemberships(uid: uid) { [weak self] docs in
             Task { @MainActor in
                 await self?.applyMembershipSnapshots(docs)
+                await self?.publishProfessionalReviewSnapshotsIfStudent()
             }
         }
         ensureInterestMessagesListening(studentUid: uid)
+    }
+
+    /// Aluno publica resumo cruzado para o profissional (IAssistente → revisão).
+    func publishProfessionalReviewSnapshotsIfStudent() async {
+        guard let uid = currentUid,
+              let profile = authService?.currentUser,
+              let mealPlanService,
+              let workoutStore else { return }
+        let studentLinks = myLinks.filter { $0.studentUid == uid && $0.isActiveLike }
+        guard !studentLinks.isEmpty else { return }
+
+        await DailyWellnessService.shared.ensureCurrentWeekLoaded()
+        let wellness = Array(DailyWellnessService.shared.weekEntriesByDayKey.values)
+        let sessions = workoutStore.sessionHistory
+
+        for link in studentLinks {
+            NutritionCareStore.shared.focus(linkId: link.id)
+            let care = NutritionCareStore.shared.bundle
+            let snapshot = ProfessionalReviewEngine.buildSnapshot(
+                link: link,
+                profile: profile,
+                weeklyPlan: mealPlanService.weeklyPlan,
+                wellnessEntries: wellness,
+                sessions: sessions,
+                careGoals: care.goals,
+                checkIns: care.checkIns
+            )
+            try? await ProfessionalReviewFirestoreService.publishReview(snapshot)
+        }
     }
 
     func stop() {
@@ -104,16 +149,25 @@ final class CoachService: ObservableObject {
         linkListeners.values.forEach { $0.remove() }
         workoutListeners.values.forEach { $0.remove() }
         mealListeners.values.forEach { $0.remove() }
+        careListeners.values.forEach { $0.remove() }
+        consultationListeners.values.forEach { $0.remove() }
+        availabilityListeners.values.forEach { $0.remove() }
         chatListeners.values.forEach { $0.remove() }
         linkListeners.removeAll()
         workoutListeners.removeAll()
         mealListeners.removeAll()
+        careListeners.removeAll()
+        consultationListeners.removeAll()
+        availabilityListeners.removeAll()
         chatListeners.removeAll()
         myLinks = []
         myTrainingMethods = []
         assignedWorkoutsByLink = [:]
+        consultationsByLink = [:]
+        availabilityByCoachUid = [:]
         chatMessages = [:]
         interestMessages = []
+        NutritionCareStore.shared.bind(userId: nil)
     }
 
     private func ensureInterestMessagesListening(studentUid: String) {
@@ -296,11 +350,29 @@ final class CoachService: ObservableObject {
             try await CoachFirestoreService.saveProfile(profile)
             myProfile = profile
             ensureMethodsListening(coachUid: user.id)
+            syncAccountRole(with: professions)
             return true
         } catch {
             lastError = error.localizedDescription
             return false
         }
+    }
+
+    /// Alinha “Você é” no Perfil com as profissões do cadastro Coach.
+    private func syncAccountRole(with professions: [CoachProfession]) {
+        guard var user = authService?.currentUser else { return }
+        let hasPersonal = professions.contains(.personal)
+        let hasNutrition = professions.contains(.nutritionist)
+        let role: UserAccountRole
+        switch (hasPersonal, hasNutrition) {
+        case (true, true): role = .personalAndNutritionist
+        case (true, false): role = .personal
+        case (false, true): role = .nutritionist
+        case (false, false): return
+        }
+        guard user.accountRole != role else { return }
+        user.accountRole = role
+        authService?.updateProfile(user)
     }
 
     /// Remove o cadastro profissional do Coach (perfil na busca + vínculos como coach).
@@ -614,6 +686,10 @@ final class CoachService: ObservableObject {
 
     func publishWorkout(link: CoachLink, sheet: WorkoutSheet) async -> Bool {
         guard let uid = currentUid, uid == link.coachUid else { return false }
+        guard canPrescribeWorkouts(on: link) else {
+            lastError = "Somente personal (ou Personal e Nutrição) pode enviar ficha de treino."
+            return false
+        }
         var prescribed = sheet
         prescribed.isCoachPrescribed = true
         prescribed.isUserCreated = true
@@ -681,6 +757,10 @@ final class CoachService: ObservableObject {
 
     func publishMealPlan(link: CoachLink, weeklyPlan: [DailyMealPlan]) async -> Bool {
         guard let uid = currentUid, uid == link.coachUid else { return false }
+        guard canPrescribeMeals(on: link) else {
+            lastError = "Cadastre-se como nutricionista (CRN) para enviar cardápio."
+            return false
+        }
         do {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
@@ -693,6 +773,315 @@ final class CoachService: ObservableObject {
                 coachUid: link.coachUid,
                 coachName: link.coachName
             )
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    /// Publica anamnese, questionários, metas e check-ins no vínculo de nutrição
+    /// (ou no vínculo personal quando o coach também é nutricionista).
+    func publishNutritionCare(link: CoachLink, from store: NutritionCareStore? = nil) async -> Bool {
+        let careStore = store ?? NutritionCareStore.shared
+        guard let uid = currentUid else { return false }
+        guard canPrescribeMeals(on: link) else {
+            lastError = "Acompanhamento nutricional requer cadastro de nutricionista."
+            return false
+        }
+        // Garante que o store está no vínculo certo antes de serializar.
+        careStore.focus(linkId: link.id)
+        let name = authService?.currentUser?.greetingName.isEmpty == false
+            ? (authService?.currentUser?.greetingName ?? link.coachName)
+            : (authService?.currentUser?.name ?? link.coachName)
+        do {
+            let json = try careStore.encodedBundleJSON(for: link.id)
+            try await CoachFirestoreService.publishNutritionCare(
+                linkId: link.id,
+                careJSON: ["bundle": json],
+                actorUid: uid,
+                actorName: name
+            )
+            if uid == link.studentUid {
+                careStore.markGoalsSyncedWithCoach()
+            }
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    /// Coach com personal + nutrição: cria vínculo de nutricionista para aluno que já tem só personal.
+    @discardableResult
+    func enableNutritionistLink(forExisting personalLink: CoachLink) async -> CoachLink? {
+        guard let user = authService?.currentUser,
+              user.id == personalLink.coachUid,
+              personalLink.profession == .personal,
+              personalLink.isActiveLike else {
+            lastError = "Vínculo inválido."
+            return nil
+        }
+        guard coachHasNutritionistProfession else {
+            lastError = "Complete o cadastro com CRN para ativar nutrição neste aluno."
+            return nil
+        }
+        // Só quem é personal E nutrição ativa o segundo vínculo a partir do personal.
+        guard isDualProfessional else {
+            lastError = "Somente Personal e Nutrição pode ativar cardápio em aluno de personal."
+            return nil
+        }
+        if let existing = myLinks.first(where: {
+            $0.coachUid == personalLink.coachUid
+                && $0.studentUid == personalLink.studentUid
+                && $0.profession == .nutritionist
+                && $0.isActiveLike
+        }) {
+            return existing
+        }
+
+        let linkId = CoachCodeGenerator.makeLinkId(
+            coachUid: personalLink.coachUid,
+            studentUid: personalLink.studentUid,
+            profession: .nutritionist
+        )
+        let link = CoachLink(
+            id: linkId,
+            coachUid: personalLink.coachUid,
+            coachName: personalLink.coachName,
+            coachPhotoURL: personalLink.coachPhotoURL,
+            studentUid: personalLink.studentUid,
+            studentName: personalLink.studentName,
+            studentPhotoURL: personalLink.studentPhotoURL,
+            profession: .nutritionist,
+            status: personalLink.status,
+            memberUids: personalLink.memberUids,
+            createdAt: .now,
+            updatedAt: .now,
+            activatedAt: personalLink.activatedAt ?? .now
+        )
+        do {
+            try await CoachFirestoreService.saveLink(link)
+            upsertLink(link)
+            return link
+        } catch {
+            lastError = error.localizedDescription
+            return nil
+        }
+    }
+
+    var coachHasNutritionistProfession: Bool {
+        if myProfile?.professions.contains(.nutritionist) == true { return true }
+        return authService?.currentUser?.accountRole.isNutritionProfessional == true
+    }
+
+    var coachHasPersonalProfession: Bool {
+        if myProfile?.professions.contains(.personal) == true { return true }
+        return authService?.currentUser?.accountRole.isPersonalProfessional == true
+    }
+
+    /// Personal e Nutrição: pode enviar ficha e cardápio.
+    var isDualProfessional: Bool {
+        coachHasPersonalProfession && coachHasNutritionistProfession
+    }
+
+    /// Cardápio: só no vínculo de nutrição (ou dual no aluno personal).
+    func canPrescribeMeals(on link: CoachLink) -> Bool {
+        guard link.isActiveLike, coachHasNutritionistProfession else { return false }
+        if link.profession == .nutritionist { return true }
+        // Dual: pode enviar cardápio também no vínculo personal do mesmo aluno.
+        return isDualProfessional && link.profession == .personal
+    }
+
+    /// Treino: só no vínculo de personal. Nunca na função nutricionista.
+    func canPrescribeWorkouts(on link: CoachLink) -> Bool {
+        guard link.isActiveLike, coachHasPersonalProfession else { return false }
+        return link.profession == .personal
+    }
+
+    // MARK: - Consultations
+
+    func availability(for coachUid: String) -> CoachAvailability {
+        availabilityByCoachUid[coachUid] ?? .empty(coachUid: coachUid)
+    }
+
+    func saveAvailability(_ availability: CoachAvailability) async -> Bool {
+        guard let uid = currentUid, uid == availability.coachUid else { return false }
+        do {
+            var copy = availability
+            copy.updatedAt = .now
+            try await CoachFirestoreService.saveAvailability(copy)
+            availabilityByCoachUid[uid] = copy
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    func openConsultationSlots(
+        for link: CoachLink,
+        daysAhead: Int = 14,
+        limit: Int = 48
+    ) async -> [ConsultationOpenSlot] {
+        let availability = availability(for: link.coachUid)
+        let existing = consultationsByLink[link.id] ?? []
+        let from = Date()
+        let to = Calendar.current.date(byAdding: .day, value: daysAhead, to: from) ?? from.addingTimeInterval(14 * 86400)
+        let busy = await ConsultationCalendarService.busyIntervals(from: from, to: to)
+        return ConsultationSlotEngine.openSlots(
+            availability: availability,
+            existing: existing,
+            busyIntervals: busy,
+            from: from,
+            daysAhead: daysAhead,
+            limit: limit
+        )
+    }
+
+    func scheduleConsultation(
+        link: CoachLink,
+        startAt: Date,
+        mode: ConsultationBookingMode,
+        note: String,
+        autoConfirmIfCoach _: Bool = true
+    ) async -> ConsultationBooking? {
+        guard let uid = currentUid else { return nil }
+        guard link.isActiveLike else {
+            lastError = "Vínculo precisa estar ativo para agendar."
+            return nil
+        }
+        let availability = availability(for: link.coachUid)
+        let duration = availability.slotDurationMinutes
+        // Confirmada ao agendar (aluno ou profissional) — com lembretes automáticos.
+        let status: ConsultationStatus = .confirmed
+        var booking = ConsultationBooking.make(
+            link: link,
+            startAt: startAt,
+            durationMinutes: duration,
+            mode: mode,
+            note: note,
+            createdByUid: uid,
+            status: status
+        )
+        do {
+            if availability.syncToDeviceCalendar {
+                if let eventId = await ConsultationCalendarService.syncBooking(booking, promptIfNeeded: true) {
+                    booking.calendarEventId = eventId
+                }
+            }
+            try await CoachFirestoreService.publishConsultation(booking)
+            var list = consultationsByLink[link.id] ?? []
+            list.removeAll { $0.id == booking.id }
+            list.append(booking)
+            consultationsByLink[link.id] = list.sorted { $0.startAt < $1.startAt }
+            NotificationService.shared.requestAuthorization()
+            NotificationService.shared.scheduleConsultationReminders(for: booking)
+            // Avisa o outro lado via chat (gera push/local no destinatário).
+            let peerIsCoach = uid == link.studentUid
+            let who = peerIsCoach ? booking.studentName : booking.coachName
+            let chatText = peerIsCoach
+                ? "✅ \(who) agendou: \(booking.confirmedScheduleLabel)"
+                : "✅ Consulta marcada: \(booking.confirmedScheduleLabel)"
+            _ = await sendChat(link: link, text: chatText)
+            return booking
+        } catch {
+            lastError = error.localizedDescription
+            return nil
+        }
+    }
+
+    /// Remarca data/hora, mantém lembretes e calendário atualizados.
+    func rescheduleConsultation(_ booking: ConsultationBooking, newStartAt: Date) async -> ConsultationBooking? {
+        guard let uid = currentUid else { return nil }
+        guard uid == booking.coachUid || uid == booking.studentUid else { return nil }
+        guard booking.isUpcoming else {
+            lastError = "Só é possível remarcar consultas futuras."
+            return nil
+        }
+        let duration = max(Int(booking.endAt.timeIntervalSince(booking.startAt) / 60), 15)
+        var updated = booking
+        updated.startAt = newStartAt
+        updated.endAt = newStartAt.addingTimeInterval(TimeInterval(duration * 60))
+        updated.status = .confirmed
+        updated.updatedAt = .now
+        do {
+            if let eventId = await ConsultationCalendarService.syncBooking(updated, promptIfNeeded: true) {
+                updated.calendarEventId = eventId
+            }
+            try await CoachFirestoreService.publishConsultation(updated)
+            var list = consultationsByLink[booking.linkId] ?? []
+            if let idx = list.firstIndex(where: { $0.id == booking.id }) {
+                list[idx] = updated
+            }
+            consultationsByLink[booking.linkId] = list.sorted { $0.startAt < $1.startAt }
+            NotificationService.shared.scheduleConsultationReminders(for: updated)
+            if let link = myLinks.first(where: { $0.id == booking.linkId }) {
+                let actor = uid == booking.studentUid ? booking.studentName : booking.coachName
+                _ = await sendChat(
+                    link: link,
+                    text: "🔄 \(actor) remarcou a consulta para \(updated.shortScheduleLabel)."
+                )
+            }
+            return updated
+        } catch {
+            lastError = error.localizedDescription
+            return nil
+        }
+    }
+
+    /// Cancela/exclui agendamento, remove lembretes e notifica o outro (profissional ou aluno).
+    func cancelConsultation(_ booking: ConsultationBooking, notifyPeer: Bool = true) async -> Bool {
+        guard let uid = currentUid else { return false }
+        guard uid == booking.coachUid || uid == booking.studentUid else { return false }
+        let ok = await updateConsultationStatus(booking, status: .cancelled)
+        guard ok else { return false }
+        NotificationService.shared.cancelConsultationReminders(bookingId: booking.id)
+        if notifyPeer, let link = myLinks.first(where: { $0.id == booking.linkId }) {
+            let isStudent = uid == booking.studentUid
+            let actor = isStudent ? booking.studentName : booking.coachName
+            let peerTitle = isStudent ? "Cancelamento pelo aluno" : "Cancelamento pelo profissional"
+            let body = "❌ \(actor) cancelou a consulta de \(booking.shortScheduleLabel)."
+            _ = await sendChat(link: link, text: body)
+            // Notificação local no aparelho de quem cancelou (confirmação).
+            NotificationService.shared.deliverConsultationStatusNotification(
+                title: peerTitle,
+                body: "Consulta de \(booking.shortScheduleLabel) cancelada.",
+                linkId: link.id,
+                bookingId: booking.id
+            )
+        }
+        return true
+    }
+
+    func updateConsultationStatus(_ booking: ConsultationBooking, status: ConsultationStatus) async -> Bool {
+        guard let uid = currentUid else { return false }
+        guard uid == booking.coachUid || uid == booking.studentUid else { return false }
+        var updated = booking
+        updated.status = status
+        updated.updatedAt = .now
+        do {
+            if status == .cancelled || status == .declined {
+                await ConsultationCalendarService.removeBookingEvent(
+                    bookingId: updated.id,
+                    eventId: updated.calendarEventId
+                )
+                updated.calendarEventId = nil
+                NotificationService.shared.cancelConsultationReminders(bookingId: updated.id)
+            } else if status == .confirmed || status == .proposed {
+                if let eventId = await ConsultationCalendarService.syncBooking(updated, promptIfNeeded: true) {
+                    updated.calendarEventId = eventId
+                }
+                if status == .confirmed {
+                    NotificationService.shared.scheduleConsultationReminders(for: updated)
+                }
+            }
+            try await CoachFirestoreService.publishConsultation(updated)
+            var list = consultationsByLink[booking.linkId] ?? []
+            if let idx = list.firstIndex(where: { $0.id == booking.id }) {
+                list[idx] = updated
+            }
+            consultationsByLink[booking.linkId] = list
             return true
         } catch {
             lastError = error.localizedDescription
@@ -961,6 +1350,9 @@ final class CoachService: ObservableObject {
         for key in chatMessages.keys where !linkIdSet.contains(key) {
             chatMessages.removeValue(forKey: key)
         }
+        for key in consultationsByLink.keys where !linkIdSet.contains(key) {
+            consultationsByLink.removeValue(forKey: key)
+        }
 
         // Drop stale listeners
         for key in linkListeners.keys where !linkIds.contains(key) {
@@ -970,8 +1362,19 @@ final class CoachService: ObservableObject {
             workoutListeners.removeValue(forKey: key)
             mealListeners[key]?.remove()
             mealListeners.removeValue(forKey: key)
+            careListeners[key]?.remove()
+            careListeners.removeValue(forKey: key)
+            consultationListeners[key]?.remove()
+            consultationListeners.removeValue(forKey: key)
             chatListeners[key]?.remove()
             chatListeners.removeValue(forKey: key)
+        }
+
+        let activeCoachUids = Set(myLinks.map(\.coachUid))
+        for key in availabilityListeners.keys where !activeCoachUids.contains(key) {
+            availabilityListeners[key]?.remove()
+            availabilityListeners.removeValue(forKey: key)
+            availabilityByCoachUid.removeValue(forKey: key)
         }
 
         for linkId in linkIds {
@@ -994,6 +1397,32 @@ final class CoachService: ObservableObject {
                 mealListeners[linkId] = CoachFirestoreService.listenMealPlan(linkId: linkId) { [weak self] data in
                     Task { @MainActor in
                         self?.applyCoachMealPlan(linkId: linkId, data: data)
+                    }
+                }
+            }
+            if careListeners[linkId] == nil {
+                careListeners[linkId] = CoachFirestoreService.listenNutritionCare(linkId: linkId) { [weak self] data in
+                    Task { @MainActor in
+                        self?.applyNutritionCare(linkId: linkId, data: data)
+                    }
+                }
+            }
+            if consultationListeners[linkId] == nil {
+                consultationListeners[linkId] = CoachFirestoreService.listenConsultations(linkId: linkId) { [weak self] items in
+                    Task { @MainActor in
+                        self?.consultationsByLink[linkId] = items
+                    }
+                }
+            }
+            if let link = myLinks.first(where: { $0.id == linkId }),
+               availabilityListeners[link.coachUid] == nil {
+                availabilityListeners[link.coachUid] = CoachFirestoreService.listenAvailability(coachUid: link.coachUid) { [weak self] availability in
+                    Task { @MainActor in
+                        if let availability {
+                            self?.availabilityByCoachUid[link.coachUid] = availability
+                        } else {
+                            self?.availabilityByCoachUid[link.coachUid] = .empty(coachUid: link.coachUid)
+                        }
                     }
                 }
             }
@@ -1097,7 +1526,7 @@ final class CoachService: ObservableObject {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let plan = try decoder.decode([DailyMealPlan].self, from: json)
-            mealPlanService?.applyCoachPrescribedPlan(plan)
+            mealPlanService?.applyCoachPrescribedPlan(plan, coachName: data["coachName"] as? String)
             if let name = data["coachName"] as? String, !name.isEmpty {
                 applyNutritionistName(name)
             }
@@ -1106,6 +1535,14 @@ final class CoachService: ObservableObject {
             print("[Coach] meal plan decode: \(error)")
             #endif
         }
+    }
+
+    private func applyNutritionCare(linkId: String, data: [String: Any]?) {
+        guard let data,
+              myLinks.contains(where: { $0.id == linkId }),
+              let bundleRaw = data["bundle"] as? [String: Any],
+              let remote = NutritionCareStore.shared.decodeBundle(from: bundleRaw) else { return }
+        NutritionCareStore.shared.applyRemote(linkId: linkId, remote: remote)
     }
 
     private func applyProfileAutoFill(from link: CoachLink) {

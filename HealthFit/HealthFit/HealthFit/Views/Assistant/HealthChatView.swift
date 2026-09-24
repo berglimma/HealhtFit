@@ -45,6 +45,24 @@ struct HealthChatView: View {
             snapshot: routineSnapshot
         )
 
+        let coach = CoachService.shared
+        let activeLinks = [coach.activePersonalLink, coach.activeNutritionLink].compactMap { $0 }
+        let upcomingConsultations = activeLinks
+            .flatMap { coach.consultationsByLink[$0.id] ?? [] }
+            .filter(\.isUpcoming)
+            .sorted { $0.startAt < $1.startAt }
+        let openSlots = activeLinks.prefix(2).flatMap { link -> [ConsultationOpenSlot] in
+            let availability = coach.availability(for: link.coachUid)
+            let existing = coach.consultationsByLink[link.id] ?? []
+            return ConsultationSlotEngine.openSlots(
+                availability: availability,
+                existing: existing,
+                busyIntervals: [],
+                daysAhead: 10,
+                limit: 6
+            )
+        }
+
         return HealthAssistantContext(
             user: user,
             waterIntakeMl: wellnessService.todayEntry.waterIntakeMl,
@@ -81,7 +99,12 @@ struct HealthChatView: View {
             isTodayRestDay: wellnessService.todayEntry.isRestDay,
             consecutiveTrainingDays: WeeklyProgressAnalyzer.consecutiveTrainingDays(
                 in: workoutStore.sessionHistory
-            )
+            ),
+            activeCoachLinks: activeLinks,
+            upcomingConsultations: upcomingConsultations,
+            openConsultationSlots: Array(openSlots.prefix(10)),
+            coachPersonalName: coach.activePersonalLink?.coachName,
+            coachNutritionistName: coach.activeNutritionLink?.coachName
         )
     }
 

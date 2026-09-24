@@ -113,7 +113,7 @@ struct MealPhotoAnalysisView: View {
                 ],
                 spacing: 8
             ) {
-                ForEach(MealType.allCases) { meal in
+                ForEach(MealType.planSlots) { meal in
                     Button {
                         selectedMealType = meal
                         if var current = draft {

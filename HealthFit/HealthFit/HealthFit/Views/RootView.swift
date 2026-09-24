@@ -285,6 +285,7 @@ struct RootView: View {
         Task { await ExternalWorkoutSyncService.shared.syncRecentExternalWorkouts(reason: .foreground) }
         bindAppleSleepSync()
         Task { await wellnessService.syncSleepFromAppleHealth() }
+        Task { await CoachService.shared.publishProfessionalReviewSnapshotsIfStudent() }
     }
 
     private func bindAppleSleepSync() {

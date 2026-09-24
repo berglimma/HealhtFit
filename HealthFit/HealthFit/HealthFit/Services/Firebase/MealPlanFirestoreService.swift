@@ -13,6 +13,9 @@ struct MealPlanCloudSnapshot: Codable {
     var userMealLibrary: [MealTemplate]
     /// Plano gerado pelo fluxo do IAssistente.
     var createdByAssistant: Bool
+    /// Cardápio prescrito pelo nutricionista (HealthFit Coach).
+    var isCoachPrescribed: Bool
+    var coachPrescribedByName: String?
 
     init(
         weeklyPlan: [DailyMealPlan],
@@ -23,7 +26,9 @@ struct MealPlanCloudSnapshot: Codable {
         estimatedTDEE: Int,
         caloricDeficit: Int,
         userMealLibrary: [MealTemplate] = [],
-        createdByAssistant: Bool = false
+        createdByAssistant: Bool = false,
+        isCoachPrescribed: Bool = false,
+        coachPrescribedByName: String? = nil
     ) {
         self.weeklyPlan = weeklyPlan
         self.shoppingList = shoppingList
@@ -34,6 +39,8 @@ struct MealPlanCloudSnapshot: Codable {
         self.caloricDeficit = caloricDeficit
         self.userMealLibrary = userMealLibrary
         self.createdByAssistant = createdByAssistant
+        self.isCoachPrescribed = isCoachPrescribed
+        self.coachPrescribedByName = coachPrescribedByName
     }
 
     init(from decoder: Decoder) throws {
@@ -47,12 +54,14 @@ struct MealPlanCloudSnapshot: Codable {
         caloricDeficit = try container.decodeIfPresent(Int.self, forKey: .caloricDeficit) ?? 0
         userMealLibrary = try container.decodeIfPresent([MealTemplate].self, forKey: .userMealLibrary) ?? []
         createdByAssistant = try container.decodeIfPresent(Bool.self, forKey: .createdByAssistant) ?? false
+        isCoachPrescribed = try container.decodeIfPresent(Bool.self, forKey: .isCoachPrescribed) ?? false
+        coachPrescribedByName = try container.decodeIfPresent(String.self, forKey: .coachPrescribedByName)
     }
 
     private enum CodingKeys: String, CodingKey {
         case weeklyPlan, shoppingList, customMenuSelection
         case basalMetabolicRate, dailyCalorieTarget, estimatedTDEE, caloricDeficit, userMealLibrary
-        case createdByAssistant
+        case createdByAssistant, isCoachPrescribed, coachPrescribedByName
     }
 }
 
