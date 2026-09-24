@@ -16,6 +16,8 @@ final class CoachService: ObservableObject {
     @Published private(set) var chatMessages: [String: [CoachChatMessage]] = [:]
     @Published private(set) var interestMessages: [CoachInterestMessage] = []
     @Published private(set) var isSyncing = false
+    /// True enquanto busca o perfil profissional na nuvem (painel usa cache + este flag).
+    @Published private(set) var isProfileLoading = false
     @Published var lastError: String?
 
     private weak var workoutStore: WorkoutStore?
@@ -36,6 +38,14 @@ final class CoachService: ObservableObject {
     private var notifiedCoachChatMessageIds: Set<String> = []
     /// Primeiro snapshot do listener não deve disparar notificação (histórico).
     private var chatListenerPrimed: Set<String> = []
+    /// UID para o qual `start()` já configurou listeners (evita reinício a cada onAppear).
+    private var startedForUid: String?
+    private var reviewPublishTask: Task<Void, Never>?
+    private var lastPhotoSyncAt: Date?
+
+    private enum CacheKey {
+        static let professionalProfile = "coach_professional_profile_v1"
+    }
 
     private init() {}
 
@@ -88,26 +98,58 @@ final class CoachService: ObservableObject {
             stop()
             return
         }
-        NutritionCareStore.shared.bind(userId: uid)
-        Task {
-            await hydrateConsentFromCloud(uid: uid)
-            await refreshProfile(uid: uid)
-            if isProfessionalAccount || myProfile != nil {
-                await refreshProfessionalPhotoFromAppProfileIfNeeded()
+
+        // Já iniciado para este usuário: só garante sync leve em background.
+        if startedForUid == uid, membershipListener != nil {
+            Task {
+                if myProfile == nil {
+                    await refreshProfile(uid: uid)
+                }
             }
-            // Se já aceitou no device mas ainda não está no Firebase, espelha.
-            if CoachPreferences.hasConsent {
-                await CoachFirestoreService.saveCoachConsentIfPossible()
-            }
+            return
         }
+
+        if let previous = startedForUid, previous != uid {
+            stop()
+        }
+        startedForUid = uid
+        NutritionCareStore.shared.bind(userId: uid)
+        loadCachedProfessionalProfile(uid: uid)
+
         membershipListener?.remove()
         membershipListener = CoachFirestoreService.listenMemberships(uid: uid) { [weak self] docs in
             Task { @MainActor in
                 await self?.applyMembershipSnapshots(docs)
-                await self?.publishProfessionalReviewSnapshotsIfStudent()
+                self?.scheduleProfessionalReviewPublishIfStudent()
             }
         }
         ensureInterestMessagesListening(studentUid: uid)
+
+        Task {
+            await hydrateConsentFromCloud(uid: uid)
+            await refreshProfile(uid: uid)
+            if CoachPreferences.hasConsent {
+                await CoachFirestoreService.saveCoachConsentIfPossible()
+            }
+            // Foto e revisão: depois do painel já estar utilizável.
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            if isProfessionalAccount || myProfile != nil {
+                await refreshProfessionalPhotoFromAppProfileIfNeeded()
+            }
+        }
+    }
+
+    /// Aluno publica resumo cruzado para o profissional (IAssistente → revisão), com debounce.
+    private func scheduleProfessionalReviewPublishIfStudent() {
+        guard let uid = currentUid else { return }
+        let studentLinks = myLinks.filter { $0.studentUid == uid && $0.isActiveLike }
+        guard !studentLinks.isEmpty else { return }
+        reviewPublishTask?.cancel()
+        reviewPublishTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard !Task.isCancelled else { return }
+            await publishProfessionalReviewSnapshotsIfStudent()
+        }
     }
 
     /// Aluno publica resumo cruzado para o profissional (IAssistente → revisão).
@@ -140,6 +182,9 @@ final class CoachService: ObservableObject {
     }
 
     func stop() {
+        reviewPublishTask?.cancel()
+        reviewPublishTask = nil
+        startedForUid = nil
         membershipListener?.remove()
         membershipListener = nil
         methodsListener?.remove()
@@ -167,6 +212,7 @@ final class CoachService: ObservableObject {
         availabilityByCoachUid = [:]
         chatMessages = [:]
         interestMessages = []
+        chatListenerPrimed.removeAll()
         NutritionCareStore.shared.bind(userId: nil)
     }
 
@@ -190,14 +236,36 @@ final class CoachService: ObservableObject {
 
     func refreshProfile(uid: String? = nil) async {
         guard let uid = uid ?? currentUid else { return }
+        if myProfile == nil {
+            isProfileLoading = true
+        }
+        defer { isProfileLoading = false }
         do {
             myProfile = try await CoachFirestoreService.fetchProfile(uid: uid)
+            cacheProfessionalProfile(uid: uid)
             if isProfessionalAccount || myProfile != nil {
                 ensureMethodsListening(coachUid: uid)
             }
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    private func loadCachedProfessionalProfile(uid: String) {
+        guard myProfile == nil else { return }
+        guard let data = UserScopedDefaults.data(forLogicalKey: CacheKey.professionalProfile, uid: uid),
+              let cached = try? JSONDecoder().decode(CoachProfessionalProfile.self, from: data)
+        else { return }
+        myProfile = cached
+    }
+
+    private func cacheProfessionalProfile(uid: String) {
+        guard let profile = myProfile,
+              let data = try? JSONEncoder().encode(profile) else {
+            UserScopedDefaults.remove(logicalKey: CacheKey.professionalProfile, uid: uid)
+            return
+        }
+        UserScopedDefaults.setData(data, forLogicalKey: CacheKey.professionalProfile, uid: uid)
     }
 
     private func ensureMethodsListening(coachUid: String) {
@@ -349,6 +417,7 @@ final class CoachService: ObservableObject {
         do {
             try await CoachFirestoreService.saveProfile(profile)
             myProfile = profile
+            cacheProfessionalProfile(uid: user.id)
             ensureMethodsListening(coachUid: user.id)
             syncAccountRole(with: professions)
             return true
@@ -397,6 +466,7 @@ final class CoachService: ObservableObject {
         do {
             try await CoachFirestoreService.deleteProfile(uid: user.id)
             myProfile = nil
+            UserScopedDefaults.remove(logicalKey: CacheKey.professionalProfile, uid: user.id)
 
             if resetAccountRoleToStudent, user.accountRole != .student {
                 var updated = user
@@ -1316,6 +1386,9 @@ final class CoachService: ObservableObject {
         do {
             try await CoachFirestoreService.saveProfile(profile)
             myProfile = profile
+            if let uid = currentUid {
+                cacheProfessionalProfile(uid: uid)
+            }
         } catch {
             lastError = error.localizedDescription
         }
@@ -1325,6 +1398,10 @@ final class CoachService: ObservableObject {
     func refreshProfessionalPhotoFromAppProfileIfNeeded() async {
         guard let uid = currentUid else { return }
         guard isProfessionalAccount || myProfile != nil else { return }
+        if let last = lastPhotoSyncAt, Date().timeIntervalSince(last) < 120 {
+            return
+        }
+        lastPhotoSyncAt = Date()
         let resolved = await Self.resolveCoachPhotoURL(userId: uid)
         await syncProfessionalProfilePhoto(photoURL: resolved)
     }
@@ -1436,8 +1513,8 @@ final class CoachService: ObservableObject {
                     }
                 }
             }
-            // Chat em tempo real para vínculos ativos (aluno e coach).
-            ensureChatListening(linkId: linkId)
+            // Chat sob demanda (openChat / detalhe do vínculo) — evita N listeners lentos ao abrir o painel.
+            await Task.yield()
         }
     }
 

@@ -94,13 +94,15 @@ struct CoachHubView: View {
         .onAppear {
             coach.start()
             Task {
+                // Status de plano e foto não bloqueiam a abertura do painel.
                 await coach.refreshLinkStatusesForPlan()
                 if isPro {
+                    try? await Task.sleep(nanoseconds: 500_000_000)
                     await coach.refreshProfessionalPhotoFromAppProfileIfNeeded()
                 }
-                // Nutri/Personal com papel certo mas sem cadastro → abre setup.
                 if (role.isPersonalProfessional || role.isNutritionProfessional),
                    coach.myProfile == nil,
+                   !coach.isProfileLoading,
                    CoachPreferences.hasConsent {
                     showProfileSetup = true
                 }
@@ -206,14 +208,27 @@ struct CoachHubView: View {
     @ViewBuilder
     private var professionalSections: some View {
         if coach.myProfile == nil {
-            Button {
-                if CoachPreferences.hasConsent { showProfileSetup = true }
-                else { showConsent = true }
-            } label: {
-                Label("Completar perfil profissional (CREF/CRN)", systemImage: "person.text.rectangle")
-                    .frame(maxWidth: .infinity)
+            if coach.isProfileLoading {
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text("Carregando painel profissional…")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            } else {
+                Button {
+                    if CoachPreferences.hasConsent { showProfileSetup = true }
+                    else { showConsent = true }
+                } label: {
+                    Label("Completar perfil profissional (CREF/CRN)", systemImage: "person.text.rectangle")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PrimaryButtonStyle())
             }
-            .buttonStyle(PrimaryButtonStyle())
         } else {
             profileSummary
             HStack(spacing: 10) {
