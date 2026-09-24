@@ -1,16 +1,20 @@
-HealthFit 1.0.10 (23)
+HealthFit 1.0.11 (24)
 
-Resolution for Guideline 3.1.1:
-- Removed in-app courtesy/promo code redemption UI ("Tenho um código de cortesia").
-- App no longer unlocks plans via custom voucher codes.
-- Subscriptions and restores use App Store / StoreKit only.
-- Future discounts/free access will use official App Store Offer Codes.
+Resolution for Guideline 3.1.2 (Subscriptions):
+- Paywall now shows the billed price first (e.g. annual total /ano); monthly equivalent only as secondary “equiv. a …/mês” in the same currency as StoreKit.
+- Purchase button includes the exact StoreKit price to be charged.
+- Functional https links on the paywall (and Meu plano): Privacy Policy, Terms of Use (EULA — Apple standard), and HealthFit Terms.
+- Full auto-renewal disclosure: charged to Apple ID at confirmation; renews unless cancelled ≥24h before period end; renewal charged within 24h of end; manage/cancel in Settings → Apple ID → Subscriptions.
+- Restore Purchases and Manage Subscription remain on the paywall and Profile → Meu plano.
+- Subscription title, length (1 month / 1 year), and price are listed above the disclosure.
 
-Other changes in this train:
-- Apple Watch segmented chronometer (walk/run/bike/MTB).
-- Fix: finishing cardio on iPhone stops the Watch session.
-- Share card: 3+ exercises count as completed.
-- Route flyover video share; Pulse/Stage Manager polish.
+How to verify:
+1. Profile → Meu plano → Ver planos e assinar
+2. Confirm annual cards show “…/ano” as the primary price
+3. Scroll under Assinar: Restaurar compras, Privacy/EULA/Termos links, and the full renewal text
+
+Previous 3.1.1 resolution (still in effect):
+- No in-app courtesy/promo code unlocks; StoreKit / App Store Offer Codes only.
 
 Demo account: use existing review credentials on file.
 No encryption changes.

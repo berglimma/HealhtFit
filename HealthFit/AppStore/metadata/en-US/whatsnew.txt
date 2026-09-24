@@ -1,6 +1,5 @@
-• Segmented circular chronometer on Apple Watch (walk, run, bike, MTB) with performance colors
+• App Review 3.1.2 fix: billed subscription price first, full auto-renewal disclosure, Privacy/EULA links on the paywall
+• Restore purchases and manage subscription remain on Subscriptions and My Plan
+• Segmented circular chronometer on Apple Watch (walk, run, bike, MTB)
 • Ending cardio on iPhone correctly stops the Watch session
-• Share card: 3+ completed exercises count as a finished workout to encourage posting
-• Route flyover video sharing
-• Pulse sync and iPad Stage Manager improvements
-• Removed in-app courtesy codes; subscriptions via App Store only
+• Subscriptions via App Store only (no in-app courtesy codes)

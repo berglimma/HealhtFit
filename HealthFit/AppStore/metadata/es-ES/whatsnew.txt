@@ -1,6 +1,5 @@
-• Cronómetro circular segmentado en Apple Watch (caminata, carrera, bici y MTB) con colores por rendimiento
+• Corrección App Review 3.1.2: precio cobrado de la suscripción en primer plano, texto completo de renovación automática y enlaces Privacidad/EULA en el paywall
+• Restaurar compras y gestionar suscripción en Suscripciones y Mi plan
+• Cronómetro circular segmentado en Apple Watch (caminata, carrera, bici y MTB)
 • Finalizar cardio en el iPhone cierra correctamente la sesión en el Watch
-• Tarjeta para compartir: con 3+ ejercicios hechos cuenta como entrenamiento concluido
-• Flyover de la ruta en vídeo
-• Mejoras de sync Pulse y Stage Manager en iPad
-• Eliminados códigos de cortesía en la app; suscripciones solo por App Store
+• Suscripciones solo por App Store (sin códigos de cortesía en la app)

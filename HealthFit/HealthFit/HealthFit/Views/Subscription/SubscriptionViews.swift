@@ -45,13 +45,8 @@ struct PaywallView: View {
                     }
                     purchaseButton
                     secondaryActions
-                    subscriptionDisclosure
                     SubscriptionLegalLinksView()
-                        .padding(.top, 4)
-                    Text("A assinatura renova automaticamente até cancelar. Gerencie em Ajustes → Apple ID.")
-                        .font(.caption2)
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .multilineTextAlignment(.center)
+                    subscriptionDisclosure
                 }
                 .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                 .adaptiveContentWidth()
@@ -259,7 +254,7 @@ struct PaywallView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
             } else if canPurchaseSelectedPlan {
-                Text("Assinar \(selectedTier.displayName) \(billingPeriod.displayName.lowercased())")
+                Text("Assinar \(selectedTier.displayName) \(billingPeriod.displayName.lowercased()) — \(subscriptions.displayPrice(for: selectedTier, period: billingPeriod))")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
@@ -275,16 +270,27 @@ struct PaywallView: View {
     }
 
     private var subscriptionDisclosure: some View {
-        VStack(spacing: 6) {
+        let billedPrice = subscriptions.displayPrice(for: selectedTier, period: billingPeriod)
+        let lengthLabel = billingPeriod == .yearly ? "1 ano" : "1 mês"
+        return VStack(alignment: .leading, spacing: 8) {
             Text("Assinatura com renovação automática")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppTheme.textPrimary)
-            Text("\(selectedTier.displayName) · \(billingPeriod.displayName) · \(subscriptions.displayPriceHeadline(for: selectedTier, period: billingPeriod))")
-                .font(.caption)
-                .foregroundStyle(AppTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+            Text("\(selectedTier.displayName) · \(lengthLabel) · \(billedPrice)")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+            Text("""
+            O pagamento será cobrado na Conta Apple ao confirmar a compra. A assinatura renova automaticamente, a menos que a renovação automática seja desativada pelo menos 24 horas antes do fim do período vigente. A Conta Apple será cobrada pela renovação nas 24 horas anteriores ao fim do período. Você pode gerenciar e cancelar em Ajustes → [seu nome] → Assinaturas.
+            """)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 4)
     }
 
@@ -424,7 +430,9 @@ struct SubscriptionPlanView: View {
             SubscriptionLegalLinksView()
                 .padding(.top, 8)
 
-            Text("Assinaturas renovam automaticamente até cancelar em Ajustes → Apple ID.")
+            Text("""
+            O pagamento será cobrado na Conta Apple ao confirmar a compra. A assinatura renova automaticamente, a menos que a renovação automática seja desativada pelo menos 24 horas antes do fim do período vigente. Gerencie ou cancele em Ajustes → [seu nome] → Assinaturas.
+            """)
                 .font(.caption2)
                 .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -440,13 +448,18 @@ struct SubscriptionLegalLinksView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            Link("Terms of Use (EULA)", destination: Self.appleStandardEULA)
+            HStack(spacing: 4) {
+                Link("Privacy Policy", destination: AppLegalConfiguration.privacyPolicyURL)
+                Text("·")
+                    .foregroundStyle(AppTheme.textSecondary)
+                Link("Terms of Use (EULA)", destination: Self.appleStandardEULA)
+            }
             Link("Termos do HealthFit", destination: AppLegalConfiguration.termsOfUseURL)
-            Link("Política de Privacidade", destination: AppLegalConfiguration.privacyPolicyURL)
         }
-        .font(.caption)
+        .font(.caption.weight(.semibold))
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
     }
 }
 

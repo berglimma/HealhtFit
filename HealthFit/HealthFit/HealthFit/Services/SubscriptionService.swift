@@ -82,27 +82,21 @@ final class SubscriptionService: ObservableObject {
         return unavailablePriceLabel
     }
 
-    /// Preço mostrado no card: no anual, destaca o equivalente mensal + total.
+    /// Preço cobrado na Assinatura (Guideline 3.1.2): no anual, o total/ano vem primeiro.
     func displayPriceHeadline(for tier: PlanTier, period: SubscriptionBillingPeriod) -> String {
-        switch period {
-        case .monthly:
-            return displayPrice(for: tier, period: .monthly)
-        case .yearly:
-            if let product = product(for: tier, period: .yearly),
-               let monthly = equivalentMonthlyPrice(from: product) {
-                return "\(monthly)/mês"
-            }
-            return unavailablePriceLabel
-        }
+        displayPrice(for: tier, period: period)
     }
 
     private var unavailablePriceLabel: String {
         areStoreProductsAvailable ? "Indisponível" : "Na App Store"
     }
 
+    /// No anual, equivalente mensal só como apoio (mesma moeda do produto StoreKit).
     func displayPriceSubtitle(for tier: PlanTier, period: SubscriptionBillingPeriod) -> String? {
-        guard period == .yearly else { return nil }
-        return displayPrice(for: tier, period: .yearly)
+        guard period == .yearly,
+              let product = product(for: tier, period: .yearly),
+              let monthly = equivalentMonthlyPrice(from: product) else { return nil }
+        return "equiv. a \(monthly)/mês"
     }
 
     func savingsBadge() -> String {
@@ -262,16 +256,12 @@ final class SubscriptionService: ObservableObject {
     }
 
     private func equivalentMonthlyPrice(from yearlyProduct: Product) -> String? {
-        // StoreKit não expõe “por mês” do anual; estimamos pelo preço / 12 no locale do produto.
-        let yearly = yearlyProduct.price as Decimal
-        let monthly = yearly / 12
+        // StoreKit não expõe “por mês” do anual; estimamos preço/12 na moeda do produto.
+        let monthly = yearlyProduct.price / 12
         var rounded = monthly
         var result = Decimal()
         NSDecimalRound(&result, &rounded, 2, .plain)
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = Locale(identifier: "pt_BR")
-        return formatter.string(from: result as NSDecimalNumber)
+        return result.formatted(yearlyProduct.priceFormatStyle)
     }
 
     private func listenForTransactions() -> Task<Void, Never> {

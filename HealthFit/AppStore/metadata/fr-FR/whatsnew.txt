@@ -1,6 +1,5 @@
-• Chronomètre circulaire segmenté sur Apple Watch (marche, course, vélo, VTT) avec couleurs de performance
+• Correction App Review 3.1.2 : prix facturé de l’abonnement en priorité, texte complet de renouvellement automatique et liens Confidentialité/EULA sur le paywall
+• Restaurer les achats et gérer l’abonnement restent dans Abonnements et Mon forfait
+• Chronomètre circulaire segmenté sur Apple Watch (marche, course, vélo, VTT)
 • Terminer le cardio sur iPhone arrête correctement la session Watch
-• Carte de partage : 3+ exercices terminés comptent comme entraînement conclu
-• Flyover de parcours en vidéo
-• Améliorations sync Pulse et Stage Manager sur iPad
-• Codes de courtoisie retirés de l’app ; abonnements uniquement via App Store
+• Abonnements uniquement via App Store (pas de codes de courtoisie dans l’app)
