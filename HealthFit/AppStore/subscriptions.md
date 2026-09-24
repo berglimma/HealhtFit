@@ -90,8 +90,10 @@ Após compra estável: gravar `plan` + `expiresAt` no user Firestore; sempre rev
 ## Regras Apple (checklist review)
 
 - [x] Restaurar compras na UI  
-- [x] Links de Termos e Privacidade no paywall  
-- [x] Free mínimo (gates ainda off = tudo livre)  
+- [x] Links funcionais de Termos (EULA) e Privacidade no paywall (https)  
+- [x] Disclosure completo: Conta Apple, renovação automática, cancelar ≥24h, Ajustes → Assinaturas  
+- [x] Preço cobrado em destaque (anual = total/ano; equiv. mensal só como apoio, mesma moeda)  
+- [x] Free mínimo (gates off = usável sem assinatura no lançamento)  
 - [x] Gerenciar assinatura (`manageSubscriptionsSheet`)  
 - [x] Opção anual com preço claro e desconto  
 - [ ] Não prometer “nutricionista humano” (copy já usa “orientação assistida”)
