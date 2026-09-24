@@ -11940,6 +11940,9 @@
     "Texto livre para o aluno. Aparece junto ao cardápio prescrito." : {
 
     },
+    "Texto livre: alimentos e orientações para o aluno" : {
+
+    },
     "Tipo" : {
 
     },
@@ -12001,9 +12004,6 @@
     "Toque em um marcador para ver o setor." : {
 
     },
-    "Toque em uma refeição para trocar o modelo. Use “Inserir alimentos e comentários” para texto livre (ex.: 150g frango, 4 claras…)." : {
-
-    },
     "Toque na refeição para selecionar e marque como concluída quando comer." : {
 
     },
@@ -12017,6 +12017,9 @@
 
     },
     "Toque no músculo ou no nome para inserir a medida (cm) e o % de gordura." : {
+
+    },
+    "Toque no nome da refeição para trocar o modelo. Use a linha abaixo para inserir alimentos e comentários em texto livre." : {
 
     },
     "Toque num horário livre para remarcar · %@" : {

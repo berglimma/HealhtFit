@@ -95,15 +95,51 @@ struct NutritionCareHubView: View {
                 .disabled(isSyncing)
 
                 if let link = careLink {
-                    NavigationLink {
-                        StudentDailyMealPhotoShareView(link: link)
-                    } label: {
-                        Label("Enviar foto da refeição (só hoje)", systemImage: "camera.fill")
-                    }
-                    .buttonStyle(.bordered)
+                    studentPhotoFlowCard(link: link)
                 }
             }
         }
+    }
+
+    private func studentPhotoFlowCard(link: CoachLink) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Foto da refeição para o nutricionista")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+            Text("Fluxo: você envia → nutri vê só hoje → ao abrir, a foto é apagada.")
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Label("1. Escolha ou tire a foto da refeição", systemImage: "1.circle.fill")
+                Label("2. Envie com o nome da refeição", systemImage: "2.circle.fill")
+                Label("3. Nutricionista abre uma vez na Revisão IAssistente", systemImage: "3.circle.fill")
+                Label("4. Foto apagada após visualização", systemImage: "4.circle.fill")
+            }
+            .font(.caption)
+            .foregroundStyle(AppTheme.textSecondary)
+
+            NavigationLink {
+                StudentDailyMealPhotoShareView(link: link)
+            } label: {
+                Label("Enviar foto da refeição (só hoje)", systemImage: "camera.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .foregroundStyle(.white)
+                    .background(AppTheme.coachNutrition)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppTheme.coachNutrition.opacity(0.35), lineWidth: 1)
+        )
     }
 
     private var anamnesisCard: some View {

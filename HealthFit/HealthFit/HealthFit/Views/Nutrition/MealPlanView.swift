@@ -180,6 +180,17 @@ struct MealPlanView: View {
                         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                         .padding(.top, 8)
                         .adaptiveContentWidth()
+
+                    if let link = coach.activeCareLink ?? coach.activeNutritionLink {
+                        studentMealPhotoFlowCard(link: link)
+                            .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                            .adaptiveContentWidth()
+                    }
+                } else if nutritionTab <= 2, let link = coach.activeCareLink ?? coach.activeNutritionLink {
+                    studentMealPhotoFlowCard(link: link)
+                        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                        .padding(.top, 8)
+                        .adaptiveContentWidth()
                 }
 
                 if mealPlanService.createdByAssistant, nutritionTab <= 1 {
@@ -244,27 +255,43 @@ struct MealPlanView: View {
 
     private func coachPrescribedBanner(name: String) -> some View {
         let notes = coachPrescriptionNotes
-        return HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "leaf.fill")
-                .foregroundStyle(AppTheme.coachNutrition)
-                .frame(width: 36, height: 36)
-                .background(AppTheme.coachNutrition.opacity(0.2))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Cardápio do nutricionista")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(AppTheme.textPrimary)
-                Text("Prescrito por \(name) · sincronizado via HealthFit Coach")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-                if let notes, !notes.isEmpty {
-                    Text(notes)
-                        .font(.caption)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "leaf.fill")
+                    .foregroundStyle(AppTheme.coachNutrition)
+                    .frame(width: 36, height: 36)
+                    .background(AppTheme.coachNutrition.opacity(0.2))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Cardápio do nutricionista")
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.textPrimary)
-                        .padding(.top, 2)
+                    Text("Prescrito por \(name) · sincronizado via HealthFit Coach")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+
+            if let notes, !notes.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Comentários gerais")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(AppTheme.coachNutrition)
+                    Text(notes)
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppTheme.background.opacity(0.55))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
+            Text("Em cada refeição abaixo: alimentos e comentários do nutricionista ficam visíveis. Toque na refeição só para marcar como feita.")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .background(
@@ -282,6 +309,70 @@ struct MealPlanView: View {
             RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
                 .stroke(AppTheme.coachNutrition.opacity(0.55), lineWidth: 1)
         )
+    }
+
+    /// Fluxo aluno → foto → nutricionista (view once, só no dia).
+    private func studentMealPhotoFlowCard(link: CoachLink) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "camera.fill")
+                    .foregroundStyle(AppTheme.coachNutrition)
+                    .frame(width: 36, height: 36)
+                    .background(AppTheme.coachNutrition.opacity(0.18))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Enviar foto para o nutricionista")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Text(link.coachName.isEmpty ? "Nutricionista" : link.coachName)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                Spacer(minLength: 0)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                photoFlowStep(number: "1", text: "Tire a foto da refeição (ou escolha da galeria).")
+                photoFlowStep(number: "2", text: "Envie pelo botão abaixo — fica disponível só hoje.")
+                photoFlowStep(number: "3", text: "O nutricionista abre uma única vez na revisão.")
+                photoFlowStep(number: "4", text: "Após visualizar, a foto é apagada automaticamente.")
+            }
+
+            NavigationLink {
+                StudentDailyMealPhotoShareView(link: link)
+            } label: {
+                Label("Enviar foto da refeição agora", systemImage: "camera.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .foregroundStyle(.white)
+                    .background(AppTheme.coachNutrition)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .stroke(AppTheme.coachNutrition.opacity(0.35), lineWidth: 1)
+        )
+    }
+
+    private func photoFlowStep(number: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Text(number)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(AppTheme.coachNutrition)
+                .clipShape(Circle())
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     /// Comentários gerais do nutricionista (subtitle após a linha “Enviado por …”).
@@ -533,7 +624,11 @@ struct MealPlanView: View {
                         mealReminderNotice
                         optionPicker(for: dayPlan, selected: safeOption)
                         macrosSummary(activeOption)
-                        Text("Toque na refeição para selecionar e marque como concluída quando comer.")
+                        Text(
+                            mealPlanService.isCoachPrescribed
+                                ? "Alimentos e comentários do nutricionista aparecem em cada refeição. Marque quando concluir."
+                                : "Toque na refeição para selecionar e marque como concluída quando comer."
+                        )
                             .font(.caption)
                             .foregroundStyle(AppTheme.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1283,8 +1378,11 @@ struct MealPlanView: View {
     }
 
     private func optionPicker(for dayPlan: DailyMealPlan, selected: Int) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("\(dayPlan.dayOfWeek) — escolha um cardápio")
+        let isCoach = mealPlanService.isCoachPrescribed
+        return VStack(alignment: .leading, spacing: 10) {
+            Text(isCoach
+                 ? "\(dayPlan.dayOfWeek) — cardápio prescrito"
+                 : "\(dayPlan.dayOfWeek) — escolha um cardápio")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.textPrimary)
 
@@ -1292,18 +1390,21 @@ struct MealPlanView: View {
                 Button {
                     selectedOption = 0
                 } label: {
-                    VStack(spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text(option.name)
                             .font(.caption.weight(.bold))
                         Text(option.subtitle)
                             .font(.caption2)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
                         Text("\(option.totalCalories) kcal")
                             .font(.caption2.weight(.medium))
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 12)
+                    .padding(.horizontal, 12)
                     .foregroundStyle(.white)
-                    .background(AppTheme.accent)
+                    .background(isCoach ? AppTheme.coachNutrition : AppTheme.accent)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -1326,7 +1427,8 @@ struct MealPlanView: View {
                                     .minimumScaleFactor(0.8)
                                 Text(option.subtitle)
                                     .font(.caption2)
-                                    .lineLimit(1)
+                                    .lineLimit(isCoach ? 4 : 1)
+                                    .multilineTextAlignment(.center)
                                 Text("\(option.totalCalories) kcal")
                                     .font(.caption2.weight(.medium))
                             }
@@ -1334,7 +1436,9 @@ struct MealPlanView: View {
                             .padding(.vertical, 10)
                             .padding(.horizontal, 6)
                             .foregroundStyle(selected == index ? .white : AppTheme.textPrimary)
-                            .background(selected == index ? AppTheme.accent : AppTheme.background)
+                            .background(selected == index
+                                        ? (isCoach ? AppTheme.coachNutrition : AppTheme.accent)
+                                        : AppTheme.background)
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
                         .buttonStyle(.plain)
@@ -1449,7 +1553,22 @@ struct MealCard: View {
     var style: Style = .standard
     var onSelect: (() -> Void)? = nil
     var onToggleCompleted: (() -> Void)? = nil
-    @State private var isExpanded = false
+    @State private var isExpanded: Bool
+
+    init(
+        meal: Meal,
+        isSelected: Bool = false,
+        style: Style = .standard,
+        onSelect: (() -> Void)? = nil,
+        onToggleCompleted: (() -> Void)? = nil
+    ) {
+        self.meal = meal
+        self.isSelected = isSelected
+        self.style = style
+        self.onSelect = onSelect
+        self.onToggleCompleted = onToggleCompleted
+        _isExpanded = State(initialValue: style == .coachPrescribed)
+    }
 
     private var accentColor: Color {
         style == .coachPrescribed ? AppTheme.coachNutrition : AppTheme.accent
@@ -1463,6 +1582,10 @@ struct MealCard: View {
         style == .coachPrescribed
             ? AppTheme.coachNutritionMuted.opacity(0.85)
             : AppTheme.cardBackground
+    }
+
+    private var showsDetails: Bool {
+        isExpanded || style == .coachPrescribed
     }
 
     var body: some View {
@@ -1525,7 +1648,7 @@ struct MealCard: View {
                                 .font(.caption2)
                                 .foregroundStyle(AppTheme.textSecondary)
                         }
-                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        Image(systemName: showsDetails ? "chevron.up" : "chevron.down")
                             .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
@@ -1540,25 +1663,47 @@ struct MealCard: View {
                     .foregroundStyle(accentColor)
             }
 
-            if isExpanded {
+            if showsDetails {
                 Divider().background(Color.white.opacity(0.1))
-                Text("Ingredientes")
+                Text(style == .coachPrescribed ? "Alimentos prescritos" : "Ingredientes")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(AppTheme.textSecondary)
-                ForEach(meal.ingredients, id: \.self) { ingredient in
-                    HStack {
-                        Image(systemName: "circle.fill")
-                            .font(.system(size: 4))
-                        Text(ingredient)
-                            .font(.caption)
-                    }
-                    .foregroundStyle(AppTheme.textPrimary)
-                }
-                if !meal.instructions.isEmpty {
-                    Text(meal.instructions)
+                if meal.ingredients.isEmpty {
+                    Text("Nenhum alimento listado nesta refeição.")
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
-                        .padding(.top, 4)
+                } else {
+                    ForEach(meal.ingredients, id: \.self) { ingredient in
+                        HStack(alignment: .top) {
+                            Image(systemName: "circle.fill")
+                                .font(.system(size: 4))
+                                .padding(.top, 5)
+                            Text(ingredient)
+                                .font(.caption)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .foregroundStyle(AppTheme.textPrimary)
+                    }
+                }
+                if !meal.instructions.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(style == .coachPrescribed ? "Comentário do nutricionista" : "Modo de preparo")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(style == .coachPrescribed ? AppTheme.coachNutrition : AppTheme.textSecondary)
+                        Text(meal.instructions)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, 4)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        style == .coachPrescribed
+                            ? AppTheme.coachNutrition.opacity(0.12)
+                            : Color.clear
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
 
                 Button {

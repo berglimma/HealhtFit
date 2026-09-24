@@ -290,7 +290,13 @@ HealhtFit/
 - Cardápio prescrito pelo nutricionista (destaque visual distinto no app)
 - Lista de compras derivada do plano
 - Análise fotográfica de refeições e cuidados nutricionais (anamnese, questionários, metas)
-- Foto nutricional do dia: aluno envia; nutricionista visualiza **apenas no dia**; após abrir, a foto é apagada
+- **Prescrição com texto livre:** nutricionista pode adicionar comentários gerais e, por refeição, alimentos (um por linha) + orientações
+- **Visão do aluno:** em Nutrição, comentários gerais, alimentos prescritos e “Comentário do nutricionista” ficam visíveis em cada refeição (sem precisar expandir)
+- **Foto nutricional do dia** (fluxo aluno → nutricionista):
+  1. Aluno tira/escolhe a foto da refeição
+  2. Envia pelo app (disponível **só no dia**)
+  3. Nutricionista abre **uma vez** em Revisão IAssistente
+  4. Após visualizar, a foto é **apagada** automaticamente
 
 ### Conta, legal e conformidade
 
@@ -322,8 +328,15 @@ Vínculos Firebase entre aluno e **personal trainer** e/ou **nutricionista**, co
 | Profissão | Pode enviar |
 |-----------|-------------|
 | Personal | Fichas de musculação |
-| Nutricionista | Cardápio / plano alimentar |
+| Nutricionista | Cardápio / plano alimentar (modelos + texto livre: alimentos e comentários) |
 | Ambos (vínculos ativos) | Cada um no seu escopo; aluno existente pode ativar nutrição + cardápio |
+
+### Prescrever cardápio
+
+- Origem: montar no app (calorias, objetivo, lactose, doces + templates) ou enviar plano local
+- Comentários gerais para o aluno
+- Por refeição: inserir/editar alimentos e comentários em texto livre
+- O aluno vê tudo sincronizado em **Nutrição** (banner + cards de refeição)
 
 ### Agenda de consultas
 

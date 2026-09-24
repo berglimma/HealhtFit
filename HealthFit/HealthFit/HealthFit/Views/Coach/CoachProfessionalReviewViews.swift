@@ -216,9 +216,17 @@ struct StudentDailyMealPhotoShareView: View {
     var body: some View {
         Form {
             Section {
-                Text("A nutricionista vê a foto só hoje. Depois de abrir, ela é apagada automaticamente.")
+                Text("Fluxo: você envia a foto → o nutricionista vê só hoje → ao abrir, a foto é apagada automaticamente.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("1. Escolha a foto da refeição", systemImage: "1.circle.fill")
+                    Label("2. Informe o nome (ex.: Almoço) e observação opcional", systemImage: "2.circle.fill")
+                    Label("3. Toque em Enviar", systemImage: "3.circle.fill")
+                    Label("4. Nutri abre 1× e a foto some", systemImage: "4.circle.fill")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
             Section("Refeição") {
                 TextField("Ex.: Almoço, Jantar…", text: $mealLabel)
