@@ -196,6 +196,7 @@
 		B1000403 /* EveningTrainingNudgeAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000400 /* EveningTrainingNudgeAttributes.swift */; };
 		B1000410 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000410 /* AppLanguage.swift */; };
 		B1000411 /* WeakMainActorBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000411 /* WeakMainActorBox.swift */; };
+		B1000412 /* AppDistribution.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000412 /* AppDistribution.swift */; };
 		B1000412 /* LanguagePickerControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000412 /* LanguagePickerControl.swift */; };
 		B1000420 /* RunTrackingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000420 /* RunTrackingModels.swift */; };
 		B1000421 /* RunTrackingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000421 /* RunTrackingService.swift */; };
@@ -616,6 +617,7 @@
 		F1000402 /* EveningTrainingNudgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningTrainingNudgeService.swift; sourceTree = "<group>"; };
 		F1000410 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
 		F1000411 /* WeakMainActorBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeakMainActorBox.swift; sourceTree = "<group>"; };
+		F1000412 /* AppDistribution.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDistribution.swift; sourceTree = "<group>"; };
 		F1000412 /* LanguagePickerControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguagePickerControl.swift; sourceTree = "<group>"; };
 		F1000420 /* RunTrackingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingModels.swift; sourceTree = "<group>"; };
 		F1000421 /* RunTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTrackingService.swift; sourceTree = "<group>"; };
@@ -1354,6 +1356,7 @@
 				F1000L01 /* PulseLocalized.swift */,
 				F1000410 /* AppLanguage.swift */,
 				F1000411 /* WeakMainActorBox.swift */,
+				F1000412 /* AppDistribution.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -1954,6 +1957,7 @@
 				B1000140 /* L10n.swift in Sources */,
 				B1000410 /* AppLanguage.swift in Sources */,
 				B1000411 /* WeakMainActorBox.swift in Sources */,
+				B1000412 /* AppDistribution.swift in Sources */,
 				B1000420 /* RunTrackingModels.swift in Sources */,
 				B1000421 /* RunTrackingService.swift in Sources */,
 				B1000422 /* RunRouteMapView.swift in Sources */,
@@ -2257,8 +2261,8 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para fotos de perfil e evolução corporal, escanear fichas de treino e publicar fotos ou stories no HealthFit Pulse.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit precisa acessar seus dados de saúde — incluindo sono do Apple Watch — para métricas, recuperação e sincronizar treinos.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mostrar o mapa e a rota em tempo real.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano. No Spot Buddy, a posição só é compartilhada se você ativou o recurso e a sessão de kitesurf estiver ativa.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mapa e rota. No Kite Spot Buddy (opt-in), a posição aproximada pode ser compartilhada com amigos da equipe só enquanto a sessão de kitesurf estiver ativa.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HealthFit usa o microfone ao gravar vídeo do treino para compartilhar com a legenda da sessão.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva na galeria fotos de evolução, cards de treino e mapas que você autorizar.";
@@ -2306,8 +2310,8 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "HealthFit usa a câmera para fotos de perfil e evolução corporal, escanear fichas de treino e publicar fotos ou stories no HealthFit Pulse.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "HealthFit precisa acessar seus dados de saúde — incluindo sono do Apple Watch — para métricas, recuperação e sincronizar treinos.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HealthFit salva seus treinos e calorias queimadas no app Saúde.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mostrar o mapa e a rota em tempo real.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano. No Spot Buddy, a posição só é compartilhada se você ativou o recurso e a sessão de kitesurf estiver ativa.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mapa e rota. No Kite Spot Buddy (opt-in), a posição aproximada pode ser compartilhada com amigos da equipe só enquanto a sessão de kitesurf estiver ativa.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HealthFit usa o microfone ao gravar vídeo do treino para compartilhar com a legenda da sessão.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando ou correndo e contar passos.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "HealthFit salva na galeria fotos de evolução, cards de treino e mapas que você autorizar.";

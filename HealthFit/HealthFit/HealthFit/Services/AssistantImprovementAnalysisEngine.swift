@@ -374,7 +374,7 @@ enum AssistantImprovementAnalysisEngine {
 
         if sparse {
             lines.append("📊 **Panorama**")
-            lines.append("Ainda há poucos dados para um diagnóstico completo — e isso é normal no começo.")
+            lines.append("Ainda há poucos dados para um resumo educativo completo — e isso é normal no começo.")
             lines.append("")
         } else {
             lines.append("📊 **O que os dados mostram**")

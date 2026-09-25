@@ -1,6 +1,6 @@
 import UIKit
 
-/// Laudo de avaliação física (1 página A4) no modelo HealthFit.
+/// Relatório educativo de avaliação física (1 página A4) no modelo HealthFit.
 enum PhysicalAssessmentPDFBuilder {
     private static let pageSize = CGSize(width: 595, height: 842)
     private static let headerHeight: CGFloat = 70

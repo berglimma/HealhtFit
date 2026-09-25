@@ -237,7 +237,7 @@ struct MealPhotoAnalysisView: View {
             }
             .font(.subheadline)
 
-            Text("Confiança: \(Int((draft.confidence * 100).rounded()))%")
+            Text("Confiança da detecção visual (estimativa, não é análise laboratorial): \(Int((draft.confidence * 100).rounded()))%")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
 

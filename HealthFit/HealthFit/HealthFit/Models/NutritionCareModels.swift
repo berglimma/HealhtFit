@@ -113,7 +113,7 @@ enum NutritionQuestionnaireKind: String, CaseIterable, Codable, Identifiable, Ha
         switch self {
         case .healthGeneral:
             return [
-                .init(id: "q1", prompt: "Tem diagnóstico médico atual?"),
+                .init(id: "q1", prompt: "Possui alguma condição de saúde já acompanhada por um médico?"),
                 .init(id: "q2", prompt: "Usa medicamentos contínuos? Quais?"),
                 .init(id: "q3", prompt: "Tem alergias alimentares ou medicamentosas?"),
                 .init(id: "q4", prompt: "Já fez exames recentes (glicemia, lipídios, TSH)?"),

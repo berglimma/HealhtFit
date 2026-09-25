@@ -163,7 +163,7 @@ struct BodyEvolutionEvaluation: Codable, Equatable, Identifiable {
                 }
             }
         } else {
-            lines.append("Comparação registrada. Atualize as medidas no Perfil para um laudo mais completo.")
+            lines.append("Comparação registrada. Atualize as medidas no Perfil para um relatório educativo mais completo.")
         }
         lines.append("Fotos: \(photoCountPrevious) → \(photoCountCurrent) (envio opcional e privado).")
         if photoCountPrevious > 0 {

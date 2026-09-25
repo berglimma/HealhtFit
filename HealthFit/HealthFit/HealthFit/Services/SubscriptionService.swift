@@ -124,8 +124,13 @@ final class SubscriptionService: ObservableObject {
     }
 
     /// Resgata voucher de cortesia (Cloud Function + Firestore). Uso único, 30 dias, sem renovação.
+    /// Só permitido em Debug/TestFlight — bloqueado no binário da App Store (Guideline 3.1.1).
     @discardableResult
     func redeemCourtesyCode(_ code: String) async -> Bool {
+        guard AppDistribution.allowsCourtesyVoucherRedeem else {
+            lastErrorMessage = "Códigos de cortesia estão disponíveis apenas no TestFlight."
+            return false
+        }
         courtesyRedeemInProgress = true
         lastErrorMessage = nil
         defer { courtesyRedeemInProgress = false }

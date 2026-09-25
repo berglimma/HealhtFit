@@ -309,11 +309,13 @@ struct PaywallView: View {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(AppTheme.accent)
 
-            Button("Tenho um código de cortesia") {
-                showCourtesyRedeem = true
+            if AppDistribution.allowsCourtesyVoucherRedeem {
+                Button("Tenho um código de cortesia (TestFlight)") {
+                    showCourtesyRedeem = true
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
             }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(AppTheme.accent)
 
             Button("Gerenciar assinatura") {
                 showManage = true
@@ -437,11 +439,13 @@ struct SubscriptionPlanView: View {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(AppTheme.accent)
 
-            Button("Tenho um código de cortesia") {
-                showCourtesyRedeem = true
+            if AppDistribution.allowsCourtesyVoucherRedeem {
+                Button("Tenho um código de cortesia (TestFlight)") {
+                    showCourtesyRedeem = true
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
             }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(AppTheme.accent)
 
             Button("Gerenciar na App Store") {
                 showManage = true
@@ -601,7 +605,7 @@ struct CourtesyRedeemSheet: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Cole o código que você recebeu. Cada voucher libera 30 dias do plano, sem cobrança e sem renovação automática.")
+                Text("Disponível só em TestFlight/Debug para testes. Cada voucher libera 30 dias do plano, sem cobrança e sem renovação automática. Na App Store use Offer Codes da Apple.")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.textSecondary)
 

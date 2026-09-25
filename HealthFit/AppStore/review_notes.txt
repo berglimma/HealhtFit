@@ -1,5 +1,10 @@
 HealthFit 1.0.11 (24)
 
+Resolution for Guideline 3.1.1 (In-App Purchase):
+- The shipping App Store binary does NOT offer in-app courtesy/promo code unlocks.
+- 30-day QA vouchers exist only in TestFlight/Debug builds (hidden and blocked in App Store builds).
+- Production paid access is StoreKit / App Store Offer Codes only.
+
 Resolution for Guideline 3.1.2 (Subscriptions):
 - Paywall now shows the billed price first (e.g. annual total /ano); monthly equivalent only as secondary “equiv. a …/mês” in the same currency as StoreKit.
 - Purchase button includes the exact StoreKit price to be charged.
@@ -12,9 +17,9 @@ How to verify:
 1. Profile → Meu plano → Ver planos e assinar
 2. Confirm annual cards show “…/ano” as the primary price
 3. Scroll under Assinar: Restaurar compras, Privacy/EULA/Termos links, and the full renewal text
+4. Confirm there is NO “código de cortesia” button on the App Store build
 
-Previous 3.1.1 resolution (still in effect):
-- No in-app courtesy/promo code unlocks; StoreKit / App Store Offer Codes only.
+Privacy Policy URL: https://healthfit-30d87.web.app/privacidade/
 
 Demo account: use existing review credentials on file.
 No encryption changes.

@@ -130,7 +130,7 @@ struct BodyEvolutionView: View {
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.textSecondary)
 
-            Text("O laudo usa as medidas do Perfil. As fotos abaixo são opcionais e reforçam o antes/depois.")
+            Text("O relatório educativo usa as medidas do Perfil. As fotos abaixo são opcionais e reforçam o antes/depois.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
 

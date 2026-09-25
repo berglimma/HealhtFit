@@ -1152,7 +1152,7 @@ enum HealthAssistantEngine {
             respond: { ctx in
                 let measuresNote: String = {
                     guard let user = ctx.user else {
-                        return "Cadastre-se e preencha as medidas no Perfil para um laudo completo."
+                        return "Cadastre-se e preencha as medidas no Perfil para um relatório educativo completo."
                     }
                     if let comparison = user.latestMeasurementComparison,
                        comparison.periodDays >= BodyMeasurements.comparisonIntervalDays {
@@ -1173,7 +1173,7 @@ enum HealthAssistantEngine {
                 return """
                 Evolução Corporal no HealthFit:
                 • Fotos são opcionais (até 6 ângulos) e privadas — só você pode ver ou acessar.
-                • O laudo principal usa as medidas corporais do Perfil.
+                • O relatório principal usa as medidas corporais do Perfil.
                 • Após 30 dias, registre uma nova avaliação (com ou sem fotos).
                 • Se houver fotos antigas, elas são excluídas após a comparação.
                 • Os PDFs das últimas 4 avaliações ficam salvos só na sua conta.

@@ -10,3 +10,7 @@
 "NSCalendarsWriteOnlyAccessUsageDescription" = "HealthFit registra en el Calendario los entrenos completados del día para seguir tu historial.";
 "NSBluetoothAlwaysUsageDescription" = "HealthFit usa Bluetooth para conectar sensores y relojes compatibles y recibir pulsaciones en vivo durante el entrenamiento.";
 "NSBluetoothPeripheralUsageDescription" = "HealthFit usa Bluetooth para conectar sensores y relojes compatibles y recibir pulsaciones en vivo durante el entrenamiento.";
+
+"NSLocationWhenInUseUsageDescription" = "HealthFit usa tu ubicación durante Carrera, caminata, ciclismo outdoor, Surf y Kitesurf para mapa y ruta. En Kite Spot Buddy (opt-in), la posición aproximada puede compartirse con amigos del equipo solo mientras la sesión de kitesurf esté activa.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "HealthFit sigue registrando la ruta de Carrera, bici outdoor, Surf y Kitesurf con la pantalla bloqueada o en segundo plano. En Spot Buddy, la posición solo se comparte si activaste la función y la sesión de kitesurf está activa.";
+"NSMotionUsageDescription" = "HealthFit usa el movimiento y el podómetro para identificar si estás parado, caminando, corriendo o pedaleando y contar pasos.";
