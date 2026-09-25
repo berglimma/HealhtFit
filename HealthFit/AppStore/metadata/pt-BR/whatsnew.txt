@@ -1,5 +1,4 @@
-• Correção App Review 3.1.2: preço cobrado da assinatura em destaque, texto completo de renovação automática e links de Privacidade/EULA no paywall
-• Restaurar compras e gerenciar assinatura permanecem em Assinaturas e Meu plano
-• Cronômetro circular segmentado no Apple Watch (caminhada, corrida, bike e MTB)
-• Finalizar cardio no iPhone encerra corretamente a sessão no Watch
-• Assinaturas apenas via App Store (sem códigos de cortesia no app)
+• Correções para App Review: códigos de cortesia só no TestFlight; binário da App Store usa apenas StoreKit
+• Política de privacidade em HTML; textos educativos (sem “laudo/diagnóstico”)
+• Análise de foto de refeição mais precisa (menos falsos positivos de açaí)
+• Melhorias no Coach: agenda, cardápio prescrito e revisão profissional

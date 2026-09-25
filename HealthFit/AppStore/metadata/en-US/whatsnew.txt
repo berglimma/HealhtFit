@@ -1,5 +1,4 @@
-• App Review 3.1.2 fix: billed subscription price first, full auto-renewal disclosure, Privacy/EULA links on the paywall
-• Restore purchases and manage subscription remain on Subscriptions and My Plan
-• Segmented circular chronometer on Apple Watch (walk, run, bike, MTB)
-• Ending cardio on iPhone correctly stops the Watch session
-• Subscriptions via App Store only (no in-app courtesy codes)
+• App Review fixes: courtesy vouchers TestFlight-only; App Store build uses StoreKit only
+• Privacy policy HTML URL; educational wording (no clinical “diagnosis” language)
+• More accurate meal photo analysis (fewer açaí false positives)
+• Coach improvements: schedule, prescribed meal plans, professional review
