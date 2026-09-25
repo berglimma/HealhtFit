@@ -138,7 +138,9 @@ enum MealPhotoAnalysisEngine {
                 request.customWords = [
                     "proteínas", "proteinas", "carboidratos", "gorduras", "kcal",
                     "calorias", "valor energético", "porção", "frango", "arroz",
-                    "feijão", "protein", "carbohydrate", "calories",
+                    "feijão", "feijao", "brócolis", "brocolis", "batata", "carne",
+                    "salada", "ovos", "tapioca", "açaí", "acai", "mandioca",
+                    "protein", "carbohydrate", "calories",
                 ]
                 let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
                 do {
@@ -390,12 +392,64 @@ enum MealPhotoAnalysisEngine {
         let source: String
     }
 
+    static func matchAllClassifications(_ observations: [VNClassificationObservation]) -> [CatalogHit] {
+        var hits: [CatalogHit] = []
+        // Só as melhores classificações — evita ruído fraco (ex.: bowl/smoothie → açaí).
+        let ranked = observations
+            .filter { $0.confidence >= 0.12 }
+            .sorted { $0.confidence > $1.confidence }
+            .prefix(10)
+
+        for observation in ranked {
+            let identifier = normalize(observation.identifier)
+            let tokens = identifier
+                .replacingOccurrences(of: "_", with: " ")
+                .split(separator: ",")
+                .map { normalize(String($0)) }
+
+            var candidateTokens = Set(tokens)
+            candidateTokens.insert(identifier)
+            if let last = identifier.split(whereSeparator: { $0 == ">" || $0 == "/" || $0 == "|" }).last {
+                candidateTokens.insert(normalize(String(last)))
+            }
+
+            for token in candidateTokens where token.count >= 3 {
+                guard let item = FoodMacroCatalog.item(matchingVisionLabel: token)
+                    ?? FoodMacroCatalog.item(matching: token) else { continue }
+
+                if item.requiresExplicitEvidence {
+                    // Açaí e similares: Vision só conta com rótulo explícito (não "bowl"/"smoothie").
+                    let explicit = FoodMacroCatalog.isExplicitEvidence(token: token, for: item)
+                    guard explicit, observation.confidence >= 0.28 else { continue }
+                }
+
+                let score = Double(observation.confidence) * item.matchWeight
+                let floor: Double = item.isGeneric ? 0.22 : 0.20
+                guard score >= floor else { continue }
+                hits.append(
+                    CatalogHit(
+                        item: item,
+                        confidence: min(max(score, floor), 0.94),
+                        source: "vision"
+                    )
+                )
+            }
+        }
+        return hits
+    }
+
     static func matchAllInText(_ text: String, sourceBoost: Double) -> [CatalogHit] {
         let normalized = normalize(text)
         guard !normalized.isEmpty else { return [] }
         var hits: [CatalogHit] = []
         for item in FoodMacroCatalog.items {
             guard let score = bestKeywordScore(item: item, in: normalized) else { continue }
+            if item.requiresExplicitEvidence {
+                let explicit = item.keywords.contains { keyword in
+                    textContainsKeyword(normalized, keyword: normalize(keyword))
+                }
+                guard explicit else { continue }
+            }
             hits.append(
                 CatalogHit(
                     item: item,
@@ -403,41 +457,6 @@ enum MealPhotoAnalysisEngine {
                     source: "ocr"
                 )
             )
-        }
-        return hits
-    }
-
-    static func matchAllClassifications(_ observations: [VNClassificationObservation]) -> [CatalogHit] {
-        var hits: [CatalogHit] = []
-        for observation in observations.prefix(20) {
-            let identifier = normalize(observation.identifier)
-            let tokens = identifier
-                .replacingOccurrences(of: "_", with: " ")
-                .split(separator: ",")
-                .map { normalize(String($0)) }
-
-            var candidateTokens = tokens
-            candidateTokens.append(identifier)
-            if let last = identifier.split(whereSeparator: { $0 == ">" || $0 == "/" || $0 == "|" }).last {
-                candidateTokens.append(normalize(String(last)))
-            }
-
-            for token in Set(candidateTokens) where token.count >= 3 {
-                if let item = FoodMacroCatalog.item(matching: token)
-                    ?? FoodMacroCatalog.item(matchingVisionLabel: token) {
-                    let score = Double(observation.confidence) * item.matchWeight
-                    guard score >= 0.05 else { continue }
-                    // Classificações genéricas/fracas do Vision não devem dominar.
-                    let floor: Double = item.isGeneric ? 0.18 : 0.14
-                    hits.append(
-                        CatalogHit(
-                            item: item,
-                            confidence: min(max(score, floor), 0.94),
-                            source: "vision"
-                        )
-                    )
-                }
-            }
         }
         return hits
     }
@@ -473,13 +492,31 @@ enum MealPhotoAnalysisEngine {
         let pool = specific.isEmpty ? Array(bestByName.values) : specific
 
         // Descarta hits muito fracos quando já há um forte.
-        let strong = pool.filter { $0.confidence >= 0.28 }
-        let trimmed = strong.isEmpty ? pool : strong
+        let strong = pool.filter { $0.confidence >= 0.32 }
+        let trimmed = strong.isEmpty ? pool.filter { $0.confidence >= 0.22 } : strong
 
-        return trimmed
+        var result = trimmed
             .sorted { $0.confidence > $1.confidence }
             .prefix(4)
             .map { $0 }
+
+        // Açaí só permanece se for a leitura principal ou vier de OCR explícito.
+        if let acai = result.first(where: { $0.item.displayName == "Açaí" }) {
+            let savoryNames: Set<String> = [
+                "Frango grelhado", "Carne bovina", "Peixe", "Arroz", "Arroz e feijão", "Feijão",
+                "Macarrão", "Salada", "Prato feito", "Ovos", "Peito de peru", "Carne de porco",
+                "Legumes", "Brócolis", "Feijoada", "Sushi", "Sanduíche", "Pizza",
+            ]
+            let hasSavory = result.contains {
+                savoryNames.contains($0.item.displayName) && $0.confidence >= 0.32
+            }
+            let visionOnlyWeak = acai.source == "vision" && acai.confidence < 0.55
+            if hasSavory || visionOnlyWeak {
+                result = result.filter { $0.item.displayName != "Açaí" }
+            }
+        }
+
+        return result
     }
 
     private static func applySupersession(_ map: inout [String: CatalogHit]) {
@@ -698,6 +735,8 @@ struct FoodMacroItem: Equatable {
     let typicalGrams: Int
     let matchWeight: Double
     let isGeneric: Bool
+    /// Exige evidência explícita (OCR/Vision com o nome do alimento) — evita falsos positivos.
+    let requiresExplicitEvidence: Bool
 
     init(
         displayName: String,
@@ -708,7 +747,8 @@ struct FoodMacroItem: Equatable {
         fatGrams: Int,
         typicalGrams: Int = 150,
         matchWeight: Double,
-        isGeneric: Bool = false
+        isGeneric: Bool = false,
+        requiresExplicitEvidence: Bool = false
     ) {
         self.displayName = displayName
         self.keywords = keywords
@@ -719,6 +759,7 @@ struct FoodMacroItem: Equatable {
         self.typicalGrams = max(1, typicalGrams)
         self.matchWeight = matchWeight
         self.isGeneric = isGeneric
+        self.requiresExplicitEvidence = requiresExplicitEvidence
     }
 }
 
@@ -821,16 +862,43 @@ enum FoodMacroCatalog {
             proteinGrams: 22, carbsGrams: 40, fatGrams: 6, matchWeight: 1.0
         ),
         FoodMacroItem(
+            displayName: "Peito de peru",
+            keywords: ["peito de peru", "peru defumado", "turkey breast", "turkey"],
+            visionLabels: [],
+            proteinGrams: 36, carbsGrams: 1, fatGrams: 2, typicalGrams: 120, matchWeight: 1.0
+        ),
+        FoodMacroItem(
+            displayName: "Carne de porco",
+            keywords: ["lombo de porco", "carne de porco", "costelinha", "pork", "bacon"],
+            visionLabels: ["pork chop", "bacon"],
+            proteinGrams: 32, carbsGrams: 0, fatGrams: 16, typicalGrams: 120, matchWeight: 0.95
+        ),
+        FoodMacroItem(
+            displayName: "Legumes",
+            keywords: ["legumes", "cenoura", "abobrinha", "chuchu", "vagem", "couve flor", "couve-flor"],
+            visionLabels: ["carrot", "zucchini", "cauliflower"],
+            proteinGrams: 3, carbsGrams: 12, fatGrams: 2, typicalGrams: 140, matchWeight: 0.85
+        ),
+        FoodMacroItem(
+            displayName: "Quinoa",
+            keywords: ["quinoa"],
+            visionLabels: [],
+            proteinGrams: 8, carbsGrams: 32, fatGrams: 3, typicalGrams: 140, matchWeight: 1.0,
+            requiresExplicitEvidence: true
+        ),
+        FoodMacroItem(
             displayName: "Açaí",
-            keywords: ["acai bowl", "acai", "açaí"],
-            visionLabels: ["acai", "smoothie bowl"],
-            proteinGrams: 6, carbsGrams: 55, fatGrams: 10, matchWeight: 1.0
+            keywords: ["acai bowl", "acai", "açaí", "açaí bowl"],
+            visionLabels: ["acai"],
+            proteinGrams: 6, carbsGrams: 55, fatGrams: 10, matchWeight: 0.75,
+            requiresExplicitEvidence: true
         ),
         FoodMacroItem(
             displayName: "Tapioca",
             keywords: ["tapioca", "crepioca"],
             visionLabels: [],
-            proteinGrams: 8, carbsGrams: 36, fatGrams: 6, matchWeight: 1.0
+            proteinGrams: 8, carbsGrams: 36, fatGrams: 6, matchWeight: 1.0,
+            requiresExplicitEvidence: true
         ),
         FoodMacroItem(
             displayName: "Salgado",
@@ -876,9 +944,10 @@ enum FoodMacroCatalog {
         ),
         FoodMacroItem(
             displayName: "Whey / shake",
-            keywords: ["whey protein", "whey", "protein shake", "shake proteico", "smoothie", "proteina", "proteína"],
-            visionLabels: ["smoothie", "milkshake"],
-            proteinGrams: 25, carbsGrams: 8, fatGrams: 2, matchWeight: 0.88
+            keywords: ["whey protein", "whey", "protein shake", "shake proteico", "proteina", "proteína"],
+            visionLabels: ["milkshake"],
+            proteinGrams: 25, carbsGrams: 8, fatGrams: 2, matchWeight: 0.88,
+            requiresExplicitEvidence: true
         ),
         FoodMacroItem(
             displayName: "Pão",
@@ -925,6 +994,23 @@ enum FoodMacroCatalog {
         ),
     ]
 
+    /// Evidência explícita: o token precisa ser o alimento (ou keyword forte), não um genérico ("bowl").
+    static func isExplicitEvidence(token: String, for item: FoodMacroItem) -> Bool {
+        let normalized = MealPhotoAnalysisEngine.normalize(token)
+        guard normalized.count >= 3 else { return false }
+        let needles = (item.keywords + item.visionLabels + [item.displayName])
+            .map { MealPhotoAnalysisEngine.normalize($0) }
+            .filter { !$0.isEmpty }
+        for needle in needles {
+            if normalized == needle { return true }
+            // Token contém a keyword inteira (ex.: "acai bowl" contém "acai").
+            if MealPhotoAnalysisEngine.textContainsKeyword(normalized, keyword: needle), needle.count >= 4 {
+                return true
+            }
+        }
+        return false
+    }
+
     static func item(matching token: String) -> FoodMacroItem? {
         let normalized = MealPhotoAnalysisEngine.normalize(token)
         guard normalized.count >= 3 else { return nil }
@@ -935,10 +1021,22 @@ enum FoodMacroCatalog {
                 let key = MealPhotoAnalysisEngine.normalize(keyword)
                 guard key.count >= 3 else { continue }
                 let exact = normalized == key
+                // Label contém a keyword (frango ← "peito de frango" no OCR completo via matchAllInText;
+                // aqui o token Vision costuma ser curto).
                 let tokenHasKey = MealPhotoAnalysisEngine.textContainsKeyword(normalized, keyword: key)
-                let keyHasToken = key.count >= 5 && MealPhotoAnalysisEngine.textContainsKeyword(key, keyword: normalized)
+                // Keyword longa contém o token só se o token for substancial (≥5) e for palavra
+                // da frase — evita "bowl" → "acai bowl" e "smoothie" → "smoothie bowl".
+                let keyHasToken = normalized.count >= 5
+                    && key.count > normalized.count
+                    && (
+                        key.hasPrefix(normalized + " ")
+                            || key.hasSuffix(" " + normalized)
+                            || key.split(separator: " ").map(String.init).contains(normalized)
+                    )
                 guard exact || tokenHasKey || keyHasToken else { continue }
-                // Preferência forte por match exato / keyword mais longa.
+                if item.requiresExplicitEvidence, !isExplicitEvidence(token: normalized, for: item) {
+                    continue
+                }
                 let score = key.count + (exact ? 20 : 0) + (tokenHasKey && key.count >= 8 ? 8 : 0)
                 if best == nil || score > best!.1 {
                     best = (item, score)
@@ -957,9 +1055,13 @@ enum FoodMacroCatalog {
                 let key = MealPhotoAnalysisEngine.normalize(vision)
                 guard key.count >= 3 else { continue }
                 let exact = normalized == key
-                let contains = MealPhotoAnalysisEngine.textContainsKeyword(normalized, keyword: key)
-                    || MealPhotoAnalysisEngine.textContainsKeyword(key, keyword: normalized)
-                guard exact || contains else { continue }
+                // Apenas: label contém a vision label completa — NÃO o inverso
+                // (evita smoothie → "smoothie bowl" do açaí).
+                let labelHasKey = MealPhotoAnalysisEngine.textContainsKeyword(normalized, keyword: key)
+                guard exact || labelHasKey else { continue }
+                if item.requiresExplicitEvidence, !isExplicitEvidence(token: normalized, for: item) {
+                    continue
+                }
                 let score = key.count + (exact ? 20 : 0)
                 if best == nil || score > best!.1 {
                     best = (item, score)

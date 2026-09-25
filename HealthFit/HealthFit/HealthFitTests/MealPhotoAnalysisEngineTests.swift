@@ -18,6 +18,40 @@ final class MealPhotoAnalysisEngineTests: XCTestCase {
         XCTAssertEqual(item?.displayName, "Pizza")
     }
 
+    func testBowlAndSmoothieDoNotMatchAcai() {
+        XCTAssertNil(FoodMacroCatalog.item(matching: "bowl"))
+        XCTAssertNil(FoodMacroCatalog.item(matching: "smoothie"))
+        XCTAssertNil(FoodMacroCatalog.item(matchingVisionLabel: "bowl"))
+        XCTAssertNil(FoodMacroCatalog.item(matchingVisionLabel: "smoothie"))
+        XCTAssertNil(FoodMacroCatalog.item(matchingVisionLabel: "smoothie bowl"))
+        XCTAssertEqual(FoodMacroCatalog.item(matching: "acai")?.displayName, "Açaí")
+        XCTAssertEqual(FoodMacroCatalog.item(matchingVisionLabel: "acai")?.displayName, "Açaí")
+        XCTAssertEqual(FoodMacroCatalog.item(matching: "açaí bowl")?.displayName, "Açaí")
+    }
+
+    func testMergeDropsVisionAcaiWhenSavoryPresent() {
+        let acai = FoodMacroCatalog.item(matching: "acai")!
+        let frango = FoodMacroCatalog.item(matching: "frango")!
+        let arroz = FoodMacroCatalog.item(matching: "arroz")!
+        let merged = MealPhotoAnalysisEngine.mergeHits([
+            .init(item: acai, confidence: 0.45, source: "vision"),
+            .init(item: frango, confidence: 0.72, source: "vision"),
+            .init(item: arroz, confidence: 0.68, source: "ocr"),
+        ])
+        let names = merged.map(\.item.displayName)
+        XCTAssertFalse(names.contains("Açaí"))
+        XCTAssertTrue(names.contains("Frango grelhado"))
+    }
+
+    func testOCRAcaiStillDetectedWhenExplicit() {
+        let hits = MealPhotoAnalysisEngine.matchAllInText(
+            "Tigela de açaí com banana e granola",
+            sourceBoost: 0.9
+        )
+        let names = Set(hits.map(\.item.displayName))
+        XCTAssertTrue(names.contains("Açaí"))
+    }
+
     func testOCRTextFindsMultipleFoods() {
         let hits = MealPhotoAnalysisEngine.matchAllInText(
             "Marmita: frango grelhado, arroz branco e brocolis",
