@@ -14,6 +14,11 @@ struct RootView: View {
     @State private var welcomeContext: WelcomeMotivationContext?
     /// Evita flash do painel: só libera o MainTab depois que a transição for concluída (ou dispensada).
     @State private var didCompleteWelcomeForSession = false
+    /// Só roda o pipeline pesado após `.background` real (evita lentidão no iPad/Stage Manager em `.inactive`→`.active`).
+    @State private var didEnterBackground = false
+    @State private var lastForegroundPipelineAt: Date?
+    @State private var foregroundPipelineTask: Task<Void, Never>?
+    private let foregroundPipelineMinInterval: TimeInterval = 45
 
     var body: some View {
         Group {
@@ -31,7 +36,7 @@ struct RootView: View {
                 } else {
                     loadingScreen(message: nil)
                         .onAppear {
-                            presentWelcome()
+                            presentWelcome(preserveMainTab: false)
                         }
                 }
             } else {
@@ -44,6 +49,14 @@ struct RootView: View {
                             .environmentObject(authService)
                             .environmentObject(wellnessService)
                             .environmentObject(healthKitManager)
+                    }
+                    // Welcome após 24h em overlay — não desmonta o MainTab (evita cold start no iPad).
+                    .fullScreenCover(isPresented: $showWelcomeMotivation) {
+                        if let welcomeContext {
+                            WelcomeMotivationView(context: welcomeContext) {
+                                showWelcomeMotivation = false
+                            }
+                        }
                     }
             }
         }
@@ -63,18 +76,19 @@ struct RootView: View {
                 // Não chamar KeyboardDismiss aqui — ao voltar de inactive (ficha/sheet/teclado)
                 // o endEditing global cancela a digitação em TextFields.
                 if authService.isAuthenticated {
-                    prepareWelcomeIfAuthenticated(trigger: .returnFromBackground)
-                    let outdoorCardioRunning =
-                        workoutStore.activeSession != nil
-                        && (workoutStore.resolvedActiveCardioConfig()?.isOutdoorGPSCardio == true)
-                    if !outdoorCardioRunning {
-                        DuoTeamService.shared.handleAppBecameActive()
+                    let returningFromBackground = didEnterBackground
+                    didEnterBackground = false
+                    // Catch-up leve sempre (treino/timer); sync pesado só após background real.
+                    runLightweightForegroundCatchUp()
+                    if returningFromBackground {
+                        prepareWelcomeIfAuthenticated(trigger: .returnFromBackground)
+                        scheduleForegroundRefreshPipeline()
                     }
-                    Task { await runForegroundRefreshPipeline() }
                 } else {
                     WorkoutLiveActivitySync.end()
                 }
             case .background:
+                didEnterBackground = true
                 KeyboardDismiss.hide()
                 workoutStore.handleAppEnteredBackground()
                 timerService.handleAppEnteredBackground()
@@ -210,20 +224,8 @@ struct RootView: View {
         Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
     }
 
-    /// Foreground return: stagger the same heavy work that used to run synchronously in onChange.
-    private func runForegroundRefreshPipeline() async {
-        let outdoorCardioRunning =
-            workoutStore.activeSession != nil
-            && (workoutStore.resolvedActiveCardioConfig()?.isOutdoorGPSCardio == true)
-
-        wellnessService.configure(for: authService.currentUser)
-        wellnessService.checkInOnAppOpen()
-        if let user = authService.currentUser {
-            AssistantBirthdayCongratsEngine.queueIfNeeded(
-                athleteName: user.greetingName,
-                dateOfBirth: user.dateOfBirth
-            )
-        }
+    /// Só o essencial para o relógio do treino/timer não “pular” ao focar a janela no iPad.
+    private func runLightweightForegroundCatchUp() {
         _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
             athleteName: authService.currentUser?.greetingName ?? "Atleta"
         )
@@ -236,16 +238,46 @@ struct RootView: View {
         if let session = workoutStore.activeSession {
             NotificationService.shared.cancelActiveWorkoutBackgroundReminder(sessionId: session.id)
         }
+    }
+
+    private func scheduleForegroundRefreshPipeline() {
+        if let last = lastForegroundPipelineAt,
+           Date().timeIntervalSince(last) < foregroundPipelineMinInterval {
+            return
+        }
+        foregroundPipelineTask?.cancel()
+        foregroundPipelineTask = Task { @MainActor in
+            await runForegroundRefreshPipeline()
+        }
+    }
+
+    /// Retorno de background real: sync em fases, sem travar o primeiro paint no iPad.
+    private func runForegroundRefreshPipeline() async {
+        lastForegroundPipelineAt = Date()
+        let outdoorCardioRunning =
+            workoutStore.activeSession != nil
+            && (workoutStore.resolvedActiveCardioConfig()?.isOutdoorGPSCardio == true)
+
+        wellnessService.configure(for: authService.currentUser)
+        wellnessService.checkInOnAppOpen()
+        if let user = authService.currentUser {
+            AssistantBirthdayCongratsEngine.queueIfNeeded(
+                athleteName: user.greetingName,
+                dateOfBirth: user.dateOfBirth
+            )
+        }
         AppIconInactivityService.shared.handleAppBecameActive()
 
-        // Corrida/caminhada/bike com GPS: adia cloud/catálogo para a UI do treino estabilizar.
+        // GPS outdoor: espera a UI do treino; senão só um yield antes do cloud.
         if outdoorCardioRunning {
             try? await Task.sleep(nanoseconds: 2_500_000_000)
-            DuoTeamService.shared.handleAppBecameActive()
         } else {
             await Task.yield()
+            try? await Task.sleep(nanoseconds: 350_000_000)
         }
+        guard !Task.isCancelled else { return }
 
+        // bind() já recarrega o plano se o userId mudou — não chamar loadSavedData de novo.
         mealPlanService.bind(userId: authService.currentUser?.id)
         ClimbingGearService.shared.bind(userId: authService.currentUser?.id)
         DuoTeamService.shared.bind(
@@ -258,7 +290,7 @@ struct RootView: View {
             workoutStore: workoutStore,
             mealPlanService: mealPlanService
         )
-        mealPlanService.loadSavedData()
+        DuoTeamService.shared.handleAppBecameActive()
         refreshInactivityReminder()
         EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
         syncWellnessCloudHistory()
@@ -272,10 +304,13 @@ struct RootView: View {
             Task { await CoachService.shared.refreshLinkStatusesForPlan() }
         }
 
-        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 600_000_000 : 250_000_000)
+        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 700_000_000 : 500_000_000)
+        guard !Task.isCancelled else { return }
         NotificationService.shared.refreshRecurringNotifications()
 
-        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 800_000_000 : 400_000_000)
+        // HealthKit / catálogo / Coach review — bem depois do paint (iPad).
+        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 1_200_000_000 : 900_000_000)
+        guard !Task.isCancelled else { return }
         Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
         Task { await healthKitManager.refreshFromHealthKit() }
         ExternalWorkoutSyncService.shared.bind(
@@ -342,16 +377,16 @@ struct RootView: View {
         switch trigger {
         case .login, .coldStart:
             didCompleteWelcomeForSession = false
-            presentWelcome()
+            presentWelcome(preserveMainTab: false)
         case .returnFromBackground:
             if let hours = AppIconInactivityService.shared.hoursSinceLastSessionEnd(), hours >= 24 {
-                didCompleteWelcomeForSession = false
-                presentWelcome()
+                // Mantém MainTab montado; só mostra overlay.
+                presentWelcome(preserveMainTab: didCompleteWelcomeForSession)
             }
         }
     }
 
-    private func presentWelcome() {
+    private func presentWelcome(preserveMainTab: Bool) {
         guard !showWelcomeMotivation else { return }
 
         let user = authService.currentUser
@@ -370,7 +405,9 @@ struct RootView: View {
             weeklyWorkoutCount: weeklyReport.currentWeek.workoutCount
         )
         showWelcomeMotivation = true
-        didCompleteWelcomeForSession = false
+        if !preserveMainTab {
+            didCompleteWelcomeForSession = false
+        }
     }
 
     private func refreshInactivityReminder() {

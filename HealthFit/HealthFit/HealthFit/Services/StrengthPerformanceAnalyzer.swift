@@ -61,7 +61,7 @@ enum StrengthPerformanceAnalyzer {
 
         for session in strengthSessions(sessions, in: window) {
             for record in session.exerciseRecords {
-                guard let weight = effectiveWeight(for: record), weight > 0, record.completedSets > 0 else { continue }
+                guard let weight = sessionLoadWeight(for: record), weight > 0, record.completedSets > 0 else { continue }
                 let key = normalizeName(record.exerciseName)
                 guard !key.isEmpty else { continue }
                 let display = record.exerciseName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -95,8 +95,8 @@ enum StrengthPerformanceAnalyzer {
             let day = calendar.startOfDay(for: session.endedAt ?? session.startedAt)
             for record in session.exerciseRecords {
                 guard normalizeName(record.exerciseName) == exerciseNameKey else { continue }
-                guard let weight = effectiveWeight(for: record), weight > 0 else { continue }
-                guard record.completedSets > 0 || record.isCompleted else { continue }
+                guard let weight = sessionLoadWeight(for: record), weight > 0 else { continue }
+                guard record.completedSets > 0 else { continue }
 
                 let meta = resolveExerciseMeta(record: record, session: session, sheets: sheets)
                 let oneRM = estimated1RM(weight: weight, reps: meta.reps)
@@ -136,16 +136,16 @@ enum StrengthPerformanceAnalyzer {
             let day = session.endedAt ?? session.startedAt
             let weekStart = startOfWeek(for: day, calendar: calendar)
 
+            // Soma cargas reais do treino: Σ (carga × séries × reps) só dos exercícios feitos.
             for record in session.exerciseRecords {
-                guard let weight = effectiveWeight(for: record), weight > 0 else { continue }
-                let sets = max(record.completedSets, record.isCompleted ? 1 : 0)
+                guard let weight = sessionLoadWeight(for: record), weight > 0 else { continue }
+                let sets = record.completedSets
                 guard sets > 0 else { continue }
 
                 let meta = resolveExerciseMeta(record: record, session: session, sheets: sheets)
                 let volume = Double(sets) * weight * Double(meta.reps)
                 guard volume > 0 else { continue }
 
-                // Volume atribuído ao grupo principal; corpo inteiro divide entre grupos principais.
                 let shares = volumeShares(for: meta.muscleGroup)
                 var week = buckets[weekStart] ?? [:]
                 for (group, fraction) in shares {
@@ -167,6 +167,19 @@ enum StrengthPerformanceAnalyzer {
         }
     }
 
+    /// Carga total (kg·séries·reps) de um treino de musculação concluído.
+    static func sessionTotalLoadKg(
+        session: WorkoutSession,
+        sheets: [WorkoutSheet]
+    ) -> Double {
+        guard isMusculacaoSession(session) else { return 0 }
+        return session.exerciseRecords.reduce(0) { partial, record in
+            guard let weight = sessionLoadWeight(for: record), record.completedSets > 0 else { return partial }
+            let meta = resolveExerciseMeta(record: record, session: session, sheets: sheets)
+            return partial + Double(record.completedSets) * weight * Double(meta.reps)
+        }
+    }
+
     // MARK: - Helpers
 
     private static func dateWindow(
@@ -184,18 +197,32 @@ enum StrengthPerformanceAnalyzer {
 
     private static func strengthSessions(_ sessions: [WorkoutSession], in window: DateInterval?) -> [WorkoutSession] {
         sessions.filter { session in
-            guard session.endedAt != nil else { return false }
-            guard session.source != .appleHealthExternal else { return false }
-            guard !session.exerciseRecords.isEmpty else { return false }
+            guard isMusculacaoSession(session) else { return false }
             let date = session.endedAt ?? session.startedAt
             if let window, !window.contains(date) { return false }
             return true
         }
     }
 
-    private static func effectiveWeight(for record: ExerciseSessionRecord) -> Double? {
+    /// Treinos de musculação concluídos (exclui cardio, meditação e importações externas).
+    private static func isMusculacaoSession(_ session: WorkoutSession) -> Bool {
+        guard session.endedAt != nil else { return false }
+        guard session.source != .appleHealthExternal else { return false }
+        guard !session.exerciseRecords.isEmpty else { return false }
+        guard !WeeklyProgressAnalyzer.isCardioSession(session) else { return false }
+        guard !WeeklyProgressAnalyzer.isMeditationSession(session) else { return false }
+        // Precisa ter ao menos uma série com carga registrada no próprio treino.
+        return session.exerciseRecords.contains { record in
+            record.completedSets > 0 && sessionLoadWeight(for: record) != nil
+        }
+    }
+
+    /// Carga feita no treino: prioriza `performedWeight`; só usa recomendada se não houver carga feita.
+    private static func sessionLoadWeight(for record: ExerciseSessionRecord) -> Double? {
         if let performed = record.performedWeight, performed > 0 { return performed }
-        if let recommended = record.recommendedWeight, recommended > 0 { return recommended }
+        if record.completedSets > 0, let recommended = record.recommendedWeight, recommended > 0 {
+            return recommended
+        }
         return nil
     }
 

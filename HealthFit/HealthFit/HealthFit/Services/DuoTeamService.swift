@@ -22,6 +22,8 @@ final class DuoTeamService: ObservableObject {
     private var listeners: [String: ListenerRegistration] = [:]
     private var inboxListener: ListenerRegistration?
     private var deliveringInboxIds: Set<String> = []
+    private var lastBecameActiveAt: Date?
+    private let becameActiveMinInterval: TimeInterval = 45
 
     private enum ScopedKey {
         static let teams = "duo_teams"
@@ -1420,12 +1422,16 @@ final class DuoTeamService: ObservableObject {
         // Inbox permanece — notifica mensagens de chat e respostas de convite.
     }
 
-    /// Ao voltar: busca pendências e garante o listener.
+    /// Ao voltar do background: inbox + prefetch (com cooldown para não travar o iPad).
     func handleAppBecameActive() {
         guard let userId = boundUserId else { return }
+        startInboxListenerIfNeeded(userId: userId)
+        if let last = lastBecameActiveAt, Date().timeIntervalSince(last) < becameActiveMinInterval {
+            return
+        }
+        lastBecameActiveAt = Date()
         Task {
             await deliverInboxNotificationsIfNeeded(userId: userId)
-            startInboxListenerIfNeeded(userId: userId)
             await prefetchMessagesForJoinedTeams()
             syncMessageListeners()
         }

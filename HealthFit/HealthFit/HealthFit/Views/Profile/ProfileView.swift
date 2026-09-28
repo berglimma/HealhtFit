@@ -62,8 +62,9 @@ struct ProfileView: View {
     @State private var showEmptyMeasurementsAlert = false
     @State private var bodyDataSaveError: String?
     @State private var showSaveFailedAlert = false
-    /// Phase 2 of profile content (heavy forms). First paint stays lean to avoid jetsam / UIDatePicker crashes.
+    /// Phase 2/3 of profile content. First paint stays lean to avoid jetsam / UIDatePicker crashes.
     @State private var showSecondarySections = false
+    @State private var showTertiarySections = false
     @State private var showDateOfBirthSheet = false
     @State private var physicalAssessmentPDFURL: URL?
     @State private var showPhysicalAssessmentShare = false
@@ -230,10 +231,13 @@ struct ProfileView: View {
                     Section("Medidas Corporais") {
                         bodyMeasurementsSection(for: user)
                     }
-                    bodyEvolutionSection
                     integrationsSection
                     nutritionNotificationsSection
                     restTimerSection
+                }
+
+                if showTertiarySections {
+                    bodyEvolutionSection
                     #if DEBUG
                     Section {
                         NavigationLink {
@@ -250,7 +254,7 @@ struct ProfileView: View {
                         LegalLinksView(style: .list, showsSupportLink: true)
                     }
                     AppFeedbackFormSections()
-                } else {
+                } else if !showSecondarySections {
                     Section {
                         HStack {
                             ProgressView()
@@ -420,17 +424,25 @@ struct ProfileView: View {
         syncDisplayNameField()
         syncBodyDataFields()
 
+        // Recarrega fotos do disco já com clamp — evita bitmap enorme em memória (jetsam).
+        authService.loadProfileImage()
+
         await Task.yield()
-        try? await Task.sleep(nanoseconds: 80_000_000)
+        try? await Task.sleep(nanoseconds: 280_000_000)
 
         syncWellnessFields()
         syncBodyMeasurementFields()
         showSecondarySections = true
 
         await Task.yield()
-        try? await Task.sleep(nanoseconds: 120_000_000)
+        try? await Task.sleep(nanoseconds: 400_000_000)
 
         syncPreWorkoutFromWorkouts()
+        coach.start()
+        showTertiarySections = true
+
+        await Task.yield()
+        try? await Task.sleep(nanoseconds: 200_000_000)
         if let userId = authService.currentUser?.id {
             Task { await evolutionService.loadIfNeeded(userId: userId) }
         }
@@ -786,7 +798,6 @@ struct ProfileView: View {
             // Largura igual às seções agrupadas (“Você é” / Biotipo).
             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
             .listRowBackground(Color.clear)
-            .onAppear { coach.start() }
         }
         .sheet(isPresented: $showCoachProfessionalSetup) {
             NavigationStack {

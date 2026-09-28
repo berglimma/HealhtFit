@@ -182,7 +182,11 @@ struct RouteFlyoverSheet: View {
     private var actionsCard: some View {
         VStack(spacing: 12) {
             Button {
-                Task { _ = await generateVideoIfNeeded(force: true) }
+                Task {
+                    // Sempre regenera: evita reutilizar MP4 antigo (orientação/mapa).
+                    exportedURL = nil
+                    _ = await generateVideoIfNeeded(force: true)
+                }
             } label: {
                 HStack {
                     if isExporting {

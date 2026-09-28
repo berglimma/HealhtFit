@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreImage
 import CoreLocation
 import MapKit
 import SwiftUI
@@ -53,7 +54,7 @@ struct RouteFlyoverMetrics: Equatable {
     }
 }
 
-// MARK: - Video exporter (Canvas flyover — confiável, Stories 9:16)
+// MARK: - Video exporter (MapKit snapshot + rota animada — Stories 9:16)
 
 enum RouteFlyoverVideoExporter {
     struct Config {
@@ -68,6 +69,7 @@ enum RouteFlyoverVideoExporter {
         case tooFewPoints
         case writerFailed
         case encodingFailed
+        case mapSnapshotFailed
 
         var errorDescription: String? {
             switch self {
@@ -77,8 +79,23 @@ enum RouteFlyoverVideoExporter {
                 return "Não foi possível iniciar a gravação do vídeo."
             case .encodingFailed:
                 return "Falha ao gerar o vídeo do Flyover."
+            case .mapSnapshotFailed:
+                return "Não foi possível carregar o mapa do Flyover. Verifique a conexão e tente de novo."
             }
         }
+    }
+
+    private struct MapBackdrop {
+        let image: UIImage
+        let pointsInSnapshot: [CGPoint]
+
+        var size: CGSize { image.size }
+    }
+
+    private struct CameraView {
+        let scale: CGFloat
+        let destCenter: CGPoint
+        let sourceCenter: CGPoint
     }
 
     static func export(
@@ -90,6 +107,10 @@ enum RouteFlyoverVideoExporter {
     ) async throws -> URL {
         let points = downsample(routePoints, maxCount: config.maxRoutePoints)
         guard points.count >= 2 else { throw ExportError.tooFewPoints }
+
+        await progress?(0.02)
+        let backdrop = try await captureMapSnapshot(points: points, outputSize: config.size)
+        await progress?(0.08)
 
         let frameCount = max(Int((config.durationSeconds * Double(config.fps)).rounded()), 60)
         let outputURL = FileManager.default.temporaryDirectory
@@ -108,10 +129,11 @@ enum RouteFlyoverVideoExporter {
         ]
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
         input.expectsMediaDataInRealTime = false
+        input.transform = .identity
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(
             assetWriterInput: input,
             sourcePixelBufferAttributes: [
-                kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32ARGB),
+                kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA),
                 kCVPixelBufferWidthKey as String: Int(config.size.width),
                 kCVPixelBufferHeightKey as String: Int(config.size.height)
             ]
@@ -136,7 +158,8 @@ enum RouteFlyoverVideoExporter {
                     performanceMetric: performanceMetric,
                     metrics: metrics,
                     size: config.size,
-                    brand: brand
+                    brand: brand,
+                    backdrop: backdrop
                 )
                 guard let buffer = pixelBuffer(from: image, size: config.size) else {
                     throw ExportError.encodingFailed
@@ -146,7 +169,8 @@ enum RouteFlyoverVideoExporter {
             }
             if !appended { throw ExportError.encodingFailed }
             if index % 4 == 0 {
-                await progress?(t)
+                let mapped = 0.08 + t * 0.9
+                await progress?(mapped)
             }
         }
 
@@ -174,32 +198,105 @@ enum RouteFlyoverVideoExporter {
         return result
     }
 
-    static func renderFrame(
+    // MARK: - Map snapshot
+
+    private static func captureMapSnapshot(
+        points: [RouteCoordinate],
+        outputSize: CGSize
+    ) async throws -> MapBackdrop {
+        // Snapshot maior para manter nitidez ao dar zoom no percurso.
+        let snapSize = CGSize(width: outputSize.width * 2, height: outputSize.height * 2)
+        let options = MKMapSnapshotter.Options()
+        options.size = snapSize
+        options.scale = 1
+        options.region = paddedRegion(for: points)
+        options.mapType = .hybrid
+        options.showsBuildings = true
+
+        let snapshotter = MKMapSnapshotter(options: options)
+        let snapshot: MKMapSnapshotter.Snapshot
+        do {
+            snapshot = try await snapshotter.start()
+        } catch {
+            throw ExportError.mapSnapshotFailed
+        }
+
+        let projected = points.map { snapshot.point(for: $0.coordinate) }
+        return MapBackdrop(image: snapshot.image, pointsInSnapshot: projected)
+    }
+
+    private static func paddedRegion(for points: [RouteCoordinate]) -> MKCoordinateRegion {
+        guard let first = points.first else {
+            return MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+            )
+        }
+        var minLat = first.latitude, maxLat = first.latitude
+        var minLon = first.longitude, maxLon = first.longitude
+        for p in points {
+            minLat = min(minLat, p.latitude); maxLat = max(maxLat, p.latitude)
+            minLon = min(minLon, p.longitude); maxLon = max(maxLon, p.longitude)
+        }
+        let latDelta = max((maxLat - minLat) * 1.55, 0.004)
+        let lonDelta = max((maxLon - minLon) * 1.55, 0.004)
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(
+                latitude: (minLat + maxLat) / 2,
+                longitude: (minLon + maxLon) / 2
+            ),
+            span: MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
+        )
+    }
+
+    // MARK: - Frame render
+
+    private static func renderFrame(
         progress: Double,
         points: [RouteCoordinate],
         performanceMetric: RoutePerformanceMetric,
         metrics: RouteFlyoverMetrics,
         size: CGSize,
-        brand: UIImage?
+        brand: UIImage?,
+        backdrop: MapBackdrop? = nil
     ) -> UIImage {
-        let renderer = UIGraphicsImageRenderer(size: size)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
         return renderer.image { ctx in
             let cg = ctx.cgContext
-            drawBackground(cg, size: size)
+            // Preenche o frame inteiro — evita faixas azuis quando o crop do mapa não cobre a tela.
+            cg.setFillColor(UIColor.black.cgColor)
+            cg.fill(CGRect(origin: .zero, size: size))
 
             let revealCount = max(2, Int(Double(points.count - 1) * progress) + 1)
             let revealed = Array(points.prefix(revealCount))
             let lookIndex = min(revealed.count - 1, max(0, revealed.count - 1))
-            let cameraCenter = points[lookIndex].coordinate
 
-            let flat = projectFlat(points, camera: cameraCenter, progress: progress, in: size)
-            let revealedFlat = Array(flat.prefix(revealCount))
+            let projected: [CGPoint]
+            if let backdrop {
+                let camera = cameraView(
+                    progress: progress,
+                    tipInSnapshot: backdrop.pointsInSnapshot[lookIndex],
+                    snapshotSize: backdrop.size,
+                    outputSize: size
+                )
+                drawMapBackground(backdrop.image, camera: camera, in: size)
+                projected = backdrop.pointsInSnapshot.map { transform($0, camera: camera) }
+            } else {
+                drawFallbackBackground(cg, size: size)
+                let cameraCenter = points[lookIndex].coordinate
+                projected = projectFlat(points, camera: cameraCenter, progress: progress, in: size)
+            }
 
-            if flat.count >= 2 {
-                strokePolyline(cg, flat, color: UIColor.white.withAlphaComponent(0.14), width: 6)
+            let revealedFlat = Array(projected.prefix(revealCount))
+
+            if projected.count >= 2 {
+                strokePolyline(cg, projected, color: UIColor.white.withAlphaComponent(0.22), width: 7)
             }
             if revealedFlat.count >= 2 {
-                strokePolyline(cg, revealedFlat, color: UIColor.white.withAlphaComponent(0.22), width: 16)
+                strokePolyline(cg, revealedFlat, color: UIColor.white.withAlphaComponent(0.35), width: 14)
                 let segments = RoutePerformanceColoring.segments(from: revealed, metric: performanceMetric)
                 for i in 0..<(revealedFlat.count - 1) {
                     let uiColor: UIColor
@@ -232,7 +329,71 @@ enum RouteFlyoverVideoExporter {
         }
     }
 
-    private static func drawBackground(_ cg: CGContext, size: CGSize) {
+    private static func cameraView(
+        progress: Double,
+        tipInSnapshot: CGPoint,
+        snapshotSize: CGSize,
+        outputSize: CGSize
+    ) -> CameraView {
+        // Aspect-fill: o snapshot sempre cobre o frame (sem bordas vazias/azuis).
+        let coverScale = max(
+            outputSize.width / max(snapshotSize.width, 1),
+            outputSize.height / max(snapshotSize.height, 1)
+        )
+        // Zoom suave — evita sair demais da área do mapa.
+        let zoom = 1.05 + 0.22 * sin(progress * .pi)
+        let scale = coverScale * zoom
+
+        let halfW = outputSize.width / (2 * scale)
+        let halfH = outputSize.height / (2 * scale)
+        let clamped = CGPoint(
+            x: min(max(tipInSnapshot.x, halfW), max(snapshotSize.width - halfW, halfW)),
+            y: min(max(tipInSnapshot.y, halfH), max(snapshotSize.height - halfH, halfH))
+        )
+
+        return CameraView(
+            scale: scale,
+            destCenter: CGPoint(x: outputSize.width * 0.5, y: outputSize.height * 0.5),
+            sourceCenter: clamped
+        )
+    }
+
+    private static func transform(_ point: CGPoint, camera: CameraView) -> CGPoint {
+        CGPoint(
+            x: camera.destCenter.x + (point.x - camera.sourceCenter.x) * camera.scale,
+            y: camera.destCenter.y + (point.y - camera.sourceCenter.y) * camera.scale
+        )
+    }
+
+    private static func drawMapBackground(_ image: UIImage, camera: CameraView, in size: CGSize) {
+        let drawRect = CGRect(
+            x: camera.destCenter.x - camera.sourceCenter.x * camera.scale,
+            y: camera.destCenter.y - camera.sourceCenter.y * camera.scale,
+            width: image.size.width * camera.scale,
+            height: image.size.height * camera.scale
+        )
+        image.draw(in: drawRect)
+
+        // Vinheta leve para legibilidade da marca/métricas.
+        if let dim = CGGradient(
+            colorsSpace: CGColorSpaceCreateDeviceRGB(),
+            colors: [
+                UIColor.black.withAlphaComponent(0.18).cgColor,
+                UIColor.clear.cgColor,
+                UIColor.black.withAlphaComponent(0.28).cgColor
+            ] as CFArray,
+            locations: [0, 0.45, 1]
+        ), let cg = UIGraphicsGetCurrentContext() {
+            cg.drawLinearGradient(
+                dim,
+                start: .zero,
+                end: CGPoint(x: 0, y: size.height),
+                options: []
+            )
+        }
+    }
+
+    private static func drawFallbackBackground(_ cg: CGContext, size: CGSize) {
         let colors = [
             UIColor(red: 0.05, green: 0.10, blue: 0.12, alpha: 1).cgColor,
             UIColor(red: 0.07, green: 0.14, blue: 0.12, alpha: 1).cgColor,
@@ -329,7 +490,7 @@ enum RouteFlyoverVideoExporter {
         cg.strokePath()
     }
 
-    private static func drawOverlay(
+    private static func drawOverlay( 
         _ cg: CGContext,
         size: CGSize,
         metrics: RouteFlyoverMetrics,
@@ -363,44 +524,45 @@ enum RouteFlyoverVideoExporter {
         }
 
         if let brand {
-            brand.draw(in: CGRect(x: 48, y: 72, width: 64, height: 64))
+            brand.draw(in: CGRect(x: 36, y: 56, width: 48, height: 48))
         }
 
         let brandAttrs: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 42, weight: .heavy),
+            .font: UIFont.systemFont(ofSize: 32, weight: .heavy),
             .foregroundColor: UIColor.white
         ]
-        ("HealthFit" as NSString).draw(at: CGPoint(x: 128, y: 78), withAttributes: brandAttrs)
+        ("HealthFit" as NSString).draw(at: CGPoint(x: 96, y: 58), withAttributes: brandAttrs)
 
         let flyAttrs: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 22, weight: .semibold),
+            .font: UIFont.systemFont(ofSize: 16, weight: .semibold),
             .foregroundColor: UIColor(named: "AccentGreen") ?? .systemGreen
         ]
-        ("FLYOVER" as NSString).draw(at: CGPoint(x: 128, y: 128), withAttributes: flyAttrs)
+        ("FLYOVER" as NSString).draw(at: CGPoint(x: 96, y: 96), withAttributes: flyAttrs)
 
         let modalityAttrs: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 36, weight: .bold),
+            .font: UIFont.systemFont(ofSize: 28, weight: .bold),
             .foregroundColor: UIColor.white
         ]
         (metrics.modalityTitle as NSString).draw(
-            in: CGRect(x: 48, y: size.height - 420, width: size.width - 96, height: 50),
+            in: CGRect(x: 36, y: size.height - 340, width: size.width - 72, height: 40),
             withAttributes: modalityAttrs
         )
 
         let athleteAttrs: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 24, weight: .medium),
+            .font: UIFont.systemFont(ofSize: 18, weight: .medium),
             .foregroundColor: UIColor.white.withAlphaComponent(0.85)
         ]
         (metrics.athleteName as NSString).draw(
-            in: CGRect(x: 48, y: size.height - 365, width: size.width - 96, height: 36),
+            in: CGRect(x: 36, y: size.height - 298, width: size.width - 72, height: 28),
             withAttributes: athleteAttrs
         )
 
-        drawStat(x: 48, y: size.height - 300, label: "DISTÂNCIA", value: metrics.distanceText)
-        drawStat(x: 400, y: size.height - 300, label: "TEMPO", value: metrics.durationText)
-        drawStat(x: 720, y: size.height - 300, label: metrics.secondaryLabel, value: metrics.secondaryValue)
+        let col = (size.width - 72) / 3
+        drawStat(x: 36, y: size.height - 250, label: "DISTÂNCIA", value: metrics.distanceText)
+        drawStat(x: 36 + col, y: size.height - 250, label: "TEMPO", value: metrics.durationText)
+        drawStat(x: 36 + col * 2, y: size.height - 250, label: metrics.secondaryLabel, value: metrics.secondaryValue)
 
-        let bar = CGRect(x: 48, y: size.height - 120, width: size.width - 96, height: 8)
+        let bar = CGRect(x: 36, y: size.height - 96, width: size.width - 72, height: 6)
         cg.setFillColor(UIColor.white.withAlphaComponent(0.2).cgColor)
         cg.fill(bar)
         cg.setFillColor((UIColor(named: "AccentOrange") ?? .orange).cgColor)
@@ -409,46 +571,62 @@ enum RouteFlyoverVideoExporter {
 
     private static func drawStat(x: CGFloat, y: CGFloat, label: String, value: String) {
         let labelAttrs: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 18, weight: .semibold),
+            .font: UIFont.systemFont(ofSize: 12, weight: .semibold),
             .foregroundColor: UIColor.white.withAlphaComponent(0.55)
         ]
         let valueAttrs: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 40, weight: .bold),
+            .font: UIFont.systemFont(ofSize: 26, weight: .bold),
             .foregroundColor: UIColor.white
         ]
         (label as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: labelAttrs)
-        (value as NSString).draw(at: CGPoint(x: x, y: y + 28), withAttributes: valueAttrs)
+        (value as NSString).draw(at: CGPoint(x: x, y: y + 20), withAttributes: valueAttrs)
     }
 
+    /// Converte UIImage → CVPixelBuffer BGRA upright via Core Image (evita invertido no player).
     private static func pixelBuffer(from image: UIImage, size: CGSize) -> CVPixelBuffer? {
         let attrs: [CFString: Any] = [
             kCVPixelBufferCGImageCompatibilityKey: true,
-            kCVPixelBufferCGBitmapContextCompatibilityKey: true
+            kCVPixelBufferCGBitmapContextCompatibilityKey: true,
+            kCVPixelBufferIOSurfacePropertiesKey: [:] as CFDictionary
         ]
         var buffer: CVPixelBuffer?
         let status = CVPixelBufferCreate(
             kCFAllocatorDefault,
             Int(size.width),
             Int(size.height),
-            kCVPixelFormatType_32ARGB,
+            kCVPixelFormatType_32BGRA,
             attrs as CFDictionary,
             &buffer
         )
         guard status == kCVReturnSuccess, let buffer else { return nil }
+
+        // Fundo preto (sem faixas azuis se o render falhar parcialmente).
         CVPixelBufferLockBaseAddress(buffer, [])
-        defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
-        guard let context = CGContext(
-            data: CVPixelBufferGetBaseAddress(buffer),
-            width: Int(size.width),
-            height: Int(size.height),
-            bitsPerComponent: 8,
-            bytesPerRow: CVPixelBufferGetBytesPerRow(buffer),
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue
-        ) else { return nil }
-        UIGraphicsPushContext(context)
-        image.draw(in: CGRect(origin: .zero, size: size))
-        UIGraphicsPopContext()
+        if let base = CVPixelBufferGetBaseAddress(buffer) {
+            memset(base, 0, CVPixelBufferGetDataSize(buffer))
+        }
+        CVPixelBufferUnlockBaseAddress(buffer, [])
+
+        guard var ciImage = CIImage(image: image) else { return nil }
+        let extent = ciImage.extent.integral
+        if extent.width > 0, extent.height > 0,
+           abs(extent.width - size.width) > 0.5 || abs(extent.height - size.height) > 0.5 {
+            let scaleX = size.width / extent.width
+            let scaleY = size.height / extent.height
+            ciImage = ciImage.transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY))
+        }
+
+        let ciContext = CIContext(options: [
+            .workingColorSpace: NSNull(),
+            .cacheIntermediates: false
+        ])
+        // CIImage(image:) + render preserva a orientação UIKit (marca/dados legíveis).
+        ciContext.render(
+            ciImage,
+            to: buffer,
+            bounds: CGRect(origin: .zero, size: size),
+            colorSpace: CGColorSpaceCreateDeviceRGB()
+        )
         return buffer
     }
 }

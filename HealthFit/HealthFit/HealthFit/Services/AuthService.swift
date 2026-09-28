@@ -360,8 +360,10 @@ final class AuthService: ObservableObject {
         guard let uid = currentUser?.id else { return }
 
         if let image {
-            Self.saveImage(image, for: uid)
-            profileImage = image
+            // Sempre publicar versão reduzida — foto original do picker/jetsam ao abrir Perfil.
+            let resized = image.resizedForProfile(maxSide: 400)
+            Self.saveImage(resized, for: uid)
+            profileImage = resized
             syncProfilePhotoToCloud(userId: uid)
         } else {
             Self.deleteImage(for: uid)
@@ -390,7 +392,7 @@ final class AuthService: ObservableObject {
         }
 
         guard let data = await ProfilePhotoStorageService.downloadPhotoJPEG(userId: userId),
-              let image = UIImage(data: data) else {
+              let image = UIImage(data: data)?.resizedForProfile(maxSide: 400) else {
             return
         }
 
@@ -437,9 +439,11 @@ final class AuthService: ObservableObject {
         guard let uid = currentUser?.id else { return }
 
         if let image {
-            Self.saveBackgroundImage(image, for: uid)
-            profileBackgroundImage = image
-            syncProfileBackgroundToCloud(userId: uid, image: image)
+            // maxSide 900: cobre banner do perfil sem manter bitmap 12MP em @Published.
+            let resized = image.resizedForProfile(maxSide: 900)
+            Self.saveBackgroundImage(resized, for: uid)
+            profileBackgroundImage = resized
+            syncProfileBackgroundToCloud(userId: uid, image: resized)
         } else {
             Self.deleteBackgroundImage(for: uid)
             profileBackgroundImage = nil
@@ -452,12 +456,13 @@ final class AuthService: ObservableObject {
     func syncProfileBackgroundFromCloud(userId: String) async {
         // Se já há fundo local, só sobe; senão baixa da nuvem.
         if let local = Self.loadBackgroundImage(for: userId) {
-            profileBackgroundImage = local
-            syncProfileBackgroundToCloud(userId: userId, image: local)
+            let display = local.resizedForProfile(maxSide: 900)
+            profileBackgroundImage = display
+            syncProfileBackgroundToCloud(userId: userId, image: display)
             return
         }
         guard let data = await ProfilePhotoStorageService.downloadBackgroundJPEG(userId: userId),
-              let image = UIImage(data: data) else {
+              let image = UIImage(data: data)?.resizedForProfile(maxSide: 900) else {
             return
         }
         Self.saveBackgroundImage(image, for: userId)
@@ -466,7 +471,8 @@ final class AuthService: ObservableObject {
 
     private func syncProfileBackgroundToCloud(userId: String, image: UIImage) {
         guard ProfilePhotoStorageService.isAvailable else { return }
-        guard let data = image.jpegData(compressionQuality: 0.85) else { return }
+        let upload = image.resizedForProfile(maxSide: 900)
+        guard let data = upload.jpegData(compressionQuality: 0.82) else { return }
         Task {
             do {
                 _ = try await ProfilePhotoStorageService.uploadBackgroundJPEG(data: data, userId: userId)
@@ -482,8 +488,11 @@ final class AuthService: ObservableObject {
             profileBackgroundImage = nil
             return
         }
-        profileImage = Self.loadImage(for: user.id) ?? Self.loadLegacyImage(for: user.email)
-        profileBackgroundImage = Self.loadBackgroundImage(for: user.id)
+        // Clamp even local files from older builds that may still be huge.
+        profileImage = (Self.loadImage(for: user.id) ?? Self.loadLegacyImage(for: user.email))?
+            .resizedForProfile(maxSide: 400)
+        profileBackgroundImage = Self.loadBackgroundImage(for: user.id)?
+            .resizedForProfile(maxSide: 900)
     }
 
     // MARK: - Private
@@ -878,7 +887,7 @@ final class AuthService: ObservableObject {
     }
 
     private static func saveBackgroundImage(_ image: UIImage, for uid: String) {
-        let resized = image.resizedForProfile(maxSide: 1_200)
+        let resized = image.resizedForProfile(maxSide: 900)
         guard let data = resized.jpegData(compressionQuality: 0.82) else { return }
         try? data.write(to: profileBackgroundURL(for: uid), options: .atomic)
     }
@@ -891,12 +900,18 @@ final class AuthService: ObservableObject {
 
 private extension UIImage {
     func resizedForProfile(maxSide: CGFloat) -> UIImage {
-        let longestSide = max(size.width, size.height)
+        // Preferir pixels reais (scale) — fotos do picker vêm enormes.
+        let pixelWidth = size.width * scale
+        let pixelHeight = size.height * scale
+        let longestSide = max(pixelWidth, pixelHeight)
         guard longestSide > maxSide else { return self }
 
-        let scale = maxSide / longestSide
-        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
-        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let scaleFactor = maxSide / longestSide
+        let newSize = CGSize(width: size.width * scaleFactor, height: size.height * scaleFactor)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
         return renderer.image { _ in
             draw(in: CGRect(origin: .zero, size: newSize))
         }
