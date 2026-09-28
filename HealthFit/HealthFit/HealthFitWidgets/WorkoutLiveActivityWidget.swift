@@ -5,6 +5,7 @@ import WidgetKit
 @main
 struct HealthFitWidgetsBundle: WidgetBundle {
     var body: some Widget {
+        HealthFitHomeWidget()
         WorkoutLiveActivityWidget()
         EveningTrainingNudgeLiveActivityWidget()
     }

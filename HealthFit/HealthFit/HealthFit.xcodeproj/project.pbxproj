@@ -155,6 +155,7 @@
 		B1000308 /* WorkoutLiveActivitySync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000308 /* WorkoutLiveActivitySync.swift */; };
 		B1000309 /* WorkoutLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000309 /* WorkoutLiveActivityWidget.swift */; };
 		B1000310 /* WorkoutLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000306 /* WorkoutLiveActivityAttributes.swift */; };
+		B1000312 /* HealthFitHomeWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000312 /* HealthFitHomeWidget.swift */; };
 		B1000311 /* HealthFitWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1000311 /* HealthFitWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B1000320 /* BodyEvolutionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000320 /* BodyEvolutionModels.swift */; };
 		B1000321 /* BodyEvolutionStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000321 /* BodyEvolutionStorageService.swift */; };
@@ -577,6 +578,7 @@
 		F1000308 /* WorkoutLiveActivitySync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivitySync.swift; sourceTree = "<group>"; };
 		F1000309 /* WorkoutLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityWidget.swift; sourceTree = "<group>"; };
 		F1000310 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F1000312 /* HealthFitHomeWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitHomeWidget.swift; sourceTree = "<group>"; };
 		F1000311 /* HealthFitWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HealthFitWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1000320 /* BodyEvolutionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionModels.swift; sourceTree = "<group>"; };
 		F1000321 /* BodyEvolutionStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionStorageService.swift; sourceTree = "<group>"; };
@@ -1250,6 +1252,7 @@
 		G1000050 /* HealthFitWidgets */ = {
 			isa = PBXGroup;
 			children = (
+				F1000312 /* HealthFitHomeWidget.swift */,
 				F1000309 /* WorkoutLiveActivityWidget.swift */,
 				F1000310 /* Info.plist */,
 			);
@@ -2010,6 +2013,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1000312 /* HealthFitHomeWidget.swift in Sources */,
 				B1000309 /* WorkoutLiveActivityWidget.swift in Sources */,
 				B1000310 /* WorkoutLiveActivityAttributes.swift in Sources */,
 				B1000403 /* EveningTrainingNudgeAttributes.swift in Sources */,

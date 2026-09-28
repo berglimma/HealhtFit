@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import UIKit
+import ImageIO
 import AuthenticationServices
 import FirebaseAuth
 
@@ -361,7 +362,7 @@ final class AuthService: ObservableObject {
 
         if let image {
             // Sempre publicar versão reduzida — foto original do picker/jetsam ao abrir Perfil.
-            let resized = image.resizedForProfile(maxSide: 400)
+            let resized = image.downsampledForProfile(maxSide: Self.profilePhotoMaxSide)
             Self.saveImage(resized, for: uid)
             profileImage = resized
             syncProfilePhotoToCloud(userId: uid)
@@ -392,7 +393,7 @@ final class AuthService: ObservableObject {
         }
 
         guard let data = await ProfilePhotoStorageService.downloadPhotoJPEG(userId: userId),
-              let image = UIImage(data: data)?.resizedForProfile(maxSide: 400) else {
+              let image = UIImage.downsampledForProfile(data: data, maxSide: Self.profilePhotoMaxSide) else {
             return
         }
 
@@ -413,7 +414,8 @@ final class AuthService: ObservableObject {
         Task {
             let data: Data?
             if let image = profileImage {
-                data = image.resizedForProfile(maxSide: 400).jpegData(compressionQuality: 0.85)
+                data = image.downsampledForProfile(maxSide: Self.profilePhotoMaxSide)
+                    .jpegData(compressionQuality: 0.85)
             } else {
                 data = try? Data(contentsOf: Self.profileImageURL(for: userId))
             }
@@ -439,8 +441,8 @@ final class AuthService: ObservableObject {
         guard let uid = currentUser?.id else { return }
 
         if let image {
-            // maxSide 900: cobre banner do perfil sem manter bitmap 12MP em @Published.
-            let resized = image.resizedForProfile(maxSide: 900)
+            // Banner compacto — evita bitmap 12MP em @Published (jetsam ao abrir Perfil).
+            let resized = image.downsampledForProfile(maxSide: Self.profileBackgroundMaxSide)
             Self.saveBackgroundImage(resized, for: uid)
             profileBackgroundImage = resized
             syncProfileBackgroundToCloud(userId: uid, image: resized)
@@ -456,13 +458,12 @@ final class AuthService: ObservableObject {
     func syncProfileBackgroundFromCloud(userId: String) async {
         // Se já há fundo local, só sobe; senão baixa da nuvem.
         if let local = Self.loadBackgroundImage(for: userId) {
-            let display = local.resizedForProfile(maxSide: 900)
-            profileBackgroundImage = display
-            syncProfileBackgroundToCloud(userId: userId, image: display)
+            profileBackgroundImage = local
+            syncProfileBackgroundToCloud(userId: userId, image: local)
             return
         }
         guard let data = await ProfilePhotoStorageService.downloadBackgroundJPEG(userId: userId),
-              let image = UIImage(data: data)?.resizedForProfile(maxSide: 900) else {
+              let image = UIImage.downsampledForProfile(data: data, maxSide: Self.profileBackgroundMaxSide) else {
             return
         }
         Self.saveBackgroundImage(image, for: userId)
@@ -471,7 +472,7 @@ final class AuthService: ObservableObject {
 
     private func syncProfileBackgroundToCloud(userId: String, image: UIImage) {
         guard ProfilePhotoStorageService.isAvailable else { return }
-        let upload = image.resizedForProfile(maxSide: 900)
+        let upload = image.downsampledForProfile(maxSide: Self.profileBackgroundMaxSide)
         guard let data = upload.jpegData(compressionQuality: 0.82) else { return }
         Task {
             do {
@@ -482,18 +483,35 @@ final class AuthService: ObservableObject {
         }
     }
 
+    /// Solta bitmaps grandes já em memória antes de montar a aba Perfil (evita jetsam).
+    func releaseOversizedProfileImagesForDisplay() {
+        if profileImage?.isLargerThanProfileMax(maxSide: Self.profilePhotoMaxSide + 32) == true {
+            profileImage = nil
+        }
+        if profileBackgroundImage?.isLargerThanProfileMax(maxSide: Self.profileBackgroundMaxSide + 32) == true {
+            profileBackgroundImage = nil
+        }
+    }
+
+    /// Recarrega avatar/fundo via ImageIO (sem decodificar JPEG full-res).
+    func reloadProfileImagesDownsampled() async {
+        await Task.yield()
+        loadProfileImage()
+    }
+
     func loadProfileImage() {
         guard let user = currentUser else {
             profileImage = nil
             profileBackgroundImage = nil
             return
         }
-        // Clamp even local files from older builds that may still be huge.
-        profileImage = (Self.loadImage(for: user.id) ?? Self.loadLegacyImage(for: user.email))?
-            .resizedForProfile(maxSide: 400)
-        profileBackgroundImage = Self.loadBackgroundImage(for: user.id)?
-            .resizedForProfile(maxSide: 900)
+        // ImageIO thumbnail — nunca UIImage(data:) full-res (jetsam no Perfil).
+        profileImage = Self.loadImage(for: user.id) ?? Self.loadLegacyImage(for: user.email)
+        profileBackgroundImage = Self.loadBackgroundImage(for: user.id)
     }
+
+    private static let profilePhotoMaxSide: CGFloat = 400
+    private static let profileBackgroundMaxSide: CGFloat = 720
 
     // MARK: - Private
 
@@ -841,10 +859,7 @@ final class AuthService: ObservableObject {
         let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let safeEmail = email.lowercased().replacingOccurrences(of: "@", with: "_at_")
         let url = directory.appendingPathComponent("profile_\(safeEmail).jpg")
-        guard FileManager.default.fileExists(atPath: url.path),
-              let data = try? Data(contentsOf: url),
-              let image = UIImage(data: data) else { return nil }
-        return image
+        return downsampledImage(at: url, maxSide: profilePhotoMaxSide)
     }
 
     private static func profileImageURL(for uid: String) -> URL {
@@ -855,14 +870,14 @@ final class AuthService: ObservableObject {
 
     private static func loadImage(for uid: String) -> UIImage? {
         let url = profileImageURL(for: uid)
-        guard FileManager.default.fileExists(atPath: url.path),
-              let data = try? Data(contentsOf: url),
-              let image = UIImage(data: data) else { return nil }
+        guard let image = downsampledImage(at: url, maxSide: profilePhotoMaxSide) else { return nil }
+        // Regrava arquivos legados enormes para a próxima abertura ser barata.
+        rewriteIfNeeded(image, at: url, maxSide: profilePhotoMaxSide, quality: 0.85)
         return image
     }
 
     private static func saveImage(_ image: UIImage, for uid: String) {
-        let resized = image.resizedForProfile(maxSide: 400)
+        let resized = image.downsampledForProfile(maxSide: profilePhotoMaxSide)
         guard let data = resized.jpegData(compressionQuality: 0.85) else { return }
         try? data.write(to: profileImageURL(for: uid), options: .atomic)
     }
@@ -880,14 +895,13 @@ final class AuthService: ObservableObject {
 
     private static func loadBackgroundImage(for uid: String) -> UIImage? {
         let url = profileBackgroundURL(for: uid)
-        guard FileManager.default.fileExists(atPath: url.path),
-              let data = try? Data(contentsOf: url),
-              let image = UIImage(data: data) else { return nil }
+        guard let image = downsampledImage(at: url, maxSide: profileBackgroundMaxSide) else { return nil }
+        rewriteIfNeeded(image, at: url, maxSide: profileBackgroundMaxSide, quality: 0.82)
         return image
     }
 
     private static func saveBackgroundImage(_ image: UIImage, for uid: String) {
-        let resized = image.resizedForProfile(maxSide: 900)
+        let resized = image.downsampledForProfile(maxSide: profileBackgroundMaxSide)
         guard let data = resized.jpegData(compressionQuality: 0.82) else { return }
         try? data.write(to: profileBackgroundURL(for: uid), options: .atomic)
     }
@@ -896,11 +910,66 @@ final class AuthService: ObservableObject {
         let url = profileBackgroundURL(for: uid)
         try? FileManager.default.removeItem(at: url)
     }
+
+    /// Decodifica só o thumbnail via ImageIO — não materializa o bitmap full-res.
+    private static func downsampledImage(at url: URL, maxSide: CGFloat) -> UIImage? {
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        let srcOptions: [CFString: Any] = [kCGImageSourceShouldCache: false]
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, srcOptions as CFDictionary) else {
+            return nil
+        }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxSide
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return nil
+        }
+        return UIImage(cgImage: cgImage, scale: 1, orientation: .up)
+    }
+
+    private static func rewriteIfNeeded(_ image: UIImage, at url: URL, maxSide: CGFloat, quality: CGFloat) {
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let fileSize = attrs[.size] as? NSNumber else { return }
+        // Arquivos > ~350KB provavelmente são fotos antigas full-res; regrava thumbnail.
+        guard fileSize.intValue > 350_000 else { return }
+        guard let data = image.jpegData(compressionQuality: quality) else { return }
+        try? data.write(to: url, options: .atomic)
+        _ = maxSide // documenta intenção do clamp já aplicado no load
+    }
 }
 
 private extension UIImage {
-    func resizedForProfile(maxSide: CGFloat) -> UIImage {
-        // Preferir pixels reais (scale) — fotos do picker vêm enormes.
+    func isLargerThanProfileMax(maxSide: CGFloat) -> Bool {
+        max(size.width * scale, size.height * scale) > maxSide
+    }
+
+    func downsampledForProfile(maxSide: CGFloat) -> UIImage {
+        Self.downsampledForProfile(data: jpegData(compressionQuality: 0.92) ?? pngData(), maxSide: maxSide)
+            ?? resizedForProfileFallback(maxSide: maxSide)
+    }
+
+    static func downsampledForProfile(data: Data?, maxSide: CGFloat) -> UIImage? {
+        guard let data, !data.isEmpty else { return nil }
+        let srcOptions: [CFString: Any] = [kCGImageSourceShouldCache: false]
+        guard let source = CGImageSourceCreateWithData(data as CFData, srcOptions as CFDictionary) else {
+            return UIImage(data: data)?.resizedForProfileFallback(maxSide: maxSide)
+        }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxSide
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return UIImage(data: data)?.resizedForProfileFallback(maxSide: maxSide)
+        }
+        return UIImage(cgImage: cgImage, scale: 1, orientation: .up)
+    }
+
+    func resizedForProfileFallback(maxSide: CGFloat) -> UIImage {
         let pixelWidth = size.width * scale
         let pixelHeight = size.height * scale
         let longestSide = max(pixelWidth, pixelHeight)

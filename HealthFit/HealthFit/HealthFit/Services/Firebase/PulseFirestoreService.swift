@@ -482,12 +482,47 @@ enum PulseFirestoreService {
             "authorName": comment.authorName,
             "text": String(text.prefix(500)),
             "createdAt": Timestamp(date: comment.createdAt),
+            "updatedAt": FieldValue.serverTimestamp(),
         ]
         do {
             try await comments(postId: postId.uuidString).document(comment.id.uuidString).setData(data)
             return true
         } catch {
             print("[Pulse] Falha ao gravar comentário: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    @discardableResult
+    static func updateComment(postId: UUID, comment: PulseComment) async -> Bool {
+        guard PulseExperimental.isCloudSyncEffective, isAvailable else { return false }
+        guard let uid = Auth.auth().currentUser?.uid, !uid.isEmpty else { return false }
+        guard comment.authorId == uid else { return false }
+        let text = comment.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return false }
+
+        do {
+            try await comments(postId: postId.uuidString).document(comment.id.uuidString).setData([
+                "text": String(text.prefix(500)),
+                "updatedAt": FieldValue.serverTimestamp(),
+            ], merge: true)
+            return true
+        } catch {
+            print("[Pulse] Falha ao editar comentário: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    @discardableResult
+    static func deleteComment(postId: UUID, commentId: UUID, authorId: String) async -> Bool {
+        guard PulseExperimental.isCloudSyncEffective, isAvailable else { return false }
+        guard let uid = Auth.auth().currentUser?.uid, !uid.isEmpty else { return false }
+        guard authorId == uid else { return false }
+        do {
+            try await comments(postId: postId.uuidString).document(commentId.uuidString).delete()
+            return true
+        } catch {
+            print("[Pulse] Falha ao excluir comentário: \(error.localizedDescription)")
             return false
         }
     }

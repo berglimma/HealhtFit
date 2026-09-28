@@ -206,54 +206,14 @@ struct ProfileView: View {
     private var profileList: some View {
         List {
             if let user = authService.currentUser {
-                // Phase 1 — always light / safe
-                profileHeaderSection(for: user)
-                subscriptionPlanSection
-                displayNameSection(for: user)
-                accountRoleSection(for: user)
-                healthFitCoachSection
-
+                // AnyView breaks the giant ViewBuilder type tree — without it, opening
+                // Profile overflows the main thread stack (__swift_instantiateConcreteType…).
+                AnyView(profilePhaseOne(user: user))
                 if showSecondarySections {
-                    biotypeSection(for: user)
-                    practicedModalitiesSection(for: user)
-                    personalTrainerSection
-                    nutritionistSection
-                    healthIconSection
-                    Section("Sono e Hidratação") {
-                        wellnessSection(for: user)
-                    }
-                    Section("Energéticos e Pré-treino") {
-                        energyDrinksSection
-                    }
-                    Section("Seus Dados") {
-                        bodyDataSection(for: user)
-                    }
-                    Section("Medidas Corporais") {
-                        bodyMeasurementsSection(for: user)
-                    }
-                    integrationsSection
-                    nutritionNotificationsSection
-                    restTimerSection
+                    AnyView(profilePhaseTwo(user: user))
                 }
-
                 if showTertiarySections {
-                    bodyEvolutionSection
-                    #if DEBUG
-                    Section {
-                        NavigationLink {
-                            PulseLabsSettingsView()
-                        } label: {
-                            Label("Labs (DEBUG)", systemImage: "flask.fill")
-                        }
-                    } footer: {
-                        Text("Ferramentas experimentais só em builds de desenvolvimento. Abrir Labs não inicia o Pulse sozinho.")
-                    }
-                    #endif
-                    aboutSection
-                    Section("Legal") {
-                        LegalLinksView(style: .list, showsSupportLink: true)
-                    }
-                    AppFeedbackFormSections()
+                    AnyView(profilePhaseThree)
                 } else if !showSecondarySections {
                     Section {
                         HStack {
@@ -265,8 +225,6 @@ struct ProfileView: View {
                         }
                     }
                 }
-
-                // Always last: language + leave / delete account
                 languageSection
                 accountActionsSection
             } else {
@@ -276,6 +234,86 @@ struct ProfileView: View {
                 }
             }
         }
+    }
+
+    /// Lean first paint — keep this tree shallow.
+    @ViewBuilder
+    private func profilePhaseOne(user: UserProfile) -> some View {
+        profileHeaderSection(for: user)
+        subscriptionPlanSection
+        displayNameSection(for: user)
+        accountRoleSection(for: user)
+    }
+
+    @ViewBuilder
+    private func profilePhaseTwo(user: UserProfile) -> some View {
+        // Extra erasure: secondary content alone was still deep enough to blow the stack.
+        AnyView(profilePhaseTwoIdentity(user: user))
+        AnyView(profilePhaseTwoWellness(user: user))
+        AnyView(profilePhaseTwoBody(user: user))
+        AnyView(profilePhaseTwoSettings)
+    }
+
+    @ViewBuilder
+    private func profilePhaseTwoIdentity(user: UserProfile) -> some View {
+        healthFitCoachSection
+        biotypeSection(for: user)
+        practicedModalitiesSection(for: user)
+        personalTrainerSection
+        nutritionistSection
+        healthIconSection
+    }
+
+    @ViewBuilder
+    private func profilePhaseTwoWellness(user: UserProfile) -> some View {
+        Section("Sono e Hidratação") {
+            wellnessSection(for: user)
+        }
+        Section("Energéticos e Pré-treino") {
+            energyDrinksSection
+        }
+    }
+
+    @ViewBuilder
+    private func profilePhaseTwoBody(user: UserProfile) -> some View {
+        AnyView(
+            Section("Seus Dados") {
+                bodyDataSection(for: user)
+            }
+        )
+        AnyView(
+            Section("Medidas Corporais") {
+                bodyMeasurementsSection(for: user)
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var profilePhaseTwoSettings: some View {
+        integrationsSection
+        nutritionNotificationsSection
+        restTimerSection
+    }
+
+    @ViewBuilder
+    private var profilePhaseThree: some View {
+        bodyEvolutionSection
+        #if DEBUG
+        Section {
+            NavigationLink {
+                PulseLabsSettingsView()
+            } label: {
+                Label("Labs (DEBUG)", systemImage: "flask.fill")
+            }
+        } footer: {
+            Text("Ferramentas experimentais só em builds de desenvolvimento. Abrir Labs não inicia o Pulse sozinho.")
+        }
+        #endif
+        aboutSection
+        Section("Legal") {
+            LegalLinksView(style: .list, showsSupportLink: true)
+        }
+        AppFeedbackFormSections()
     }
 
     private var dateOfBirthPickerSheet: some View {
@@ -424,18 +462,20 @@ struct ProfileView: View {
         syncDisplayNameField()
         syncBodyDataFields()
 
-        // Recarrega fotos do disco já com clamp — evita bitmap enorme em memória (jetsam).
-        authService.loadProfileImage()
+        // Solta bitmaps enormes já em memória e recarrega via ImageIO (evita jetsam).
+        authService.releaseOversizedProfileImagesForDisplay()
+        await Task.yield()
+        await authService.reloadProfileImagesDownsampled()
 
         await Task.yield()
-        try? await Task.sleep(nanoseconds: 280_000_000)
+        try? await Task.sleep(nanoseconds: 220_000_000)
 
         syncWellnessFields()
         syncBodyMeasurementFields()
         showSecondarySections = true
 
         await Task.yield()
-        try? await Task.sleep(nanoseconds: 400_000_000)
+        try? await Task.sleep(nanoseconds: 450_000_000)
 
         syncPreWorkoutFromWorkouts()
         coach.start()

@@ -71,6 +71,7 @@ struct PulseFeedView: View {
     @State private var pendingShareItems: [Any] = []
     @State private var showPulseShareSheet = false
     @State private var shareHintMessage: String?
+    @State private var lastCloudRefreshAt: Date?
 
     private var authorId: String { authService.currentUser?.id ?? "local" }
     private var authorName: String {
@@ -380,11 +381,16 @@ struct PulseFeedView: View {
                     selectedTab = .people
                 }
                 store.requestPulseNotificationPermission()
+                lastCloudRefreshAt = Date()
                 Task { await store.refreshFromCloud(currentUserId: authorId) }
             }
             .onChange(of: scenePhase) { _, phase in
-                // iPhone ↔ iPad: ao voltar ao app, puxa posts/stories da nuvem.
+                // Debounce: sync pesado a cada retorno de tela congelava o app.
                 guard phase == .active, canAccessPulseUGC else { return }
+                if let last = lastCloudRefreshAt, Date().timeIntervalSince(last) < 90 {
+                    return
+                }
+                lastCloudRefreshAt = Date()
                 Task { await store.refreshFromCloud(currentUserId: authorId) }
             }
             .onDisappear {
@@ -451,7 +457,7 @@ struct PulseFeedView: View {
                                     : nil,
                                 currentUserId: authorId,
                                 currentUserAvatar: authService.profileImage,
-                                mentionCandidates: store.followingPeople(of: authorId),
+                                mentionCandidates: store.mentionablePeople(for: authorId),
                                 isCommunityActive: store.joinedCommunities.contains(post.community),
                                 commentText: Binding(
                                     get: { commentDrafts[post.id] ?? "" },
@@ -477,6 +483,21 @@ struct PulseFeedView: View {
                                         avatar: authService.profileImage
                                     )
                                     commentDrafts[post.id] = ""
+                                },
+                                onEditComment: { commentId, text in
+                                    store.updateComment(
+                                        postId: post.id,
+                                        commentId: commentId,
+                                        authorId: authorId,
+                                        text: text
+                                    )
+                                },
+                                onDeleteComment: { commentId in
+                                    store.deleteComment(
+                                        postId: post.id,
+                                        commentId: commentId,
+                                        authorId: authorId
+                                    )
                                 },
                                 onShowReactions: { reactionsToShow = post.reactions.filter(\.isHeart) },
                                 onReport: { store.reportPost(post.id, reporterId: authorId) },
@@ -2342,6 +2363,8 @@ private struct PulsePostCard: View {
     var onAutoPlayHandled: () -> Void = {}
     var onHeart: () -> Void
     var onComment: () -> Void
+    var onEditComment: (UUID, String) -> Void = { _, _ in }
+    var onDeleteComment: (UUID) -> Void = { _ in }
     var onShowReactions: () -> Void
     var onReport: () -> Void
     var onHide: () -> Void
@@ -2354,6 +2377,8 @@ private struct PulsePostCard: View {
     @ObservedObject private var musicPlayer = PulseMusicPreviewPlayer.shared
     /// Atualiza durante o scroll para reenviar a preference de visibilidade.
     @State private var scrollVisibilityTick: CGFloat = 0
+    @State private var editingComment: PulseComment?
+    @State private var editingCommentText = ""
 
     private var canSendComment: Bool {
         !commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -2505,6 +2530,34 @@ private struct PulsePostCard: View {
                                     .font(.caption)
                                     .foregroundStyle(AppTheme.textSecondary)
                             }
+                            Spacer(minLength: 0)
+                            if comment.authorId == currentUserId {
+                                Menu {
+                                    Button(L10n.Pulse.menuEdit) {
+                                        editingComment = comment
+                                        editingCommentText = comment.text
+                                    }
+                                    Button(L10n.Pulse.menuDelete, role: .destructive) {
+                                        onDeleteComment(comment.id)
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(AppTheme.textSecondary)
+                                        .padding(6)
+                                }
+                            }
+                        }
+                        .contextMenu {
+                            if comment.authorId == currentUserId {
+                                Button(L10n.Pulse.menuEdit) {
+                                    editingComment = comment
+                                    editingCommentText = comment.text
+                                }
+                                Button(L10n.Pulse.menuDelete, role: .destructive) {
+                                    onDeleteComment(comment.id)
+                                }
+                            }
                         }
                     }
                 }
@@ -2540,6 +2593,31 @@ private struct PulsePostCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .cardStyle()
+        .sheet(item: $editingComment) { comment in
+            NavigationStack {
+                Form {
+                    Section("Editar comentário") {
+                        TextField("Comentário", text: $editingCommentText, axis: .vertical)
+                            .lineLimit(2...6)
+                    }
+                }
+                .navigationTitle("Comentário")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancelar") { editingComment = nil }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Salvar") {
+                            onEditComment(comment.id, editingCommentText)
+                            editingComment = nil
+                        }
+                        .disabled(editingCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
         .background {
             GeometryReader { geo in
                 let frame = geo.frame(in: .global)
@@ -2656,7 +2734,7 @@ private struct PulsePostCard: View {
     }
 }
 
-/// Campo de texto com sugestões de @menção (pessoas que o usuário segue).
+/// Campo de texto com sugestões de @menção (lista de usuários do Pulse).
 private struct PulseMentionTextField: View {
     @Binding var text: String
     let candidates: [PulsePerson]
@@ -2665,13 +2743,13 @@ private struct PulseMentionTextField: View {
 
     private var filtered: [PulsePerson] {
         guard let query = PulseMentionParser.activeQuery(in: text) else { return [] }
-        if query.isEmpty { return Array(candidates.prefix(6)) }
+        if query.isEmpty { return Array(candidates.prefix(8)) }
         return candidates
             .filter {
                 $0.mentionHandle.localizedCaseInsensitiveContains(query)
                     || $0.displayName.localizedCaseInsensitiveContains(query)
             }
-            .prefix(6)
+            .prefix(8)
             .map { $0 }
     }
 
@@ -2787,7 +2865,7 @@ struct PulseComposeView: View {
     }
 
     private var mentionCandidates: [PulsePerson] {
-        PulseLocalStore.shared.followingPeople(of: mentionUserId)
+        PulseLocalStore.shared.mentionablePeople(for: mentionUserId)
     }
 
     private var isEditing: Bool { existingPost != nil }

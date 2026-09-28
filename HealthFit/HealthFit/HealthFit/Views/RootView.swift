@@ -18,7 +18,10 @@ struct RootView: View {
     @State private var didEnterBackground = false
     @State private var lastForegroundPipelineAt: Date?
     @State private var foregroundPipelineTask: Task<Void, Never>?
-    private let foregroundPipelineMinInterval: TimeInterval = 45
+    private let foregroundPipelineMinInterval: TimeInterval = 120
+    /// Trabalho muito pesado (HealthKit / catálogo / sync externo) no máximo a cada 5 min.
+    private let heavyForegroundMinInterval: TimeInterval = 300
+    @State private var lastHeavyForegroundAt: Date?
 
     var body: some View {
         Group {
@@ -251,7 +254,7 @@ struct RootView: View {
         }
     }
 
-    /// Retorno de background real: sync em fases, sem travar o primeiro paint no iPad.
+    /// Retorno de background real: sync leve em fases — evita deixar o app “pesado” até reiniciar.
     private func runForegroundRefreshPipeline() async {
         lastForegroundPipelineAt = Date()
         let outdoorCardioRunning =
@@ -268,50 +271,44 @@ struct RootView: View {
         }
         AppIconInactivityService.shared.handleAppBecameActive()
 
-        // GPS outdoor: espera a UI do treino; senão só um yield antes do cloud.
         if outdoorCardioRunning {
             try? await Task.sleep(nanoseconds: 2_500_000_000)
         } else {
             await Task.yield()
-            try? await Task.sleep(nanoseconds: 350_000_000)
+            try? await Task.sleep(nanoseconds: 450_000_000)
         }
         guard !Task.isCancelled else { return }
 
-        // bind() já recarrega o plano se o userId mudou — não chamar loadSavedData de novo.
+        // Rebind só se necessário — rebinds repetidos + cloud sync congelavam a UI.
         mealPlanService.bind(userId: authService.currentUser?.id)
         ClimbingGearService.shared.bind(userId: authService.currentUser?.id)
-        DuoTeamService.shared.bind(
-            userId: authService.currentUser?.id,
-            userName: authService.currentUser?.greetingName,
-            countryCode: authService.currentUser?.countryCode
-        )
-        CoachService.shared.bind(
-            authService: authService,
-            workoutStore: workoutStore,
-            mealPlanService: mealPlanService
-        )
         DuoTeamService.shared.handleAppBecameActive()
         refreshInactivityReminder()
         EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
         syncWellnessCloudHistory()
-        if let userId = authService.currentUser?.id {
-            Task {
-                await authService.syncProfileFromCloudIfNeeded()
-                await authService.syncProfilePhotoFromCloud(userId: userId)
-            }
-            Task { await DuoTeamService.shared.loadIfNeeded() }
-            CoachService.shared.start()
-            Task { await CoachService.shared.refreshLinkStatusesForPlan() }
-        }
 
-        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 700_000_000 : 500_000_000)
+        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 700_000_000 : 600_000_000)
         guard !Task.isCancelled else { return }
         NotificationService.shared.refreshRecurringNotifications()
 
-        // HealthKit / catálogo / Coach review — bem depois do paint (iPad).
-        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 1_200_000_000 : 900_000_000)
+        let shouldRunHeavy: Bool = {
+            guard let last = lastHeavyForegroundAt else { return true }
+            return Date().timeIntervalSince(last) >= heavyForegroundMinInterval
+        }()
+        guard shouldRunHeavy else { return }
+
+        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 1_200_000_000 : 1_000_000_000)
         guard !Task.isCancelled else { return }
-        Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
+        lastHeavyForegroundAt = Date()
+
+        if let userId = authService.currentUser?.id {
+            Task {
+                await authService.syncProfileFromCloudIfNeeded()
+            }
+            Task { await DuoTeamService.shared.loadIfNeeded() }
+            Task { await CoachService.shared.refreshLinkStatusesForPlan() }
+        }
+
         Task { await healthKitManager.refreshFromHealthKit() }
         ExternalWorkoutSyncService.shared.bind(
             workoutStore: workoutStore,
@@ -320,6 +317,8 @@ struct RootView: View {
         Task { await ExternalWorkoutSyncService.shared.syncRecentExternalWorkouts(reason: .foreground) }
         bindAppleSleepSync()
         Task { await wellnessService.syncSleepFromAppleHealth() }
+        // Catálogo de GIFs e review Coach — só no pipeline “pesado”.
+        Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
         Task { await CoachService.shared.publishProfessionalReviewSnapshotsIfStudent() }
     }
 

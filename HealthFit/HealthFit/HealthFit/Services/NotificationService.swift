@@ -192,7 +192,9 @@ final class NotificationService {
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             switch settings.authorizationStatus {
             case .notDetermined:
-                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                UNUserNotificationCenter.current().requestAuthorization(options: [
+                    .alert, .sound, .badge, .timeSensitive
+                ]) { granted, error in
                     if let error {
                         print("[HealthFit] Falha ao pedir autorização de notificação: \(error.localizedDescription)")
                     }

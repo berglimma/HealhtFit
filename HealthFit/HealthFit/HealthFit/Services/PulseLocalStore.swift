@@ -393,6 +393,47 @@ final class PulseLocalStore: ObservableObject {
         }
     }
 
+    func updateComment(
+        postId: UUID,
+        commentId: UUID,
+        authorId: String,
+        text: String
+    ) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let postIdx = posts.firstIndex(where: { $0.id == postId }),
+              let commentIdx = posts[postIdx].comments.firstIndex(where: { $0.id == commentId }),
+              posts[postIdx].comments[commentIdx].authorId == authorId
+        else { return }
+        posts[postIdx].comments[commentIdx].text = String(trimmed.prefix(280))
+        persistPosts()
+        notifyMentions(
+            in: trimmed,
+            fromUserId: authorId,
+            fromName: posts[postIdx].comments[commentIdx].authorName,
+            context: "comentário"
+        )
+        let updated = posts[postIdx].comments[commentIdx]
+        Task { _ = await PulseFirestoreService.updateComment(postId: postId, comment: updated) }
+    }
+
+    func deleteComment(postId: UUID, commentId: UUID, authorId: String) {
+        guard let postIdx = posts.firstIndex(where: { $0.id == postId }),
+              let commentIdx = posts[postIdx].comments.firstIndex(where: { $0.id == commentId }),
+              posts[postIdx].comments[commentIdx].authorId == authorId
+        else { return }
+        posts[postIdx].comments.remove(at: commentIdx)
+        persistPosts()
+        Task { _ = await PulseFirestoreService.deleteComment(postId: postId, commentId: commentId, authorId: authorId) }
+    }
+
+    /// Pessoas disponíveis para @menção (diretório Pulse, sem bloqueados).
+    func mentionablePeople(for userId: String) -> [PulsePerson] {
+        people
+            .filter { $0.id != userId && !blockedUserIds.contains($0.id) }
+            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+    }
+
     func toggleHeart(
         postId: UUID,
         userId: String,
@@ -1239,7 +1280,9 @@ final class PulseLocalStore: ObservableObject {
     }
 
     func requestPulseNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        UNUserNotificationCenter.current().requestAuthorization(options: [
+            .alert, .sound, .badge, .timeSensitive
+        ]) { _, _ in }
     }
 
     /// Pull-based sync (sem listeners). Mescla nuvem no store local respeitando expiresAt.
@@ -1416,9 +1459,10 @@ final class PulseLocalStore: ObservableObject {
     ) {
         let handles = PulseMentionParser.handles(in: text)
         guard !handles.isEmpty else { return }
-        let following = followingPeople(of: fromUserId)
+        // Busca no diretório Pulse (não só em quem o autor segue).
+        let directory = mentionablePeople(for: fromUserId)
         for handle in handles {
-            guard let person = following.first(where: {
+            guard let person = directory.first(where: {
                 $0.mentionHandle.compare(handle, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
             }) else { continue }
             pushNotification(
@@ -1437,6 +1481,10 @@ final class PulseLocalStore: ObservableObject {
         content.title = title
         content.body = body
         content.sound = .default
+        content.threadIdentifier = "healthfit.pulse"
+        // timeSensitive: aparece na tela bloqueada quando o usuário autorizou.
+        content.interruptionLevel = .timeSensitive
+        content.relevanceScore = 1
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.4, repeats: false)
         let request = UNNotificationRequest(
             identifier: "pulse-\(UUID().uuidString)",

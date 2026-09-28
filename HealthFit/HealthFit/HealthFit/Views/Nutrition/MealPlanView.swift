@@ -330,7 +330,7 @@ struct MealPlanView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                photoFlowStep(number: "1", text: "Tire a foto da refeição (ou escolha da galeria).")
+                photoFlowStep(number: "1", text: "Tire a foto da refeição (câmera ou galeria).")
                 photoFlowStep(number: "2", text: "Envie pelo botão abaixo — fica disponível só hoje.")
                 photoFlowStep(number: "3", text: "O nutricionista abre uma única vez na revisão.")
                 photoFlowStep(number: "4", text: "Após visualizar, a foto é apagada automaticamente.")

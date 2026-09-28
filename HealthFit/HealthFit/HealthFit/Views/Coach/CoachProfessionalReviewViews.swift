@@ -1,6 +1,5 @@
 import Charts
 import FirebaseFirestore
-import PhotosUI
 import SwiftUI
 
 // MARK: - Resumo IAssistente para o profissional
@@ -206,12 +205,14 @@ struct CoachProfessionalReviewView: View {
 struct StudentDailyMealPhotoShareView: View {
     let link: CoachLink
 
-    @State private var pickerItem: PhotosPickerItem?
     @State private var image: UIImage?
     @State private var mealLabel = "Almoço"
     @State private var note = ""
     @State private var isUploading = false
     @State private var statusMessage: String?
+    @State private var showPhotoSource = false
+    @State private var showGallery = false
+    @State private var showCamera = false
 
     var body: some View {
         Form {
@@ -220,7 +221,7 @@ struct StudentDailyMealPhotoShareView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 6) {
-                    Label("1. Escolha a foto da refeição", systemImage: "1.circle.fill")
+                    Label("1. Tire a foto ou escolha da galeria", systemImage: "1.circle.fill")
                     Label("2. Informe o nome (ex.: Almoço) e observação opcional", systemImage: "2.circle.fill")
                     Label("3. Toque em Enviar", systemImage: "3.circle.fill")
                     Label("4. Nutri abre 1× e a foto some", systemImage: "4.circle.fill")
@@ -234,8 +235,13 @@ struct StudentDailyMealPhotoShareView: View {
                     .lineLimit(2...4)
             }
             Section("Foto") {
-                PhotosPicker(selection: $pickerItem, matching: .images) {
-                    Label(image == nil ? "Escolher foto" : "Trocar foto", systemImage: "camera.fill")
+                Button {
+                    showPhotoSource = true
+                } label: {
+                    Label(
+                        image == nil ? "Câmera ou galeria" : "Trocar foto",
+                        systemImage: "camera.fill"
+                    )
                 }
                 if let image {
                     Image(uiImage: image)
@@ -259,14 +265,30 @@ struct StudentDailyMealPhotoShareView: View {
             }
         }
         .navigationTitle("Foto do dia")
-        .onChange(of: pickerItem) { _, item in
-            guard let item else { return }
-            Task {
-                if let data = try? await item.loadTransferable(type: Data.self),
-                   let ui = UIImage(data: data) {
-                    image = ui
+        .confirmationDialog("Foto da refeição", isPresented: $showPhotoSource, titleVisibility: .visible) {
+            if PhotoCaptureAvailability.isCameraAvailable {
+                Button("Câmera") {
+                    DispatchQueue.main.async { showCamera = true }
                 }
             }
+            Button("Galeria") {
+                DispatchQueue.main.async { showGallery = true }
+            }
+            Button("Cancelar", role: .cancel) {}
+        }
+        .sheet(isPresented: $showGallery) {
+            LibraryImagePicker { picked in
+                showGallery = false
+                if let picked { image = picked }
+            }
+            .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showCamera) {
+            CameraImagePicker { picked in
+                showCamera = false
+                if let picked { image = picked }
+            }
+            .ignoresSafeArea()
         }
     }
 
@@ -283,7 +305,6 @@ struct StudentDailyMealPhotoShareView: View {
             )
             statusMessage = "Enviado. Disponível só hoje para a nutricionista."
             self.image = nil
-            pickerItem = nil
             note = ""
         } catch {
             statusMessage = error.localizedDescription
