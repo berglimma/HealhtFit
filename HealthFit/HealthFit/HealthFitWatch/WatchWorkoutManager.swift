@@ -403,7 +403,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
-    /// Caminhada, corrida, bike e mountain bike — anel segmentado com cor por desempenho.
+    /// Cardio / caminhada / corrida / esteira / bike / MTB — anel segmentado com cor por desempenho.
     private static func shouldUseSegmentedChronometer(
         exerciseName: String,
         swimmingMode: Bool,
@@ -411,11 +411,17 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     ) -> Bool {
         if swimmingMode || waterSportMode { return false }
         let name = exerciseName.folding(options: .diacriticInsensitive, locale: .current).lowercased()
-        if name.contains("ergometr") || name.contains("indoor") { return false }
-        if name.contains("corrida") || name.contains("run") || name.contains("esteira") { return true }
+        // Indoor bike/ergômetro usa o cronômetro clássico (sem GPS de ritmo).
+        if name.contains("ergometr") { return false }
+        if name.contains("bike") && name.contains("indoor") { return false }
+        if name.contains("corrida") || name.contains("run") || name.contains("esteira") || name.contains("treadmill") {
+            return true
+        }
         if name.contains("caminh") || name.contains("walk") { return true }
         if name.contains("mountain") || name.contains("mtb") { return true }
         if name.contains("bike") || name.contains("cicl") || name.contains("bicicleta") { return true }
+        // Cardio genérico outdoor / sessão de cardio livre.
+        if name.contains("cardio") { return true }
         return false
     }
 

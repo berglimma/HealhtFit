@@ -6,6 +6,7 @@ enum PhotoLibrarySaver {
     enum SaveError: LocalizedError {
         case permissionDenied
         case empty
+        case videoFailed
         case underlying(Error)
 
         var errorDescription: String? {
@@ -14,6 +15,8 @@ enum PhotoLibrarySaver {
                 return "Permissão negada para salvar em Fotos. Ative em Ajustes → HealthFit → Fotos."
             case .empty:
                 return "Nenhuma imagem para salvar."
+            case .videoFailed:
+                return "Não foi possível salvar o vídeo na Galeria."
             case .underlying(let error):
                 return error.localizedDescription
             }
@@ -60,12 +63,34 @@ enum PhotoLibrarySaver {
         guard status == .authorized || status == .limited else {
             throw SaveError.permissionDenied
         }
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            throw SaveError.underlying(
+                NSError(
+                    domain: "PhotoLibrarySaver",
+                    code: 404,
+                    userInfo: [NSLocalizedDescriptionKey: "Arquivo de vídeo não encontrado."]
+                )
+            )
+        }
+        // Cópia estável: o arquivo temporário pode sumir durante o performChanges.
+        let stableURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("healthfit-save-\(UUID().uuidString).mp4")
+        do {
+            try FileManager.default.copyItem(at: fileURL, to: stableURL)
+        } catch {
+            throw SaveError.underlying(error)
+        }
+        defer { try? FileManager.default.removeItem(at: stableURL) }
+
+        final class Flag: @unchecked Sendable { var ok = false }
+        let flag = Flag()
         do {
             try await PHPhotoLibrary.shared().performChanges {
-                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+                flag.ok = PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: stableURL) != nil
             }
         } catch {
             throw SaveError.underlying(error)
         }
+        guard flag.ok else { throw SaveError.videoFailed }
     }
 }

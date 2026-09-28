@@ -2637,9 +2637,6 @@
     "Código para o aluno" : {
 
     },
-    "Cole o código que você recebeu. Cada voucher libera 30 dias do plano, sem cobrança e sem renovação automática." : {
-
-    },
     "Com base no seu peso (%@ kg), beba:" : {
 
     },
@@ -3027,7 +3024,7 @@
     "Conexão" : {
 
     },
-    "Confiança: %lld%%" : {
+    "Confiança da detecção visual (estimativa, não é análise laboratorial): %lld%%" : {
 
     },
     "Configure em Perfil se deseja notificações de alimentação e os horários habituais de cada refeição. Os alertas disparam no horário cadastrado." : {
@@ -3479,6 +3476,9 @@
 
     },
     "Disponível a partir do plano %@." : {
+
+    },
+    "Disponível só em TestFlight/Debug para testes. Cada voucher libera 30 dias do plano, sem cobrança e sem renovação automática. Na App Store use Offer Codes da Apple." : {
 
     },
     "Dispositivos encontrados" : {
@@ -5471,9 +5471,6 @@
     "O ícone do app na tela inicial usa a mesma cor." : {
 
     },
-    "O relatório educativo usa as medidas do Perfil. As fotos abaixo são opcionais e reforçam o antes/depois." : {
-
-    },
     "O método fica disponível para outras fichas deste personal." : {
 
     },
@@ -5499,6 +5496,9 @@
 
     },
     "O relatório de nutrição foi enviado para %@ com sucesso." : {
+
+    },
+    "O relatório educativo usa as medidas do Perfil. As fotos abaixo são opcionais e reforçam o antes/depois." : {
 
     },
     "O vínculo com o nutricionista será encerrado." : {
@@ -11982,7 +11982,7 @@
     "Tempo por Exercício" : {
 
     },
-    "Tenho um código de cortesia" : {
+    "Tenho um código de cortesia (TestFlight)" : {
 
     },
     "Tentar de novo" : {

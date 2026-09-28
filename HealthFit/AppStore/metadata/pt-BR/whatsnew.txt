@@ -1,4 +1,3 @@
-• Correções para App Review: códigos de cortesia só no TestFlight; binário da App Store usa apenas StoreKit
-• Política de privacidade em HTML; textos educativos (sem “laudo/diagnóstico”)
-• Análise de foto de refeição mais precisa (menos falsos positivos de açaí)
-• Melhorias no Coach: agenda, cardápio prescrito e revisão profissional
+• Flyover: correção ao compartilhar/salvar vídeo (WhatsApp, Instagram, Stories e Fotos)
+• Apple Watch: cronômetro segmentado maior e adaptado ao tamanho da tela (cardio, corrida, caminhada, esteira e bike)
+• Assinaturas só via App Store; códigos de cortesia apenas no TestFlight

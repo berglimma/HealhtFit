@@ -1,5 +1,3 @@
-• Corrección App Review 3.1.2: precio cobrado de la suscripción en primer plano, texto completo de renovación automática y enlaces Privacidad/EULA en el paywall
-• Restaurar compras y gestionar suscripción en Suscripciones y Mi plan
-• Cronómetro circular segmentado en Apple Watch (caminata, carrera, bici y MTB)
-• Finalizar cardio en el iPhone cierra correctamente la sesión en el Watch
-• Suscripciones solo por App Store (sin códigos de cortesía en la app)
+• Flyover: corrección al compartir/guardar vídeo (WhatsApp, Instagram, Stories y Fotos)
+• Apple Watch: cronómetro segmentado más grande según el tamaño de pantalla
+• Suscripciones solo por App Store; códigos de cortesía solo en TestFlight

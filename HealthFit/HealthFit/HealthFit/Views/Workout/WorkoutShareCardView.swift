@@ -1354,14 +1354,63 @@ struct ActivityShareSheet: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
         controller.completionWithItemsHandler = { _, _, _, _ in
-            onComplete?()
+            DispatchQueue.main.async { onComplete?() }
         }
         if let popover = controller.popoverPresentationController {
-            popover.sourceView = UIView()
+            // UIView() órfão derruba o app no iPad — ancora na janela ativa.
+            let window = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap(\.windows)
+                .first(where: \.isKeyWindow)
+            popover.sourceView = window ?? controller.view
+            if let bounds = window?.bounds ?? controller.view?.bounds {
+                popover.sourceRect = CGRect(x: bounds.midX, y: bounds.midY, width: 1, height: 1)
+            }
             popover.permittedArrowDirections = []
         }
         return controller
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+/// Apresenta `UIActivityViewController` no VC topo (evita crash de sheet SwiftUI aninhada).
+@MainActor
+enum ActivitySharePresenter {
+    static func present(items: [Any], completion: (() -> Void)? = nil) {
+        guard !items.isEmpty else {
+            completion?()
+            return
+        }
+        guard let presenter = topViewController() else {
+            completion?()
+            return
+        }
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        controller.completionWithItemsHandler = { _, _, _, _ in
+            DispatchQueue.main.async { completion?() }
+        }
+        if let popover = controller.popoverPresentationController {
+            popover.sourceView = presenter.view
+            let bounds = presenter.view.bounds
+            popover.sourceRect = CGRect(x: bounds.midX, y: bounds.midY, width: 1, height: 1)
+            popover.permittedArrowDirections = []
+        }
+        presenter.present(controller, animated: true)
+    }
+
+    private static func topViewController() -> UIViewController? {
+        guard let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive || $0.activationState == .foregroundInactive }),
+              let root = windowScene.windows.first(where: \.isKeyWindow)?.rootViewController
+                ?? windowScene.windows.first?.rootViewController
+        else { return nil }
+
+        var controller = root
+        while let presented = controller.presentedViewController {
+            controller = presented
+        }
+        return controller
+    }
 }

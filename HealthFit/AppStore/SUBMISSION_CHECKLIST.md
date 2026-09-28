@@ -1,6 +1,6 @@
 # Checklist — publicar HealthFit na App Store
 
-Versão alvo: **1.0.11 (Build 24)** · Bundle `luan.com.healthfit.app`
+Versão alvo: **1.0.13 (Build 26)** · Bundle `luan.com.healthfit.app`
 
 ## URLs legais
 
@@ -12,19 +12,20 @@ Versão alvo: **1.0.11 (Build 24)** · Bundle `luan.com.healthfit.app`
 
 ## Build
 
-- [x] Versão Xcode **1.0.11 (24)**
-- [x] Correção Guideline **3.1.2** (preço cobrado em destaque, disclosure completo, links EULA/Privacy)
-- [x] `GoogleService-Info.plist` baixado do Firebase (`healthfit-30d87`) e incluído no archive
+- [x] Versão Xcode **1.0.13 (26)**
+- [x] Flyover share/save crash fix
+- [x] Watch chronometer adaptive sizing
 - [x] `whatsnew.txt` / `review_notes.txt` atualizados
-- [x] Archive + upload build **24**
-- [x] Attach build 24 na versão 1.0.11
-- [x] Reenviado para revisão — **Aguardando revisão** (2026-09-24)
+- [x] Archive + upload build **26**
+- [x] Attach build 26 na versão 1.0.13
+- [x] Enviado para revisão — **Waiting for Review** (2026-09-28)
 
 ## App Store Connect
 
 1. https://appstoreconnect.apple.com/apps/6798621208
-2. Versão **1.0.11** com build **24** · status **Waiting for Review**
+2. Versão **1.0.13** com build **26** · status **Waiting for Review**
 
-## Correção desta revisão
+## Itens desta versão
 
-1. Guideline 3.1.2(c) — assinaturas: preço claro, restore, EULA/Privacy, texto de renovação automática completo
+1. Flyover: sem crash ao compartilhar/salvar (WhatsApp, Instagram, Stories, Fotos)
+2. Apple Watch: cronômetro segmentado adaptado ao tamanho da tela

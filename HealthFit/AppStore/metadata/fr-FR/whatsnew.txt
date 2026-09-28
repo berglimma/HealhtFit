@@ -1,5 +1,3 @@
-• Correction App Review 3.1.2 : prix facturé de l’abonnement en priorité, texte complet de renouvellement automatique et liens Confidentialité/EULA sur le paywall
-• Restaurer les achats et gérer l’abonnement restent dans Abonnements et Mon forfait
-• Chronomètre circulaire segmenté sur Apple Watch (marche, course, vélo, VTT)
-• Terminer le cardio sur iPhone arrête correctement la session Watch
-• Abonnements uniquement via App Store (pas de codes de courtoisie dans l’app)
+• Flyover : correction du plantage à l’envoi/enregistrement vidéo (WhatsApp, Instagram, Stories, Photos)
+• Apple Watch : chronomètre segmenté plus grand selon la taille de l’écran
+• Abonnements uniquement via App Store ; codes de courtoisie TestFlight seulement

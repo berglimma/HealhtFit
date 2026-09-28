@@ -82,6 +82,7 @@ struct HealthFitApp: App {
             }
             .task(priority: .utility) {
                 await Task.yield()
+                await AppDistribution.refreshEnvironment()
                 try? await Task.sleep(nanoseconds: 800_000_000)
                 NotificationService.shared.requestAuthorization()
                 watchConnectivity.ensureSessionActivated()

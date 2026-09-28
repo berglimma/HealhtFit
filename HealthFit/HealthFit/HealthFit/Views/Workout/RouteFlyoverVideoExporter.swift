@@ -57,10 +57,11 @@ struct RouteFlyoverMetrics: Equatable {
 
 enum RouteFlyoverVideoExporter {
     struct Config {
-        var size = CGSize(width: 1080, height: 1920)
-        var fps: Int = 20
-        var durationSeconds: Double = 8.5
-        var maxRoutePoints: Int = 220
+        /// 720p vertical: bem mais leve na memória ao gerar/compartilhar (evita jetsam).
+        var size = CGSize(width: 720, height: 1280)
+        var fps: Int = 18
+        var durationSeconds: Double = 8.0
+        var maxRoutePoints: Int = 180
     }
 
     enum ExportError: LocalizedError {
@@ -101,7 +102,7 @@ enum RouteFlyoverVideoExporter {
             AVVideoWidthKey: Int(config.size.width),
             AVVideoHeightKey: Int(config.size.height),
             AVVideoCompressionPropertiesKey: [
-                AVVideoAverageBitRateKey: 8_000_000,
+                AVVideoAverageBitRateKey: 4_000_000,
                 AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel
             ]
         ]
@@ -125,24 +126,25 @@ enum RouteFlyoverVideoExporter {
 
         for index in 0..<frameCount {
             let t = Double(index) / Double(max(frameCount - 1, 1))
-            let image = renderFrame(
-                progress: t,
-                points: points,
-                performanceMetric: performanceMetric,
-                metrics: metrics,
-                size: config.size,
-                brand: brand
-            )
             while !input.isReadyForMoreMediaData {
                 try await Task.sleep(nanoseconds: 2_000_000)
             }
-            guard let buffer = pixelBuffer(from: image, size: config.size) else {
-                throw ExportError.encodingFailed
+            let appended: Bool = try autoreleasepool {
+                let image = renderFrame(
+                    progress: t,
+                    points: points,
+                    performanceMetric: performanceMetric,
+                    metrics: metrics,
+                    size: config.size,
+                    brand: brand
+                )
+                guard let buffer = pixelBuffer(from: image, size: config.size) else {
+                    throw ExportError.encodingFailed
+                }
+                let time = CMTimeMultiply(frameDuration, multiplier: Int32(index))
+                return adaptor.append(buffer, withPresentationTime: time)
             }
-            let time = CMTimeMultiply(frameDuration, multiplier: Int32(index))
-            if !adaptor.append(buffer, withPresentationTime: time) {
-                throw ExportError.encodingFailed
-            }
+            if !appended { throw ExportError.encodingFailed }
             if index % 4 == 0 {
                 await progress?(t)
             }

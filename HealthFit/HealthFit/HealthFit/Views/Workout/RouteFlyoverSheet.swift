@@ -19,12 +19,12 @@ struct RouteFlyoverSheet: View {
     @State private var exportedURL: URL?
     @State private var exportError: String?
 
-    @State private var showShareSheet = false
-    @State private var shareItems: [Any] = []
     @State private var galleryAlertTitle = ""
     @State private var galleryAlertMessage = ""
     @State private var showGalleryAlert = false
     @State private var storiesUnavailable = false
+    /// Limite seguro para colar vídeo no pasteboard do Instagram (evita jetsam/fechamento).
+    private let instagramPasteboardMaxBytes = 7_500_000
 
     private var metrics: RouteFlyoverMetrics {
         RouteFlyoverMetrics.make(session: session, athleteName: athleteName)
@@ -59,13 +59,7 @@ struct RouteFlyoverSheet: View {
             }
             .onAppear { startPreviewLoop() }
             .onDisappear {
-                previewTask?.cancel()
-                previewTask = nil
-            }
-            .sheet(isPresented: $showShareSheet) {
-                ActivityShareSheet(items: shareItems) {
-                    showShareSheet = false
-                }
+                stopPreviewLoop()
             }
             .alert(galleryAlertTitle, isPresented: $showGalleryAlert) {
                 Button("OK", role: .cancel) {}
@@ -78,7 +72,7 @@ struct RouteFlyoverSheet: View {
                 }
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Abra o Instagram ou use Compartilhar para enviar o Flyover.")
+                Text("O vídeo é grande demais para colar no Instagram ou o app não está disponível. Use Compartilhar.")
             }
         }
     }
@@ -277,6 +271,29 @@ struct RouteFlyoverSheet: View {
         }
     }
 
+    private func stopPreviewLoop() {
+        isPreviewPlaying = false
+        previewTask?.cancel()
+        previewTask = nil
+    }
+
+    /// Pausa o MapKit (pesado) antes de exportar/compartilhar — evita OOM ao abrir share sheets.
+    private func prepareForExportOrShare() {
+        stopPreviewLoop()
+    }
+
+    private func persistExportedVideo(_ tempURL: URL) throws -> URL {
+        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Flyovers", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let dest = dir.appendingPathComponent("flyover-\(session.id.uuidString).mp4")
+        if FileManager.default.fileExists(atPath: dest.path) {
+            try FileManager.default.removeItem(at: dest)
+        }
+        try FileManager.default.copyItem(at: tempURL, to: dest)
+        return dest
+    }
+
     private func applyCamera(at progress: Double) {
         guard coordinates.count >= 2 else { return }
         let idx = min(coordinates.count - 1, max(0, Int(Double(coordinates.count - 1) * progress)))
@@ -321,25 +338,30 @@ struct RouteFlyoverSheet: View {
 
     @MainActor
     private func generateVideoIfNeeded(force: Bool = false) async -> URL? {
-        if let exportedURL, !force { return exportedURL }
+        if let exportedURL, !force, FileManager.default.fileExists(atPath: exportedURL.path) {
+            return exportedURL
+        }
         guard session.routePoints.count >= 2 else {
             exportError = RouteFlyoverVideoExporter.ExportError.tooFewPoints.localizedDescription
             return nil
         }
+        prepareForExportOrShare()
         isExporting = true
         exportProgress = 0
         exportError = nil
         defer { isExporting = false }
         do {
-            let url = try await RouteFlyoverVideoExporter.export(
+            let tempURL = try await RouteFlyoverVideoExporter.export(
                 routePoints: session.routePoints,
                 performanceMetric: session.routePerformanceMetric,
                 metrics: metrics
             ) { value in
                 exportProgress = value
             }
-            exportedURL = url
-            return url
+            let stableURL = try persistExportedVideo(tempURL)
+            try? FileManager.default.removeItem(at: tempURL)
+            exportedURL = stableURL
+            return stableURL
         } catch {
             exportError = error.localizedDescription
             return nil
@@ -348,13 +370,19 @@ struct RouteFlyoverSheet: View {
 
     @MainActor
     private func shareVideo() async {
+        prepareForExportOrShare()
         guard let url = await generateVideoIfNeeded() else { return }
-        shareItems = [url, metrics.caption]
-        showShareSheet = true
+        // Só o arquivo: URL+caption junto derruba alguns share extensions (WhatsApp/Instagram).
+        let caption = metrics.caption
+        UIPasteboard.general.string = caption
+        // Pequeno atraso para o SwiftUI estabilizar após pausar o Map.
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        ActivitySharePresenter.present(items: [url])
     }
 
     @MainActor
     private func saveToGallery() async {
+        prepareForExportOrShare()
         guard let url = await generateVideoIfNeeded() else { return }
         do {
             try await PhotoLibrarySaver.saveVideo(at: url)
@@ -369,30 +397,40 @@ struct RouteFlyoverSheet: View {
 
     @MainActor
     private func shareToInstagramStories() async {
+        prepareForExportOrShare()
         guard let url = await generateVideoIfNeeded() else { return }
-        let scheme = URL(string: "instagram-stories://share")!
-        guard UIApplication.shared.canOpenURL(scheme) else {
+        guard let scheme = URL(string: "instagram-stories://share"),
+              UIApplication.shared.canOpenURL(scheme) else {
             storiesUnavailable = true
             return
         }
+
+        let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue ?? 0
+        // Vídeos grandes no pasteboard matam o processo (jetsam). Cai para share sheet.
+        guard fileSize > 0, fileSize <= instagramPasteboardMaxBytes else {
+            storiesUnavailable = true
+            return
+        }
+
         do {
-            let data = try Data(contentsOf: url)
-            let pasteboardItems: [[String: Any]] = [[
-                "com.instagram.sharedSticker.backgroundVideo": data,
-                "com.instagram.sharedSticker.appID": Bundle.main.bundleIdentifier ?? "luan.com.healthfit.app"
-            ]]
+            // mappedIfSafe evita duplicar o arquivo inteiro na RAM quando possível.
+            let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+            guard data.count <= instagramPasteboardMaxBytes else {
+                storiesUnavailable = true
+                return
+            }
+            let appID = Bundle.main.bundleIdentifier ?? "luan.com.healthfit.app"
             UIPasteboard.general.setItems(
-                pasteboardItems,
+                [[
+                    "com.instagram.sharedSticker.backgroundVideo": data,
+                    "com.instagram.sharedSticker.appID": appID
+                ]],
                 options: [.expirationDate: Date().addingTimeInterval(60 * 5)]
             )
-            var components = URLComponents(string: "instagram-stories://share")!
-            components.queryItems = [
-                URLQueryItem(
-                    name: "source_application",
-                    value: Bundle.main.bundleIdentifier ?? "luan.com.healthfit.app"
-                )
-            ]
-            if let openURL = components.url {
+            var components = URLComponents(string: "instagram-stories://share")
+            components?.queryItems = [URLQueryItem(name: "source_application", value: appID)]
+            if let openURL = components?.url {
+                try? await Task.sleep(nanoseconds: 100_000_000)
                 await UIApplication.shared.open(openURL)
             }
         } catch {

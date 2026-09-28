@@ -1,4 +1,3 @@
-• App Review fixes: courtesy vouchers TestFlight-only; App Store build uses StoreKit only
-• Privacy policy HTML URL; educational wording (no clinical “diagnosis” language)
-• More accurate meal photo analysis (fewer açaí false positives)
-• Coach improvements: schedule, prescribed meal plans, professional review
+• Flyover: fixed crash when sharing/saving video (WhatsApp, Instagram, Stories, Photos)
+• Apple Watch: larger segmented chronometer that scales to screen size (cardio, run, walk, treadmill, bike)
+• Subscriptions via App Store only; courtesy codes TestFlight-only

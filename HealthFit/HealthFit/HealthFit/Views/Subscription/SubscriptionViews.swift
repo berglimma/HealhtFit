@@ -16,6 +16,7 @@ struct PaywallView: View {
     @State private var billingPeriod: SubscriptionBillingPeriod = .yearly
     @State private var showManage = false
     @State private var showCourtesyRedeem = false
+    @State private var allowsCourtesyRedeem = AppDistribution.allowsCourtesyVoucherRedeem
 
     private let plans: [PlanMarketingCopy] = PlanTier.allCases
         .filter(\.isPaid)
@@ -62,6 +63,8 @@ struct PaywallView: View {
             }
             .task {
                 AppAnalytics.paywallView(feature: highlight?.rawValue)
+                await AppDistribution.refreshEnvironment()
+                allowsCourtesyRedeem = AppDistribution.allowsCourtesyVoucherRedeem
                 await subscriptions.refresh()
                 if subscriptions.currentTier.isPaid {
                     selectedTier = max(selectedTier, subscriptions.currentTier)
@@ -309,7 +312,7 @@ struct PaywallView: View {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(AppTheme.accent)
 
-            if AppDistribution.allowsCourtesyVoucherRedeem {
+            if allowsCourtesyRedeem {
                 Button("Tenho um código de cortesia (TestFlight)") {
                     showCourtesyRedeem = true
                 }
@@ -334,6 +337,7 @@ struct SubscriptionPlanView: View {
     @State private var showPaywall = false
     @State private var showManage = false
     @State private var showCourtesyRedeem = false
+    @State private var allowsCourtesyRedeem = AppDistribution.allowsCourtesyVoucherRedeem
 
     var body: some View {
         ScrollView {
@@ -348,7 +352,11 @@ struct SubscriptionPlanView: View {
         .background(AppTheme.background)
         .navigationTitle("Meu plano")
         .navigationBarTitleDisplayMode(.large)
-        .task { await subscriptions.refresh() }
+        .task {
+            await AppDistribution.refreshEnvironment()
+            allowsCourtesyRedeem = AppDistribution.allowsCourtesyVoucherRedeem
+            await subscriptions.refresh()
+        }
         .sheet(isPresented: $showPaywall) {
             PaywallView()
                 .environmentObject(subscriptions)
@@ -439,7 +447,7 @@ struct SubscriptionPlanView: View {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(AppTheme.accent)
 
-            if AppDistribution.allowsCourtesyVoucherRedeem {
+            if allowsCourtesyRedeem {
                 Button("Tenho um código de cortesia (TestFlight)") {
                     showCourtesyRedeem = true
                 }

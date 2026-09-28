@@ -127,6 +127,7 @@ final class SubscriptionService: ObservableObject {
     /// Só permitido em Debug/TestFlight — bloqueado no binário da App Store (Guideline 3.1.1).
     @discardableResult
     func redeemCourtesyCode(_ code: String) async -> Bool {
+        await AppDistribution.refreshEnvironment()
         guard AppDistribution.allowsCourtesyVoucherRedeem else {
             lastErrorMessage = "Códigos de cortesia estão disponíveis apenas no TestFlight."
             return false

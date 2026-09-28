@@ -643,9 +643,9 @@ struct WatchContentView: View {
         }
     }
 
-    /// Anel de 60 segmentos + timers + BPM/Kcal — layout da imagem, sem sobreposições.
+    /// Anel de 60 segmentos + timers + BPM/Kcal — escala com o tamanho da tela.
     private var segmentedChronometerCardio: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             WatchSegmentedChronometer(
                 elapsedSeconds: workoutManager.workoutElapsedSeconds,
                 performance: workoutManager.isPaused
@@ -656,12 +656,15 @@ struct WatchContentView: View {
                     ? "Pausado"
                     : (workoutManager.chronometerPerformance == .unknown ? "Registrando" : nil)
             )
+            .padding(.top, 2)
 
             WatchChronometerMetricsRow(
                 heartRate: workoutManager.heartRate,
                 calories: workoutManager.calories
             )
+            .padding(.top, 2)
         }
+        .frame(maxWidth: .infinity)
     }
 
     /// Chip resumido na página de métricas; detalhe + sync ficam na página de água.
