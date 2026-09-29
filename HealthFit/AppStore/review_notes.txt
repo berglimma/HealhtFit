@@ -1,17 +1,18 @@
-HealthFit 1.0.13 (26)
+HealthFit 1.0.14 (27)
 
 What's new in this binary:
-- Flyover: fixed crash when sharing/saving video (WhatsApp, Instagram, Stories, Photos).
-- Apple Watch: segmented chronometer scales to watch screen size (cardio, run, walk, treadmill, bike).
-- AppDistribution uses StoreKit AppTransaction (no deprecated receipt URL).
+- Removed private alternate-icon API (_setAlternateIconName); uses public setAlternateIconName only (Guideline 2.5.1).
+- Apple Watch: added NSMotionUsageDescription for Surf/Kitesurf jump detection and climbing motion.
+- iPhone: HealthKit background-delivery entitlement aligned with enableBackgroundDelivery.
+- Watch: Now Playing controls via left→right swipe during any workout (system player: Music, Spotify, etc.).
+- Watch↔iPhone chronometer: wall-clock sync (no freeze/jump after WCSession sync).
+- Flyover: option to post to Pulse.
+- Faster resume from background (deferred heavy HealthKit/Duo/catalog work).
 
 Still in effect from prior review replies:
 - App Store binary: no in-app courtesy/promo code unlocks (TestFlight/Debug only).
 - Subscriptions: billed price first, Restore, EULA/Privacy https links, auto-renewal disclosure.
-
-How to verify Flyover:
-1. Complete outdoor walk/run/bike with GPS route → Summary → Flyover 3D
-2. Generate video → Share / Stories / Save to Photos (should not crash)
+- Pulse UGC remote flags stay off unless explicitly enabled for production.
 
 Demo account (login required):
 Username: healthfit.appreview@gmail.com

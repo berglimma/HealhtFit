@@ -8,6 +8,7 @@ struct RouteFlyoverSheet: View {
     let athleteName: String
 
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var authService: AuthService
 
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var flyProgress: Double = 0
@@ -23,6 +24,9 @@ struct RouteFlyoverSheet: View {
     @State private var galleryAlertMessage = ""
     @State private var showGalleryAlert = false
     @State private var storiesUnavailable = false
+    @State private var isPublishingPulse = false
+    @State private var showPulsePublishAlert = false
+    @State private var pulsePublishMessage = ""
     /// Limite seguro para colar vídeo no pasteboard do Instagram (evita jetsam/fechamento).
     private let instagramPasteboardMaxBytes = 7_500_000
 
@@ -73,6 +77,11 @@ struct RouteFlyoverSheet: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("O vídeo é grande demais para colar no Instagram ou o app não está disponível. Use Compartilhar.")
+            }
+            .alert(L10n.Pulse.shareOnPulse, isPresented: $showPulsePublishAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(pulsePublishMessage)
             }
         }
     }
@@ -241,6 +250,27 @@ struct RouteFlyoverSheet: View {
             .tint(AppTheme.accent)
             .disabled(isExporting)
 
+            if PulseExperimental.isUIEnabled {
+                Button {
+                    Task { await publishToPulse() }
+                } label: {
+                    HStack {
+                        if isPublishingPulse {
+                            ProgressView().tint(AppTheme.accent)
+                        } else {
+                            Image(systemName: "heart.circle.fill")
+                        }
+                        Text(L10n.Pulse.shareOnPulse)
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.pink)
+                .disabled(isExporting || isPublishingPulse || session.routePoints.count < 2)
+            }
+
             Text("Vídeo vertical (Stories) com marca HealthFit, \(metrics.modalityTitle.lowercased()) e métricas do percurso.")
                 .font(.caption2)
                 .foregroundStyle(AppTheme.textSecondary)
@@ -397,6 +427,72 @@ struct RouteFlyoverSheet: View {
             galleryAlertMessage = error.localizedDescription
         }
         showGalleryAlert = true
+    }
+
+    @MainActor
+    private func publishToPulse() async {
+        guard PulseExperimental.isUIEnabled else { return }
+        prepareForExportOrShare()
+        isPublishingPulse = true
+        defer { isPublishingPulse = false }
+
+        guard let url = await generateVideoIfNeeded() else { return }
+
+        let community = PulseCommunity.fromWorkoutTitle(session.completedModalityTitle)
+        let duration = Int((session.endedAt ?? Date()).timeIntervalSince(session.startedAt))
+        let meta = PulseWorkoutMeta(
+            modality: session.completedModalityTitle,
+            durationSeconds: max(0, duration),
+            intensity: session.perceivedEffort.map { min(max($0, 1), 10) },
+            duoTeamName: session.duoTeamName
+        )
+        let caption = metrics.caption
+        let authorId = authService.currentUser?.id ?? "local"
+        let authorName = athleteName
+        let country = authService.currentUser?.countryCode ?? "BR"
+
+        do {
+            if PulseExperimental.isVideoPostsEnabledInBuild {
+                do {
+                    _ = try await PulseLocalStore.shared.addVideoPost(
+                        authorId: authorId,
+                        authorName: authorName,
+                        authorCountryCode: country,
+                        caption: caption,
+                        sourceURL: url,
+                        community: community,
+                        workoutMeta: meta,
+                        authorAvatar: authService.profileImage
+                    )
+                    pulsePublishMessage = L10n.Pulse.videoPublished
+                    showPulsePublishAlert = true
+                    return
+                } catch PulseStoreError.videoTooLong, PulseStoreError.videoDisabled {
+                    // Continua com frame do vídeo abaixo.
+                }
+            }
+
+            guard let poster = await WorkoutResultMediaOverlayRenderer.posterFrame(fromVideoURL: url) else {
+                pulsePublishMessage = L10n.Pulse.prepareImageFailed
+                showPulsePublishAlert = true
+                return
+            }
+            _ = try PulseLocalStore.shared.addPhotoPost(
+                authorId: authorId,
+                authorName: authorName,
+                authorCountryCode: country,
+                caption: caption,
+                image: poster,
+                community: community,
+                workoutMeta: meta,
+                authorAvatar: authService.profileImage
+            )
+            pulsePublishMessage = L10n.Pulse.photoPublished
+            showPulsePublishAlert = true
+        } catch {
+            pulsePublishMessage = error.localizedDescription
+            showPulsePublishAlert = true
+        }
     }
 
     @MainActor

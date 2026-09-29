@@ -677,13 +677,13 @@
     "1 unidade" : {
 
     },
-    "1. Escolha a foto da refeição" : {
-
-    },
     "1. Escolha ou tire a foto da refeição" : {
 
     },
     "1. Tipo de equipamento (kite)" : {
+
+    },
+    "1. Tire a foto ou escolha da galeria" : {
 
     },
     "1) Abra Spot Buddy no Watch · 2) Gire a Digital Crown até o fim ou toque SOS · 3) Amigos Duo no Spot (≤2 km) recebem o alerta · 4) “Estou bem” cancela." : {
@@ -2658,6 +2658,9 @@
     "Comece o dia com um copo d'água" : {
 
     },
+    "Comentário" : {
+
+    },
     "Comentário do nutricionista" : {
 
     },
@@ -3562,6 +3565,9 @@
     "Editar alimentos e comentários" : {
 
     },
+    "Editar comentário" : {
+
+    },
     "Editar equipamento" : {
 
     },
@@ -3771,9 +3777,6 @@
 
     },
     "Escolha WhatsApp ou Instagram na tela de compartilhar. O nome HealthFit já vai no card." : {
-
-    },
-    "Escolher foto" : {
 
     },
     "Escolher horário manualmente" : {

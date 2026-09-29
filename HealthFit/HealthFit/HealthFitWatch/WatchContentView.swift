@@ -1,12 +1,16 @@
 import SwiftUI
+import WatchKit
 
 struct WatchContentView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
+    /// 0 = Now Playing (swipe ←→), 1 = métricas / controles (swipe ↑↓).
+    @State private var workoutHorizontalPage = 1
 
     var body: some View {
         Group {
             if workoutManager.isActive {
                 activeWorkoutRoot
+                    .onAppear { workoutHorizontalPage = 1 }
             } else {
                 NavigationStack {
                     homeMenu
@@ -217,17 +221,25 @@ struct WatchContentView: View {
     // MARK: - Sessão ativa
 
     private var activeWorkoutRoot: some View {
-        TabView {
-            activeMetricsPage
-            if workoutManager.isWaterSportMode {
-                waterSportStatsPage
+        // Horizontal: L→R mostra o player do sistema (Spotify, Music, Deezer, YouTube, etc.).
+        TabView(selection: $workoutHorizontalPage) {
+            NowPlayingView()
+                .tag(0)
+
+            TabView {
+                activeMetricsPage
+                if workoutManager.isWaterSportMode {
+                    waterSportStatsPage
+                }
+                if workoutManager.isKitesurfMode {
+                    KiteSpotBuddyWatchRootView(workoutManager: workoutManager)
+                }
+                sessionControlsPage
             }
-            if workoutManager.isKitesurfMode {
-                KiteSpotBuddyWatchRootView(workoutManager: workoutManager)
-            }
-            sessionControlsPage
+            .tabViewStyle(.verticalPage)
+            .tag(1)
         }
-        .tabViewStyle(.verticalPage)
+        .tabViewStyle(.page)
     }
 
     /// Página 1: cronômetro e métricas (sem botões empilhados).
@@ -263,7 +275,7 @@ struct WatchContentView: View {
                     compactMetricsRow
                 }
 
-                Text("Deslize ↑ para Pausar / Encerrar")
+                Text("← Música  ·  ↑ Pausar / Encerrar")
                     .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
                     .padding(.top, 2)

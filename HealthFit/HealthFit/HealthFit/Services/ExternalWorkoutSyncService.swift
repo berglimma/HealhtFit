@@ -64,6 +64,12 @@ final class ExternalWorkoutSyncService: ObservableObject {
 
     @discardableResult
     func syncRecentExternalWorkouts(reason: SyncReason) async -> Int {
+        #if targetEnvironment(simulator)
+        // Simulador: HealthKit externo não existe — evita fan-out no resume.
+        if reason == .foreground || reason == .startup {
+            return 0
+        }
+        #endif
         guard !isSyncing, let store = workoutStore else { return 0 }
         isSyncing = true
         defer { isSyncing = false }

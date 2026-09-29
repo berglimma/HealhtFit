@@ -305,8 +305,12 @@ final class WorkoutStore: ObservableObject {
 
     /// Verifica se o treino ativo ultrapassou 2h30 e encerra automaticamente.
     @discardableResult
-    func autoEndStaleActiveSessionIfNeeded(now: Date = .now, athleteName: String = "Atleta") -> WorkoutSession? {
-        if activeSession == nil {
+    func autoEndStaleActiveSessionIfNeeded(
+        now: Date = .now,
+        athleteName: String = "Atleta",
+        restoreIfNeeded: Bool = true
+    ) -> WorkoutSession? {
+        if restoreIfNeeded, activeSession == nil {
             restorePersistedActiveSessionIfNeeded()
         }
         guard var session = activeSession else { return nil }
@@ -1078,13 +1082,27 @@ final class WorkoutStore: ObservableObject {
         if activeSession == nil {
             restorePersistedActiveSessionIfNeeded()
         }
-        catchUpExerciseElapsedFromWallClock()
+        catchUpExerciseElapsedFromWallClock(persist: false)
         if let session = activeSession,
            !WeeklyProgressAnalyzer.isCardioSession(session),
            !WeeklyProgressAnalyzer.isMeditationSession(session) {
             startExerciseTimer()
         }
-        persistActiveSession()
+        // Só persiste se há sessão — evita clear/encode UserDefaults + cloud a cada resume vazio.
+        if activeSession != nil {
+            persistActiveSession()
+        }
+    }
+
+    /// Multitarefa breve (Control Center): só wall-clock, sem restore/persist.
+    func catchUpActiveSessionClockFromForeground() {
+        guard activeSession != nil else { return }
+        catchUpExerciseElapsedFromWallClock(persist: false)
+        if let session = activeSession,
+           !WeeklyProgressAnalyzer.isCardioSession(session),
+           !WeeklyProgressAnalyzer.isMeditationSession(session) {
+            startExerciseTimer()
+        }
     }
 
     func handleAppEnteredBackground() {

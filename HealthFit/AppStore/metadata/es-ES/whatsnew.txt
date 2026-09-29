@@ -1,3 +1,4 @@
-• Flyover: corrección al compartir/guardar vídeo (WhatsApp, Instagram, Stories y Fotos)
-• Apple Watch: cronómetro segmentado más grande según el tamaño de pantalla
+• Cumplimiento App Store: API pública de icono, motion en Watch y HealthKit en segundo plano
+• Apple Watch: player Now Playing con swipe y cronómetro estable con el iPhone
+• Flyover: opción de publicar en Pulse; retorno más rápido desde segundo plano
 • Suscripciones solo por App Store; códigos de cortesía solo en TestFlight

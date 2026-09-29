@@ -81,11 +81,14 @@ struct RootView: View {
                 if authService.isAuthenticated {
                     let returningFromBackground = didEnterBackground
                     didEnterBackground = false
-                    // Catch-up leve sempre (treino/timer); sync pesado só após background real.
-                    runLightweightForegroundCatchUp()
                     if returningFromBackground {
+                        // Só após background real: catch-up + pipeline (evita lag no Control Center / Stage Manager).
+                        runLightweightForegroundCatchUp()
                         prepareWelcomeIfAuthenticated(trigger: .returnFromBackground)
                         scheduleForegroundRefreshPipeline()
+                    } else if workoutStore.activeSession != nil || timerService.isRunning {
+                        // Multitarefa breve: só relógio, sem JSON/cloud/HealthKit.
+                        runActiveSessionClockCatchUpOnly()
                     }
                 } else {
                     WorkoutLiveActivitySync.end()
@@ -227,12 +230,13 @@ struct RootView: View {
         Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
     }
 
-    /// Só o essencial para o relógio do treino/timer não “pular” ao focar a janela no iPad.
+    /// Só o essencial para o relógio do treino/timer não “pular” ao voltar do background.
     private func runLightweightForegroundCatchUp() {
-        _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
-            athleteName: authService.currentUser?.greetingName ?? "Atleta"
-        )
         workoutStore.handleAppBecameActive()
+        _ = workoutStore.autoEndStaleActiveSessionIfNeeded(
+            athleteName: authService.currentUser?.greetingName ?? "Atleta",
+            restoreIfNeeded: false
+        )
         timerService.handleAppBecameActive()
         WorkoutLiveActivitySync.reconcile(
             workoutStore: workoutStore,
@@ -243,23 +247,32 @@ struct RootView: View {
         }
     }
 
+    /// Multitarefa (Control Center / ficheiro): atualiza só o wall-clock, sem persistência.
+    private func runActiveSessionClockCatchUpOnly() {
+        workoutStore.catchUpActiveSessionClockFromForeground()
+        timerService.handleAppBecameActive()
+        WorkoutLiveActivitySync.reconcile(
+            workoutStore: workoutStore,
+            timerService: timerService
+        )
+    }
+
     private func scheduleForegroundRefreshPipeline() {
         if let last = lastForegroundPipelineAt,
            Date().timeIntervalSince(last) < foregroundPipelineMinInterval {
             return
         }
         foregroundPipelineTask?.cancel()
-        foregroundPipelineTask = Task { @MainActor in
+        // Não forçar MainActor no Task inteiro — trabalho de rede/HK fica em Tasks filhas.
+        foregroundPipelineTask = Task {
             await runForegroundRefreshPipeline()
         }
     }
 
-    /// Retorno de background real: sync leve em fases — evita deixar o app “pesado” até reiniciar.
+    /// Retorno de background real: sync em fases longas — UI volta a responder antes do trabalho pesado.
+    @MainActor
     private func runForegroundRefreshPipeline() async {
         lastForegroundPipelineAt = Date()
-        let outdoorCardioRunning =
-            workoutStore.activeSession != nil
-            && (workoutStore.resolvedActiveCardioConfig()?.isOutdoorGPSCardio == true)
 
         wellnessService.configure(for: authService.currentUser)
         wellnessService.checkInOnAppOpen()
@@ -269,27 +282,42 @@ struct RootView: View {
                 dateOfBirth: user.dateOfBirth
             )
         }
-        AppIconInactivityService.shared.handleAppBecameActive()
+        // Ícone: barato, mas depois do 1º frame.
+        Task { @MainActor in
+            await Task.yield()
+            AppIconInactivityService.shared.handleAppBecameActive()
+        }
 
+        #if targetEnvironment(simulator)
+        // Simulador: resume só com catch-up leve (já feito) — sem Duo/HK/notificações/cloud.
+        await Task.yield()
+        #else
+        let outdoorCardioRunning =
+            workoutStore.activeSession != nil
+            && (workoutStore.resolvedActiveCardioConfig()?.isOutdoorGPSCardio == true)
+
+        // Deixa a UI pintar antes de qualquer rebind/cloud.
         if outdoorCardioRunning {
-            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
         } else {
             await Task.yield()
-            try? await Task.sleep(nanoseconds: 450_000_000)
+            try? await Task.sleep(nanoseconds: 900_000_000)
         }
         guard !Task.isCancelled else { return }
 
-        // Rebind só se necessário — rebinds repetidos + cloud sync congelavam a UI.
         mealPlanService.bind(userId: authService.currentUser?.id)
         ClimbingGearService.shared.bind(userId: authService.currentUser?.id)
-        DuoTeamService.shared.handleAppBecameActive()
-        refreshInactivityReminder()
-        EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
-        syncWellnessCloudHistory()
+        // Duo/reminders — ainda depois; não competem com o 1º segundo de interação.
+        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 1_200_000_000 : 800_000_000)
+        guard !Task.isCancelled else { return }
 
-        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 700_000_000 : 600_000_000)
+        DuoTeamService.shared.handleAppBecameActive()
+        EveningTrainingNudgeService.refresh(workoutStore: workoutStore)
+
+        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 1_000_000_000 : 700_000_000)
         guard !Task.isCancelled else { return }
         NotificationService.shared.refreshRecurringNotifications()
+        refreshInactivityReminder()
 
         let shouldRunHeavy: Bool = {
             guard let last = lastHeavyForegroundAt else { return true }
@@ -297,15 +325,15 @@ struct RootView: View {
         }()
         guard shouldRunHeavy else { return }
 
-        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 1_200_000_000 : 1_000_000_000)
+        try? await Task.sleep(nanoseconds: outdoorCardioRunning ? 2_000_000_000 : 1_500_000_000)
         guard !Task.isCancelled else { return }
         lastHeavyForegroundAt = Date()
 
-        if let userId = authService.currentUser?.id {
+        if authService.currentUser?.id != nil {
             Task {
                 await authService.syncProfileFromCloudIfNeeded()
             }
-            Task { await DuoTeamService.shared.loadIfNeeded() }
+            // loadIfNeeded Duo só se ainda não carregou — evita prefetch duplo com handleAppBecameActive.
             Task { await CoachService.shared.refreshLinkStatusesForPlan() }
         }
 
@@ -317,9 +345,7 @@ struct RootView: View {
         Task { await ExternalWorkoutSyncService.shared.syncRecentExternalWorkouts(reason: .foreground) }
         bindAppleSleepSync()
         Task { await wellnessService.syncSleepFromAppleHealth() }
-        // Catálogo de GIFs e review Coach — só no pipeline “pesado”.
-        Task { await exerciseVideoRepository.bootstrapRemoteCatalog() }
-        Task { await CoachService.shared.publishProfessionalReviewSnapshotsIfStudent() }
+        #endif
     }
 
     private func bindAppleSleepSync() {
@@ -388,24 +414,30 @@ struct RootView: View {
     private func presentWelcome(preserveMainTab: Bool) {
         guard !showWelcomeMotivation else { return }
 
-        let user = authService.currentUser
-        let weeklyReport = WeeklyProgressAnalyzer.buildReport(
-            sessions: workoutStore.sessionHistory,
-            goal: user?.goal ?? .maintenance
-        )
-        let hoursSinceLastWorkout = workoutStore.lastCompletedWorkoutAt.map {
-            Date().timeIntervalSince($0) / 3600
-        }
+        // Relatório/contexto — não bloqueia o handler de scenePhase.
+        Task { @MainActor in
+            await Task.yield()
+            guard !showWelcomeMotivation else { return }
 
-        welcomeContext = WelcomeMotivationEngine.makeContext(
-            athleteName: user?.greetingName ?? "Atleta",
-            hoursSinceLastOpen: AppIconInactivityService.shared.hoursSinceLastSessionEnd(),
-            hoursSinceLastWorkout: hoursSinceLastWorkout,
-            weeklyWorkoutCount: weeklyReport.currentWeek.workoutCount
-        )
-        showWelcomeMotivation = true
-        if !preserveMainTab {
-            didCompleteWelcomeForSession = false
+            let user = authService.currentUser
+            let weeklyReport = WeeklyProgressAnalyzer.buildReport(
+                sessions: workoutStore.sessionHistory,
+                goal: user?.goal ?? .maintenance
+            )
+            let hoursSinceLastWorkout = workoutStore.lastCompletedWorkoutAt.map {
+                Date().timeIntervalSince($0) / 3600
+            }
+
+            welcomeContext = WelcomeMotivationEngine.makeContext(
+                athleteName: user?.greetingName ?? "Atleta",
+                hoursSinceLastOpen: AppIconInactivityService.shared.hoursSinceLastSessionEnd(),
+                hoursSinceLastWorkout: hoursSinceLastWorkout,
+                weeklyWorkoutCount: weeklyReport.currentWeek.workoutCount
+            )
+            showWelcomeMotivation = true
+            if !preserveMainTab {
+                didCompleteWelcomeForSession = false
+            }
         }
     }
 

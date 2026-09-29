@@ -98,13 +98,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var restTimer: Timer?
     private var configuredRestSeconds = 60
     private var restElapsedSeconds = 0
-    private var secondsSincePhoneSync = 0
     /// Ignora `stopWorkout` atrasado que chega depois de um start mais novo.
     private var lastPhoneStartTimestamp: TimeInterval = 0
     /// Ignora `start*` atrasado (fila transferUserInfo) depois de um stop do iPhone.
     private var lastPhoneStopTimestamp: TimeInterval = 0
     private var hasSentRestOvertimeNotification = false
+    /// Âncora de wall-clock do treino (evita freeze ao syncar com iPhone/iPad).
     private var workoutStartedAt: Date?
+    /// Tempo total pausado (não conta no cronômetro).
+    private var totalPausedSeconds: TimeInterval = 0
+    private var pauseStartedAt: Date?
     private var localMeditationPrompts: [String] = []
     private var meditationOwnedByWatch = false
     /// Detecção de salto (motion + giroscópio do DeviceMotion).
@@ -382,11 +385,15 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             waterSportMode: waterSportMode
         )
         isBikeStyleCardio = Self.isBikeStyleCardio(exerciseName: exerciseName)
-        let outdoor = locationOutdoor
+        let indoorMachine = Self.isIndoorMachineCardio(exerciseName: exerciseName)
+        // Indoor (esteira / bike ergométrica): mesmo layout da corrida, sem GPS outdoor.
+        let outdoor = !indoorMachine && (
+            locationOutdoor
             || swimmingMode
             || waterSportMode
             || usesSegmentedChronometer
             || [.walking, .running, .cycling, .rowing, .hiking].contains(activity)
+        )
         startLiveWorkoutSession(
             activityType: activity,
             locationType: outdoor ? .outdoor : .indoor,
@@ -398,12 +405,12 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             startWaterSportMotion()
             startWaterSportGPS()
         }
-        if usesSegmentedChronometer {
+        if usesSegmentedChronometer, !indoorMachine {
             startLandCardioGPS()
         }
     }
 
-    /// Cardio / caminhada / corrida / esteira / bike / MTB — anel segmentado com cor por desempenho.
+    /// Anel segmentado (layout da corrida): caminhada, corrida, esteira, bikes outdoor/indoor e MTB.
     private static func shouldUseSegmentedChronometer(
         exerciseName: String,
         swimmingMode: Bool,
@@ -411,17 +418,22 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     ) -> Bool {
         if swimmingMode || waterSportMode { return false }
         let name = exerciseName.folding(options: .diacriticInsensitive, locale: .current).lowercased()
-        // Indoor bike/ergômetro usa o cronômetro clássico (sem GPS de ritmo).
-        if name.contains("ergometr") { return false }
-        if name.contains("bike") && name.contains("indoor") { return false }
-        if name.contains("corrida") || name.contains("run") || name.contains("esteira") || name.contains("treadmill") {
-            return true
-        }
+        if name.contains("corrida") || name.contains("run") { return true }
+        if name.contains("esteira") || name.contains("treadmill") { return true }
         if name.contains("caminh") || name.contains("walk") { return true }
         if name.contains("mountain") || name.contains("mtb") { return true }
         if name.contains("bike") || name.contains("cicl") || name.contains("bicicleta") { return true }
-        // Cardio genérico outdoor / sessão de cardio livre.
+        if name.contains("ergometr") { return true }
         if name.contains("cardio") { return true }
+        return false
+    }
+
+    /// Máquinas indoor: usam o cronômetro segmentado, mas sem tracking GPS.
+    private static func isIndoorMachineCardio(exerciseName: String) -> Bool {
+        let name = exerciseName.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+        if name.contains("ergometr") { return true }
+        if name.contains("esteira") || name.contains("treadmill") { return true }
+        if name.contains("indoor") { return true }
         return false
     }
 
@@ -432,6 +444,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             || name.contains("bicicleta")
             || name.contains("mountain")
             || name.contains("mtb")
+            || name.contains("ergometr")
     }
 
     /// Inicia meditação escolhida no Watch.
@@ -508,6 +521,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         guard isActive, isPaused != paused else { return }
         isPaused = paused
         if isPaused {
+            pauseStartedAt = Date()
             resetAirborneJumpState()
             if usesSegmentedChronometer {
                 chronometerPerformance = .paused
@@ -522,6 +536,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
             watchSyncStatus = "Pausado"
         } else {
+            if let pauseStartedAt {
+                totalPausedSeconds += Date().timeIntervalSince(pauseStartedAt)
+            }
+            pauseStartedAt = nil
             if usesSegmentedChronometer, chronometerPerformance == .paused {
                 chronometerPerformance = landCardioRecentSpeeds.count >= 3 ? .fair : .unknown
             }
@@ -534,6 +552,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 ])
             }
             watchSyncStatus = "Em andamento"
+            refreshElapsedFromWallClock()
         }
     }
 
@@ -615,7 +634,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         heartRate = 0
         lastHeartRateSampleAt = nil
         workoutStartedAt = nil
-        secondsSincePhoneSync = 0
+        totalPausedSeconds = 0
+        pauseStartedAt = nil
         isPaused = false
         isWaterSportMode = false
         isKitesurfMode = false
@@ -762,25 +782,54 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     private func startWorkoutClock() {
         workoutClockTimer?.invalidate()
-        secondsSincePhoneSync = 0
+        if workoutStartedAt == nil {
+            workoutStartedAt = Date()
+        }
         let clockBox = WeakMainActorBox(self)
-        workoutClockTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+        let timer = Timer(timeInterval: 0.5, repeats: true) { _ in
             clockBox.run { this in
-                this.tickWorkoutClock()
+                this.refreshElapsedFromWallClock()
             }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        workoutClockTimer = timer
+        refreshElapsedFromWallClock()
     }
 
-    private func tickWorkoutClock() {
-        guard isActive, !isPaused else { return }
-        secondsSincePhoneSync += 1
+    /// Cronômetro baseado em Date() — não depende de ticks após sync do iPhone (evita trava/salto).
+    private func refreshElapsedFromWallClock() {
+        guard isActive, let start = workoutStartedAt else { return }
+        let now = Date()
+        let paused = accumulatedPausedSeconds(at: now)
+        let elapsed = max(0, Int(now.timeIntervalSince(start) - paused))
 
-        guard secondsSincePhoneSync > 2, !isResting else { return }
-        workoutElapsedSeconds += 1
-        if !isCardioWorkout && !isMeditationWorkout {
-            exerciseElapsedSeconds += 1
+        if !isPaused && !isResting && !isCardioWorkout && !isMeditationWorkout {
+            let delta = elapsed - workoutElapsedSeconds
+            if delta > 0 {
+                exerciseElapsedSeconds += delta
+            }
         }
+
+        workoutElapsedSeconds = elapsed
         advanceLocalMeditationPromptIfNeeded()
+    }
+
+    private func accumulatedPausedSeconds(at date: Date) -> TimeInterval {
+        var total = totalPausedSeconds
+        if isPaused, let pauseStartedAt {
+            total += date.timeIntervalSince(pauseStartedAt)
+        }
+        return total
+    }
+
+    /// Reancora o wall-clock para coincidir com o valor vindo do iPhone/iPad sem congelar o fluxo.
+    private func reanchorWorkoutClock(toElapsedSeconds elapsed: Int) {
+        let basePaused = totalPausedSeconds
+        workoutStartedAt = Date().addingTimeInterval(-TimeInterval(max(0, elapsed)) - basePaused)
+        if isPaused {
+            pauseStartedAt = Date()
+        }
+        workoutElapsedSeconds = max(0, elapsed)
     }
 
     /// Rotaciona prompts da meditação iniciada no próprio Watch.
@@ -807,9 +856,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         meditationPrompt: String? = nil,
         promptIndex: Int? = nil
     ) {
-        secondsSincePhoneSync = 0
         if let workoutElapsedSeconds {
-            self.workoutElapsedSeconds = workoutElapsedSeconds
+            reanchorWorkoutClock(toElapsedSeconds: workoutElapsedSeconds)
         }
         if let exerciseElapsedSeconds {
             self.exerciseElapsedSeconds = exerciseElapsedSeconds

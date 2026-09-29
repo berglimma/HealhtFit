@@ -1281,7 +1281,7 @@ final class PulseLocalStore: ObservableObject {
 
     func requestPulseNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [
-            .alert, .sound, .badge, .timeSensitive
+            .alert, .sound, .badge
         ]) { _, _ in }
     }
 

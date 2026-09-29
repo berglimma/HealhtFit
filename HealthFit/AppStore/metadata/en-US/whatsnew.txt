@@ -1,3 +1,4 @@
-• Flyover: fixed crash when sharing/saving video (WhatsApp, Instagram, Stories, Photos)
-• Apple Watch: larger segmented chronometer that scales to screen size (cardio, run, walk, treadmill, bike)
+• App Store compliance: public icon API, Watch motion usage string, HealthKit background delivery
+• Apple Watch: Now Playing swipe controls and stable chronometer sync with iPhone
+• Flyover: option to post to Pulse; faster resume from background
 • Subscriptions via App Store only; courtesy codes TestFlight-only

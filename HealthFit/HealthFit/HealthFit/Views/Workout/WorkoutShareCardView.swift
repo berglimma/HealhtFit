@@ -1,3 +1,4 @@
+import MapKit
 import SwiftUI
 import UIKit
 
@@ -1131,7 +1132,8 @@ struct ShareCardRouteMapView: View {
     }
 }
 
-/// Renderiza o mapa do percurso (polyline colorida) para e-mail / anexos — sem MapKit.
+/// Renderiza o mapa do percurso para Stories / Pulse / e-mail.
+/// 2D: canvas leve. 3D: snapshot MapKit híbrido com câmera inclinada (igual à Rota).
 enum WorkoutRouteMapRenderer {
     static let emailAttachmentFileName = "rota-treino.png"
     static let emailAttachmentMimeType = "image/png"
@@ -1142,14 +1144,64 @@ enum WorkoutRouteMapRenderer {
         width: CGFloat = 900,
         height: CGFloat = 560,
         style: ShareCardRouteMapStyle = .flat2D
+    ) async -> UIImage? {
+        guard session.routePoints.count >= 2 else { return nil }
+        if style == .perspective3D {
+            return await renderMapKit3DImage(
+                routePoints: session.routePoints,
+                performanceMetric: session.routePerformanceMetric,
+                distanceKm: session.displayDistanceKm,
+                markMaxSpeedArrow: session.isKitesurfSession,
+                width: width,
+                height: height
+            )
+        }
+        return renderFlatCanvasImage(
+            routePoints: session.routePoints,
+            performanceMetric: session.routePerformanceMetric,
+            distanceKm: session.displayDistanceKm,
+            markMaxSpeedArrow: session.isKitesurfSession,
+            style: .flat2D,
+            width: width,
+            height: height
+        )
+    }
+
+    /// Versão síncrona (PDF/mail) — sempre canvas 2D.
+    @MainActor
+    static func renderFlatImage(
+        session: WorkoutSession,
+        width: CGFloat = 900,
+        height: CGFloat = 560
     ) -> UIImage? {
         guard session.routePoints.count >= 2 else { return nil }
-        let map = ShareCardRouteMapView(
+        return renderFlatCanvasImage(
             routePoints: session.routePoints,
-            distanceKm: session.displayDistanceKm,
             performanceMetric: session.routePerformanceMetric,
+            distanceKm: session.displayDistanceKm,
+            markMaxSpeedArrow: session.isKitesurfSession,
+            style: .flat2D,
+            width: width,
+            height: height
+        )
+    }
+
+    @MainActor
+    private static func renderFlatCanvasImage(
+        routePoints: [RouteCoordinate],
+        performanceMetric: RoutePerformanceMetric,
+        distanceKm: Double,
+        markMaxSpeedArrow: Bool,
+        style: ShareCardRouteMapStyle,
+        width: CGFloat,
+        height: CGFloat
+    ) -> UIImage? {
+        let map = ShareCardRouteMapView(
+            routePoints: routePoints,
+            distanceKm: distanceKm,
+            performanceMetric: performanceMetric,
             style: style,
-            markMaxSpeedArrow: session.isKitesurfSession
+            markMaxSpeedArrow: markMaxSpeedArrow
         )
         .frame(width: width, height: height)
 
@@ -1159,9 +1211,211 @@ enum WorkoutRouteMapRenderer {
         return renderer.uiImage
     }
 
+    /// Snapshot MapKit com pitch — mesmo espírito do mapa 3D da seção Rota.
     @MainActor
-    static func pngData(for session: WorkoutSession, style: ShareCardRouteMapStyle = .flat2D) -> Data? {
-        renderImage(session: session, style: style)?.pngData()
+    private static func renderMapKit3DImage(
+        routePoints: [RouteCoordinate],
+        performanceMetric: RoutePerformanceMetric,
+        distanceKm: Double,
+        markMaxSpeedArrow: Bool,
+        width: CGFloat,
+        height: CGFloat
+    ) async -> UIImage? {
+        let points = downsample(routePoints, maxCount: 220)
+        guard points.count >= 2 else { return nil }
+
+        let size = CGSize(width: width, height: height)
+        let options = MKMapSnapshotter.Options()
+        options.size = size
+        options.scale = UIScreen.main.scale
+        options.mapType = .hybridFlyover
+        options.showsBuildings = true
+        options.camera = mapCamera3D(for: points)
+
+        let snapshotter = MKMapSnapshotter(options: options)
+        let snapshot: MKMapSnapshotter.Snapshot
+        do {
+            snapshot = try await snapshotter.start()
+        } catch {
+            // Fallback: hybrid plano se flyover falhar (offline / região).
+            options.mapType = .hybrid
+            options.camera = mapCamera3D(for: points)
+            do {
+                snapshot = try await MKMapSnapshotter(options: options).start()
+            } catch {
+                return renderFlatCanvasImage(
+                    routePoints: routePoints,
+                    performanceMetric: performanceMetric,
+                    distanceKm: distanceKm,
+                    markMaxSpeedArrow: markMaxSpeedArrow,
+                    style: .perspective3D,
+                    width: width,
+                    height: height
+                )
+            }
+        }
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = snapshot.image.scale
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        return renderer.image { ctx in
+            snapshot.image.draw(in: CGRect(origin: .zero, size: size))
+
+            let projected = points.map { snapshot.point(for: $0.coordinate) }
+            guard projected.count >= 2 else { return }
+
+            let cg = ctx.cgContext
+            let segments = RoutePerformanceColoring.segments(from: points, metric: performanceMetric)
+
+            // Sombra sob a rota (legibilidade no satélite).
+            cg.setStrokeColor(UIColor.black.withAlphaComponent(0.45).cgColor)
+            cg.setLineWidth(6)
+            cg.setLineCap(.round)
+            cg.setLineJoin(.round)
+            cg.beginPath()
+            cg.move(to: projected[0])
+            for p in projected.dropFirst() { cg.addLine(to: p) }
+            cg.strokePath()
+
+            for index in 0..<(projected.count - 1) {
+                let color = (index < segments.count ? UIColor(segments[index].color) : UIColor.systemOrange)
+                cg.setStrokeColor(color.cgColor)
+                cg.setLineWidth(3.6)
+                cg.setLineCap(.round)
+                cg.setLineJoin(.round)
+                cg.beginPath()
+                cg.move(to: projected[index])
+                cg.addLine(to: projected[index + 1])
+                cg.strokePath()
+            }
+
+            // Início / fim.
+            drawEndpoint(cg: cg, at: projected[0], fill: UIColor(Color("AccentGreen")))
+            let endColor = segments.last.map { UIColor($0.color) } ?? .systemOrange
+            drawEndpoint(cg: cg, at: projected[projected.count - 1], fill: endColor)
+
+            if markMaxSpeedArrow,
+               let maxIdx = KitePostingMetrics.maxSpeedRouteIndex(in: points),
+               maxIdx >= 0, maxIdx < projected.count {
+                let peak = projected[maxIdx]
+                let tip = CGPoint(x: peak.x, y: peak.y - 16)
+                cg.setFillColor(UIColor(Color("AccentOrange")).cgColor)
+                cg.beginPath()
+                cg.move(to: tip)
+                cg.addLine(to: CGPoint(x: peak.x - 7, y: peak.y - 4))
+                cg.addLine(to: CGPoint(x: peak.x + 7, y: peak.y - 4))
+                cg.closePath()
+                cg.fillPath()
+            }
+
+            if distanceKm > 0 {
+                let label = String(format: "%.2f km", distanceKm) as NSString
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 13, weight: .bold),
+                    .foregroundColor: UIColor.white
+                ]
+                let textSize = label.size(withAttributes: attrs)
+                let pad: CGFloat = 8
+                let rect = CGRect(
+                    x: 12,
+                    y: size.height - textSize.height - pad * 2 - 12,
+                    width: textSize.width + pad * 2,
+                    height: textSize.height + pad
+                )
+                UIColor.black.withAlphaComponent(0.4).setFill()
+                UIBezierPath(roundedRect: rect, cornerRadius: 10).fill()
+                label.draw(
+                    at: CGPoint(x: rect.minX + pad, y: rect.minY + pad / 2),
+                    withAttributes: attrs
+                )
+            }
+
+            // Badge 3D
+            let badge = "3D" as NSString
+            let badgeAttrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 11, weight: .bold),
+                .foregroundColor: UIColor.white
+            ]
+            let badgeSize = badge.size(withAttributes: badgeAttrs)
+            let badgeRect = CGRect(
+                x: size.width - badgeSize.width - 28,
+                y: 12,
+                width: badgeSize.width + 16,
+                height: badgeSize.height + 10
+            )
+            UIColor.black.withAlphaComponent(0.4).setFill()
+            UIBezierPath(roundedRect: badgeRect, cornerRadius: 10).fill()
+            badge.draw(
+                at: CGPoint(x: badgeRect.minX + 8, y: badgeRect.minY + 5),
+                withAttributes: badgeAttrs
+            )
+        }
+    }
+
+    private static func drawEndpoint(cg: CGContext, at point: CGPoint, fill: UIColor) {
+        let rect = CGRect(x: point.x - 6, y: point.y - 6, width: 12, height: 12)
+        cg.setFillColor(fill.cgColor)
+        cg.fillEllipse(in: rect)
+        cg.setStrokeColor(UIColor.white.cgColor)
+        cg.setLineWidth(2)
+        cg.strokeEllipse(in: rect)
+    }
+
+    private static func mapCamera3D(for points: [RouteCoordinate]) -> MKMapCamera {
+        var minLat = points[0].latitude, maxLat = points[0].latitude
+        var minLon = points[0].longitude, maxLon = points[0].longitude
+        for p in points {
+            minLat = min(minLat, p.latitude); maxLat = max(maxLat, p.latitude)
+            minLon = min(minLon, p.longitude); maxLon = max(maxLon, p.longitude)
+        }
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLon + maxLon) / 2
+        )
+        let latM = max(maxLat - minLat, 0.004) * 111_320
+        let lonM = max(maxLon - minLon, 0.004) * 111_320 * max(cos(center.latitude * .pi / 180), 0.2)
+        let distance = max(700, min(max(latM, lonM) * 2.6, 18_000))
+        return MKMapCamera(
+            lookingAtCenter: center,
+            fromDistance: distance,
+            pitch: 58,
+            heading: bearing(for: points)
+        )
+    }
+
+    private static func bearing(for points: [RouteCoordinate]) -> CLLocationDirection {
+        guard points.count >= 2 else { return 20 }
+        let sampleCount = min(8, points.count)
+        let start = points[points.count - sampleCount]
+        let end = points[points.count - 1]
+        let lat1 = start.latitude * .pi / 180
+        let lat2 = end.latitude * .pi / 180
+        let dLon = (end.longitude - start.longitude) * .pi / 180
+        let y = sin(dLon) * cos(lat2)
+        let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+        let degrees = atan2(y, x) * 180 / .pi
+        return (degrees + 360).truncatingRemainder(dividingBy: 360)
+    }
+
+    private static func downsample(_ points: [RouteCoordinate], maxCount: Int) -> [RouteCoordinate] {
+        guard points.count > maxCount, maxCount >= 2 else { return points }
+        let step = Double(points.count - 1) / Double(maxCount - 1)
+        var result: [RouteCoordinate] = []
+        result.reserveCapacity(maxCount)
+        for i in 0..<maxCount {
+            let index = min(Int((Double(i) * step).rounded()), points.count - 1)
+            result.append(points[index])
+        }
+        if result.last?.id != points.last?.id {
+            result[result.count - 1] = points[points.count - 1]
+        }
+        return result
+    }
+
+    @MainActor
+    static func pngData(for session: WorkoutSession, style: ShareCardRouteMapStyle = .flat2D) async -> Data? {
+        await renderImage(session: session, style: style)?.pngData()
     }
 
     @MainActor
@@ -1169,7 +1423,9 @@ enum WorkoutRouteMapRenderer {
         for session: WorkoutSession,
         style: ShareCardRouteMapStyle = .flat2D
     ) -> MailAttachment? {
-        guard let data = pngData(for: session, style: style) else { return nil }
+        // Anexo de e-mail permanece 2D (síncrono / leve).
+        _ = style
+        guard let data = renderFlatImage(session: session)?.pngData() else { return nil }
         return MailAttachment(
             data: data,
             mimeType: emailAttachmentMimeType,

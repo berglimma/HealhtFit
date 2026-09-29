@@ -792,7 +792,7 @@ struct WorkoutSummaryView: View {
         guard session.routePoints.count >= 2 else { return }
         isPreparingMapShare = true
         defer { isPreparingMapShare = false }
-        guard let image = WorkoutRouteMapRenderer.renderImage(
+        guard let image = await WorkoutRouteMapRenderer.renderImage(
             session: session,
             style: shareMapStyle
         ) else { return }
@@ -806,7 +806,7 @@ struct WorkoutSummaryView: View {
         guard session.routePoints.count >= 2 else { return }
         isPreparingMapShare = true
         defer { isPreparingMapShare = false }
-        guard let image = WorkoutRouteMapRenderer.renderImage(
+        guard let image = await WorkoutRouteMapRenderer.renderImage(
             session: session,
             style: shareMapStyle
         ) else { return }
@@ -826,7 +826,7 @@ struct WorkoutSummaryView: View {
         guard PulseExperimental.isUIEnabled, session.routePoints.count >= 2 else { return }
         isPreparingMapShare = true
         defer { isPreparingMapShare = false }
-        guard let image = WorkoutRouteMapRenderer.renderImage(
+        guard let image = await WorkoutRouteMapRenderer.renderImage(
             session: session,
             style: shareMapStyle
         ) else {
@@ -1083,7 +1083,7 @@ struct WorkoutSummaryView: View {
             // Libera o toque e mostra o ProgressView antes do trabalho pesado.
             try? await Task.sleep(nanoseconds: 80_000_000)
             let routeMap: UIImage? = WorkoutReportBuilder.hasRouteMapForEmail(sessionSnapshot)
-                ? WorkoutRouteMapRenderer.renderImage(session: sessionSnapshot, width: 1024, height: 640)
+                ? WorkoutRouteMapRenderer.renderFlatImage(session: sessionSnapshot, width: 1024, height: 640)
                 : nil
             let url = WorkoutSessionPDFBuilder.makePDF(
                 session: sessionSnapshot,
@@ -2107,14 +2107,31 @@ struct WorkoutSummaryView: View {
             }
             .pickerStyle(.segmented)
 
-            ShareCardRouteMapView(
-                routePoints: session.routePoints,
-                distanceKm: session.displayDistanceKm,
-                performanceMetric: session.routePerformanceMetric,
-                style: shareMapStyle,
-                markMaxSpeedArrow: session.isKitesurfSession
-            )
-            .frame(height: shareMapStyle == .perspective3D ? 170 : 150)
+            if shareMapStyle == .perspective3D {
+                // Mesmo MapKit 3D da seção Rota (hybrid + câmera inclinada).
+                RunRouteMapView(
+                    routePoints: session.routePoints,
+                    userCoordinate: session.routePoints.last?.coordinate,
+                    followUser: false,
+                    showsUserLocation: false,
+                    height: 220,
+                    performanceMetric: session.routePerformanceMetric,
+                    jumpEvents: session.waterSport?.jumps ?? [],
+                    allows3DMode: true,
+                    forces3DMode: true,
+                    prefers3DInitially: true,
+                    showsEndPin: true
+                )
+            } else {
+                ShareCardRouteMapView(
+                    routePoints: session.routePoints,
+                    distanceKm: session.displayDistanceKm,
+                    performanceMetric: session.routePerformanceMetric,
+                    style: .flat2D,
+                    markMaxSpeedArrow: session.isKitesurfSession
+                )
+                .frame(height: 150)
+            }
 
             Button {
                 Task { await shareRouteMapImage() }

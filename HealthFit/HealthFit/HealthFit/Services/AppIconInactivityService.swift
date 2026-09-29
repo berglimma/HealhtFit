@@ -304,34 +304,15 @@ final class AppIconInactivityService {
     private func restoreDefaultAppIcon() {
         guard UIApplication.shared.supportsAlternateIcons else { return }
         guard UIApplication.shared.alternateIconName != nil else { return }
-        setAlternateIconSilently(nil)
+        // API pública — sem `_setAlternateIconName` (Guideline 2.5.1).
+        UIApplication.shared.setAlternateIconName(nil) { error in
+            if let error {
+                print("AppIconInactivityService: failed to restore primary icon - \(error.localizedDescription)")
+            }
+        }
     }
 
     private func applyIcon(_ state: IconState, pulseFrame: Int) {
         restoreDefaultAppIcon()
-    }
-
-    /// Troca o ícone sem o alerta do sistema (“Você alterou o ícone…”).
-    private func setAlternateIconSilently(_ iconName: String?) {
-        let application = UIApplication.shared
-        let selector = NSSelectorFromString("_setAlternateIconName:completionHandler:")
-
-        guard let method = class_getInstanceMethod(UIApplication.self, selector) else {
-            application.setAlternateIconName(iconName) { error in
-                if let error {
-                    print("AppIconInactivityService: failed to set icon \(iconName ?? "primary") - \(error.localizedDescription)")
-                }
-            }
-            return
-        }
-
-        typealias IconSetter = @convention(c) (AnyObject, Selector, NSString?, @escaping (NSError?) -> Void) -> Void
-        let implementation = method_getImplementation(method)
-        let setIcon = unsafeBitCast(implementation, to: IconSetter.self)
-        setIcon(application, selector, iconName as NSString?) { error in
-            if let error {
-                print("AppIconInactivityService: failed to set icon \(iconName ?? "primary") - \(error.localizedDescription)")
-            }
-        }
     }
 }

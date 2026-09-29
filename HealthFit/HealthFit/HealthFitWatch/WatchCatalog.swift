@@ -97,6 +97,7 @@ enum WatchCatalog {
     static let cardioActivities: [CardioActivity] = [
         .init(id: "run", name: "Corrida", icon: "figure.run", isWaterSport: false, isKitesurf: false, isSwimming: false),
         .init(id: "walk", name: "Caminhada", icon: "figure.walk", isWaterSport: false, isKitesurf: false, isSwimming: false),
+        .init(id: "treadmill", name: "Esteira Ergométrica", icon: "figure.run.treadmill", isWaterSport: false, isKitesurf: false, isSwimming: false),
         .init(id: "mtb", name: "Mountain bike", icon: "bicycle", isWaterSport: false, isKitesurf: false, isSwimming: false),
         .init(id: "bike", name: "Bicicleta pedal", icon: "figure.outdoor.cycle", isWaterSport: false, isKitesurf: false, isSwimming: false),
         .init(id: "ergo", name: "Bicicleta ergométrica", icon: "figure.indoor.cycle", isWaterSport: false, isKitesurf: false, isSwimming: false),

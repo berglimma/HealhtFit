@@ -1,3 +1,4 @@
-• Flyover : correction du plantage à l’envoi/enregistrement vidéo (WhatsApp, Instagram, Stories, Photos)
-• Apple Watch : chronomètre segmenté plus grand selon la taille de l’écran
-• Abonnements uniquement via App Store ; codes de courtoisie TestFlight seulement
+• Conformité App Store : API publique d’icône, motion sur Watch et HealthKit en arrière-plan
+• Apple Watch : lecteur Now Playing au swipe et chronomètre stable avec iPhone
+• Flyover : option de publier sur Pulse ; reprise plus rapide depuis l’arrière-plan
+• Abonnements uniquement via l’App Store ; codes de courtoisie seulement sur TestFlight

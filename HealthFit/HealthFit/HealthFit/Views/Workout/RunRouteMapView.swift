@@ -16,6 +16,8 @@ struct RunRouteMapView: View {
     var jumpEvents: [SurfJumpEvent] = []
     /// Exibe controle Mapa 2D / 3D. Padrão: ligado em todos os mapas de percurso.
     var allows3DMode: Bool = true
+    /// Força 3D (mesmo visual da Rota) e esconde o seletor interno — usado em “Postar mapa”.
+    var forces3DMode: Bool = false
     /// SPOT / ponto de partida quando ainda não há rota GPS.
     var spotCoordinate: CLLocationCoordinate2D? = nil
     var spotTitle: String? = nil
@@ -56,12 +58,12 @@ struct RunRouteMapView: View {
 
     private var mapContentHeight: CGFloat {
         // Um pouco mais de altura no 3D para a polilinha do percurso caber na perspectiva.
-        allows3DMode && is3DEnabled ? max(height, 280) : height
+        is3DEnabled ? max(height, 280) : height
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if allows3DMode {
+            if allows3DMode, !forces3DMode {
                 Picker("Mapa", selection: $is3DEnabled) {
                     Text("2D").tag(false)
                     Text("3D").tag(true)
@@ -213,8 +215,10 @@ struct RunRouteMapView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .onAppear {
                 // Só força 3D no resumo/diário quando o caller pede; ao vivo o usuário escolhe 2D/3D.
-                if allows3DMode, prefers3DInitially, !didApplyInitialMode {
-                    is3DEnabled = true
+                if !didApplyInitialMode {
+                    if forces3DMode || (allows3DMode && prefers3DInitially) {
+                        is3DEnabled = true
+                    }
                     didApplyInitialMode = true
                 }
                 rebuildGeometry()
@@ -559,6 +563,7 @@ extension RunRouteMapView: Equatable {
             && lhs.height == rhs.height
             && lhs.performanceMetric == rhs.performanceMetric
             && lhs.allows3DMode == rhs.allows3DMode
+            && lhs.forces3DMode == rhs.forces3DMode
             && lhs.spotTitle == rhs.spotTitle
             && lhs.prefers3DInitially == rhs.prefers3DInitially
             && lhs.showsEndPin == rhs.showsEndPin

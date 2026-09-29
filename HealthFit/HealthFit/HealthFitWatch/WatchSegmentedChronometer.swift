@@ -1,7 +1,7 @@
 import SwiftUI
 import WatchKit
 
-/// Faixa de desempenho do cronômetro Watch (caminhada / corrida / bike / MTB / esteira).
+/// Faixa de desempenho do cronômetro Watch (corrida, caminhada, esteira, bikes e MTB).
 enum WatchChronometerPerformance: Equatable {
     case unknown
     case paused

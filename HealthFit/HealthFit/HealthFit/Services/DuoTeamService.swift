@@ -23,7 +23,7 @@ final class DuoTeamService: ObservableObject {
     private var inboxListener: ListenerRegistration?
     private var deliveringInboxIds: Set<String> = []
     private var lastBecameActiveAt: Date?
-    private let becameActiveMinInterval: TimeInterval = 45
+    private let becameActiveMinInterval: TimeInterval = 180
 
     private enum ScopedKey {
         static let teams = "duo_teams"

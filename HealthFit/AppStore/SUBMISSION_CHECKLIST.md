@@ -1,6 +1,6 @@
 # Checklist — publicar HealthFit na App Store
 
-Versão alvo: **1.0.13 (Build 26)** · Bundle `luan.com.healthfit.app`
+Versão alvo: **1.0.14 (Build 27)** · Bundle `luan.com.healthfit.app`
 
 ## URLs legais
 
@@ -10,22 +10,33 @@ Versão alvo: **1.0.13 (Build 26)** · Bundle `luan.com.healthfit.app`
 - Termos HealthFit: https://healthfit-30d87.web.app/termos/
 - Suporte: https://healthfit-30d87.web.app/suporte/
 
-## Build
+## Status Connect (2026-09-28)
 
-- [x] Versão Xcode **1.0.13 (26)**
-- [x] Flyover share/save crash fix
-- [x] Watch chronometer adaptive sizing
-- [x] `whatsnew.txt` / `review_notes.txt` atualizados
-- [x] Archive + upload build **26**
-- [x] Attach build 26 na versão 1.0.13
-- [x] Enviado para revisão — **Waiting for Review** (2026-09-28)
+- **1.0.13 (26)** — **Pronto para distribuição** (aprovado; lançamento automático).
+- **1.0.14 (27)** — preparada no Xcode + metadados; criar versão na Connect e enviar build.
+
+## Build 27 (código pronto)
+
+- [x] Versão Xcode **1.0.14 (27)**
+- [x] Removida API privada de ícone (`setAlternateIconName` público)
+- [x] Watch `NSMotionUsageDescription`
+- [x] iPhone `healthkit.background-delivery`
+- [x] Now Playing no Watch + cronômetro wall-clock + Flyover→Pulse + resume mais rápido
+- [x] `whatsnew.txt` (pt-BR/en-US/es-ES/fr-FR) + `review_notes.txt` atualizados
+- [ ] Archive + upload build **27** (Xcode Organizer → Distribute App)
+- [ ] Criar versão **1.0.14** na Connect → anexar build 27 → preencher “O que há de novo” → Enviar para revisão
 
 ## App Store Connect
 
 1. https://appstoreconnect.apple.com/apps/6798621208
-2. Versão **1.0.13** com build **26** · status **Waiting for Review**
+2. Distribuição → Adicionar app para iOS → versão `1.0.14`
+3. Compilação → selecionar **27**
+4. Colar What’s New de `AppStore/metadata/*/whatsnew.txt`
+5. Notas de revisão: `AppStore/review_notes.txt`
+6. Conta demo já preenchida: `healthfit.appreview@gmail.com` / `HealthFitReview2026!`
+7. Enviar para revisão
 
-## Itens desta versão
+## Bloqueio local desta máquina
 
-1. Flyover: sem crash ao compartilhar/salvar (WhatsApp, Instagram, Stories, Fotos)
-2. Apple Watch: cronômetro segmentado adaptado ao tamanho da tela
+- Sem certificado **Apple Distribution** no keychain (só Development).
+- Archive App Store precisa ser feito no Xcode logado na conta Apple Developer (Signing Automatic cria o cert na 1ª distribuição).
