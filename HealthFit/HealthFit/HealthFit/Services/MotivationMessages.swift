@@ -195,6 +195,92 @@ enum MotivationMessages {
         }
     }
 
+    /// Card do dashboard (Início): título + apoio + selo — uma combinação estável por dia local.
+    struct DashboardDisciplineBanner: Equatable {
+        let title: String
+        let subtitle: String
+        let cheer: String
+    }
+
+    static func dashboardDisciplineBanner(
+        for date: Date = .now,
+        calendar: Calendar = localCalendar
+    ) -> DashboardDisciplineBanner {
+        let day = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
+        let titles = dashboardDisciplineTitles
+        let subtitles = dashboardDisciplineSubtitles
+        let cheers = dashboardDisciplineCheers
+        return DashboardDisciplineBanner(
+            title: titles[(day - 1) % titles.count],
+            subtitle: subtitles[(day - 1) % subtitles.count],
+            cheer: cheers[(day - 1) % cheers.count]
+        )
+    }
+
+    private static let dashboardDisciplineTitles: [String] = [
+        "Disciplina hoje, resultados amanhã.",
+        "Mostre pra você do que é capaz hoje.",
+        "Um dia de foco vale mais que uma semana de desculpas.",
+        "Consistência silenciosa, progresso barulhento.",
+        "Treine por quem você quer ser amanhã.",
+        "Pequeno esforço diário, grande transformação.",
+        "Hoje você escolhe: evolução ou adiamento.",
+        "A vitória começa quando você aparece.",
+        "Seu corpo segue o que sua mente decide.",
+        "Não espere motivação — pratique disciplina.",
+        "Cada escolha de hoje molda o resultado.",
+        "Força não é sorte. É repetição com intenção.",
+        "O melhor treino é o que você faz agora.",
+        "Menos perfeição, mais presença no processo.",
+        "Quem treina hoje, agradece amanhã.",
+        "Seu futuro eu já está torcendo por você.",
+        "Disciplina é liberdade disfarçada de rotina.",
+        "Avance 1% hoje. Isso já muda o jogo.",
+        "Foque no próximo passo, não no fim da estrada.",
+        "Resultados respeitam quem respeita o processo.",
+        "Hoje é o dia que o ontem pediu.",
+        "Coragem de começar, constância de continuar.",
+        "Você não precisa estar pronto — precisa começar.",
+        "A meta não some; a desculpa que some.",
+        "Energia vem da ação. Mova-se.",
+        "Treinar é investir em você. Faça o depósito.",
+        "Sua melhor versão treina mesmo sem plateia.",
+        "Feche o dia com orgulho, não com remorso.",
+        "O suor de hoje vira confiança amanhã.",
+        "Disciplina hoje. Orgulho depois.",
+    ]
+
+    private static let dashboardDisciplineSubtitles: [String] = [
+        "Pequenas escolhas, grandes conquistas.",
+        "Apareça. Execute. Evolua.",
+        "Um treino de cada vez — sem pressa e sem pausa.",
+        "Técnica boa, intensidade certa, mente firme.",
+        "Hidrate, respire e dê o seu melhor agora.",
+        "O caminho é diário. O resultado é acumulado.",
+        "Foque no que você controla: o próximo movimento.",
+        "Consistência vence intensidade isolada.",
+        "Seu progresso nasce nas decisões silenciosas.",
+        "Hoje conta. Não deixe passar em branco.",
+        "Menos comparação, mais construção.",
+        "Cada repetição é um voto no seu objetivo.",
+        "Corpo e mente agradecem quem aparece.",
+        "A rotina que você cumpre vira identidade.",
+        "Comece leve se precisar — só não pule o dia.",
+    ]
+
+    private static let dashboardDisciplineCheers: [String] = [
+        "VOCÊ CONSEGUE!",
+        "BORA!",
+        "FOCO!",
+        "VAI!",
+        "É HOJE!",
+        "FIRME!",
+        "EVOLUA!",
+        "PRESENTE!",
+        "FORÇA!",
+        "SEGUE!",
+    ]
+
     /// Morning motivation push (scheduled ~06:00 local) always uses “Bom dia”.
     static func dailyNotificationTitle(for date: Date = .now) -> String {
         _ = date

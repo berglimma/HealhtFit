@@ -478,11 +478,15 @@ struct RootView: View {
                 Date().timeIntervalSince($0) / 3600
             }
 
+            // Garante status sono/água atualizado antes do glow do carregamento.
+            wellnessService.refreshHealthIconNotifications()
+
             welcomeContext = WelcomeMotivationEngine.makeContext(
                 athleteName: user?.greetingName ?? "Atleta",
                 hoursSinceLastOpen: AppIconInactivityService.shared.hoursSinceLastSessionEnd(),
                 hoursSinceLastWorkout: hoursSinceLastWorkout,
-                weeklyWorkoutCount: weeklyReport.currentWeek.workoutCount
+                weeklyWorkoutCount: weeklyReport.currentWeek.workoutCount,
+                healthIconStatus: wellnessService.healthIconStatus()
             )
             showWelcomeMotivation = true
             if !preserveMainTab {

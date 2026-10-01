@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>luan.com.healthfit.appicon.healthsync</string>
@@ -11,17 +9,6 @@
 	</array>
 	<key>CFBundleIcons</key>
 	<dict>
-		<key>CFBundlePrimaryIcon</key>
-		<dict>
-			<key>CFBundleIconFiles</key>
-			<array>
-				<string>AppIcon</string>
-			</array>
-			<key>CFBundleIconName</key>
-			<string>AppIcon</string>
-			<key>UIPrerenderedIcon</key>
-			<false/>
-		</dict>
 		<key>CFBundleAlternateIcons</key>
 		<dict>
 			<key>AppIconBroken</key>
@@ -124,35 +111,18 @@
 				<false/>
 			</dict>
 		</dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>AppIcon</string>
+			</array>
+			<key>CFBundleIconName</key>
+			<string>AppIcon</string>
+			<key>UIPrerenderedIcon</key>
+			<false/>
+		</dict>
 	</dict>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>fetch</string>
-		<string>remote-notification</string>
-		<string>location</string>
-	</array>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>HealthFit usa sua localização durante Corrida, caminhada, ciclismo outdoor, Surf e Kitesurf para mapa e rota. No Kite Spot Buddy (opt-in), a posição aproximada pode ser compartilhada com amigos da equipe só enquanto a sessão de kitesurf estiver ativa.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>HealthFit continua registrando a rota de Corrida, bike outdoor, Surf e Kitesurf com a tela bloqueada ou em segundo plano. No Spot Buddy, a posição só é compartilhada se você ativou o recurso e a sessão de kitesurf estiver ativa.</string>
-	<key>NSMotionUsageDescription</key>
-	<string>HealthFit usa movimento e pedômetro para identificar se você está parado, caminhando, correndo ou pedalando e contar passos.</string>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>HealthFit usa Bluetooth para conectar sensores e relógios compatíveis e receber batimentos cardíacos ao vivo durante o treino.</string>
-	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>HealthFit usa Bluetooth para conectar sensores e relógios compatíveis e receber batimentos cardíacos ao vivo durante o treino.</string>
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.</string>
-	<key>NSCalendarsUsageDescription</key>
-	<string>HealthFit registra no Calendário os treinos concluídos no dia para você acompanhar o histórico de treinos.</string>
-	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
-	<string>HealthFit adiciona ao Calendário os treinos concluídos no dia.</string>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>instagram</string>
-		<string>instagram-stories</string>
-		<string>whatsapp</string>
-	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -164,19 +134,22 @@
 			</array>
 		</dict>
 	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram</string>
+		<string>instagram-stories</string>
+		<string>whatsapp</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+		<string>location</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
 		<string>Background</string>
 	</dict>
-	<key>UIApplicationSceneManifest</key>
-	<dict>
-		<key>UIApplicationSupportsMultipleScenes</key>
-		<true/>
-		<key>UISceneConfigurations</key>
-		<dict/>
-	</dict>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 </dict>
 </plist>

@@ -40,7 +40,8 @@ enum WelcomeMotivationEngine {
         athleteName: String,
         hoursSinceLastOpen: Double?,
         hoursSinceLastWorkout: Double?,
-        weeklyWorkoutCount: Int
+        weeklyWorkoutCount: Int,
+        healthIconStatus: WellnessHealthIconStatus = .yellow
     ) -> WelcomeMotivationContext {
         let firstName = athleteName.components(separatedBy: " ").first ?? athleteName
         let level = resolveUsageLevel(
@@ -48,6 +49,8 @@ enum WelcomeMotivationEngine {
             hoursSinceLastWorkout: hoursSinceLastWorkout,
             weeklyWorkoutCount: weeklyWorkoutCount
         )
+        // Glow do "Carregando…" segue sono/água do dia (verde = ambos atualizados).
+        let glow = glowColor(for: healthIconStatus)
 
         switch level {
         case .active:
@@ -56,9 +59,10 @@ enum WelcomeMotivationEngine {
                 theme: .workout,
                 headline: "Bora treinar, \(firstName)!",
                 message: MotivationMessages.welcomeActiveMessage(),
-                submessage: "Musculação, cardio ou meditação — escolha seu próximo passo.",
+                submessage: healthSubmessage(for: healthIconStatus)
+                    ?? "Musculação, cardio ou meditação — escolha seu próximo passo.",
                 slides: activeSlides,
-                glowColorName: .accent
+                glowColorName: glow
             )
         case .moderateInactivity:
             return WelcomeMotivationContext(
@@ -66,9 +70,10 @@ enum WelcomeMotivationEngine {
                 theme: .comeback,
                 headline: "Que bom ter você de volta!",
                 message: MotivationMessages.welcomeComebackMessage(),
-                submessage: "Retome com um treino leve ou alguns minutos de meditação.",
+                submessage: healthSubmessage(for: healthIconStatus)
+                    ?? "Retome com um treino leve ou alguns minutos de meditação.",
                 slides: comebackSlides,
-                glowColorName: .yellow
+                glowColorName: glow
             )
         case .lowUsage:
             return WelcomeMotivationContext(
@@ -76,9 +81,10 @@ enum WelcomeMotivationEngine {
                 theme: .overcome,
                 headline: "Sentimos sua falta!",
                 message: MotivationMessages.welcomeLowUsageMessage(),
-                submessage: "Superação começa com um passo. Treino ou meditação — você consegue.",
+                submessage: healthSubmessage(for: healthIconStatus)
+                    ?? "Superação começa com um passo. Treino ou meditação — você consegue.",
                 slides: overcomeSlides,
-                glowColorName: .orange
+                glowColorName: glow
             )
         case .missedYou:
             return WelcomeMotivationContext(
@@ -86,10 +92,36 @@ enum WelcomeMotivationEngine {
                 theme: .overcome,
                 headline: "Sentimos sua falta, \(firstName)!",
                 message: MotivationMessages.welcomeMissedYouMessage(),
-                submessage: "Seu corpo e sua mente agradecem quando você volta. Comece hoje.",
+                submessage: healthSubmessage(for: healthIconStatus)
+                    ?? "Seu corpo e sua mente agradecem quando você volta. Comece hoje.",
                 slides: overcomeSlides,
-                glowColorName: .red
+                glowColorName: glow
             )
+        }
+    }
+
+    /// Cor do carregamento inicial: prioriza sono/água do dia sobre inatividade de abertura.
+    private static func glowColor(
+        for health: WellnessHealthIconStatus
+    ) -> WelcomeMotivationContext.WelcomeGlowColor {
+        switch health {
+        case .green:
+            return .accent
+        case .yellow:
+            return .yellow
+        case .red:
+            return .red
+        }
+    }
+
+    private static func healthSubmessage(for health: WellnessHealthIconStatus) -> String? {
+        switch health {
+        case .green:
+            return "Sono e água em dia — ótimo cuidado. Agora escolha o próximo passo."
+        case .yellow:
+            return "Atualize sono e água no Início/Perfil para voltar ao verde."
+        case .red:
+            return "Há mais de 24h sem registro de sono/água. Atualize agora para cuidar da rotina."
         }
     }
 

@@ -627,18 +627,21 @@ struct DashboardView: View {
     }
 
     private var dashboardMotivationBanner: some View {
-        HStack(spacing: 12) {
+        let banner = MotivationMessages.dashboardDisciplineBanner()
+        return HStack(spacing: 12) {
             Image(systemName: "chart.bar.fill")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(AppTheme.accent)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Disciplina hoje, resultados amanhã.")
+                Text(banner.title)
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(AppTheme.textPrimary)
-                Text("Pequenas escolhas, grandes conquistas.")
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(banner.subtitle)
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 4)
@@ -647,10 +650,12 @@ struct DashboardView: View {
                 Image(systemName: "heart.fill")
                     .font(.title3)
                     .foregroundStyle(AppTheme.accent)
-                Text("VOCÊ CONSEGUE!")
+                Text(banner.cheer)
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(AppTheme.accent)
                     .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.8)
+                    .lineLimit(2)
             }
         }
         .padding(16)
@@ -678,6 +683,8 @@ struct DashboardView: View {
             }
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(banner.title). \(banner.subtitle). \(banner.cheer)")
     }
 
     /// Calendário do iPhone (Ajustes → Geral → Idioma e Região), com região do perfil quando houver.

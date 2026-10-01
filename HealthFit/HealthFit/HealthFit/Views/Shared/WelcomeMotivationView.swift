@@ -172,13 +172,27 @@ struct WelcomeMotivationView: View {
     }
 }
 
-#Preview("Ativo") {
+#Preview("Ativo — sono/água OK") {
     WelcomeMotivationView(
         context: WelcomeMotivationEngine.makeContext(
             athleteName: "João Silva",
             hoursSinceLastOpen: 6,
             hoursSinceLastWorkout: 12,
-            weeklyWorkoutCount: 3
+            weeklyWorkoutCount: 3,
+            healthIconStatus: .green
+        ),
+        onComplete: {}
+    )
+}
+
+#Preview("Volta — falta sono/água") {
+    WelcomeMotivationView(
+        context: WelcomeMotivationEngine.makeContext(
+            athleteName: "Maria",
+            hoursSinceLastOpen: 30,
+            hoursSinceLastWorkout: 40,
+            weeklyWorkoutCount: 1,
+            healthIconStatus: .yellow
         ),
         onComplete: {}
     )
@@ -190,7 +204,8 @@ struct WelcomeMotivationView: View {
             athleteName: "Maria",
             hoursSinceLastOpen: 72,
             hoursSinceLastWorkout: 96,
-            weeklyWorkoutCount: 0
+            weeklyWorkoutCount: 0,
+            healthIconStatus: .red
         ),
         onComplete: {}
     )

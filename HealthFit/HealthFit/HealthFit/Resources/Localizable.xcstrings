@@ -1094,6 +1094,9 @@
     "Análise de saltos (Surf)" : {
 
     },
+    "Analisei a agenda de %@ e os horários livres." : {
+
+    },
     "Anamnese" : {
 
     },
@@ -1217,6 +1220,12 @@
     "Assistente" : {
 
     },
+    "Assistente de agendamento" : {
+
+    },
+    "Assistente de agendamento (sugere melhores horários)" : {
+
+    },
     "Assistente digitando" : {
 
     },
@@ -1314,6 +1323,9 @@
 
     },
     "Atualizar nível na musculação" : {
+
+    },
+    "Atualizar sugestões" : {
 
     },
     "Aumentar água" : {
@@ -2357,6 +2369,9 @@
     "Buscando em %@…" : {
 
     },
+    "Buscando melhores horários…" : {
+
+    },
     "Buscando setores próximos…" : {
 
     },
@@ -2474,6 +2489,9 @@
           }
         }
       }
+    },
+    "Calendário (aluno escolhe manualmente)" : {
+
     },
     "Calorias" : {
 
@@ -3269,7 +3287,7 @@
     "Déficit: −%lld kcal" : {
 
     },
-    "Defina quando você atende. Alunos e o IAssistente usam isso para sugerir horários livres." : {
+    "Defina quando você atende. O Assistente de agendamento do aluno usa isso para sugerir os melhores horários livres." : {
 
     },
     "Defina quantas calorias pretende gastar. Ao atingir a meta o treino continua — ele só encerra quando você tocar em Finalizar." : {
@@ -3532,6 +3550,9 @@
     "Duração: %lld min · verde = disponível · laranja = ocupado no calendário · toque num horário livre" : {
 
     },
+    "Duração: %lld min · você pode cancelar ou remarcar depois" : {
+
+    },
     "É doce / sobremesa" : {
 
     },
@@ -3777,9 +3798,6 @@
 
     },
     "Escolha WhatsApp ou Instagram na tela de compartilhar. O nome HealthFit já vai no card." : {
-
-    },
-    "Escolher horário manualmente" : {
 
     },
     "Escolher no mapa de áreas" : {
@@ -4358,6 +4376,9 @@
     "Inclinação inicial" : {
 
     },
+    "Inclui Assistente de agendamento: analisa a agenda do profissional e sugere o melhor horário. Depois você pode cancelar ou remarcar." : {
+
+    },
     "Incluir intensidade" : {
 
     },
@@ -4451,9 +4472,6 @@
     "Integrações" : {
 
     },
-    "Inteligente (horários livres)" : {
-
-    },
     "Intensidade" : {
 
     },
@@ -4541,7 +4559,7 @@
     "Legal" : {
 
     },
-    "Lembretes automáticos: 24h, 1h e 15 min antes" : {
+    "Lembretes automáticos: 24h, 1h e 15 min antes · pode cancelar ou remarcar a qualquer momento" : {
 
     },
     "Lembretes: 24h · 1h · 15 min antes" : {
@@ -4758,6 +4776,9 @@
           }
         }
       }
+    },
+    "Melhor horário" : {
+
     },
     "Melhor marca anterior" : {
 
@@ -5484,6 +5505,9 @@
 
     },
     "O personal define a meta em ml. Sem override, o app usa 35 ml por kg de peso." : {
+
+    },
+    "O profissional ainda não liberou agenda ou os próximos dias estão ocupados. Tente o calendário ou fale no chat." : {
 
     },
     "O que melhorar" : {
@@ -11374,6 +11398,9 @@
     "Sem dados suficientes." : {
 
     },
+    "Sem horários livres" : {
+
+    },
     "Sem localização em tempo real" : {
 
     },
@@ -11686,6 +11713,9 @@
 
     },
     "Sugerido pelo IAssistente" : {
+
+    },
+    "Sugestão %lld" : {
 
     },
     "Sugestão para %@: cerca de %lld kcal no seu plano." : {
