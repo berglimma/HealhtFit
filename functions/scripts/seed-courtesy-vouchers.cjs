@@ -2,29 +2,30 @@
 "use strict";
 
 /**
- * Gera 40 vouchers de 30 dias por plano pago e grava no Firestore.
+ * Gera vouchers de cortesia (padrão: 40×30 dias por plano) e grava no Firestore.
  *
- * Uso (na pasta functions, com ADC / firebase login):
- *   node scripts/seed-courtesy-vouchers.cjs --deploy   # via Cloud Function (firebase login)
+ * Uso (na pasta functions):
+ *   CODES_PER_PLAN=10 BATCH_ID=dist-10x-30d node scripts/seed-courtesy-vouchers.cjs --local-only
+ *   COURTESY_SEED_KEY=... npm run seed:courtesy:deploy
  *
- * Idempotente: se o lote launch-v1-30d já existir, só reimprime os códigos.
+ * Idempotente: se o lote (BATCH_ID) já existir no Firestore, só reimprime os códigos.
  */
 
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const {initializeApp, applicationDefault, cert} = require("firebase-admin/app");
-const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 
 const PROJECT_ID = "healthfit-30d87";
-const BATCH_ID = "launch-v2-40x-30d";
-const DURATION_DAYS = 30;
-const CODES_PER_PLAN = 40;
-const COURTESY_SEED_KEY = "healthfit-courtesy-seed-v2-40x";
+const BATCH_ID = (process.env.BATCH_ID || "launch-v2-40x-30d").trim();
+const DURATION_DAYS = Number(process.env.DURATION_DAYS || 30);
+const CODES_PER_PLAN = Number(process.env.CODES_PER_PLAN || 40);
 const FUNCTION_NAME = "seedCourtesyVouchers";
 const FUNCTION_REGION = "southamerica-east1";
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
+function resolveCourtesySeedKey() {
+  return (process.env.COURTESY_SEED_KEY || "").trim();
+}
 const PLANS = [
   {id: "basic", prefix: "BASIC", label: "Básico"},
   {id: "fit", prefix: "FIT", label: "Fit"},
@@ -49,7 +50,7 @@ function repoRoot() {
   return path.resolve(__dirname, "..", "..");
 }
 
-function writeLocalLists(grouped) {
+function writeLocalLists(grouped, outBase = "courtesy-vouchers.local") {
   const dir = path.join(repoRoot(), "HealthFit", "AppStore");
   fs.mkdirSync(dir, {recursive: true});
 
@@ -61,6 +62,7 @@ function writeLocalLists(grouped) {
     "",
     `Lote: ${BATCH_ID}`,
     `Validade do brinde após o resgate: ${DURATION_DAYS} dias`,
+    `Quantidade por plano: ${CODES_PER_PLAN}`,
     `Gerado em: ${new Date().toISOString()}`,
     "",
   ];
@@ -78,8 +80,8 @@ function writeLocalLists(grouped) {
     lines.push("");
   }
 
-  const mdPath = path.join(dir, "courtesy-vouchers.local.md");
-  const csvPath = path.join(dir, "courtesy-vouchers.local.csv");
+  const mdPath = path.join(dir, `${outBase}.md`);
+  const csvPath = path.join(dir, `${outBase}.csv`);
   fs.writeFileSync(mdPath, lines.join("\n"), "utf8");
   fs.writeFileSync(csvPath, csv.join("\n") + "\n", "utf8");
   return {mdPath, csvPath};
@@ -117,6 +119,7 @@ function docsFromGrouped(grouped) {
 }
 
 function initializeFirebaseAdmin() {
+  const {initializeApp, applicationDefault, cert} = require("firebase-admin/app");
   const serviceAccountPath =
     process.env.GOOGLE_APPLICATION_CREDENTIALS ||
     path.join(__dirname, "..", "serviceAccountKey.json");
@@ -141,6 +144,10 @@ function initializeFirebaseAdmin() {
 const {execSync} = require("child_process");
 
 async function deployViaCloudFunction(csvPath) {
+  const seedKey = resolveCourtesySeedKey();
+  if (!seedKey) {
+    throw new Error("Defina COURTESY_SEED_KEY no ambiente — não versionar no git.");
+  }
   const vouchers = parseLocalCsv(csvPath);
   if (vouchers.length === 0) {
     throw new Error(`CSV vazio ou ausente: ${csvPath}`);
@@ -165,7 +172,7 @@ async function deployViaCloudFunction(csvPath) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-healthfit-seed-key": COURTESY_SEED_KEY,
+      "x-healthfit-seed-key": seedKey,
     },
     body: JSON.stringify({vouchers}),
   });
@@ -198,20 +205,18 @@ async function main() {
   }
 
   if (localOnly) {
-    if (fs.existsSync(csvPath) && parseLocalCsv(csvPath).length > 0) {
-      console.log("CSV local já existe — não regenerar. Apague o arquivo para criar outro lote.");
-      console.log(csvPath);
-      return;
-    }
+    const outName = process.env.VOUCHER_OUT || "courtesy-vouchers.local";
     const grouped = generateNewGrouped();
-    const paths = writeLocalLists(grouped);
+    const paths = writeLocalLists(grouped, outName);
     console.log(`Gerados ${CODES_PER_PLAN * PLANS.length} códigos locais (sem Firestore).`);
+    console.log(`Lote: ${BATCH_ID} · ${DURATION_DAYS} dias · ${CODES_PER_PLAN}/plano`);
     console.log(paths.mdPath);
     console.log(paths.csvPath);
     return;
   }
 
   initializeFirebaseAdmin();
+  const {getFirestore, FieldValue} = require("firebase-admin/firestore");
   const db = getFirestore();
 
   const existingSnap = await db
@@ -280,6 +285,7 @@ function parseLocalCsv(csvPath) {
 }
 
 async function commitVouchers(db, docs) {
+  const {FieldValue} = require("firebase-admin/firestore");
   let written = 0;
   let skipped = 0;
   const now = FieldValue.serverTimestamp();

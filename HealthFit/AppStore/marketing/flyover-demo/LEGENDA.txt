@@ -1,0 +1,18 @@
+HealthFit Flyover — vídeo demo 15s (divulgação)
+
+Arquivo: healthfit-flyover-demo-15s.mp4
+Formato: 720×1280 (Stories 9:16) · H.264 · 24 fps · ~15s
+Rota: contorno fiel OSM da orla da Lagoa Rodrigo de Freitas (lagoa_contour.json)
+Regenerar: swift GenerateFlyoverDemo.swift (nesta pasta)
+
+────────────────────────────────────
+Legenda Instagram / Reels / Stories
+
+Seu treino, em flyover.
+Percurso no mapa, ritmo colorido e marca HealthFit — pronto pra Stories.
+
+Baixa o HealthFit e gera o teu.
+#HealthFit #Flyover #Corrida #Caminhada #Fitness
+
+WhatsApp (curta):
+Flyover HealthFit: sua rota em vídeo vertical pra postar. Experimenta no app 🔥

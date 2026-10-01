@@ -313,8 +313,9 @@ enum HealthAssistantEngine {
         var lines: [String] = [
             "Agenda de consultas no HealthFit Coach:",
             "",
-            "• Modo inteligente: sugere horários livres da agenda do profissional (e do Calendário do iPhone, se autorizado).",
-            "• Modo manual: você escolhe data e hora.",
+            "• Assistente de agendamento: analisa a agenda do personal/nutri e sugere os melhores horários livres.",
+            "• Calendário: você escolhe data e hora manualmente.",
+            "• Depois de marcar (pelo Assistente ou calendário), você pode cancelar ou remarcar a qualquer momento.",
             "• Personal e nutricionista têm agendas separadas no vínculo."
         ]
 
@@ -350,11 +351,11 @@ enum HealthAssistantEngine {
                 lines.append("• \(slot.label)")
             }
             lines.append("")
-            lines.append("Para marcar: abra o vínculo em HealthFit Coach → Agendar consulta → escolha Inteligente ou Manual.")
+            lines.append("Para marcar: abra o vínculo em HealthFit Coach → Agendar consulta → Assistente de agendamento (ou Calendário).")
         } else {
             lines.append("")
             lines.append("Para ver horários livres e agendar: HealthFit Coach → seu profissional → Agendar consulta.")
-            lines.append("O profissional precisa salvar a agenda semanal (Coach → Agenda de consultas).")
+            lines.append("O profissional precisa salvar a agenda semanal (Coach → Agenda de consultas → Horários).")
         }
 
         lines.append("")

@@ -143,14 +143,24 @@ struct CoachLinkDetailView: View {
                             systemImage: "calendar.badge.clock"
                         )
                     }
+                    if !isCoach {
+                        Text("Inclui Assistente de agendamento: analisa a agenda do profissional e sugere o melhor horário. Depois você pode cancelar ou remarcar.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                     let upcoming = (coach.consultationsByLink[liveLink.id] ?? []).filter(\.isUpcoming)
                     ForEach(upcoming.prefix(5)) { item in
                         VStack(alignment: .leading, spacing: 6) {
                             Text(item.confirmedScheduleLabel)
                                 .font(.subheadline.weight(.semibold))
-                            Text("Lembretes: 24h · 1h · 15 min antes")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                            HStack(spacing: 8) {
+                                Text(item.mode.shortBadge)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(item.mode == .smart ? AppTheme.accent : .secondary)
+                                Text("Lembretes: 24h · 1h · 15 min antes")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                             HStack(spacing: 16) {
                                 Button("Remarcar") {
                                     showScheduleConsultation = true

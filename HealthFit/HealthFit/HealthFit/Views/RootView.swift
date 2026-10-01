@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// Sobrevive a remount do `RootView` (comum no iPad após background / Stage Manager).
+/// Sem isso, `@State didCompleteWelcomeForSession` volta a `false` e a UI trava em "Carregando…".
+private enum WelcomeSessionGate {
+    static var didCompleteWelcomeThisLaunch = false
+}
+
 struct RootView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var healthKitManager: HealthKitManager
@@ -33,13 +39,19 @@ struct RootView: View {
                 // Após login/sessão, a transição tem prioridade — nunca renderiza o painel antes.
                 if showWelcomeMotivation, let welcomeContext {
                     WelcomeMotivationView(context: welcomeContext) {
-                        showWelcomeMotivation = false
-                        didCompleteWelcomeForSession = true
+                        completeWelcomeAndShowMainTab()
                     }
                 } else {
                     loadingScreen(message: nil)
                         .onAppear {
                             presentWelcome(preserveMainTab: false)
+                            // Failsafe: se o Task do welcome travar (iPad remount), libera o MainTab.
+                            Task { @MainActor in
+                                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                                guard authService.isAuthenticated else { return }
+                                guard !didCompleteWelcomeForSession else { return }
+                                completeWelcomeAndShowMainTab()
+                            }
                         }
                 }
             } else {
@@ -59,6 +71,10 @@ struct RootView: View {
                             WelcomeMotivationView(context: welcomeContext) {
                                 showWelcomeMotivation = false
                             }
+                        } else {
+                            // Evita fullScreenCover vazio (não dismissível) se o contexto falhar.
+                            Color.clear
+                                .onAppear { showWelcomeMotivation = false }
                         }
                     }
             }
@@ -66,7 +82,13 @@ struct RootView: View {
         // No implicit .animation on auth/welcome flags — they animate layout of heavy MainTab
         // and make the first tab switch feel frozen on device.
         .onAppear {
-            prepareWelcomeIfAuthenticated(trigger: .coldStart)
+            // Remount após background (iPad): restaura o gate — NÃO reinicia cold start.
+            if WelcomeSessionGate.didCompleteWelcomeThisLaunch {
+                didCompleteWelcomeForSession = true
+                showWelcomeMotivation = false
+            } else {
+                prepareWelcomeIfAuthenticated(trigger: .coldStart)
+            }
             // Icon sync is cheap but not needed before first paint.
             Task { @MainActor in
                 await Task.yield()
@@ -79,6 +101,11 @@ struct RootView: View {
                 // Não chamar KeyboardDismiss aqui — ao voltar de inactive (ficha/sheet/teclado)
                 // o endEditing global cancela a digitação em TextFields.
                 if authService.isAuthenticated {
+                    // iPad remount: @State zera, mas o processo ainda está vivo — restaura o MainTab.
+                    if WelcomeSessionGate.didCompleteWelcomeThisLaunch {
+                        didCompleteWelcomeForSession = true
+                        showWelcomeMotivation = false
+                    }
                     let returningFromBackground = didEnterBackground
                     didEnterBackground = false
                     if returningFromBackground {
@@ -110,6 +137,7 @@ struct RootView: View {
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             if isAuthenticated {
+                WelcomeSessionGate.didCompleteWelcomeThisLaunch = false
                 didCompleteWelcomeForSession = false
                 showWelcomeMotivation = false
                 welcomeContext = nil
@@ -123,6 +151,7 @@ struct RootView: View {
                     syncWorkoutCloudHistory()
                 }
             } else {
+                WelcomeSessionGate.didCompleteWelcomeThisLaunch = false
                 didCompleteWelcomeForSession = false
                 showWelcomeMotivation = false
                 welcomeContext = nil
@@ -400,15 +429,31 @@ struct RootView: View {
         guard authService.isAuthenticated else { return }
 
         switch trigger {
-        case .login, .coldStart:
+        case .login:
+            WelcomeSessionGate.didCompleteWelcomeThisLaunch = false
+            didCompleteWelcomeForSession = false
+            presentWelcome(preserveMainTab: false)
+        case .coldStart:
+            // Remount do RootView no iPad NÃO deve reiniciar o welcome.
+            if WelcomeSessionGate.didCompleteWelcomeThisLaunch {
+                didCompleteWelcomeForSession = true
+                showWelcomeMotivation = false
+                return
+            }
             didCompleteWelcomeForSession = false
             presentWelcome(preserveMainTab: false)
         case .returnFromBackground:
             if let hours = AppIconInactivityService.shared.hoursSinceLastSessionEnd(), hours >= 24 {
                 // Mantém MainTab montado; só mostra overlay.
-                presentWelcome(preserveMainTab: didCompleteWelcomeForSession)
+                presentWelcome(preserveMainTab: true)
             }
         }
+    }
+
+    private func completeWelcomeAndShowMainTab() {
+        WelcomeSessionGate.didCompleteWelcomeThisLaunch = true
+        showWelcomeMotivation = false
+        didCompleteWelcomeForSession = true
     }
 
     private func presentWelcome(preserveMainTab: Bool) {
@@ -418,6 +463,11 @@ struct RootView: View {
         Task { @MainActor in
             await Task.yield()
             guard !showWelcomeMotivation else { return }
+            // Se o failsafe / remount já liberou o MainTab, não força welcome de novo.
+            if preserveMainTab == false, WelcomeSessionGate.didCompleteWelcomeThisLaunch {
+                didCompleteWelcomeForSession = true
+                return
+            }
 
             let user = authService.currentUser
             let weeklyReport = WeeklyProgressAnalyzer.buildReport(

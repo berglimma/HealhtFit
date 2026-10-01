@@ -1,0 +1,14 @@
+{
+  "name": "healthfit-sonar-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Portal local HealthFit → SonarQube",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

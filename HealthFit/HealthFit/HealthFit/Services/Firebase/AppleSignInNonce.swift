@@ -1,9 +1,11 @@
 import Foundation
 import CryptoKit
+import Security
 
 enum AppleSignInNonce {
-    static func randomNonce(length: Int = 32) -> String {
-        precondition(length > 0)
+    /// Gera nonce criptograficamente seguro. Retorna `nil` se o gerador de entropia falhar.
+    static func randomNonce(length: Int = 32) -> String? {
+        guard length > 0 else { return nil }
         let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
         var result = ""
         var remaining = length
@@ -11,9 +13,7 @@ enum AppleSignInNonce {
         while remaining > 0 {
             var random: UInt8 = 0
             let status = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
-            if status != errSecSuccess {
-                fatalError("Não foi possível gerar nonce seguro.")
-            }
+            guard status == errSecSuccess else { return nil }
 
             if random < charset.count {
                 result.append(charset[Int(random)])

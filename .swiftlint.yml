@@ -1,0 +1,25 @@
+# HealthFit — SwiftLint (alinhamento Sonar / qualidade)
+disabled_rules:
+  - trailing_whitespace
+  - vertical_whitespace
+  - line_length
+
+opt_in:
+  - empty_count
+  - force_unwrapping
+  - fatal_error_message
+
+force_cast: warning
+force_try: error
+force_unwrapping: warning
+
+excluded:
+  - build
+  - DerivedData
+  - .docx_deps
+  - HealthFit/AppStore
+  - videos
+  - sonar
+
+reporter:
+  - xcode

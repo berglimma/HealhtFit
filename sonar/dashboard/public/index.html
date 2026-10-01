@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HealthFit · SonarQube</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="bg"></div>
+  <header class="top">
+    <div class="brand">
+      <span class="mark">HF</span>
+      <div>
+        <h1>HealthFit Sonar</h1>
+        <p>Qualidade e segurança do projeto — visão local</p>
+      </div>
+    </div>
+    <div class="actions">
+      <a class="btn ghost" id="openSonar" href="http://localhost:9000" target="_blank" rel="noopener">Abrir SonarQube</a>
+      <button class="btn" id="refreshBtn" type="button">Atualizar</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="status-row" id="statusRow">
+      <article class="card status">
+        <h2>SonarQube</h2>
+        <p class="big" id="sonarStatus">…</p>
+        <p class="muted" id="sonarMeta"></p>
+      </article>
+      <article class="card status">
+        <h2>Quality Gate</h2>
+        <p class="big" id="gateStatus">…</p>
+        <p class="muted" id="gateMeta"></p>
+      </article>
+      <article class="card status">
+        <h2>Projeto</h2>
+        <p class="big" id="projectKey">healthfit</p>
+        <p class="muted">Community Edition · TS/JS/HTML (+ inventário Swift)</p>
+      </article>
+    </section>
+
+    <section class="metrics" id="metrics">
+      <!-- filled by JS -->
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Issues prioritários</h2>
+        <p class="muted">Vulnerabilidades, bugs e code smells (até 50)</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Severidade</th>
+              <th>Tipo</th>
+              <th>Mensagem</th>
+              <th>Arquivo</th>
+            </tr>
+          </thead>
+          <tbody id="issuesBody">
+            <tr><td colspan="4" class="muted">Carregando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel help">
+      <h2>Como usar</h2>
+      <ol>
+        <li><code>./sonar/scripts/up.sh</code> — sobe SonarQube (Docker) + este portal</li>
+        <li>Primeiro acesso em <a href="http://localhost:9000" target="_blank" rel="noopener">localhost:9000</a>: login <code>admin</code> / <code>admin</code> e troque a senha</li>
+        <li><code>./sonar/scripts/scan.sh</code> — analisa o código e publica no Sonar</li>
+        <li>Recarregue esta página para ver Quality Gate, vulnerabilidades e smells</li>
+      </ol>
+      <p class="muted">
+        Segredos (ex.: <code>COURTESY_SEED_KEY</code>) devem ficar só em variáveis de ambiente / Secret Manager — nunca no git.
+        Análise completa de Swift requer SonarQube Developer Edition ou SonarCloud; a Community analisa Functions (TS), rules e Docs.
+      </p>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

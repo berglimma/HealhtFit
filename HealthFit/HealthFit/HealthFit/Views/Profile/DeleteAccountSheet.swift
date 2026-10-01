@@ -41,7 +41,7 @@ struct DeleteAccountSheet: View {
                                 .foregroundStyle(.green)
                         } else {
                             SignInWithAppleButton(.continue) { request in
-                                let nonce = AppleSignInNonce.randomNonce()
+                                guard let nonce = AppleSignInNonce.randomNonce() else { return }
                                 currentAppleNonce = nonce
                                 request.requestedScopes = []
                                 request.nonce = AppleSignInNonce.sha256(nonce)

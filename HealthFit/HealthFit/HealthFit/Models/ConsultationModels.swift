@@ -9,17 +9,24 @@ enum ConsultationBookingMode: String, CaseIterable, Codable, Identifiable, Hasha
 
     var title: String {
         switch self {
-        case .smart: return "Inteligente"
-        case .manual: return "Escolher horário"
+        case .smart: return "Assistente de agendamento"
+        case .manual: return "Calendário"
         }
     }
 
     var detail: String {
         switch self {
         case .smart:
-            return "Sugere horários livres da agenda do profissional e do calendário do celular."
+            return "Verifica a agenda do personal/nutri e sugere os melhores horários livres."
         case .manual:
-            return "Você escolhe data e hora livremente."
+            return "Você escolhe data e hora no calendário."
+        }
+    }
+
+    var shortBadge: String {
+        switch self {
+        case .smart: return "Assistente"
+        case .manual: return "Manual"
         }
     }
 }
@@ -235,6 +242,163 @@ struct ConsultationOpenSlot: Identifiable, Hashable {
         f.dateFormat = "HH:mm"
         return f
     }()
+}
+
+/// Horário ranqueado pelo Assistente de agendamento (aluno).
+struct ConsultationSuggestedSlot: Identifiable, Hashable {
+    var id: Date { startAt }
+    var startAt: Date
+    var endAt: Date
+    var score: Double
+    var reasons: [String]
+
+    var label: String {
+        let day = Self.dayFormatter.string(from: startAt)
+        let time = Self.timeFormatter.string(from: startAt)
+        return "\(day) · \(time)"
+    }
+
+    var openSlot: ConsultationOpenSlot {
+        ConsultationOpenSlot(startAt: startAt, endAt: endAt, source: "assistente")
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "pt_BR")
+        f.setLocalizedDateFormatFromTemplate("EEE d MMM")
+        return f
+    }()
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "pt_BR")
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+}
+
+/// Ranqueia horários livres da agenda do profissional (e conflitos do calendário).
+enum ConsultationSchedulingAssistant {
+    /// Sugere os melhores horários a partir dos slots abertos e da carga da agenda.
+    static func suggest(
+        openSlots: [ConsultationOpenSlot],
+        existing: [ConsultationBooking],
+        from: Date = .now,
+        limit: Int = 8
+    ) -> [ConsultationSuggestedSlot] {
+        guard !openSlots.isEmpty else { return [] }
+        let calendar = Calendar.current
+        let active = existing.filter { $0.status == .proposed || $0.status == .confirmed }
+        let scored = openSlots.map { slot -> ConsultationSuggestedSlot in
+            score(slot: slot, existing: active, from: from, calendar: calendar)
+        }
+        // Diversifica: no máximo 2 sugestões por dia, priorizando score.
+        var perDay: [Date: Int] = [:]
+        var picked: [ConsultationSuggestedSlot] = []
+        for item in scored.sorted(by: { $0.score > $1.score }) {
+            let day = calendar.startOfDay(for: item.startAt)
+            let count = perDay[day, default: 0]
+            if count >= 2 { continue }
+            perDay[day] = count + 1
+            picked.append(item)
+            if picked.count >= limit { break }
+        }
+        return picked
+    }
+
+    private static func score(
+        slot: ConsultationOpenSlot,
+        existing: [ConsultationBooking],
+        from: Date,
+        calendar: Calendar
+    ) -> ConsultationSuggestedSlot {
+        var score: Double = 50
+        var reasons: [String] = []
+
+        let hoursAhead = slot.startAt.timeIntervalSince(from) / 3600
+        switch hoursAhead {
+        case ..<4:
+            score -= 15
+            reasons.append("Muito em cima da hora")
+        case 4..<24:
+            score += 12
+            reasons.append("Ainda hoje / amanhã cedo")
+        case 24..<72:
+            score += 28
+            reasons.append("Bom prazo (1–3 dias)")
+        case 72..<168:
+            score += 18
+            reasons.append("Esta semana")
+        default:
+            score += 6
+            reasons.append("Mais à frente")
+        }
+
+        let hour = calendar.component(.hour, from: slot.startAt)
+        let minute = calendar.component(.minute, from: slot.startAt)
+        let minutes = hour * 60 + minute
+        switch minutes {
+        case (9 * 60)..<(11 * 60), (14 * 60)..<(16 * 60):
+            score += 22
+            reasons.append("Horário comercial ideal")
+        case (11 * 60)..<(12 * 60), (16 * 60)..<(18 * 60):
+            score += 10
+            reasons.append("Bom horário do dia")
+        case (12 * 60)..<(14 * 60):
+            score -= 8
+            reasons.append("Horário de almoço — menos preferível")
+        default:
+            break
+        }
+
+        let weekday = calendar.component(.weekday, from: slot.startAt)
+        if (2...6).contains(weekday) {
+            score += 12
+            reasons.append("Dia útil")
+        } else {
+            score -= 4
+            reasons.append("Fim de semana")
+        }
+
+        let dayStart = calendar.startOfDay(for: slot.startAt)
+        let sameDayCount = existing.filter {
+            calendar.isDate($0.startAt, inSameDayAs: dayStart)
+        }.count
+        if sameDayCount == 0 {
+            score += 14
+            reasons.append("Agenda do profissional folgada nesse dia")
+        } else if sameDayCount == 1 {
+            score += 4
+            reasons.append("Poucas consultas nesse dia")
+        } else {
+            score -= Double(sameDayCount) * 3
+            reasons.append("Dia já movimentado (\(sameDayCount) consultas)")
+        }
+
+        let nearestGap = existing
+            .map { abs($0.startAt.timeIntervalSince(slot.startAt)) }
+            .min()
+        if let nearestGap {
+            if nearestGap >= 90 * 60 {
+                score += 10
+                reasons.append("Espaço confortável entre consultas")
+            } else if nearestGap < 45 * 60 {
+                score -= 6
+            }
+        } else {
+            score += 8
+            reasons.append("Sem conflito com outras consultas")
+        }
+
+        // Mantém no máximo 3 motivos legíveis, priorizando os mais positivos.
+        let trimmed = Array(reasons.prefix(3))
+        return ConsultationSuggestedSlot(
+            startAt: slot.startAt,
+            endAt: slot.endAt,
+            score: score,
+            reasons: trimmed
+        )
+    }
 }
 
 enum ConsultationSlotEngine {

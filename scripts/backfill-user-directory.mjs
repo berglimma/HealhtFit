@@ -2,9 +2,11 @@
  * Popula userDirectory a partir de users/{uid} para a busca de treino em grupo.
  *
  * Uso:
- *   node scripts/backfill-user-directory.mjs
+ *   FIREBASE_TOOLS_CLIENT_SECRET=... node scripts/backfill-user-directory.mjs
  *
  * Requer firebase login válido (usa o refresh token do firebase-tools).
+ * CLIENT_ID/SECRET: use as credenciais OAuth do firebase-tools via env
+ * (nunca versionar o secret no repositório).
  */
 import fs from "fs";
 import https from "https";
@@ -12,9 +14,16 @@ import os from "os";
 
 const PROJECT = "healthfit-30d87";
 const CLIENT_ID =
+  process.env.FIREBASE_TOOLS_CLIENT_ID ||
   "563584335869-fgrhgmd47bqnek113k5u0ujjluhyo3vp.apps.googleusercontent.com";
-const CLIENT_SECRET = "FAKESECRET_u3v4w5x6y7z8a9b0c1d2";
+const CLIENT_SECRET = (process.env.FIREBASE_TOOLS_CLIENT_SECRET || "").trim();
 
+if (!CLIENT_SECRET) {
+  console.error(
+    "Defina FIREBASE_TOOLS_CLIENT_SECRET (OAuth do firebase-tools). Não versionar no git."
+  );
+  process.exit(1);
+}
 function request(method, url, headers = {}, body = null) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);

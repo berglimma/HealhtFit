@@ -22,7 +22,7 @@ struct CoachAvailabilityEditorView: View {
     var body: some View {
         Form {
             Section {
-                Text("Defina quando você atende. Alunos e o IAssistente usam isso para sugerir horários livres.")
+                Text("Defina quando você atende. O Assistente de agendamento do aluno usa isso para sugerir os melhores horários livres.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -32,8 +32,8 @@ struct CoachAvailabilityEditorView: View {
             }
 
             Section("Modo de agendamento") {
-                Toggle("Inteligente (horários livres)", isOn: $allowSmart)
-                Toggle("Escolher horário manualmente", isOn: $allowManual)
+                Toggle("Assistente de agendamento (sugere melhores horários)", isOn: $allowSmart)
+                Toggle("Calendário (aluno escolhe manualmente)", isOn: $allowManual)
                 Toggle("Sincronizar com Calendário do iPhone", isOn: $draft.syncToDeviceCalendar)
             }
 
@@ -173,6 +173,11 @@ struct CoachScheduleConsultationView: View {
     @State private var bookingToReschedule: ConsultationBooking?
     @State private var bookingPendingCancel: ConsultationBooking?
     @State private var nowTicker = Date()
+    /// Aluno: Assistente (.smart) ou calendário (.manual).
+    @State private var bookingMode: ConsultationBookingMode = .manual
+    @State private var suggestedSlots: [ConsultationSuggestedSlot] = []
+    @State private var isLoadingSuggestions = false
+    @State private var didConfigureInitialMode = false
 
     private var calendar: Calendar { Calendar.current }
 
@@ -182,6 +187,27 @@ struct CoachScheduleConsultationView: View {
 
     private var durationMinutes: Int {
         max(availability.slotDurationMinutes, 15)
+    }
+
+    private var isStudentViewer: Bool {
+        authService.currentUser?.id == link.studentUid
+    }
+
+    /// Assistente só para o aluno (não na agenda wide do profissional).
+    private var showsAssistantOption: Bool {
+        isStudentViewer && !showCoachWideAgenda && availability.allowsSmart
+    }
+
+    private var showsManualOption: Bool {
+        availability.allowsManual || showCoachWideAgenda || !isStudentViewer || !availability.allowsSmart
+    }
+
+    private var showsModePicker: Bool {
+        showsAssistantOption && showsManualOption && bookingToReschedule == nil
+    }
+
+    private var isAssistantMode: Bool {
+        showsAssistantOption && bookingMode == .smart && bookingToReschedule == nil
     }
 
     /// Compromissos deste vínculo (aluno selecionado).
@@ -214,21 +240,29 @@ struct CoachScheduleConsultationView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            calendarChrome
-
-            Group {
-                switch scope {
-                case .year:
-                    yearView
-                case .month:
-                    monthView
-                case .week:
-                    weekView
-                case .day:
-                    dayView
-                }
+            if showsModePicker {
+                modePicker
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if isAssistantMode {
+                assistantPanel
+            } else {
+                calendarChrome
+
+                Group {
+                    switch scope {
+                    case .year:
+                        yearView
+                    case .month:
+                        monthView
+                    case .week:
+                        weekView
+                    case .day:
+                        dayView
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
 
             if let confirmationBanner {
                 Text(confirmationBanner)
@@ -285,6 +319,9 @@ struct CoachScheduleConsultationView: View {
                         if bookingToReschedule?.id == booking.id {
                             bookingToReschedule = nil
                         }
+                        if isAssistantMode {
+                            await refreshSuggestions()
+                        }
                     } else {
                         statusMessage = coach.lastError ?? "Não foi possível cancelar."
                     }
@@ -300,13 +337,173 @@ struct CoachScheduleConsultationView: View {
             }
         }
         .task {
+            configureInitialModeIfNeeded()
             await refreshBusy()
+            if isAssistantMode {
+                await refreshSuggestions()
+            }
         }
         .onChange(of: focusedDay) { _, _ in
             Task { await refreshBusy() }
         }
+        .onChange(of: bookingMode) { _, mode in
+            selectedStart = nil
+            if mode == .smart, showsAssistantOption {
+                Task { await refreshSuggestions() }
+            }
+        }
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { date in
             nowTicker = date
+        }
+    }
+
+    private var modePicker: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Picker("Modo", selection: $bookingMode) {
+                if showsAssistantOption {
+                    Text(ConsultationBookingMode.smart.title).tag(ConsultationBookingMode.smart)
+                }
+                if showsManualOption {
+                    Text(ConsultationBookingMode.manual.title).tag(ConsultationBookingMode.manual)
+                }
+            }
+            .pickerStyle(.segmented)
+            Text(bookingMode.detail)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+        .background(AppTheme.background)
+    }
+
+    private var assistantPanel: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkles")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Assistente de agendamento")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text("Analisei a agenda de \(link.coachName.isEmpty ? "seu profissional" : link.coachName) e os horários livres.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Text("Duração: \(durationMinutes) min · você pode cancelar ou remarcar depois")
+                    .font(.caption2)
+                    .foregroundStyle(HFCalTheme.muted)
+
+                if isLoadingSuggestions {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Buscando melhores horários…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 24)
+                } else if suggestedSlots.isEmpty {
+                    ContentUnavailableView(
+                        "Sem horários livres",
+                        systemImage: "calendar.badge.exclamationmark",
+                        description: Text("O profissional ainda não liberou agenda ou os próximos dias estão ocupados. Tente o calendário ou fale no chat.")
+                    )
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                } else {
+                    ForEach(Array(suggestedSlots.enumerated()), id: \.element.id) { index, slot in
+                        suggestionCard(slot, rank: index + 1)
+                    }
+                }
+
+                Button {
+                    Task { await refreshSuggestions() }
+                } label: {
+                    Label("Atualizar sugestões", systemImage: "arrow.clockwise")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .disabled(isLoadingSuggestions)
+                .tint(AppTheme.accent)
+            }
+            .padding(16)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func suggestionCard(_ slot: ConsultationSuggestedSlot, rank: Int) -> some View {
+        let isSelected = selectedStart.map { abs($0.timeIntervalSince(slot.startAt)) < 1 } ?? false
+        return Button {
+            selectedStart = slot.startAt
+            focusedDay = calendar.startOfDay(for: slot.startAt)
+            statusMessage = nil
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(rank == 1 ? "Melhor horário" : "Sugestão \(rank)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(rank == 1 ? AppTheme.accent : HFCalTheme.muted)
+                    Spacer()
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(HFCalTheme.eventGreen)
+                    }
+                }
+                Text(slot.label)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text("\(durationMinutes) min")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                ForEach(slot.reasons, id: \.self) { reason in
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "checkmark")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(AppTheme.accent)
+                        Text(reason)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? HFCalTheme.eventGreen.opacity(0.22) : Color.white.opacity(0.06))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? HFCalTheme.eventGreen : Color.white.opacity(0.08), lineWidth: isSelected ? 1.5 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func configureInitialModeIfNeeded() {
+        guard !didConfigureInitialMode else { return }
+        didConfigureInitialMode = true
+        if showsAssistantOption {
+            bookingMode = .smart
+        } else {
+            bookingMode = .manual
+        }
+    }
+
+    private func refreshSuggestions() async {
+        guard showsAssistantOption else { return }
+        isLoadingSuggestions = true
+        defer { isLoadingSuggestions = false }
+        suggestedSlots = await coach.suggestedConsultationSlots(for: link, daysAhead: 14, limit: 8)
+        if let selectedStart,
+           !suggestedSlots.contains(where: { abs($0.startAt.timeIntervalSince(selectedStart)) < 1 }) {
+            self.selectedStart = nil
         }
     }
 
@@ -432,18 +629,26 @@ struct CoachScheduleConsultationView: View {
                                     .font(.caption2.weight(.semibold))
                                     .foregroundStyle(HFCalTheme.eventGreen)
                             }
+                            Text(item.mode.shortBadge)
+                                .font(.caption2.weight(.semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(item.mode == .smart ? AppTheme.accent.opacity(0.25) : Color.white.opacity(0.08))
+                                .clipShape(Capsule())
+                                .foregroundStyle(item.mode == .smart ? AppTheme.accent : HFCalTheme.muted)
                             if !item.note.isEmpty {
                                 Text(item.note)
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
-                            Text("Lembretes automáticos: 24h, 1h e 15 min antes")
+                            Text("Lembretes automáticos: 24h, 1h e 15 min antes · pode cancelar ou remarcar a qualquer momento")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                             HStack(spacing: 12) {
                                 Button("Remarcar") {
                                     bookingToReschedule = item
                                     selectedStart = nil
+                                    bookingMode = .manual
                                     focusedDay = calendar.startOfDay(for: item.startAt)
                                     scope = .day
                                     statusMessage = "Escolha o novo horário no calendário."
@@ -1026,21 +1231,31 @@ struct CoachScheduleConsultationView: View {
                 statusMessage = "Remarcada com lembretes automáticos. O outro lado foi notificado."
                 self.bookingToReschedule = nil
                 self.selectedStart = nil
+                if showsAssistantOption {
+                    bookingMode = .smart
+                    await refreshSuggestions()
+                }
             } else {
                 statusMessage = coach.lastError ?? "Não foi possível remarcar."
             }
             return
         }
+        let mode: ConsultationBookingMode = isAssistantMode ? .smart : .manual
         if let booking = await coach.scheduleConsultation(
             link: link,
             startAt: selectedStart,
-            mode: .manual,
+            mode: mode,
             note: note
         ) {
             confirmationBanner = booking.confirmedScheduleLabel
-            statusMessage = "Lembretes automáticos ativos (24h, 1h e 15 min antes)."
+            statusMessage = mode == .smart
+                ? "Agendada pelo Assistente. Você pode cancelar ou remarcar quando quiser."
+                : "Lembretes automáticos ativos (24h, 1h e 15 min antes)."
             self.selectedStart = nil
             note = ""
+            if isAssistantMode {
+                await refreshSuggestions()
+            }
         } else {
             statusMessage = coach.lastError ?? "Não foi possível agendar."
         }

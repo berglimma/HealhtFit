@@ -9,7 +9,11 @@ const path = require("path");
 const PROJECT_ID = "healthfit-30d87";
 const FUNCTION_REGION = "southamerica-east1";
 const FUNCTION_NAME = "ensureAppReviewDemoAccount";
-const COURTESY_SEED_KEY = "healthfit-courtesy-seed-v2-40x";
+const COURTESY_SEED_KEY = (process.env.COURTESY_SEED_KEY || "").trim();
+if (!COURTESY_SEED_KEY) {
+  console.error("Defina COURTESY_SEED_KEY no ambiente — não versionar no git.");
+  process.exit(1);
+}
 
 function repoRoot() {
   return path.resolve(__dirname, "..", "..");

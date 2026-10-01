@@ -85,7 +85,7 @@ struct SocialLoginButtonsView: View {
     }
 
     private func configureAppleRequest(_ request: ASAuthorizationAppleIDRequest) {
-        let nonce = AppleSignInNonce.randomNonce()
+        guard let nonce = AppleSignInNonce.randomNonce() else { return }
         currentAppleNonce = nonce
         request.requestedScopes = [.fullName, .email]
         request.nonce = AppleSignInNonce.sha256(nonce)

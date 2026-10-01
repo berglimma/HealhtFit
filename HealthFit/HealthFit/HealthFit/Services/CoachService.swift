@@ -1019,6 +1019,22 @@ final class CoachService: ObservableObject {
         )
     }
 
+    /// Assistente de agendamento: horários livres ranqueados (agenda do profissional + calendário).
+    func suggestedConsultationSlots(
+        for link: CoachLink,
+        daysAhead: Int = 14,
+        limit: Int = 8
+    ) async -> [ConsultationSuggestedSlot] {
+        let open = await openConsultationSlots(for: link, daysAhead: daysAhead, limit: max(limit * 4, 32))
+        let existing = allActiveConsultations(forCoachUid: link.coachUid)
+        return ConsultationSchedulingAssistant.suggest(
+            openSlots: open,
+            existing: existing,
+            from: .now,
+            limit: limit
+        )
+    }
+
     func scheduleConsultation(
         link: CoachLink,
         startAt: Date,
@@ -1060,9 +1076,10 @@ final class CoachService: ObservableObject {
             // Avisa o outro lado via chat (gera push/local no destinatário).
             let peerIsCoach = uid == link.studentUid
             let who = peerIsCoach ? booking.studentName : booking.coachName
+            let viaAssistente = mode == .smart ? " (Assistente)" : ""
             let chatText = peerIsCoach
-                ? "✅ \(who) agendou: \(booking.confirmedScheduleLabel)"
-                : "✅ Consulta marcada: \(booking.confirmedScheduleLabel)"
+                ? "✅ \(who) agendou\(viaAssistente): \(booking.confirmedScheduleLabel)"
+                : "✅ Consulta marcada\(viaAssistente): \(booking.confirmedScheduleLabel)"
             _ = await sendChat(link: link, text: chatText)
             return booking
         } catch {

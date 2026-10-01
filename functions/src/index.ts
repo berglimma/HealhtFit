@@ -687,8 +687,12 @@ export const redeemCourtesyVoucher = onCall(
   }
 );
 
-/** Uso interno: popular courtesyVouchers via `npm run seed:courtesy -- --deploy`. */
-const COURTESY_SEED_KEY = "healthfit-courtesy-seed-v2-40x";
+/** Uso interno: popular courtesyVouchers via `npm run seed:courtesy -- --deploy`.
+ *  Segredo via env COURTESY_SEED_KEY (Firebase Secret / .env local) — não versionar.
+ */
+function resolveCourtesySeedKey(): string {
+  return (process.env.COURTESY_SEED_KEY || "").trim();
+}
 
 export const seedCourtesyVouchers = onRequest(
   {
@@ -702,7 +706,8 @@ export const seedCourtesyVouchers = onRequest(
       res.status(405).json({error: "Use POST"});
       return;
     }
-    if (req.get("x-healthfit-seed-key") !== COURTESY_SEED_KEY) {
+    const seedKey = resolveCourtesySeedKey();
+    if (!seedKey || req.get("x-healthfit-seed-key") !== seedKey) {
       res.status(403).json({error: "Forbidden"});
       return;
     }
@@ -780,7 +785,8 @@ export const ensureAppReviewDemoAccount = onRequest(
       res.status(405).json({error: "Use POST"});
       return;
     }
-    if (req.get("x-healthfit-seed-key") !== COURTESY_SEED_KEY) {
+    const seedKey = resolveCourtesySeedKey();
+    if (!seedKey || req.get("x-healthfit-seed-key") !== seedKey) {
       res.status(403).json({error: "Forbidden"});
       return;
     }

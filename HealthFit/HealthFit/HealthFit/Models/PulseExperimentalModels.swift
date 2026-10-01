@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 /// HealthFit Pulse — compilado em Debug e Release.
 /// UI/sync OFF por padrão; produção liga via Firestore `appConfig/ios` (`pulseEnabled` / `pulseCloudSyncEnabled`).
@@ -149,9 +150,19 @@ enum PulseExperimental {
         set { UserDefaults.standard.set(newValue, forKey: spotifyClientIdKey) }
     }
 
+    /// Segredo OAuth do Spotify — Keychain (não UserDefaults).
     static var spotifyClientSecret: String {
-        get { UserDefaults.standard.string(forKey: spotifyClientSecretKey) ?? "" }
-        set { UserDefaults.standard.set(newValue, forKey: spotifyClientSecretKey) }
+        get { PulseSecureStore.string(account: spotifyClientSecretKey) ?? "" }
+        set {
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                PulseSecureStore.delete(account: spotifyClientSecretKey)
+            } else {
+                PulseSecureStore.set(trimmed, account: spotifyClientSecretKey)
+            }
+            // Remove cópia legada insegura do UserDefaults, se existir.
+            UserDefaults.standard.removeObject(forKey: spotifyClientSecretKey)
+        }
     }
 
     static var hasSpotifyCredentials: Bool {
@@ -176,6 +187,7 @@ enum PulseExperimental {
         defaults.removeObject(forKey: cloudSyncEnabledKey)
         defaults.removeObject(forKey: spotifyClientIdKey)
         defaults.removeObject(forKey: spotifyClientSecretKey)
+        PulseSecureStore.delete(account: spotifyClientSecretKey)
         defaults.removeObject(forKey: termsAcceptedPrefix + userId + "." + termsVersion)
         defaults.removeObject(forKey: termsAcceptedPrefix + userId + ".at")
         // Prefixo de termos de versões anteriores.
@@ -1379,5 +1391,54 @@ struct PulseSeededGenerator {
         z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
         z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
         return z ^ (z >> 31)
+    }
+}
+
+// MARK: - Keychain (segredos Pulse)
+
+/// Armazena valores sensíveis no Keychain (não em UserDefaults).
+enum PulseSecureStore {
+    private static let service = "com.healthfit.pulse.secure"
+
+    static func string(account: String) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess,
+              let data = item as? Data,
+              let value = String(data: data, encoding: .utf8)
+        else { return nil }
+        return value
+    }
+
+    @discardableResult
+    static func set(_ value: String, account: String) -> Bool {
+        delete(account: account)
+        guard let data = value.data(using: .utf8) else { return false }
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
+    }
+
+    @discardableResult
+    static func delete(account: String) -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        let status = SecItemDelete(query as CFDictionary)
+        return status == errSecSuccess || status == errSecItemNotFound
     }
 }

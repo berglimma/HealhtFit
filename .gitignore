@@ -30,6 +30,7 @@ functions/serviceAccountKey.json
 # Segredos / ambiente
 .env
 .env.*
+!.env.example
 *.secret
 secrets.plist
 
@@ -51,3 +52,11 @@ _stash_tmp/
 # Vouchers de cortesia (códigos reais — não publicar)
 **/courtesy-vouchers.local.md
 **/courtesy-vouchers.local.csv
+**/courtesy-vouchers*.local.md
+**/courtesy-vouchers*.local.csv
+
+# SonarQube local
+.scannerwork/
+sonar/dashboard/portal.log
+sonar/dashboard/portal.pid
+**/.sonar/

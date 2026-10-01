@@ -608,7 +608,7 @@ private final class LoopingMutedPlayerView: UIView {
 
     override class var layerClass: AnyClass { AVPlayerLayer.self }
 
-    private var avLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+    private var avLayer: AVPlayerLayer? { layer as? AVPlayerLayer }
 
     func configure(url: URL) {
         guard configuredURL != url else {
@@ -626,8 +626,8 @@ private final class LoopingMutedPlayerView: UIView {
         queue.actionAtItemEnd = .none
         looper = AVPlayerLooper(player: queue, templateItem: template)
         player = queue
-        avLayer.player = queue
-        avLayer.videoGravity = .resizeAspectFill
+        avLayer?.player = queue
+        avLayer?.videoGravity = .resizeAspectFill
         queue.play()
     }
 
@@ -635,7 +635,7 @@ private final class LoopingMutedPlayerView: UIView {
         player?.pause()
         looper?.disableLooping()
         looper = nil
-        avLayer.player = nil
+        avLayer?.player = nil
         player = nil
         configuredURL = nil
     }

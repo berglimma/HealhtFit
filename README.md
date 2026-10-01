@@ -30,6 +30,7 @@ Aplicativo iOS + watchOS de saúde e fitness desenvolvido em **Swift** e **Swift
 - [Configuração e execução](#configuração-e-execução)
 - [Build via linha de comando](#build-via-linha-de-comando)
 - [Scripts auxiliares](#scripts-auxiliares)
+- [SonarQube local](#sonarqube-local)
 - [Convenções de código](#convenções-de-código)
 - [Limitações conhecidas](#limitações-conhecidas)
 
@@ -562,6 +563,21 @@ Gera em `Assets.xcassets`: `AppIconYellow`, `AppIconRed`, `AppIconBroken`, frame
 ```bash
 python3 generate_report.py
 ```
+
+---
+
+## SonarQube local
+
+Portal web do projeto: **http://localhost:9040** (métricas + Quality Gate).  
+UI oficial SonarQube: **http://localhost:9000**.
+
+```bash
+./sonar/scripts/up.sh      # Docker SonarQube + portal
+./sonar/scripts/scan.sh    # analisa o código
+./sonar/scripts/down.sh    # encerra
+```
+
+Detalhes em `sonar/README.md`. Segredos de seed/demo: use `.env.example` → `.env` (não versionar).
 
 ---
 
