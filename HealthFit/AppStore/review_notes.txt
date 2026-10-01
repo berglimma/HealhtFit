@@ -1,13 +1,9 @@
-HealthFit 1.0.14 (27)
+HealthFit 1.0.15 (28)
 
 What's new in this binary:
-- Removed private alternate-icon API (_setAlternateIconName); uses public setAlternateIconName only (Guideline 2.5.1).
-- Apple Watch: added NSMotionUsageDescription for Surf/Kitesurf jump detection and climbing motion.
-- iPhone: HealthKit background-delivery entitlement aligned with enableBackgroundDelivery.
-- Watch: Now Playing controls via left→right swipe during any workout (system player: Music, Spotify, etc.).
-- Watch↔iPhone chronometer: wall-clock sync (no freeze/jump after WCSession sync).
-- Flyover: option to post to Pulse.
-- Faster resume from background (deferred heavy HealthKit/Duo/catalog work).
+- Welcome loading glow now follows sleep+water wellness status (green when both updated today).
+- Dashboard Discipline card rotates a daily motivation phrase.
+- Flyover exporter: fixed invalid drawOverlay signature that broke Xcode Cloud builds.
 
 Still in effect from prior review replies:
 - App Store binary: no in-app courtesy/promo code unlocks (TestFlight/Debug only).
@@ -19,4 +15,4 @@ Username: healthfit.appreview@gmail.com
 Password: HealthFitReview2026!
 
 Privacy: https://healthfit-30d87.web.app/privacidade/
-No encryption changes.
+No encryption changes (uses HTTPS/standard encryption only).

@@ -1,6 +1,6 @@
 # Checklist — publicar HealthFit na App Store
 
-Versão alvo: **1.0.14 (Build 27)** · Bundle `luan.com.healthfit.app`
+Versão alvo: **1.0.15 (Build 28)** · Bundle `luan.com.healthfit.app`
 
 ## URLs legais
 

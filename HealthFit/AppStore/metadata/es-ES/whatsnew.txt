@@ -1,4 +1,4 @@
-• Cumplimiento App Store: API pública de icono, motion en Watch y HealthKit en segundo plano
-• Apple Watch: player Now Playing con swipe y cronómetro estable con el iPhone
-• Flyover: opción de publicar en Pulse; retorno más rápido desde segundo plano
-• Suscripciones solo por App Store; códigos de cortesía solo en TestFlight
+• Pantalla de bienvenida: brillo verde cuando sueño y agua del día están actualizados
+• Tarjeta Disciplina: frases motivacionales que cambian cada día
+• Corrección de estabilidad en Flyover
+• Asistente de agenda y mejoras de rendimiento
