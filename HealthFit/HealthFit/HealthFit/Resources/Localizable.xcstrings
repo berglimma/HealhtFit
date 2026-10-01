@@ -269,6 +269,16 @@
         }
       }
     },
+    "%@. %@. %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. %2$@. %3$@"
+          }
+        }
+      }
+    },
     "%@%lld kcal" : {
       "localizations" : {
         "pt-BR" : {
@@ -3487,9 +3497,6 @@
     "Disciplina · Evolução · Constância" : {
 
     },
-    "Disciplina hoje, resultados amanhã." : {
-
-    },
     "Dispensar" : {
 
     },
@@ -5708,9 +5715,6 @@
 
     },
     "Pendente" : {
-
-    },
-    "Pequenas escolhas, grandes conquistas." : {
 
     },
     "Perda estimada" : {
@@ -12427,9 +12431,6 @@
 
     },
     "Você concluiu a ficha recomendada. Deseja incluir mais algum exercício nesta sessão?" : {
-
-    },
-    "VOCÊ CONSEGUE!" : {
 
     },
     "Você consome muito doce?" : {

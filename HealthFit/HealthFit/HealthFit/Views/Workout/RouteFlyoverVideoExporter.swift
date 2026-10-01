@@ -490,7 +490,7 @@ enum RouteFlyoverVideoExporter {
         cg.strokePath()
     }
 
-    private static func drawOverlay( ,
+    private static func drawOverlay(
         _ cg: CGContext,
         size: CGSize,
         metrics: RouteFlyoverMetrics,
