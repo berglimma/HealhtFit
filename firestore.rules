@@ -315,6 +315,25 @@ service cloud.firestore {
         && userId in coachLinkData(linkId).get('memberUids', []);
     }
 
+    // Aluno com vínculo ativo (personal ou nutri) pode ler a agenda do profissional.
+    function isLinkedStudentOfCoach(coachUid) {
+      let personalId = coachUid + '_' + request.auth.uid + '_personal';
+      let nutriId = coachUid + '_' + request.auth.uid + '_nutritionist';
+      return request.auth != null
+        && (
+          (
+            exists(/databases/$(database)/documents/coachLinks/$(personalId))
+            && request.auth.uid in get(/databases/$(database)/documents/coachLinks/$(personalId)).data.get('memberUids', [])
+            && get(/databases/$(database)/documents/coachLinks/$(personalId)).data.get('status', '') in ['active', 'blockedPlan']
+          )
+          || (
+            exists(/databases/$(database)/documents/coachLinks/$(nutriId))
+            && request.auth.uid in get(/databases/$(database)/documents/coachLinks/$(nutriId)).data.get('memberUids', [])
+            && get(/databases/$(database)/documents/coachLinks/$(nutriId)).data.get('status', '') in ['active', 'blockedPlan']
+          )
+        );
+    }
+
     match /coachProfiles/{uid} {
       allow read: if request.auth != null
         && (request.auth.uid == uid
@@ -337,6 +356,16 @@ service cloud.firestore {
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
           && request.resource.data.name.size() <= 80;
+        allow delete: if request.auth != null && request.auth.uid == uid;
+      }
+
+      // Agenda semanal do profissional (Assistente de agendamento + calendário).
+      match /settings/{docId} {
+        allow read: if request.auth != null
+          && (request.auth.uid == uid || isLinkedStudentOfCoach(uid));
+        allow create, update: if request.auth != null
+          && request.auth.uid == uid
+          && request.resource.data.coachUid == request.auth.uid;
         allow delete: if request.auth != null && request.auth.uid == uid;
       }
     }
@@ -412,6 +441,34 @@ service cloud.firestore {
           && request.resource.data.linkId == linkId;
         allow delete: if isCoachOfLink(linkId)
           && request.auth.uid == resource.data.coachUid;
+      }
+
+      match /nutritionCare/{docId} {
+        allow read: if isCoachLinkMember(linkId)
+          && (isCoachOfLink(linkId) || isCoachLinkActive(linkId));
+        allow create, update: if isCoachOfLink(linkId)
+          && request.auth.uid == request.resource.data.coachUid
+          && request.resource.data.linkId == linkId;
+        allow delete: if isCoachOfLink(linkId)
+          && request.auth.uid == resource.data.coachUid;
+      }
+
+      // Consultas (Assistente de agendamento / calendário) — ambos os lados do vínculo.
+      match /consultations/{consultationId} {
+        allow read: if isCoachLinkMember(linkId);
+        allow create, update: if isCoachLinkMember(linkId)
+          && request.resource.data.linkId == linkId
+          && request.resource.data.coachUid == coachLinkData(linkId).coachUid
+          && request.resource.data.studentUid == coachLinkData(linkId).studentUid
+          && request.auth.uid in [
+            coachLinkData(linkId).coachUid,
+            coachLinkData(linkId).studentUid
+          ];
+        allow delete: if isCoachLinkMember(linkId)
+          && request.auth.uid in [
+            resource.data.coachUid,
+            resource.data.studentUid
+          ];
       }
     }
 

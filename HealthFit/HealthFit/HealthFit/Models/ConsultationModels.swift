@@ -81,6 +81,7 @@ struct CoachAvailability: Codable, Equatable, Hashable {
     var updatedAt: Date
 
     static let defaultDuration = 45
+    static let defaultAllowedModes: [ConsultationBookingMode] = [.smart, .manual]
 
     static func empty(coachUid: String) -> CoachAvailability {
         CoachAvailability(
@@ -88,7 +89,7 @@ struct CoachAvailability: Codable, Equatable, Hashable {
             weekdayRanges: Self.defaultWeekdayRanges,
             slotDurationMinutes: defaultDuration,
             timezoneIdentifier: TimeZone.current.identifier,
-            allowedModes: [.smart, .manual],
+            allowedModes: defaultAllowedModes,
             syncToDeviceCalendar: true,
             updatedAt: .now
         )
@@ -103,6 +104,36 @@ struct CoachAvailability: Codable, Equatable, Hashable {
             map[String(weekday)] = [morning, afternoon]
         }
         return map
+    }
+
+    init(
+        coachUid: String,
+        weekdayRanges: [String: [ConsultationTimeRange]],
+        slotDurationMinutes: Int,
+        timezoneIdentifier: String,
+        allowedModes: [ConsultationBookingMode],
+        syncToDeviceCalendar: Bool,
+        updatedAt: Date
+    ) {
+        self.coachUid = coachUid
+        self.weekdayRanges = weekdayRanges
+        self.slotDurationMinutes = slotDurationMinutes
+        self.timezoneIdentifier = timezoneIdentifier
+        self.allowedModes = allowedModes.isEmpty ? Self.defaultAllowedModes : allowedModes
+        self.syncToDeviceCalendar = syncToDeviceCalendar
+        self.updatedAt = updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        coachUid = try container.decode(String.self, forKey: .coachUid)
+        weekdayRanges = try container.decodeIfPresent([String: [ConsultationTimeRange]].self, forKey: .weekdayRanges) ?? [:]
+        slotDurationMinutes = try container.decodeIfPresent(Int.self, forKey: .slotDurationMinutes) ?? Self.defaultDuration
+        timezoneIdentifier = try container.decodeIfPresent(String.self, forKey: .timezoneIdentifier) ?? TimeZone.current.identifier
+        let modes = try container.decodeIfPresent([ConsultationBookingMode].self, forKey: .allowedModes) ?? []
+        allowedModes = modes.isEmpty ? Self.defaultAllowedModes : modes
+        syncToDeviceCalendar = try container.decodeIfPresent(Bool.self, forKey: .syncToDeviceCalendar) ?? true
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .now
     }
 
     func ranges(forWeekday weekday: Int) -> [ConsultationTimeRange] {

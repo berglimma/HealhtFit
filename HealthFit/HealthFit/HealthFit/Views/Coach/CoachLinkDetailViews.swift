@@ -442,10 +442,9 @@ struct CoachLinkDetailView: View {
         }
         .sheet(isPresented: $showScheduleConsultation) {
             NavigationStack {
-                CoachScheduleConsultationView(
-                    link: liveLink,
-                    showCoachWideAgenda: isCoach
-                )
+                // Sheet 1:1: aluno e profissional usam Assistente + calendário.
+                // A agenda wide (conflitos entre alunos) fica em "Agenda de consultas".
+                CoachScheduleConsultationView(link: liveLink, showCoachWideAgenda: false)
             }
         }
         .alert("Excluir ficha?", isPresented: deletionAlertBinding) {

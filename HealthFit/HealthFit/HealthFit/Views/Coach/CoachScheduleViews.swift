@@ -193,13 +193,15 @@ struct CoachScheduleConsultationView: View {
         authService.currentUser?.id == link.studentUid
     }
 
-    /// Assistente só para o aluno (não na agenda wide do profissional).
+    /// Assistente para o aluno; também no sheet 1:1 do profissional (não na agenda wide).
     private var showsAssistantOption: Bool {
-        isStudentViewer && !showCoachWideAgenda && availability.allowsSmart
+        !showCoachWideAgenda && availability.allowsSmart && (
+            isStudentViewer || authService.currentUser?.id == link.coachUid
+        )
     }
 
     private var showsManualOption: Bool {
-        availability.allowsManual || showCoachWideAgenda || !isStudentViewer || !availability.allowsSmart
+        availability.allowsManual || showCoachWideAgenda || !availability.allowsSmart
     }
 
     private var showsModePicker: Bool {
@@ -222,14 +224,14 @@ struct CoachScheduleConsultationView: View {
         coach.allActiveConsultations(forCoachUid: link.coachUid)
     }
 
-    /// Eventos desenhados no calendário.
+    /// Eventos desenhados no calendário (só o vínculo neste sheet 1:1).
     private var calendarBookings: [ConsultationBooking] {
         showCoachWideAgenda ? coachWideBookings : linkBookings
     }
 
-    /// Conflitos ao marcar horário (sempre agenda completa do coach quando wide).
+    /// Conflitos ao marcar horário: sempre a agenda completa do profissional.
     private var conflictBookings: [ConsultationBooking] {
-        showCoachWideAgenda ? coachWideBookings : linkBookings
+        coachWideBookings
     }
 
     private var upcoming: [ConsultationBooking] {
@@ -352,6 +354,14 @@ struct CoachScheduleConsultationView: View {
                 Task { await refreshSuggestions() }
             }
         }
+        .onChange(of: coach.availabilityByCoachUid[link.coachUid]?.allowedModes) { _, _ in
+            // Agenda do profissional chegou/atualizou — reabre o Assistente se estiver liberado.
+            if showsAssistantOption, bookingMode != .smart, bookingToReschedule == nil {
+                bookingMode = .smart
+            } else if !showsAssistantOption {
+                bookingMode = .manual
+            }
+        }
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { date in
             nowTicker = date
         }
@@ -361,10 +371,10 @@ struct CoachScheduleConsultationView: View {
         VStack(alignment: .leading, spacing: 6) {
             Picker("Modo", selection: $bookingMode) {
                 if showsAssistantOption {
-                    Text(ConsultationBookingMode.smart.title).tag(ConsultationBookingMode.smart)
+                    Text("Assistente").tag(ConsultationBookingMode.smart)
                 }
                 if showsManualOption {
-                    Text(ConsultationBookingMode.manual.title).tag(ConsultationBookingMode.manual)
+                    Text("Calendário").tag(ConsultationBookingMode.manual)
                 }
             }
             .pickerStyle(.segmented)
