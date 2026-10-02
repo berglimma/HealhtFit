@@ -258,8 +258,9 @@ final class WorkoutStore: ObservableObject {
             saveData()
             _ = autoEndStaleActiveSessionIfNeeded()
         } else {
-            // Seed Shape right away so "Foco no Shape" isn't empty while other samples refresh.
+            // Seed Shape / Militar right away so method hubs aren't empty while other samples refresh.
             ensureShapeWorkoutsSeeded()
+            ensureMilitarWorkoutsSeeded()
             // Returning users: full sample merge can wait — don't hitch first tab switches.
             try? await Task.sleep(nanoseconds: 1_200_000_000)
             refreshSampleWorkoutsIfNeeded()
@@ -460,12 +461,40 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
+    /// Fichas Método Militar. Catálogo como fonte; prefere cópia persistida (ID estável).
+    func militarStandardWorkouts(for gender: Gender) -> [WorkoutSheet] {
+        let catalog = MilitarWorkoutCatalog.sheets(for: gender)
+        let storedByTitle = Dictionary(
+            workoutSheets.map { ($0.title, $0) },
+            uniquingKeysWith: { current, _ in current }
+        )
+        return catalog.map { sample in
+            storedByTitle[sample.title] ?? sample
+        }
+    }
+
     /// Garante que as fichas Foco no Shape existam no store (usuários que já tinham o app instalado).
     @discardableResult
     func ensureShapeWorkoutsSeeded() -> Bool {
         var existingTitles = Set(workoutSheets.map(\.title))
         var didAdd = false
         for sample in Self.shapeSampleWorkouts where !existingTitles.contains(sample.title) {
+            workoutSheets.append(sample)
+            existingTitles.insert(sample.title)
+            didAdd = true
+        }
+        if didAdd {
+            saveDataLocalOnly()
+        }
+        return didAdd
+    }
+
+    /// Garante que as fichas Método Militar existam no store (upgrade de app já instalado).
+    @discardableResult
+    func ensureMilitarWorkoutsSeeded() -> Bool {
+        var existingTitles = Set(workoutSheets.map(\.title))
+        var didAdd = false
+        for sample in Self.militarSampleWorkouts where !existingTitles.contains(sample.title) {
             workoutSheets.append(sample)
             existingTitles.insert(sample.title)
             didAdd = true
@@ -519,6 +548,7 @@ final class WorkoutStore: ObservableObject {
     private static let sampleWorkoutTitles: Set<String> = {
         RecommendedWorkoutCatalog.allRecommendedTitles
             .union(ShapeWorkoutCatalog.allTitles)
+            .union(MilitarWorkoutCatalog.allTitles)
             .union(homeSampleTitles)
             .union(mobilitySampleTitles)
     }()
@@ -1870,6 +1900,7 @@ final class WorkoutStore: ObservableObject {
         maleSampleWorkouts
         + femaleSampleWorkouts
         + shapeSampleWorkouts
+        + militarSampleWorkouts
         + homeSampleWorkouts
         + mobilitySampleWorkouts
 
@@ -1882,6 +1913,10 @@ final class WorkoutStore: ObservableObject {
     /// Método Shape de Respeito — fichas masculino e feminino (Nível 1 e 2).
     static let shapeSampleWorkouts: [WorkoutSheet] =
         ShapeWorkoutCatalog.allMaleSheets + ShapeWorkoutCatalog.allFemaleSheets
+
+    /// Método Militar — fichas masculino e feminino (Soldado / Cabo).
+    static let militarSampleWorkouts: [WorkoutSheet] =
+        MilitarWorkoutCatalog.allMaleSheets + MilitarWorkoutCatalog.allFemaleSheets
 
     /// Programa em casa — peso corporal com demos em vídeo/GIF durante o treino.
     static let homeSampleWorkouts: [WorkoutSheet] = [

@@ -287,8 +287,12 @@ enum MusculacaoProgram: Equatable {
     private static func program(fromTitle title: String) -> MusculacaoProgram? {
         let lower = title.lowercased()
         if lower.hasPrefix("mobilidade") { return .mobility }
-        if lower.hasPrefix("masculino") || lower.hasPrefix("shape masculino") { return .male }
-        if lower.hasPrefix("feminino") || lower.hasPrefix("shape feminino") { return .female }
+        if lower.hasPrefix("masculino")
+            || lower.hasPrefix("shape masculino")
+            || lower.hasPrefix("militar masculino") { return .male }
+        if lower.hasPrefix("feminino")
+            || lower.hasPrefix("shape feminino")
+            || lower.hasPrefix("militar feminino") { return .female }
         return nil
     }
 }
@@ -419,8 +423,12 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
 
     private static func inferredGender(from title: String) -> Gender? {
         let lower = title.lowercased()
-        if lower.hasPrefix("masculino") || lower.hasPrefix("shape masculino") { return .male }
-        if lower.hasPrefix("feminino") || lower.hasPrefix("shape feminino") { return .female }
+        if lower.hasPrefix("masculino")
+            || lower.hasPrefix("shape masculino")
+            || lower.hasPrefix("militar masculino") { return .male }
+        if lower.hasPrefix("feminino")
+            || lower.hasPrefix("shape feminino")
+            || lower.hasPrefix("militar feminino") { return .female }
         return nil
     }
 
@@ -819,15 +827,49 @@ struct WorkoutSession: Identifiable, Codable {
     }
 
     var isWaterSportSession: Bool {
-        SurfKiteMetricsAnalyzer.isWaterSportSession(self)
+        isKitesurfSession || isSurfSession
     }
 
     var isKitesurfSession: Bool {
-        SurfKiteMetricsAnalyzer.isKitesurfSession(self)
+        if let waterSport { return waterSport.isKitesurf }
+        if exerciseRecordsIndicateKitesurf { return true }
+        return Self.titleIndicatesKitesurf(workoutTitle)
     }
 
     var isSurfSession: Bool {
-        SurfKiteMetricsAnalyzer.isSurfSession(self)
+        if let waterSport { return !waterSport.isKitesurf }
+        if isKitesurfSession { return false }
+        if exerciseRecordsIndicateSurf { return true }
+        return Self.titleIndicatesSurf(workoutTitle)
+    }
+
+    private var exerciseRecordsIndicateKitesurf: Bool {
+        exerciseRecords.contains { record in
+            let n = record.exerciseName.lowercased()
+            return n.contains("kitesurf") || n.contains("kite surf")
+        }
+    }
+
+    private var exerciseRecordsIndicateSurf: Bool {
+        exerciseRecords.contains { record in
+            let n = record.exerciseName.lowercased()
+            if n.contains("kitesurf") || n.contains("kite surf") { return false }
+            let tokens = n.split { !$0.isLetter }.map(String.init)
+            return tokens.contains("surf") || tokens.contains("surfing")
+        }
+    }
+
+    private static func titleIndicatesKitesurf(_ title: String) -> Bool {
+        let t = title.lowercased()
+        return t.contains("kitesurf") || t.contains("kite surf")
+    }
+
+    private static func titleIndicatesSurf(_ title: String) -> Bool {
+        if titleIndicatesKitesurf(title) { return false }
+        let t = title.lowercased()
+        if t.contains("— surf") || t.contains("- surf") { return true }
+        let tokens = t.split { !$0.isLetter && $0 != "'" }.map(String.init)
+        return tokens.contains("surf") || tokens.contains("surfing")
     }
 
     var isRowingSession: Bool {

@@ -277,6 +277,7 @@
 		B1000978 /* AppUpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000978 /* AppUpdateService.swift */; };
 		B1000979 /* ForceAppUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000979 /* ForceAppUpdateView.swift */; };
 		B1000988 /* ShapeWorkoutCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000988 /* ShapeWorkoutCatalog.swift */; };
+		B1000989 /* MilitarWorkoutCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000989 /* MilitarWorkoutCatalog.swift */; };
 		B1000991 /* AssistantBirthdayCongratsEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000991 /* AssistantBirthdayCongratsEngine.swift */; };
 		B1000992 /* StrengthPerformanceAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000992 /* StrengthPerformanceAnalyzer.swift */; };
 		B1000993 /* StrengthPerformanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000993 /* StrengthPerformanceView.swift */; };
@@ -704,6 +705,7 @@
 		F1000978 /* AppUpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateService.swift; sourceTree = "<group>"; };
 		F1000979 /* ForceAppUpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceAppUpdateView.swift; sourceTree = "<group>"; };
 		F1000988 /* ShapeWorkoutCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapeWorkoutCatalog.swift; sourceTree = "<group>"; };
+		F1000989 /* MilitarWorkoutCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilitarWorkoutCatalog.swift; sourceTree = "<group>"; };
 		F1000991 /* AssistantBirthdayCongratsEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantBirthdayCongratsEngine.swift; sourceTree = "<group>"; };
 		F1000992 /* StrengthPerformanceAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrengthPerformanceAnalyzer.swift; sourceTree = "<group>"; };
 		F1000993 /* StrengthPerformanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrengthPerformanceView.swift; sourceTree = "<group>"; };
@@ -989,6 +991,7 @@
 				F1000914 /* NutritionNotificationPreferences.swift */,
 				F1000918 /* RecommendedWorkoutCatalog.swift */,
 				F1000988 /* ShapeWorkoutCatalog.swift */,
+				F1000989 /* MilitarWorkoutCatalog.swift */,
 				F1000915 /* WorkoutSheetOCRParser.swift */,
 				F1000010 /* RestTimerService.swift */,
 				F1000306 /* WorkoutLiveActivityAttributes.swift */,
@@ -1761,6 +1764,7 @@
 				B1000914 /* NutritionNotificationPreferences.swift in Sources */,
 				B1000918 /* RecommendedWorkoutCatalog.swift in Sources */,
 				B1000988 /* ShapeWorkoutCatalog.swift in Sources */,
+				B1000989 /* MilitarWorkoutCatalog.swift in Sources */,
 				B1000915 /* WorkoutSheetOCRParser.swift in Sources */,
 				B1000916 /* WorkoutSheetDocumentScanner.swift in Sources */,
 				B1000917 /* ScanWorkoutSheetView.swift in Sources */,

@@ -117,17 +117,23 @@ enum MusculacaoSheetCardStyle {
     case shape
     case shapeLevel1
     case shapeLevel2
+    case militarSoldado
+    case militarCabo
     case recommended
     case standard
 
     private static let shapeLevel1Blue = Color(red: 0.45, green: 0.72, blue: 0.98)
     private static let shapeLevel2Orange = AppTheme.accentSecondary
+    private static let militarOlive = Color(red: 0.45, green: 0.55, blue: 0.32)
+    private static let militarSand = Color(red: 0.72, green: 0.62, blue: 0.38)
 
     var badgeTitle: String? {
         switch self {
         case .shape: return "Foco no Shape"
         case .shapeLevel1: return "Shape · Nível 1"
         case .shapeLevel2: return "Shape · Nível 2"
+        case .militarSoldado: return "Militar · Soldado"
+        case .militarCabo: return "Militar · Cabo"
         case .recommended: return "Recomendado"
         case .standard: return nil
         }
@@ -136,6 +142,7 @@ enum MusculacaoSheetCardStyle {
     var badgeIcon: String {
         switch self {
         case .shape, .shapeLevel1, .shapeLevel2: return "flame.fill"
+        case .militarSoldado, .militarCabo: return "shield.fill"
         case .recommended: return "star.fill"
         case .standard: return "dumbbell.fill"
         }
@@ -151,6 +158,10 @@ enum MusculacaoSheetCardStyle {
             return Self.shapeLevel1Blue
         case .shapeLevel2:
             return Self.shapeLevel2Orange
+        case .militarSoldado:
+            return Self.militarOlive
+        case .militarCabo:
+            return Self.militarSand
         case .recommended:
             return gender == .female
                 ? Color(red: 0.86, green: 0.45, blue: 0.58)
@@ -285,6 +296,7 @@ struct MusculacaoPhotoSheetCard: View {
         if let displayTitle, !displayTitle.isEmpty { return displayTitle }
         var title = sheet.title
         for prefix in [
+            "Militar Feminino ", "Militar Masculino ",
             "Shape Feminino ", "Shape Masculino ",
             "Feminino ", "Masculino ",
             "Guiado — ", "Guiado - "

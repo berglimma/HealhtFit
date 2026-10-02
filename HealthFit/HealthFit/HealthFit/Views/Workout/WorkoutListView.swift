@@ -764,6 +764,18 @@ struct GenderWorkoutHubView: View {
         shapeSheets.filter { $0.title.contains("Nível 2") }
     }
 
+    private var militarSheets: [WorkoutSheet] {
+        workoutStore.militarStandardWorkouts(for: gender)
+    }
+
+    private var militarSoldadoSheets: [WorkoutSheet] {
+        militarSheets.filter { $0.title.contains("Soldado") }
+    }
+
+    private var militarCaboSheets: [WorkoutSheet] {
+        militarSheets.filter { $0.title.contains("Cabo") }
+    }
+
     private var customSheets: [WorkoutSheet] {
         workoutStore.customWorkoutSheets(for: gender).filter { !$0.isCoachPrescribed }
     }
@@ -826,6 +838,24 @@ struct GenderWorkoutHubView: View {
                     )
                 }
 
+                if !militarSoldadoSheets.isEmpty {
+                    workoutGroupSection(
+                        title: "Método Militar · Soldado",
+                        subtitle: "Base Push / Pull / Inferiores + condicionamento",
+                        sheets: militarSoldadoSheets,
+                        cardStyle: .militarSoldado
+                    )
+                }
+
+                if !militarCaboSheets.isEmpty {
+                    workoutGroupSection(
+                        title: "Método Militar · Cabo",
+                        subtitle: "Progressão de volume e intensidade",
+                        sheets: militarCaboSheets,
+                        cardStyle: .militarCabo
+                    )
+                }
+
                 workoutGroupSection(
                     title: "Recomendados",
                     subtitle: recommendedSubtitle,
@@ -846,6 +876,7 @@ struct GenderWorkoutHubView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             workoutStore.ensureShapeWorkoutsSeeded()
+            workoutStore.ensureMilitarWorkoutsSeeded()
             _ = workoutStore.refreshRecommendedRotationIfNeeded()
             if authService.currentUser?.musculacaoTrainingExperience == nil {
                 showExperiencePrompt = true
