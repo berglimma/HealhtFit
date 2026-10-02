@@ -446,11 +446,12 @@ service cloud.firestore {
       match /nutritionCare/{docId} {
         allow read: if isCoachLinkMember(linkId)
           && (isCoachOfLink(linkId) || isCoachLinkActive(linkId));
+        // App grava actorUid/actorName (não coachUid).
         allow create, update: if isCoachOfLink(linkId)
-          && request.auth.uid == request.resource.data.coachUid
+          && request.auth.uid == request.resource.data.actorUid
           && request.resource.data.linkId == linkId;
         allow delete: if isCoachOfLink(linkId)
-          && request.auth.uid == resource.data.coachUid;
+          && request.auth.uid == resource.data.get('actorUid', request.auth.uid);
       }
 
       // Consultas (Assistente de agendamento / calendário) — ambos os lados do vínculo.
