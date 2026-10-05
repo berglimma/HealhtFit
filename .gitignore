@@ -60,3 +60,11 @@ _stash_tmp/
 sonar/dashboard/portal.log
 sonar/dashboard/portal.pid
 **/.sonar/
+
+# Android (HealthFit_Android)
+HealthFit_Android/.gradle/
+HealthFit_Android/**/build/
+HealthFit_Android/local.properties
+HealthFit_Android/.idea/
+HealthFit_Android/**/google-services.json
+!HealthFit_Android/**/google-services.json.example

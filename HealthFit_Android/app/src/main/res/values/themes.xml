@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.HealthFit" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#14191A</item>
+        <item name="android:navigationBarColor">#14191A</item>
+        <item name="android:windowBackground">#14191A</item>
+    </style>
+</resources>

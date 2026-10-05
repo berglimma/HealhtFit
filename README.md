@@ -12,6 +12,11 @@ Aplicativo iOS + watchOS de saúde e fitness desenvolvido em **Swift** e **Swift
 **UI:** SwiftUI (tema escuro por padrão)  
 **Desenvolvimento:** BERG / LUAN
 
+### Android (em construção)
+
+Cliente nativo em [`HealthFit_Android/`](HealthFit_Android/) — Kotlin + Jetpack Compose + Wear OS, Firebase compartilhado com o iOS. Ver [`HealthFit_Android/ROADMAP.md`](HealthFit_Android/ROADMAP.md). **Não publica rules/Functions** a partir desse módulo.
+
+
 ---
 
 ## Índice
