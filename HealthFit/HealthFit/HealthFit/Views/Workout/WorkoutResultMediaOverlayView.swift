@@ -582,18 +582,19 @@ enum WorkoutResultPickedMedia {
 
 // MARK: - Looping muted video (preview)
 
-/// Player leve para preview do overlay: loop, mudo, aspect-fill.
-private struct LoopingMutedVideoPlayer: UIViewRepresentable {
+/// Player leve para preview / feed Pulse: loop, mudo, aspect-fill.
+struct LoopingMutedVideoPlayer: UIViewRepresentable {
     let url: URL
+    var videoGravity: AVLayerVideoGravity = .resizeAspectFill
 
     func makeUIView(context: Context) -> LoopingMutedPlayerView {
         let view = LoopingMutedPlayerView()
-        view.configure(url: url)
+        view.configure(url: url, videoGravity: videoGravity)
         return view
     }
 
     func updateUIView(_ uiView: LoopingMutedPlayerView, context: Context) {
-        uiView.configure(url: url)
+        uiView.configure(url: url, videoGravity: videoGravity)
     }
 
     static func dismantleUIView(_ uiView: LoopingMutedPlayerView, coordinator: ()) {
@@ -601,7 +602,7 @@ private struct LoopingMutedVideoPlayer: UIViewRepresentable {
     }
 }
 
-private final class LoopingMutedPlayerView: UIView {
+final class LoopingMutedPlayerView: UIView {
     private var player: AVQueuePlayer?
     private var looper: AVPlayerLooper?
     private var configuredURL: URL?
@@ -610,8 +611,9 @@ private final class LoopingMutedPlayerView: UIView {
 
     private var avLayer: AVPlayerLayer? { layer as? AVPlayerLayer }
 
-    func configure(url: URL) {
+    func configure(url: URL, videoGravity: AVLayerVideoGravity = .resizeAspectFill) {
         guard configuredURL != url else {
+            avLayer?.videoGravity = videoGravity
             if player?.timeControlStatus != .playing {
                 player?.play()
             }
@@ -627,7 +629,7 @@ private final class LoopingMutedPlayerView: UIView {
         looper = AVPlayerLooper(player: queue, templateItem: template)
         player = queue
         avLayer?.player = queue
-        avLayer?.videoGravity = .resizeAspectFill
+        avLayer?.videoGravity = videoGravity
         queue.play()
     }
 

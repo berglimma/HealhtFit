@@ -38,14 +38,8 @@ enum PulseExperimental {
         #endif
     }
 
-    /// Posts em vídeo: só em builds DEBUG por enquanto.
-    static var isVideoPostsEnabledInBuild: Bool {
-        #if DEBUG
-        true
-        #else
-        false
-        #endif
-    }
+    /// Posts em vídeo (Flyover, câmera, galeria) habilitados em Debug e Release.
+    static var isVideoPostsEnabledInBuild: Bool { true }
 
     private static let labEnabledKey = "pulse.experimental.labEnabled"
     private static let demoContentKey = "pulse.experimental.includeDemoContent"

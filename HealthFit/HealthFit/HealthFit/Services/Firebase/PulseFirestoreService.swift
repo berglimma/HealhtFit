@@ -34,13 +34,29 @@ enum PulseFirestoreService {
 
     @discardableResult
     static func upsertPost(_ post: PulsePost, imageJPEG: Data? = nil) async -> String? {
+        await upsertPost(post, mediaData: imageJPEG, contentType: "image/jpeg", fileExtension: "jpg")
+    }
+
+    @discardableResult
+    static func upsertPost(
+        _ post: PulsePost,
+        mediaData: Data?,
+        contentType: String,
+        fileExtension: String
+    ) async -> String? {
         guard PulseExperimental.isCloudSyncEffective, isAvailable else { return nil }
         guard let uid = Auth.auth().currentUser?.uid, !uid.isEmpty else { return nil }
         guard post.authorId == uid || post.authorId == "local" else { return nil }
 
         var remoteURL = post.remoteMediaURL
-        if let imageJPEG {
-            remoteURL = (try? await uploadJPEG(data: imageJPEG, userId: uid, fileId: post.id))?.absoluteString ?? remoteURL
+        if let mediaData {
+            remoteURL = (try? await uploadMedia(
+                data: mediaData,
+                userId: uid,
+                fileId: post.id,
+                contentType: contentType,
+                fileExtension: fileExtension
+            ))?.absoluteString ?? remoteURL
         }
 
         var payload = firestorePayload(for: post, authorId: uid, remoteMediaURL: remoteURL)
@@ -62,7 +78,11 @@ enum PulseFirestoreService {
             let snap = try await posts().document(id.uuidString).getDocument()
             guard snap.data()?["authorId"] as? String == uid else { return }
             try await posts().document(id.uuidString).delete()
-            try? await storage.reference(withPath: mediaPath(userId: uid, fileId: id)).delete()
+            for ext in ["jpg", "mp4", "mov"] {
+                try? await storage.reference(
+                    withPath: mediaPath(userId: uid, fileId: id, fileExtension: ext)
+                ).delete()
+            }
         } catch {
             print("[Pulse] Falha ao apagar post remoto: \(error.localizedDescription)")
         }
@@ -767,14 +787,32 @@ enum PulseFirestoreService {
         }
     }
 
-    private static func mediaPath(userId: String, fileId: UUID) -> String {
-        "pulse/\(userId)/\(fileId.uuidString).jpg"
+    private static func mediaPath(userId: String, fileId: UUID, fileExtension: String = "jpg") -> String {
+        "pulse/\(userId)/\(fileId.uuidString).\(fileExtension)"
     }
 
     private static func uploadJPEG(data: Data, userId: String, fileId: UUID) async throws -> URL {
-        let reference = storage.reference(withPath: mediaPath(userId: userId, fileId: fileId))
+        try await uploadMedia(
+            data: data,
+            userId: userId,
+            fileId: fileId,
+            contentType: "image/jpeg",
+            fileExtension: "jpg"
+        )
+    }
+
+    private static func uploadMedia(
+        data: Data,
+        userId: String,
+        fileId: UUID,
+        contentType: String,
+        fileExtension: String
+    ) async throws -> URL {
+        let reference = storage.reference(
+            withPath: mediaPath(userId: userId, fileId: fileId, fileExtension: fileExtension)
+        )
         let metadata = StorageMetadata()
-        metadata.contentType = "image/jpeg"
+        metadata.contentType = contentType
         _ = try await reference.putDataAsync(data, metadata: metadata)
         return try await reference.downloadURL()
     }

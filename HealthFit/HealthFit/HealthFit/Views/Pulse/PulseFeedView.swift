@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 import UIKit
 
@@ -451,9 +452,9 @@ struct PulseFeedView: View {
                             PulsePostCard(
                                 post: post,
                                 image: nil,
-                                imagePath: store.mediaPath(for: post),
-                                videoURL: (PulseExperimental.isVideoPostsEnabledInBuild && post.mediaKind == .video)
-                                    ? post.mediaFileName.map { store.mediaURL(for: $0) }
+                                imagePath: post.mediaKind == .video ? nil : store.mediaPath(for: post),
+                                videoURL: post.mediaKind == .video
+                                    ? store.videoPlaybackURL(for: post)
                                     : nil,
                                 currentUserId: authorId,
                                 currentUserAvatar: authService.profileImage,
@@ -509,9 +510,7 @@ struct PulseFeedView: View {
                                     prepareExternalShare(
                                         post: post,
                                         image: store.loadImage(for: post),
-                                        videoURL: post.mediaKind == .video
-                                            ? post.mediaFileName.map { store.mediaURL(for: $0) }
-                                            : nil
+                                        videoURL: store.videoPlaybackURL(for: post)
                                     )
                                 },
                                 onAppearIndex: { store.loadMoreFeedIfNeeded(currentIndex: index) }
@@ -2704,7 +2703,21 @@ private struct PulsePostCard: View {
 
     @ViewBuilder
     private var mediaView: some View {
-        if let imagePath {
+        if let videoURL {
+            LoopingMutedVideoPlayer(url: videoURL, videoGravity: .resizeAspect)
+                .aspectRatio(9 / 16, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .background(Color.black)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: "video.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(8)
+                        .background(.black.opacity(0.45), in: Capsule())
+                        .padding(10)
+                }
+        } else if let imagePath {
             PulseCachedAsyncImage(filePath: imagePath, contentMode: .fit)
                 .frame(maxWidth: .infinity)
         } else if let image {
@@ -2712,15 +2725,6 @@ private struct PulsePostCard: View {
                 .resizable()
                 .scaledToFit()
                 .frame(maxWidth: .infinity)
-        } else if videoURL != nil {
-            ZStack {
-                Color.black.opacity(0.4)
-                Image(systemName: "play.circle.fill")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.white.opacity(0.9))
-            }
-            .aspectRatio(9 / 16, contentMode: .fit)
-            .frame(maxWidth: .infinity)
         } else {
             ZStack {
                 AppTheme.gradientPrimary.opacity(0.35)

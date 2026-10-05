@@ -193,9 +193,9 @@ struct CoachScheduleConsultationView: View {
         authService.currentUser?.id == link.studentUid
     }
 
-    /// Assistente para o aluno; também no sheet 1:1 do profissional (não na agenda wide).
+    /// Assistente para o aluno, sheet 1:1 e Agenda de consultas do profissional.
     private var showsAssistantOption: Bool {
-        !showCoachWideAgenda && availability.allowsSmart && (
+        availability.allowsSmart && (
             isStudentViewer || authService.currentUser?.id == link.coachUid
         )
     }
@@ -354,6 +354,17 @@ struct CoachScheduleConsultationView: View {
                 Task { await refreshSuggestions() }
             }
         }
+        .onChange(of: link.id) { _, _ in
+            selectedStart = nil
+            suggestedSlots = []
+            configureInitialModeIfNeeded(force: true)
+            Task {
+                await refreshBusy()
+                if isAssistantMode {
+                    await refreshSuggestions()
+                }
+            }
+        }
         .onChange(of: coach.availabilityByCoachUid[link.coachUid]?.allowedModes) { _, _ in
             // Agenda do profissional chegou/atualizou — reabre o Assistente se estiver liberado.
             if showsAssistantOption, bookingMode != .smart, bookingToReschedule == nil {
@@ -399,7 +410,7 @@ struct CoachScheduleConsultationView: View {
                         Text("Assistente de agendamento")
                             .font(.headline)
                             .foregroundStyle(.white)
-                        Text("Analisei a agenda de \(link.coachName.isEmpty ? "seu profissional" : link.coachName) e os horários livres.")
+                        Text(assistantSubtitle)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -422,7 +433,7 @@ struct CoachScheduleConsultationView: View {
                     ContentUnavailableView(
                         "Sem horários livres",
                         systemImage: "calendar.badge.exclamationmark",
-                        description: Text("O profissional ainda não liberou agenda ou os próximos dias estão ocupados. Tente o calendário ou fale no chat.")
+                        description: Text(assistantEmptyDescription)
                     )
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
@@ -496,8 +507,23 @@ struct CoachScheduleConsultationView: View {
         .buttonStyle(.plain)
     }
 
-    private func configureInitialModeIfNeeded() {
-        guard !didConfigureInitialMode else { return }
+    private var assistantSubtitle: String {
+        if isStudentViewer {
+            return "Analisei a agenda de \(link.coachName.isEmpty ? "seu profissional" : link.coachName) e os horários livres."
+        }
+        let student = link.studentName.isEmpty ? "este aluno" : link.studentName
+        return "Analisei sua agenda e os horários livres para \(student)."
+    }
+
+    private var assistantEmptyDescription: String {
+        if isStudentViewer {
+            return "O profissional ainda não liberou agenda ou os próximos dias estão ocupados. Tente o calendário ou fale no chat."
+        }
+        return "Não há horários livres nos próximos dias. Ajuste Horários no canto superior ou use o Calendário."
+    }
+
+    private func configureInitialModeIfNeeded(force: Bool = false) {
+        if didConfigureInitialMode, !force { return }
         didConfigureInitialMode = true
         if showsAssistantOption {
             bookingMode = .smart
@@ -1417,6 +1443,7 @@ struct CoachProfessionalAgendaView: View {
                     studentPicker
                     syncedBanner
                     CoachScheduleConsultationView(link: link, isEmbedded: true, showCoachWideAgenda: true)
+                        .id(link.id)
                 }
             }
         }

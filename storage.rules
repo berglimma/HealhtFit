@@ -34,14 +34,18 @@ service firebase.storage {
         );
     }
 
-    // HealthFit Pulse — imagens de posts e stories (mesmo path pulse/{uid}/{file}.jpg).
-    // contentType image/*; máx. 8 MB. Isolado de exerciseVideos/users/duoTeams.
+    // HealthFit Pulse — fotos e vídeos de posts/stories (pulse/{uid}/{file}.jpg|.mp4|.mov).
+    // Imagens até 8 MB; vídeos até 40 MB (Flyover ~8s / posts até 30s).
     match /pulse/{userId}/{fileName} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
         && request.auth.uid == userId
-        && request.resource.size < 8 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
+        && (
+          (request.resource.contentType.matches('image/.*')
+            && request.resource.size < 8 * 1024 * 1024)
+          || (request.resource.contentType.matches('video/.*')
+            && request.resource.size < 40 * 1024 * 1024)
+        );
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
   }

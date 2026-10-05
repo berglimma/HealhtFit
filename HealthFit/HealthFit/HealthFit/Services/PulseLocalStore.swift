@@ -131,6 +131,7 @@ final class PulseLocalStore: ObservableObject {
     }
 
     func mediaPath(for post: PulsePost) -> String? {
+        if post.mediaKind == .video { return nil }
         if let name = post.mediaFileName {
             let path = mediaURL(for: name).path
             if FileManager.default.fileExists(atPath: path) { return path }
@@ -142,9 +143,25 @@ final class PulseLocalStore: ObservableObject {
         return nil
     }
 
+    /// URL local (ou remota) para reproduzir vídeo do post no feed.
+    func videoPlaybackURL(for post: PulsePost) -> URL? {
+        guard post.mediaKind == .video else { return nil }
+        if let name = post.mediaFileName {
+            let url = mediaURL(for: name)
+            if FileManager.default.fileExists(atPath: url.path) { return url }
+        }
+        if let cached = cachedRemoteVideoFileName(for: post.id) {
+            return mediaURL(for: cached)
+        }
+        if let remote = post.remoteMediaURL, let url = URL(string: remote) {
+            return url
+        }
+        return nil
+    }
+
     /// Prefer `mediaPath` + PulseCachedAsyncImage no feed. Sync só para sheets/legacy.
     func loadImage(for post: PulsePost) -> UIImage? {
-        guard let path = mediaPath(for: post) else { return nil }
+        guard post.mediaKind != .video, let path = mediaPath(for: post) else { return nil }
         return UIImage(contentsOfFile: path)
     }
 
@@ -165,10 +182,40 @@ final class PulseLocalStore: ObservableObject {
         return FileManager.default.fileExists(atPath: mediaURL(for: name).path) ? name : nil
     }
 
+    private func cachedRemoteVideoFileName(for postId: UUID) -> String? {
+        for ext in ["mp4", "mov"] {
+            let name = "remote-\(postId.uuidString).\(ext)"
+            if FileManager.default.fileExists(atPath: mediaURL(for: name).path) { return name }
+        }
+        return nil
+    }
+
     func cacheRemoteImageIfNeeded(for post: PulsePost) async {
         guard let urlString = post.remoteMediaURL,
-              let url = URL(string: urlString),
-              cachedRemoteFileName(for: post.id) == nil else { return }
+              let url = URL(string: urlString) else { return }
+
+        if post.mediaKind == .video {
+            if let name = post.mediaFileName,
+               FileManager.default.fileExists(atPath: mediaURL(for: name).path) {
+                return
+            }
+            if cachedRemoteVideoFileName(for: post.id) != nil { return }
+            do {
+                let (data, response) = try await URLSession.shared.data(from: url)
+                let ext = Self.preferredVideoExtension(for: url, response: response)
+                let name = "remote-\(post.id.uuidString).\(ext)"
+                try data.write(to: mediaURL(for: name), options: .atomic)
+                if let idx = posts.firstIndex(where: { $0.id == post.id }) {
+                    posts[idx].mediaFileName = name
+                    persistPosts()
+                }
+            } catch {
+                // Offline / URL expirada — player pode tentar a URL remota.
+            }
+            return
+        }
+
+        guard cachedRemoteFileName(for: post.id) == nil else { return }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             let name = "remote-\(post.id.uuidString).jpg"
@@ -180,6 +227,16 @@ final class PulseLocalStore: ObservableObject {
         } catch {
             // Offline / URL expirada — feed ainda mostra placeholder.
         }
+    }
+
+    private static func preferredVideoExtension(for url: URL, response: URLResponse?) -> String {
+        let pathExt = url.pathExtension.lowercased()
+        if pathExt == "mp4" || pathExt == "mov" { return pathExt }
+        if let mime = response?.mimeType?.lowercased() {
+            if mime.contains("mp4") { return "mp4" }
+            if mime.contains("quicktime") { return "mov" }
+        }
+        return "mp4"
     }
 
     func cacheRemoteImageIfNeeded(for story: PulseStory) async {
@@ -307,7 +364,10 @@ final class PulseLocalStore: ObservableObject {
         ensureUserAvatar(userId: authorId, image: authorAvatar)
         let duration = try await videoDuration(url: sourceURL)
         guard duration <= PulseExperimental.maxVideoSeconds + 0.5 else { throw PulseStoreError.videoTooLong }
-        let fileName = "\(UUID().uuidString).mov"
+        let ext = ["mp4", "mov"].contains(sourceURL.pathExtension.lowercased())
+            ? sourceURL.pathExtension.lowercased()
+            : "mp4"
+        let fileName = "\(UUID().uuidString).\(ext)"
         let dest = mediaURL(for: fileName)
         if FileManager.default.fileExists(atPath: dest.path) {
             try FileManager.default.removeItem(at: dest)
@@ -520,7 +580,10 @@ final class PulseLocalStore: ObservableObject {
         } else if let newVideoURL {
             let duration = try await videoDuration(url: newVideoURL)
             guard duration <= PulseExperimental.maxVideoSeconds + 0.5 else { throw PulseStoreError.videoTooLong }
-            let fileName = "\(UUID().uuidString).mov"
+            let ext = ["mp4", "mov"].contains(newVideoURL.pathExtension.lowercased())
+                ? newVideoURL.pathExtension.lowercased()
+                : "mp4"
+            let fileName = "\(UUID().uuidString).\(ext)"
             let dest = mediaURL(for: fileName)
             if FileManager.default.fileExists(atPath: dest.path) {
                 try FileManager.default.removeItem(at: dest)
@@ -1407,12 +1470,24 @@ final class PulseLocalStore: ObservableObject {
 
     private func scheduleCloudUpsert(_ post: PulsePost) {
         guard PulseExperimental.isCloudSyncEffective else { return }
-        let imageData: Data? = {
+        let mediaData: Data? = {
             guard let name = post.mediaFileName else { return nil }
             return try? Data(contentsOf: mediaURL(for: name))
         }()
+        let fileExt = post.mediaFileName.map { ($0 as NSString).pathExtension.lowercased() } ?? "jpg"
         Task {
-            let remoteURL = await PulseFirestoreService.upsertPost(post, imageJPEG: imageData)
+            let remoteURL: String?
+            if post.mediaKind == .video {
+                let contentType = fileExt == "mov" ? "video/quicktime" : "video/mp4"
+                remoteURL = await PulseFirestoreService.upsertPost(
+                    post,
+                    mediaData: mediaData,
+                    contentType: contentType,
+                    fileExtension: fileExt.isEmpty ? "mp4" : fileExt
+                )
+            } else {
+                remoteURL = await PulseFirestoreService.upsertPost(post, imageJPEG: mediaData)
+            }
             if let remoteURL, let idx = posts.firstIndex(where: { $0.id == post.id }) {
                 posts[idx].remoteMediaURL = remoteURL
                 persistPosts()
