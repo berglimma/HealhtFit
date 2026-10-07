@@ -267,7 +267,7 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         CardioExercise(name: "Esteira Ergométrica", description: "Indoor · configure se tem elevação · sem mapa GPS", icon: "figure.run.treadmill", caloriesPerMinute: 9),
         CardioExercise(name: "Caminhada", description: "Caminhada outdoor com mapa GPS, ritmo e passos", icon: "figure.walk", caloriesPerMinute: 6),
         CardioExercise(name: "Mountain bike", description: "Mountain bike em trilha ou terreno irregular", icon: "bicycle", caloriesPerMinute: 10),
-        CardioExercise(name: "Bicicleta pedal", description: "Ciclismo outdoor em rua ou ciclovia", icon: "figure.outdoor.cycle", caloriesPerMinute: 9),
+        CardioExercise(name: "Bicicleta pedal", description: "Ciclismo outdoor em rua ou ciclovia", icon: "bicycle", caloriesPerMinute: 9),
         CardioExercise(name: "Bicicleta ergométrica", description: "Bike estacionária indoor, sem GPS", icon: "figure.indoor.cycle", caloriesPerMinute: 8),
         CardioExercise(name: "Surf", description: "Sessão de surf com GPS, spot e registro de condições", icon: surfSystemImage, caloriesPerMinute: 10),
         CardioExercise(name: "Kitesurf", description: "Kitesurf com equipamento, modos, saltos e mapa", icon: kitesurfSystemImage, caloriesPerMinute: 12),
@@ -701,6 +701,10 @@ struct CardioWorkoutConfig: Hashable, Codable {
                 }
                 return max(60, Int((targetDistanceKm / speedKmh) * 3600))
             }
+            if isOutdoorWalkingSession {
+                // Ritmo de caminhada (~12'/10'/8'30" por km) — não reutilizar ritmo de corrida.
+                return max(60, Int(targetDistanceKm * Double(walkingPaceSecondsPerKm)))
+            }
             return Int(targetDistanceKm * Double(intensity.paceSecondsPerKm))
         }
         return intensity.durationMinutes * 60
@@ -725,6 +729,15 @@ struct CardioWorkoutConfig: Hashable, Codable {
         return max(timeBased, distanceBased)
     }
 
+    /// Ritmo de referência da caminhada (s/km) por intensidade.
+    var walkingPaceSecondsPerKm: Int {
+        switch intensity {
+        case .low: return 12 * 60      // ~5,0 km/h
+        case .medium: return 10 * 60   // ~6,0 km/h
+        case .high: return 8 * 60 + 30 // ~7,0 km/h
+        }
+    }
+
     func estimatedDistanceKm(elapsedSeconds: Int) -> Double {
         if isOutdoorCyclingSession {
             let speedKmh: Double
@@ -734,6 +747,11 @@ struct CardioWorkoutConfig: Hashable, Codable {
             case .high: speedKmh = 28
             }
             return (Double(elapsedSeconds) / 3600.0) * speedKmh
+        }
+        if isOutdoorWalkingSession {
+            let pace = walkingPaceSecondsPerKm
+            guard pace > 0 else { return 0 }
+            return Double(elapsedSeconds) / Double(pace)
         }
         guard intensity.paceSecondsPerKm > 0 else { return 0 }
         return Double(elapsedSeconds) / Double(intensity.paceSecondsPerKm)

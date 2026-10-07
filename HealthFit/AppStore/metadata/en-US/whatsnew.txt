@@ -1,4 +1,4 @@
-• Welcome screen: green glow when today’s sleep and water are logged
-• Discipline card: daily rotating motivation phrases
-• Flyover stability fix
-• Scheduling assistant and performance improvements
+• Cycling: fixed zero KM on share cards and workout photo overlay
+• Run & walk: only real GPS distance is saved; walking uses walking pace
+• Correct bike, walk, and run icons when starting (Live Activity)
+• Outdoor cardio stability improvements

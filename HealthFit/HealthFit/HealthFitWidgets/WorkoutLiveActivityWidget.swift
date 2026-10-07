@@ -41,7 +41,9 @@ struct WorkoutLiveActivityWidget: Widget {
                     }
                 }
             } compactLeading: {
-                Image(systemName: context.state.phase == .rest ? "pause.circle.fill" : "figure.strengthtraining.traditional")
+                Image(systemName: context.state.phase == .rest
+                      ? "pause.circle.fill"
+                      : context.state.modalitySystemImage)
                     .foregroundStyle(context.state.phase == .rest ? .orange : .green)
             } compactTrailing: {
                 timerView(for: context.state)
@@ -112,6 +114,12 @@ private struct LockScreenWorkoutLiveActivityView: View {
 
                     Text("·")
                         .foregroundStyle(.white.opacity(0.35))
+
+                    if state.phase != .rest {
+                        Image(systemName: state.modalitySystemImage)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.green)
+                    }
 
                     Text(state.phase == .rest ? "Pausa" : "Exercício")
                         .font(.caption.weight(.semibold))

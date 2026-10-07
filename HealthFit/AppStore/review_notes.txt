@@ -1,18 +1,10 @@
-HealthFit 1.0.15 (28)
+HealthFit 1.0.18 (31)
 
 What's new in this binary:
-- Welcome loading glow now follows sleep+water wellness status (green when both updated today).
-- Dashboard Discipline card rotates a daily motivation phrase.
-- Flyover exporter: fixed invalid drawOverlay signature that broke Xcode Cloud builds.
+- Bike pedal: fixed KM showing 0 on share cards and photo overlay
+- Run/walk: persist GPS-only distance; walking estimate uses walking pace
+- Live Activity / start button icons: bicycle, walk, run (not strength)
+- Outdoor cardio distance + auto-end history persistence fixes
 
-Still in effect from prior review replies:
-- App Store binary: no in-app courtesy/promo code unlocks (TestFlight/Debug only).
-- Subscriptions: billed price first, Restore, EULA/Privacy https links, auto-renewal disclosure.
-- Pulse UGC remote flags stay off unless explicitly enabled for production.
-
-Demo account (login required):
-Username: healthfit.appreview@gmail.com
+Demo login: healthfit.appreview@gmail.com
 Password: HealthFitReview2026!
-
-Privacy: https://healthfit-30d87.web.app/privacidade/
-No encryption changes (uses HTTPS/standard encryption only).

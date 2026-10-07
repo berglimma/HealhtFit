@@ -893,9 +893,15 @@ struct WorkoutSession: Identifiable, Codable {
     var isOutdoorCyclingSession: Bool {
         if isWaterSportSession || isRowingSession { return false }
         let title = workoutTitle.lowercased()
+        if title.contains("ergométrica") || title.contains("ergometrica") || title.contains("indoor cycle") {
+            return false
+        }
         return title.contains("mountain bike")
             || title.contains("bicicleta pedal")
             || title.contains("bike outdoor")
+            || title.contains("ciclismo")
+            || (title.contains("bike") && title.contains("cardio"))
+            || (title.contains("pedal") && title.contains("cardio"))
     }
 
     /// Corrida (título ou heurística legado).
@@ -923,14 +929,24 @@ struct WorkoutSession: Identifiable, Codable {
         return .pace
     }
 
-    /// Distância exibida: GPS concluída, senão soma da polyline, senão meta.
+    /// Distância exibida: GPS concluída ou soma da polyline (sem pausa).
+    /// Não usa a meta como “km percorridos” (evita card 5,00 km sem GPS).
     var displayDistanceKm: Double {
+        let fromRoute = RunTrackingMath.distanceKm(from: routePoints, excludingPaused: true)
         if let completed = completedDistanceKm, completed > 0 {
-            return completed
+            // Se a rota for maior (ex.: completed gravado parcial), preferir a polyline.
+            return max(completed, fromRoute)
         }
-        let fromRoute = RunTrackingMath.distanceKm(from: routePoints)
-        if fromRoute > 0 { return fromRoute }
-        return targetDistanceKm ?? 0
+        return fromRoute
+    }
+
+    /// Velocidade média em km/h (bike / outdoor com distância).
+    var displayAverageSpeedKmh: Double? {
+        let km = displayDistanceKm
+        guard km > 0.05, activeDurationSeconds > 0 else { return nil }
+        let hours = Double(activeDurationSeconds) / 3600.0
+        guard hours > 0 else { return nil }
+        return km / hours
     }
 
     /// Ritmo em s/km: gravado ou tempo ativo ÷ distância.

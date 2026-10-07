@@ -236,6 +236,32 @@ struct WorkoutShareCardView: View {
     private var runningStatsGrid: some View {
         if session.isKitesurfSession {
             kiteStatsGrid
+        } else if session.isOutdoorCyclingSession {
+            VStack(spacing: 6) {
+                HStack(spacing: 6) {
+                    shareStat(value: runningBPMValue, label: "BPM")
+                    shareStat(value: runningKcalValue, label: "KCAL")
+                    shareStat(value: cyclingSpeedValue, label: "KM/H")
+                }
+                HStack(spacing: 6) {
+                    shareStat(value: runningKmValue, label: "KM")
+                    shareStat(value: runningTempoValue, label: "TEMPO")
+                    Color.clear.frame(maxWidth: .infinity)
+                }
+                if session.pausedDurationSeconds > 0 {
+                    HStack(spacing: 6) {
+                        shareStat(
+                            value: DurationFormatting.format(seconds: session.pausedDurationSeconds),
+                            label: "PAUSA"
+                        )
+                        shareStat(
+                            value: DurationFormatting.format(seconds: session.activeDurationSeconds),
+                            label: "ATIVO"
+                        )
+                        Color.clear.frame(maxWidth: .infinity)
+                    }
+                }
+            }
         } else {
             VStack(spacing: 6) {
                 HStack(spacing: 6) {
@@ -315,6 +341,11 @@ struct WorkoutShareCardView: View {
         let km = session.displayDistanceKm
         guard km > 0 else { return "—" }
         return String(format: km >= 10 ? "%.1f" : "%.2f", km)
+    }
+
+    private var cyclingSpeedValue: String {
+        guard let speed = session.displayAverageSpeedKmh, speed > 0.3 else { return "—" }
+        return String(format: "%.1f", speed)
     }
 
     private var runningTempoValue: String {

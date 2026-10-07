@@ -1,4 +1,4 @@
-• Pantalla de bienvenida: brillo verde cuando sueño y agua del día están actualizados
-• Tarjeta Disciplina: frases motivacionales que cambian cada día
-• Corrección de estabilidad en Flyover
-• Asistente de agenda y mejoras de rendimiento
+• Pedal: corrección del contador de km en tarjetas y foto del entrenamiento
+• Carrera y caminata: km solo con GPS real; caminata con ritmo propio
+• Iconos correctos al iniciar bici, caminata y carrera (Live Activity)
+• Mejoras de estabilidad en cardio outdoor

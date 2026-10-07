@@ -2017,10 +2017,14 @@ struct WorkoutSummaryView: View {
             // Sempre visível na seção de rota (não depende de ≥2 pontos GPS).
             mapShareActions
 
-            if let distance = session.completedDistanceKm {
-                Text(String(format: "%.2f km percorridos · %d pontos GPS", distance, session.routePoints.count))
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
+            if session.displayDistanceKm > 0.0005 {
+                Text(String(
+                    format: "%.2f km percorridos · %d pontos GPS",
+                    session.displayDistanceKm,
+                    session.routePoints.count
+                ))
+                .font(.caption)
+                .foregroundStyle(AppTheme.textSecondary)
             }
             if let jumps = session.waterSport?.jumps, !jumps.isEmpty {
                 Text("\(jumps.count) salto(s) · ciano = subida · laranja = descida (sobre o GPS)")

@@ -2204,7 +2204,15 @@ struct CardioSetupView: View {
                     if config.isTreadmillSession { return "Iniciar Esteira" }
                     return "Iniciar Cardio"
                 }(),
-                systemImage: "play.fill"
+                systemImage: {
+                    if config.isOutdoorCyclingSession { return "bicycle" }
+                    if config.isOutdoorWalkingSession { return "figure.walk" }
+                    if config.isRunningSession || config.isTreadmillSession { return "figure.run" }
+                    if config.isSwimmingSession { return "figure.pool.swim" }
+                    if config.isKitesurfSession { return CardioExercise.kitesurfSystemImage }
+                    if config.isSurfSession { return CardioExercise.surfSystemImage }
+                    return config.exercise.icon
+                }()
             )
         }
         .buttonStyle(PrimaryButtonStyle())

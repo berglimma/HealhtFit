@@ -185,9 +185,9 @@ final class RunTrackingService: NSObject, ObservableObject {
         }
     }
 
-    /// Distância GPS assim que há progresso real (não espera 5 m para liberar a UI).
+    /// Distância GPS assim que há progresso real (libera a UI com qualquer avanço ≥ 0,5 m).
     var gpsDistanceKmIfAvailable: Double? {
-        guard distanceMeters >= 1 else { return nil }
+        guard distanceMeters >= 0.5 else { return nil }
         return distanceKm
     }
 

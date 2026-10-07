@@ -35,7 +35,8 @@ final class WorkoutLiveActivityController {
             setsLabel: setsLabel,
             exerciseTimerStart: timerStart,
             restEndDate: isResting ? restEndDate : nil,
-            workoutTitle: session.workoutTitle
+            workoutTitle: session.workoutTitle,
+            modalitySystemImage: WorkoutShareCardView.modalitySystemImage(for: session)
         )
 
         // Never let the evening nudge share the lock screen with a workout LA.

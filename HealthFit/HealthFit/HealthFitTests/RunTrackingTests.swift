@@ -212,6 +212,72 @@ final class RunTrackingTests: XCTestCase {
         XCTAssertLessThan(km, 1.3)
     }
 
+    func testDisplayDistanceDoesNotUseTargetAsCompleted() {
+        var session = WorkoutSession(
+            workoutSheetId: UUID(),
+            workoutTitle: "Cardio — Corrida 5 km",
+            totalExercises: 1,
+            targetDistanceKm: 5.0,
+            completedDistanceKm: nil
+        )
+        XCTAssertEqual(session.displayDistanceKm, 0, accuracy: 0.001)
+
+        session.completedDistanceKm = 0
+        XCTAssertEqual(session.displayDistanceKm, 0, accuracy: 0.001)
+    }
+
+    func testWalkingEstimateUsesWalkingPaceNotRunning() {
+        let walk = CardioExercise.catalog.first { $0.name == "Caminhada" }!
+        let walkConfig = CardioWorkoutConfig(
+            exercise: walk,
+            intensity: .medium,
+            customTargetDistanceKm: 3
+        )
+        let run = CardioWorkoutConfig(
+            exercise: TestFixtures.runningExercise,
+            intensity: .medium,
+            customTargetDistanceKm: 3
+        )
+        // 30 min: caminhada ~3 km @ 10'/km; corrida bem mais (ritmo ~6'/km).
+        let walkKm = walkConfig.estimatedDistanceKm(elapsedSeconds: 30 * 60)
+        let runKm = runConfig.estimatedDistanceKm(elapsedSeconds: 30 * 60)
+        XCTAssertEqual(walkKm, 3.0, accuracy: 0.05)
+        XCTAssertGreaterThan(runKm, walkKm + 1.0)
+        XCTAssertGreaterThan(walkConfig.targetDurationSeconds, runConfig.targetDurationSeconds)
+    }
+
+    func testBikeDisplayDistanceFallsBackToRouteWhenCompletedIsZero() {
+        var session = WorkoutSession(
+            workoutSheetId: UUID(),
+            workoutTitle: "Cardio — Bicicleta pedal",
+            startedAt: Date(timeIntervalSince1970: 0),
+            endedAt: Date(timeIntervalSince1970: 1800),
+            totalExercises: 1,
+            completedDistanceKm: 0
+        )
+        session.routePoints = [
+            RouteCoordinate(latitude: -23.5500, longitude: -46.6300),
+            RouteCoordinate(latitude: -23.5500, longitude: -46.6400)
+        ]
+        XCTAssertTrue(session.isOutdoorCyclingSession)
+        XCTAssertGreaterThan(session.displayDistanceKm, 0.8)
+        XCTAssertNotNil(session.displayAverageSpeedKmh)
+
+        let stats = WorkoutResultMediaStats.stats(for: session, isCardio: true)
+        XCTAssertTrue(stats.contains(where: { $0.id == "km" && Double($0.value) ?? 0 > 0.5 }))
+        XCTAssertTrue(stats.contains(where: { $0.id == "speed" }))
+    }
+
+    func testDistanceKmExcludesPausedSegments() {
+        let a = RouteCoordinate(latitude: -23.5500, longitude: -46.6300, isPaused: false)
+        let pause = RouteCoordinate(latitude: -23.5500, longitude: -46.6350, isPaused: true)
+        let b = RouteCoordinate(latitude: -23.5500, longitude: -46.6400, isPaused: false)
+        let all = RunTrackingMath.distanceKm(from: [a, pause, b], excludingPaused: false)
+        let active = RunTrackingMath.distanceKm(from: [a, pause, b], excludingPaused: true)
+        XCTAssertGreaterThan(all, active)
+        XCTAssertEqual(active, 0, accuracy: 0.001)
+    }
+
     func testRoutePerformanceColoringFasterIsGreener() {
         // Segment speeds come from the destination point: 2.5 then 4.0 → median 3.25
         // 2.5/3.25 ≈ 0.77 → below; 4.0/3.25 ≈ 1.23 → optimal

@@ -1,4 +1,4 @@
-• Tela de boas-vindas: glow verde quando sono e água do dia estão atualizados
-• Card Disciplina: frases motivacionais que mudam a cada dia
-• Correção de estabilidade no Flyover
-• Assistente de agendamento e melhorias de desempenho
+• Pedal: correção do contador de km nos cards e na foto do treino
+• Corrida e caminhada: km só com GPS real; caminhada com ritmo próprio
+• Ícones corretos ao iniciar bike, caminhada e corrida (Live Activity)
+• Melhorias de estabilidade no cardio outdoor

@@ -86,17 +86,27 @@ struct ActiveCardioView: View {
         if isSwimming {
             return swimDistanceMeters / 1000.0
         }
-        if isOutdoorGPS, let gpsKm = runTracker.gpsDistanceKmIfAvailable {
-            if config.hasDistanceTarget {
-                return min(gpsKm, config.targetDistanceKm)
+        if isOutdoorGPS {
+            // Odômetro GPS + polyline (corrida, caminhada, bike, água, remo).
+            let trackerKm = max(0, runTracker.distanceKm)
+            let routeKm = RunTrackingMath.distanceKm(
+                from: runTracker.routePoints,
+                excludingPaused: true
+            )
+            let gpsKm = max(trackerKm, routeKm)
+            // Não limitar ao target na UI ao vivo — o anel já satura em 100%;
+            // senão ritmo/km ficam errados após passar a meta e o resumo “pula”.
+            if gpsKm > 0 {
+                return gpsKm
             }
-            return gpsKm
+            // Pedal: sem GPS ainda → 0 (não inventa km por intensidade).
+            // Corrida/caminhada/água/remo: mantêm estimativa até o GPS firmar.
+            if isOutdoorCycling {
+                return 0
+            }
         }
         if config.hasDistanceTarget {
             return min(config.estimatedDistanceKm(elapsedSeconds: elapsedSeconds), config.targetDistanceKm)
-        }
-        if isOutdoorCycling {
-            return 0
         }
         return config.estimatedDistanceKm(elapsedSeconds: elapsedSeconds)
     }
@@ -467,7 +477,32 @@ struct ActiveCardioView: View {
             if isKitesurf {
                 spotBuddy.stop()
             }
-            finishedSession = ended
+            // Auto-end do store não copia GPS — anexa rota/km/passos/ritmo e persiste.
+            var session = ended
+            if isOutdoorGPS {
+                if session.routePoints.isEmpty {
+                    session.routePoints = runTracker.routePoints
+                }
+                let bestKm = max(
+                    runTracker.distanceKm,
+                    RunTrackingMath.distanceKm(from: session.routePoints, excludingPaused: true)
+                )
+                if bestKm > 0.0005 {
+                    session.completedDistanceKm = bestKm
+                } else {
+                    session.completedDistanceKm = nil
+                }
+                if isRunningSession || isOutdoorWalking || trackingModality.usesFootTracking {
+                    session.stepCount = max(session.stepCount ?? 0, liveSteps)
+                }
+                if !isOutdoorCycling, bestKm > 0.05 {
+                    let active = max(1, session.activeDurationSeconds)
+                    session.averagePaceSecondsPerKm = max(1, Int((Double(active) / bestKm).rounded()))
+                }
+                session.pausedDurationSeconds = max(session.pausedDurationSeconds, finalizedPausedSeconds())
+                workoutStore.replaceHistorySession(session)
+            }
+            finishedSession = session
         }
         .onChange(of: watchConnectivity.isWatchSessionPaused) { _, paused in
             guard !isFinishing, finishedSession == nil else { return }
@@ -495,8 +530,13 @@ struct ActiveCardioView: View {
             }
         }
         .onChange(of: workoutStore.isActiveWorkoutMinimized) { _, minimized in
-            guard !minimized, finishedSession == nil, !isFinishing else { return }
+            guard finishedSession == nil, !isFinishing else { return }
+            // Ao minimizar outdoor, ainda liga/mantém GPS; ao restaurar, liga o restante.
             startSessionHardwareIfVisible()
+            if !minimized, isOutdoorGPS {
+                UIApplication.shared.isIdleTimerDisabled = !isPaused
+                runTracker.handleAppBecameActive()
+            }
         }
     }
 
@@ -1362,8 +1402,17 @@ struct ActiveCardioView: View {
                         Text("Meta: \(String(format: abs(config.targetDistanceKm - config.targetDistanceKm.rounded()) < 0.05 ? "%.0f" : "%.1f", config.targetDistanceKm)) km")
                             .font(.caption)
                             .foregroundStyle(AppTheme.textSecondary)
+                    } else if isOutdoorGPS {
+                        let hasGPSFix = runTracker.distanceKm > 0
+                            || RunTrackingMath.distanceKm(
+                                from: runTracker.routePoints,
+                                excludingPaused: true
+                            ) > 0
+                        Text(hasGPSFix ? "GPS" : (isOutdoorCycling ? "Aguardando GPS" : "Estimado"))
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
                     } else {
-                        Text(runTracker.gpsDistanceKmIfAvailable != nil ? "GPS" : "Estimado")
+                        Text("Estimado")
                             .font(.caption)
                             .foregroundStyle(AppTheme.textSecondary)
                     }
@@ -2276,18 +2325,23 @@ struct ActiveCardioView: View {
         return snapshot
     }
 
-    /// Só liga GPS/sensores quando a tela está visível — evita disputa com CardioSetup no iPhone.
+    /// Liga GPS/sensores. Outdoor GPS também com o treino minimizado (pill), para o km não zerar no fundo.
     private func startSessionHardwareIfVisible() {
-        guard !workoutStore.isActiveWorkoutMinimized, finishedSession == nil, !isFinishing else { return }
+        guard finishedSession == nil, !isFinishing else { return }
+        // Indoor / sensores de UI: só com a tela aberta (evita disputa com CardioSetup).
+        // Outdoor GPS: continua mesmo minimizado — senão o pedal/caminhada perde distância.
+        let canStartNonGPS = !workoutStore.isActiveWorkoutMinimized
+        guard isOutdoorGPS || canStartNonGPS else { return }
 
         if isOutdoorGPS, !runTracker.isTracking {
-            UIApplication.shared.isIdleTimerDisabled = true
+            UIApplication.shared.isIdleTimerDisabled = !workoutStore.isActiveWorkoutMinimized && !isPaused
             runTracker.prepareForSession(modality: trackingModality)
             runTracker.start(modality: trackingModality)
             if isOutdoorCycling {
                 roadHazards.refreshSeedIfNeeded(near: runTracker.currentLocation?.coordinate)
             }
         }
+        guard canStartNonGPS else { return }
         if isWaterSport, !jumpMetrics.isRunning {
             jumpMetrics.configure(locationProvider: { [weak runTracker] in
                 runTracker?.currentLocation
@@ -2369,7 +2423,23 @@ struct ActiveCardioView: View {
             return
         }
 
-        let distanceKm = completedDistanceKm
+        // Copia a rota antes de fechar a distância — cards/foto usam displayDistanceKm (GPS ou polyline).
+        if isOutdoorGPS {
+            session.routePoints = runTracker.routePoints
+            if isRunningSession || isOutdoorWalking || trackingModality.usesFootTracking {
+                session.stepCount = liveSteps
+            }
+        }
+
+        let routeKm = RunTrackingMath.distanceKm(from: session.routePoints, excludingPaused: true)
+        let trackerKm = isOutdoorGPS ? max(0, runTracker.distanceKm) : 0
+        // Outdoor GPS: só persiste km real (rota/odômetro). Estimativa ao vivo não vira histórico.
+        let distanceKm: Double = {
+            if isOutdoorGPS {
+                return max(routeKm, trackerKm)
+            }
+            return max(completedDistanceKm, routeKm)
+        }()
         let pace = config.paceSecondsPerKm(elapsedSeconds: elapsedSeconds, distanceKm: max(distanceKm, 0.01))
         let swimPace = config.swimPaceSecondsPer100m(elapsedSeconds: elapsedSeconds, distanceMeters: swimDistanceMeters)
         let goalReached: Bool = {
@@ -2394,12 +2464,19 @@ struct ActiveCardioView: View {
 
         session.endedAt = .now
         session.caloriesBurned = liveCalories
-        session.completedDistanceKm = (config.hasDistanceTarget || config.isFreeRun || isOutdoorGPS || isSwimming || isTreadmill)
-            ? distanceKm
-            : nil
+        if config.hasDistanceTarget || config.isFreeRun || isOutdoorGPS || isSwimming || isTreadmill {
+            // Persiste nil em vez de 0 — evita “0.00 km” nos cards quando a rota ainda pode resolver.
+            session.completedDistanceKm = distanceKm > 0.0005 ? distanceKm : nil
+        } else {
+            session.completedDistanceKm = nil
+        }
         session.averagePaceSecondsPerKm = {
             if isOutdoorCycling { return nil }
-            if config.hasDistanceTarget || config.isFreeRun || isOutdoorGPS || isTreadmill { return pace }
+            // Ritmo só com distância GPS real (outdoor) ou esteira/meta indoor.
+            if isOutdoorGPS {
+                return distanceKm > 0.05 ? pace : nil
+            }
+            if config.hasDistanceTarget || config.isFreeRun || isTreadmill { return pace }
             return nil
         }()
         if config.hasDistanceTarget {
@@ -2421,13 +2498,6 @@ struct ActiveCardioView: View {
         session.cardioIntensityLabel = config.intensity.rawValue
         session.targetCalories = config.targetCalories
         session.pausedDurationSeconds = finalPausedSeconds
-        if isOutdoorGPS {
-            session.routePoints = runTracker.routePoints
-            // Passos na corrida e na caminhada (pedômetro / estimativa).
-            if isRunningSession || isOutdoorWalking || trackingModality.usesFootTracking {
-                session.stepCount = liveSteps
-            }
-        }
         if isWaterSport {
             let exported = jumpMetrics.exportSnapshot()
             var water = session.waterSport

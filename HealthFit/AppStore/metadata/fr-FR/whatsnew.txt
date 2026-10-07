@@ -1,4 +1,4 @@
-• Écran d’accueil : lueur verte quand sommeil et eau du jour sont à jour
-• Carte Discipline : phrases motivantes qui changent chaque jour
-• Correction de stabilité Flyover
-• Assistant de planification et améliorations de perf
+• Vélo : correction du compteur de km sur les cartes et la photo
+• Course et marche : km uniquement via GPS ; rythme de marche dédié
+• Icônes correctes au démarrage vélo, marche et course (Live Activity)
+• Améliorations de stabilité du cardio outdoor

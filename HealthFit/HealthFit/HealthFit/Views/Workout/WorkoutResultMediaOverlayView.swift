@@ -45,6 +45,13 @@ enum WorkoutResultMediaStats {
                     label: "km"
                 ))
             }
+            if session.isOutdoorCyclingSession, let speed = session.displayAverageSpeedKmh, speed > 0.3 {
+                result.append(WorkoutResultMediaStat(
+                    id: "speed",
+                    value: String(format: "%.1f", speed),
+                    label: "km/h"
+                ))
+            }
             if let pace = session.displayPaceSecondsPerKm, pace > 0,
                !session.isOutdoorCyclingSession, !session.isSwimmingSession {
                 result.append(WorkoutResultMediaStat(

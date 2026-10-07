@@ -248,11 +248,15 @@ enum RunTrackingMath {
     }
 
     /// Soma das distâncias entre pontos consecutivos da rota (km).
-    static func distanceKm(from routePoints: [RouteCoordinate]) -> Double {
+    /// - Parameter excludingPaused: quando `true`, ignora trechos gravados em pausa (alinha ao odômetro).
+    static func distanceKm(from routePoints: [RouteCoordinate], excludingPaused: Bool = false) -> Double {
         guard routePoints.count >= 2 else { return 0 }
         var meters = 0.0
         for index in 1..<routePoints.count {
-            meters += routePoints[index - 1].clLocation.distance(from: routePoints[index].clLocation)
+            let a = routePoints[index - 1]
+            let b = routePoints[index]
+            if excludingPaused, a.isPaused || b.isPaused { continue }
+            meters += a.clLocation.distance(from: b.clLocation)
         }
         return meters / 1_000.0
     }

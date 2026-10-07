@@ -1397,6 +1397,18 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
+    /// Substitui uma sessão já no histórico (ex.: anexar GPS após auto-end).
+    func replaceHistorySession(_ session: WorkoutSession) {
+        guard let index = sessionHistory.firstIndex(where: { $0.id == session.id }) else { return }
+        sessionHistory[index] = session
+        saveHistory()
+        if let userId = cloudUserId {
+            Task {
+                try? await WorkoutFirestoreService.saveSession(session, userId: userId)
+            }
+        }
+    }
+
     private func scheduleAutoEnd(for session: WorkoutSession) {
         let fireDate = session.startedAt.addingTimeInterval(Self.autoEndInactivityLimit)
         NotificationService.shared.scheduleActiveWorkoutAutoEnd(
