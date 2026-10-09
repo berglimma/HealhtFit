@@ -72,3 +72,31 @@ Atualiza na App Store e treina no próximo nível.
 
 WhatsApp (curta):
 HealthFit 1.0.14: Now Playing no Watch, cronômetro estável, Flyover no Pulse e app mais rápido. Atualiza na App Store!
+
+────────────────────────────────────
+LOTE 2 — mais 5 cards
+────────────────────────────────────
+6) Pulse comunidade
+Arquivos: hf-card-06-pulse-comunidade-post.png | …-story.png
+Legenda: Sua comunidade de treino vive no Pulse. Posta, motiva e evolui junto. #HealthFit #Pulse
+WhatsApp: Pulse no HealthFit — posta o treino e motiva a galera.
+
+7) Watch companion
+Arquivos: hf-card-07-watch-companion-post.png | …-story.png
+Legenda: Treina no pulso. Apple Watch sincronizado com o iPhone. #HealthFit #AppleWatch
+WhatsApp: Companion no Apple Watch — métricas no pulso com o HealthFit.
+
+8) Flyover cinemático
+Arquivos: hf-card-08-flyover-cinematico-post.png | …-story.png
+Legenda: Veja seu percurso de cima. Flyover cinematográfico do treino outdoor. #HealthFit #Flyover
+WhatsApp: Flyover do percurso — vê o treino de cima no HealthFit.
+
+9) Duo
+Arquivos: hf-card-09-duo-treino-post.png | …-story.png
+Legenda: Treina em dupla. Duo com metas compartilhadas e motivação a dois. #HealthFit #Duo
+WhatsApp: Duo no HealthFit — treina junto e divide as metas.
+
+10) CTA atualiza
+Arquivos: hf-card-10-cta-atualiza-post.png | …-story.png
+Legenda: Atualiza e treina. HealthFit 1.0.14 já na App Store. #HealthFit #AppStore
+WhatsApp: HealthFit 1.0.14 na App Store — atualiza e treina agora.
