@@ -5,7 +5,7 @@
     <string name="tab_home">Início</string>
     <string name="tab_workouts">Treinos</string>
     <string name="tab_nutrition">Nutrição</string>
-    <string name="tab_assistant">Dúvidas</string>
+    <string name="tab_assistant">IAssistente</string>
     <string name="tab_profile">Perfil</string>
     <string name="phase_badge">Fase 1 · Android</string>
     <string name="health_connect_rationale">O HealthFit lê passos, sono, frequência cardíaca e treinos no Health Connect — o equivalente Android do Apple Health — para manter as mesmas métricas do app iOS.</string>

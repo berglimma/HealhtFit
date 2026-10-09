@@ -1,6 +1,5 @@
 package com.healthfit.android.ui.navigation
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -9,46 +8,47 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.healthfit.android.R
+import com.healthfit.android.ui.assistant.AssistantEngine
+import com.healthfit.android.ui.assistant.AssistantScreen
 import com.healthfit.android.ui.auth.AuthScreen
+import com.healthfit.android.ui.components.HealthFitTabBar
+import com.healthfit.android.ui.components.TabSpec
+import com.healthfit.android.ui.home.DailyWellness
 import com.healthfit.android.ui.home.HomeScreen
+import com.healthfit.android.ui.home.WelcomeLoadingScreen
+import com.healthfit.android.ui.nutrition.NutritionScreen
 import com.healthfit.android.ui.profile.ProfileScreen
+import com.healthfit.android.ui.pulse.PulseScreen
 import com.healthfit.android.ui.workouts.WorkoutsScreen
 import com.healthfit.core.auth.AuthRepository
 import com.healthfit.core.billing.BillingGateway
 import com.healthfit.core.health.HealthConnectGateway
 import com.healthfit.core.workout.WorkoutRepository
-import com.healthfit.designsystem.HealthFitCard
 import com.healthfit.designsystem.HealthFitColors
 
-private enum class MainTab(val route: String, val labelRes: Int, val icon: ImageVector) {
-    Home("home", R.string.tab_home, Icons.Filled.Home),
-    Workouts("workouts", R.string.tab_workouts, Icons.Filled.FitnessCenter),
-    Nutrition("nutrition", R.string.tab_nutrition, Icons.Filled.Restaurant),
-    Assistant("assistant", R.string.tab_assistant, Icons.Filled.Chat),
-    Profile("profile", R.string.tab_profile, Icons.Filled.Person),
-}
+private val Tabs = listOf(
+    TabSpec("home", "Início", Icons.Filled.Home),
+    TabSpec("workouts", "Treinos", Icons.Filled.FitnessCenter),
+    TabSpec("nutrition", "Nutrição", Icons.Filled.Restaurant),
+    TabSpec("assistant", "IAssistente", Icons.Filled.Chat, badge = 1),
+    TabSpec("profile", "Perfil", Icons.Filled.Person),
+)
 
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun HealthFitRoot(
     authRepository: AuthRepository,
     workoutRepository: WorkoutRepository,
@@ -56,6 +56,16 @@ fun HealthFitRoot(
     billingGateway: BillingGateway,
 ) {
     val user by authRepository.currentUser.collectAsState(initial = null)
+    val wellness = remember { DailyWellness() }
+    val athlete = remember { com.healthfit.android.ui.home.AthleteProfile() }
+    var showWelcome by remember { mutableStateOf(true) }
+    if (showWelcome) {
+        WelcomeLoadingScreen(
+            name = user?.displayName?.ifBlank { "Berg" } ?: "Berg",
+            onFinished = { showWelcome = false },
+        )
+        return
+    }
     if (user == null) {
         AuthScreen(authRepository = authRepository)
         return
@@ -64,93 +74,68 @@ fun HealthFitRoot(
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val current = backStack?.destination?.route
-    val billingConnected by billingGateway.connected.collectAsState()
+    val showTabs = current != "pulse"
 
     Scaffold(
         containerColor = HealthFitColors.Background,
         bottomBar = {
-            NavigationBar(containerColor = HealthFitColors.CardBackground) {
-                MainTab.entries.forEach { tab ->
-                    NavigationBarItem(
-                        selected = current == tab.route,
-                        onClick = {
-                            navController.navigate(tab.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
+            if (showTabs) {
+                HealthFitTabBar(
+                    items = Tabs.map { tab ->
+                        if (tab.route == "assistant") {
+                            tab.copy(badge = if (current == "assistant") 0 else AssistantEngine.alerts(wellness).size)
+                        } else {
+                            tab
+                        }
+                    },
+                    selectedRoute = current,
+                    onSelect = { route ->
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
                             }
-                        },
-                        icon = { Icon(tab.icon, contentDescription = null) },
-                        label = { Text(stringResource(tab.labelRes)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = HealthFitColors.Accent,
-                            selectedTextColor = HealthFitColors.Accent,
-                            indicatorColor = HealthFitColors.Accent.copy(alpha = 0.18f),
-                            unselectedIconColor = HealthFitColors.TextSecondary,
-                            unselectedTextColor = HealthFitColors.TextSecondary,
-                        ),
-                    )
-                }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
             }
         },
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = MainTab.Home.route,
+            startDestination = "home",
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            composable(MainTab.Home.route) {
+            composable("home") {
                 HomeScreen(
-                    userName = user?.displayName?.ifBlank { user?.email }.orEmpty(),
-                    healthAvailable = healthConnectGateway.isAvailable(),
-                    billingConnected = billingConnected,
+                    userName = user?.displayName?.ifBlank { user?.email?.substringBefore('@') }.orEmpty(),
+                    wellness = wellness,
+                    onOpenPulse = { navController.navigate("pulse") },
                 )
             }
-            composable(MainTab.Workouts.route) {
-                WorkoutsScreen(workoutRepository = workoutRepository)
-            }
-            composable(MainTab.Nutrition.route) {
-                PlaceholderPhaseScreen(
-                    title = "Nutrição",
-                    body = "Fase 2 — cardápio, lista de compras e foto de refeição (paridade com iOS).",
+            composable("workouts") { WorkoutsScreen() }
+            composable("nutrition") { NutritionScreen(wellness, athlete) }
+            composable("assistant") {
+                AssistantScreen(
+                    name = user?.displayName?.ifBlank { "Berg" } ?: "Berg",
+                    wellness = wellness,
+                    athlete = athlete,
                 )
             }
-            composable(MainTab.Assistant.route) {
-                PlaceholderPhaseScreen(
-                    title = "Dúvidas",
-                    body = "Fase 3 — IAssistente e motores de engajamento.",
-                )
-            }
-            composable(MainTab.Profile.route) {
+            composable("profile") {
                 ProfileScreen(
                     profile = user!!,
+                    wellness = wellness,
+                    athlete = athlete,
                     onSignOut = { authRepository.signOut() },
-                    healthAvailable = healthConnectGateway.isAvailable(),
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun PlaceholderPhaseScreen(title: String, body: String) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        HealthFitCard {
-            Text(
-                text = title,
-                color = HealthFitColors.TextPrimary,
-                style = MaterialTheme.typography.headlineMedium,
-            )
-            Text(
-                text = body,
-                color = HealthFitColors.TextSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 8.dp),
-            )
+            composable("pulse") {
+                PulseScreen(onClose = { navController.popBackStack() })
+            }
         }
     }
 }

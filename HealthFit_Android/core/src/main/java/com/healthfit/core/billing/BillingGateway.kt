@@ -60,7 +60,7 @@ class BillingGateway(context: Context) {
         val params = QueryProductDetailsParams.newBuilder().setProductList(products).build()
         client.queryProductDetailsAsync(params) { result, details ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                _products.value = details.productDetailsList.orEmpty()
+                _products.value = details
             }
         }
     }

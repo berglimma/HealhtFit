@@ -10,7 +10,13 @@ import kotlinx.coroutines.flow.asStateFlow
  * Lets the UI shell run without touching Firebase.
  */
 class OfflineAuthRepository : AuthRepository {
-    private val user = MutableStateFlow<UserProfile?>(null)
+    private val user = MutableStateFlow<UserProfile?>(
+        UserProfile(
+            uid = "offline-local",
+            displayName = "Berg Limma",
+            email = "berg@healthfit.app",
+        ),
+    )
     override val currentUser: Flow<UserProfile?> = user.asStateFlow()
 
     override suspend fun signInWithEmail(email: String, password: String): Result<UserProfile> {

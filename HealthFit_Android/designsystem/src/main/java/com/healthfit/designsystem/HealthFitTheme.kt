@@ -11,10 +11,10 @@ import androidx.compose.ui.graphics.Color
  * Default experience is dark (same as iOS shipping look).
  */
 object HealthFitColors {
-    val Accent = Color(0xFF33D92E)          // AccentGreen ~ (0.20, 0.85, 0.18)
-    val AccentSecondary = Color(0xFFFF8C33) // AccentOrange ~ (1.00, 0.55, 0.20)
-    val Background = Color(0xFF14191A)      // Background ~ (0.08, 0.10, 0.10)
-    val CardBackground = Color(0xFF24292E)  // CardBackground ~ (0.14, 0.16, 0.18)
+    val Accent = Color(0xFF3DDC3A)
+    val AccentSecondary = Color(0xFFFF8C33)
+    val Background = Color(0xFF0E1113)
+    val CardBackground = Color(0xFF1C2126)
     val TextPrimary = Color(0xFFFFFFFF)
     val TextSecondary = Color(0xFFB0B8C0)
     val Danger = Color(0xFFFF453A)
