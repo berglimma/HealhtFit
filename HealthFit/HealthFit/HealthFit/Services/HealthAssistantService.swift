@@ -1866,7 +1866,7 @@ final class HealthAssistantService: ObservableObject {
     private var draftMealPlanGoal: FitnessGoal?
     /// Minimum time the typing bubble stays visible before showing an assistant reply.
     /// `nonisolated` so default args / static helpers can read it under Swift 6 concurrency.
-    nonisolated private static let replyDelay: Duration = .seconds(3)
+    nonisolated private static let replyDelay: Duration = .seconds(4)
     nonisolated private static let workoutBuilderReplyDelay: Duration = .seconds(1)
     private static let idleReturnThreshold: TimeInterval = 180
 

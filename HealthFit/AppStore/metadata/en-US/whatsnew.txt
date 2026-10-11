@@ -1,4 +1,3 @@
-• Cycling: fixed zero KM on share cards and workout photo overlay
-• Run & walk: only real GPS distance is saved; walking uses walking pace
-• Correct bike, walk, and run icons when starting (Live Activity)
-• Outdoor cardio stability improvements
+• Fixed the green loading screen when leaving and returning to the app (iPhone and iPad)
+• More reliable welcome/loading after background and Stage Manager
+• Stability improvements when returning to workouts and the home screen

@@ -1,4 +1,3 @@
-• Vélo : correction du compteur de km sur les cartes et la photo
-• Course et marche : km uniquement via GPS ; rythme de marche dédié
-• Icônes correctes au démarrage vélo, marche et course (Live Activity)
-• Améliorations de stabilité du cardio outdoor
+• Correction de l’écran vert en quittant et en revenant dans l’app (iPhone et iPad)
+• Accueil/chargement plus stable après l’arrière-plan et Stage Manager
+• Améliorations de stabilité au retour à l’entraînement et à l’accueil

@@ -23,7 +23,10 @@ struct WelcomeMotivationView: View {
     }
 
     private var currentSlide: WelcomeMotivationSlide {
-        context.slides[slideIndex]
+        guard !context.slides.isEmpty else {
+            return WelcomeMotivationSlide(icon: "figure.run", label: "HealthFit")
+        }
+        return context.slides[min(slideIndex, context.slides.count - 1)]
     }
 
     var body: some View {
@@ -55,6 +58,10 @@ struct WelcomeMotivationView: View {
             .padding(.horizontal, 28)
             .opacity(contentOpacity)
         }
+        .contentShape(Rectangle())
+        .onTapGesture { finish() }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Toque para continuar")
         .onAppear { startAnimations() }
     }
 
@@ -128,7 +135,7 @@ struct WelcomeMotivationView: View {
                 .tint(glowColor)
                 .padding(.horizontal, 12)
 
-            Text("Carregando...")
+            Text("Carregando... toque para continuar")
                 .font(.caption.weight(.medium))
                 .foregroundStyle(AppTheme.textSecondary)
         }
@@ -144,18 +151,29 @@ struct WelcomeMotivationView: View {
             progress = 1
         }
 
-        Task {
-            while !didComplete {
+        let slideCount = max(context.slides.count, 1)
+
+        // Sleep fora do MainActor — resume pesado no iPad/iPhone não pode prender o welcome.
+        Task(priority: .userInitiated) {
+            while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(slideInterval))
-                guard !didComplete else { break }
+                let shouldStop = await MainActor.run { didComplete }
+                if shouldStop { break }
                 await MainActor.run {
-                    slideIndex = (slideIndex + 1) % context.slides.count
+                    guard !didComplete, !context.slides.isEmpty else { return }
+                    slideIndex = (slideIndex + 1) % slideCount
                 }
             }
         }
 
-        Task {
+        Task(priority: .userInitiated) {
             try? await Task.sleep(for: .seconds(displayDuration))
+            await MainActor.run { finish() }
+        }
+
+        // Hard failsafe: se o MainActor travar no resume, libera após 8s.
+        Task(priority: .utility) {
+            try? await Task.sleep(for: .seconds(8))
             await MainActor.run { finish() }
         }
     }

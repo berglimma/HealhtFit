@@ -1,6 +1,13 @@
 package com.healthfit.android.ui.navigation
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
@@ -10,18 +17,23 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.healthfit.android.ui.assistant.AssistantEngine
+import com.healthfit.android.ui.assistant.AssistantNotifications
 import com.healthfit.android.ui.assistant.AssistantScreen
 import com.healthfit.android.ui.auth.AuthScreen
 import com.healthfit.android.ui.components.HealthFitTabBar
@@ -66,20 +78,55 @@ fun HealthFitRoot(
         )
         return
     }
-    if (user == null) {
+    val signedIn = user
+    if (signedIn == null) {
         AuthScreen(authRepository = authRepository)
         return
+    }
+
+    val context = LocalContext.current
+    val greetingName = signedIn.displayName?.ifBlank { "Berg" } ?: "Berg"
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            AssistantNotifications.ensureBackgroundDelivery(
+                context = context,
+                name = greetingName,
+                userId = signedIn.uid,
+                requestBatteryExemption = true,
+            )
+        }
+    }
+    LaunchedEffect(signedIn.uid) {
+        val needsPermission = Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        if (needsPermission) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            AssistantNotifications.ensureBackgroundDelivery(
+                context = context,
+                name = greetingName,
+                userId = signedIn.uid,
+                requestBatteryExemption = false,
+            )
+        }
     }
 
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val current = backStack?.destination?.route
     val showTabs = current != "pulse"
+    val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
+    // Hide tab bar while typing in IAssistente so the composer stays above the keyboard.
+    val showBottomBar = showTabs && !(current == "assistant" && imeVisible)
 
     Scaffold(
         containerColor = HealthFitColors.Background,
         bottomBar = {
-            if (showTabs) {
+            if (showBottomBar) {
                 HealthFitTabBar(
                     items = Tabs.map { tab ->
                         if (tab.route == "assistant") {
@@ -111,23 +158,24 @@ fun HealthFitRoot(
         ) {
             composable("home") {
                 HomeScreen(
-                    userName = user?.displayName?.ifBlank { user?.email?.substringBefore('@') }.orEmpty(),
+                    userName = signedIn.displayName?.ifBlank { signedIn.email.substringBefore('@') }.orEmpty(),
                     wellness = wellness,
                     onOpenPulse = { navController.navigate("pulse") },
                 )
             }
-            composable("workouts") { WorkoutsScreen() }
+            composable("workouts") { WorkoutsScreen(userId = signedIn.uid) }
             composable("nutrition") { NutritionScreen(wellness, athlete) }
             composable("assistant") {
                 AssistantScreen(
-                    name = user?.displayName?.ifBlank { "Berg" } ?: "Berg",
+                    name = greetingName,
                     wellness = wellness,
                     athlete = athlete,
+                    userId = signedIn.uid,
                 )
             }
             composable("profile") {
                 ProfileScreen(
-                    profile = user!!,
+                    profile = signedIn,
                     wellness = wellness,
                     athlete = athlete,
                     onSignOut = { authRepository.signOut() },

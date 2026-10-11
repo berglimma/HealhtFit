@@ -14,8 +14,6 @@ import android.os.SystemClock
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.google.android.gms.wearable.PutDataMapRequest
-import com.google.android.gms.wearable.Wearable
 import com.healthfit.android.MainActivity
 import com.healthfit.android.R
 import com.healthfit.core.workout.WorkoutWearContract
@@ -30,7 +28,11 @@ object WorkoutLockPublisher {
     fun clear(context: Context) {
         WorkoutLockSession.clear()
         val app = context.applicationContext
-        app.startService(Intent(app, WorkoutLockService::class.java).setAction(WorkoutLockService.ACTION_STOP))
+        // Must use startForegroundService so onStartCommand can call startForeground before stop.
+        ContextCompat.startForegroundService(
+            app,
+            Intent(app, WorkoutLockService::class.java).setAction(WorkoutLockService.ACTION_STOP),
+        )
     }
 }
 
@@ -45,31 +47,43 @@ class WorkoutLockService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
+        ensureChannel()
+        val stopping = intent?.action == ACTION_STOP
+        val snapshot = if (stopping) null else WorkoutLockSession.state.value
+
+        // Android kills the app if startForeground isn't called promptly after startForegroundService.
+        val notification = snapshot?.let {
+            rememberClock(it)
+            buildNotification(it)
+        } ?: placeholderNotification()
+        promoteForeground(notification)
+
+        if (stopping || snapshot == null) {
             syncWatch(null)
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
         }
-        val snapshot = WorkoutLockSession.state.value ?: return START_NOT_STICKY
-        rememberClock(snapshot)
-        val notification = buildNotification(snapshot)
+
+        syncWatch(snapshot)
+        return START_STICKY
+    }
+
+    private fun promoteForeground(notification: Notification) {
         if (Build.VERSION.SDK_INT >= 34) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
-        syncWatch(snapshot)
-        return START_STICKY
     }
 
     private fun rememberClock(snapshot: WorkoutLockSnapshot) {
         val countdown = snapshot.resting && snapshot.restRemainingSeconds > 0
-        val key = "${snapshot.workoutTitle}|${snapshot.exerciseName}|${snapshot.resting}|$countdown"
+        val key = "${snapshot.workoutTitle}|${snapshot.exerciseName}|${snapshot.resting}|$countdown|${snapshot.paused}"
         if (key == chronoKey) return
         chronoKey = key
         chronoCountDown = countdown
-        chronoRunning = !snapshot.resting || countdown
+        chronoRunning = !snapshot.paused && (!snapshot.resting || countdown)
         chronoBase = when {
             countdown -> SystemClock.elapsedRealtime() + snapshot.restRemainingSeconds * 1000L
             else -> SystemClock.elapsedRealtime() - snapshot.elapsedSeconds * 1000L
@@ -79,17 +93,28 @@ class WorkoutLockService : Service() {
     }
 
     private fun buildNotification(snapshot: WorkoutLockSnapshot): Notification {
-        ensureChannel()
-        val phase = if (snapshot.resting) "HealthFit · Pausa" else "HealthFit · Exercício"
+        val phase = when {
+            snapshot.paused -> "HealthFit · Pausado"
+            snapshot.resting -> "HealthFit · Pausa"
+            else -> "HealthFit · Exercício"
+        }
+        val phaseColor = when {
+            snapshot.paused -> 0xFFFFD60A.toInt()
+            snapshot.resting -> 0xFFFF8C33.toInt()
+            else -> 0xFF3DDC3A.toInt()
+        }
         val views = RemoteViews(packageName, R.layout.notification_workout_lock).apply {
             setTextViewText(R.id.lock_phase, phase)
-            setTextColor(R.id.lock_phase, if (snapshot.resting) 0xFFFF8C33.toInt() else 0xFF3DDC3A.toInt())
+            setTextColor(R.id.lock_phase, phaseColor)
             setTextViewText(R.id.lock_exercise, snapshot.exerciseName)
             setTextViewText(R.id.lock_title, snapshot.workoutTitle)
-            setTextViewText(R.id.lock_sets, if (snapshot.resting && snapshot.restRemainingSeconds > 0) "restante" else snapshot.setsLabel)
+            setTextViewText(
+                R.id.lock_sets,
+                if (snapshot.resting && snapshot.restRemainingSeconds > 0) "restante" else snapshot.setsLabel,
+            )
             setChronometer(R.id.lock_clock, chronoBase, null, chronoRunning)
             setChronometerCountDown(R.id.lock_clock, chronoCountDown)
-            if (snapshot.resting) setTextColor(R.id.lock_clock, 0xFFFF8C33.toInt())
+            if (snapshot.resting || snapshot.paused) setTextColor(R.id.lock_clock, phaseColor)
         }
         val open = PendingIntent.getActivity(
             this,
@@ -115,6 +140,15 @@ class WorkoutLockService : Service() {
             .build()
     }
 
+    private fun placeholderNotification(): Notification =
+        NotificationCompat.Builder(this, CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_heart)
+            .setContentTitle("HealthFit")
+            .setContentText("Encerrando treino…")
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+
     private fun ensureChannel() {
         val manager = getSystemService(NotificationManager::class.java)
         val channel = NotificationChannel(CHANNEL, "Treino na tela bloqueada", NotificationManager.IMPORTANCE_HIGH).apply {
@@ -127,20 +161,19 @@ class WorkoutLockService : Service() {
     }
 
     private fun syncWatch(snapshot: WorkoutLockSnapshot?) {
-        runCatching {
-            val request = PutDataMapRequest.create(WorkoutWearContract.PATH).apply {
-                dataMap.putBoolean(WorkoutWearContract.ACTIVE, snapshot != null)
-                dataMap.putString(WorkoutWearContract.TITLE, snapshot?.workoutTitle.orEmpty())
-                dataMap.putString(WorkoutWearContract.EXERCISE, snapshot?.exerciseName.orEmpty())
-                dataMap.putString(WorkoutWearContract.SETS, snapshot?.setsLabel.orEmpty())
-                dataMap.putBoolean(WorkoutWearContract.RESTING, snapshot?.resting == true)
-                dataMap.putInt(WorkoutWearContract.ELAPSED, snapshot?.elapsedSeconds ?: 0)
-                dataMap.putLong(WorkoutWearContract.TIMER_START, if (snapshot == null) 0L else timerStartEpoch)
-                dataMap.putLong(WorkoutWearContract.REST_END, if (snapshot == null) 0L else restEndEpoch)
-                dataMap.putLong(WorkoutWearContract.UPDATED, System.currentTimeMillis())
-            }.asPutDataRequest().setUrgent()
-            Wearable.getDataClient(this).putDataItem(request)
-        }
+        PhoneWorkoutSync.publishPhoneState(
+            context = this,
+            active = snapshot != null,
+            title = snapshot?.workoutTitle.orEmpty(),
+            exercise = snapshot?.exerciseName.orEmpty(),
+            sets = snapshot?.setsLabel.orEmpty(),
+            resting = snapshot?.resting == true && snapshot.paused != true,
+            paused = snapshot?.paused == true,
+            elapsedSeconds = snapshot?.elapsedSeconds ?: 0,
+            timerStartEpoch = if (snapshot == null) 0L else timerStartEpoch,
+            restEndEpoch = if (snapshot == null) 0L else restEndEpoch,
+            kind = snapshot?.kind ?: WorkoutWearContract.KIND_STRENGTH,
+        )
     }
 
     companion object {

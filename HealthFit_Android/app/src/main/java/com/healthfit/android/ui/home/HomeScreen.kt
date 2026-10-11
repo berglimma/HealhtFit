@@ -618,15 +618,8 @@ private fun WaterQuick(label: String, onClick: () -> Unit, modifier: Modifier) {
     )
 }
 
-private fun greeting(name: String): String {
-    val hour = java.time.LocalTime.now().hour
-    val hello = when {
-        hour < 12 -> "Bom dia"
-        hour < 18 -> "Boa tarde"
-        else -> "Boa noite"
-    }
-    return "$hello, $name!"
-}
+private fun greeting(name: String): String =
+    com.healthfit.android.ui.assistant.MotivationMessages.namedGreeting(name)
 
 private fun clock(totalMinutes: Int): String {
     val day = 24 * 60

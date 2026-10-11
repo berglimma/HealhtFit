@@ -14,6 +14,8 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -23,14 +25,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthfit.android.R
+import com.healthfit.android.ui.assistant.AssistantRoutineStore
 import com.healthfit.android.ui.components.ChipRow
 import com.healthfit.android.ui.components.HeroCard
 import com.healthfit.android.ui.components.MetaRow
 import com.healthfit.android.ui.components.SectionLabel
+import com.healthfit.android.workout.PhoneWorkoutSync
+import com.healthfit.core.workout.WorkoutWearContract
 
 private val Gym = Brush.linearGradient(listOf(Color(0xFF102018), Color(0xFF1C3A2A), Color(0xFF0E1814)))
 private val Sunset = Brush.linearGradient(listOf(Color(0xFF3A2418), Color(0xFF1A2840)))
@@ -70,11 +76,29 @@ private fun programTitle(key: String) = when (key) {
 }
 
 @Composable
-fun WorkoutsScreen() {
+fun WorkoutsScreen(userId: String? = null) {
     var tab by remember { mutableIntStateOf(0) }
     var dest by remember { mutableStateOf<WorkoutDest>(WorkoutDest.Browse) }
     val maleCustom = remember { mutableStateListOf<WorkoutSheet>() }
     val femaleCustom = remember { mutableStateListOf<WorkoutSheet>() }
+    val context = LocalContext.current
+    val watchOwned by PhoneWorkoutSync.watchOwned.collectAsState()
+
+    // When the watch starts a workout and the phone isn't already in a live session, mirror it.
+    LaunchedEffect(watchOwned?.title, watchOwned?.exercise, dest) {
+        val owned = watchOwned ?: return@LaunchedEffect
+        if (dest is WorkoutDest.Activity) return@LaunchedEffect
+        dest = WorkoutDest.Activity(
+            title = owned.exercise.ifBlank { owned.title },
+            detail = "Watch · ${owned.title}",
+            cardio = owned.kind == WorkoutWearContract.KIND_CARDIO,
+            cover = when (owned.kind) {
+                WorkoutWearContract.KIND_MEDITATION -> R.drawable.meditacaocoverrespiracao
+                else -> R.drawable.cardiocovercorrida
+            },
+        )
+    }
+
     when (val current = dest) {
         is WorkoutDest.Program -> {
             val hub = when (current.key) {
@@ -128,9 +152,31 @@ fun WorkoutsScreen() {
             return
         }
         is WorkoutDest.OpenLive -> {
+            val cover = if (current.programKey == "female") {
+                R.drawable.workoutprogramfemale
+            } else {
+                R.drawable.workoutprogrammale
+            }
             ActiveWorkoutScreen(
                 sheet = current.sheet,
                 onClose = { dest = WorkoutDest.OpenSheet(current.sheet, current.programKey, current.group) },
+                onFinished = { elapsed, done ->
+                    val session = finishedActivity(current.sheet.title, elapsed, false, cover)
+                    dest = WorkoutDest.Finished(
+                        session.copy(
+                            completed = done,
+                            total = current.sheet.exercises.size,
+                            exercises = current.sheet.exercises.take(done).map {
+                                com.healthfit.android.ui.home.FinishedExercise(
+                                    name = it.name,
+                                    sets = it.sets,
+                                    elapsed = "—",
+                                    rest = "${it.restSeconds}s",
+                                )
+                            },
+                        ),
+                    )
+                },
             )
             return
         }
@@ -169,9 +215,33 @@ fun WorkoutsScreen() {
             return
         }
         is WorkoutDest.Live -> {
+            val sheet = sheetsFor(current.key)[current.index]
+            val cover = when (current.key) {
+                "female" -> R.drawable.workoutprogramfemale
+                "home" -> R.drawable.workoutprogramhome
+                "mobility" -> R.drawable.workoutprogrammobility
+                else -> R.drawable.workoutprogrammale
+            }
             ActiveWorkoutScreen(
-                sheet = sheetsFor(current.key)[current.index],
+                sheet = sheet,
                 onClose = { dest = WorkoutDest.Detail(current.key, current.index) },
+                onFinished = { elapsed, done ->
+                    val session = finishedActivity(sheet.title, elapsed, false, cover)
+                    dest = WorkoutDest.Finished(
+                        session.copy(
+                            completed = done,
+                            total = sheet.exercises.size,
+                            exercises = sheet.exercises.take(done).map {
+                                com.healthfit.android.ui.home.FinishedExercise(
+                                    name = it.name,
+                                    sets = it.sets,
+                                    elapsed = "—",
+                                    rest = "${it.restSeconds}s",
+                                )
+                            },
+                        ),
+                    )
+                },
             )
             return
         }
@@ -232,6 +302,19 @@ fun WorkoutsScreen() {
             return
         }
         is WorkoutDest.Finished -> {
+            LaunchedEffect(current.session.title, current.session.duration) {
+                val kind = when {
+                    current.session.isCardio -> "cardio"
+                    current.session.title.contains("medita", ignoreCase = true) -> "meditation"
+                    else -> "strength"
+                }
+                AssistantRoutineStore.recordSession(
+                    context = context,
+                    userId = userId,
+                    title = current.session.title,
+                    kind = kind,
+                )
+            }
             com.healthfit.android.ui.home.WorkoutFinishedScreen(
                 session = current.session,
                 onClose = { dest = WorkoutDest.Browse },

@@ -1,52 +1,62 @@
 package com.healthfit.wear
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.Wearable
 import com.healthfit.core.workout.WorkoutWearContract
-import com.healthfit.designsystem.HealthFitColors
-import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setShowWhenLocked(true)
         setTurnScreenOn(true)
+        LocalWatchSession.init(applicationContext)
         setContent { WearRoot() }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        LocalWatchSession.refreshPhoneReachable()
     }
 }
 
 @Composable
 private fun WearRoot() {
     val context = LocalContext.current
-    val workout by WorkoutWearSession.state.collectAsState()
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val session by LocalWatchSession.state.collectAsState()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { }
+
+    LaunchedEffect(Unit) {
+        val permissions = buildList {
+            add(Manifest.permission.BODY_SENSORS)
+            add(Manifest.permission.ACTIVITY_RECOGNITION)
+            add(Manifest.permission.ACCESS_FINE_LOCATION)
+            add(Manifest.permission.ACCESS_COARSE_LOCATION)
+            if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        permissionLauncher.launch(permissions.toTypedArray())
+    }
+
+    // Mantém o carregamento do treino do celular (DataClient) ao abrir o app.
     LaunchedEffect(Unit) {
         Wearable.getDataClient(context).dataItems.addOnSuccessListener { buffer ->
             buffer.use { items ->
@@ -58,71 +68,14 @@ private fun WearRoot() {
             }
         }
     }
-    LaunchedEffect(workout) {
-        while (true) {
-            now = System.currentTimeMillis()
-            delay(1000)
-        }
-    }
-    DisposableEffect(workout != null) {
+
+    DisposableEffect(session != null) {
         val activity = context.findActivity()
-        if (workout != null) activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        if (session != null) activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose { activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
-    MaterialTheme {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(HealthFitColors.Background)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text("HealthFit", color = HealthFitColors.Accent, textAlign = TextAlign.Center)
-            val current = workout
-            if (current == null) {
-                Text(
-                    "Aguardando treino do celular",
-                    color = HealthFitColors.TextSecondary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            } else {
-                Text(
-                    if (current.resting) "Pausa" else "Exercício",
-                    color = if (current.resting) HealthFitColors.AccentSecondary else HealthFitColors.Accent,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 6.dp),
-                )
-                Text(
-                    current.exercise,
-                    color = androidx.compose.ui.graphics.Color.White,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-                Text(
-                    current.clock(now),
-                    color = androidx.compose.ui.graphics.Color.White,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-                Text(
-                    current.sets,
-                    color = HealthFitColors.TextSecondary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-                if (current.title.isNotBlank()) {
-                    Text(
-                        current.title,
-                        color = HealthFitColors.TextSecondary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
-                }
-            }
-        }
-    }
+
+    WearNavigation()
 }
 
 private fun Context.findActivity(): Activity? {

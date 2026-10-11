@@ -1,5 +1,11 @@
 package com.healthfit.android.ui.nutrition
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -24,6 +31,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -41,16 +49,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.healthfit.android.ui.components.BiotypeSection
 import com.healthfit.android.ui.components.ChipRow
 import com.healthfit.android.ui.components.DarkCard
 import com.healthfit.android.ui.components.GradientButton
+import com.healthfit.android.ui.home.SweetConsumptionLevel
 import com.healthfit.designsystem.HealthFitColors
+import java.io.File
 
 @Composable
 fun NutritionScreen(
@@ -61,7 +76,6 @@ fun NutritionScreen(
     var showShopping by remember { mutableStateOf(false) }
     var deficit by remember { mutableIntStateOf(400) }
     val objective = athlete.objective
-    var lactose by remember { mutableStateOf(true) }
     var menuVersion by remember { mutableIntStateOf(0) }
     val eaten = remember { androidx.compose.runtime.mutableStateListOf<String>() }
     var supplement by remember { mutableStateOf("Whey Protein") }
@@ -70,7 +84,10 @@ fun NutritionScreen(
     val supplementLog = remember { androidx.compose.runtime.mutableStateListOf<String>() }
     var analysisMeal by remember { mutableStateOf("Café") }
     var analyzed by remember { mutableStateOf(false) }
+    var photoLabel by remember { mutableStateOf<String?>(null) }
+    var customSupplement by remember { mutableStateOf("") }
     val meta = 2900 - deficit
+    val context = LocalContext.current
     if (showShopping) {
         ShoppingListScreen(onBack = { showShopping = false })
         return
@@ -138,14 +155,47 @@ fun NutritionScreen(
             )
             Spacer(Modifier.height(16.dp))
             when (tab) {
-                0 -> PlanTab(deficit, athlete, wellness, lactose, meta, { deficit = it }, { lactose = it }) { menuVersion += 1 }
+                0 -> PlanTab(
+                    deficit = deficit,
+                    athlete = athlete,
+                    wellness = wellness,
+                    meta = meta,
+                    onDeficit = { deficit = it },
+                    onUpdateMenu = { menuVersion += 1 },
+                )
                 1 -> MenuTab(meta, eaten.toSet(), menuVersion) { name ->
                     if (name in eaten) eaten.remove(name) else eaten.add(name)
                 }
-                2 -> SupplementsTab(supplement, amount, unit, supplementLog.toList(), { supplement = it }, { amount = it }, { unit = it }) {
-                    supplementLog.add("$supplement · $amount $unit")
-                }
-                else -> AnalysisTab(analysisMeal, analyzed, { analysisMeal = it }) { analyzed = true }
+                2 -> SupplementsTab(
+                    selected = supplement,
+                    customName = customSupplement,
+                    amount = amount,
+                    unit = unit,
+                    log = supplementLog.toList(),
+                    onSelect = { supplement = it },
+                    onCustomName = { customSupplement = it },
+                    onAmount = { amount = it.coerceIn(1, 500) },
+                    onUnit = { unit = it },
+                    onSave = {
+                        val name = if (supplement == "Outro") {
+                            customSupplement.trim().ifBlank { "Suplemento" }
+                        } else {
+                            supplement
+                        }
+                        supplementLog.add(0, "$name · $amount $unit · agora")
+                        Toast.makeText(context, "Registrado: $name", Toast.LENGTH_SHORT).show()
+                    },
+                )
+                else -> AnalysisTab(
+                    meal = analysisMeal,
+                    analyzed = analyzed,
+                    photoLabel = photoLabel,
+                    onMeal = { analysisMeal = it },
+                    onPhotoReady = { label ->
+                        photoLabel = label
+                        analyzed = true
+                    },
+                )
             }
             Spacer(Modifier.height(12.dp))
         }
@@ -157,10 +207,8 @@ private fun PlanTab(
     deficit: Int,
     athlete: com.healthfit.android.ui.home.AthleteProfile,
     wellness: com.healthfit.android.ui.home.DailyWellness,
-    lactose: Boolean,
     meta: Int,
     onDeficit: (Int) -> Unit,
-    onLactose: (Boolean) -> Unit,
     onUpdateMenu: () -> Unit,
 ) {
     val objective = athlete.objective
@@ -228,8 +276,53 @@ private fun PlanTab(
     Text("Você tolera lactose?", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Choice("Sim", lactose) { onLactose(true) }
-        Choice("Não", !lactose) { onLactose(false) }
+        Choice("Sim", athlete.lactoseTolerant) { athlete.lactoseTolerant = true }
+        Choice("Não", !athlete.lactoseTolerant) { athlete.lactoseTolerant = false }
+    }
+    Spacer(Modifier.height(18.dp))
+    Text("Você consome muito doce?", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+    Spacer(Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        SweetConsumptionLevel.entries.forEach { level ->
+            Text(
+                level.title,
+                color = if (athlete.sweetConsumption == level) Color.Black else Color.White,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        if (athlete.sweetConsumption == level) HealthFitColors.Accent
+                        else HealthFitColors.CardBackground,
+                    )
+                    .clickable { athlete.sweetConsumption = level }
+                    .padding(horizontal = 10.dp, vertical = 12.dp),
+            )
+        }
+    }
+    Text(
+        athlete.sweetConsumption.detail,
+        color = Color(0xFFB7C0C8),
+        fontSize = 13.sp,
+        modifier = Modifier.padding(top = 10.dp),
+    )
+    athlete.sweetConsumption.warning?.let { warning ->
+        Spacer(Modifier.height(10.dp))
+        DarkCard {
+            Text(
+                "Atenção ao consumo de doces",
+                color = athlete.sweetConsumption.warningColor,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+            )
+            Text(
+                warning,
+                color = Color(0xFFB7C0C8),
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
     }
 }
 
@@ -304,17 +397,19 @@ private fun MealRow(
 @Composable
 private fun SupplementsTab(
     selected: String,
+    customName: String,
     amount: Int,
     unit: String,
     log: List<String>,
     onSelect: (String) -> Unit,
+    onCustomName: (String) -> Unit,
     onAmount: (Int) -> Unit,
     onUnit: (String) -> Unit,
     onSave: () -> Unit,
 ) {
     Text("Suplementos de hoje", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
     Text(
-        "Registre o que você ingeriu hoje. Os dados ficam salvos no dia atual.",
+        "Registre o que você ingeriu hoje (incluindo no dia de musculação). Os dados ficam no dia atual.",
         color = Color(0xFFB7C0C8),
         modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
     )
@@ -346,12 +441,43 @@ private fun SupplementsTab(
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
+        if (selected == "Outro") {
+            Spacer(Modifier.height(8.dp))
+            BasicTextField(
+                value = customName,
+                onValueChange = onCustomName,
+                textStyle = TextStyle(color = Color.White, fontSize = 15.sp),
+                cursorBrush = SolidColor(HealthFitColors.Accent),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF12161A))
+                    .padding(14.dp),
+                decorationBox = { inner ->
+                    if (customName.isEmpty()) {
+                        Text("Nome do suplemento", color = Color(0xFF8E989F))
+                    }
+                    inner()
+                },
+            )
+        }
     }
     Spacer(Modifier.height(12.dp))
     DarkCard {
         Text("Quantidade ingerida", color = Color.White, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.Remove,
+                contentDescription = "Diminuir",
+                tint = HealthFitColors.Accent,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF12161A))
+                    .clickable { onAmount(amount - 5) }
+                    .padding(6.dp),
+            )
             Text(
                 "$amount",
                 color = Color.White,
@@ -359,8 +485,18 @@ private fun SupplementsTab(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFF12161A))
-                    .clickable { onAmount(amount + 5) }
                     .padding(horizontal = 18.dp, vertical = 10.dp),
+            )
+            Icon(
+                Icons.Filled.Add,
+                contentDescription = "Aumentar",
+                tint = HealthFitColors.Accent,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF12161A))
+                    .clickable { onAmount(amount + 5) }
+                    .padding(6.dp),
             )
             listOf("g", "ml", "cápsulas", "scoop").forEach { option ->
                 Text(
@@ -378,13 +514,59 @@ private fun SupplementsTab(
     }
     Spacer(Modifier.height(12.dp))
     GradientButton(text = "Registrar ingestão", onClick = onSave)
-    log.forEach { entry ->
-        Text(entry, color = HealthFitColors.Accent, modifier = Modifier.padding(top = 8.dp))
+    if (log.isEmpty()) {
+        Text("Nenhum suplemento registrado hoje.", color = Color(0xFF8E989F), modifier = Modifier.padding(top = 10.dp))
+    } else {
+        Text("Registros de hoje", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
+        log.forEach { entry ->
+            Text(entry, color = HealthFitColors.Accent, modifier = Modifier.padding(top = 8.dp))
+        }
     }
 }
 
 @Composable
-private fun AnalysisTab(meal: String, analyzed: Boolean, onMeal: (String) -> Unit, onAnalyze: () -> Unit) {
+private fun AnalysisTab(
+    meal: String,
+    analyzed: Boolean,
+    photoLabel: String?,
+    onMeal: (String) -> Unit,
+    onPhotoReady: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) onPhotoReady("Galeria")
+    }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        if (ok) onPhotoReady("Câmera")
+    }
+    val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) {
+            Toast.makeText(context, "Permita a câmera para tirar a foto", Toast.LENGTH_SHORT).show()
+            return@rememberLauncherForActivityResult
+        }
+        val dir = File(context.cacheDir, "nutrition").apply { mkdirs() }
+        val file = File(dir, "meal_${System.currentTimeMillis()}.jpg")
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        pendingCameraUri = uri
+        camera.launch(uri)
+    }
+
+    fun openCamera() {
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            val dir = File(context.cacheDir, "nutrition").apply { mkdirs() }
+            val file = File(dir, "meal_${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            pendingCameraUri = uri
+            camera.launch(uri)
+        } else {
+            cameraPermission.launch(Manifest.permission.CAMERA)
+        }
+    }
+
     Text("Análise de refeição", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
     Text(
         "Recurso do plano IA Plus. Foto do prato ou do rótulo nutricional — o app lê a tabela quando houver; senão estima pelo visual. Só macros são salvos; a foto é descartada.",
@@ -401,11 +583,32 @@ private fun AnalysisTab(meal: String, analyzed: Boolean, onMeal: (String) -> Uni
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = HealthFitColors.Accent, modifier = Modifier.size(28.dp))
-            Text(if (analyzed) "Foto estimada · macros abaixo" else "Nenhuma foto selecionada", color = Color(0xFFB7C0C8), modifier = Modifier.padding(top = 8.dp))
+            Text(
+                when {
+                    analyzed && photoLabel != null -> "Foto ($photoLabel) · macros abaixo"
+                    analyzed -> "Foto estimada · macros abaixo"
+                    else -> "Nenhuma foto selecionada"
+                },
+                color = Color(0xFFB7C0C8),
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
     }
     Spacer(Modifier.height(12.dp))
-    GradientButton(text = "Adicionar foto", onClick = onAnalyze, icon = Icons.Filled.CameraAlt)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        GradientButton(
+            text = "Câmera",
+            onClick = { openCamera() },
+            icon = Icons.Filled.CameraAlt,
+            modifier = Modifier.weight(1f),
+        )
+        GradientButton(
+            text = "Galeria",
+            onClick = { gallery.launch("image/*") },
+            icon = Icons.Filled.PhotoLibrary,
+            modifier = Modifier.weight(1f),
+        )
+    }
     Spacer(Modifier.height(14.dp))
     Text("Refeição", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
     Spacer(Modifier.height(8.dp))
@@ -435,43 +638,6 @@ private fun AnalysisTab(meal: String, analyzed: Boolean, onMeal: (String) -> Uni
         color = if (analyzed) Color.White else Color(0xFFB7C0C8),
         modifier = Modifier.padding(top = 4.dp),
     )
-}
-
-@Composable
-private fun ShoppingListScreen(onBack: () -> Unit) {
-    val items = remember {
-        androidx.compose.runtime.mutableStateListOf(
-            "Claras" to true,
-            "Carne magra" to true,
-            "Feijão" to true,
-            "Atum" to false,
-            "Tapioca" to false,
-            "Queijo" to false,
-            "Maçã" to false,
-            "Pasta de amendoim" to false,
-            "Iogurte de coco" to false,
-            "Whey" to false,
-        )
-    }
-    Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(16.dp)) {
-        Text("Lista de compras", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable(onClick = onBack))
-        Text("Toque para marcar o que já comprou. Toque no título para voltar.", color = HealthFitColors.TextSecondary, modifier = Modifier.padding(bottom = 12.dp))
-        items.forEachIndexed { index, (name, bought) ->
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(HealthFitColors.CardBackground)
-                    .clickable { items[index] = name to !bought }
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (bought) Icon(Icons.Filled.CheckCircle, null, tint = HealthFitColors.Accent) else Box(Modifier.size(18.dp).border(1.5.dp, Color(0xFF8E989F), CircleShape))
-                Text(name, color = Color.White, modifier = Modifier.padding(start = 10.dp))
-            }
-        }
-    }
 }
 
 @Composable

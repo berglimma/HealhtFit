@@ -1,4 +1,3 @@
-• Pedal: correção do contador de km nos cards e na foto do treino
-• Corrida e caminhada: km só com GPS real; caminhada com ritmo próprio
-• Ícones corretos ao iniciar bike, caminhada e corrida (Live Activity)
-• Melhorias de estabilidade no cardio outdoor
+• Correção da tela verde ao sair e voltar do app (iPhone e iPad)
+• Welcome/carregamento mais estável após background e Stage Manager
+• Melhorias de estabilidade no retorno ao treino e à tela inicial

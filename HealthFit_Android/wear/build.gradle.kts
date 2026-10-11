@@ -9,7 +9,8 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.healthfit.android"
+        // Separate from phone app so Wear never overwrites the phone install.
+        applicationId = "com.healthfit.android.watch"
         minSdk = 30
         targetSdk = 35
         versionCode = 1
@@ -48,6 +49,7 @@ dependencies {
 
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.compose.foundation:foundation")
     implementation("androidx.wear.compose:compose-material:1.4.0")
     implementation("androidx.wear.compose:compose-foundation:1.4.0")
     implementation("androidx.wear.compose:compose-navigation:1.4.0")

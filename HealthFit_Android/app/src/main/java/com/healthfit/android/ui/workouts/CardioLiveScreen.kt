@@ -35,6 +35,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,7 +59,10 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.healthfit.android.ui.components.GradientButton
+import com.healthfit.android.workout.PhoneWorkoutSync
+import com.healthfit.android.workout.WearRemoteAction
 import com.healthfit.android.workout.WorkoutPresence
+import com.healthfit.core.workout.WorkoutWearContract
 import com.healthfit.designsystem.HealthFitColors
 import kotlin.math.asin
 import kotlin.math.atan2
@@ -153,12 +157,26 @@ fun CardioLiveScreen(
         showMap -> "%.2f km · %s /km".format(distanceKm, paceLabel)
         else -> detail
     }
+    val stopFromWatch by rememberUpdatedState {
+        onClose(elapsed, distanceKm, paceLabel)
+    }
+    LaunchedEffect(Unit) {
+        PhoneWorkoutSync.remoteActions.collect { action ->
+            when (action) {
+                WearRemoteAction.Pause -> paused = true
+                WearRemoteAction.Resume -> paused = false
+                WearRemoteAction.Stop -> stopFromWatch()
+            }
+        }
+    }
     WorkoutPresence(
         workoutTitle = detail,
         exerciseName = title,
         setsLabel = lockSets,
         elapsedSeconds = elapsed,
-        resting = paused,
+        resting = false,
+        paused = paused,
+        kind = WorkoutWearContract.KIND_CARDIO,
     )
 
     Column(

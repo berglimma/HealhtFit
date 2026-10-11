@@ -316,16 +316,16 @@ fun ProgramHubScreen(
             }
         }
         Spacer(Modifier.height(8.dp))
-        SectionHead("Foco no Shape · Nível 1", "Base do método")
+        SectionHead("Foco no Shape · Nível 1", "Base do método", ProgramAccents.shapeLevel1)
         program.shape1.forEach { PhotoSheetCard(it, program.cover, "Foco no Shape · Nível 1") { onOpen(it) } }
         Spacer(Modifier.height(12.dp))
-        SectionHead("Foco no Shape · Nível 2", "Progressão do método")
+        SectionHead("Foco no Shape · Nível 2", "Progressão do método", ProgramAccents.shapeLevel2)
         program.shape2.forEach { PhotoSheetCard(it, program.cover, "Foco no Shape · Nível 2") { onOpen(it) } }
         Spacer(Modifier.height(12.dp))
-        SectionHead("Método Militar · Soldado", "Base Push / Pull / Inferiores + condicionamento")
+        SectionHead("Método Militar · Soldado", "Base Push / Pull / Inferiores + condicionamento", ProgramAccents.militarSoldado)
         program.soldado.forEach { PhotoSheetCard(it, program.cover, "Método Militar · Soldado") { onOpen(it) } }
         Spacer(Modifier.height(12.dp))
-        SectionHead("Método Militar · Cabo", "Progressão de volume e intensidade")
+        SectionHead("Método Militar · Cabo", "Progressão de volume e intensidade", ProgramAccents.militarCabo)
         program.cabo.forEach { PhotoSheetCard(it, program.cover, "Método Militar · Cabo") { onOpen(it) } }
         Spacer(Modifier.height(12.dp))
         SectionHead("Recomendados", program.recommendedSubtitle)
@@ -357,7 +357,7 @@ fun SheetGroupScreen(
     ) {
         Text("Voltar", color = HealthFitColors.Accent, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onBack))
         Text(title, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-        Text(subtitle, color = Color(0xFFB7C0C8), modifier = Modifier.padding(bottom = 8.dp))
+        Text(subtitle, color = methodAccent(title).copy(alpha = 0.9f), modifier = Modifier.padding(bottom = 8.dp))
         sheets.forEach { PhotoSheetCard(it, imageRes, title) { onOpen(it) } }
     }
 }
@@ -401,10 +401,39 @@ fun ScanSheetScreen(onBack: () -> Unit, onImport: () -> Unit) {
     }
 }
 
+/** Accent tokens aligned with iOS WorkoutProgramHeroCard. */
+private object ProgramAccents {
+    val shapeLevel1 = Color(0xFF73B8FA) // blue
+    val shapeLevel2 = Color(0xFFFF8C33) // orange / AccentSecondary
+    val militarSoldado = Color(0xFF738C52) // olive
+    val militarCabo = Color(0xFFB89E61) // sand
+    val level = Color(0xFF9B7BFF)
+    val focus = Color(0xFF4ECDC4)
+}
+
+private fun methodAccent(method: String): Color = when {
+    method.contains("Shape", ignoreCase = true) && method.contains("Nível 2", ignoreCase = true) ->
+        ProgramAccents.shapeLevel2
+    method.contains("Shape", ignoreCase = true) -> ProgramAccents.shapeLevel1
+    method.contains("Cabo", ignoreCase = true) -> ProgramAccents.militarCabo
+    method.contains("Soldado", ignoreCase = true) || method.contains("Militar", ignoreCase = true) ->
+        ProgramAccents.militarSoldado
+    method.contains("MÉTODO ·", ignoreCase = true) && (
+        method.contains("Iniciante", ignoreCase = true) ||
+            method.contains("Intermedi", ignoreCase = true) ||
+            method.contains("Avançad", ignoreCase = true)
+        ) -> ProgramAccents.level
+    method.startsWith("MÉTODO", ignoreCase = true) -> ProgramAccents.focus
+    else -> HealthFitColors.Accent
+}
+
+private fun methodBrush(accent: Color): Brush =
+    Brush.linearGradient(listOf(accent.copy(alpha = 0.35f), Color(0xFF101820), Color(0xFF0E1113)))
+
 @Composable
-private fun SectionHead(title: String, subtitle: String) {
+private fun SectionHead(title: String, subtitle: String, accent: Color = HealthFitColors.Accent) {
     Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-    Text(subtitle, color = Color(0xFF8E989F), fontSize = 13.sp, modifier = Modifier.padding(bottom = 4.dp))
+    Text(subtitle, color = accent.copy(alpha = 0.9f), fontSize = 13.sp, modifier = Modifier.padding(bottom = 4.dp))
 }
 
 @Composable
@@ -416,16 +445,18 @@ private fun FocusCard(
     imageRes: Int,
     onClick: () -> Unit,
 ) {
+    val accent = methodAccent(eyebrow)
     Spacer(Modifier.height(8.dp))
     HeroCard(
         title = title,
         subtitle = subtitle,
-        brush = Brush.linearGradient(listOf(Color(0xFF102018), Color(0xFF1A2830))),
+        brush = methodBrush(accent),
         imageRes = imageRes,
         eyebrow = eyebrow,
+        eyebrowColor = accent,
         height = 148.dp,
         footer = {
-            Text(count, color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            Text(count, color = accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
         },
         onClick = onClick,
     )
@@ -433,13 +464,15 @@ private fun FocusCard(
 
 @Composable
 private fun PhotoSheetCard(sheet: WorkoutSheet, imageRes: Int, method: String, onClick: () -> Unit) {
+    val accent = methodAccent(method)
     Spacer(Modifier.height(8.dp))
     HeroCard(
         title = sheet.title,
         subtitle = "${sheet.exercises.size} exercícios · ~${sheet.minutes} min",
-        brush = Brush.linearGradient(listOf(Color(0xFF102018), Color(0xFF1A2830))),
+        brush = methodBrush(accent),
         imageRes = imageRes,
         eyebrow = method,
+        eyebrowColor = accent,
         height = 168.dp,
         onClick = onClick,
     )

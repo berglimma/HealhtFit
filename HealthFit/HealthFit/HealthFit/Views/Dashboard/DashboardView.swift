@@ -578,48 +578,53 @@ struct DashboardView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 10) {
-                ZStack {
-                    Circle()
-                        .fill(iconTint.opacity(0.2))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: icon)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(iconTint)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 4) {
-                        Text(title)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(iconTint.opacity(0.2))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: icon)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.85)
-                        if showsNew {
-                            Text("NOVO")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .background(iconTint)
-                                .clipShape(Capsule())
-                        }
+                            .foregroundStyle(iconTint)
                     }
-                    Text(subtitle)
-                        .font(.caption2)
+
+                    Spacer(minLength: 4)
+
+                    if showsNew {
+                        Text("NOVO")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(iconTint)
+                            .clipShape(Capsule())
+                            .fixedSize()
+                    }
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(AppTheme.textSecondary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.85)
                 }
 
-                Spacer(minLength: 0)
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
+                Text(subtitle)
+                    .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(12)
-            .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 104, alignment: .topLeading)
             .background(AppTheme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }

@@ -10,11 +10,13 @@ data class WorkoutLockSnapshot(
     val setsLabel: String,
     val elapsedSeconds: Int,
     val resting: Boolean,
+    val paused: Boolean = false,
     val restRemainingSeconds: Int = 0,
+    val kind: String = "strength",
     val publishedAt: Long = SystemClock.elapsedRealtime(),
 ) {
     fun displaySeconds(now: Long = SystemClock.elapsedRealtime()): Int {
-        if (resting) return elapsedSeconds
+        if (resting || paused) return elapsedSeconds
         val extra = ((now - publishedAt) / 1000L).toInt()
         return elapsedSeconds + extra.coerceAtLeast(0)
     }

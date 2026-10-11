@@ -11,9 +11,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -64,12 +64,15 @@ fun HealthFitTabBar(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(20.dp))
                     .clickable { onSelect(item.route) }
                     .padding(vertical = 2.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                // Fixed slot so the red unread badge sits fully inside (not clipped by tab clip/offset).
+                Box(
+                    modifier = Modifier.size(40.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
                     if (selected) {
                         Box(
                             modifier = Modifier
@@ -85,20 +88,24 @@ fun HealthFitTabBar(
                         modifier = Modifier.size(22.dp),
                     )
                     if (item.badge > 0) {
+                        val label = if (item.badge > 99) "99+" else item.badge.toString()
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
-                                .offset(x = 8.dp, y = (-4).dp)
-                                .size(16.dp)
+                                .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFFF3B30)),
+                                .background(Color(0xFFFF3B30))
+                                .padding(horizontal = if (label.length > 1) 5.dp else 0.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = item.badge.toString(),
+                                text = label,
                                 color = Color.White,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                lineHeight = 11.sp,
                             )
                         }
                     }

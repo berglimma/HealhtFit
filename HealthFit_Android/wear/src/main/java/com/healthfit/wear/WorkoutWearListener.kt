@@ -10,8 +10,10 @@ import androidx.wear.ongoing.Status
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
+import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import com.healthfit.core.workout.WorkoutWearContract
+import org.json.JSONObject
 
 class WorkoutWearListener : WearableListenerService() {
     override fun onDataChanged(events: DataEventBuffer) {
@@ -23,6 +25,8 @@ class WorkoutWearListener : WearableListenerService() {
                 return@forEach
             }
             val map = DataMapItem.fromDataItem(event.dataItem).dataMap
+            // Ignore echoes of sessions we ourselves published from the watch.
+            if (map.getString(WorkoutWearContract.SOURCE) == WorkoutWearContract.SOURCE_WATCH) return@forEach
             WorkoutWearSession.apply(map)
             if (map.getBoolean(WorkoutWearContract.ACTIVE)) {
                 showOngoing()
@@ -35,6 +39,17 @@ class WorkoutWearListener : WearableListenerService() {
                 cancelOngoing()
             }
         }
+    }
+
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+        if (messageEvent.path != WorkoutWearContract.CONTROL_PATH) return
+        val json = runCatching {
+            JSONObject(String(messageEvent.data, Charsets.UTF_8))
+        }.getOrNull() ?: return
+        WatchPhoneSync.applyControl(
+            action = json.optString(WorkoutWearContract.ACTION),
+            source = json.optString(WorkoutWearContract.SOURCE),
+        )
     }
 
     private fun showOngoing() {

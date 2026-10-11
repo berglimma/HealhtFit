@@ -4,6 +4,30 @@ import SwiftUI
 /// Sem isso, `@State didCompleteWelcomeForSession` volta a `false` e a UI trava em "Carregando…".
 private enum WelcomeSessionGate {
     static var didCompleteWelcomeThisLaunch = false
+    /// Firebase às vezes emite nil→user no resume; evita reiniciar welcome (tela verde).
+    static var lastAuthenticatedUserId: String?
+    static var lastLogoutAt: Date?
+
+    static func noteLogout() {
+        // `AuthService` zera `currentUser` antes de `isAuthenticated=false` — não depender do id aqui.
+        lastLogoutAt = Date()
+        didCompleteWelcomeThisLaunch = false
+    }
+
+    static func shouldResumeSameSession(userId: String?) -> Bool {
+        guard let userId,
+              userId == lastAuthenticatedUserId,
+              let lastLogoutAt,
+              Date().timeIntervalSince(lastLogoutAt) < 4
+        else { return false }
+        return true
+    }
+
+    static func rememberAuthenticatedUser(_ userId: String?) {
+        if let userId {
+            lastAuthenticatedUserId = userId
+        }
+    }
 }
 
 struct RootView: View {
@@ -29,32 +53,19 @@ struct RootView: View {
     private let heavyForegroundMinInterval: TimeInterval = 300
     @State private var lastHeavyForegroundAt: Date?
 
+    /// Gate estático + @State: após remount do RootView (iPad/Stage Manager) o @State zera,
+    /// mas o processo continua — sem isso a UI fica na tela verde de loading para sempre.
+    private var shouldShowMainTab: Bool {
+        WelcomeSessionGate.didCompleteWelcomeThisLaunch || didCompleteWelcomeForSession
+    }
+
     var body: some View {
         Group {
             if authService.isRestoringSession {
                 loadingScreen(message: "Carregando...")
             } else if !authService.isAuthenticated {
                 LoginView()
-            } else if !didCompleteWelcomeForSession {
-                // Após login/sessão, a transição tem prioridade — nunca renderiza o painel antes.
-                if showWelcomeMotivation, let welcomeContext {
-                    WelcomeMotivationView(context: welcomeContext) {
-                        completeWelcomeAndShowMainTab()
-                    }
-                } else {
-                    loadingScreen(message: nil)
-                        .onAppear {
-                            presentWelcome(preserveMainTab: false)
-                            // Failsafe: se o Task do welcome travar (iPad remount), libera o MainTab.
-                            Task { @MainActor in
-                                try? await Task.sleep(nanoseconds: 2_500_000_000)
-                                guard authService.isAuthenticated else { return }
-                                guard !didCompleteWelcomeForSession else { return }
-                                completeWelcomeAndShowMainTab()
-                            }
-                        }
-                }
-            } else {
+            } else if shouldShowMainTab {
                 MainTabView()
                     .task {
                         await runPostLoginStartupPipeline()
@@ -67,26 +78,38 @@ struct RootView: View {
                     }
                     // Welcome após 24h em overlay — não desmonta o MainTab (evita cold start no iPad).
                     .fullScreenCover(isPresented: $showWelcomeMotivation) {
-                        if let welcomeContext {
-                            WelcomeMotivationView(context: welcomeContext) {
-                                showWelcomeMotivation = false
+                        // Evitar `if let welcomeContext` (shadow do @State) — crasha o typechecker do Swift.
+                        if let context = welcomeContext {
+                            WelcomeMotivationView(context: context) {
+                                dismissWelcomeOverlay()
                             }
                         } else {
                             // Evita fullScreenCover vazio (não dismissível) se o contexto falhar.
                             Color.clear
-                                .onAppear { showWelcomeMotivation = false }
+                                .onAppear { dismissWelcomeOverlay() }
                         }
                     }
+            } else {
+                // Após login/sessão, a transição tem prioridade — nunca renderiza o painel antes.
+                if showWelcomeMotivation, let context = welcomeContext {
+                    WelcomeMotivationView(context: context) {
+                        completeWelcomeAndShowMainTab()
+                    }
+                } else {
+                    loadingScreen(message: nil)
+                        .onAppear {
+                            presentWelcome(preserveMainTab: false)
+                            scheduleWelcomeFailsafe()
+                        }
+                }
             }
         }
         // No implicit .animation on auth/welcome flags — they animate layout of heavy MainTab
         // and make the first tab switch feel frozen on device.
         .onAppear {
             // Remount após background (iPad): restaura o gate — NÃO reinicia cold start.
-            if WelcomeSessionGate.didCompleteWelcomeThisLaunch {
-                didCompleteWelcomeForSession = true
-                showWelcomeMotivation = false
-            } else {
+            restoreMainTabIfWelcomeAlreadyCompleted()
+            if !shouldShowMainTab {
                 prepareWelcomeIfAuthenticated(trigger: .coldStart)
             }
             // Icon sync is cheap but not needed before first paint.
@@ -102,9 +125,12 @@ struct RootView: View {
                 // o endEditing global cancela a digitação em TextFields.
                 if authService.isAuthenticated {
                     // iPad remount: @State zera, mas o processo ainda está vivo — restaura o MainTab.
-                    if WelcomeSessionGate.didCompleteWelcomeThisLaunch {
-                        didCompleteWelcomeForSession = true
-                        showWelcomeMotivation = false
+                    restoreMainTabIfWelcomeAlreadyCompleted()
+                    // Failsafe: loading verde OU overlay 24h preso após resume.
+                    if !shouldShowMainTab {
+                        scheduleWelcomeFailsafe(delayNanoseconds: 1_200_000_000)
+                    } else if showWelcomeMotivation {
+                        scheduleStuckWelcomeOverlayDismiss(delayNanoseconds: 7_000_000_000)
                     }
                     let returningFromBackground = didEnterBackground
                     didEnterBackground = false
@@ -137,6 +163,16 @@ struct RootView: View {
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             if isAuthenticated {
+                // Blip Firebase (nil→user em <4s): restaura MainTab em vez da tela verde.
+                if WelcomeSessionGate.shouldResumeSameSession(userId: authService.currentUser?.id) {
+                    WelcomeSessionGate.didCompleteWelcomeThisLaunch = true
+                    WelcomeSessionGate.lastLogoutAt = nil
+                    didCompleteWelcomeForSession = true
+                    showWelcomeMotivation = false
+                    welcomeContext = nil
+                    wellnessService.configure(for: authService.currentUser)
+                    return
+                }
                 WelcomeSessionGate.didCompleteWelcomeThisLaunch = false
                 didCompleteWelcomeForSession = false
                 showWelcomeMotivation = false
@@ -151,7 +187,7 @@ struct RootView: View {
                     syncWorkoutCloudHistory()
                 }
             } else {
-                WelcomeSessionGate.didCompleteWelcomeThisLaunch = false
+                WelcomeSessionGate.noteLogout()
                 didCompleteWelcomeForSession = false
                 showWelcomeMotivation = false
                 welcomeContext = nil
@@ -165,6 +201,63 @@ struct RootView: View {
                 WorkoutLiveActivitySync.end()
                 EveningTrainingNudgeService.cancelAll()
             }
+        }
+    }
+
+    private func restoreMainTabIfWelcomeAlreadyCompleted() {
+        guard WelcomeSessionGate.didCompleteWelcomeThisLaunch else { return }
+        WelcomeSessionGate.rememberAuthenticatedUser(authService.currentUser?.id)
+        if !didCompleteWelcomeForSession {
+            didCompleteWelcomeForSession = true
+        }
+        // Cover vazio (sem contexto) trava em fundo verde — fecha sempre.
+        if showWelcomeMotivation, welcomeContext == nil {
+            dismissWelcomeOverlay()
+        }
+    }
+
+    private func dismissWelcomeOverlay() {
+        showWelcomeMotivation = false
+        welcomeContext = nil
+    }
+
+    /// Sleep fora do MainActor — se o resume travar a main thread, o failsafe ainda dispara.
+    private func scheduleWelcomeFailsafe(delayNanoseconds: UInt64 = 2_000_000_000) {
+        Task(priority: .userInitiated) {
+            try? await Task.sleep(nanoseconds: delayNanoseconds)
+            await MainActor.run {
+                guard authService.isAuthenticated else { return }
+                if WelcomeSessionGate.didCompleteWelcomeThisLaunch || didCompleteWelcomeForSession {
+                    // MainTab já liberado: só fecha cover vazio. Overlay 24h legítimo
+                    // usa `scheduleStuckWelcomeOverlayDismiss` (não este failsafe de 2s).
+                    restoreMainTabIfWelcomeAlreadyCompleted()
+                    return
+                }
+                completeWelcomeAndShowMainTab()
+            }
+        }
+    }
+
+    /// Overlay de welcome (24h) sobre o MainTab — não pode ficar eterno se o timer/UI falhar no resume.
+    private func scheduleStuckWelcomeOverlayDismiss(delayNanoseconds: UInt64 = 7_000_000_000) {
+        Task(priority: .utility) {
+            try? await Task.sleep(nanoseconds: delayNanoseconds)
+            await MainActor.run {
+                guard authService.isAuthenticated else { return }
+                guard showWelcomeMotivation else { return }
+                dismissWelcomeOverlay()
+            }
+        }
+    }
+
+    /// Contagem leve dos últimos 7 dias — evita `buildReport` completo no MainActor no resume.
+    private func recentWeeklyWorkoutCount(referenceDate: Date = .now) -> Int {
+        let calendar = Calendar.current
+        let todayStart = calendar.startOfDay(for: referenceDate)
+        guard let weekStart = calendar.date(byAdding: .day, value: -6, to: todayStart) else { return 0 }
+        return workoutStore.sessionHistory.reduce(into: 0) { count, session in
+            guard let ended = session.endedAt else { return }
+            if ended >= weekStart { count += 1 }
         }
     }
 
@@ -446,18 +539,27 @@ struct RootView: View {
             if let hours = AppIconInactivityService.shared.hoursSinceLastSessionEnd(), hours >= 24 {
                 // Mantém MainTab montado; só mostra overlay.
                 presentWelcome(preserveMainTab: true)
+                scheduleStuckWelcomeOverlayDismiss()
             }
         }
     }
 
     private func completeWelcomeAndShowMainTab() {
         WelcomeSessionGate.didCompleteWelcomeThisLaunch = true
+        WelcomeSessionGate.rememberAuthenticatedUser(authService.currentUser?.id)
+        WelcomeSessionGate.lastLogoutAt = nil
         showWelcomeMotivation = false
+        welcomeContext = nil
         didCompleteWelcomeForSession = true
     }
 
     private func presentWelcome(preserveMainTab: Bool) {
         guard !showWelcomeMotivation else { return }
+        // Já no MainTab nesta sessão: nunca derruba para loading verde.
+        if preserveMainTab == false, WelcomeSessionGate.didCompleteWelcomeThisLaunch {
+            didCompleteWelcomeForSession = true
+            return
+        }
 
         // Relatório/contexto — não bloqueia o handler de scenePhase.
         Task { @MainActor in
@@ -470,10 +572,6 @@ struct RootView: View {
             }
 
             let user = authService.currentUser
-            let weeklyReport = WeeklyProgressAnalyzer.buildReport(
-                sessions: workoutStore.sessionHistory,
-                goal: user?.goal ?? .maintenance
-            )
             let hoursSinceLastWorkout = workoutStore.lastCompletedWorkoutAt.map {
                 Date().timeIntervalSince($0) / 3600
             }
@@ -481,15 +579,27 @@ struct RootView: View {
             // Garante status sono/água atualizado antes do glow do carregamento.
             wellnessService.refreshHealthIconNotifications()
 
+            // Yield antes do relatório — não empilhar com o pipeline pesado de resume.
+            await Task.yield()
+            guard !showWelcomeMotivation else { return }
+            if preserveMainTab == false, WelcomeSessionGate.didCompleteWelcomeThisLaunch {
+                didCompleteWelcomeForSession = true
+                return
+            }
+
             welcomeContext = WelcomeMotivationEngine.makeContext(
                 athleteName: user?.greetingName ?? "Atleta",
                 hoursSinceLastOpen: AppIconInactivityService.shared.hoursSinceLastSessionEnd(),
                 hoursSinceLastWorkout: hoursSinceLastWorkout,
-                weeklyWorkoutCount: weeklyReport.currentWeek.workoutCount,
+                weeklyWorkoutCount: recentWeeklyWorkoutCount(),
                 healthIconStatus: wellnessService.healthIconStatus()
             )
             showWelcomeMotivation = true
-            if !preserveMainTab {
+            if preserveMainTab {
+                scheduleStuckWelcomeOverlayDismiss()
+            }
+            // Nunca zera o MainTab se o gate já liberou (remount / failsafe).
+            if !preserveMainTab, !WelcomeSessionGate.didCompleteWelcomeThisLaunch {
                 didCompleteWelcomeForSession = false
             }
         }

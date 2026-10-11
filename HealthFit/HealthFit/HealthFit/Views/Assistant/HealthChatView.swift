@@ -110,45 +110,56 @@ struct HealthChatView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(assistant.messages) { message in
-                            ChatBubble(message: message)
-                                .id(message.id)
-                        }
+            // Layout estilo Mensagens do iOS: bolhas ocupam o espaço; sugestões + campo
+            // ficam fixos embaixo (não cobrem o histórico).
+            VStack(spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(assistant.messages) { message in
+                                ChatBubble(message: message)
+                                    .id(message.id)
+                            }
 
-                        if assistant.isTyping {
-                            TypingIndicatorBubble()
-                                .id("typing-indicator")
+                            if assistant.isTyping {
+                                TypingIndicatorBubble()
+                                    .id("typing-indicator")
+                            }
+
+                            Color.clear
+                                .frame(height: 1)
+                                .id("chat-bottom-anchor")
                         }
+                        .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                        .padding(.top, 12)
+                        .padding(.bottom, 12)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
                     }
-                    .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                    .padding(.top, 12)
-                    .padding(.bottom, 16)
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
-                }
-                .scrollDismissesKeyboard(.immediately)
-                .onTapGesture {
-                    dismissChatKeyboard()
-                }
-                .onChange(of: assistant.messages.count) { _, _ in
-                    scrollToBottom(proxy)
-                }
-                .onChange(of: assistant.isTyping) { _, isTyping in
-                    if isTyping {
+                    .defaultScrollAnchor(.bottom)
+                    .scrollDismissesKeyboard(.interactively)
+                    .onTapGesture {
                         dismissChatKeyboard()
+                    }
+                    .onChange(of: assistant.messages.count) { _, _ in
                         scrollToBottom(proxy)
                     }
+                    .onChange(of: assistant.isTyping) { _, isTyping in
+                        if isTyping {
+                            dismissChatKeyboard()
+                            scrollToBottom(proxy)
+                        }
+                    }
+                    .onChange(of: suggestedReplies) { _, _ in
+                        scrollToBottom(proxy)
+                    }
+                    .onAppear {
+                        scrollToBottom(proxy, animated: false)
+                    }
                 }
-            }
-            // Pin composer to the bottom so it never scrolls with messages and stays
-            // anchored when keyboard / scene phase leaves residual safe-area insets.
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
                 composerChrome
-                    // Composer must sit above scroll content / typing dots.
-                    .zIndex(1)
             }
             .background(AppTheme.background)
             .navigationTitle("Assistente")
@@ -346,12 +357,21 @@ struct HealthChatView: View {
         }
     }
 
-    private func scrollToBottom(_ proxy: ScrollViewProxy) {
-        withAnimation(.easeOut(duration: 0.25)) {
+    private func scrollToBottom(_ proxy: ScrollViewProxy, animated: Bool = true) {
+        let scroll = {
             if assistant.isTyping {
                 proxy.scrollTo("typing-indicator", anchor: .bottom)
-            } else if let last = assistant.messages.last {
-                proxy.scrollTo(last.id, anchor: .bottom)
+            } else {
+                proxy.scrollTo("chat-bottom-anchor", anchor: .bottom)
+            }
+        }
+        // Aguarda o layout do composer (sugestões) para a última bolha ficar acima dele.
+        Task { @MainActor in
+            await Task.yield()
+            if animated {
+                withAnimation(.easeOut(duration: 0.25), scroll)
+            } else {
+                scroll()
             }
         }
     }
@@ -370,19 +390,13 @@ struct HealthChatView: View {
             Divider()
                 .opacity(0.35)
 
-            suggestionStrip
-
-            Text(HealthAssistantEngine.healthSafetyDisclaimer)
-                .font(.caption2)
-                .foregroundStyle(AppTheme.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-                .padding(.bottom, 6)
+            if !suggestedReplies.isEmpty {
+                suggestionStrip
+            }
 
             inputBar
         }
-        // Opaque so scrolling typing dots never bleed through the input region.
-        .background(AppTheme.background.ignoresSafeArea(edges: .bottom))
+        .background(AppTheme.background)
     }
 
     private var suggestionStrip: some View {
@@ -401,12 +415,24 @@ struct HealthChatView: View {
                         )
                     } label: {
                         Text(question)
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(assistant.isInGuidedCheckIn ? .white : AppTheme.textPrimary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(assistant.isInGuidedCheckIn ? AppTheme.accent : AppTheme.cardBackground)
-                            .clipShape(Capsule())
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(assistant.isInGuidedCheckIn ? .white : AppTheme.accent)
+                            .lineLimit(1)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(assistant.isInGuidedCheckIn ? AppTheme.accent : AppTheme.cardBackground)
+                            )
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .strokeBorder(
+                                        assistant.isInGuidedCheckIn
+                                            ? Color.clear
+                                            : AppTheme.accent.opacity(0.45),
+                                        lineWidth: 1
+                                    )
+                            )
                     }
                     .buttonStyle(.plain)
                     .disabled(assistant.isTyping)
@@ -414,9 +440,9 @@ struct HealthChatView: View {
                 }
             }
             .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-            .padding(.vertical, 8)
+            .padding(.top, 10)
+            .padding(.bottom, 4)
         }
-        .background(AppTheme.background.opacity(0.95))
     }
 
     private var suggestedReplies: [String] {
@@ -458,52 +484,64 @@ struct HealthChatView: View {
     }
 
     private var inputBar: some View {
-        HStack(spacing: 10) {
-            TextField(inputPlaceholder, text: $draft)
-                .textInputAutocapitalization(.sentences)
-                .submitLabel(.send)
-                .focused($isInputFocused)
-                .onSubmit {
-                    sendDraftIfPossible()
-                }
-                .disabled(assistant.isTyping)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(AppTheme.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .foregroundStyle(AppTheme.textPrimary)
+        VStack(spacing: 6) {
+            HStack(alignment: .bottom, spacing: 10) {
+                TextField(inputPlaceholder, text: $draft, axis: .vertical)
+                    .lineLimit(1...5)
+                    .textInputAutocapitalization(.sentences)
+                    .submitLabel(.send)
+                    .focused($isInputFocused)
+                    .onSubmit {
+                        sendDraftIfPossible()
+                    }
+                    .disabled(assistant.isTyping)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(AppTheme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .foregroundStyle(AppTheme.textPrimary)
 
-            if isInputFocused {
+                if isInputFocused {
+                    Button {
+                        dismissChatKeyboard()
+                    } label: {
+                        Image(systemName: "keyboard.chevron.compact.down")
+                            .font(.title3)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .frame(width: 40, height: 40)
+                            .background(AppTheme.cardBackground)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Fechar teclado")
+                }
+
                 Button {
-                    dismissChatKeyboard()
+                    sendDraftIfPossible()
                 } label: {
-                    Image(systemName: "keyboard.chevron.compact.down")
-                        .font(.title3)
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .frame(width: 44, height: 44)
-                        .background(AppTheme.cardBackground)
+                    Image(systemName: "paperplane.fill")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 40, height: 40)
+                        .background(canSendDraft ? AppTheme.accent : AppTheme.textSecondary.opacity(0.55))
                         .clipShape(Circle())
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Fechar teclado")
+                .disabled(!canSendDraft)
+                .accessibilityLabel("Enviar")
             }
 
-            Button {
-                sendDraftIfPossible()
-            } label: {
-                Image(systemName: "paperplane.fill")
-                    .font(.title3)
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(canSendDraft ? AppTheme.accent : AppTheme.textSecondary)
-                    .clipShape(Circle())
-            }
-            .disabled(!canSendDraft)
+            Text(HealthAssistantEngine.healthSafetyDisclaimer)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary.opacity(0.85))
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-        .padding(.vertical, 10)
-        .background(AppTheme.cardBackground.opacity(0.6))
-        .opacity(assistant.isTyping ? 0.85 : 1)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+        .opacity(assistant.isTyping ? 0.9 : 1)
     }
 
     private func sendDraftIfPossible() {

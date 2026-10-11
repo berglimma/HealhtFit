@@ -2,6 +2,8 @@ package com.healthfit.android
 
 import android.app.Application
 import com.google.firebase.FirebaseApp
+import com.healthfit.android.ui.assistant.AssistantNotifications
+import com.healthfit.android.workout.PhoneWorkoutSync
 import com.healthfit.core.auth.AuthRepository
 import com.healthfit.core.auth.FirebaseAuthRepository
 import com.healthfit.core.auth.OfflineAuthRepository
@@ -33,5 +35,8 @@ class HealthFitApp : Application() {
         workoutRepository = DefaultWorkoutRepository()
         healthConnectGateway = HealthConnectGateway(this)
         billingGateway = BillingGateway(this).also { it.startConnection() }
+        // Re-arm alarms even if the user never opens IAssistente this session.
+        AssistantNotifications.rescheduleFromStorage(this)
+        PhoneWorkoutSync.start(this)
     }
 }

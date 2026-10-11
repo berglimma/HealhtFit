@@ -21,7 +21,9 @@ fun WorkoutPresence(
     setsLabel: String,
     elapsedSeconds: Int,
     resting: Boolean,
+    paused: Boolean = resting,
     restRemainingSeconds: Int = 0,
+    kind: String = "strength",
     enabled: Boolean = true,
 ) {
     val context = LocalContext.current
@@ -49,7 +51,17 @@ fun WorkoutPresence(
             PackageManager.PERMISSION_GRANTED
         if (!granted) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
-    LaunchedEffect(enabled, workoutTitle, exerciseName, setsLabel, resting, restRemainingSeconds, elapsedSeconds / 5) {
+    LaunchedEffect(
+        enabled,
+        workoutTitle,
+        exerciseName,
+        setsLabel,
+        resting,
+        paused,
+        restRemainingSeconds,
+        kind,
+        elapsedSeconds / 5,
+    ) {
         if (!enabled) return@LaunchedEffect
         WorkoutLockPublisher.publish(
             context,
@@ -59,7 +71,9 @@ fun WorkoutPresence(
                 setsLabel = setsLabel,
                 elapsedSeconds = elapsedSeconds,
                 resting = resting,
+                paused = paused,
                 restRemainingSeconds = restRemainingSeconds,
+                kind = kind,
             ),
         )
     }

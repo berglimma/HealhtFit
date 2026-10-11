@@ -4,4 +4,5 @@
     <cache-path name="cards" path="cards/" />
     <cache-path name="flyover" path="flyover/" />
     <cache-path name="share" path="share/" />
+    <cache-path name="nutrition" path="nutrition/" />
 </paths>

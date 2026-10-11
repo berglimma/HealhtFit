@@ -17,9 +17,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -122,93 +124,94 @@ fun DashboardLowerSections(
         onToggle = { expandedSlot = if (expandedSlot == "individual") null else "individual" },
     ) {
         WorkoutShareCard(DemoSessions.strength)
-    }
-    ShareCommandButtons(
-        saveLabel = "Salvar card na Galeria",
-        busy = posting,
-        onWhatsApp = {
-            postHomeCard(context, scope, DemoSessions.strength, SharePublisher.Target.WhatsAppStatus) { posting = it }
-        },
-        onInstagram = {
-            postHomeCard(context, scope, DemoSessions.strength, SharePublisher.Target.InstagramStories) { posting = it }
-        },
-        onSave = {
-            posting = true
-            scope.launch {
-                val message = withContext(Dispatchers.Default) {
-                    runCatching {
-                        val bitmap = ShareCardImage.render(context, DemoSessions.strength)
-                        ShareCardImage.saveToGallery(context, bitmap, "HealthFit-Card")
-                        bitmap.recycle()
-                        "Card salvo na galeria"
-                    }.getOrElse { it.message ?: "Não foi possível salvar o card" }
-                }
-                posting = false
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            }
-        },
-    )
-    Text(
-        "Adicionar foto ou vídeo",
-        color = HealthFitColors.Accent,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 14.sp,
-        modifier = Modifier
-            .padding(top = 8.dp)
-            .clickable {
-                photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-            },
-    )
-    loaded?.let { media ->
-        Spacer(Modifier.height(8.dp))
-        LoadedSharePreview(media, DemoSessions.strength)
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
         ShareCommandButtons(
-            saveLabel = if (media is LoadedShare.Video) "Salvar vídeo na Galeria" else "Salvar foto na Galeria",
+            saveLabel = "Salvar card na Galeria",
             busy = posting,
             onWhatsApp = {
-                val (file, mime) = when (media) {
-                    is LoadedShare.Photo -> media.file to "image/jpeg"
-                    is LoadedShare.Video -> media.file to "video/mp4"
-                }
-                toastShare(context) { SharePublisher.post(context, file, mime, SharePublisher.Target.WhatsAppStatus) }
+                postHomeCard(context, scope, DemoSessions.strength, SharePublisher.Target.WhatsAppStatus) { posting = it }
             },
             onInstagram = {
-                val (file, mime) = when (media) {
-                    is LoadedShare.Photo -> media.file to "image/jpeg"
-                    is LoadedShare.Video -> media.file to "video/mp4"
-                }
-                toastShare(context) { SharePublisher.post(context, file, mime, SharePublisher.Target.InstagramStories) }
+                postHomeCard(context, scope, DemoSessions.strength, SharePublisher.Target.InstagramStories) { posting = it }
             },
             onSave = {
                 posting = true
                 scope.launch {
                     val message = withContext(Dispatchers.Default) {
                         runCatching {
-                            when (media) {
-                                is LoadedShare.Photo -> {
-                                    ShareCardImage.saveToGallery(context, media.bitmap, "HealthFit-Foto-Treino")
-                                    "Foto salva na galeria"
-                                }
-                                is LoadedShare.Video -> {
-                                    SharePublisher.saveVideo(context, media.file, "HealthFit-Video-Treino")
-                                    "Vídeo salvo na galeria"
-                                }
-                            }
-                        }.getOrElse { it.message ?: "Não foi possível salvar" }
+                            val bitmap = ShareCardImage.render(context, DemoSessions.strength)
+                            ShareCardImage.saveToGallery(context, bitmap, "HealthFit-Card")
+                            bitmap.recycle()
+                            "Card salvo na galeria"
+                        }.getOrElse { it.message ?: "Não foi possível salvar o card" }
                     }
                     posting = false
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
             },
         )
+        Text(
+            "Adicionar foto ou vídeo",
+            color = HealthFitColors.Accent,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
+            modifier = Modifier
+                .padding(top = 8.dp)
+                .clickable {
+                    photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                },
+        )
+        loaded?.let { media ->
+            Spacer(Modifier.height(8.dp))
+            LoadedSharePreview(media, DemoSessions.strength)
+            Spacer(Modifier.height(8.dp))
+            ShareCommandButtons(
+                saveLabel = if (media is LoadedShare.Video) "Salvar vídeo na Galeria" else "Salvar foto na Galeria",
+                busy = posting,
+                onWhatsApp = {
+                    val (file, mime) = when (media) {
+                        is LoadedShare.Photo -> media.file to "image/jpeg"
+                        is LoadedShare.Video -> media.file to "video/mp4"
+                    }
+                    toastShare(context) { SharePublisher.post(context, file, mime, SharePublisher.Target.WhatsAppStatus) }
+                },
+                onInstagram = {
+                    val (file, mime) = when (media) {
+                        is LoadedShare.Photo -> media.file to "image/jpeg"
+                        is LoadedShare.Video -> media.file to "video/mp4"
+                    }
+                    toastShare(context) { SharePublisher.post(context, file, mime, SharePublisher.Target.InstagramStories) }
+                },
+                onSave = {
+                    posting = true
+                    scope.launch {
+                        val message = withContext(Dispatchers.Default) {
+                            runCatching {
+                                when (media) {
+                                    is LoadedShare.Photo -> {
+                                        ShareCardImage.saveToGallery(context, media.bitmap, "HealthFit-Foto-Treino")
+                                        "Foto salva na galeria"
+                                    }
+                                    is LoadedShare.Video -> {
+                                        SharePublisher.saveVideo(context, media.file, "HealthFit-Video-Treino")
+                                        "Vídeo salvo na galeria"
+                                    }
+                                }
+                            }.getOrElse { it.message ?: "Não foi possível salvar" }
+                        }
+                        posting = false
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
+                },
+            )
+        }
+        Text(
+            "A foto leva HealthFit e os dados da modalidade. Musculação mostra exercícios; corrida mostra km e ritmo.",
+            color = Color(0xFF8E989F),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+        )
     }
-    Text(
-        "A foto leva HealthFit e os dados da modalidade. Musculação mostra exercícios; corrida mostra km e ritmo.",
-        color = Color(0xFF8E989F),
-        fontSize = 12.sp,
-        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
-    )
     Spacer(Modifier.height(12.dp))
     ExpandableShareSlot(
         title = "Último card em grupo",
@@ -222,6 +225,12 @@ fun DashboardLowerSections(
             color = Color(0xFFB7C0C8),
             fontSize = 13.sp,
             modifier = Modifier.padding(top = 12.dp),
+        )
+        Text(
+            "As opções de postar e salvar aparecem aqui quando houver um card de grupo.",
+            color = Color(0xFF8E989F),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
         )
     }
     Spacer(Modifier.height(16.dp))
@@ -284,43 +293,68 @@ private fun ReportTile(
 ) {
     Column(
         modifier = modifier
-            .height(96.dp)
+            .heightIn(min = 104.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(HealthFitColors.CardBackground)
             .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
             .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             Box(
                 Modifier.size(32.dp).clip(CircleShape).background(tint.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
             }
+            Spacer(Modifier.weight(1f))
             if (showNew) {
                 Text(
-                    " NOVO",
+                    "NOVO",
                     color = Color.White,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
+                    maxLines = 1,
                     modifier = Modifier
-                        .padding(start = 6.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(tint)
-                        .padding(horizontal = 4.dp, vertical = 1.dp),
+                        .padding(horizontal = 5.dp, vertical = 2.dp),
                 )
             }
-            Spacer(Modifier.weight(1f))
-            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFF8E989F), modifier = Modifier.size(14.dp))
+            Icon(
+                Icons.Filled.ChevronRight,
+                contentDescription = null,
+                tint = Color(0xFF8E989F),
+                modifier = Modifier.size(14.dp),
+            )
         }
-        Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp), maxLines = 1)
-        Text(subtitle, color = Color(0xFF8E989F), fontSize = 11.sp, maxLines = 2)
+        Text(
+            title,
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 13.sp,
+            lineHeight = 16.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            subtitle,
+            color = Color(0xFF8E989F),
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
 @Composable
 private fun MotivationBanner() {
+    val banner = remember { com.healthfit.android.ui.assistant.MotivationMessages.dashboardDisciplineBanner() }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -332,12 +366,12 @@ private fun MotivationBanner() {
     ) {
         Icon(Icons.Filled.BarChart, contentDescription = null, tint = HealthFitColors.Accent)
         Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-            Text("Força não é sorte. É repetição com intenção.", color = Color.White, fontWeight = FontWeight.Bold)
-            Text("Cada repetição é um voto no seu objetivo.", color = Color(0xFFB7C0C8), fontSize = 13.sp)
+            Text(banner.title, color = Color.White, fontWeight = FontWeight.Bold)
+            Text(banner.subtitle, color = Color(0xFFB7C0C8), fontSize = 13.sp)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Filled.Favorite, contentDescription = null, tint = HealthFitColors.Accent)
-            Text("BORA!", color = HealthFitColors.Accent, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Text(banner.cheer, color = HealthFitColors.Accent, fontWeight = FontWeight.Bold, fontSize = 11.sp)
         }
     }
 }
@@ -357,10 +391,14 @@ private fun ExpandableShareSlot(
             .clip(RoundedCornerShape(20.dp))
             .background(HealthFitColors.CardBackground)
             .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(20.dp))
-            .clickable(onClick = onToggle)
             .padding(12.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle),
+        ) {
             Box(
                 Modifier.size(44.dp).clip(CircleShape).background(HealthFitColors.Accent.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center,
