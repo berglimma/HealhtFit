@@ -197,6 +197,7 @@ struct WorkoutShareCardView: View {
     }
 
     private var outdoorSessionNoun: String {
+        if session.isTennisSession { return "o tênis" }
         if session.isKitesurfSession { return "o kitesurf" }
         if session.isSurfSession { return "o surf" }
         if session.isSwimmingSession { return "a natação" }
@@ -214,6 +215,7 @@ struct WorkoutShareCardView: View {
     }
 
     private var outdoorSessionVerb: String {
+        if session.isTennisSession { return "jogou tênis" }
         if session.isKitesurfSession { return "kitesurfou" }
         if session.isSurfSession { return "surfou" }
         if session.isSwimmingSession { return "nadou" }
@@ -234,7 +236,9 @@ struct WorkoutShareCardView: View {
 
     @ViewBuilder
     private var runningStatsGrid: some View {
-        if session.isKitesurfSession {
+        if session.isTennisSession {
+            tennisStatsGrid
+        } else if session.isKitesurfSession {
             kiteStatsGrid
         } else if session.isOutdoorCyclingSession {
             VStack(spacing: 6) {
@@ -306,6 +310,30 @@ struct WorkoutShareCardView: View {
                     label: "VEL. MÁX",
                     showsPeakArrow: metrics.maxSpeedKmh > 0
                 )
+            }
+        }
+    }
+
+    /// Card de postagem Tênis: placar, picos, zona alta e carga.
+    private var tennisStatsGrid: some View {
+        let t = session.tennis
+        let sets = t.map { "\($0.setsWon)–\($0.setsLost)" } ?? "—"
+        let bursts = t.map { "\($0.burstCount)" } ?? "—"
+        let zone = t.map { String(format: "%.0f%%", $0.highZonePercent) } ?? "—"
+        let load = t.map { String(format: "%.0f", $0.loadScore) } ?? "—"
+        return VStack(spacing: 6) {
+            HStack(spacing: 6) {
+                shareStat(value: sets, label: "SETS")
+                shareStat(value: bursts, label: "PICOS")
+            }
+            HStack(spacing: 6) {
+                shareStat(value: zone, label: "ZONA ALTA")
+                shareStat(value: load, label: "CARGA")
+            }
+            HStack(spacing: 6) {
+                shareStat(value: runningBPMValue, label: "BPM")
+                shareStat(value: runningKcalValue, label: "KCAL")
+                shareStat(value: runningTempoValue, label: "TEMPO")
             }
         }
     }
@@ -577,6 +605,12 @@ struct WorkoutShareCardView: View {
             return "figure.walk"
         }
 
+        if session.isTennisSession
+            || lower.contains("tênis")
+            || lower.contains("tenis") {
+            return CardioExercise.tennisSystemImage
+        }
+
         if session.isRunningSession || lower.contains("corrida") {
             return "figure.run"
         }
@@ -817,7 +851,37 @@ struct WorkoutShareCardView: View {
         return String(trimmed.prefix(6)).uppercased() + "…"
     }
 
+    @ViewBuilder
     private var statsRow: some View {
+        if session.isTennisSession, let tennis = session.tennis {
+            VStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    shareStat(value: "\(tennis.setsWon)–\(tennis.setsLost)", label: "SETS")
+                    shareStat(value: "\(tennis.burstCount)", label: "PICOS")
+                    shareStat(value: String(format: "%.0f", tennis.loadScore), label: "CARGA")
+                }
+                HStack(spacing: 8) {
+                    shareStat(
+                        value: DurationFormatting.format(seconds: Int(session.duration)),
+                        label: "DURAÇÃO"
+                    )
+                    if session.caloriesBurned > 0 {
+                        shareStat(value: "\(Int(session.caloriesBurned))", label: "KCAL")
+                    }
+                    if session.averageHeartRate > 0 {
+                        shareStat(
+                            value: String(format: "%.0f", session.averageHeartRate),
+                            label: "BPM"
+                        )
+                    }
+                }
+            }
+        } else {
+            standardStatsRow
+        }
+    }
+
+    private var standardStatsRow: some View {
         HStack(spacing: 8) {
             shareStat(
                 value: DurationFormatting.format(seconds: Int(session.duration)),
@@ -1531,6 +1595,9 @@ enum WorkoutShareCardRenderer {
 
     /// Copy de legenda / hashtag alinhado à modalidade outdoor.
     private static func outdoorShareCopy(for session: WorkoutSession) -> (noun: String, verb: String, tag: String) {
+        if session.isTennisSession {
+            return ("o tênis", "jogou", "#Tenis")
+        }
         if session.isKitesurfSession {
             return ("o kitesurf", "kitesurfou", "#Kitesurf")
         }
@@ -1611,6 +1678,15 @@ enum WorkoutShareCardRenderer {
                         "Constância no asfalto, evolução no corpo."
                     ]
                 }
+                if session.isTennisSession {
+                    return [
+                        "Quadra, foco e explosão. Sessão de tênis fechada.",
+                        "Cada game conta. Ritmo intermitente e presença.",
+                        "Você entrou em quadra e jogou. Orgulho merecido.",
+                        "Picos, recuperação e constância — evolução no tênis.",
+                        "Saque, cobertura e coração. Treino bem fechado."
+                    ]
+                }
                 return [
                     "Quilômetros que viram disciplina.",
                     "Cada passo conta. Ritmo firme, mente leve.",
@@ -1621,6 +1697,17 @@ enum WorkoutShareCardRenderer {
             }()
             let index = abs(session.id.hashValue) % lines.count
             return lines[index]
+        }
+        if session.isTennisSession {
+            let tennisLines = [
+                "Quadra, foco e explosão. Sessão de tênis fechada.",
+                "Cada game conta. Ritmo intermitente e presença.",
+                "Você entrou em quadra e jogou. Orgulho merecido.",
+                "Picos, recuperação e constância — evolução no tênis.",
+                "Saque, cobertura e coração. Treino bem fechado."
+            ]
+            let index = abs(session.id.hashValue) % tennisLines.count
+            return tennisLines[index]
         }
         let lines = [
             "Mais um dia de compromisso com a sua melhor versão.",

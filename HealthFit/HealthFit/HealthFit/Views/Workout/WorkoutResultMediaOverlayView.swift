@@ -19,6 +19,9 @@ enum WorkoutResultMediaStats {
         if session.isKitesurfSession {
             return kiteStats(for: session)
         }
+        if session.isTennisSession {
+            return tennisStats(for: session)
+        }
 
         var result: [WorkoutResultMediaStat] = []
 
@@ -118,6 +121,33 @@ enum WorkoutResultMediaStats {
                 value: metrics.maxSpeedText,
                 label: "Vel. máxima",
                 showsPeakArrow: metrics.maxSpeedKmh > 0
+            )
+        ]
+    }
+
+    /// Métricas do overlay de Tênis: sets, picos, zona alta e carga.
+    static func tennisStats(for session: WorkoutSession) -> [WorkoutResultMediaStat] {
+        let t = session.tennis
+        return [
+            WorkoutResultMediaStat(
+                id: "sets",
+                value: t.map { "\($0.setsWon)–\($0.setsLost)" } ?? "—",
+                label: "Sets"
+            ),
+            WorkoutResultMediaStat(
+                id: "bursts",
+                value: t.map { "\($0.burstCount)" } ?? "—",
+                label: "Picos"
+            ),
+            WorkoutResultMediaStat(
+                id: "zone",
+                value: t.map { String(format: "%.0f%%", $0.highZonePercent) } ?? "—",
+                label: "Zona alta"
+            ),
+            WorkoutResultMediaStat(
+                id: "load",
+                value: t.map { String(format: "%.0f", $0.loadScore) } ?? DurationFormatting.format(seconds: Int(session.duration)),
+                label: t != nil ? "Carga" : "Duração"
             )
         ]
     }

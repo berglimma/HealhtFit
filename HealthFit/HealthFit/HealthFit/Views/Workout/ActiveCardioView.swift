@@ -57,6 +57,17 @@ struct ActiveCardioView: View {
     @State private var showSpotBuddyLiveMap = false
     @State private var showSpotBuddyDuoInvite = false
     @ObservedObject private var spotBuddy = KiteSpotBuddyService.shared
+    // Tênis
+    @State private var tennisGamesWon = 0
+    @State private var tennisGamesLost = 0
+    @State private var tennisSetsWon = 0
+    @State private var tennisSetsLost = 0
+    @State private var tennisBurstCount = 0
+    @State private var tennisHighZoneSeconds = 0
+    @State private var tennisRecoverySeconds = 0
+    @State private var tennisPeakHR: Double = 0
+    @State private var lastTennisBurstAt: Date = .distantPast
+    @State private var lastTennisBurstTick = 0
 
     /// Side-effects; display uses wall clock from session start minus pauses.
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -70,10 +81,12 @@ struct ActiveCardioView: View {
     private var isKitesurf: Bool { config.isKitesurfSession }
     private var isRowing: Bool { config.isRowingSession }
     private var isClimbing: Bool { config.isClimbingSession }
+    private var isTennis: Bool { config.isTennisSession }
     private var isFight: Bool { config.isFightSession }
     private var isTreadmill: Bool { config.isTreadmillSession }
     private var treadmillHasElevation: Bool { config.treadmillSetup?.hasElevation == true }
     private var climbingSetup: ClimbingSetup { config.climbingSetup ?? .default }
+    private var tennisSetup: TennisSetup { config.tennisSetup ?? .default }
     private var trackingModality: OutdoorCardioModality {
         config.outdoorTrackingModality
     }
@@ -310,6 +323,9 @@ struct ActiveCardioView: View {
             if isRowing {
                 AnyView(rowingLiveSection)
             }
+            if isTennis {
+                AnyView(tennisLiveSection)
+            }
             if isOutdoorCycling, let hazard = activeHazardAlert {
                 AnyView(potholeAlertBanner(hazard))
             }
@@ -331,6 +347,9 @@ struct ActiveCardioView: View {
                 AnyView(climbingWeatherSection)
                 AnyView(climbingLiveSection)
                 AnyView(climbingAttemptsSection)
+            }
+            if isTennis {
+                AnyView(tennisLiveSection)
             }
         }
     }
@@ -370,6 +389,12 @@ struct ActiveCardioView: View {
         }
         if isSwimming {
             AnyView(swimExtraMetricsRow)
+        }
+        if isTennis {
+            AnyView(tennisMetricsGrid)
+            if isOutdoorGPS {
+                AnyView(tennisHeatmapHint)
+            }
         }
     }
 
@@ -437,6 +462,9 @@ struct ActiveCardioView: View {
                     if isSwimming {
                         applyAutomaticSwimLapsFromWatch()
                     }
+                    if isTennis {
+                        updateTennisLiveMetrics()
+                    }
                 }
                 syncWatchData()
             }
@@ -448,11 +476,20 @@ struct ActiveCardioView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                // Atualiza o cronômetro na hora — o Timer.publish às vezes atrasa no resume.
                 elapsedSeconds = activeElapsedSeconds()
-                if isOutdoorGPS {
-                    runTracker.handleAppBecameActive()
-                }
                 UIApplication.shared.isIdleTimerDisabled = isOutdoorGPS && !isPaused && finishedSession == nil
+                // GPS / Watch: no próximo frame, para não bloquear o 1º paint ao voltar do background.
+                Task { @MainActor in
+                    await Task.yield()
+                    guard scenePhase == .active, finishedSession == nil, !isFinishing else { return }
+                    elapsedSeconds = activeElapsedSeconds()
+                    if isOutdoorGPS {
+                        runTracker.handleAppBecameActive()
+                    }
+                    // Só sincroniza; NÃO relauncha Watch app em loop (já é debounceado).
+                    syncWithWatch()
+                }
             } else if phase == .background {
                 // Não reinicia o GPS no lock — só garante entrega em background.
                 UIApplication.shared.isIdleTimerDisabled = false
@@ -572,8 +609,17 @@ struct ActiveCardioView: View {
             }
         }
         .onChange(of: watchConnectivity.lastWatchAccelG) { _, g in
-            guard isWaterSport, g > 0 else { return }
-            jumpMetrics.ingestWatchAcceleration(g)
+            if isWaterSport, g > 0 {
+                jumpMetrics.ingestWatchAcceleration(g)
+            }
+            if isTennis, g >= TennisMetricsEngine.burstAccelThresholdG {
+                registerTennisBurst(peakG: g)
+            }
+        }
+        .onChange(of: watchConnectivity.tennisBurstTick) { _, tick in
+            guard isTennis, tick > lastTennisBurstTick else { return }
+            lastTennisBurstTick = tick
+            registerTennisBurst(peakG: watchConnectivity.lastTennisBurstG)
         }
     }
 
@@ -1848,6 +1894,7 @@ struct ActiveCardioView: View {
             Label(
                 {
                     if isSwimming { return "Finalizar Natação" }
+                    if isTennis { return "Finalizar Tênis" }
                     if showsRunningUI { return "Finalizar Corrida" }
                     if isOutdoorCycling { return "Finalizar Pedal" }
                     if isOutdoorWalking { return "Finalizar Caminhada" }
@@ -2003,6 +2050,12 @@ struct ActiveCardioView: View {
             spotBuddyEnabled: isKitesurf && spotBuddy.isActive,
             isPaused: isPaused
         )
+        // Sem BPM fresco e Watch alcançável: pede métricas (throttle interno no manager).
+        if liveHeartRateBPM <= 0,
+           watchConnectivity.isWatchConnected,
+           clockTickCount % 6 == 0 {
+            watchConnectivity.requestWatchMetrics()
+        }
     }
 
     private func updateCalorieMotivation() {
@@ -2279,6 +2332,245 @@ struct ActiveCardioView: View {
         .frame(maxWidth: .infinity)
     }
 
+    // MARK: - Tênis ao vivo
+
+    private var tennisLiveSection: some View {
+        let zoneGoal = tennisSetup.resolvedHighZoneGoalPercent
+        let zonePct = tennisZonePercent
+        let zoneMet = zonePct >= zoneGoal * 0.9
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label(tennisSetup.sessionType.rawValue, systemImage: tennisSetup.sessionType.icon)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                Text(tennisSetup.surface.rawValue)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(tennisSetup.surface.color)
+            }
+
+            // Placar
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Placar")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+                HStack(spacing: 16) {
+                    tennisScoreColumn(
+                        title: "Sets",
+                        won: $tennisSetsWon,
+                        lost: $tennisSetsLost,
+                        range: 0...5
+                    )
+                    tennisScoreColumn(
+                        title: "Games",
+                        won: $tennisGamesWon,
+                        lost: $tennisGamesLost,
+                        range: 0...99
+                    )
+                }
+            }
+
+            HStack(spacing: 0) {
+                climbingMetric(
+                    value: liveHeartRateBPM > 0 ? "\(Int(liveHeartRateBPM))" : "—",
+                    label: "BPM"
+                )
+                climbingMetric(value: "\(tennisBurstCount)", label: "picos")
+                climbingMetric(value: formattedDuration(tennisHighZoneSeconds), label: "zona alta")
+                climbingMetric(
+                    value: tennisPeakHR > 0 ? "\(Int(tennisPeakHR))" : "—",
+                    label: "pico BPM"
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Meta zona alta")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Spacer()
+                    Text(String(format: "%.0f%% / %.0f%%", zonePct, zoneGoal))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(zoneMet ? AppTheme.accent : AppTheme.accentSecondary)
+                }
+                ProgressView(value: min(1, zonePct / max(zoneGoal, 1)))
+                    .tint(zoneMet ? AppTheme.accent : tennisSetup.surface.color)
+            }
+
+            Text("Toque +/− no placar a cada game/set. Picos vêm do Watch (explosões) e a zona alta da FC.")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(AppTheme.cardBackground, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private var tennisMetricsGrid: some View {
+        let load = TennisMetricsEngine.computeLoadScore(
+            setup: tennisSetup,
+            activeSeconds: max(1, elapsedSeconds),
+            highZoneSeconds: tennisHighZoneSeconds,
+            burstCount: tennisBurstCount,
+            calories: liveCalories
+        )
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Carga intermitente")
+                .font(.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                tennisStatTile(title: "Carga", value: String(format: "%.0f", load.score))
+                tennisStatTile(title: "Faixa", value: load.band.rawValue)
+                tennisStatTile(title: "Formato", value: tennisSetup.matchFormat.rawValue)
+                tennisStatTile(title: "Nível", value: tennisSetup.skillLevel.rawValue)
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private var tennisHeatmapHint: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Cobertura de quadra", systemImage: "map.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+            Text(
+                String(
+                    format: "%.2f km no GPS · %d pts · ao finalizar: heatmap + Flyover 3D da movimentação.",
+                    max(0, runTracker.distanceKm),
+                    runTracker.routePoints.count
+                )
+            )
+            .font(.caption)
+            .foregroundStyle(AppTheme.textSecondary)
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func tennisScoreColumn(
+        title: String,
+        won: Binding<Int>,
+        lost: Binding<Int>,
+        range: ClosedRange<Int>
+    ) -> some View {
+        VStack(spacing: 6) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+            HStack(spacing: 10) {
+                tennisStepper(value: won, range: range, tint: AppTheme.accent)
+                Text("–")
+                    .foregroundStyle(AppTheme.textSecondary)
+                tennisStepper(value: lost, range: range, tint: AppTheme.accentSecondary)
+            }
+            Text("Você  ·  Adv.")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func tennisStepper(value: Binding<Int>, range: ClosedRange<Int>, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Button {
+                value.wrappedValue = max(range.lowerBound, value.wrappedValue - 1)
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .foregroundStyle(tint)
+            }
+            .buttonStyle(.plain)
+            Text("\(value.wrappedValue)")
+                .font(.title3.weight(.bold).monospacedDigit())
+                .foregroundStyle(AppTheme.textPrimary)
+                .frame(minWidth: 28)
+            Button {
+                value.wrappedValue = min(range.upperBound, value.wrappedValue + 1)
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .foregroundStyle(tint)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func tennisStatTile(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textSecondary)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(AppTheme.background.opacity(0.55), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var tennisZonePercent: Double {
+        let total = tennisHighZoneSeconds + tennisRecoverySeconds
+        guard total > 0 else { return 0 }
+        return (Double(tennisHighZoneSeconds) / Double(total)) * 100
+    }
+
+    private func updateTennisLiveMetrics() {
+        guard !isPaused else { return }
+        let bpm = liveHeartRateBPM
+        if bpm > tennisPeakHR { tennisPeakHR = bpm }
+        let maxHR = TennisMetricsEngine.estimatedMaxHR(age: authService.currentUser?.age)
+        if TennisMetricsEngine.isHighZone(bpm: bpm, maxHR: maxHR) {
+            tennisHighZoneSeconds += 1
+        } else if bpm > 40 {
+            tennisRecoverySeconds += 1
+        }
+    }
+
+    private func registerTennisBurst(peakG: Double) {
+        guard peakG >= TennisMetricsEngine.burstAccelThresholdG else { return }
+        let now = Date()
+        guard now.timeIntervalSince(lastTennisBurstAt) >= TennisMetricsEngine.burstCooldownSeconds else { return }
+        lastTennisBurstAt = now
+        tennisBurstCount += 1
+    }
+
+    private func buildTennisSnapshot(session: WorkoutSession, courtCoverageKm: Double) -> TennisSessionSnapshot {
+        var snap = session.tennis ?? tennisSetup.snapshot()
+        snap.gamesWon = tennisGamesWon
+        snap.gamesLost = tennisGamesLost
+        snap.setsWon = tennisSetsWon
+        snap.setsLost = tennisSetsLost
+        snap.burstCount = tennisBurstCount
+        snap.highZoneSeconds = tennisHighZoneSeconds
+        snap.recoverySeconds = tennisRecoverySeconds
+        snap.peakHeartRate = max(tennisPeakHR, session.averageHeartRate)
+        snap.averageHeartRate = session.averageHeartRate
+        let load = TennisMetricsEngine.computeLoadScore(
+            setup: tennisSetup,
+            activeSeconds: session.activeDurationSeconds,
+            highZoneSeconds: tennisHighZoneSeconds,
+            burstCount: tennisBurstCount,
+            calories: session.caloriesBurned
+        )
+        snap.loadScore = load.score
+        snap.loadBand = load.band
+        snap.courtCoverageKm = isOutdoorGPS ? max(0, courtCoverageKm) : 0
+        snap.heatmapPoints = isOutdoorGPS
+            ? TennisMetricsEngine.buildHeatmap(from: session.routePoints)
+            : []
+        snap.recoveryTips = TennisMetricsEngine.recoveryTips(
+            setup: tennisSetup,
+            loadBand: load.band,
+            activeMinutes: max(1, session.activeDurationSeconds / 60),
+            highZonePercent: snap.highZonePercent
+        )
+        return snap
+    }
+
     private func formattedDuration(_ seconds: Int) -> String {
         let minutes = seconds / 60
         let remaining = seconds % 60
@@ -2518,6 +2810,9 @@ struct ActiveCardioView: View {
             session.climbing = buildClimbingSnapshot(session: session)
             ClimbingGearService.shared.registerSessionUse(discipline: climbingSetup.discipline)
         }
+        if isTennis {
+            session.tennis = buildTennisSnapshot(session: session, courtCoverageKm: distanceKm)
+        }
         if isTreadmill {
             session.treadmill = config.treadmillSetup?.snapshot(finalInclinePercent: treadmillInclinePercent)
                 ?? TreadmillSessionSnapshot(
@@ -2550,6 +2845,10 @@ struct ActiveCardioView: View {
                         let pool = Int(config.resolvedPoolLengthMeters)
                         return "Natação \(pool) m · \(swimLapCount) voltas (\(config.intensity.rawValue))"
                     }
+                    if isTennis {
+                        let type = tennisSetup.sessionType.rawValue
+                        return "Tênis · \(type) (\(config.intensity.rawValue))"
+                    }
                     return "\(config.exercise.name) (\(config.intensity.rawValue))"
                 }(),
                 elapsedSeconds: elapsedSeconds,
@@ -2565,6 +2864,7 @@ struct ActiveCardioView: View {
         }
 
         let hkActivity: HKWorkoutActivityType = {
+            if config.isTennisSession { return .tennis }
             if config.isSwimmingSession { return .swimming }
             if config.isOutdoorCyclingSession { return .cycling }
             if config.isRunningSession || config.isDistanceRun { return .running }
@@ -2579,7 +2879,7 @@ struct ActiveCardioView: View {
             }
             if config.exercise.isStationaryBike { return .cycling }
             if config.isTreadmillSession { return .running }
-            return .walking
+            return config.healthKitActivityType
         }()
 
         Task {

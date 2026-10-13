@@ -22,7 +22,15 @@ struct RouteFlyoverMetrics: Equatable {
         let durationText = DurationFormatting.format(seconds: Int(session.duration))
 
         let secondary: (String, String)
-        if session.isOutdoorCyclingSession || session.isWaterSportSession {
+        if session.isTennisSession {
+            if let tennis = session.tennis, tennis.burstCount > 0 {
+                secondary = ("PICOS", "\(tennis.burstCount)")
+            } else if let tennis = session.tennis, tennis.loadScore > 0 {
+                secondary = ("CARGA", String(format: "%.0f", tennis.loadScore))
+            } else {
+                secondary = ("TEMPO", durationText)
+            }
+        } else if session.isOutdoorCyclingSession || session.isWaterSportSession {
             let hours = max(Double(session.activeDurationSeconds), 1) / 3600.0
             let speed = km > 0 ? km / hours : 0
             secondary = ("VELOCIDADE", speed > 0 ? String(format: "%.1f km/h", speed) : "—")
@@ -36,10 +44,11 @@ struct RouteFlyoverMetrics: Equatable {
 
         let name = athleteName.trimmingCharacters(in: .whitespacesAndNewlines)
         let who = name.isEmpty ? "HealthFit" : name
+        let tennisTag = session.isTennisSession ? " #Tenis" : ""
         let caption = """
         \(who) · \(session.completedModalityTitle) · \(durationText)\(km > 0 ? String(format: " · %.2f km", km) : "")
         Flyover · HealthFit
-        #HealthFit #Flyover #Treino
+        #HealthFit #Flyover #Treino\(tennisTag)
         """
 
         return RouteFlyoverMetrics(
@@ -238,8 +247,13 @@ enum RouteFlyoverVideoExporter {
             minLat = min(minLat, p.latitude); maxLat = max(maxLat, p.latitude)
             minLon = min(minLon, p.longitude); maxLon = max(maxLon, p.longitude)
         }
-        let latDelta = max((maxLat - minLat) * 1.55, 0.004)
-        let lonDelta = max((maxLon - minLon) * 1.55, 0.004)
+        // Percursos compactos (ex.: cobertura de quadra de tênis) usam zoom mais fechado.
+        let rawLat = maxLat - minLat
+        let rawLon = maxLon - minLon
+        let isCompactCourt = rawLat < 0.0012 && rawLon < 0.0012
+        let minSpan = isCompactCourt ? 0.0011 : 0.004
+        let latDelta = max(rawLat * 1.55, minSpan)
+        let lonDelta = max(rawLon * 1.55, minSpan)
         return MKCoordinateRegion(
             center: CLLocationCoordinate2D(
                 latitude: (minLat + maxLat) / 2,

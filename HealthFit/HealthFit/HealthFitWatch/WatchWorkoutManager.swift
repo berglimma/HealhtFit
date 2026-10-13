@@ -35,12 +35,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var lastHeartRateSampleAt: Date?
     /// Idade máxima da amostra de BPM para ainda ser considerada “ao vivo”.
     private static let heartRateSampleMaxAge: TimeInterval = 10
+    /// Tênis: braço em movimento gera gaps no óptico — janela um pouco maior.
+    private static let tennisHeartRateSampleMaxAge: TimeInterval = 18
     @Published var restRemainingSeconds = 0
     @Published var isResting = false
     @Published var isRestOvertime = false
     @Published var restExerciseName = ""
     @Published var restOvertimeSeconds = 0
     @Published var isWaterSportMode = false
+    @Published var isTennisMode = false
+    @Published var tennisBurstCount = 0
     @Published var isKitesurfMode = false
     @Published var spotBuddyEnabled = false
     @Published var spotBuddyPeers: [KiteSpotBuddyPeer] = []
@@ -118,6 +122,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var peakGyroDuringAir: Double = 0
     private var lastAutoJumpAt: Date = .distantPast
     private var lastAccelSendAt: Date = .distantPast
+    private var lastTennisBurstAt: Date = .distantPast
     private let healthStore = HKHealthStore()
     private let motionManager = CMMotionManager()
     /// Manager dedicado à detecção de escalada, para não disputar o de esportes de água.
@@ -379,6 +384,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             waterSportMode: waterSportMode,
             isKitesurf: isKitesurf
         )
+        isTennisMode = activity == .tennis || Self.isTennisExercise(exerciseName: exerciseName)
+        tennisBurstCount = 0
         usesSegmentedChronometer = Self.shouldUseSegmentedChronometer(
             exerciseName: exerciseName,
             swimmingMode: swimmingMode,
@@ -392,7 +399,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             || swimmingMode
             || waterSportMode
             || usesSegmentedChronometer
-            || [.walking, .running, .cycling, .rowing, .hiking].contains(activity)
+            || [.walking, .running, .cycling, .rowing, .hiking, .tennis].contains(activity)
         )
         startLiveWorkoutSession(
             activityType: activity,
@@ -405,7 +412,12 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             startWaterSportMotion()
             startWaterSportGPS()
         }
+        if isTennisMode {
+            startTennisMotion()
+        }
         if usesSegmentedChronometer, !indoorMachine {
+            startLandCardioGPS()
+        } else if isTennisMode, outdoor {
             startLandCardioGPS()
         }
     }
@@ -587,6 +599,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         localMeditationPrompts = []
         lastPhoneStopTimestamp = max(lastPhoneStopTimestamp, Date().timeIntervalSince1970)
         stopWaterSportMotion()
+        stopTennisMotion()
         stopWaterSportGPS(flush: true)
         stopLandCardioGPS()
         stopLiveWorkoutSession()
@@ -638,6 +651,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         pauseStartedAt = nil
         isPaused = false
         isWaterSportMode = false
+        isTennisMode = false
+        tennisBurstCount = 0
+        lastTennisBurstAt = .distantPast
         isKitesurfMode = false
         spotBuddyEnabled = false
         spotBuddyPeers = []
@@ -1353,12 +1369,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         healthStore.execute(query)
     }
 
+    private var heartRateFreshMaxAge: TimeInterval {
+        isTennisMode ? Self.tennisHeartRateSampleMaxAge : Self.heartRateSampleMaxAge
+    }
+
     private func sendMetricsToPhone() {
         guard let session else { return }
         let sampleAge = lastHeartRateSampleAt.map { Date().timeIntervalSince($0) } ?? .infinity
-        let hrFresh = !isPaused && heartRate > 0 && sampleAge <= Self.heartRateSampleMaxAge
+        let hrFresh = !isPaused && heartRate > 0 && sampleAge <= heartRateFreshMaxAge
         var payload: [String: Any] = [
-            // 0 = iPhone deve expirar BPM (não rebroadcast de valor travado).
+            // 0 = iPhone deve deixar expirar pelo stale timer (não zerar na hora).
             "heartRate": hrFresh ? heartRate : 0,
             "heartRateFresh": hrFresh,
             "calories": calories,
@@ -1423,44 +1443,68 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
 
         do {
-            let hkSession = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
-            let builder = hkSession.associatedWorkoutBuilder()
-            let dataSource = HKLiveWorkoutDataSource(
-                healthStore: healthStore,
-                workoutConfiguration: configuration
+            try beginHKWorkoutSession(
+                configuration: configuration,
+                swimmingMode: swimmingMode
             )
-            if let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate) {
-                dataSource.enableCollection(for: heartRateType, predicate: nil)
-            }
-            if let energyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
-                dataSource.enableCollection(for: energyType, predicate: nil)
-            }
-            if let walkRun = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) {
-                dataSource.enableCollection(for: walkRun, predicate: nil)
-            }
-            if let cycling = HKQuantityType.quantityType(forIdentifier: .distanceCycling) {
-                dataSource.enableCollection(for: cycling, predicate: nil)
-            }
-            builder.dataSource = dataSource
-            hkSession.delegate = self
-            builder.delegate = self
-
-            let start = Date()
-            workoutStartedAt = start
-            hkSession.startActivity(with: start)
-            builder.beginCollection(withStart: start) { _, _ in }
-
-            hkWorkoutSession = hkSession
-            hkLiveBuilder = builder
-            watchSyncStatus = swimmingMode ? "Natação · voltas automáticas" : "Watch · batimentos ativos"
-            if swimmingMode {
-                sendSwimMetricsToPhone(force: true)
-            } else {
-                sendMetricsToPhone()
-            }
         } catch {
-            watchSyncStatus = "Falha ao iniciar sessão HK"
+            // Tênis / tipos novos: se a sessão falhar, tenta HIIT para manter o óptico ligado.
+            if configuration.activityType == .tennis {
+                let fallback = HKWorkoutConfiguration()
+                fallback.activityType = .highIntensityIntervalTraining
+                fallback.locationType = configuration.locationType
+                do {
+                    try beginHKWorkoutSession(configuration: fallback, swimmingMode: false)
+                    watchSyncStatus = "Tênis · BPM (fallback HIIT)"
+                    return
+                } catch {
+                    watchSyncStatus = "Falha ao iniciar sessão HK"
+                }
+            } else {
+                watchSyncStatus = "Falha ao iniciar sessão HK"
+            }
             // Fallback: timer continua consultando amostras do HealthKit.
+        }
+    }
+
+    private func beginHKWorkoutSession(
+        configuration: HKWorkoutConfiguration,
+        swimmingMode: Bool
+    ) throws {
+        let hkSession = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
+        let builder = hkSession.associatedWorkoutBuilder()
+        let dataSource = HKLiveWorkoutDataSource(
+            healthStore: healthStore,
+            workoutConfiguration: configuration
+        )
+        if let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate) {
+            dataSource.enableCollection(for: heartRateType, predicate: nil)
+        }
+        if let energyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
+            dataSource.enableCollection(for: energyType, predicate: nil)
+        }
+        if let walkRun = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) {
+            dataSource.enableCollection(for: walkRun, predicate: nil)
+        }
+        if let cycling = HKQuantityType.quantityType(forIdentifier: .distanceCycling) {
+            dataSource.enableCollection(for: cycling, predicate: nil)
+        }
+        builder.dataSource = dataSource
+        hkSession.delegate = self
+        builder.delegate = self
+
+        let start = Date()
+        workoutStartedAt = start
+        hkSession.startActivity(with: start)
+        builder.beginCollection(withStart: start) { _, _ in }
+
+        hkWorkoutSession = hkSession
+        hkLiveBuilder = builder
+        watchSyncStatus = swimmingMode ? "Natação · voltas automáticas" : "Watch · batimentos ativos"
+        if swimmingMode {
+            sendSwimMetricsToPhone(force: true)
+        } else {
+            sendMetricsToPhone()
         }
     }
 
@@ -1519,10 +1563,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         if name.contains("escada") || name.contains("stair") { return .stairClimbing }
         if name.contains("hiit") || name.contains("burpee") || name.contains("polichinel") { return .highIntensityIntervalTraining }
         if name.contains("luta") || name.contains("fight") || name.contains("box") || name.contains("mma") { return .martialArts }
+        if name.contains("tenis") || name.contains("tennis") { return .tennis }
         if name.contains("surf") { return .surfingSports }
         if name.contains("kite") { return .paddleSports }
         if name.contains("yoga") || name.contains("pilates") || name.contains("mobil") { return .yoga }
         return .other
+    }
+
+    private static func isTennisExercise(exerciseName: String) -> Bool {
+        let name = exerciseName.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+        return name.contains("tenis") || name.contains("tennis")
     }
 
     private func applySwimLapCount(_ laps: Int, distanceMeters: Double?, source: String) {
@@ -1716,6 +1766,86 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         motionManager.stopGyroUpdates()
         altimeter.stopRelativeAltitudeUpdates()
         resetAirborneJumpState()
+    }
+
+    // MARK: - Tênis (picos / explosões)
+
+    private static let tennisBurstThresholdG = 2.2
+    private static let tennisBurstCooldown: TimeInterval = 4
+
+    private func startTennisMotion() {
+        guard isTennisMode else { return }
+        lastTennisBurstAt = .distantPast
+        let motionBox = WeakMainActorBox(self)
+        if motionManager.isDeviceMotionAvailable {
+            motionManager.deviceMotionUpdateInterval = 0.08
+            motionManager.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { data, _ in
+                guard let data else { return }
+                motionBox.run { this in
+                    this.handleTennisDeviceMotion(data)
+                }
+            }
+            watchSyncStatus = "Tênis · sensores ativos"
+        } else if motionManager.isAccelerometerAvailable {
+            motionManager.accelerometerUpdateInterval = 0.08
+            motionManager.startAccelerometerUpdates(to: .main) { data, _ in
+                guard let data else { return }
+                let a = data.acceleration
+                let g = sqrt(a.x * a.x + a.y * a.y + a.z * a.z)
+                motionBox.run { this in
+                    this.evaluateTennisBurst(accelG: g)
+                }
+            }
+            watchSyncStatus = "Tênis · acelerômetro"
+        } else {
+            watchSyncStatus = "Tênis · sem motion"
+        }
+    }
+
+    private func stopTennisMotion() {
+        guard isTennisMode || tennisBurstCount > 0 else {
+            // Evita derrubar sensores de água se ambos forem parados no mesmo ciclo.
+            return
+        }
+        if !isWaterSportMode {
+            motionManager.stopDeviceMotionUpdates()
+            motionManager.stopAccelerometerUpdates()
+            motionManager.stopGyroUpdates()
+        }
+    }
+
+    private func handleTennisDeviceMotion(_ data: CMDeviceMotion) {
+        let u = data.userAcceleration
+        let accelMag = sqrt(u.x * u.x + u.y * u.y + u.z * u.z)
+        evaluateTennisBurst(accelG: accelMag)
+    }
+
+    private func evaluateTennisBurst(accelG: Double) {
+        guard isActive, isTennisMode, !isPaused else { return }
+        guard accelG >= Self.tennisBurstThresholdG else { return }
+        let now = Date()
+        guard now.timeIntervalSince(lastTennisBurstAt) >= Self.tennisBurstCooldown else { return }
+        lastTennisBurstAt = now
+        tennisBurstCount += 1
+        WKInterfaceDevice.current().play(.click)
+        var payload: [String: Any] = [
+            "action": "tennisBurst",
+            "accelG": accelG,
+            "peakG": accelG,
+            "burstCount": tennisBurstCount,
+            "timestamp": now.timeIntervalSince1970
+        ]
+        // Reenvia BPM junto do pico — mantém o sync com o iPhone durante rajadas.
+        let sampleAge = lastHeartRateSampleAt.map { Date().timeIntervalSince($0) } ?? .infinity
+        if !isPaused, heartRate > 0, sampleAge <= heartRateFreshMaxAge {
+            payload["heartRate"] = heartRate
+            payload["heartRateFresh"] = true
+            if let lastHeartRateSampleAt {
+                payload["heartRateSampleAt"] = lastHeartRateSampleAt.timeIntervalSince1970
+            }
+        }
+        payload["calories"] = calories
+        sendToPhone(payload)
     }
 
     // MARK: - GPS Watch (Surf / Kitesurf)

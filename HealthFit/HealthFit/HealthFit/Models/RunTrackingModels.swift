@@ -10,11 +10,12 @@ enum OutdoorCardioModality: String, Codable, CaseIterable {
     case surfing
     case kitesurfing
     case rowing
+    case tennis
 
     /// Corrida e caminhada usam pedômetro e estados Parado / Caminhando / Correndo.
     var usesFootTracking: Bool {
         switch self {
-        case .running, .walking: return true
+        case .running, .walking, .tennis: return true
         case .cycling, .surfing, .kitesurfing, .rowing: return false
         }
     }
@@ -35,6 +36,7 @@ enum OutdoorCardioModality: String, Codable, CaseIterable {
         case .surfing: return CardioExercise.surfSystemImage
         case .kitesurfing: return CardioExercise.kitesurfSystemImage
         case .rowing: return "figure.rower"
+        case .tennis: return CardioExercise.tennisSystemImage
         }
     }
 }
@@ -162,8 +164,8 @@ enum RunTrackingMath {
         modality: OutdoorCardioModality
     ) -> RunningActivityState {
         switch modality {
-        case .running, .walking:
-            // Corrida e caminhada: Parado / Caminhando / Correndo.
+        case .running, .walking, .tennis:
+            // Corrida, caminhada e tênis: Parado / Caminhando / Correndo (picos laterais).
             if speed < 0.5 { return .stationary }
             if speed < 2.0 { return .walking }
             return .running
@@ -231,6 +233,11 @@ enum RunTrackingMath {
                 // Remo/sculling: ~6–12 MET conforme velocidade da embarcação.
                 if speed < 0.5 { return 2.5 }
                 return min(12.5, 5.0 + speed * 1.15)
+            case .tennis:
+                // Tênis intermitente: parado baixo + sprints elevados.
+                if speed < 0.5 { return 2.0 }
+                if speed < 2.0 { return 5.5 + speed }
+                return min(12.0, 7.0 + speed * 1.2)
             }
         }
         switch activityState {

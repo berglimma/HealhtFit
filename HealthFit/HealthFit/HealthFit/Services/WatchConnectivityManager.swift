@@ -64,6 +64,9 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     @Published private(set) var lastWatchJumpEvent: (height: Double, peakG: Double, airtime: Double?)?
     @Published private(set) var watchJumpTick: Int = 0
     @Published private(set) var lastWatchAccelG: Double = 0
+    /// Pico/explosão de tênis reportado pelo Watch (ou aceleração genérica).
+    @Published private(set) var tennisBurstTick: Int = 0
+    @Published private(set) var lastTennisBurstG: Double = 0
     /// Voltas de natação reportadas pelo Apple Watch (fonte automática).
     @Published private(set) var watchSwimLapCount: Int = 0
     @Published private(set) var watchSwimDistanceMeters: Double = 0
@@ -85,7 +88,8 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     private var watchHeartRateStaleTimer: Timer?
 
     /// BPM do Watch só é considerado fresco por este intervalo.
-    static let watchHeartRateStaleInterval: TimeInterval = 12
+    /// Um pouco maior que o poll do Watch para cobrir gaps do óptico (tênis / braço).
+    static let watchHeartRateStaleInterval: TimeInterval = 18
 
     private override init() {
         super.init()
@@ -262,11 +266,6 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         activityType: HKWorkoutActivityType = .other,
         locationOutdoor: Bool = false
     ) {
-        stopRetryTask?.cancel()
-        stopRetryTask = nil
-        clearWatchMetrics()
-        suppressWatchSessionCommandsUntil = nil
-        lastWorkoutName = workoutName
         let resolvedActivity = activityType == .other
             ? Self.inferredCardioActivityType(
                 exerciseName: exerciseName,
@@ -278,7 +277,30 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         let resolvedOutdoor = locationOutdoor
             || swimmingMode
             || waterSportMode
-            || [.walking, .running, .rowing, .hiking].contains(resolvedActivity)
+            || [.walking, .running, .rowing, .hiking, .cycling, .tennis].contains(resolvedActivity)
+        let signature = "\(workoutName)|\(exerciseName)|\(resolvedActivity.rawValue)|\(resolvedOutdoor)"
+
+        // Já tentando iniciar a mesma sessão: não relauncha o Watch app (causa freeze no simulador).
+        if isWorkoutActiveOnWatch == false,
+           lastCardioStartSignature == signature,
+           let last = lastCardioStartAttemptAt,
+           Date().timeIntervalSince(last) < Self.cardioStartDebounceInterval {
+            refreshConnectionStatus()
+            return
+        }
+
+        stopRetryTask?.cancel()
+        stopRetryTask = nil
+        // Só limpa métricas no 1º start da assinatura — retries não zeram BPM na UI.
+        let isFreshStart = lastCardioStartSignature != signature
+        if isFreshStart {
+            clearWatchMetrics()
+        }
+        suppressWatchSessionCommandsUntil = nil
+        lastWorkoutName = workoutName
+        lastCardioStartSignature = signature
+        lastCardioStartAttemptAt = .now
+
         let message: [String: Any] = [
             "action": "startCardio",
             "workoutName": workoutName,
@@ -294,17 +316,19 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             "locationOutdoor": resolvedOutdoor,
             "timestamp": Date().timeIntervalSince1970
         ]
-        isWorkoutActiveOnWatch = false
+        // Não força `isWorkoutActiveOnWatch = false` de novo se já está false — evita churn.
         sendToWatch(message, realtime: true)
         publishWorkoutContext(message)
         session?.transferUserInfo(message)
         scheduleStartRetries(message)
-        launchCompanionWatchApp(
-            activityType: resolvedActivity,
-            locationType: resolvedOutdoor ? .outdoor : .indoor,
-            swimmingMode: swimmingMode,
-            poolLengthMeters: poolLengthMeters
-        )
+        if isFreshStart {
+            launchCompanionWatchApp(
+                activityType: resolvedActivity,
+                locationType: resolvedOutdoor ? .outdoor : .indoor,
+                swimmingMode: swimmingMode,
+                poolLengthMeters: poolLengthMeters
+            )
+        }
         refreshConnectionStatus()
     }
 
@@ -317,6 +341,21 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         Task {
             _ = await attemptSyncWithWatch()
         }
+    }
+
+    /// Pede BPM/kcal frescos do Watch (útil quando o óptico falha em gaps — ex.: tênis).
+    func requestWatchMetrics() {
+        // Sem Watch pareado/alcançável (simulador): não spammar WCSession.
+        guard isWatchConnected, session?.isReachable == true else { return }
+        if let last = lastMetricsRequestAt,
+           Date().timeIntervalSince(last) < Self.metricsRequestMinInterval {
+            return
+        }
+        lastMetricsRequestAt = .now
+        sendToWatch([
+            "action": "requestMetrics",
+            "timestamp": Date().timeIntervalSince1970
+        ], realtime: true)
     }
 
     func sendKiteSpotBuddyToWatch(_ payload: KiteSpotBuddyWatchPayload) {
@@ -397,6 +436,10 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         swimmingMode: Bool = false,
         poolLengthMeters: Double = 25
     ) {
+        #if targetEnvironment(simulator)
+        // Simulador não tem Watch real — `startWatchApp` em loop congela a UI ao voltar do background.
+        return
+        #else
         guard HKHealthStore.isHealthDataAvailable() else { return }
         let configuration = HKWorkoutConfiguration()
         configuration.activityType = activityType
@@ -417,6 +460,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             }
             #endif
         }
+        #endif
     }
 
     private static func inferredCardioActivityType(
@@ -443,6 +487,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         if name.contains("luta") || name.contains("fight") || name.contains("box") || name.contains("mma") {
             return .martialArts
         }
+        if name.contains("tenis") || name.contains("tennis") { return .tennis }
         if name.contains("surf") { return .surfingSports }
         if name.contains("kite") { return .paddleSports }
         if name.contains("yoga") || name.contains("pilates") || name.contains("mobil") { return .yoga }
@@ -516,6 +561,12 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     private var suppressWatchSessionCommandsUntil: Date?
     private var stopRetryTask: Task<Void, Never>?
     private var startRetryTask: Task<Void, Never>?
+    /// Evita flood de `startWatchApp` / retries a cada tick do cardio (trava o simulador ao voltar do background).
+    private var lastCardioStartAttemptAt: Date?
+    private var lastCardioStartSignature: String?
+    private var lastMetricsRequestAt: Date?
+    private static let cardioStartDebounceInterval: TimeInterval = 18
+    private static let metricsRequestMinInterval: TimeInterval = 6
 
     private var shouldSuppressWatchSessionCommands: Bool {
         guard let until = suppressWatchSessionCommandsUntil else { return false }
@@ -531,6 +582,8 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         isWorkoutActiveOnWatch = false
         isWatchSessionPaused = false
         lastWorkoutName = ""
+        lastCardioStartSignature = nil
+        lastCardioStartAttemptAt = nil
         suppressWatchSessionCommandsUntil = Date().addingTimeInterval(12)
         clearWatchMetrics()
 
@@ -891,14 +944,17 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 noteWatchHeartRateUpdate(value, sampleAt: sampleAt)
                 heartRate = watchHeartRate
             } else if freshFlag == false || value <= 0 {
-                // Watch sinalizou amostra velha / pausa — expira BPM no iPhone.
-                if watchHeartRate > 0 {
+                // Não zerar na hora: o Watch reenvia heartRate=0 em gaps do sensor
+                // (tênis/braço em movimento). Mantém a última leitura até o stale timer.
+                let stillFresh = lastWatchHeartRateAt
+                    .map { Date().timeIntervalSince($0) < Self.watchHeartRateStaleInterval } == true
+                if !stillFresh, watchHeartRate > 0 {
                     watchHeartRate = 0
                     lastWatchHeartRateAt = nil
                     watchHeartRateStaleTimer?.invalidate()
                     watchHeartRateStaleTimer = nil
+                    HealthKitManager.shared.clearLiveWatchHeartRate()
                 }
-                HealthKitManager.shared.clearLiveWatchHeartRate()
             }
         }
         if let value = Self.double(from: message, key: "calories") {
@@ -937,7 +993,15 @@ extension WatchConnectivityManager: WCSessionDelegate {
             lastWatchJumpEvent = (height, peakG, airtime)
             watchJumpTick += 1
         }
-        if action == "waterSportAccel" || message["accelG"] != nil {
+        if action == "tennisBurst" {
+            let g = Self.double(from: message, key: "accelG")
+                ?? Self.double(from: message, key: "peakG")
+                ?? 0
+            lastTennisBurstG = max(0, g)
+            lastWatchAccelG = max(lastWatchAccelG, lastTennisBurstG)
+            tennisBurstTick += 1
+        } else if action == "waterSportAccel" || message["accelG"] != nil {
+            // Não misturar com tennisBurst (também traz accelG).
             if let g = Self.double(from: message, key: "accelG") {
                 lastWatchAccelG = g
             }

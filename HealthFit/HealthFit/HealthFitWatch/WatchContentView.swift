@@ -581,6 +581,9 @@ struct WatchContentView: View {
             if workoutManager.isWaterSportMode {
                 waterSportCompactChip
             }
+            if workoutManager.isTennisMode {
+                tennisCompactChip
+            }
             if workoutManager.isSwimmingMode {
                 swimmingCardioExtras
             }
@@ -697,6 +700,19 @@ struct WatchContentView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(Color.cyan.opacity(0.15))
+        .clipShape(Capsule())
+    }
+
+    private var tennisCompactChip: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "figure.tennis")
+            Text("\(workoutManager.tennisBurstCount) picos")
+        }
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundStyle(.green)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.green.opacity(0.15))
         .clipShape(Capsule())
     }
 

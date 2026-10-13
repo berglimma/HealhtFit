@@ -44,6 +44,16 @@ struct CardioSetupView: View {
     @State private var showsClimbingMap = false
     @State private var treadmillHasElevation = false
     @State private var treadmillInclinePercent: Double = 1
+    // Tênis
+    @State private var tennisSessionType: TennisSessionType = .training
+    @State private var tennisMatchFormat: TennisMatchFormat = .singles
+    @State private var tennisSurface: TennisCourtSurface = .hardOutdoor
+    @State private var tennisSkillLevel: TennisSkillLevel = .intermediate
+    @State private var tennisHandedness: TennisHandedness = .right
+    @State private var tennisTargetSets: Int = 0
+    @State private var tennisTargetMinutes: Int = 0
+    @State private var tennisCourtName = ""
+    @State private var useTennisZoneGoal = true
     @Environment(\.dismiss) private var dismiss
     @StateObject private var spotLocator = SpotLocationHelper()
     @State private var showWindConditions = false
@@ -162,7 +172,8 @@ struct CardioSetupView: View {
             waterSportSetup: makeWaterSetup(windSpeedKmh: speed, windDirectionDegrees: direction),
             rowingSetup: exercise.isRowing ? RowingSetup(boatType: selectedRowingBoat) : nil,
             climbingSetup: climbingSetup,
-            treadmillSetup: treadmillSetup
+            treadmillSetup: treadmillSetup,
+            tennisSetup: tennisSetup
         )
     }
 
@@ -186,6 +197,9 @@ struct CardioSetupView: View {
                 }
                 if exercise.isClimbing {
                     climbingSetupSection
+                }
+                if exercise.isTennis {
+                    tennisSetupSection
                 }
                 if exercise.supportsSwimmingPool {
                     swimmingPoolSection
@@ -333,6 +347,16 @@ struct CardioSetupView: View {
                     subtitle: "Progressão por grau, vias e inspeção de equipamento",
                     icon: "book.pages.fill",
                     tint: .orange
+                )
+            }
+            .buttonStyle(.plain)
+        } else if exercise.isTennis {
+            NavigationLink(value: TennisLogbookRoute()) {
+                modalityLogbookRow(
+                    title: "Diário de tênis",
+                    subtitle: "Carga, placar, zonas de FC e recuperação",
+                    icon: "book.pages.fill",
+                    tint: .green
                 )
             }
             .buttonStyle(.plain)
@@ -1374,6 +1398,170 @@ struct CardioSetupView: View {
         )
     }
 
+    private var tennisSetup: TennisSetup? {
+        guard exercise.isTennis else { return nil }
+        return TennisSetup(
+            sessionType: tennisSessionType,
+            matchFormat: tennisMatchFormat,
+            surface: tennisSurface,
+            skillLevel: tennisSkillLevel,
+            handedness: tennisHandedness,
+            targetSets: tennisTargetSets > 0 ? tennisTargetSets : nil,
+            targetMinutes: tennisTargetMinutes > 0 ? tennisTargetMinutes : nil,
+            highZoneGoalPercent: useTennisZoneGoal ? tennisSkillLevel.highZoneGoalPercent : nil,
+            courtName: tennisCourtName,
+            courtLatitude: nil,
+            courtLongitude: nil
+        )
+    }
+
+    // MARK: - Tênis
+
+    private var tennisSetupSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Tipo de sessão")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 108), spacing: 8)], spacing: 8) {
+                    ForEach(TennisSessionType.allCases) { type in
+                        Button {
+                            tennisSessionType = type
+                        } label: {
+                            VStack(spacing: 4) {
+                                Image(systemName: type.icon)
+                                Text(type.rawValue)
+                                    .font(.caption.weight(.medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(
+                                tennisSessionType == type ? AppTheme.accent : AppTheme.cardBackground,
+                                in: RoundedRectangle(cornerRadius: 12)
+                            )
+                            .foregroundStyle(tennisSessionType == type ? .black : AppTheme.textPrimary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                Text(tennisSessionType.detail)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Formato")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Picker("Formato", selection: $tennisMatchFormat) {
+                    ForEach(TennisMatchFormat.allCases) { format in
+                        Text(format.rawValue).tag(format)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Superfície")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
+                    ForEach(TennisCourtSurface.allCases) { surface in
+                        Button {
+                            tennisSurface = surface
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Label(surface.rawValue, systemImage: surface.icon)
+                                    .font(.caption.weight(.semibold))
+                                Text(surface.isOutdoor ? "Outdoor · GPS" : "Indoor")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(
+                                tennisSurface == surface ? surface.color.opacity(0.35) : AppTheme.cardBackground,
+                                in: RoundedRectangle(cornerRadius: 12)
+                            )
+                            .foregroundStyle(AppTheme.textPrimary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                Text(tennisSurface.detail)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Nível e mão dominante")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Picker("Nível", selection: $tennisSkillLevel) {
+                    ForEach(TennisSkillLevel.allCases) { level in
+                        Text(level.rawValue).tag(level)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Picker("Mão", selection: $tennisHandedness) {
+                    ForEach(TennisHandedness.allCases) { hand in
+                        Text(hand.rawValue).tag(hand)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Metas (opcional)")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                HStack {
+                    Text("Sets")
+                    Spacer()
+                    Stepper(value: $tennisTargetSets, in: 0...5) {
+                        Text(tennisTargetSets == 0 ? "Livre" : "\(tennisTargetSets) set(s)")
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+                HStack {
+                    Text("Duração")
+                    Spacer()
+                    Stepper(value: $tennisTargetMinutes, in: 0...180, step: 15) {
+                        Text(tennisTargetMinutes == 0 ? "Livre" : "\(tennisTargetMinutes) min")
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+                Toggle(isOn: $useTennisZoneGoal) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Meta de zona alta")
+                        Text("Alvo ~\(Int(tennisSkillLevel.highZoneGoalPercent))% do tempo em FC elevada")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+                .tint(AppTheme.accent)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Quadra / clube")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                TextField("Nome da quadra (opcional)", text: $tennisCourtName)
+                    .textFieldStyle(.plain)
+                    .padding(12)
+                    .background(AppTheme.cardBackground, in: RoundedRectangle(cornerRadius: 12))
+                    .foregroundStyle(AppTheme.textPrimary)
+            }
+
+            Label(
+                "Apple Watch abre como Tênis (HealthKit). FC, kcal e picos de movimento alimentam densidade e carga.",
+                systemImage: "applewatch"
+            )
+            .font(.caption)
+            .foregroundStyle(AppTheme.textSecondary)
+        }
+    }
+
     private var climbingSetup: ClimbingSetup? {
         guard exercise.isClimbing else { return nil }
         return ClimbingSetup(
@@ -2201,6 +2389,7 @@ struct CardioSetupView: View {
                     if config.isOutdoorWalkingSession { return "Iniciar Caminhada" }
                     if config.isKitesurfSession { return "Iniciar Kitesurf" }
                     if config.isSurfSession { return "Iniciar Surf" }
+                    if config.isTennisSession { return "Iniciar Tênis" }
                     if config.isTreadmillSession { return "Iniciar Esteira" }
                     return "Iniciar Cardio"
                 }(),
@@ -2211,6 +2400,7 @@ struct CardioSetupView: View {
                     if config.isSwimmingSession { return "figure.pool.swim" }
                     if config.isKitesurfSession { return CardioExercise.kitesurfSystemImage }
                     if config.isSurfSession { return CardioExercise.surfSystemImage }
+                    if config.isTennisSession { return CardioExercise.tennisSystemImage }
                     return config.exercise.icon
                 }()
             )

@@ -130,6 +130,9 @@ struct WorkoutSummaryView: View {
                         if let rowing = session.rowing {
                             rowingPerformanceSection(rowing)
                         }
+                        if let tennis = session.tennis {
+                            tennisPerformanceSection(tennis)
+                        }
                         if shouldShowRouteMap {
                             runRouteSection
                         }
@@ -1865,6 +1868,89 @@ struct WorkoutSummaryView: View {
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
     }
 
+    private func tennisPerformanceSection(_ t: TennisSessionSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Image(systemName: CardioExercise.tennisSystemImage)
+                    .foregroundStyle(AppTheme.accent)
+                Text("Performance Tênis")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textPrimary)
+                Spacer()
+                Text(t.sessionType.rawValue)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(t.surface.color)
+            }
+
+            HStack(spacing: 12) {
+                SummaryStat(
+                    value: "\(t.setsWon)–\(t.setsLost)",
+                    label: "Sets",
+                    icon: "trophy.fill"
+                )
+                SummaryStat(
+                    value: "\(t.gamesWon)–\(t.gamesLost)",
+                    label: "Games",
+                    icon: "sportscourt.fill"
+                )
+                SummaryStat(
+                    value: "\(t.burstCount)",
+                    label: "Picos",
+                    icon: "bolt.fill"
+                )
+            }
+
+            HStack(spacing: 12) {
+                SummaryStat(
+                    value: String(format: "%.0f%%", t.highZonePercent),
+                    label: "Zona alta",
+                    icon: "heart.fill"
+                )
+                SummaryStat(
+                    value: String(format: "%.0f", t.loadScore),
+                    label: "Carga",
+                    icon: t.loadBand.icon
+                )
+                SummaryStat(
+                    value: t.peakHeartRate > 0 ? "\(Int(t.peakHeartRate))" : "—",
+                    label: "Pico BPM",
+                    icon: "waveform.path.ecg"
+                )
+            }
+
+            Label(
+                "\(t.matchFormat.rawValue) · \(t.surface.rawValue) · \(t.loadBand.rawValue)",
+                systemImage: t.surface.icon
+            )
+            .font(.caption)
+            .foregroundStyle(AppTheme.textSecondary)
+
+            if t.courtCoverageKm > 0.01 {
+                Text(String(format: "Cobertura GPS na quadra: %.2f km · %d células no heatmap", t.courtCoverageKm, t.heatmapPoints.count))
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            if !t.recoveryTips.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Recuperação")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    ForEach(Array(t.recoveryTips.prefix(3).enumerated()), id: \.offset) { _, tip in
+                        Text("• \(tip)")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+        .foregroundStyle(AppTheme.textPrimary)
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
     private func rowingPerformanceSection(_ r: RowingSessionSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
@@ -2080,6 +2166,7 @@ struct WorkoutSummaryView: View {
     }
 
     private var flyoverModalityNoun: String {
+        if session.isTennisSession { return "sessão de tênis" }
         if session.isOutdoorCyclingSession {
             return session.completedModalityTitle.localizedCaseInsensitiveContains("mountain")
                 ? "mountain bike"

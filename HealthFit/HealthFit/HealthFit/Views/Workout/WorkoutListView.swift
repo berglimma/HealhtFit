@@ -186,6 +186,10 @@ struct WorkoutListView: View {
                 ClimbingLogbookView()
                     .onAppear { discardAlignedMealPlanForOtherWorkout() }
             }
+            .navigationDestination(for: TennisLogbookRoute.self) { _ in
+                TennisLogbookView()
+                    .onAppear { discardAlignedMealPlanForOtherWorkout() }
+            }
             .navigationDestination(for: ClimbingMapRoute.self) { _ in
                 ClimbingMapView()
             }

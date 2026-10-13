@@ -10,6 +10,9 @@
     "-%lld%%" : {
 
     },
+    "–" : {
+
+    },
     "—" : {
 
     },
@@ -292,6 +295,16 @@
     "%lld" : {
 
     },
+    "%lld · %lld min" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld · %2$lld min"
+          }
+        }
+      }
+    },
     "%lld / %lld kcal" : {
       "localizations" : {
         "pt-BR" : {
@@ -481,6 +494,9 @@
           }
         }
       }
+    },
+    "%lld set(s)" : {
+
     },
     "%lld treinos · %lld min · %lld kcal" : {
       "localizations" : {
@@ -1011,6 +1027,9 @@
     "Aguardando amostras de aceleração…" : {
 
     },
+    "Aguardando GPS" : {
+
+    },
     "Aguardando Watch" : {
 
     },
@@ -1086,6 +1105,9 @@
     "Alunos" : {
 
     },
+    "Alvo ~%lld%% do tempo em FC elevada" : {
+
+    },
     "Amigos da equipe com Spot Buddy ativo receberão um alerta com sua distância aproximada." : {
 
     },
@@ -1159,6 +1181,9 @@
 
     },
     "Apple Watch" : {
+
+    },
+    "Apple Watch abre como Tênis (HealthKit). FC, kcal e picos de movimento alimentam densidade e carga." : {
 
     },
     "Ar" : {
@@ -2343,6 +2368,9 @@
     "Aviso" : {
 
     },
+    "Barras = minutos ativos por semana · sessões nas dicas dos eixos." : {
+
+    },
     "Batimentos ao vivo vêm de sensores Bluetooth com Heart Rate Service (cintas e alguns relógios). Passos e calorias do dia continuam vindo do Apple Saúde — ative a sincronização do app do seu relógio para o Saúde." : {
 
     },
@@ -2572,6 +2600,9 @@
     "Carga" : {
 
     },
+    "Carga intermitente" : {
+
+    },
     "Carga recomendada" : {
 
     },
@@ -2602,7 +2633,7 @@
     "Carregando seu perfil…" : {
 
     },
-    "Carregando..." : {
+    "Carregando... toque para continuar" : {
 
     },
     "Catálogo (%lld)" : {
@@ -2645,6 +2676,9 @@
 
     },
     "cm" : {
+
+    },
+    "Cobertura de quadra" : {
 
     },
     "Cobrança" : {
@@ -3420,6 +3454,9 @@
     "Diário de natação" : {
 
     },
+    "Diário de tênis" : {
+
+    },
     "Diários de natação, bike e surf/kite ficam dentro de cada modalidade." : {
 
     },
@@ -4102,7 +4139,13 @@
     "Finalizar Pedal" : {
 
     },
+    "Finalizar Tênis" : {
+
+    },
     "Finalize ou conclua o exercício atual para trocar. A troca só fica disponível na tela Começar exercício." : {
+
+    },
+    "Finalize uma sessão para gerar tips personalizados." : {
 
     },
     "Firebase não configurado. Substitua o GoogleService-Info.plist pelo arquivo do Firebase Console." : {
@@ -4401,6 +4444,9 @@
     "Indicadores na sessão" : {
 
     },
+    "Indoor" : {
+
+    },
     "Indoor · sem mapa" : {
 
     },
@@ -4453,6 +4499,9 @@
 
     },
     "Iniciar Surf" : {
+
+    },
+    "Iniciar Tênis" : {
 
     },
     "Iniciar Treino" : {
@@ -4675,6 +4724,9 @@
     "Manutenção" : {
 
     },
+    "Mão" : {
+
+    },
     "Mapa" : {
 
     },
@@ -4848,6 +4900,9 @@
     "Meta de voltas" : {
 
     },
+    "Meta de zona alta" : {
+
+    },
     "Meta diária" : {
 
     },
@@ -4858,6 +4913,9 @@
 
     },
     "Meta voltas" : {
+
+    },
+    "Meta zona alta" : {
 
     },
     "Meta: %@" : {
@@ -4886,6 +4944,9 @@
 
     },
     "Metabolismo Basal" : {
+
+    },
+    "Metas (opcional)" : {
 
     },
     "Metas do profissional" : {
@@ -5173,7 +5234,13 @@
     "Ninguém te segue ainda. Quando aprovarem o pedido, o chat aparece aqui." : {
 
     },
+    "Nível" : {
+
+    },
     "Nível do mar via Open-Meteo Marine (estimado — não é tábua de porto)." : {
+
+    },
+    "Nível e mão dominante" : {
 
     },
     "No app" : {
@@ -5201,6 +5268,9 @@
 
     },
     "Nome completo: %@" : {
+
+    },
+    "Nome da quadra (opcional)" : {
 
     },
     "Nome da refeição" : {
@@ -5614,6 +5684,9 @@
     "Ou gerar código para compartilhar" : {
 
     },
+    "Outdoor · GPS" : {
+
+    },
     "Outras modalidades de cardio ficam em Perfil → Modalidades que pratico." : {
 
     },
@@ -5747,6 +5820,9 @@
     "Performance Surf" : {
 
     },
+    "Performance Tênis" : {
+
+    },
     "Perguntas" : {
 
     },
@@ -5814,6 +5890,9 @@
           }
         }
       }
+    },
+    "Placar" : {
+
     },
     "Plano" : {
 
@@ -10905,6 +10984,9 @@
     "Qtd" : {
 
     },
+    "Quadra / clube" : {
+
+    },
     "Qual o seu nível na musculação?" : {
 
     },
@@ -10978,6 +11060,9 @@
 
     },
     "Recorde anterior" : {
+
+    },
+    "Recuperação" : {
 
     },
     "Recurso do plano IA Plus. Foto do prato ou do rótulo nutricional — o app lê a tabela quando houver; senão estima pelo visual. Só macros são salvos; a foto é descartada." : {
@@ -11435,6 +11520,9 @@
     "Sem pontos GPS. No Surf/Kitesurf use o Apple Watch na água — a rota sincroniza com o iPhone." : {
 
     },
+    "Sem superfícies registradas." : {
+
+    },
     "Sem tentativas registradas." : {
 
     },
@@ -11496,6 +11584,9 @@
 
     },
     "Setor" : {
+
+    },
+    "Sets" : {
 
     },
     "settings.language" : {
@@ -11738,6 +11829,9 @@
           }
         }
       }
+    },
+    "Superfície" : {
+
     },
     "Suplementos" : {
 
@@ -12061,6 +12155,9 @@
     "Tipo de prancha" : {
 
     },
+    "Tipo de sessão" : {
+
+    },
     "Tipo de vínculo" : {
 
     },
@@ -12093,6 +12190,9 @@
 
     },
     "Tópicos praticados" : {
+
+    },
+    "Toque +/− no placar a cada game/set. Picos vêm do Watch (explosões) e a zona alta da FC." : {
 
     },
     "Toque de 1 (muito fácil) a 10 (máximo)" : {
@@ -12132,6 +12232,9 @@
 
     },
     "Toque para ativar ou desativar o radar de amigos no kitesurf" : {
+
+    },
+    "Toque para continuar" : {
 
     },
     "Toque para expandir o card. Mantenha pressionado por 1 segundo para tela cheia e salvar em Fotos." : {
@@ -12422,6 +12525,9 @@
 
     },
     "Visível na busca regional" : {
+
+    },
+    "Você  ·  Adv." : {
 
     },
     "Você concluiu %lld exercícios — sessão para postar!" : {

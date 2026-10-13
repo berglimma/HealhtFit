@@ -109,6 +109,7 @@ enum WatchCatalog {
         .init(id: "climb", name: "Escalada", icon: "figure.climbing", isWaterSport: false, isKitesurf: false, isSwimming: false),
         .init(id: "row", name: "Remo", icon: "figure.rower", isWaterSport: false, isKitesurf: false, isSwimming: false),
         .init(id: "swim", name: "Natação", icon: "figure.pool.swim", isWaterSport: false, isKitesurf: false, isSwimming: true),
+        .init(id: "tennis", name: "Tênis", icon: "figure.tennis", isWaterSport: false, isKitesurf: false, isSwimming: false),
         .init(id: "jack", name: "Polichinelo", icon: "figure.mixed.cardio", isWaterSport: false, isKitesurf: false, isSwimming: false),
         .init(id: "burpee", name: "Burpees", icon: "figure.highintensity.intervaltraining", isWaterSport: false, isKitesurf: false, isSwimming: false),
     ]

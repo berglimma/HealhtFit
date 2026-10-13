@@ -562,6 +562,8 @@ struct WorkoutSession: Identifiable, Codable {
     var climbing: ClimbingSessionSnapshot?
     /// Snapshot esteira ergométrica (elevação / inclinação).
     var treadmill: TreadmillSessionSnapshot?
+    /// Snapshot tênis (tipo, placar, zonas, picos, carga).
+    var tennis: TennisSessionSnapshot?
     /// Encerrado antes de concluir todos os exercícios.
     var endedEarly: Bool
     /// Motivo informado pelo aluno ao encerrar antecipadamente.
@@ -621,6 +623,7 @@ struct WorkoutSession: Identifiable, Codable {
         rowing: RowingSessionSnapshot? = nil,
         climbing: ClimbingSessionSnapshot? = nil,
         treadmill: TreadmillSessionSnapshot? = nil,
+        tennis: TennisSessionSnapshot? = nil,
         endedEarly: Bool = false,
         earlyEndJustification: String? = nil,
         autoEndedByInactivity: Bool = false,
@@ -661,6 +664,7 @@ struct WorkoutSession: Identifiable, Codable {
         self.rowing = rowing
         self.climbing = climbing
         self.treadmill = treadmill
+        self.tennis = tennis
         self.endedEarly = endedEarly
         self.earlyEndJustification = earlyEndJustification
         self.autoEndedByInactivity = autoEndedByInactivity
@@ -705,6 +709,7 @@ struct WorkoutSession: Identifiable, Codable {
         rowing = try container.decodeIfPresent(RowingSessionSnapshot.self, forKey: .rowing)
         climbing = try container.decodeIfPresent(ClimbingSessionSnapshot.self, forKey: .climbing)
         treadmill = try container.decodeIfPresent(TreadmillSessionSnapshot.self, forKey: .treadmill)
+        tennis = try container.decodeIfPresent(TennisSessionSnapshot.self, forKey: .tennis)
         endedEarly = try container.decodeIfPresent(Bool.self, forKey: .endedEarly) ?? false
         earlyEndJustification = try container.decodeIfPresent(String.self, forKey: .earlyEndJustification)
         autoEndedByInactivity = try container.decodeIfPresent(Bool.self, forKey: .autoEndedByInactivity) ?? false
@@ -749,6 +754,7 @@ struct WorkoutSession: Identifiable, Codable {
         try container.encodeIfPresent(rowing, forKey: .rowing)
         try container.encodeIfPresent(climbing, forKey: .climbing)
         try container.encodeIfPresent(treadmill, forKey: .treadmill)
+        try container.encodeIfPresent(tennis, forKey: .tennis)
         try container.encode(endedEarly, forKey: .endedEarly)
         try container.encodeIfPresent(earlyEndJustification, forKey: .earlyEndJustification)
         try container.encode(autoEndedByInactivity, forKey: .autoEndedByInactivity)
@@ -764,7 +770,7 @@ struct WorkoutSession: Identifiable, Codable {
         case targetDistanceKm, completedDistanceKm, averagePaceSecondsPerKm, cardioIntensityLabel, perceivedEffort
         case targetCalories, routePoints, stepCount, pausedDurationSeconds
         case poolLengthMeters, swimLapCount, targetSwimLaps, swimPaceSecondsPer100m
-        case waterSport, rowing, climbing, treadmill
+        case waterSport, rowing, climbing, treadmill, tennis
         case endedEarly, earlyEndJustification, autoEndedByInactivity
         case duoTeamId, duoTeamName
     }
@@ -807,7 +813,7 @@ struct WorkoutSession: Identifiable, Codable {
         return false
     }
 
-    /// Sessão com mapa GPS outdoor (Corrida, caminhada, Bicicleta pedal, Mountain bike, Surf, Kite, Remo).
+    /// Sessão com mapa GPS outdoor (Corrida, caminhada, Bicicleta pedal, Mountain bike, Surf, Kite, Remo, Tênis outdoor).
     /// Esteira ergométrica é indoor e nunca entra aqui.
     var isOutdoorGPSCardio: Bool {
         if isTreadmillSession { return false }
@@ -816,6 +822,7 @@ struct WorkoutSession: Identifiable, Codable {
         if isOutdoorCyclingSession { return true }
         if isWaterSportSession { return true }
         if isRowingSession { return true }
+        if isTennisSession, let tennis, tennis.surface.isOutdoor { return true }
         if !routePoints.isEmpty { return true }
         return false
     }
@@ -841,6 +848,16 @@ struct WorkoutSession: Identifiable, Codable {
         if isKitesurfSession { return false }
         if exerciseRecordsIndicateSurf { return true }
         return Self.titleIndicatesSurf(workoutTitle)
+    }
+
+    var isTennisSession: Bool {
+        if tennis != nil { return true }
+        let title = workoutTitle.lowercased()
+        if title.contains("tênis") || title.contains("tenis") { return true }
+        return exerciseRecords.contains { record in
+            let n = record.exerciseName.lowercased()
+            return n.contains("tênis") || n.contains("tenis")
+        }
     }
 
     private var exerciseRecordsIndicateKitesurf: Bool {
@@ -908,6 +925,7 @@ struct WorkoutSession: Identifiable, Codable {
     var isRunningSession: Bool {
         if isSwimmingSession { return false }
         if isTreadmillSession { return false }
+        if isTennisSession { return false }
         if isOutdoorWalkingSession || isOutdoorCyclingSession || isWaterSportSession || isRowingSession {
             return false
         }

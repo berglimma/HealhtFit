@@ -42,6 +42,8 @@ final class RunTrackingService: NSObject, ObservableObject {
     private var didRequestAlwaysAuthorization = false
     /// Distância mínima entre updates GPS em treino ativo (reduz flood na UI após wake).
     private static let activeDistanceFilterMeters: CLLocationDistance = 6
+    /// Tênis: cobertura de quadra — filtro menor para capturar laterais e gerar Flyover.
+    private static let tennisActiveDistanceFilterMeters: CLLocationDistance = 2
     /// Surf/Kite: prioriza GPS do Apple Watch (iPhone em terra).
     private var prefersWatchGPS = false
     private var lastWatchGPSAt: Date?
@@ -199,12 +201,17 @@ final class RunTrackingService: NSObject, ObservableObject {
             return
         }
         lastForegroundResumeAt = now
-        requestLocationPermissionIfNeeded()
+        // Não pedir Always de novo no resume — só liga o stream (evita jank/freeze no simulador).
         if !isPaused {
             applyActiveTrackingAccuracy()
         }
+        #if targetEnvironment(simulator)
+        // Simulador: one-shot `requestLocation` no resume costuma travar a UI.
+        startLocationUpdatesIfAuthorized(forceImmediateFix: false)
+        #else
         let needsImmediateFix = currentLocation.map { now.timeIntervalSince($0.timestamp) > 8 } ?? true
         startLocationUpdatesIfAuthorized(forceImmediateFix: needsImmediateFix)
+        #endif
     }
 
     /// Garante entrega em background sem reiniciar o stream (lock / inactive).
@@ -222,7 +229,9 @@ final class RunTrackingService: NSObject, ObservableObject {
 
     private func applyActiveTrackingAccuracy() {
         locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-        locationManager.distanceFilter = Self.activeDistanceFilterMeters
+        locationManager.distanceFilter = modality == .tennis
+            ? Self.tennisActiveDistanceFilterMeters
+            : Self.activeDistanceFilterMeters
         locationManager.pausesLocationUpdatesAutomatically = false
     }
 
@@ -326,8 +335,8 @@ final class RunTrackingService: NSObject, ObservableObject {
             } else {
                 next = currentSpeedMetersPerSecond >= 3.0 ? .hardCycling : .moving
             }
-        case .running, .walking:
-            // Parado / Caminhando / Correndo — igual para corrida e caminhada.
+        case .running, .walking, .tennis:
+            // Parado / Caminhando / Correndo — igual para corrida, caminhada e tênis (picos laterais).
             if activity.running {
                 next = .running
             } else if activity.walking {
@@ -390,6 +399,9 @@ final class RunTrackingService: NSObject, ObservableObject {
         if prefersWatchGPS {
             // GPS no mar via Watch costuma ser mais ruidoso — tolerância maior.
             maxAccuracy = lastAcceptedLocation == nil ? 150 : 85
+        } else if modality == .tennis {
+            // Quadra: GPS lateral ruidoso — aceita precisão um pouco pior para o Flyover.
+            maxAccuracy = lastAcceptedLocation == nil ? 120 : (elapsedSinceStart < 90 ? 85 : 65)
         } else if lastAcceptedLocation == nil {
             maxAccuracy = 120
         } else if elapsedSinceStart < 90 {
@@ -408,14 +420,16 @@ final class RunTrackingService: NSObject, ObservableObject {
             switch modality {
             case .cycling, .kitesurfing: maxJumpSpeed = 22.0
             case .surfing, .rowing: maxJumpSpeed = 16.0
-            case .running, .walking: maxJumpSpeed = 9.0
+            case .running, .walking, .tennis: maxJumpSpeed = 9.0
             }
             let allowedGap = maxJumpSpeed * max(dt, 1)
             if delta > allowedGap, dt < 8 { return false }
             if delta > 250, dt < 3 { return false }
             // Distância de treino só em movimento ativo (não durante pausa).
             // Aceita micro-avanços ≥ 0.5 m para percursos retos sem “só contar na volta”.
-            if !isPaused, delta >= 0.5 {
+            // Tênis: laterais curtas (≥ 0.35 m) entram na cobertura / Flyover.
+            let minDistanceDelta = modality == .tennis ? 0.35 : 0.5
+            if !isPaused, delta >= minDistanceDelta {
                 distanceMeters += delta
             }
         }
@@ -451,7 +465,13 @@ final class RunTrackingService: NSObject, ObservableObject {
             let moved = CLLocation(latitude: last.latitude, longitude: last.longitude)
                 .distance(from: location)
             // Menor limiar no mapa para desenhar trechos retos sem “buracos”.
-            let minMove = modality == .cycling ? 2.0 : 1.0
+            // Tênis: aceita micro-movimentos de quadra para o Flyover da movimentação.
+            let minMove: Double
+            switch modality {
+            case .cycling: minMove = 2.0
+            case .tennis: minMove = 0.4
+            default: minMove = 1.0
+            }
             if moved < minMove, last.isPaused == isPaused { return true }
         }
         routePoints.append(point)
@@ -519,7 +539,9 @@ final class RunTrackingService: NSObject, ObservableObject {
     ) -> Bool {
         let elapsedSinceStart = sessionStartDate.map { location.timestamp.timeIntervalSince($0) } ?? 0
         let maxAccuracy: CLLocationAccuracy
-        if lastAccepted == nil {
+        if modality == .tennis {
+            maxAccuracy = lastAccepted == nil ? 120 : (elapsedSinceStart < 90 ? 85 : 65)
+        } else if lastAccepted == nil {
             maxAccuracy = 120
         } else if elapsedSinceStart < 90 {
             maxAccuracy = 75
@@ -535,12 +557,13 @@ final class RunTrackingService: NSObject, ObservableObject {
             switch modality {
             case .cycling, .kitesurfing: maxJumpSpeed = 22.0
             case .surfing, .rowing: maxJumpSpeed = 16.0
-            case .running, .walking: maxJumpSpeed = 9.0
+            case .running, .walking, .tennis: maxJumpSpeed = 9.0
             }
             let allowedGap = maxJumpSpeed * max(dt, 1)
             if delta > allowedGap, dt < 8 { return false }
             if delta > 250, dt < 3 { return false }
-            if !isPaused, delta >= 0.5 {
+            let minDistanceDelta = modality == .tennis ? 0.35 : 0.5
+            if !isPaused, delta >= minDistanceDelta {
                 distance += delta
             }
         }
@@ -574,7 +597,12 @@ final class RunTrackingService: NSObject, ObservableObject {
         if let last = route.last {
             let moved = CLLocation(latitude: last.latitude, longitude: last.longitude)
                 .distance(from: location)
-            let minMove = modality == .cycling ? 2.0 : 1.0
+            let minMove: Double
+            switch modality {
+            case .cycling: minMove = 2.0
+            case .tennis: minMove = 0.4
+            default: minMove = 1.0
+            }
             if moved < minMove, last.isPaused == isPaused { return true }
         }
         route.append(point)

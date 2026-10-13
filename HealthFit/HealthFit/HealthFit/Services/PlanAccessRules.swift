@@ -8,7 +8,8 @@ enum PlanAccessRules {
         if exercise.name == "Corrida" {
             return .fullWorkouts
         }
-        if exercise.isWaterSport || exercise.isRowing || exercise.isClimbing || exercise.isFight {
+        if exercise.isWaterSport || exercise.isRowing || exercise.isClimbing
+            || exercise.isFight || exercise.isTennis {
             return .advancedModalities
         }
         return nil

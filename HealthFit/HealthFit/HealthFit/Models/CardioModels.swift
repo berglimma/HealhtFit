@@ -180,6 +180,9 @@ struct CardioExercise: Identifiable, Hashable, Codable {
     /// Escalada: vias, graus, clima, detecção de movimento e inventário de equipamento.
     var isClimbing: Bool { name == "Escalada" }
 
+    /// Tênis: carga intermitente, placar, superfície e zonas de FC.
+    var isTennis: Bool { name == "Tênis" || name == "Tenis" }
+
     /// Gradientes “foto” para cards de modalidade (lista de cardio).
     var coverColors: [Color] {
         switch name {
@@ -211,6 +214,8 @@ struct CardioExercise: Identifiable, Hashable, Codable {
             return [Color(red: 0.18, green: 0.48, blue: 0.68), Color(red: 0.06, green: 0.20, blue: 0.35)]
         case "Natação":
             return [Color(red: 0.12, green: 0.55, blue: 0.78), Color(red: 0.04, green: 0.22, blue: 0.45)]
+        case "Tênis", "Tenis":
+            return [Color(red: 0.20, green: 0.55, blue: 0.35), Color(red: 0.10, green: 0.28, blue: 0.55)]
         case "Polichinelo":
             return [Color(red: 0.95, green: 0.62, blue: 0.22), Color(red: 0.70, green: 0.28, blue: 0.12)]
         case "Burpees":
@@ -237,6 +242,7 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         case "Escalada": return "CardioCoverEscalada"
         case "Remo": return "CardioCoverRemo"
         case "Natação": return "CardioCoverNatacao"
+        case "Tênis", "Tenis": return "CardioCoverTenis"
         case "Polichinelo": return "CardioCoverPolichinelo"
         case "Burpees": return "CardioCoverBurpees"
         default: return "CardioCoverCorrida"
@@ -247,10 +253,13 @@ struct CardioExercise: Identifiable, Hashable, Codable {
     static let surfSystemImage = "figure.surfing"
     /// SF Symbol da modalidade Kitesurf — vento (esporte a vela / powerkite); sem `figure.kitesurfing` no SF Symbols.
     static let kitesurfSystemImage = "wind"
+    /// SF Symbol da modalidade Tênis.
+    static let tennisSystemImage = "figure.tennis"
 
     private static let outdoorGPSNames: Set<String> = [
         "Corrida", "Caminhada", "Caminhada Rápida", "Bicicleta pedal", "Mountain bike",
-        "Surf", "Kitesurf", "Kite Surf", "Remo"
+        "Surf", "Kitesurf", "Kite Surf", "Remo",
+        // Tênis outdoor usa GPS via `isOutdoorTennisSession` (superfície), não pela lista fixa.
     ]
 
     /// Inclui o nome legado "Caminhada Rápida" para sessões / reconstrução antigas.
@@ -277,6 +286,12 @@ struct CardioExercise: Identifiable, Hashable, Codable {
         CardioExercise(name: "Escalada", description: "Escalada em parede indoor ou rocha", icon: "figure.climbing", caloriesPerMinute: 11),
         CardioExercise(name: "Remo", description: "Remo na água ou ergométrico · SPM, split /500 m, eficiência e simetria", icon: "figure.rower", caloriesPerMinute: 10),
         CardioExercise(name: "Natação", description: "Nados em piscina com voltas, distância e ritmo", icon: "figure.pool.swim", caloriesPerMinute: 11),
+        CardioExercise(
+            name: "Tênis",
+            description: "Partida ou treino · placar, zonas de FC, picos e carga intermitente",
+            icon: tennisSystemImage,
+            caloriesPerMinute: 11
+        ),
         CardioExercise(name: "Polichinelo", description: "Jumping jacks em ritmo constante", icon: "figure.mixed.cardio", caloriesPerMinute: 9),
         CardioExercise(name: "Burpees", description: "Exercício funcional de alta intensidade", icon: "figure.highintensity.intervaltraining", caloriesPerMinute: 13)
     ]
@@ -322,6 +337,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
     let climbingSetup: ClimbingSetup?
     /// Setup de esteira ergométrica (elevação / inclinação).
     let treadmillSetup: TreadmillSetup?
+    /// Setup de tênis (tipo, formato, superfície, metas de zona).
+    let tennisSetup: TennisSetup?
 
     init(
         exercise: CardioExercise,
@@ -335,7 +352,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
         waterSportSetup: WaterSportSetup? = nil,
         rowingSetup: RowingSetup? = nil,
         climbingSetup: ClimbingSetup? = nil,
-        treadmillSetup: TreadmillSetup? = nil
+        treadmillSetup: TreadmillSetup? = nil,
+        tennisSetup: TennisSetup? = nil
     ) {
         self.exercise = exercise
         self.intensity = intensity
@@ -349,6 +367,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
         self.rowingSetup = rowingSetup
         self.climbingSetup = climbingSetup
         self.treadmillSetup = treadmillSetup
+        self.tennisSetup = tennisSetup
     }
 
     /// Rebuilds a usable config from a persisted active session (app relaunch / stuck session).
@@ -360,6 +379,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
 
         let exerciseName: String = {
             if lower.contains("natação") || lower.contains("natacao") { return "Natação" }
+            if lower.contains("tênis") || lower.contains("tenis") || session.tennis != nil { return "Tênis" }
             if lower.contains("escalada") || session.climbing != nil { return "Escalada" }
             if lower.contains("remo") || session.rowing != nil { return "Remo" }
             if lower.contains("kitesurf") || lower.contains("kite surf") { return "Kitesurf" }
@@ -471,7 +491,22 @@ struct CardioWorkoutConfig: Hashable, Codable {
             } ?? (exercise.isClimbing ? .default : nil),
             treadmillSetup: session.treadmill.map {
                 TreadmillSetup(hasElevation: $0.hasElevation, inclinePercent: $0.inclinePercent)
-            } ?? (exercise.isTreadmill ? .default : nil)
+            } ?? (exercise.isTreadmill ? .default : nil),
+            tennisSetup: session.tennis.map { snap in
+                TennisSetup(
+                    sessionType: snap.sessionType,
+                    matchFormat: snap.matchFormat,
+                    surface: snap.surface,
+                    skillLevel: snap.skillLevel,
+                    handedness: snap.handedness,
+                    targetSets: snap.targetSets,
+                    targetMinutes: snap.targetMinutes,
+                    highZoneGoalPercent: snap.highZoneGoalPercent,
+                    courtName: snap.courtName ?? "",
+                    courtLatitude: snap.courtLatitude,
+                    courtLongitude: snap.courtLongitude
+                )
+            } ?? (exercise.isTennis ? .default : nil)
         )
     }
 
@@ -491,7 +526,10 @@ struct CardioWorkoutConfig: Hashable, Codable {
     var isSwimmingSession: Bool { exercise.supportsSwimmingPool }
 
     /// Corrida, caminhada ou bike outdoor — mapa GPS, rota e métricas de movimento.
-    var isOutdoorGPSCardio: Bool { exercise.supportsOutdoorGPS }
+    var isOutdoorGPSCardio: Bool {
+        if exercise.isTennis { return isOutdoorTennisSession }
+        return exercise.supportsOutdoorGPS
+    }
 
     /// Mountain bike / Bicicleta pedal (velocidade em vez de ritmo).
     var isOutdoorCyclingSession: Bool { exercise.isOutdoorCycling }
@@ -501,6 +539,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
     var isWaterSportSession: Bool { exercise.isWaterSport }
     var isRowingSession: Bool { exercise.isRowing }
     var isClimbingSession: Bool { exercise.isClimbing }
+    var isTennisSession: Bool { exercise.isTennis }
     /// Esteira ergométrica indoor — sem mapa.
     var isTreadmillSession: Bool { exercise.isTreadmill }
     /// Luta: só cronômetro de combate, sem meta de distância, ritmo ou GPS.
@@ -509,6 +548,10 @@ struct CardioWorkoutConfig: Hashable, Codable {
     /// Escalada em rocha — clima, mapa e GPS só fazem sentido fora do ginásio.
     var isOutdoorClimbingSession: Bool {
         isClimbingSession && (climbingSetup?.discipline.isOutdoor ?? true)
+    }
+    /// Tênis outdoor — GPS para cobertura aproximada da quadra.
+    var isOutdoorTennisSession: Bool {
+        isTennisSession && (tennisSetup?.surface.isOutdoor ?? true)
     }
 
     /// Remo com barco na água (GPS + equilíbrio); erg também usa sensores sem exigir rota.
@@ -527,6 +570,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
         if isRunningSession || isDistanceRun || isTreadmillSession { return .running }
         if isRowingSession { return .rowing }
         if isClimbingSession { return .climbing }
+        if isTennisSession { return .tennis }
         if isKitesurfSession { return .paddleSports }
         if isSurfSession { return .surfingSports }
         if exercise.name.localizedCaseInsensitiveContains("luta")
@@ -539,9 +583,10 @@ struct CardioWorkoutConfig: Hashable, Codable {
     /// Local outdoor no HealthKit (GPS / sensores de percurso).
     var prefersOutdoorHealthKitLocation: Bool {
         if isTreadmillSession || exercise.isStationaryBike { return false }
+        if isTennisSession { return isOutdoorTennisSession }
         if isSwimmingSession || isWaterSportSession || isOutdoorGPSCardio { return true }
         switch healthKitActivityType {
-        case .walking, .running, .cycling, .rowing, .hiking, .paddleSports, .surfingSports:
+        case .walking, .running, .cycling, .rowing, .hiking, .paddleSports, .surfingSports, .tennis:
             return true
         default:
             return false
@@ -550,6 +595,7 @@ struct CardioWorkoutConfig: Hashable, Codable {
 
     /// Modalidade do `RunTrackingService` (passos ligados em corrida e caminhada).
     var outdoorTrackingModality: OutdoorCardioModality {
+        if isTennisSession { return .tennis }
         if isKitesurfSession { return .kitesurfing }
         if isSurfSession { return .surfing }
         if isRowingSession { return .rowing }
@@ -621,6 +667,16 @@ struct CardioWorkoutConfig: Hashable, Codable {
             }
             return "Cardio — Escalada · \(discipline)"
         }
+        if isTennisSession {
+            let type = tennisSetup?.sessionType.rawValue ?? "Treino"
+            let format = tennisSetup?.matchFormat.rawValue ?? "Simples"
+            let surface = tennisSetup?.surface.rawValue ?? "Duro"
+            let court = tennisSetup?.courtName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !court.isEmpty {
+                return "Cardio — Tênis · \(type) · \(format) · \(surface) · \(court)"
+            }
+            return "Cardio — Tênis · \(type) · \(format) · \(surface)"
+        }
         if isTreadmillSession {
             let elev: String
             if let setup = treadmillSetup, setup.hasElevation {
@@ -677,6 +733,12 @@ struct CardioWorkoutConfig: Hashable, Codable {
     var targetDurationSeconds: Int {
         // Meta de calorias é sessão aberta: o treino só encerra quando o usuário tocar em Finalizar.
         if hasCalorieGoal {
+            return 0
+        }
+        if isTennisSession {
+            if let minutes = tennisSetup?.targetMinutes, minutes > 0 {
+                return minutes * 60
+            }
             return 0
         }
         if isFreeRun {

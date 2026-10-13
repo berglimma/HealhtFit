@@ -343,6 +343,7 @@ enum PulseExperimental {
         "CardioCoverNatacao",
         "CardioCoverMountainBike",
         "CardioCoverEscalada",
+        "CardioCoverTenis",
         "WorkoutProgramMale",
         "FightCoverLuta"
     ]

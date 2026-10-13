@@ -226,6 +226,8 @@
 		B1000910 /* ClimbingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000910 /* ClimbingLogbookView.swift */; };
 		B1000911 /* ClimbingAttemptEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000911 /* ClimbingAttemptEditorView.swift */; };
 		B1000912 /* FightModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000912 /* FightModels.swift */; };
+		B1000T01 /* TennisModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000T01 /* TennisModels.swift */; };
+		B1000T02 /* TennisLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000T02 /* TennisLogbookView.swift */; };
 		B1000913 /* FightHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000913 /* FightHubView.swift */; };
 		B1000914 /* NutritionNotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000914 /* NutritionNotificationPreferences.swift */; };
 		B1000915 /* WorkoutSheetOCRParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000915 /* WorkoutSheetOCRParser.swift */; };
@@ -655,6 +657,8 @@
 		F1000910 /* ClimbingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingLogbookView.swift; sourceTree = "<group>"; };
 		F1000911 /* ClimbingAttemptEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAttemptEditorView.swift; sourceTree = "<group>"; };
 		F1000912 /* FightModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightModels.swift; sourceTree = "<group>"; };
+		F1000T01 /* TennisModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisModels.swift; sourceTree = "<group>"; };
+		F1000T02 /* TennisLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisLogbookView.swift; sourceTree = "<group>"; };
 		F1000913 /* FightHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightHubView.swift; sourceTree = "<group>"; };
 		F1000914 /* NutritionNotificationPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionNotificationPreferences.swift; sourceTree = "<group>"; };
 		F1000915 /* WorkoutSheetOCRParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSheetOCRParser.swift; sourceTree = "<group>"; };
@@ -930,6 +934,7 @@
 				F1000700 /* SurfKiteModels.swift */,
 				F1000801 /* RowingModels.swift */,
 				F1000912 /* FightModels.swift */,
+				F1000T01 /* TennisModels.swift */,
 				F1000902 /* ClimbingGearModels.swift */,
 				F1000901 /* ClimbingModels.swift */,
 				F1000709 /* TideWindFavorability.swift */,
@@ -1165,6 +1170,7 @@
 				F1000913 /* FightHubView.swift */,
 				F1000911 /* ClimbingAttemptEditorView.swift */,
 				F1000910 /* ClimbingLogbookView.swift */,
+				F1000T02 /* TennisLogbookView.swift */,
 				F1000909 /* ClimbingMapView.swift */,
 				F1000051 /* MeditationSetupView.swift */,
 				F1000052 /* ActiveMeditationView.swift */,
@@ -1735,6 +1741,8 @@
 				B1000701 /* JumpMetricsService.swift in Sources */,
 				B1000801 /* RowingModels.swift in Sources */,
 				B1000912 /* FightModels.swift in Sources */,
+				B1000T01 /* TennisModels.swift in Sources */,
+				B1000T02 /* TennisLogbookView.swift in Sources */,
 				B1000902 /* ClimbingGearModels.swift in Sources */,
 				B1000901 /* ClimbingModels.swift in Sources */,
 				B1000802 /* RowingMetricsService.swift in Sources */,
