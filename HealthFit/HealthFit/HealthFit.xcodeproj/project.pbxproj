@@ -228,6 +228,8 @@
 		B1000912 /* FightModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000912 /* FightModels.swift */; };
 		B1000T01 /* TennisModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000T01 /* TennisModels.swift */; };
 		B1000T02 /* TennisLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000T02 /* TennisLogbookView.swift */; };
+		B1000C01 /* WorkoutCheckInPhotoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000C01 /* WorkoutCheckInPhotoStore.swift */; };
+		B1000C02 /* WorkoutPhotoCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000C02 /* WorkoutPhotoCalendarView.swift */; };
 		B1000913 /* FightHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000913 /* FightHubView.swift */; };
 		B1000914 /* NutritionNotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000914 /* NutritionNotificationPreferences.swift */; };
 		B1000915 /* WorkoutSheetOCRParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000915 /* WorkoutSheetOCRParser.swift */; };
@@ -659,6 +661,8 @@
 		F1000912 /* FightModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightModels.swift; sourceTree = "<group>"; };
 		F1000T01 /* TennisModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisModels.swift; sourceTree = "<group>"; };
 		F1000T02 /* TennisLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisLogbookView.swift; sourceTree = "<group>"; };
+		F1000C01 /* WorkoutCheckInPhotoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCheckInPhotoStore.swift; sourceTree = "<group>"; };
+		F1000C02 /* WorkoutPhotoCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPhotoCalendarView.swift; sourceTree = "<group>"; };
 		F1000913 /* FightHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightHubView.swift; sourceTree = "<group>"; };
 		F1000914 /* NutritionNotificationPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionNotificationPreferences.swift; sourceTree = "<group>"; };
 		F1000915 /* WorkoutSheetOCRParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSheetOCRParser.swift; sourceTree = "<group>"; };
@@ -975,6 +979,7 @@
 				F1000006 /* HealthKitManager.swift */,
 				F1000007 /* WorkoutStore.swift */,
 				F100034C /* WorkoutCalendarService.swift */,
+				F1000C01 /* WorkoutCheckInPhotoStore.swift */,
 				F1000353 /* MealPhotoAnalysisEngine.swift */,
 				F1000950 /* OpenFoodFactsService.swift */,
 				F1000356 /* BluetoothHeartRateService.swift */,
@@ -1209,6 +1214,7 @@
 				F1000028 /* ProfileView.swift */,
 				F1000358 /* BluetoothHeartRateSettingsView.swift */,
 				F1000325 /* BodyEvolutionView.swift */,
+				F1000C02 /* WorkoutPhotoCalendarView.swift */,
 				F1000119 /* DeleteAccountSheet.swift */,
 			);
 			path = Profile;
@@ -1743,6 +1749,8 @@
 				B1000912 /* FightModels.swift in Sources */,
 				B1000T01 /* TennisModels.swift in Sources */,
 				B1000T02 /* TennisLogbookView.swift in Sources */,
+				B1000C01 /* WorkoutCheckInPhotoStore.swift in Sources */,
+				B1000C02 /* WorkoutPhotoCalendarView.swift in Sources */,
 				B1000902 /* ClimbingGearModels.swift in Sources */,
 				B1000901 /* ClimbingModels.swift in Sources */,
 				B1000802 /* RowingMetricsService.swift in Sources */,

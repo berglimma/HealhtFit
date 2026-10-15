@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 
 @MainActor
 final class WorkoutStore: ObservableObject {
@@ -1411,6 +1412,38 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
+    /// Anexa (ou troca) a foto de check-in usada no calendário de treinos.
+    @discardableResult
+    func attachCheckInPhoto(sessionId: UUID, image: UIImage) -> Bool {
+        guard let index = sessionHistory.firstIndex(where: { $0.id == sessionId }) else { return false }
+        if let previous = sessionHistory[index].checkInPhotoFileName {
+            WorkoutCheckInPhotoStore.delete(fileName: previous)
+        }
+        guard let fileName = WorkoutCheckInPhotoStore.save(image, sessionId: sessionId) else { return false }
+        sessionHistory[index].checkInPhotoFileName = fileName
+        saveHistory()
+        let updated = sessionHistory[index]
+        if let userId = cloudUserId {
+            Task {
+                try? await WorkoutFirestoreService.saveSession(updated, userId: userId)
+            }
+        }
+        return true
+    }
+
+    func clearCheckInPhoto(sessionId: UUID) {
+        guard let index = sessionHistory.firstIndex(where: { $0.id == sessionId }) else { return }
+        WorkoutCheckInPhotoStore.delete(fileName: sessionHistory[index].checkInPhotoFileName)
+        sessionHistory[index].checkInPhotoFileName = nil
+        saveHistory()
+        let updated = sessionHistory[index]
+        if let userId = cloudUserId {
+            Task {
+                try? await WorkoutFirestoreService.saveSession(updated, userId: userId)
+            }
+        }
+    }
+
     private func scheduleAutoEnd(for session: WorkoutSession) {
         let fireDate = session.startedAt.addingTimeInterval(Self.autoEndInactivityLimit)
         NotificationService.shared.scheduleActiveWorkoutAutoEnd(
@@ -1857,7 +1890,13 @@ final class WorkoutStore: ObservableObject {
             merged[session.id] = session
         }
         for session in remote {
-            merged[session.id] = session
+            var incoming = session
+            // Foto de check-in fica no aparelho — não apagar referência local se o remoto ainda não tem.
+            if incoming.checkInPhotoFileName == nil,
+               let localName = merged[session.id]?.checkInPhotoFileName {
+                incoming.checkInPhotoFileName = localName
+            }
+            merged[session.id] = incoming
         }
 
         return merged.values

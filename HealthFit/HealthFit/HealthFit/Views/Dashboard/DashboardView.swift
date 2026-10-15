@@ -184,6 +184,9 @@ struct DashboardView: View {
             reportsSideBySideRow
 
             dashboardMotivationBanner
+
+            // Último card do grupo de bem-estar/constância (não no fim do Dashboard).
+            WorkoutPhotoCalendarCard()
         }
     }
 

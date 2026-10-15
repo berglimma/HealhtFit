@@ -298,7 +298,7 @@ struct TennisSessionSnapshot: Codable, Hashable {
         guard total > 0 else { return 0 }
         return (Double(highZoneSeconds) / Double(total)) * 100
     }
-
+    
     var densityRatio: Double {
         let total = highZoneSeconds + recoverySeconds
         guard total > 0 else { return 0 }
@@ -433,7 +433,7 @@ struct TennisSessionEntry: Identifiable {
 }
 
 enum TennisAnalytics {
-    static func entries(from history: [WorkoutSession]) -> [TennisSessionEntry] {
+    static func entries(from history: [ xWorkoutSession]) -> [TennisSessionEntry] {
         history.compactMap { session in
             guard session.isTennisSession, let snap = session.tennis else { return nil }
             return TennisSessionEntry(

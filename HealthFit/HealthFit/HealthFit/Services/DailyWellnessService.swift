@@ -455,6 +455,36 @@ final class DailyWellnessService: ObservableObject {
         }
     }
 
+    /// Histórico mais longo (ex.: calendário de constância com dias de descanso).
+    func ensureRecentHistoryLoaded(limit: Int = 62) async {
+        let todayKey = DailyWellnessEntry.dayKey(for: .now)
+        if todayEntry.dayKey == todayKey {
+            upsertWeekEntry(todayEntry)
+        }
+        let cached = MonthlyReportService.shared.recentWellnessEntries
+        if !cached.isEmpty {
+            ingestWeekEntries(cached)
+        }
+        guard let userId = cloudUserId, DailyWellnessFirestoreService.isAvailable else { return }
+        do {
+            let recent = try await DailyWellnessFirestoreService.fetchRecentEntries(
+                userId: userId,
+                limit: max(14, limit)
+            )
+            ingestWeekEntries(recent)
+            if !recent.isEmpty {
+                MonthlyReportService.shared.cacheWellnessEntries(recent)
+            }
+        } catch {
+            print("[HealthFit] Falha ao carregar histórico de wellness: \(error.localizedDescription)")
+        }
+    }
+
+    /// Dia de descanso marcado (perfil / wellness) para a data informada.
+    func isRestDay(on date: Date) -> Bool {
+        entry(for: DailyWellnessEntry.dayKey(for: date)).isRestDay
+    }
+
     func updateEnergyDrinksCount(_ count: Int) {
         var entry = currentTodayEntry()
         let clamped = max(0, count)

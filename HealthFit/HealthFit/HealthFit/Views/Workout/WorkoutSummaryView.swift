@@ -99,6 +99,11 @@ struct WorkoutSummaryView: View {
             || waterSpotCoordinate != nil
     }
 
+    private var liveSessionHasCheckInPhoto: Bool {
+        let live = workoutStore.sessionHistory.first(where: { $0.id == session.id }) ?? session
+        return live.hasCheckInPhoto && WorkoutCheckInPhotoStore.exists(fileName: live.checkInPhotoFileName)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
@@ -223,6 +228,7 @@ struct WorkoutSummaryView: View {
                 guard let image else { return }
                 resultMedia = .photo(image)
                 resultMediaOverlayLayout = .default
+                persistCheckInPhoto(image)
                 offerSavePhotoToGallery(image)
             }
             .ignoresSafeArea()
@@ -233,6 +239,7 @@ struct WorkoutSummaryView: View {
                 guard let image else { return }
                 resultMedia = .photo(image)
                 resultMediaOverlayLayout = .default
+                persistCheckInPhoto(image)
                 offerSavePhotoToGallery(image)
             }
             .ignoresSafeArea()
@@ -459,9 +466,15 @@ struct WorkoutSummaryView: View {
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
 
-            Text("Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit (estilo Stories).")
+            Text("Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit. A foto também entra no calendário de treinos.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
+
+            if liveSessionHasCheckInPhoto {
+                Label("Salva no calendário de treinos", systemImage: "calendar.badge.checkmark")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+            }
 
             if let resultMedia {
                 WorkoutResultMediaOverlayView(
@@ -716,10 +729,15 @@ struct WorkoutSummaryView: View {
             if let poster = await WorkoutResultMediaOverlayRenderer.posterFrame(fromVideoURL: url) {
                 resultMedia = .video(url: url, poster: poster)
                 resultMediaOverlayLayout = .default
+                persistCheckInPhoto(poster)
             } else {
                 mediaLoadFailed = true
             }
         }
+    }
+
+    private func persistCheckInPhoto(_ image: UIImage) {
+        _ = workoutStore.attachCheckInPhoto(sessionId: session.id, image: image)
     }
 
     private func clearResultMedia() {
