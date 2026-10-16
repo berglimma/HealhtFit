@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MainTabView: View {
     @EnvironmentObject var authService: AuthService
@@ -121,6 +122,13 @@ struct MainTabView: View {
             .onAppear(perform: handleAppear)
             .onChange(of: scenePhase) { _, phase in
                 handleScenePhase(phase)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
+                reclaimMemoryUnderPressure(reason: .warning)
+                // Só remonta overlay se o treino estiver em tela cheia (não minimizado).
+                if scenePhase == .active, !workoutStore.isActiveWorkoutMinimized {
+                    syncActiveWorkoutHosting()
+                }
             }
             .onChange(of: selectedTab) { _, tab in
                 handleSelectedTabChange(tab)
@@ -388,9 +396,36 @@ struct MainTabView: View {
         // animação de teclado) o endEditing global impede digitar em TextField (ex.: medidas).
         if phase == .background {
             KeyboardDismiss.hide()
+            reclaimMemoryUnderPressure(reason: .background)
         }
         if phase == .active {
             ClimbingGearService.shared.notifyInspectionIfNeeded()
+            // Remonta UI do treino se a sessão ainda existe (overlays foram liberados no background).
+            syncActiveWorkoutHosting()
+        }
+    }
+
+    private enum MemoryReclaimReason {
+        case background
+        case warning
+    }
+
+    /// Reduz footprint antes do Jetsam: abas lazy + overlays minimizados + cache de capas.
+    private func reclaimMemoryUnderPressure(reason: MemoryReclaimReason) {
+        // Mantém só a aba visível — as outras remontam na próxima visita.
+        loadedTabs = [selectedTab]
+
+        // Overlay full-screen invisível (opacity 0) ainda segura Map/SwiftUI pesado.
+        // Sessão continua no WorkoutStore / RunTrackingService.
+        if workoutStore.isActiveWorkoutMinimized {
+            clearHostedWorkoutOverlays()
+        }
+
+        CoverAssetDecoder.shared.clear()
+        Task { await PulseImageCache.shared.clear() }
+
+        if reason == .warning {
+            URLCache.shared.removeAllCachedResponses()
         }
     }
 

@@ -633,9 +633,7 @@ struct HealthFitCoachProfileCard: View {
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: 180, alignment: .bottomLeading)
         .background {
-            Image("CoachCover")
-                .resizable()
-                .scaledToFill()
+            CoverAssetImage(name: "CoachCover")
                 .overlay {
                     LinearGradient(
                         colors: [.black.opacity(0.08), .black.opacity(0.72)],
