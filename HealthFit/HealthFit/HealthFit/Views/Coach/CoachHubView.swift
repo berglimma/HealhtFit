@@ -576,93 +576,74 @@ struct HealthFitCoachProfileCard: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.12, green: 0.42, blue: 0.48),
-                    Color(red: 0.08, green: 0.22, blue: 0.32),
-                    Color(red: 0.05, green: 0.14, blue: 0.22)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                Label(eyebrow, systemImage: "person.badge.shield.checkmark.fill")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.black.opacity(0.35))
+                    .clipShape(Capsule())
 
-            // Atmosfera: formas suaves (sem asset dedicado)
-            Circle()
-                .fill(AppTheme.accent.opacity(0.22))
-                .frame(width: 160, height: 160)
-                .blur(radius: 8)
-                .offset(x: 140, y: -50)
+                Spacer(minLength: 8)
 
-            Circle()
-                .fill(Color.orange.opacity(0.12))
-                .frame(width: 100, height: 100)
-                .offset(x: -30, y: 40)
-
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.55)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top) {
-                    Label(eyebrow, systemImage: "person.badge.shield.checkmark.fill")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(AppTheme.accent)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.black.opacity(0.35))
-                        .clipShape(Capsule())
-
-                    Spacer(minLength: 8)
-
-                    if isFitLocked {
-                        PlanRequirementBadge(tier: FeatureGate.minimumPlan(for: .healthFitCoach), compact: true)
-                    } else {
-                        Image(systemName: "chevron.right.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
+                if isFitLocked {
+                    PlanRequirementBadge(tier: FeatureGate.minimumPlan(for: .healthFitCoach), compact: true)
+                } else {
+                    Image(systemName: "chevron.right.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.white.opacity(0.85))
                 }
-
-                Text(title)
-                    .font(.title3.bold())
-                    .foregroundStyle(.white)
-
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.88))
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if !statusChips.isEmpty {
-                    HStack(spacing: 6) {
-                        ForEach(statusChips.prefix(3), id: \.self) { chip in
-                            Text(chip)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.95))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.white.opacity(0.14))
-                                .clipShape(Capsule())
-                                .lineLimit(1)
-                        }
-                    }
-                }
-
-                HStack(spacing: 14) {
-                    Label(isPro ? "Alunos" : "Fichas", systemImage: isPro ? "person.2.fill" : "dumbbell.fill")
-                    Label(isPro ? "Prescrever" : "Dieta", systemImage: isPro ? "list.clipboard.fill" : "fork.knife")
-                    Label("Chat", systemImage: "bubble.left.and.bubble.right.fill")
-                }
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.9))
             }
-            .padding(16)
+
+            Text(title)
+                .font(.title3.bold())
+                .foregroundStyle(.white)
+
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.88))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if !statusChips.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(statusChips.prefix(3), id: \.self) { chip in
+                        Text(chip)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.95))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.white.opacity(0.14))
+                            .clipShape(Capsule())
+                            .lineLimit(1)
+                    }
+                }
+            }
+
+            HStack(spacing: 14) {
+                Label(isPro ? "Alunos" : "Fichas", systemImage: isPro ? "person.2.fill" : "dumbbell.fill")
+                Label(isPro ? "Prescrever" : "Dieta", systemImage: isPro ? "list.clipboard.fill" : "fork.knife")
+                Label("Chat", systemImage: "bubble.left.and.bubble.right.fill")
+            }
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.white.opacity(0.9))
         }
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: 168)
+        .padding(16)
+        .frame(maxWidth: .infinity, minHeight: 180, alignment: .bottomLeading)
+        .background {
+            Image("CoachCover")
+                .resizable()
+                .scaledToFill()
+                .overlay {
+                    LinearGradient(
+                        colors: [.black.opacity(0.08), .black.opacity(0.72)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
