@@ -433,7 +433,7 @@ struct TennisSessionEntry: Identifiable {
 }
 
 enum TennisAnalytics {
-    static func entries(from history: [ xWorkoutSession]) -> [TennisSessionEntry] {
+    static func entries(from history: [WorkoutSession]) -> [TennisSessionEntry] {
         history.compactMap { session in
             guard session.isTennisSession, let snap = session.tennis else { return nil }
             return TennisSessionEntry(
