@@ -3,9 +3,8 @@ package com.healthfit.android.ui.workouts
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Location
-import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Bundle
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -48,9 +47,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
@@ -59,8 +65,6 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
-import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth
 import com.healthfit.android.ui.components.GradientButton
 import com.healthfit.android.ui.components.SessionClockDial
 import com.healthfit.android.ui.kite.KiteSpotBuddyEntryCard
@@ -73,7 +77,6 @@ import com.healthfit.android.workout.WearRemoteAction
 import com.healthfit.android.workout.WorkoutPresence
 import com.healthfit.core.workout.WorkoutWearContract
 import com.healthfit.designsystem.HealthFitColors
-import androidx.compose.runtime.collectAsState
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -135,8 +138,12 @@ fun CardioLiveScreen(
     val peers by buddy.peers.collectAsState()
     val needsHelp by buddy.needsHelp.collectAsState()
     val incomingHelp by buddy.incomingHelp.collectAsState()
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        locationOn = granted
+    val mapsKeyOk = remember(context) { hasMapsApiKey(context) }
+    val permission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { result ->
+        locationOn = result[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
     }
 
     DisposableEffect(buddyOn) {
@@ -158,41 +165,65 @@ fun CardioLiveScreen(
         }
     }
     LaunchedEffect(showMap) {
-        if (showMap && !locationOn) permission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (showMap && !locationOn) {
+            permission.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                ),
+            )
+        }
     }
     DisposableEffect(locationOn, showMap, paused) {
         if (!showMap || !locationOn || paused) return@DisposableEffect onDispose { }
+        val fused = LocationServices.getFusedLocationProviderClient(context)
+        fun ingest(location: Location) {
+            val last = route.lastOrNull()
+            val gap = last?.distanceTo(location) ?: 0f
+            when {
+                last == null -> route.add(location)
+                gap > 250f -> {
+                    route.clear()
+                    route.add(location)
+                }
+                gap >= 2f -> route.add(location)
+            }
+            if (buddyOn) buddy.updateLocation(location.latitude, location.longitude)
+        }
+        runCatching {
+            fused.lastLocation.addOnSuccessListener { last ->
+                if (last != null && route.isEmpty()) ingest(last)
+            }
+        }
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L)
+            .setMinUpdateDistanceMeters(2f)
+            .setMinUpdateIntervalMillis(800L)
+            .build()
+        val callback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                result.lastLocation?.let(::ingest)
+            }
+        }
+        val fusedOk = runCatching {
+            fused.requestLocationUpdates(request, callback, Looper.getMainLooper())
+            true
+        }.getOrDefault(false)
         val manager = context.getSystemService(LocationManager::class.java)
-        val listener = object : LocationListener {
-            override fun onLocationChanged(location: Location) {
-                val last = route.lastOrNull()
-                val gap = last?.distanceTo(location) ?: 0f
-                when {
-                    last == null -> route.add(location)
-                    gap > 250f -> {
-                        route.clear()
-                        route.add(location)
+        val legacyListener = android.location.LocationListener { loc -> ingest(loc) }
+        if (!fusedOk) {
+            listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+                .filter { runCatching { manager.isProviderEnabled(it) }.getOrDefault(false) }
+                .forEach { provider ->
+                    runCatching {
+                        manager.getLastKnownLocation(provider)?.let { if (route.isEmpty()) ingest(it) }
+                        manager.requestLocationUpdates(provider, 1000L, 2f, legacyListener, Looper.getMainLooper())
                     }
-                    gap >= 3f -> route.add(location)
                 }
-                if (buddyOn) buddy.updateLocation(location.latitude, location.longitude)
-            }
-            override fun onProviderDisabled(provider: String) = Unit
-            override fun onProviderEnabled(provider: String) = Unit
-            @Deprecated("Deprecated in Java")
-            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
         }
-        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
-            .filter { runCatching { manager.isProviderEnabled(it) }.getOrDefault(false) }
-        providers.forEach { provider ->
-            runCatching {
-                manager.getLastKnownLocation(provider)?.let { last ->
-                    if (route.isEmpty()) route.add(last)
-                }
-                manager.requestLocationUpdates(provider, 1000L, 2f, listener)
-            }
+        onDispose {
+            runCatching { fused.removeLocationUpdates(callback) }
+            if (!fusedOk) runCatching { manager.removeUpdates(legacyListener) }
         }
-        onDispose { runCatching { manager.removeUpdates(listener) } }
     }
 
     val distanceMeters = remember(route.size) { routeDistance(route) }
@@ -242,12 +273,13 @@ fun CardioLiveScreen(
         return
     }
 
+    // Scaffold já reserva a tab bar — não somar 88.dp (isso escondia o cronômetro sob área preta).
     Column(
         Modifier
             .fillMaxSize()
-            .navigationBarsPadding()
             .padding(horizontal = 16.dp)
-            .padding(bottom = 88.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 16.dp),
     ) {
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -270,133 +302,128 @@ fun CardioLiveScreen(
                 MapModeChip("2D", !is3D) { is3D = false }
                 MapModeChip("3D", is3D) { is3D = true }
             }
-            if (is3D) {
-                Text(
-                    if (route.size >= 2) "3D: percurso no terreno" else "3D: vista inclinada do local",
-                    color = HealthFitColors.TextSecondary,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
             RouteMap(
                 points = route,
                 is3D = is3D,
-                showUser = locationOn,
+                showUser = locationOn && mapsKeyOk,
+                mapsKeyOk = mapsKeyOk,
                 modifier = Modifier
                     .padding(top = 8.dp)
                     .fillMaxWidth()
-                    .height(if (is3D) 300.dp else 260.dp),
+                    .height(if (is3D) 220.dp else 180.dp),
             )
-            if (!locationOn) {
+            val mapHint = when {
+                !mapsKeyOk ->
+                    "Mapa sem API key — adicione MAPS_API_KEY em local.properties e reinstale."
+                !locationOn ->
+                    "Ative a localização para gravar a rota e o ritmo."
+                route.isEmpty() ->
+                    "Buscando GPS… saia para área aberta se demorar."
+                route.size < 2 ->
+                    "Localização ok · aguardando movimento para traçar a rota."
+                else -> null
+            }
+            if (mapHint != null) {
                 Text(
-                    "O mapa precisa da localização para gravar a rota e o ritmo.",
-                    color = HealthFitColors.AccentSecondary,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 6.dp),
-                )
-            } else if (route.size < 2) {
-                Text(
-                    "Aguardando pontos GPS da sessão.",
-                    color = HealthFitColors.TextSecondary,
+                    mapHint,
+                    color = if (!mapsKeyOk || !locationOn) HealthFitColors.AccentSecondary else HealthFitColors.TextSecondary,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(top = 6.dp),
                 )
             }
         }
         Column(
-            Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
+            Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-        SessionClockDial(
-            totalSeconds = elapsed,
-            caption = if (paused) "Pausado" else "tempo real",
-            accent = HealthFitColors.Accent,
-            progress = (elapsed % 60) / 60f,
-            paused = paused,
-            size = if (showMap) 168.dp else 200.dp,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        Text(
-            detail,
-            color = HealthFitColors.Accent,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .padding(top = 4.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(HealthFitColors.Accent.copy(alpha = 0.15f))
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-        )
-        Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MetricTile("—", "BPM", Modifier.weight(1f))
-            MetricTile("$kcal", "kcal", Modifier.weight(1f))
-            if (cycling) MetricTile("%.1f".format(speedKmh), "km/h", Modifier.weight(1f))
-            else MetricTile(paceLabel, "Ritmo", Modifier.weight(1f))
-        }
-        if (showMap) {
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (cycling) MetricTile("%.1f".format(speedKmh), "km/h", Modifier.weight(1f))
-                else MetricTile("$steps", "Passos", Modifier.weight(1f))
-                MetricTile("%.2f".format(distanceKm), "km", Modifier.weight(1f))
-                MetricTile("%02d:%02d".format(elapsed / 60, elapsed % 60), "Tempo", Modifier.weight(1f))
-            }
-        }
-        if (isTennis) {
-            Spacer(Modifier.height(14.dp))
-            TennisScoreBoard(
-                mySets = mySets,
-                oppSets = oppSets,
-                myGames = myGames,
-                oppGames = oppGames,
-                bursts = bursts,
-                onMySets = { mySets = it.coerceIn(0, 5) },
-                onOppSets = { oppSets = it.coerceIn(0, 5) },
-                onMyGames = { myGames = it.coerceIn(0, 99) },
-                onOppGames = { oppGames = it.coerceIn(0, 99) },
-                onBurst = { bursts += 1 },
+            SessionClockDial(
+                totalSeconds = elapsed,
+                caption = if (paused) "Pausado" else "tempo real",
+                accent = HealthFitColors.Accent,
+                progress = (elapsed % 60) / 60f,
+                paused = paused,
+                size = if (showMap) 160.dp else 200.dp,
+                modifier = Modifier.padding(top = 10.dp),
             )
-        }
-        if (buddyOn) {
+            Text(
+                detail,
+                color = HealthFitColors.Accent,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(HealthFitColors.Accent.copy(alpha = 0.15f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+            Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MetricTile("—", "BPM", Modifier.weight(1f))
+                MetricTile("$kcal", "kcal", Modifier.weight(1f))
+                if (cycling) MetricTile("%.1f".format(speedKmh), "km/h", Modifier.weight(1f))
+                else MetricTile(paceLabel, "Ritmo", Modifier.weight(1f))
+            }
+            if (showMap) {
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (cycling) MetricTile("%.1f".format(speedKmh), "km/h", Modifier.weight(1f))
+                    else MetricTile("$steps", "Passos", Modifier.weight(1f))
+                    MetricTile("%.2f".format(distanceKm), "km", Modifier.weight(1f))
+                    MetricTile("%02d:%02d".format(elapsed / 60, elapsed % 60), "Tempo", Modifier.weight(1f))
+                }
+            }
+            if (isTennis) {
+                Spacer(Modifier.height(14.dp))
+                TennisScoreBoard(
+                    mySets = mySets,
+                    oppSets = oppSets,
+                    myGames = myGames,
+                    oppGames = oppGames,
+                    bursts = bursts,
+                    onMySets = { mySets = it.coerceIn(0, 5) },
+                    onOppSets = { oppSets = it.coerceIn(0, 5) },
+                    onMyGames = { myGames = it.coerceIn(0, 99) },
+                    onOppGames = { oppGames = it.coerceIn(0, 99) },
+                    onBurst = { bursts += 1 },
+                )
+            }
+            if (buddyOn) {
+                Spacer(Modifier.height(14.dp))
+                incomingHelp?.let { help ->
+                    KiteSpotBuddyIncomingBanner(
+                        peer = help,
+                        onOpen = {
+                            showSpotMap = true
+                            buddy.dismissIncomingHelp()
+                        },
+                        onDismiss = { buddy.dismissIncomingHelp() },
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
+                if (confirmSos) {
+                    KiteSpotBuddyHelpConfirmSheet(
+                        onConfirm = {
+                            buddy.requestHelp()
+                            confirmSos = false
+                        },
+                        onCancel = { confirmSos = false },
+                    )
+                } else {
+                    KiteSpotBuddyEntryCard(
+                        peers = peers,
+                        needsHelp = needsHelp,
+                        onOpenMap = { showSpotMap = true },
+                        onRequestHelp = { confirmSos = true },
+                        onCancelHelp = { buddy.cancelHelp() },
+                    )
+                }
+            }
             Spacer(Modifier.height(14.dp))
-            incomingHelp?.let { help ->
-                KiteSpotBuddyIncomingBanner(
-                    peer = help,
-                    onOpen = {
-                        showSpotMap = true
-                        buddy.dismissIncomingHelp()
-                    },
-                    onDismiss = { buddy.dismissIncomingHelp() },
-                )
-                Spacer(Modifier.height(10.dp))
-            }
-            if (confirmSos) {
-                KiteSpotBuddyHelpConfirmSheet(
-                    onConfirm = {
-                        buddy.requestHelp()
-                        confirmSos = false
-                    },
-                    onCancel = { confirmSos = false },
-                )
-            } else {
-                KiteSpotBuddyEntryCard(
-                    peers = peers,
-                    needsHelp = needsHelp,
-                    onOpenMap = { showSpotMap = true },
-                    onRequestHelp = { confirmSos = true },
-                    onCancelHelp = { buddy.cancelHelp() },
-                )
-            }
-        }
-        Spacer(Modifier.height(14.dp))
-        GradientButton(
-            text = if (paused) "Retomar" else "Pausar",
-            onClick = { paused = !paused },
-            icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-        )
-        Spacer(Modifier.height(24.dp))
+            GradientButton(
+                text = if (paused) "Retomar" else "Pausar",
+                onClick = { paused = !paused },
+                icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+            )
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -515,14 +542,21 @@ private fun MetricTile(value: String, label: String, modifier: Modifier = Modifi
 }
 
 @Composable
-private fun RouteMap(points: List<Location>, is3D: Boolean, showUser: Boolean, modifier: Modifier = Modifier) {
-    val camera = rememberCameraPositionState {
-        val here = points.lastOrNull()
-        if (here != null) {
-            position = CameraPosition.fromLatLngZoom(LatLng(here.latitude, here.longitude), 17f)
-        }
-    }
+private fun RouteMap(
+    points: List<Location>,
+    is3D: Boolean,
+    showUser: Boolean,
+    mapsKeyOk: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val fallback = LatLng(-23.5505, -46.6333) // São Paulo — evita câmera em (0,0) no oceano
     val latest = points.lastOrNull()
+    val camera = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(
+            latest?.let { LatLng(it.latitude, it.longitude) } ?: fallback,
+            if (latest != null) 17f else 11f,
+        )
+    }
     LaunchedEffect(latest?.latitude, latest?.longitude, is3D) {
         val here = latest ?: return@LaunchedEffect
         val previous = points.getOrNull(points.lastIndex - 1)
@@ -538,34 +572,62 @@ private fun RouteMap(points: List<Location>, is3D: Boolean, showUser: Boolean, m
             ),
         )
     }
-    GoogleMap(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp)),
-        cameraPositionState = camera,
-        properties = MapProperties(
-            isMyLocationEnabled = showUser,
-            mapType = if (is3D) MapType.HYBRID else MapType.NORMAL,
-        ),
-        uiSettings = MapUiSettings(
-            zoomControlsEnabled = false,
-            myLocationButtonEnabled = showUser,
-            compassEnabled = true,
-            tiltGesturesEnabled = true,
-        ),
-    ) {
-        if (points.size >= 2) {
-            Polyline(
-                points = points.map { LatLng(it.latitude, it.longitude) },
-                color = HealthFitColors.Accent,
-                width = 14f,
-            )
-        }
-        points.firstOrNull()?.let { start ->
-            Marker(
-                state = MarkerState(LatLng(start.latitude, start.longitude)),
-                title = "Início",
-            )
+    Box(modifier) {
+        if (!mapsKeyOk) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(HealthFitColors.CardBackground)
+                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "Mapa indisponível\nConfigure MAPS_API_KEY",
+                    color = HealthFitColors.TextSecondary,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        } else {
+            GoogleMap(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp)),
+                cameraPositionState = camera,
+                properties = MapProperties(
+                    isMyLocationEnabled = showUser,
+                    mapType = if (is3D) MapType.HYBRID else MapType.NORMAL,
+                ),
+                uiSettings = MapUiSettings(
+                    zoomControlsEnabled = false,
+                    myLocationButtonEnabled = showUser,
+                    compassEnabled = true,
+                    tiltGesturesEnabled = true,
+                ),
+            ) {
+                if (points.size >= 2) {
+                    Polyline(
+                        points = points.map { LatLng(it.latitude, it.longitude) },
+                        color = HealthFitColors.Accent,
+                        width = 14f,
+                    )
+                }
+                latest?.let { here ->
+                    Marker(
+                        state = MarkerState(LatLng(here.latitude, here.longitude)),
+                        title = "Você",
+                    )
+                }
+                points.firstOrNull()?.let { start ->
+                    Marker(
+                        state = MarkerState(LatLng(start.latitude, start.longitude)),
+                        title = "Início",
+                    )
+                }
+            }
         }
     }
 }
@@ -580,7 +642,17 @@ private fun bearing(from: Location, to: Location): Float {
 }
 
 private fun hasLocationPermission(context: android.content.Context): Boolean =
-    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+private fun hasMapsApiKey(context: android.content.Context): Boolean = runCatching {
+    val info = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
+    val key = info.metaData?.getString("com.google.android.geo.API_KEY").orEmpty().trim()
+    key.isNotEmpty() &&
+        !key.contains("YOUR_", ignoreCase = true) &&
+        !key.contains("REPLACE", ignoreCase = true) &&
+        key != "null"
+}.getOrDefault(false)
 
 private fun routeDistance(points: List<Location>): Double {
     var total = 0.0

@@ -183,6 +183,10 @@ fun ProfileScreen(
                 { page = "main" },
             )
             "coach" -> CoachHubScreen(
+                role = CoachAccountRole.fromProfileLabel(role),
+                uid = profile.uid,
+                hasTrainerOnProfile = hasTrainer,
+                trainerName = trainerName,
                 onBack = { page = "main" },
                 onOpen = { page = it },
                 sent = prescribed,
@@ -198,6 +202,28 @@ fun ProfileScreen(
             }
             "coach-chat" -> CoachChatScreen(onBack = { page = "coach" })
             "coach-fichas" -> CoachSheetScreen(onBack = { page = "coach" })
+            "coach-invite" -> CoachInviteScreen(onBack = { page = "coach" })
+            "coach-join" -> CoachJoinScreen(onBack = { page = "coach" })
+            "coach-search" -> CoachSearchPlaceholder(
+                onBack = { page = "coach" },
+                title = "Buscar na região",
+                body = "Encontre personals e nutricionistas próximos, como no iOS.",
+            )
+            "coach-student-search" -> CoachSearchPlaceholder(
+                onBack = { page = "coach" },
+                title = "Buscar alunos",
+                body = "Encontre alunos interessados na sua região.",
+            )
+            "coach-profile-setup" -> CoachSearchPlaceholder(
+                onBack = { page = "coach" },
+                title = "Perfil profissional",
+                body = "Cadastro CREF/CRN e visibilidade na busca — em breve com sync Firestore.",
+            )
+            "coach-agenda" -> CoachSearchPlaceholder(
+                onBack = { page = "coach" },
+                title = "Agenda de consultas",
+                body = "Disponibilidade e consultas do aluno vinculado — em breve.",
+            )
             "support" -> InfoPage(
                 "Suporte",
                 "Escreva para o suporte pelo formulário de feedback nesta tela, com o tipo Dúvida. A resposta usa o e-mail da sua conta.",
@@ -271,7 +297,13 @@ fun ProfileScreen(
             fontSize = 13.sp,
             modifier = Modifier.padding(vertical = 8.dp),
         )
-        CoachEntryCard(onClick = { page = "coach" })
+        CoachEntryCard(
+            role = CoachAccountRole.fromProfileLabel(role),
+            uid = profile.uid,
+            hasTrainerOnProfile = hasTrainer,
+            trainerName = trainerName,
+            onClick = { page = "coach" },
+        )
         Spacer(Modifier.height(16.dp))
         BiotypeSection(athlete.bodyType) { athlete.bodyType = it }
         Spacer(Modifier.height(18.dp))

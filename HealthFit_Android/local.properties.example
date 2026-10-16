@@ -1,2 +1,4 @@
-## Copy to local.properties (gitignored). Do not commit SDK paths.
+## Copy to local.properties (gitignored). Do not commit SDK paths or keys.
 sdk.dir=/Users/YOU/Library/Android/sdk
+## Google Maps SDK (required for bike/run/walk live map). Create a Maps SDK for Android key in Google Cloud.
+MAPS_API_KEY=YOUR_ANDROID_MAPS_API_KEY

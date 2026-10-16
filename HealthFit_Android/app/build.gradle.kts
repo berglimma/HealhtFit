@@ -80,6 +80,7 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.android.gms:play-services-auth:21.2.0")
     implementation("com.google.android.gms:play-services-maps:19.0.0")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("com.google.maps.android:maps-compose:4.4.1")
 
