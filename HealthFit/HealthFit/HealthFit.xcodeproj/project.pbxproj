@@ -323,6 +323,7 @@
 		B1000P09 /* PulseFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P09 /* PulseFirestoreService.swift */; };
 		B1000P0E /* PulseEntitlement.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P0E /* PulseEntitlement.swift */; };
 		B1000P10 /* PulseImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P10 /* PulseImageCache.swift */; };
+		B1000CA1 /* CoverAssetImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000CA1 /* CoverAssetImage.swift */; };
 		B1000P11 /* PulseModerationQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P11 /* PulseModerationQueueView.swift */; };
 		B1000P12 /* PulseShareService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000P12 /* PulseShareService.swift */; };
 		B1000PNR /* PulseNavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000PNR /* PulseNavigationRouter.swift */; };
@@ -758,6 +759,7 @@
 		F1000P09 /* PulseFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseFirestoreService.swift; sourceTree = "<group>"; };
 		F1000P0E /* PulseEntitlement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseEntitlement.swift; sourceTree = "<group>"; };
 		F1000P10 /* PulseImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseImageCache.swift; sourceTree = "<group>"; };
+		F1000CA1 /* CoverAssetImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverAssetImage.swift; sourceTree = "<group>"; };
 		F1000P11 /* PulseModerationQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseModerationQueueView.swift; sourceTree = "<group>"; };
 		F1000P12 /* PulseShareService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseShareService.swift; sourceTree = "<group>"; };
 		F1000PNR /* PulseNavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseNavigationRouter.swift; sourceTree = "<group>"; };
@@ -1001,6 +1003,7 @@
 				F1000P0E /* PulseEntitlement.swift */,
 				F1000P07 /* PulseMusicSearchService.swift */,
 				F1000P10 /* PulseImageCache.swift */,
+				F1000CA1 /* CoverAssetImage.swift */,
 				F1000P12 /* PulseShareService.swift */,
 				F1000935 /* DuoNavigationRouter.swift */,
 				F1000PNR /* PulseNavigationRouter.swift */,
@@ -1914,6 +1917,7 @@
 				B1000P08 /* PulseMusicViews.swift in Sources */,
 				B1000P09 /* PulseFirestoreService.swift in Sources */,
 				B1000P10 /* PulseImageCache.swift in Sources */,
+				B1000CA1 /* CoverAssetImage.swift in Sources */,
 				B1000P11 /* PulseModerationQueueView.swift in Sources */,
 				B1000P12 /* PulseShareService.swift in Sources */,
 				B1000L01 /* PulseLocalized.swift in Sources */,

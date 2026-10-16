@@ -97,10 +97,7 @@ struct WorkoutProgramHeroCard: View {
     @ViewBuilder
     private var coverLayer: some View {
         if let imageName {
-            Image(imageName)
-                .resizable()
-                .scaledToFill()
-                // Hint decoder toward list card size (~2x for @3x max).
+            CoverAssetImage(name: imageName)
                 .frame(maxWidth: .infinity, maxHeight: 180)
         } else {
             ModalityCoverArt(
@@ -189,9 +186,7 @@ struct MusculacaoPhotoCategoryCard: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            Image(imageName)
-                .resizable()
-                .scaledToFill()
+            CoverAssetImage(name: imageName)
                 .frame(maxWidth: .infinity, maxHeight: height)
                 .clipped()
 
@@ -318,9 +313,7 @@ struct MusculacaoPhotoSheetCard: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            Image(imageName)
-                .resizable()
-                .scaledToFill()
+            CoverAssetImage(name: imageName, maxPixel: 720)
                 .frame(maxWidth: .infinity, maxHeight: 118)
                 .offset(y: coverOffset)
                 .clipped()
@@ -400,9 +393,7 @@ struct ModalityCoverArt: View {
 
             ZStack {
                 if let imageName {
-                    Image(imageName)
-                        .resizable()
-                        .scaledToFill()
+                    CoverAssetImage(name: imageName)
                         .frame(width: geo.size.width, height: geo.size.height)
                         .clipped()
                 } else {
