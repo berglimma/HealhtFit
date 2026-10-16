@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -114,9 +115,11 @@ fun CoachEntryCard(
     val subtitle = coachEntrySubtitle(role, cloud, hasTrainerOnProfile, trainerName)
     val chips = coachEntryChips(role, cloud, hasTrainerOnProfile, trainerName)
 
+    // Mesma foto realista do iOS (`CoachCover` / `coachcover.jpg`, bytes idênticos).
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 180.dp)
             .shadow(10.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.28f))
             .clip(RoundedCornerShape(16.dp))
             .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
@@ -126,11 +129,12 @@ fun CoachEntryCard(
             painter = painterResource(R.drawable.coachcover),
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.matchParentSize(),
+            alignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize(),
         )
         Box(
             Modifier
-                .matchParentSize()
+                .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
                         listOf(Color.Black.copy(alpha = 0.08f), Color.Black.copy(alpha = 0.72f)),
@@ -140,6 +144,7 @@ fun CoachEntryCard(
         Column(
             Modifier
                 .fillMaxWidth()
+                .align(Alignment.BottomStart)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
