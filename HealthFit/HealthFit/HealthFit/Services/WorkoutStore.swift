@@ -37,6 +37,12 @@ final class WorkoutStore: ObservableObject {
     let exerciseElapsedTick = PassthroughSubject<Int, Never>()
     /// Emitido quando o treino é encerrado automaticamente por inatividade (2h30).
     let sessionAutoEnded = PassthroughSubject<WorkoutSession, Never>()
+    /// Incrementado quando o overlay de treino/meditação do MainTab fecha (Fechar no resumo).
+    @Published private(set) var activeWorkoutUICloseTick: Int = 0
+
+    func notifyActiveWorkoutUIClosed() {
+        activeWorkoutUICloseTick += 1
+    }
 
     @Published private(set) var isExerciseTimerPaused = false
 
@@ -1375,6 +1381,9 @@ final class WorkoutStore: ObservableObject {
             NotificationService.shared.recordWorkoutCompleted(at: endedAt)
             if WeeklyProgressAnalyzer.isCardioSession(session) {
                 NotificationService.shared.recordCardioCompleted(at: endedAt)
+            } else if WeeklyProgressAnalyzer.isStudyFocusSession(session) {
+                NotificationService.shared.recordStudyFocusCompleted(at: endedAt)
+                NotificationService.shared.recordMeditationCompleted(at: endedAt)
             } else if WeeklyProgressAnalyzer.isMeditationSession(session) {
                 NotificationService.shared.recordMeditationCompleted(at: endedAt)
             }

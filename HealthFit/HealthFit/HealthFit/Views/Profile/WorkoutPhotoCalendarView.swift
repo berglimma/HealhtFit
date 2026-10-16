@@ -547,35 +547,26 @@ struct WorkoutPhotoCalendarCard: View {
         NavigationLink {
             WorkoutPhotoCalendarView()
         } label: {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Label("Constância", systemImage: "calendar")
-                        .font(.headline)
-                        .foregroundStyle(AppTheme.textPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
+            VStack(alignment: .leading, spacing: 0) {
+                WorkoutProgramHeroCard(
+                    title: "Constância",
+                    subtitle: "Calendário de treinos · \(summaryLine)",
+                    accent: AppTheme.accent,
+                    imageName: "ConstancyCover",
+                    systemImage: "calendar",
+                    coverColors: [AppTheme.accent, AppTheme.accentSecondary],
+                    footerLabels: [
+                        (
+                            icon: wellnessService.isTodayRestDay ? "bed.double.fill" : "photo.fill",
+                            text: wellnessService.isTodayRestDay
+                                ? "Descanso hoje"
+                                : (recentPhotoDays.isEmpty ? "Anexe fotos" : "\(recentPhotoDays.count) com foto")
+                        ),
+                        (icon: "calendar", text: "\(trainedDaysThisMonth) dias")
+                    ]
+                )
 
-                Text("Calendário de treinos · \(summaryLine)")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.textSecondary)
-
-                if recentPhotoDays.isEmpty {
-                    HStack(spacing: 8) {
-                        Image(systemName: wellnessService.isTodayRestDay ? "bed.double.fill" : "camera.viewfinder")
-                            .foregroundStyle(wellnessService.isTodayRestDay ? AppTheme.accentSecondary : AppTheme.accent)
-                        Text(
-                            wellnessService.isTodayRestDay
-                                ? "Hoje é dia de descanso — aparece no calendário de constância."
-                                : "Anexe uma foto no resumo do treino ou marque descanso no perfil."
-                        )
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                            .multilineTextAlignment(.leading)
-                    }
-                } else {
+                if !recentPhotoDays.isEmpty {
                     HStack(spacing: 8) {
                         ForEach(Array(recentPhotoDays.enumerated()), id: \.offset) { _, item in
                             Color.clear
@@ -590,11 +581,11 @@ struct WorkoutPhotoCalendarCard: View {
                         }
                         Spacer(minLength: 0)
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(AppTheme.cardBackground)
                 }
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppTheme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
         }
         .buttonStyle(.plain)

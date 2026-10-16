@@ -1846,6 +1846,7 @@ final class HealthAssistantService: ObservableObject {
     private var lastUserMessageAt: Date?
     private var inactivityFollowUpDelivered = false
     private var cardioMeditationNudgeDelivered = false
+    private var studyFocusInsightDelivered = false
     private var supplementNudgeDelivered = false
     private var coachComplianceNudgeDelivered = false
     private var restDaySevenDayNudgeDelivered = false
@@ -2083,6 +2084,7 @@ final class HealthAssistantService: ObservableObject {
         lastUserMessageAt = Date()
         inactivityFollowUpDelivered = false
         cardioMeditationNudgeDelivered = false
+        studyFocusInsightDelivered = false
         supplementNudgeDelivered = false
         coachComplianceNudgeDelivered = false
         restDaySevenDayNudgeDelivered = false
@@ -3109,6 +3111,7 @@ final class HealthAssistantService: ObservableObject {
         lastUserMessageAt = nil
         inactivityFollowUpDelivered = false
         cardioMeditationNudgeDelivered = false
+        studyFocusInsightDelivered = false
         supplementNudgeDelivered = false
         coachComplianceNudgeDelivered = false
         restDaySevenDayNudgeDelivered = false
@@ -3253,6 +3256,72 @@ final class HealthAssistantService: ObservableObject {
         }
         cardioMeditationNudgeDelivered = true
         lastUserInteractionAt = Date()
+    }
+
+    /// Rotina de Foco em Estudo: progresso, janela habitual e inatividade (IAssistente).
+    func checkStudyFocusInsightsIfNeeded(
+        context: HealthAssistantContext,
+        sessions: [WorkoutSession]
+    ) {
+        guard !isTyping else { return }
+        guard !isInGuidedCheckIn else { return }
+        guard !studyFocusInsightDelivered else { return }
+
+        let name = context.user?.greetingName ?? "Atleta"
+        let profile = AssistantStudyFocusEngine.buildProfile(sessions: sessions)
+        let store = StudyFocusStore.shared
+        let dayKey = AssistantRoutineStore.dayKey()
+
+        if let reference = AssistantStudyFocusEngine.evaluateInactivity(
+            sessions: sessions,
+            recordedStudyAt: NotificationService.shared.lastRecordedStudyFocusAt
+        ), !NotificationService.shared.hasAssistantStudyFocusNudge(for: reference) {
+            let text = AssistantStudyFocusEngine.inactivityMessage(athleteName: name)
+            if let last = messages.last, !last.isUser, last.text == text {
+                studyFocusInsightDelivered = true
+                return
+            }
+            deliverAssistantMessage(text)
+            NotificationService.shared.markAssistantStudyFocusNudgeDelivered(for: reference)
+            studyFocusInsightDelivered = true
+            lastUserInteractionAt = Date()
+            return
+        }
+
+        if let missed = AssistantStudyFocusEngine.missedStudyWindowMessageIfNeeded(
+            athleteName: name,
+            profile: profile,
+            sessions: sessions,
+            lastInsightDayKey: store.lastInsightDay
+        ) {
+            if let last = messages.last, !last.isUser, last.text == missed {
+                store.lastInsightDay = dayKey
+                studyFocusInsightDelivered = true
+                return
+            }
+            deliverAssistantMessage(missed)
+            store.lastInsightDay = dayKey
+            studyFocusInsightDelivered = true
+            lastUserInteractionAt = Date()
+            return
+        }
+
+        if let progress = AssistantStudyFocusEngine.progressMessageIfNeeded(
+            athleteName: name,
+            profile: profile,
+            sessions: sessions,
+            lastProgressDayKey: store.lastProgressDay
+        ) {
+            if let last = messages.last, !last.isUser, last.text == progress {
+                store.lastProgressDay = dayKey
+                studyFocusInsightDelivered = true
+                return
+            }
+            deliverAssistantMessage(progress)
+            store.lastProgressDay = dayKey
+            studyFocusInsightDelivered = true
+            lastUserInteractionAt = Date()
+        }
     }
 
     func checkSupplementNudgeIfNeeded(

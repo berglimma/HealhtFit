@@ -74,6 +74,8 @@ fun NutritionScreen(
 ) {
     var tab by remember { mutableIntStateOf(0) }
     var showShopping by remember { mutableStateOf(false) }
+    var showAnamnesis by remember { mutableStateOf(false) }
+    var careRefresh by remember { mutableIntStateOf(0) }
     var deficit by remember { mutableIntStateOf(400) }
     val objective = athlete.objective
     var menuVersion by remember { mutableIntStateOf(0) }
@@ -88,6 +90,16 @@ fun NutritionScreen(
     var customSupplement by remember { mutableStateOf("") }
     val meta = 2900 - deficit
     val context = LocalContext.current
+    if (showAnamnesis) {
+        NutritionAnamnesisEditorScreen(
+            isCoachMode = false,
+            onBack = {
+                showAnamnesis = false
+                careRefresh++
+            },
+        )
+        return
+    }
     if (showShopping) {
         ShoppingListScreen(onBack = { showShopping = false })
         return
@@ -149,7 +161,7 @@ fun NutritionScreen(
                 Spacer(Modifier.height(12.dp))
             }
             ChipRow(
-                labels = listOf("Plano", "Cardápio", "Suplementos", "Análise"),
+                labels = listOf("Plano", "Cardápio", "Suplementos", "Análise", "Acompanhar"),
                 selected = tab,
                 onSelect = { tab = it },
             )
@@ -186,7 +198,7 @@ fun NutritionScreen(
                         Toast.makeText(context, "Registrado: $name", Toast.LENGTH_SHORT).show()
                     },
                 )
-                else -> AnalysisTab(
+                3 -> AnalysisTab(
                     meal = analysisMeal,
                     analyzed = analyzed,
                     photoLabel = photoLabel,
@@ -196,6 +208,11 @@ fun NutritionScreen(
                         analyzed = true
                     },
                 )
+                else -> {
+                    @Suppress("UNUSED_EXPRESSION")
+                    careRefresh
+                    NutritionCareTab(onOpenAnamnesis = { showAnamnesis = true })
+                }
             }
             Spacer(Modifier.height(12.dp))
         }

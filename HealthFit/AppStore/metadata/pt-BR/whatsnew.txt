@@ -1,3 +1,4 @@
-• Correção da tela verde ao sair e voltar do app (iPhone e iPad)
-• Welcome/carregamento mais estável após background e Stage Manager
-• Melhorias de estabilidade no retorno ao treino e à tela inicial
+• Foco em Estudo: cards com prioridades, durações de 30 min a 3h30 (ou personalizado) e capa realista
+• Correção do Fechar na tela pós-sessão (volta à meditação sem travar no cronômetro)
+• Lembretes e progresso de estudo no IAssistente
+• Melhorias de estabilidade na sessão de meditação/estudo

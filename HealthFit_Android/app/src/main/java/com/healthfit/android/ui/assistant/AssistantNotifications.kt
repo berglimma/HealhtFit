@@ -18,6 +18,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.healthfit.android.MainActivity
 import com.healthfit.android.ui.home.DailyWellness
+import com.healthfit.android.ui.workouts.StudyFocusCard
+import com.healthfit.android.ui.workouts.StudyFocusSessionRecord
+import com.healthfit.android.ui.workouts.StudyPriorityLevel
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
@@ -36,6 +39,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 ACTION_QUICKBOOT,
                 ACTION_HTC_QUICKBOOT,
                 ACTION_RESCHEDULE -> {
+                    // Re-arma tudo sem precisar abrir o IAssistente.
                     AssistantNotifications.rescheduleFromStorage(context)
                 }
                 else -> {
@@ -43,7 +47,7 @@ class ReminderReceiver : BroadcastReceiver() {
                     val body = intent.getStringExtra(BODY) ?: return
                     val id = intent.getIntExtra(ID, 0)
                     AssistantNotifications.show(context, id, title, body)
-                    // Re-arm next occurrence so delivery continues without opening the app.
+                    // Re-arm next day / next habit — works with app killed and IAssistente closed.
                     AssistantNotifications.rescheduleFromStorage(context)
                 }
             }
@@ -77,6 +81,106 @@ object AssistantNotifications {
     private const val KEY_RULES_DAY = "rules_day"
     private const val KEY_ASKED_BATTERY = "asked_battery"
 
+    private const val STUDY_FOCUS_ID_BASE = 9200
+
+    fun scheduleStudyFocusReminders(context: Context, card: StudyFocusCard, sessionMinutes: Int) {
+        cancelStudyFocusReminders(context)
+        if (card.priorities.isEmpty() || sessionMinutes <= 0) return
+        ensureChannel(context)
+        val alarm = context.getSystemService(AlarmManager::class.java)
+        val ordered = card.priorities.sortedBy {
+            when (it.level) {
+                StudyPriorityLevel.High -> 0
+                StudyPriorityLevel.Medium -> 1
+                StudyPriorityLevel.Low -> 2
+            }
+        }
+        val sessionMs = sessionMinutes * 60_000L
+        val step = maxOf(sessionMs / (ordered.size + 1), 60_000L)
+        ordered.forEachIndexed { index, item ->
+            val fireAt = System.currentTimeMillis() + step * (index + 1)
+            if (fireAt >= System.currentTimeMillis() + sessionMs) return@forEachIndexed
+            scheduleAt(
+                alarm,
+                context,
+                fireAt,
+                STUDY_FOCUS_ID_BASE + index,
+                "Prioridade ${item.level.label} · ${card.name}",
+                item.title,
+            )
+        }
+    }
+
+    fun cancelStudyFocusReminders(context: Context) {
+        val alarm = context.getSystemService(AlarmManager::class.java)
+        for (i in 0 until 12) {
+            val intent = Intent(context, ReminderReceiver::class.java).apply {
+                action = ReminderReceiver.ACTION_REMINDER
+            }
+            val pending = PendingIntent.getBroadcast(
+                context,
+                STUDY_FOCUS_ID_BASE + i,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            alarm.cancel(pending)
+        }
+    }
+
+    private const val STUDY_HABIT_ID = 9310
+    private const val STUDY_INACTIVITY_ID = 9311
+
+    /** Lembrete diário no horário habitual aprendido (após ≥3 sessões). */
+    fun scheduleStudyFocusHabitReminder(context: Context, sessions: List<StudyFocusSessionRecord>) {
+        val alarm = context.getSystemService(AlarmManager::class.java)
+        val cancelIntent = Intent(context, ReminderReceiver::class.java).apply {
+            action = ReminderReceiver.ACTION_REMINDER
+        }
+        alarm.cancel(
+            PendingIntent.getBroadcast(
+                context,
+                STUDY_HABIT_ID,
+                cancelIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            ),
+        )
+        if (sessions.size < 3) return
+        ensureChannel(context)
+        val hourBuckets = sessions.groupBy {
+            Calendar.getInstance().apply { timeInMillis = it.endedAtMillis }.get(Calendar.HOUR_OF_DAY)
+        }
+        val preferredHour = hourBuckets.maxByOrNull { it.value.size }?.key ?: return
+        val fireAt = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, preferredHour)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            if (timeInMillis <= System.currentTimeMillis() + 2_000L) add(Calendar.DAY_OF_YEAR, 1)
+        }.timeInMillis
+        scheduleAt(
+            alarm,
+            context,
+            fireAt,
+            STUDY_HABIT_ID,
+            "Hora do Foco em Estudo",
+            "Pela sua rotina, este costuma ser um bom horário para estudar. Abra Meditação → Foco em Estudo.",
+        )
+        // Inatividade 48h a partir da última sessão
+        sessions.maxOfOrNull { it.endedAtMillis }?.let { last ->
+            val inactivityAt = last + AssistantStudyFocusEngine.InactivityMs
+            if (inactivityAt > System.currentTimeMillis()) {
+                scheduleAt(
+                    alarm,
+                    context,
+                    inactivityAt,
+                    STUDY_INACTIVITY_ID,
+                    "Foco em Estudo",
+                    "Faz cerca de 48h sem sessão de estudo. Retome suas prioridades no HealthFit.",
+                )
+            }
+        }
+    }
+
     fun show(context: Context, id: Int, title: String, body: String) {
         ensureChannel(context)
         val openApp = PendingIntent.getActivity(
@@ -106,7 +210,8 @@ object AssistantNotifications {
     }
 
     /**
-     * Call from app entry (any tab) so scheduling does not depend on IAssistente being open.
+     * Agenda lembretes no aparelho. Não depende do IAssistente estar aberto —
+     * AlarmManager + ReminderReceiver disparam com o app morto / tela bloqueada.
      */
     fun ensureBackgroundDelivery(
         context: Context,
@@ -119,6 +224,7 @@ object AssistantNotifications {
         if (!hasNotificationPermission(context)) return
         persistEnabled(context, true)
         schedule(context, name, userId)
+        restoreStudyFocusHabits(context)
         if (requestBatteryExemption) {
             maybeRequestBatteryExemption(context)
         }
@@ -138,7 +244,7 @@ object AssistantNotifications {
                 context,
                 4100,
                 "IAssistente",
-                "$name, sono e água estão em ordem. Os lembretes do dia continuam ativos — mesmo com o celular bloqueado.",
+                "$name, sono e água estão em ordem. Os lembretes do dia continuam ativos — mesmo com o IAssistente fechado e o celular bloqueado.",
             )
         } else {
             notes.forEachIndexed { index, note ->
@@ -147,13 +253,22 @@ object AssistantNotifications {
         }
     }
 
+    /**
+     * Re-arma alarmes após boot / update / disparo.
+     * Usa identidade salva — não exige abrir o IAssistente.
+     */
     fun rescheduleFromStorage(context: Context) {
-        val prefs = prefs(context)
-        if (!prefs.getBoolean(KEY_ENABLED, false)) return
         if (!hasNotificationPermission(context)) return
+        val prefs = prefs(context)
         val name = prefs.getString(KEY_NAME, null)?.ifBlank { null } ?: "Atleta"
         val userId = prefs.getString(KEY_USER_ID, null)
+        // Se o usuário já abriu o app com permissão, mantém ativo mesmo sem tocar no IAssistente.
+        if (!prefs.getBoolean(KEY_ENABLED, false) && prefs.getString(KEY_NAME, null).isNullOrBlank()) {
+            return
+        }
+        persistEnabled(context, true)
         schedule(context, name, userId)
+        restoreStudyFocusHabits(context)
     }
 
     fun schedule(context: Context, name: String, userId: String?) {
@@ -163,6 +278,16 @@ object AssistantNotifications {
         val alarm = context.getSystemService(AlarmManager::class.java)
         buildSlots(name).forEach { slot -> scheduleSlot(alarm, context, slot) }
         scheduleInactivityIfNeeded(alarm, context, userId)
+    }
+
+    /** Reagenda hábito / inatividade de Foco em Estudo a partir do histórico local. */
+    fun restoreStudyFocusHabits(context: Context) {
+        runCatching {
+            val sessions = com.healthfit.android.ui.workouts.StudyFocusStore.loadSessions(context)
+            if (sessions.isNotEmpty()) {
+                scheduleStudyFocusHabitReminder(context, sessions)
+            }
+        }
     }
 
     private fun buildSlots(name: String): List<Slot> {
@@ -282,18 +407,31 @@ object AssistantNotifications {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+        val openApp = PendingIntent.getActivity(
+            context,
+            id + 50_000,
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (alarm.canScheduleExactAlarms()) {
-                    alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, whenMillis, pending)
-                } else {
+            // setAlarmClock is the most reliable path on Samsung / Doze — fires with app killed.
+            alarm.setAlarmClock(AlarmManager.AlarmClockInfo(whenMillis, openApp), pending)
+        } catch (_: SecurityException) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarm.canScheduleExactAlarms()) {
                     alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, whenMillis, pending)
+                } else {
+                    alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, whenMillis, pending)
                 }
-            } else {
+            } catch (_: SecurityException) {
+                alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, whenMillis, pending)
+            }
+        } catch (_: Exception) {
+            runCatching {
                 alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, whenMillis, pending)
             }
-        } catch (_: SecurityException) {
-            alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, whenMillis, pending)
         }
     }
 
@@ -315,8 +453,8 @@ object AssistantNotifications {
         val manager = context.getSystemService(NotificationManager::class.java)
         // Recreate channel with lock-screen visibility for locked-phone delivery.
         runCatching { manager.deleteNotificationChannel("healthfit_assistant") }
-        val channel = NotificationChannel(CHANNEL, "IAssistente", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Água, sono, treino, suplemento, refeições e motivação — mesmo com o celular bloqueado"
+        val channel = NotificationChannel(CHANNEL, "Lembretes HealthFit", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "Água, sono, treino, estudo e motivação — mesmo com o IAssistente fechado e o celular bloqueado"
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             enableVibration(true)
             setShowBadge(true)

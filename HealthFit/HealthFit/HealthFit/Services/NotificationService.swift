@@ -1,5 +1,5 @@
 import Foundation
-import UserNotifications
+@preconcurrency import UserNotifications
 
 enum WaterReminderConfiguration {
     static let intervalHours = 2
@@ -788,6 +788,176 @@ final class NotificationService {
         // Desativado: não notifica início de meditação.
         _ = sessionTitle
         _ = athleteName
+    }
+
+    private let studyFocusReminderPrefix = "study_focus_priority_"
+    private let studyFocusRoutineIdentifier = "study_focus_routine_habit"
+    private let studyFocusInactivityIdentifier = "study_focus_inactivity_48h"
+    private let lastStudyFocusKey = "healthfit_last_study_focus_completed_at"
+    private let studyFocusInactivityNotifiedKey = "healthfit_study_focus_inactivity_notified_for"
+    private let assistantStudyFocusNudgeKey = "healthfit_assistant_study_focus_nudge_for"
+    private let lastStudyProgressNotifiedDayKey = "healthfit_study_focus_progress_notified_day"
+
+    func deliverStudyFocusStartNotification(cardName: String, topPriority: String?) {
+        let body: String
+        if let topPriority, !topPriority.isEmpty {
+            body = "Prioridade agora: \(topPriority). Boa sessão de \(cardName)."
+        } else {
+            body = "Sessão \"\(cardName)\" iniciada. Mantenha o foco."
+        }
+        deliverImmediately(
+            title: "Foco em estudo 📚",
+            body: body,
+            category: "STUDY_FOCUS",
+            identifier: "study_focus_start_\(UUID().uuidString)",
+            immediate: true
+        )
+    }
+
+    /// Agenda lembretes ao longo da sessão com as prioridades do card (alta primeiro).
+    func scheduleStudyFocusPriorityReminders(
+        cardName: String,
+        priorities: [StudyPriorityItem],
+        sessionMinutes: Int
+    ) {
+        cancelStudyFocusPriorityReminders()
+        guard !priorities.isEmpty, sessionMinutes > 0 else { return }
+
+        let ordered = priorities.sorted { lhs, rhs in
+            let order: [StudyPriorityLevel: Int] = [.high: 0, .medium: 1, .low: 2]
+            return (order[lhs.level] ?? 9) < (order[rhs.level] ?? 9)
+        }
+        let sessionSeconds = max(sessionMinutes * 60, 60)
+        let step = max(sessionSeconds / (ordered.count + 1), 60)
+
+        for (index, item) in ordered.enumerated() {
+            let fire = TimeInterval((index + 1) * step)
+            guard fire < Double(sessionSeconds) else { continue }
+            scheduleOnPhone(
+                title: "Prioridade \(item.level.label) · \(cardName)",
+                body: item.title,
+                category: "STUDY_FOCUS_PRIORITY",
+                identifier: "\(studyFocusReminderPrefix)\(item.id.uuidString)",
+                trigger: UNTimeIntervalNotificationTrigger(timeInterval: fire, repeats: false)
+            )
+        }
+    }
+
+    func cancelStudyFocusPriorityReminders() {
+        let prefix = studyFocusReminderPrefix
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let ids = requests
+                .map(\.identifier)
+                .filter { $0.hasPrefix(prefix) }
+            guard !ids.isEmpty else { return }
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        }
+    }
+
+    func recordStudyFocusCompleted(at date: Date = .now) {
+        UserDefaults.standard.set(date, forKey: lastStudyFocusKey)
+        UserDefaults.standard.removeObject(forKey: studyFocusInactivityNotifiedKey)
+        UserDefaults.standard.removeObject(forKey: assistantStudyFocusNudgeKey)
+        refreshStudyFocusInactivityReminder(lastStudyAt: date)
+    }
+
+    var lastRecordedStudyFocusAt: Date? {
+        UserDefaults.standard.object(forKey: lastStudyFocusKey) as? Date
+    }
+
+    func markAssistantStudyFocusNudgeDelivered(for referenceDate: Date) {
+        UserDefaults.standard.set(referenceDate, forKey: assistantStudyFocusNudgeKey)
+    }
+
+    func hasAssistantStudyFocusNudge(for referenceDate: Date) -> Bool {
+        (UserDefaults.standard.object(forKey: assistantStudyFocusNudgeKey) as? Date) == referenceDate
+    }
+
+    /// Agenda lembrete no horário habitual aprendido (IAssistente).
+    func refreshStudyFocusRoutineReminders(using sessionLog: [StudyFocusSessionRecord]) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [studyFocusRoutineIdentifier]
+        )
+        guard sessionLog.count >= 3 else { return }
+
+        let calendar = MotivationMessages.localCalendar
+        let hourBuckets = Dictionary(grouping: sessionLog) {
+            calendar.component(.hour, from: $0.endedAt)
+        }
+        guard let preferredHour = hourBuckets.max(by: { $0.value.count < $1.value.count })?.key else { return }
+
+        var components = DateComponents()
+        components.hour = preferredHour
+        components.minute = 0
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        scheduleOnPhone(
+            title: "Hora do Foco em Estudo 📚",
+            body: "Pela sua rotina, este costuma ser um bom horário para estudar. Abra Meditação → Foco em Estudo.",
+            category: "STUDY_FOCUS_ROUTINE",
+            identifier: studyFocusRoutineIdentifier,
+            trigger: trigger
+        )
+    }
+
+    func refreshStudyFocusInactivityReminder(lastStudyAt: Date?) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [studyFocusInactivityIdentifier]
+        )
+        guard let lastStudyAt else { return }
+        let fireDate = lastStudyAt.addingTimeInterval(AssistantStudyFocusEngine.inactivityThreshold)
+        let title = "Foco em Estudo 📚"
+        let body = "Faz cerca de 48h sem sessão de estudo. Retome suas prioridades no HealthFit."
+        if fireDate <= .now {
+            Task {
+                await deliverTypedInactivityIfNeeded(
+                    referenceAt: lastStudyAt,
+                    notifiedKey: studyFocusInactivityNotifiedKey,
+                    category: "STUDY_FOCUS_INACTIVITY",
+                    title: title,
+                    body: body
+                )
+            }
+        } else {
+            scheduleOnPhone(
+                title: title,
+                body: body,
+                category: "STUDY_FOCUS_INACTIVITY",
+                identifier: studyFocusInactivityIdentifier,
+                trigger: UNTimeIntervalNotificationTrigger(
+                    timeInterval: fireDate.timeIntervalSinceNow,
+                    repeats: false
+                )
+            )
+        }
+    }
+
+    /// Notificação de progresso após concluir sessão (máx. 1×/dia).
+    func deliverStudyFocusProgressNotification(athleteName: String, sessions: [WorkoutSession]) {
+        let dayKey = AssistantRoutineStore.dayKey()
+        if UserDefaults.standard.string(forKey: lastStudyProgressNotifiedDayKey) == dayKey { return }
+
+        let profile = AssistantStudyFocusEngine.buildProfile(sessions: sessions)
+        let calendar = MotivationMessages.localCalendar
+        let weekStart = calendar.date(
+            from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: .now)
+        ) ?? .now
+        let weekSessions = AssistantStudyFocusEngine.studySessions(from: sessions).filter {
+            ($0.endedAt ?? $0.startedAt) >= weekStart
+        }
+        let weekMinutes = Int(weekSessions.reduce(0.0) { $0 + ($1.duration / 60.0) }.rounded())
+        let body = AssistantStudyFocusEngine.notificationProgressBody(
+            profile: profile,
+            weekMinutes: weekMinutes,
+            weekCount: weekSessions.count
+        )
+        deliverImmediately(
+            title: "Progresso · Foco em Estudo",
+            body: body,
+            category: "STUDY_FOCUS_PROGRESS",
+            identifier: "study_focus_progress_\(UUID().uuidString)",
+            immediate: true
+        )
+        UserDefaults.standard.set(dayKey, forKey: lastStudyProgressNotifiedDayKey)
     }
 
     func deliverWorkoutEndNotification(session: WorkoutSession, athleteName: String) {

@@ -1,10 +1,15 @@
-HealthFit 1.0.18 (31)
+HealthFit 1.0.20 (33)
 
 What's new in this binary:
-- Bike pedal: fixed KM showing 0 on share cards and photo overlay
-- Run/walk: persist GPS-only distance; walking estimate uses walking pace
-- Live Activity / start button icons: bicycle, walk, run (not strength)
-- Outdoor cardio distance + auto-end history persistence fixes
+- Study Focus hub: study cards with priorities, durations 30 min–3h30 or custom, realistic cover
+- Fixed post-session Close returning to a stuck timer (single MainTab host; returns to meditation)
+- IAssistente study reminders / progress
+- Meditation/study session stability
+
+How to test Study Focus:
+1. Workouts → Meditation → Foco em Estudo
+2. Pick a card and duration → Start
+3. End session → on summary tap Fechar → should return to meditation (not stuck timer)
 
 Demo login: healthfit.appreview@gmail.com
 Password: HealthFitReview2026!

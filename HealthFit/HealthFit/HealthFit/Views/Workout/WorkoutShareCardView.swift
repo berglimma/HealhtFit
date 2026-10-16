@@ -577,6 +577,10 @@ struct WorkoutShareCardView: View {
         let title = session.workoutTitle
         let lower = title.lowercased()
 
+        if lower.contains("estudo") || lower.contains("foco em estudo") {
+            return "book.fill"
+        }
+
         if WeeklyProgressAnalyzer.isMeditationSession(session)
             || lower.hasPrefix("meditação")
             || lower.hasPrefix("meditacao") {

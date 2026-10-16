@@ -21,6 +21,8 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(0xFF0E1113.toInt()),
             navigationBarStyle = SystemBarStyle.dark(0xFF0E1113.toInt()),
         )
+        // Reagenda lembretes ao abrir qualquer tela — não depende do IAssistente.
+        runCatching { com.healthfit.android.ui.assistant.AssistantNotifications.rescheduleFromStorage(this) }
         val app = application as HealthFitApp
         setContent {
             HealthFitTheme(darkTheme = true) {

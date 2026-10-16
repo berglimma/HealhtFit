@@ -36,7 +36,8 @@ class HealthFitApp : Application() {
         healthConnectGateway = HealthConnectGateway(this)
         billingGateway = BillingGateway(this).also { it.startConnection() }
         // Re-arm alarms even if the user never opens IAssistente this session.
-        AssistantNotifications.rescheduleFromStorage(this)
-        PhoneWorkoutSync.start(this)
+        // Device may still be CE-locked at process start — never crash the app here.
+        runCatching { AssistantNotifications.rescheduleFromStorage(this) }
+        runCatching { PhoneWorkoutSync.start(this) }
     }
 }

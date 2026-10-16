@@ -77,6 +77,7 @@ struct MeditationTopic: Identifiable, Hashable, Codable {
         case "Relaxamento Corporal": return "MeditacaoCoverRelaxamento"
         case "Gratidão": return "MeditacaoCoverGratidao"
         case "Foco e Clareza": return "MeditacaoCoverFoco"
+        case "Foco em Estudo": return "StudyFocusCover"
         case "Redução de Ansiedade": return "MeditacaoCoverAnsiedade"
         case "Sono e Descanso": return "MeditacaoCoverSono"
         case "Recuperação Pós-Treino": return "MeditacaoCoverRecuperacao"
@@ -167,6 +168,24 @@ struct MeditationTopic: Identifiable, Hashable, Codable {
             ]
         ),
         MeditationTopic(
+            name: "Foco em Estudo",
+            description: "Sessão de concentração com prioridades e lembretes",
+            icon: "book.fill",
+            colorName: "indigo",
+            prompts: [
+                "Silencie o celular e afaste o que não for estudo.",
+                "Defina a prioridade #1 desta sessão e mantenha-a à vista.",
+                "Respire fundo: inspire 4, expire 6 — mente pronta.",
+                "Trabalhe só na tarefa atual. Uma coisa de cada vez.",
+                "Se a mente divagar, anote o pensamento e volte ao estudo.",
+                "Mantenha postura ereta e ombros relaxados.",
+                "Revise mentalmente o que já avançou nesta sessão.",
+                "Próxima prioridade: foque com a mesma intensidade.",
+                "Hidrate-se e continue — o foco é um músculo.",
+                "Encerre revisando o que concluiu. Bom trabalho."
+            ]
+        ),
+        MeditationTopic(
             name: "Redução de Ansiedade",
             description: "Ancore-se no presente e acalme pensamentos acelerados",
             icon: "leaf.fill",
@@ -226,7 +245,52 @@ struct MeditationTopic: Identifiable, Hashable, Codable {
 struct MeditationWorkoutConfig: Hashable {
     let topic: MeditationTopic
     let duration: MeditationDuration
+    /// Prefixo do título da sessão (`Meditação` ou `Estudo`).
+    var titlePrefix: String = "Meditação"
+    /// Quando definido, sobrescreve `duration.seconds` (Foco em Estudo com 30 min–3h30 / personalizado).
+    var customTargetSeconds: Int? = nil
 
-    var title: String { "Meditação — \(topic.name)" }
-    var targetDurationSeconds: Int { duration.seconds }
+    var title: String { "\(titlePrefix) — \(topic.name)" }
+    var targetDurationSeconds: Int { customTargetSeconds ?? duration.seconds }
+    var isStudyFocus: Bool {
+        titlePrefix.localizedCaseInsensitiveContains("estudo")
+            || topic.name.localizedCaseInsensitiveContains("estudo")
+            || topic.icon == "book.fill"
+    }
+}
+
+/// Durações do hub Foco em Estudo (presets + personalizado).
+enum StudyFocusDurationChoice: Hashable, Identifiable {
+    case minutes(Int)
+    case custom
+
+    var id: String {
+        switch self {
+        case .minutes(let m): return "m\(m)"
+        case .custom: return "custom"
+        }
+    }
+
+    static let presets: [StudyFocusDurationChoice] = [
+        .minutes(30), .minutes(60), .minutes(90), .minutes(120),
+        .minutes(150), .minutes(180), .minutes(210), .custom,
+    ]
+
+    static func label(forMinutes minutes: Int) -> String {
+        if minutes < 60 { return "\(minutes) min" }
+        let hours = minutes / 60
+        let rem = minutes % 60
+        if rem == 0 { return hours == 1 ? "1 h" : "\(hours) h" }
+        return hours == 1 ? "1 h e \(rem) min" : "\(hours) h e \(rem) min"
+    }
+
+    func chipLabel(customMinutes: Int) -> String {
+        switch self {
+        case .minutes(let m): return Self.label(forMinutes: m)
+        case .custom:
+            return customMinutes > 0
+                ? "Personalizado · \(Self.label(forMinutes: customMinutes))"
+                : "Personalizado"
+        }
+    }
 }

@@ -76,6 +76,7 @@ fun HomeScreen(
 ) {
     var finished by remember { mutableStateOf<FinishedWorkout?>(null) }
     var reportKind by remember { mutableStateOf<ReportKind?>(null) }
+    var showConstancy by remember { mutableStateOf(false) }
     var weeklySeen by remember { mutableStateOf(false) }
     val goalMl = wellness.goalMl
     val name = userName.ifBlank { "Berg" }
@@ -154,9 +155,15 @@ fun HomeScreen(
                 if (it == ReportKind.Weekly) weeklySeen = true
                 reportKind = it
             },
+            onOpenConstancy = { showConstancy = true },
             weeklySeen = weeklySeen,
         )
     }
+        if (showConstancy) {
+            Box(Modifier.fillMaxSize().background(HealthFitColors.Background)) {
+                ConstancyCalendarScreen(onBack = { showConstancy = false })
+            }
+        }
         finished?.let { session ->
             Box(Modifier.fillMaxSize().background(HealthFitColors.Background)) {
                 WorkoutFinishedScreen(session = session, onClose = { finished = null })

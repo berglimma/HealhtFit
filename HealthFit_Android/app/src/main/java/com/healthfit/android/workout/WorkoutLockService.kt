@@ -22,17 +22,20 @@ object WorkoutLockPublisher {
     fun publish(context: Context, snapshot: WorkoutLockSnapshot) {
         WorkoutLockSession.publish(snapshot)
         val app = context.applicationContext
-        ContextCompat.startForegroundService(app, Intent(app, WorkoutLockService::class.java))
+        runCatching {
+            ContextCompat.startForegroundService(app, Intent(app, WorkoutLockService::class.java))
+        }
     }
 
     fun clear(context: Context) {
         WorkoutLockSession.clear()
         val app = context.applicationContext
-        // Must use startForegroundService so onStartCommand can call startForeground before stop.
-        ContextCompat.startForegroundService(
-            app,
-            Intent(app, WorkoutLockService::class.java).setAction(WorkoutLockService.ACTION_STOP),
-        )
+        val stop = Intent(app, WorkoutLockService::class.java).setAction(WorkoutLockService.ACTION_STOP)
+        // Prefer stopService: startForegroundService from Compose onDispose can kill the app on Samsung/Android 12+.
+        val stopped = runCatching { app.stopService(stop) }.getOrDefault(false)
+        if (!stopped) {
+            runCatching { ContextCompat.startForegroundService(app, stop) }
+        }
     }
 }
 
@@ -93,13 +96,19 @@ class WorkoutLockService : Service() {
     }
 
     private fun buildNotification(snapshot: WorkoutLockSnapshot): Notification {
+        val isStudy = snapshot.kind == WorkoutWearContract.KIND_MEDITATION &&
+            (snapshot.workoutTitle.contains("Estudo", ignoreCase = true) ||
+                snapshot.setsLabel.contains("estudo", ignoreCase = true))
         val phase = when {
             snapshot.paused -> "HealthFit · Pausado"
+            isStudy -> "HealthFit · Estudo"
             snapshot.resting -> "HealthFit · Pausa"
+            snapshot.kind == WorkoutWearContract.KIND_MEDITATION -> "HealthFit · Meditação"
             else -> "HealthFit · Exercício"
         }
         val phaseColor = when {
             snapshot.paused -> 0xFFFFD60A.toInt()
+            isStudy -> 0xFF7B8CFF.toInt()
             snapshot.resting -> 0xFFFF8C33.toInt()
             else -> 0xFF3DDC3A.toInt()
         }
@@ -110,7 +119,11 @@ class WorkoutLockService : Service() {
             setTextViewText(R.id.lock_title, snapshot.workoutTitle)
             setTextViewText(
                 R.id.lock_sets,
-                if (snapshot.resting && snapshot.restRemainingSeconds > 0) "restante" else snapshot.setsLabel,
+                when {
+                    isStudy && snapshot.restRemainingSeconds > 0 -> "estudo restante"
+                    snapshot.resting && snapshot.restRemainingSeconds > 0 -> "restante"
+                    else -> snapshot.setsLabel
+                },
             )
             setChronometer(R.id.lock_clock, chronoBase, null, chronoRunning)
             setChronometerCountDown(R.id.lock_clock, chronoCountDown)

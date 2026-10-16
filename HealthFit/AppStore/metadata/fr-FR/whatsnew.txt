@@ -1,3 +1,4 @@
-• Correction de l’écran vert en quittant et en revenant dans l’app (iPhone et iPad)
-• Accueil/chargement plus stable après l’arrière-plan et Stage Manager
-• Améliorations de stabilité au retour à l’entraînement et à l’accueil
+• Focus Études : cartes avec priorités, durées de 30 min à 3h30 (ou personnalisé) et couverture réaliste
+• Correction de Fermer sur l’écran post-séance (retour à la méditation sans rester bloqué sur le chrono)
+• Rappels et progression d’étude dans l’assistant
+• Améliorations de stabilité des sessions méditation/étude

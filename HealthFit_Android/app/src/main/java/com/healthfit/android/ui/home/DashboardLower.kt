@@ -75,8 +75,11 @@ import com.healthfit.designsystem.HealthFitColors
 fun DashboardLowerSections(
     onOpenRecent: (FinishedWorkout) -> Unit = {},
     onOpenReport: (ReportKind) -> Unit = {},
+    onOpenConstancy: () -> Unit = {},
     weeklySeen: Boolean = false,
 ) {
+    Spacer(Modifier.height(12.dp))
+    ConstancyCard(onOpen = onOpenConstancy)
     Spacer(Modifier.height(12.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         ReportTile(

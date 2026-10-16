@@ -829,6 +829,9 @@
     "A ficha será salva em Personalizados deste programa." : {
 
     },
+    "A foto aparece no dia do treino no calendário." : {
+
+    },
     "A grade mostra todos os alunos; abaixo só os deste paciente." : {
 
     },
@@ -967,6 +970,9 @@
 
     },
     "Adicionar pessoas" : {
+
+    },
+    "Adicionar prioridade" : {
 
     },
     "Adicione exercícios do catálogo, crie um personalizado ou use os grupos acima." : {
@@ -2531,6 +2537,9 @@
     "Calendário (aluno escolhe manualmente)" : {
 
     },
+    "Calendário de treinos" : {
+
+    },
     "Calorias" : {
 
     },
@@ -2580,6 +2589,9 @@
 
     },
     "Carboidrato: %lld g" : {
+
+    },
+    "Card" : {
 
     },
     "Card pronto para Stories e status — WhatsApp ou Instagram." : {
@@ -2697,6 +2709,9 @@
 
     },
     "Com base no seu peso (%@ kg), beba:" : {
+
+    },
+    "Com foto" : {
 
     },
     "Com o Apple Watch, as voltas são contadas automaticamente. Uma volta = comprimento da piscina (%lld m). Sem Watch, você pode ajustar manualmente." : {
@@ -3247,6 +3262,9 @@
     "Criar story" : {
 
     },
+    "Crie cards com o nome do que vai estudar, marque prioridades e receba lembretes durante a sessão." : {
+
+    },
     "Crie metas (ex.: reduzir açúcar, beber 3 L de água). Com nutricionista, sincronize para acompanhamento." : {
 
     },
@@ -3361,6 +3379,9 @@
     "Desativado" : {
 
     },
+    "Descanso" : {
+
+    },
     "Descanso acumulado: %@" : {
 
     },
@@ -3437,6 +3458,9 @@
 
     },
     "Dia" : {
+
+    },
+    "Dia de descanso" : {
 
     },
     "dia inteiro" : {
@@ -3582,7 +3606,13 @@
     "Duração do fluxo: %lld dias" : {
 
     },
+    "Duração do foco" : {
+
+    },
     "Duração do trecho (%llds)" : {
+
+    },
+    "Duração personalizada" : {
 
     },
     "Duração sugerida" : {
@@ -3628,6 +3658,9 @@
 
     },
     "Editar alimentos e comentários" : {
+
+    },
+    "Editar card" : {
 
     },
     "Editar comentário" : {
@@ -3995,6 +4028,9 @@
     "Excluir cadastro no Coach?" : {
 
     },
+    "Excluir card" : {
+
+    },
     "Excluir Conta" : {
 
     },
@@ -4002,6 +4038,9 @@
 
     },
     "Excluir esta refeição" : {
+
+    },
+    "Excluir este card?" : {
 
     },
     "Excluir ficha" : {
@@ -4130,6 +4169,9 @@
     "Finalizar Corrida" : {
 
     },
+    "Finalizar foco" : {
+
+    },
     "Finalizar Meditação" : {
 
     },
@@ -4166,6 +4208,12 @@
     "Flyover 3D do percurso" : {
 
     },
+    "Foco em estudo" : {
+
+    },
+    "Foco em Estudo" : {
+
+    },
     "Folga" : {
 
     },
@@ -4197,6 +4245,9 @@
 
     },
     "Foto do perfil" : {
+
+    },
+    "Foto do treino" : {
 
     },
     "Foto ou vídeo do treino" : {
@@ -4456,6 +4507,9 @@
     "Informe a data de nascimento para continuar" : {
 
     },
+    "Informe a duração em minutos (1–720)." : {
+
+    },
     "Informe ao menos o peso ou alguma circunferência antes de exportar." : {
 
     },
@@ -4484,6 +4538,9 @@
 
     },
     "Iniciar Esteira" : {
+
+    },
+    "Iniciar foco em estudo" : {
 
     },
     "Iniciar Kitesurf" : {
@@ -5132,6 +5189,9 @@
     "Nenhum amigo da equipe com Spot Buddy ativo por perto (até 2 km)." : {
 
     },
+    "Nenhum card ainda. Crie um com o nome que desejar." : {
+
+    },
     "Nenhum cardápio ativo. Gere seu plano em Nutrição." : {
 
     },
@@ -5166,6 +5226,12 @@
 
     },
     "Nenhum suplemento registrado. Use Nutrição → Suplementos." : {
+
+    },
+    "Nenhum treino — recuperação conta na constância." : {
+
+    },
+    "Nenhum treino neste dia." : {
 
     },
     "Nenhum treino realizado ainda" : {
@@ -5279,6 +5345,9 @@
     "Nome da via" : {
 
     },
+    "Nome do card" : {
+
+    },
     "Nome do exercício" : {
 
     },
@@ -5336,6 +5405,9 @@
     "Notificações de suplementos" : {
 
     },
+    "Notificar prioridades na sessão" : {
+
+    },
     "Nova consulta" : {
 
     },
@@ -5348,7 +5420,19 @@
     "Nova meta" : {
 
     },
+    "Nova prioridade" : {
+
+    },
+    "Novo" : {
+
+    },
     "NOVO" : {
+
+    },
+    "Novo card" : {
+
+    },
+    "Novo card de estudo" : {
 
     },
     "Novo equipamento" : {
@@ -5645,7 +5729,7 @@
     "OK vamos lá" : {
 
     },
-    "Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit (estilo Stories)." : {
+    "Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit. A foto também entra no calendário de treinos." : {
 
     },
     "Opcional e privado — só na sua conta." : {
@@ -6033,6 +6117,9 @@
 
     },
     "Prioridade de batimentos no treino: Apple Watch → Bluetooth → Apple Saúde." : {
+
+    },
+    "Prioridades" : {
 
     },
     "Privacy Policy" : {
@@ -11370,6 +11457,9 @@
     "Saltos por sessão" : {
 
     },
+    "Salva no calendário de treinos" : {
+
+    },
     "Salvando e sincronizando…" : {
 
     },
@@ -11652,6 +11742,9 @@
 
     },
     "Seus 15 dias grátis terminaram. Assine o plano Básico (R$ 9,90/mês) para continuar publicando no Pulse." : {
+
+    },
+    "Seus cards" : {
 
     },
     "Seus Dados" : {
@@ -12074,6 +12167,9 @@
     "Técnica" : {
 
     },
+    "Tela permanece acesa · notificações de prioridade" : {
+
+    },
     "Telefone com DDD" : {
 
     },
@@ -12204,6 +12300,9 @@
     "Toque em + para incluir na lista" : {
 
     },
+    "Toque em um dia com treino ou descanso para ver detalhes." : {
+
+    },
     "Toque em um exercício para treiná-lo agora (sem precisar seguir a ordem)." : {
 
     },
@@ -12281,6 +12380,9 @@
 
     },
     "Treinei com HealthFit" : {
+
+    },
+    "Treino" : {
 
     },
     "Treino Concluído" : {
@@ -12383,6 +12485,9 @@
 
     },
     "Usamos a mesma foto do seu perfil no HealthFit. Altere em Perfil se quiser atualizar." : {
+
+    },
+    "Usar" : {
 
     },
     "Usar 35 ml/kg" : {

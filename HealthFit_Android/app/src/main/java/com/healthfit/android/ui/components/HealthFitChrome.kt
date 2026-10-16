@@ -1,5 +1,6 @@
 package com.healthfit.android.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,8 +13,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -24,11 +27,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -36,10 +44,112 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthfit.designsystem.HealthFitColors
+import kotlin.math.min
 
 val GreenOrange = Brush.horizontalGradient(
     listOf(Color(0xFF3DDC4A), Color(0xFFFF9A3C)),
 )
+
+/** Relógio central (MM:SS / H:MM:SS) com anel de progresso — cardio, meditação e estudo. */
+@Composable
+fun SessionClockDial(
+    totalSeconds: Int,
+    caption: String,
+    accent: Color = HealthFitColors.Accent,
+    progress: Float = (totalSeconds % 60) / 60f,
+    paused: Boolean = false,
+    size: Dp = 200.dp,
+    modifier: Modifier = Modifier,
+) {
+    val clamped = progress.coerceIn(0f, 1f)
+    val timeColor = if (paused) HealthFitColors.TextSecondary else Color.White
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.fillMaxSize()) {
+                val stroke = 14.dp.toPx()
+                val diameter = min(this.size.width, this.size.height) - stroke
+                val topLeft = Offset(
+                    (this.size.width - diameter) / 2f,
+                    (this.size.height - diameter) / 2f,
+                )
+                val arcSize = Size(diameter, diameter)
+                drawArc(
+                    color = Color.White.copy(alpha = 0.10f),
+                    startAngle = -90f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = stroke, cap = StrokeCap.Round),
+                )
+                if (clamped > 0f) {
+                    drawArc(
+                        color = if (paused) accent.copy(alpha = 0.45f) else accent,
+                        startAngle = -90f,
+                        sweepAngle = 360f * clamped,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = Stroke(width = stroke, cap = StrokeCap.Round),
+                    )
+                }
+                // Marcadores tipo relógio (12 ticks).
+                val cx = this.size.width / 2f
+                val cy = this.size.height / 2f
+                val outer = diameter / 2f
+                for (i in 0 until 12) {
+                    val angle = Math.toRadians((-90.0 + i * 30.0))
+                    val major = i % 3 == 0
+                    val inner = outer - if (major) stroke * 0.85f else stroke * 0.45f
+                    val cos = kotlin.math.cos(angle).toFloat()
+                    val sin = kotlin.math.sin(angle).toFloat()
+                    drawLine(
+                        color = Color.White.copy(alpha = if (major) 0.35f else 0.18f),
+                        start = Offset(cx + cos * inner, cy + sin * inner),
+                        end = Offset(cx + cos * outer, cy + sin * outer),
+                        strokeWidth = if (major) 3f else 2f,
+                        cap = StrokeCap.Round,
+                    )
+                }
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    formatSessionClock(totalSeconds),
+                    color = timeColor,
+                    fontSize = if (totalSeconds >= 3600) 36.sp else 44.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    caption,
+                    color = HealthFitColors.TextSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+        }
+    }
+}
+
+fun formatSessionClock(totalSeconds: Int): String {
+    val s = totalSeconds.coerceAtLeast(0)
+    val h = s / 3600
+    val m = (s % 3600) / 60
+    val sec = s % 60
+    return if (h > 0) {
+        "%d:%02d:%02d".format(h, m, sec)
+    } else {
+        "%02d:%02d".format(m, sec)
+    }
+}
 
 @Composable
 fun HealthFitTabBar(
@@ -51,6 +161,7 @@ fun HealthFitTabBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .padding(horizontal = 12.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(32.dp))
             .background(Color(0xF01A1E22))

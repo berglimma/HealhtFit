@@ -5,4 +5,6 @@
     <cache-path name="flyover" path="flyover/" />
     <cache-path name="share" path="share/" />
     <cache-path name="nutrition" path="nutrition/" />
+    <files-path name="checkin_photos" path="WorkoutCheckInPhotos/" />
+    <cache-path name="checkin_camera" path="checkin_camera/" />
 </paths>

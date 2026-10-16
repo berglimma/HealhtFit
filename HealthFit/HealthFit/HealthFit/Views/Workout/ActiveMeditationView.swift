@@ -1,6 +1,7 @@
 import SwiftUI
-
+import UIKit
 import Combine
+
 struct ActiveMeditationView: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var authService: AuthService
@@ -59,7 +60,7 @@ struct ActiveMeditationView: View {
                 .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                 .adaptiveContentWidth()
             }
-            .navigationTitle("Meditação")
+            .navigationTitle(isStudyFocusSession ? "Foco em estudo" : "Meditação")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -71,18 +72,35 @@ struct ActiveMeditationView: View {
             }
         }
         .onAppear {
-            isFinishing = false
+            // Não reabre o cronômetro depois do resumo (Fechar).
+            guard finishedSession == nil, !isFinishing else { return }
             elapsedSeconds = wallClockElapsedSeconds()
             ensureWatchMeditationActive()
+            if isStudyFocusSession {
+                UIApplication.shared.isIdleTimerDisabled = true
+                syncStudyFocusLockScreen()
+            }
+        }
+        .onDisappear {
+            if isStudyFocusSession {
+                UIApplication.shared.isIdleTimerDisabled = false
+                NotificationService.shared.cancelStudyFocusPriorityReminders()
+                WorkoutLiveActivityController.shared.end()
+            }
         }
         .onReceive(clock) { _ in
+            guard finishedSession == nil, !isFinishing else { return }
             elapsedSeconds = wallClockElapsedSeconds()
             // Em background: só encerra por tempo; evita sync Watch a cada segundo.
             if scenePhase == .active {
                 ensureWatchMeditationActive()
                 syncLiveWatchSamples()
             }
-            if elapsedSeconds >= config.targetDurationSeconds && !isFinishing {
+            // Live Activity continua atualizando com o celular bloqueado.
+            if isStudyFocusSession {
+                syncStudyFocusLockScreen()
+            }
+            if elapsedSeconds >= config.targetDurationSeconds {
                 finishMeditation()
             } else if scenePhase == .active, shouldAutoEndByInactivity {
                 finishMeditation(autoEndedByInactivity: true)
@@ -113,15 +131,11 @@ struct ActiveMeditationView: View {
             WorkoutSummaryView(
                 session: session,
                 onFinish: {
-                    finishedSession = nil
                     closeMeditationHost()
                 },
                 onReturnToWorkoutList: {
                     onReturnToWorkoutList?()
-                    finishedSession = nil
-                    DispatchQueue.main.async {
-                        closeMeditationHost()
-                    }
+                    closeMeditationHost()
                 }
             )
         }
@@ -150,6 +164,7 @@ struct ActiveMeditationView: View {
     }
 
     private func closeMeditationHost() {
+        // Remove o overlay do MainTab (cronômetro + resumo juntos).
         if let onHostClose {
             onHostClose()
         } else {
@@ -260,12 +275,37 @@ struct ActiveMeditationView: View {
         Button {
             finishMeditation()
         } label: {
-            Label("Finalizar Meditação", systemImage: "checkmark.circle.fill")
+            Label(
+                isStudyFocusSession ? "Finalizar foco" : "Finalizar Meditação",
+                systemImage: "checkmark.circle.fill"
+            )
         }
         .buttonStyle(PrimaryButtonStyle())
     }
 
+    private var isStudyFocusSession: Bool {
+        config.isStudyFocus
+    }
+
+    private func syncStudyFocusLockScreen() {
+        guard isStudyFocusSession, !isFinishing, finishedSession == nil,
+              let session = workoutStore.activeSession else { return }
+        // Fim absoluto da sessão — a Live Activity conta sozinha com o celular bloqueado.
+        let endDate = session.startedAt.addingTimeInterval(TimeInterval(config.targetDurationSeconds))
+        WorkoutLiveActivityController.shared.startOrUpdate(
+            session: session,
+            exerciseName: config.topic.name,
+            setsLabel: "estudo restante",
+            exerciseElapsedSeconds: elapsedSeconds,
+            isResting: true,
+            restEndDate: endDate,
+            modalitySystemImage: "book.fill"
+        )
+    }
+
     private var shouldAutoEndByInactivity: Bool {
+        // Sessão de estudo pode durar o tempo escolhido sem auto-fim por “inatividade”.
+        guard !isStudyFocusSession else { return false }
         guard let startedAt = workoutStore.activeSession?.startedAt, !isFinishing else { return false }
         return Date.now.timeIntervalSince(startedAt) >= WorkoutStore.autoEndInactivityLimit
     }
@@ -293,6 +333,9 @@ struct ActiveMeditationView: View {
         isFinishing = true
 
         watchConnectivity.stopWorkoutOnWatch()
+        if isStudyFocusSession {
+            WorkoutLiveActivityController.shared.end()
+        }
 
         elapsedSeconds = wallClockElapsedSeconds()
 
@@ -328,6 +371,18 @@ struct ActiveMeditationView: View {
             session: session,
             athleteName: authService.currentUser?.greetingName ?? "Atleta"
         )
+
+        if isStudyFocusSession || config.isStudyFocus {
+            StudyFocusStore.shared.recordCompletedSession(
+                cardName: config.topic.name,
+                durationSeconds: elapsedSeconds,
+                prioritiesCount: config.topic.prompts.filter { $0.localizedCaseInsensitiveContains("prioridade") }.count
+            )
+            NotificationService.shared.deliverStudyFocusProgressNotification(
+                athleteName: authService.currentUser?.greetingName ?? "Atleta",
+                sessions: workoutStore.sessionHistory + [session]
+            )
+        }
 
         finishedSession = session
         workoutStore.endSession(persisting: session)

@@ -61,6 +61,7 @@ data class FinishedWorkout(
     val recentMinutes: List<Int>,
     val exerciseSeconds: String = "58:12",
     val restSeconds: String = "26:36",
+    val studyPrioritiesCount: Int = 0,
 ) {
     fun methodLabel(): String = when {
         title.contains("Cabo", ignoreCase = true) -> "Método Militar · Cabo"
@@ -310,9 +311,17 @@ fun WorkoutShareCard(session: FinishedWorkout, modifier: Modifier = Modifier) {
                     PerformanceBar("TEMPO", session.duration, 0.45f, HealthFitColors.Accent)
                     session.calories?.let { PerformanceBar("KCAL", "$it", (it / 180f).coerceIn(0.2f, 1f), HealthFitColors.AccentSecondary) }
                 } else {
-                    Text("SÉRIES POR EXERCÍCIO", color = Color.White.copy(alpha = 0.45f), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (session.title.startsWith("Estudo", ignoreCase = true)) "FOCO EM ESTUDO" else "SÉRIES POR EXERCÍCIO",
+                        color = Color.White.copy(alpha = 0.45f),
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
                     val shown = session.exercises.take(6)
-                    val maxSets = shown.maxOf { it.sets }.coerceAtLeast(1)
+                    if (shown.isEmpty()) {
+                        PerformanceBar("TEMPO", session.duration, 0.55f, HealthFitColors.Accent)
+                    } else {
+                    val maxSets = shown.maxOfOrNull { it.sets }?.coerceAtLeast(1) ?: 1
                     Row(
                         modifier = Modifier.fillMaxWidth().height(72.dp).padding(top = 6.dp),
                         verticalAlignment = Alignment.Bottom,
@@ -346,6 +355,7 @@ fun WorkoutShareCard(session: FinishedWorkout, modifier: Modifier = Modifier) {
                                 )
                             }
                         }
+                    }
                     }
                 }
                 if (session.recentMinutes.size >= 2) {

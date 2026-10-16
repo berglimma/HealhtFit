@@ -5,12 +5,12 @@ struct MeditationSetupView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var watchConnectivity: WatchConnectivityManager
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dismiss) private var dismiss
 
     let topic: MeditationTopic
     @State private var selectedDuration: MeditationDuration = .ten
-    @State private var showActiveMeditation = false
-    @State private var shouldPopToWorkoutList = false
-    @Environment(\.dismiss) private var dismiss
+    /// Após Fechar no resumo (host do MainTab), volta à lista de meditação.
+    @State private var popWhenHostCloses = false
 
     private var config: MeditationWorkoutConfig {
         MeditationWorkoutConfig(topic: topic, duration: selectedDuration)
@@ -30,15 +30,11 @@ struct MeditationSetupView: View {
         .background(AppTheme.background)
         .navigationTitle(topic.name)
         .navigationBarTitleDisplayMode(.large)
-        .fullScreenCover(isPresented: $showActiveMeditation, onDismiss: {
-            if shouldPopToWorkoutList {
-                shouldPopToWorkoutList = false
-                dismiss()
-            }
-        }) {
-            ActiveMeditationView(config: config, onHostClose:  {
-                shouldPopToWorkoutList = true
-            })
+        // Sessão roda só no overlay do MainTab. Ao Fechar o resumo, volta à lista de meditação.
+        .onChange(of: workoutStore.activeWorkoutUICloseTick) { _, _ in
+            guard popWhenHostCloses else { return }
+            popWhenHostCloses = false
+            dismiss()
         }
     }
 
@@ -144,7 +140,7 @@ struct MeditationSetupView: View {
                 sessionTitle: config.title,
                 athleteName: athleteName
             )
-            showActiveMeditation = true
+            popWhenHostCloses = true
         } label: {
             Label("Iniciar Meditação", systemImage: "play.fill")
         }

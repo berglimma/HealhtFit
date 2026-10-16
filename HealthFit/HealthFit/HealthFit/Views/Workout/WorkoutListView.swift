@@ -198,7 +198,16 @@ struct WorkoutListView: View {
                     .onAppear { discardAlignedMealPlanForOtherWorkout() }
             }
             .navigationDestination(for: MeditationTopic.self) { topic in
-                MeditationSetupView(topic: topic)
+                if topic.name == "Foco em Estudo" {
+                    StudyFocusHubView()
+                        .onAppear { discardAlignedMealPlanForOtherWorkout() }
+                } else {
+                    MeditationSetupView(topic: topic)
+                        .onAppear { discardAlignedMealPlanForOtherWorkout() }
+                }
+            }
+            .navigationDestination(for: StudyFocusHubRoute.self) { _ in
+                StudyFocusHubView()
                     .onAppear { discardAlignedMealPlanForOtherWorkout() }
             }
             .navigationDestination(for: GuidedLevelRoute.self) { route in

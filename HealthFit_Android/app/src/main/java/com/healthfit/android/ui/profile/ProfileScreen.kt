@@ -64,12 +64,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthfit.android.R
 import com.healthfit.android.ui.components.BiotypeSection
+import com.healthfit.android.ui.home.ConstancyStore
 import com.healthfit.android.ui.home.DailyWellness
 import com.healthfit.android.ui.home.SleepCard
 import com.healthfit.android.ui.home.WaterCard
 import com.healthfit.android.ui.components.DarkCard
 import com.healthfit.core.model.UserProfile
 import com.healthfit.designsystem.HealthFitColors
+import androidx.compose.material.icons.filled.SportsTennis
 
 private data class Modality(val title: String, val subtitle: String, val icon: ImageVector, val group: String)
 
@@ -96,6 +98,7 @@ fun ProfileScreen(
             Modality("Escalada", "Escalada em parede indoor ou rocha", Icons.Filled.DirectionsRun, "CARDIO"),
             Modality("Remo", "Remo na água ou ergométrico · SPM, split / 500 m", Icons.Filled.Pool, "CARDIO"),
             Modality("Natação", "Nados em piscina com voltas, distância e ritmo", Icons.Filled.Pool, "CARDIO"),
+            Modality("Tênis", "Partida ou treino · placar, zonas de FC, picos e carga", Icons.Filled.SportsTennis, "CARDIO"),
             Modality("Polichinelo", "Jumping jacks em ritmo constante", Icons.Filled.DirectionsRun, "CARDIO"),
             Modality("Luta", "Boxe, Muay Thai, Jiu-Jitsu e MMA", Icons.Filled.FitnessCenter, "CARDIO"),
             Modality("Corrida", "Corrida ao ar livre com mapa GPS, ritmo e rota", Icons.Filled.DirectionsRun, "CARDIO"),
@@ -185,6 +188,10 @@ fun ProfileScreen(
                 sent = prescribed,
             )
             "coach-alunos" -> CoachStudentsScreen(onBack = { page = "coach" }, onOpenSheet = { page = "coach-fichas" })
+            "coach-anamnesis" -> com.healthfit.android.ui.nutrition.NutritionAnamnesisEditorScreen(
+                isCoachMode = true,
+                onBack = { page = "coach" },
+            )
             "coach-prescribe" -> CoachPrescribeScreen(onBack = { page = "coach" }) {
                 prescribed = true
                 page = "coach"
@@ -447,11 +454,33 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             Text(
-                "Ajustar descanso",
+                "Ajustar descanso entre séries",
                 color = HealthFitColors.Accent,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(top = 8.dp).clickable { page = "body" },
             )
+        }
+        Spacer(Modifier.height(10.dp))
+        var todayRest by remember { mutableStateOf(ConstancyStore.isTodayRestDay(context)) }
+        DarkCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Hoje é dia de descanso", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Aparece no calendário de Constância no Início",
+                        color = Color(0xFF8E989F),
+                        fontSize = 12.sp,
+                    )
+                }
+                Switch(
+                    checked = todayRest,
+                    onCheckedChange = {
+                        todayRest = it
+                        ConstancyStore.setTodayRestDay(context, it)
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = HealthFitColors.Accent),
+                )
+            }
         }
         Spacer(Modifier.height(10.dp))
         DarkCard(onClick = { page = "measures" }) {

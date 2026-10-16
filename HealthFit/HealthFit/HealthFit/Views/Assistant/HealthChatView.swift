@@ -195,6 +195,10 @@ struct HealthChatView: View {
                     sessions: workoutStore.sessionHistory,
                     accountCreatedAt: authService.currentUser?.createdAt
                 )
+                assistant.checkStudyFocusInsightsIfNeeded(
+                    context: context,
+                    sessions: workoutStore.sessionHistory
+                )
                 assistant.checkSupplementNudgeIfNeeded(
                     context: context,
                     todayIntakes: wellnessService.todaySupplementIntakes
@@ -245,6 +249,10 @@ struct HealthChatView: View {
                         sessions: workoutStore.sessionHistory,
                         accountCreatedAt: authService.currentUser?.createdAt
                     )
+                    assistant.checkStudyFocusInsightsIfNeeded(
+                        context: context,
+                        sessions: workoutStore.sessionHistory
+                    )
                     assistant.checkSupplementNudgeIfNeeded(
                         context: context,
                         todayIntakes: wellnessService.todaySupplementIntakes
@@ -289,6 +297,10 @@ struct HealthChatView: View {
                         context: context,
                         sessions: workoutStore.sessionHistory,
                         accountCreatedAt: authService.currentUser?.createdAt
+                    )
+                    assistant.checkStudyFocusInsightsIfNeeded(
+                        context: context,
+                        sessions: workoutStore.sessionHistory
                     )
                     assistant.checkSupplementNudgeIfNeeded(
                         context: context,

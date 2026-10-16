@@ -149,6 +149,49 @@ fun AssistantScreen(
 
     fun appendProactiveInsights() {
         if (isTyping) return
+        val studySessions = com.healthfit.android.ui.workouts.StudyFocusStore.loadSessions(context)
+        val studyProfile = AssistantStudyFocusEngine.buildProfile(studySessions)
+        AssistantStudyFocusEngine.evaluateInactivity(
+            studySessions,
+            com.healthfit.android.ui.workouts.StudyFocusStore.lastStudyAt(context),
+        )?.let {
+            val text = AssistantStudyFocusEngine.inactivityMessage(name)
+            if (messages.none { !it.fromUser && it.text == text }) {
+                messages += ChatLine(false, text)
+            }
+            return
+        }
+        AssistantStudyFocusEngine.missedStudyWindowMessage(
+            athleteName = name,
+            profile = studyProfile,
+            sessions = studySessions,
+            lastInsightDay = com.healthfit.android.ui.workouts.StudyFocusStore.lastInsightDay(context),
+        )?.let { text ->
+            if (messages.none { !it.fromUser && it.text == text }) {
+                messages += ChatLine(false, text)
+                com.healthfit.android.ui.workouts.StudyFocusStore.setLastInsightDay(
+                    context,
+                    AssistantRoutineStore.dayKey(),
+                )
+            }
+            return
+        }
+        AssistantStudyFocusEngine.progressMessage(
+            athleteName = name,
+            profile = studyProfile,
+            sessions = studySessions,
+            lastProgressDay = com.healthfit.android.ui.workouts.StudyFocusStore.lastProgressDay(context),
+        )?.let { text ->
+            if (messages.none { !it.fromUser && it.text == text }) {
+                messages += ChatLine(false, text)
+                com.healthfit.android.ui.workouts.StudyFocusStore.setLastProgressDay(
+                    context,
+                    AssistantRoutineStore.dayKey(),
+                )
+            }
+            return
+        }
+
         val fresh = AssistantRoutineStore.load(context, userId)
         val built = AssistantRoutineProfileEngine.buildProfile(fresh)
         val week = AssistantRoutineProfileEngine.weeklyWorkoutCount(fresh)

@@ -99,8 +99,19 @@ enum WeeklyProgressAnalyzer {
     }
 
     static func isMeditationSession(_ session: WorkoutSession) -> Bool {
-        session.workoutTitle.lowercased().hasPrefix("meditação")
-            || session.workoutTitle.lowercased().hasPrefix("meditacao")
+        let lower = session.workoutTitle.lowercased()
+        if isStudyFocusSession(session) { return true }
+        return lower.hasPrefix("meditação") || lower.hasPrefix("meditacao")
+    }
+
+    /// Sessões do hub Foco em Estudo (rotina aprendida pelo IAssistente).
+    static func isStudyFocusSession(_ session: WorkoutSession) -> Bool {
+        let lower = session.workoutTitle.lowercased()
+        return lower.hasPrefix("estudo")
+            || lower.contains("foco em estudo")
+            || lower.contains(" — estudo")
+            || (lower.hasPrefix("meditação") && lower.contains("estudo"))
+            || (lower.hasPrefix("meditacao") && lower.contains("estudo"))
     }
 
     /// Treino que conta para streak / alerta de 7 dias (meditação não entra).

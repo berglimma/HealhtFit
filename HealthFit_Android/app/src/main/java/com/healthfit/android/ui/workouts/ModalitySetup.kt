@@ -47,10 +47,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthfit.android.R
 import com.healthfit.android.ui.components.GradientButton
+import com.healthfit.android.ui.kite.KiteSessionSetup
+import com.healthfit.android.ui.kite.KiteSetupSection
+import com.healthfit.android.ui.kite.KiteSpotBuddyConsentSheet
+import com.healthfit.android.ui.kite.KiteSpotBuddyPreferences
+import com.healthfit.android.ui.kite.SurfSessionSetup
+import com.healthfit.android.ui.kite.SurfSetupSection
+import com.healthfit.android.ui.kite.WaterWindConditionsScreen
+import com.healthfit.android.ui.tennis.TennisSessionSetup
+import com.healthfit.android.ui.tennis.TennisSetupSection
 import com.healthfit.designsystem.HealthFitColors
+import androidx.compose.ui.platform.LocalContext
 import kotlin.math.roundToInt
 
-private enum class SportKind { Run, Walk, Bike, Treadmill, Swim, Surf, Kite, Row, Climb, Other }
+private enum class SportKind { Run, Walk, Bike, Treadmill, Swim, Surf, Kite, Tennis, Row, Climb, Other }
 
 private enum class Intensity(val title: String, val detail: String, val minutes: Int, val multiplier: Float, val pace: String, val color: Color) {
     Low("Baixa", "Ritmo leve, foco em resistência e recuperação", 50, 0.75f, "7:00 /km", Color(0xFF3DDC3A)),
@@ -66,9 +76,10 @@ fun CardioSetupScreen(
     title: String,
     imageRes: Int,
     onBack: () -> Unit,
-    onStart: (minutes: Int, detail: String) -> Unit,
+    onStart: (minutes: Int, detail: String, spotBuddyEnabled: Boolean) -> Unit,
 ) {
     BackHandler(onBack = onBack)
+    val context = LocalContext.current
     val kind = sportKind(title)
     var freeDistance by remember { mutableStateOf(kind == SportKind.Treadmill) }
     var distanceKm by remember { mutableIntStateOf(if (kind == SportKind.Bike) 20 else 5) }
@@ -78,10 +89,69 @@ fun CardioSetupScreen(
     var primary by remember { mutableStateOf(defaultPrimary(kind)) }
     var secondary by remember { mutableStateOf(defaultSecondary(kind)) }
     var diary by remember { mutableStateOf(false) }
+    var kiteSetup by remember { mutableStateOf(KiteSessionSetup()) }
+    var surfSetup by remember { mutableStateOf(SurfSessionSetup()) }
+    var tennisSetup by remember { mutableStateOf(TennisSessionSetup()) }
+    var showSpotConsent by remember { mutableStateOf(false) }
+    var showWindSheet by remember { mutableStateOf(false) }
     val outdoor = kind == SportKind.Run || kind == SportKind.Walk || kind == SportKind.Bike || kind == SportKind.Treadmill
     val water = kind == SportKind.Surf || kind == SportKind.Kite
-    val minutes = if (water) 45 else intensity.minutes
+    val tennis = kind == SportKind.Tennis
+    val minutes = when {
+        water -> 45
+        tennis -> tennisSetup.minutes
+        else -> intensity.minutes
+    }
     val kcal = (kcalPerMin(title) * intensity.multiplier * minutes).roundToInt()
+
+    if (showSpotConsent) {
+        KiteSpotBuddyConsentSheet(
+            onAccept = {
+                KiteSpotBuddyPreferences.grantConsent(context)
+                KiteSpotBuddyPreferences.setEnabledForNextSession(context, true)
+                kiteSetup = kiteSetup.copy(spotBuddyEnabled = true)
+                showSpotConsent = false
+            },
+            onCancel = { showSpotConsent = false },
+        )
+        return
+    }
+
+    if (showWindSheet && water) {
+        WaterWindConditionsScreen(
+            isKitesurf = kind == SportKind.Kite,
+            preferredSpot = if (kind == SportKind.Kite) kiteSetup.spot else surfSetup.spot,
+            startButtonTitle = startLabel(kind, title),
+            onCancel = { showWindSheet = false },
+            onStart = { snap ->
+                showWindSheet = false
+                when (kind) {
+                    SportKind.Kite -> {
+                        val updated = snap?.let {
+                            kiteSetup.copy(
+                                windSummary = "${it.windSpeedKmh.toInt()} km/h ${it.windLabel}",
+                                tideSummary = it.estimatedTideLabel,
+                            )
+                        } ?: kiteSetup
+                        kiteSetup = updated
+                        onStart(minutes, updated.detailLine(minutes), updated.spotBuddyEnabled)
+                    }
+                    SportKind.Surf -> {
+                        val updated = snap?.let {
+                            surfSetup.copy(
+                                windSummary = "${it.windSpeedKmh.toInt()} km/h ${it.windLabel}",
+                                tideSummary = it.estimatedTideLabel,
+                            )
+                        } ?: surfSetup
+                        surfSetup = updated
+                        onStart(minutes, updated.detailLine(minutes), false)
+                    }
+                    else -> Unit
+                }
+            },
+        )
+        return
+    }
 
     if (diary) {
         DiaryScreen(title, onBack = { diary = false })
@@ -134,16 +204,23 @@ fun CardioSetupScreen(
                 OptionGrid(listOf("10 voltas", "20 voltas", "40 voltas", "60 voltas"), secondary) { secondary = it }
             }
             SportKind.Surf -> {
-                SectionTitle("Setup Surf")
-                OptionGrid(listOf("Shortboard", "Funboard", "Longboard"), primary) { primary = it }
-                SectionTitle("Vento e maré")
-                OptionGrid(listOf("Vento fraco", "Moderado", "Forte"), secondary) { secondary = it }
+                SurfSetupSection(
+                    setup = surfSetup,
+                    onSetupChange = { surfSetup = it },
+                )
             }
             SportKind.Kite -> {
-                SectionTitle("Setup Kitesurf")
-                OptionGrid(listOf("Kite 7 m", "Kite 9 m", "Kite 12 m"), primary) { primary = it }
-                SectionTitle("Modo")
-                OptionGrid(listOf("Freeride", "Wave", "Freestyle"), secondary) { secondary = it }
+                KiteSetupSection(
+                    setup = kiteSetup,
+                    onSetupChange = { kiteSetup = it },
+                    onRequestConsent = { showSpotConsent = true },
+                )
+            }
+            SportKind.Tennis -> {
+                TennisSetupSection(
+                    setup = tennisSetup,
+                    onSetupChange = { tennisSetup = it },
+                )
             }
             SportKind.Row -> {
                 SectionTitle("Barco")
@@ -159,7 +236,7 @@ fun CardioSetupScreen(
             }
             else -> Unit
         }
-        if (!water) {
+        if (!water && !tennis) {
             CalorieBlock(useCalories, kcalGoal, { useCalories = it }, { kcalGoal = it })
             SectionTitle("Intensidade")
             Intensity.entries.forEach { option ->
@@ -175,29 +252,64 @@ fun CardioSetupScreen(
             rows = buildList {
                 add("Duração" to "$minutes min")
                 if (outdoor) add("Distância" to if (freeDistance) "Livre" else "$distanceKm km")
-                if (kind != SportKind.Run && kind != SportKind.Walk && kind != SportKind.Bike) {
-                    if (primary.isNotBlank()) add("Ajuste" to primary)
-                    if (secondary.isNotBlank() && kind != SportKind.Other) add("Detalhe" to secondary)
+                when (kind) {
+                    SportKind.Kite -> {
+                        add("Equipamento" to kiteSetup.equipment.title)
+                        add("Velejo" to kiteSetup.ridingMode.title)
+                        add("Prancha" to kiteSetup.board.title)
+                        if (kiteSetup.spot.name.isNotBlank()) add("Spot" to kiteSetup.spot.name)
+                        if (kiteSetup.windSummary.isNotBlank()) add("Vento" to kiteSetup.windSummary)
+                        add("Spot Buddy" to if (kiteSetup.spotBuddyEnabled) "Ativo" else "Off")
+                    }
+                    SportKind.Surf -> {
+                        add("Prancha" to surfSetup.board.title)
+                        if (surfSetup.spot.name.isNotBlank()) add("Spot" to surfSetup.spot.name)
+                        if (surfSetup.windSummary.isNotBlank()) add("Vento" to surfSetup.windSummary)
+                        if (surfSetup.tideSummary.isNotBlank()) add("Maré" to surfSetup.tideSummary)
+                    }
+                    SportKind.Tennis -> {
+                        add("Sessão" to tennisSetup.sessionType.title)
+                        add("Formato" to tennisSetup.matchFormat.title)
+                        add("Superfície" to tennisSetup.surface.title)
+                        add("Nível" to tennisSetup.skillLevel.title)
+                        add("Mão" to tennisSetup.handedness.title)
+                        if (tennisSetup.courtName.isNotBlank()) add("Quadra" to tennisSetup.courtName)
+                        add("GPS" to if (tennisSetup.surface.isOutdoor) "Outdoor" else "Indoor")
+                    }
+                    else -> {
+                        if (kind != SportKind.Run && kind != SportKind.Walk && kind != SportKind.Bike) {
+                            if (primary.isNotBlank()) add("Ajuste" to primary)
+                            if (secondary.isNotBlank() && kind != SportKind.Other) add("Detalhe" to secondary)
+                        }
+                    }
                 }
-                if (!water) add("Intensidade" to intensity.title)
+                if (!water && !tennis) add("Intensidade" to intensity.title)
                 add("Calorias" to if (useCalories) "Meta $kcalGoal kcal" else "~$kcal kcal")
             },
         )
         Spacer(Modifier.height(16.dp))
         GradientButton(startLabel(kind, title), onClick = {
-            val distance = when {
-                !outdoor -> ""
-                freeDistance -> "distância livre"
-                else -> "$distanceKm km"
+            when (kind) {
+                SportKind.Kite, SportKind.Surf -> showWindSheet = true
+                SportKind.Tennis -> onStart(minutes, tennisSetup.detailLine(), false)
+                else -> {
+                    val distance = when {
+                        !outdoor -> ""
+                        freeDistance -> "distância livre"
+                        else -> "$distanceKm km"
+                    }
+                    val extra = listOf(primary, secondary).filter {
+                        it.isNotBlank() && kind != SportKind.Run && kind != SportKind.Walk && kind != SportKind.Bike
+                    }
+                    val parts = listOfNotNull(
+                        distance.takeIf { it.isNotBlank() },
+                        extra.takeIf { it.isNotEmpty() }?.joinToString(" · "),
+                        "intensidade ${intensity.title.lowercase()}",
+                        if (useCalories) "meta $kcalGoal kcal" else "~$kcal kcal",
+                    )
+                    onStart(minutes, parts.joinToString(" · "), false)
+                }
             }
-            val extra = listOf(primary, secondary).filter { it.isNotBlank() && kind != SportKind.Run && kind != SportKind.Walk && kind != SportKind.Bike }
-            val parts = listOfNotNull(
-                distance.takeIf { it.isNotBlank() },
-                extra.takeIf { it.isNotEmpty() }?.joinToString(" · "),
-                if (water) null else "intensidade ${intensity.title.lowercase()}",
-                if (useCalories) "meta $kcalGoal kcal" else "~$kcal kcal",
-            )
-            onStart(minutes, parts.joinToString(" · "))
         }, icon = Icons.Filled.PlayArrow)
         Spacer(Modifier.height(28.dp))
     }
@@ -601,6 +713,8 @@ private fun DiaryScreen(title: String, onBack: () -> Unit) {
         title.contains("bike") || title.contains("Bicicleta") -> listOf("Ontem · 18,4 km · 210 m de elevação", "2 out · 32 km · ritmo 22 km/h")
         title == "Surf" -> listOf("Ontem · 11 ondas · spot praia · vento fraco", "1 out · 8 ondas · maré enchente")
         title == "Kitesurf" -> listOf("Ontem · kite 9 m · 6 saltos · vento 18 nós", "30 set · wave · 42 min")
+        title == "Tênis" || title.contains("Tenis", ignoreCase = true) ->
+            listOf("Ontem · Partida · Simples · saibro · 2×6 6×4", "4 out · Treino · duro outdoor · 55 min")
         else -> listOf("Ontem · via esportiva · grau 6", "28 set · boulder · 5 problemas")
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
@@ -626,6 +740,7 @@ private fun sportKind(title: String) = when {
     title.contains("Natação") -> SportKind.Swim
     title == "Surf" -> SportKind.Surf
     title == "Kitesurf" -> SportKind.Kite
+    title == "Tênis" || title.equals("Tenis", ignoreCase = true) -> SportKind.Tennis
     title == "Remo" -> SportKind.Row
     title == "Escalada" -> SportKind.Climb
     title.contains("Caminhada") -> SportKind.Walk
@@ -655,6 +770,7 @@ private fun startLabel(kind: SportKind, title: String) = when (kind) {
     SportKind.Swim -> "Iniciar Natação"
     SportKind.Surf -> "Iniciar Surf"
     SportKind.Kite -> "Iniciar Kitesurf"
+    SportKind.Tennis -> "Iniciar Tênis"
     else -> "Iniciar $title"
 }
 
@@ -683,6 +799,7 @@ private fun diaryTitle(title: String) = when {
     title.contains("bike", ignoreCase = true) || title.contains("Bicicleta pedal") -> "Diário de bike"
     title == "Kitesurf" -> "Diário de kite surf"
     title == "Surf" -> "Diário de surf"
+    title == "Tênis" || title.equals("Tenis", ignoreCase = true) -> "Diário de tenis"
     title == "Escalada" -> "Diário de escalada"
     else -> null
 }
@@ -692,6 +809,7 @@ private fun diarySubtitle(title: String) = when {
     title.contains("bike", ignoreCase = true) || title.contains("Bicicleta") -> "Problemas, manutenção e vida útil das peças"
     title == "Kitesurf" -> "Saltos, spot, vento e comparativo"
     title == "Surf" -> "Spot, condições e comparativo de sessões"
+    title == "Tênis" || title.equals("Tenis", ignoreCase = true) -> "Carga, placar, zonas de FC e recuperação"
     else -> "Progressão por grau, vias e equipamento"
 }
 
@@ -700,6 +818,7 @@ private fun modalityLead(kind: SportKind) = when (kind) {
     SportKind.Swim -> "Nados em piscina com voltas, distância e ritmo"
     SportKind.Surf -> "Sessão de surf com spot e registro de condições"
     SportKind.Kite -> "Kitesurf com equipamento, modos e vento"
+    SportKind.Tennis -> "Partida ou treino · placar, zonas de FC, picos e carga intermitente"
     SportKind.Row -> "Remo na água ou ergométrico, distância e split"
     SportKind.Climb -> "Escalada em parede indoor ou rocha"
     SportKind.Walk -> "Caminhada outdoor com mapa, ritmo e passos"
@@ -711,14 +830,15 @@ private fun modalityLead(kind: SportKind) = when (kind) {
 private fun kcalPerMin(title: String) = when {
     title.contains("Burpee") -> 13.0
     title.contains("Kitesurf") || title.contains("Corda") -> 12.0
-    title.contains("Escada") || title.contains("Escalada") || title.contains("Natação") -> 11.0
+    title.contains("Escada") || title.contains("Escalada") || title.contains("Natação") ||
+        title.contains("Tênis") || title.contains("Tenis", ignoreCase = true) -> 11.0
     title.contains("Corrida") || title.contains("Mountain") || title == "Remo" || title == "Surf" -> 10.0
     title.contains("Esteira") || title.contains("Polichinelo") || title.contains("pedal") -> 9.0
     title.contains("Caminhada") -> 6.0
     else -> 8.0
 }
 
-private fun meditationPrompts(title: String): List<String> = when {
+fun meditationPrompts(title: String): List<String> = when {
     title.contains("Relaxamento") -> listOf(
         "Deite-se ou sente-se com a coluna ereta.",
         "Traga atenção aos dedos dos pés. Relaxe-os completamente.",
@@ -735,6 +855,14 @@ private fun meditationPrompts(title: String): List<String> = when {
         "Agradeça pela saúde, mesmo que em pequenas vitórias.",
         "Pense em alguém que te apoia.",
         "Carregue essa sensação pelo resto do dia.",
+    )
+    title.contains("Estudo") -> listOf(
+        "Silencie o celular e afaste o que não for estudo.",
+        "Defina a prioridade #1 desta sessão e mantenha-a à vista.",
+        "Respire fundo: inspire 4, expire 6 — mente pronta.",
+        "Trabalhe só na tarefa atual. Uma coisa de cada vez.",
+        "Se a mente divagar, anote o pensamento e volte ao estudo.",
+        "Encerre revisando o que concluiu. Bom trabalho.",
     )
     title.contains("Foco") -> listOf(
         "Sente-se em postura alerta, mas relaxada.",

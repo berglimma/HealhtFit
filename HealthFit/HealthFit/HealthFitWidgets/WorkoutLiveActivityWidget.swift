@@ -41,20 +41,18 @@ struct WorkoutLiveActivityWidget: Widget {
                     }
                 }
             } compactLeading: {
-                Image(systemName: context.state.phase == .rest
-                      ? "pause.circle.fill"
-                      : context.state.modalitySystemImage)
-                    .foregroundStyle(context.state.phase == .rest ? .orange : .green)
+                Image(systemName: compactLeadingSymbol(context.state))
+                    .foregroundStyle(accentColor(for: context.state))
             } compactTrailing: {
                 timerView(for: context.state)
                     .font(.caption.monospacedDigit().weight(.bold))
-                    .foregroundStyle(context.state.phase == .rest ? .orange : .primary)
+                    .foregroundStyle(accentColor(for: context.state))
                     .frame(maxWidth: 64)
                     .minimumScaleFactor(0.6)
             } minimal: {
-                Image(systemName: context.state.phase == .rest ? "pause.circle.fill" : "heart.fill")
-                    .foregroundStyle(context.state.phase == .rest ? .orange : .green)
-                    .symbolEffect(.pulse, options: .repeating, isActive: context.state.phase != .rest)
+                Image(systemName: isStudyFocus(context.state) ? "book.fill" : (context.state.phase == .rest ? "pause.circle.fill" : "heart.fill"))
+                    .foregroundStyle(accentColor(for: context.state))
+                    .symbolEffect(.pulse, options: .repeating, isActive: context.state.phase != .rest || isStudyFocus(context.state))
             }
         }
     }
@@ -69,12 +67,29 @@ struct WorkoutLiveActivityWidget: Widget {
     }
 
     private func phaseBadge(_ state: WorkoutLiveActivityAttributes.ContentState) -> some View {
-        Text(state.phase == .rest ? "PAUSA" : "TREINO")
+        Text(isStudyFocus(state) ? "ESTUDO" : (state.phase == .rest ? "PAUSA" : "TREINO"))
             .font(.caption2.weight(.bold))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(state.phase == .rest ? Color.orange.opacity(0.25) : Color.green.opacity(0.25))
+            .background(accentColor(for: state).opacity(0.25))
             .clipShape(Capsule())
+    }
+
+    private func isStudyFocus(_ state: WorkoutLiveActivityAttributes.ContentState) -> Bool {
+        state.modalitySystemImage == "book.fill"
+            || state.workoutTitle.localizedCaseInsensitiveContains("estudo")
+            || state.exerciseName.localizedCaseInsensitiveContains("estudo")
+            || state.setsLabel.localizedCaseInsensitiveContains("estudo")
+    }
+
+    private func accentColor(for state: WorkoutLiveActivityAttributes.ContentState) -> Color {
+        if isStudyFocus(state) { return Color(red: 0.48, green: 0.55, blue: 1.0) }
+        return state.phase == .rest ? .orange : .green
+    }
+
+    private func compactLeadingSymbol(_ state: WorkoutLiveActivityAttributes.ContentState) -> String {
+        if isStudyFocus(state) { return "book.fill" }
+        return state.phase == .rest ? "pause.circle.fill" : state.modalitySystemImage
     }
 }
 
@@ -115,15 +130,20 @@ private struct LockScreenWorkoutLiveActivityView: View {
                     Text("·")
                         .foregroundStyle(.white.opacity(0.35))
 
-                    if state.phase != .rest {
+                    if !isStudy && state.phase != .rest {
                         Image(systemName: state.modalitySystemImage)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.green)
                     }
+                    if isStudy {
+                        Image(systemName: "book.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(studyAccent)
+                    }
 
-                    Text(state.phase == .rest ? "Pausa" : "Exercício")
+                    Text(isStudy ? "Estudo" : (state.phase == .rest ? "Pausa" : "Exercício"))
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(state.phase == .rest ? .orange : .green)
+                        .foregroundStyle(isStudy ? studyAccent : (state.phase == .rest ? .orange : .green))
                         .lineLimit(1)
                 }
 
@@ -144,11 +164,11 @@ private struct LockScreenWorkoutLiveActivityView: View {
                 if state.phase == .rest, let end = state.restEndDate {
                     Text(timerInterval: Date.now...max(end, Date.now.addingTimeInterval(1)), countsDown: true, showsHours: true)
                         .font(.system(size: 28, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(isStudy ? studyAccent : .orange)
                         .multilineTextAlignment(.trailing)
-                    Text("restante")
+                    Text(isStudy ? "estudo restante" : "restante")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.orange.opacity(0.8))
+                        .foregroundStyle((isStudy ? studyAccent : .orange).opacity(0.8))
                 } else {
                     Text(timerInterval: state.exerciseTimerStart...Date.distantFuture, countsDown: false, showsHours: true)
                         .font(.system(size: 28, weight: .bold, design: .monospaced))
@@ -162,6 +182,17 @@ private struct LockScreenWorkoutLiveActivityView: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
+    }
+
+    private var isStudy: Bool {
+        state.modalitySystemImage == "book.fill"
+            || state.workoutTitle.localizedCaseInsensitiveContains("estudo")
+            || state.exerciseName.localizedCaseInsensitiveContains("estudo")
+            || state.setsLabel.localizedCaseInsensitiveContains("estudo")
+    }
+
+    private var studyAccent: Color {
+        Color(red: 0.48, green: 0.55, blue: 1.0)
     }
 }
 

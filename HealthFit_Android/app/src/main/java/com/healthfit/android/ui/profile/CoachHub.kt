@@ -44,9 +44,11 @@ import coil.compose.AsyncImage
 import java.io.File
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.healthfit.android.R
 import com.healthfit.android.ui.components.DarkCard
 import com.healthfit.android.ui.components.GradientButton
+import com.healthfit.android.ui.nutrition.NutritionCareStore
 import com.healthfit.designsystem.HealthFitColors
 
 @Composable
@@ -92,12 +94,17 @@ fun CoachEntryCard(onClick: () -> Unit) {
 
 @Composable
 fun CoachHubScreen(onBack: () -> Unit, onOpen: (String) -> Unit, sent: Boolean = false) {
+    val context = LocalContext.current
+    val anamnesis = NutritionCareStore.loadAnamnesis(context)
     HubColumn(onBack, "HealthFit Coach") {
         if (sent) {
             Text("Ficha enviada ao aluno.", color = HealthFitColors.Accent, fontWeight = FontWeight.SemiBold)
         }
-        Text("Fichas, dietas e chat do aluno vinculado.", color = Color(0xFFB7C0C8))
+        Text("Fichas, dietas, anamnese e chat do aluno vinculado.", color = Color(0xFFB7C0C8))
         Action("Alunos", "1 aluno ativo") { onOpen("coach-alunos") }
+        Action("Anamnese", "${anamnesis.completionPercent}% preenchida · queixa e histórico") {
+            onOpen("coach-anamnesis")
+        }
         Action("Prescrever", "Enviar ficha ou dieta") { onOpen("coach-prescribe") }
         Action("Chat", "Conversar com o aluno") { onOpen("coach-chat") }
         Action("Fichas", "Treino — Peito + Tríceps") { onOpen("coach-fichas") }

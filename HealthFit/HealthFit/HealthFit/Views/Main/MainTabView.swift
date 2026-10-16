@@ -328,7 +328,10 @@ struct MainTabView: View {
             ActiveMeditationView(
                 config: meditation,
                 onReturnToWorkoutList: { selectedTab = workoutsTabTag },
-                onHostClose: { hostedMeditationConfig = nil }
+                onHostClose: {
+                    hostedMeditationConfig = nil
+                    workoutStore.notifyActiveWorkoutUIClosed()
+                }
             )
             .modifier(HostedActiveWorkoutChrome(isMinimized: isHostedWorkoutMinimized))
         }

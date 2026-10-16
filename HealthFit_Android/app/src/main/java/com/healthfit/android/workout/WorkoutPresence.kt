@@ -36,10 +36,12 @@ fun WorkoutPresence(
             activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
         onDispose {
-            activity?.setShowWhenLocked(false)
-            activity?.setTurnScreenOn(false)
-            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            WorkoutLockPublisher.clear(context)
+            runCatching {
+                activity?.setShowWhenLocked(false)
+                activity?.setTurnScreenOn(false)
+                activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+            runCatching { WorkoutLockPublisher.clear(context) }
         }
     }
     LaunchedEffect(enabled) {

@@ -1,3 +1,4 @@
-• Fixed the green loading screen when leaving and returning to the app (iPhone and iPad)
-• More reliable welcome/loading after background and Stage Manager
-• Stability improvements when returning to workouts and the home screen
+• Study Focus: priority cards, durations from 30 min to 3h30 (or custom), and a realistic cover
+• Fixed Close on the post-session screen (returns to meditation without getting stuck on the timer)
+• Study reminders and progress in the Health Assistant
+• Stability improvements for meditation/study sessions

@@ -66,6 +66,7 @@ Slogan: *Sozinho você treina. Junto, você permanece.*
 | `HealthFit-card-cardio-escalada-remo-feed.png` | 1:1 | Cardio: Escalada · Remo · Natação |
 | `HealthFit-card-cardio-funcional-luta-feed.png` | 1:1 | Cardio: Funcional · Luta |
 | `HealthFit-card-modalidades-feed.png` | 1:1 | Surf · Kite · Remo · Escalada · Luta |
+| `HealthFit-card-constancia-feed.jpg` | 1:1 | Constância — calendário de treinos com foto |
 
 Pasta: `HealthFit/AppStore/marketing/pt-BR/social/`
 
@@ -252,6 +253,21 @@ Inclui Kite Spot Buddy no kitesurf.
 https://apps.apple.com/br/app/id6798621208
 
 #HealthFit #Kitesurf #Surf #Escalada #Luta #Remo
+```
+
+---
+
+## Legenda — Constância
+
+```
+📅 Constância que se vê.
+
+Anexe a foto do treino e marque seus dias no calendário.
+Treino · descanso · evolução no mesmo lugar.
+
+📲 https://apps.apple.com/br/app/id6798621208
+
+#HealthFit #Constância #Treino #Calendário #Fitness #Motivação #Academia
 ```
 
 ---

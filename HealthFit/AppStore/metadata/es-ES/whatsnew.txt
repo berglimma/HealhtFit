@@ -1,3 +1,4 @@
-• Corrección de la pantalla verde al salir y volver a la app (iPhone e iPad)
-• Carga/bienvenida más estable tras segundo plano y Stage Manager
-• Mejoras de estabilidad al volver al entrenamiento y a la pantalla de inicio
+• Foco en Estudio: tarjetas con prioridades, duraciones de 30 min a 3h30 (o personalizado) y portada realista
+• Corrección de Cerrar en la pantalla post-sesión (vuelve a meditación sin quedarse en el cronómetro)
+• Recordatorios y progreso de estudio en el asistente
+• Mejoras de estabilidad en sesiones de meditación/estudio

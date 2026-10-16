@@ -56,8 +56,18 @@ private sealed interface WorkoutDest {
     data class Live(val key: String, val index: Int) : WorkoutDest
     data class CardioSetup(val title: String) : WorkoutDest
     data class MeditationSetup(val title: String, val subtitle: String) : WorkoutDest
+    data object StudyFocus : WorkoutDest
     data object Fight : WorkoutDest
-    data class Activity(val title: String, val detail: String, val cardio: Boolean, val cover: Int) : WorkoutDest
+    data class Activity(
+        val title: String,
+        val detail: String,
+        val cardio: Boolean,
+        val cover: Int,
+        val spotBuddyEnabled: Boolean = false,
+        val isStudyFocus: Boolean = false,
+        val studyMinutes: Int = 0,
+        val studyPriorities: List<StudyPriorityItem> = emptyList(),
+    ) : WorkoutDest
     data class Finished(val session: com.healthfit.android.ui.home.FinishedWorkout) : WorkoutDest
 }
 
@@ -250,8 +260,14 @@ fun WorkoutsScreen(userId: String? = null) {
                 title = current.title,
                 imageRes = cardioImage(current.title),
                 onBack = { dest = WorkoutDest.Browse },
-                onStart = { minutes, detail ->
-                    dest = WorkoutDest.Activity(current.title, "$detail · $minutes min", true, cardioImage(current.title))
+                onStart = { minutes, detail, spotBuddy ->
+                    dest = WorkoutDest.Activity(
+                        title = current.title,
+                        detail = detail,
+                        cardio = true,
+                        cover = cardioImage(current.title),
+                        spotBuddyEnabled = spotBuddy,
+                    )
                 },
             )
             return
@@ -267,6 +283,23 @@ fun WorkoutsScreen(userId: String? = null) {
             )
             return
         }
+        WorkoutDest.StudyFocus -> {
+            StudyFocusHubScreen(
+                onBack = { dest = WorkoutDest.Browse },
+                onStart = { card, minutes ->
+                    dest = WorkoutDest.Activity(
+                        title = card.name,
+                        detail = "Estudo · $minutes min · ${card.priorities.size} prioridade(s)",
+                        cardio = false,
+                        cover = R.drawable.studyfocuscover,
+                        isStudyFocus = true,
+                        studyMinutes = minutes,
+                        studyPriorities = card.priorities,
+                    )
+                },
+            )
+            return
+        }
         WorkoutDest.Fight -> {
             FightHubScreen(
                 onBack = { dest = WorkoutDest.Browse },
@@ -277,16 +310,39 @@ fun WorkoutsScreen(userId: String? = null) {
             return
         }
         is WorkoutDest.Activity -> {
-            if (current.cardio && cardioUsesLiveMap(current.title)) {
+            if (current.cardio && usesCardioLiveScreen(current.title, current.detail)) {
                 CardioLiveScreen(
                     title = current.title,
                     detail = current.detail,
+                    spotBuddyEnabled = current.spotBuddyEnabled,
                     onClose = { elapsed, km, pace ->
                         val session = finishedActivity(current.title, elapsed, true, current.cover)
                         dest = WorkoutDest.Finished(
                             session.copy(
                                 whenLabel = if (km >= 0.02) "%.2f km · %s /km".format(km, pace) else session.whenLabel,
                             ),
+                        )
+                    },
+                )
+            } else if (current.isStudyFocus) {
+                val studyTitle = current.title
+                val studyCover = current.cover
+                val studyPrioritiesCount = current.studyPriorities.size
+                StudyFocusLiveScreen(
+                    cardName = studyTitle,
+                    minutes = current.studyMinutes.coerceAtLeast(1),
+                    priorities = current.studyPriorities,
+                    onClose = { elapsed ->
+                        runCatching {
+                            com.healthfit.android.ui.assistant.AssistantNotifications.cancelStudyFocusReminders(context)
+                        }
+                        dest = WorkoutDest.Finished(
+                            finishedActivity(
+                                "Estudo — $studyTitle",
+                                elapsed.coerceAtLeast(0),
+                                false,
+                                studyCover,
+                            ).copy(studyPrioritiesCount = studyPrioritiesCount),
                         )
                     },
                 )
@@ -303,8 +359,10 @@ fun WorkoutsScreen(userId: String? = null) {
         }
         is WorkoutDest.Finished -> {
             LaunchedEffect(current.session.title, current.session.duration) {
+                val isStudy = current.session.title.startsWith("Estudo", ignoreCase = true)
                 val kind = when {
                     current.session.isCardio -> "cardio"
+                    isStudy -> "study"
                     current.session.title.contains("medita", ignoreCase = true) -> "meditation"
                     else -> "strength"
                 }
@@ -314,10 +372,58 @@ fun WorkoutsScreen(userId: String? = null) {
                     title = current.session.title,
                     kind = kind,
                 )
+                com.healthfit.android.ui.home.ConstancyStore.recordSession(
+                    context = context,
+                    title = current.session.title,
+                    kind = kind,
+                )
+                if (isStudy) {
+                    runCatching {
+                        val seconds = Regex("""(\d+):(\d+)""").find(current.session.duration)?.destructured
+                            ?.let { (m, s) -> m.toInt() * 60 + s.toInt() }
+                            ?: ((current.session.durationMinutes.filter { it.isDigit() }.toIntOrNull() ?: 1) * 60)
+                        val cardName = current.session.title
+                            .removePrefix("Estudo — ")
+                            .removePrefix("Estudo - ")
+                            .trim()
+                        StudyFocusStore.recordCompletedSession(
+                            context = context,
+                            cardName = cardName.ifBlank { current.session.title },
+                            durationSeconds = seconds,
+                            prioritiesCount = current.session.studyPrioritiesCount,
+                        )
+                        val sessions = StudyFocusStore.loadSessions(context)
+                        val profile = com.healthfit.android.ui.assistant.AssistantStudyFocusEngine.buildProfile(sessions)
+                        val weekStart = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000
+                        val week = sessions.filter { it.endedAtMillis >= weekStart }
+                        val weekMinutes = week.sumOf { it.durationSeconds / 60 }
+                        com.healthfit.android.ui.assistant.AssistantNotifications.show(
+                            context,
+                            9301,
+                            "Progresso · Foco em Estudo",
+                            com.healthfit.android.ui.assistant.AssistantStudyFocusEngine.notificationProgressBody(
+                                profile,
+                                weekMinutes,
+                                week.size,
+                            ),
+                        )
+                        com.healthfit.android.ui.assistant.AssistantNotifications.scheduleStudyFocusHabitReminder(
+                            context,
+                            sessions,
+                        )
+                    }
+                }
             }
             com.healthfit.android.ui.home.WorkoutFinishedScreen(
                 session = current.session,
-                onClose = { dest = WorkoutDest.Browse },
+                onClose = {
+                    dest = if (current.session.title.startsWith("Estudo", ignoreCase = true)) {
+                        // Pós Foco em Estudo → hub de meditação/estudo (não o cronômetro).
+                        WorkoutDest.StudyFocus
+                    } else {
+                        WorkoutDest.Browse
+                    }
+                },
             )
             return
         }
@@ -343,7 +449,15 @@ fun WorkoutsScreen(userId: String? = null) {
             2 -> CardioTab(onOpen = { title ->
                 dest = if (title == "Luta") WorkoutDest.Fight else WorkoutDest.CardioSetup(title)
             })
-            else -> MeditationTab(onOpen = { title, subtitle -> dest = WorkoutDest.MeditationSetup(title, subtitle) })
+            else -> MeditationTab(
+                onOpen = { title, subtitle ->
+                    dest = if (title.contains("Estudo", ignoreCase = true)) {
+                        WorkoutDest.StudyFocus
+                    } else {
+                        WorkoutDest.MeditationSetup(title, subtitle)
+                    }
+                },
+            )
         }
         Spacer(Modifier.height(8.dp))
     }
@@ -456,6 +570,7 @@ private fun CardioTab(onOpen: (String) -> Unit) {
         Triple("Escalada", "Escalada em parede indoor ou rocha", "~11 kcal/min"),
         Triple("Remo", "Remo na água ou ergométrico · SPM, split / 500 m", "Mapa GPS"),
         Triple("Natação", "Nados em piscina com voltas, distância e ritmo", "Piscina e voltas"),
+        Triple("Tênis", "Partida ou treino · placar, zonas de FC, picos e carga intermitente", "Placar · GPS outdoor"),
         Triple("Polichinelo", "Jumping jacks em ritmo constante", "~9 kcal/min"),
         Triple("Burpees", "Exercício funcional de alta intensidade", "~13 kcal/min"),
         Triple("Luta", "Boxe, Muay Thai, Jiu-Jitsu, MMA e mais — cronômetro de combate", "Cronômetro de luta"),
@@ -488,22 +603,13 @@ private fun CardioTab(onOpen: (String) -> Unit) {
 private fun MeditationTab(onOpen: (String, String) -> Unit) {
     SectionLabel("Sessões guiadas para recuperar e focar")
     Spacer(Modifier.height(10.dp))
-    val covers = listOf(
-        R.drawable.meditacaocoverrespiracao,
-        R.drawable.meditacaocoverrelaxamento,
-        R.drawable.meditacaocovergratidao,
-        R.drawable.meditacaocoverfoco,
-        R.drawable.meditacaocoveransiedade,
-        R.drawable.meditacaocoversono,
-        R.drawable.meditacaocoverrecuperacao,
-    )
-    MeditationTopics.forEachIndexed { index, (title, subtitle) ->
+    MeditationTopics.forEach { (title, subtitle) ->
         HeroCard(
             title = title,
             subtitle = subtitle,
             brush = Brush.linearGradient(listOf(Color(0xFF141E38), Color(0xFF1A2848))),
-            imageRes = covers[index],
-            eyebrow = "MEDITAÇÃO",
+            imageRes = meditationCover(title),
+            eyebrow = if (title.contains("Estudo")) "ESTUDO" else "MEDITAÇÃO",
             height = 168.dp,
             onClick = { onOpen(title, subtitle) },
         )
@@ -520,6 +626,7 @@ private fun cardioImage(title: String): Int = when (title) {
     "Bicicleta ergométrica" -> R.drawable.cardiocoverbicicletaergometrica
     "Surf" -> R.drawable.cardiocoversurf
     "Kitesurf" -> R.drawable.cardiocoverkitesurf
+    "Tênis", "Tenis" -> R.drawable.cardiocovertenis
     "Elíptico" -> R.drawable.cardiocovereliptico
     "Pular Corda" -> R.drawable.cardiocoverpularcorda
     "Escada" -> R.drawable.cardiocoverescada

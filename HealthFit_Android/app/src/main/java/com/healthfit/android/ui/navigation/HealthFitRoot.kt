@@ -105,11 +105,12 @@ fun HealthFitRoot(
         if (needsPermission) {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
+            // Ativa lembretes em qualquer aba (Início, Treinos, etc.) — IAssistente não precisa estar aberto.
             AssistantNotifications.ensureBackgroundDelivery(
                 context = context,
                 name = greetingName,
                 userId = signedIn.uid,
-                requestBatteryExemption = false,
+                requestBatteryExemption = true,
             )
         }
     }
