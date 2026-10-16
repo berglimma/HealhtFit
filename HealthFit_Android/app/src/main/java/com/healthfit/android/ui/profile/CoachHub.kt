@@ -1,5 +1,6 @@
 package com.healthfit.android.ui.profile
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -121,36 +122,19 @@ fun CoachEntryCard(
             .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
     ) {
-        Box(
-            Modifier
-                .matchParentSize()
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            Color(0xFF1F6B7A),
-                            Color(0xFF143852),
-                            Color(0xFF0D2438),
-                        ),
-                    ),
-                ),
-        )
-        Box(
-            Modifier
-                .size(160.dp)
-                .align(Alignment.TopEnd)
-                .padding(top = 0.dp)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(HealthFitColors.Accent.copy(alpha = 0.22f), Color.Transparent),
-                    ),
-                    shape = CircleShape,
-                ),
+        Image(
+            painter = painterResource(R.drawable.coachcover),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize(),
         )
         Box(
             Modifier
                 .matchParentSize()
                 .background(
-                    Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))),
+                    Brush.verticalGradient(
+                        listOf(Color.Black.copy(alpha = 0.08f), Color.Black.copy(alpha = 0.72f)),
+                    ),
                 ),
         )
         Column(

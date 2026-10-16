@@ -577,30 +577,13 @@ struct HealthFitCoachProfileCard: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.12, green: 0.42, blue: 0.48),
-                    Color(red: 0.08, green: 0.22, blue: 0.32),
-                    Color(red: 0.05, green: 0.14, blue: 0.22)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            // Atmosfera: formas suaves (sem asset dedicado)
-            Circle()
-                .fill(AppTheme.accent.opacity(0.22))
-                .frame(width: 160, height: 160)
-                .blur(radius: 8)
-                .offset(x: 140, y: -50)
-
-            Circle()
-                .fill(Color.orange.opacity(0.12))
-                .frame(width: 100, height: 100)
-                .offset(x: -30, y: 40)
+            Image("CoachCover")
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             LinearGradient(
-                colors: [.clear, .black.opacity(0.55)],
+                colors: [.black.opacity(0.08), .black.opacity(0.72)],
                 startPoint: .top,
                 endPoint: .bottom
             )
