@@ -94,4 +94,18 @@ final class EveningTrainingNudgeTests: XCTestCase {
     func testStatusMessageIsPortuguese() {
         XCTAssertEqual(EveningTrainingNudgeService.statusMessage, "Você ainda não treinou hoje")
     }
+
+    @MainActor
+    func testRestDaySuppressesUntrainedNudgePath() {
+        // Espelha a condição de `refresh`: descanso conta como “já ok hoje”.
+        XCTAssertFalse(
+            EveningTrainingNudgeService.hasTrainedToday(sessions: [], now: .now)
+        )
+        // isRestDayToday lê o wellness real; aqui só garantimos a API e a mensagem dedicada.
+        XCTAssertFalse(EveningTrainingNudgeService.restDayStatusMessage.isEmpty)
+        XCTAssertTrue(
+            EveningTrainingNudgeService.restDayStatusMessage
+                .localizedCaseInsensitiveContains("descanso")
+        )
+    }
 }

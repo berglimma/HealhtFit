@@ -67,9 +67,12 @@ enum AssistantInactivityFollowUpEngine {
             lines.append("• \(topImprovement.title): \(topImprovement.detail)")
         }
 
-        if week.workoutCount == 0 {
+        if week.workoutCount == 0, !context.isTodayRestDay {
             lines.append("")
             lines.append("Ainda dá tempo de registrar um treino hoje na aba **Treinos** — cada sessão conta!")
+        } else if context.isTodayRestDay, week.workoutCount == 0 {
+            lines.append("")
+            lines.append("Hoje você marcou **dia de descanso** — foque na recuperação; amanhã a gente retoma com calma.")
         } else {
             lines.append("")
             lines.append("Você está no caminho certo para **\(goal.rawValue.lowercased())**. Continue assim!")

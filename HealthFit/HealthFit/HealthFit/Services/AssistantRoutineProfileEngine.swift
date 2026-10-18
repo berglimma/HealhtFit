@@ -143,6 +143,7 @@ enum AssistantRoutineProfileEngine {
         }
 
         if !context.todayWorkoutSessions.isEmpty { return nil }
+        if context.isTodayRestDay { return nil }
         if let hours = context.hoursSinceLastWorkout, hours < 20 { return nil }
 
         let name = athleteName.isEmpty ? "Atleta" : athleteName
