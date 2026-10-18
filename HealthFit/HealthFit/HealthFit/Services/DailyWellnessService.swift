@@ -549,6 +549,7 @@ final class DailyWellnessService: ObservableObject {
         entry.isRestDay = true
         entry.restDayMarkedAt = .now
         save(entry)
+        EveningTrainingNudgeService.handleRestDayMarked()
         let message = AssistantRestDayEngine.restDayMarkedMessage(context: assistantContext)
         AssistantRestDayEngine.queueRestDayMarkedMessage(message)
     }
@@ -559,6 +560,7 @@ final class DailyWellnessService: ObservableObject {
         entry.isRestDay = false
         entry.restDayMarkedAt = nil
         save(entry)
+        EveningTrainingNudgeService.handleRestDayCleared()
     }
 
     var isTodayRestDay: Bool { todayEntry.isRestDay }

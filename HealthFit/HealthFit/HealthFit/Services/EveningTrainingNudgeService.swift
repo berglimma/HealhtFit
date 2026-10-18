@@ -8,6 +8,7 @@ enum EveningTrainingNudgeService {
     private static let activeSessionKey = "healthfit_active_session"
 
     static let statusMessage = "Você ainda não treinou hoje"
+    static let restDayStatusMessage = "Hoje é dia de descanso — sem cobrança de treino"
     static let notificationTitle = "HealthFit · Hora de treinar"
 
     // MARK: - Trained today
@@ -21,6 +22,15 @@ enum EveningTrainingNudgeService {
             guard let endedAt = session.endedAt else { return false }
             return calendar.isDate(endedAt, inSameDayAs: now)
         }
+    }
+
+    /// Dia off marcado no perfil/wellness — não cobrar treino.
+    static func isRestDayToday(
+        calendar: Calendar = .current,
+        now: Date = .now
+    ) -> Bool {
+        _ = calendar
+        return DailyWellnessService.shared.isRestDay(on: now)
     }
 
     static func dayKey(for date: Date = .now, calendar: Calendar = .current) -> String {
@@ -85,6 +95,20 @@ enum EveningTrainingNudgeService {
         scheduleNextFire(after: .now, calendar: .current, skipToday: true)
     }
 
+    /// Dia de descanso marcado → encerra o “ainda não treinou” e agenda só o próximo dia.
+    static func handleRestDayMarked() {
+        NotificationService.shared.cancelEveningTrainingNudge()
+        EveningTrainingNudgeController.shared.end()
+        UserDefaults.standard.set(dayKey(), forKey: shownDayKey)
+        scheduleNextFire(after: .now, calendar: .current, skipToday: true)
+    }
+
+    /// Desmarcou descanso → reavalia se ainda deve lembrar de treinar hoje.
+    static func handleRestDayCleared() {
+        UserDefaults.standard.removeObject(forKey: shownDayKey)
+        refreshFromPersistedState()
+    }
+
     static func cancelAll() {
         NotificationService.shared.cancelEveningTrainingNudge()
         EveningTrainingNudgeController.shared.end()
@@ -102,14 +126,15 @@ enum EveningTrainingNudgeService {
         guard let window = nudgeWindow(on: now, calendar: calendar) else { return }
         let todayKey = dayKey(for: now, calendar: calendar)
         let trained = hasTrainedToday(sessions: sessions, calendar: calendar, now: now)
+        let restDay = isRestDayToday(calendar: calendar, now: now)
 
-        if trained || hasActiveWorkout {
+        if trained || hasActiveWorkout || restDay {
             NotificationService.shared.cancelEveningTrainingNudge()
             EveningTrainingNudgeController.shared.end()
-            if trained {
+            if trained || restDay {
                 UserDefaults.standard.set(todayKey, forKey: shownDayKey)
             }
-            // Agenda o próximo dia às 18:00 se já treinou hoje (ou há treino ativo).
+            // Agenda o próximo dia às 18:00 se já treinou / descanso / treino ativo.
             scheduleNextFire(after: now, calendar: calendar, skipToday: true)
             return
         }
