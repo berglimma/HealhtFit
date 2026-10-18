@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -79,6 +80,18 @@ fun NutritionScreen(
     var deficit by remember { mutableIntStateOf(400) }
     val objective = athlete.objective
     var menuVersion by remember { mutableIntStateOf(0) }
+    val meta = 2900 - deficit
+    var weeklyPlan by remember {
+        mutableStateOf(
+            MealPlanGenerator.generateWeekly(
+                calorieTarget = meta,
+                athlete = athlete,
+                seed = 0,
+            ),
+        )
+    }
+    var selectedDay by remember { mutableIntStateOf(0) }
+    var selectedOption by remember { mutableIntStateOf(0) }
     val eaten = remember { androidx.compose.runtime.mutableStateListOf<String>() }
     var supplement by remember { mutableStateOf("Whey Protein") }
     var amount by remember { mutableIntStateOf(30) }
@@ -88,8 +101,27 @@ fun NutritionScreen(
     var analyzed by remember { mutableStateOf(false) }
     var photoLabel by remember { mutableStateOf<String?>(null) }
     var customSupplement by remember { mutableStateOf("") }
-    val meta = 2900 - deficit
     val context = LocalContext.current
+
+    fun refreshMenu() {
+        menuVersion += 1
+        weeklyPlan = MealPlanGenerator.generateWeekly(
+            calorieTarget = meta,
+            athlete = athlete,
+            seed = menuVersion,
+        )
+        selectedDay = 0
+        selectedOption = 0
+        eaten.clear()
+        Toast.makeText(
+            context,
+            "Cardápio semanal atualizado · $meta kcal · ${athlete.objective}",
+            Toast.LENGTH_SHORT,
+        ).show()
+    }
+
+    val activeDay = weeklyPlan.day(selectedDay.coerceIn(0, weeklyPlan.days.lastIndex))
+    val activeOptionIndex = activeDay?.let { selectedOption.coerceIn(0, (it.options.size - 1).coerceAtLeast(0)) } ?: 0
     if (showAnamnesis) {
         NutritionAnamnesisEditorScreen(
             isCoachMode = false,
@@ -172,12 +204,38 @@ fun NutritionScreen(
                     athlete = athlete,
                     wellness = wellness,
                     meta = meta,
+                    weeklyPlan = weeklyPlan,
+                    menuVersion = menuVersion,
+                    selectedDay = selectedDay,
+                    selectedOption = activeOptionIndex,
+                    eaten = eaten.toSet(),
                     onDeficit = { deficit = it },
-                    onUpdateMenu = { menuVersion += 1 },
+                    onUpdateMenu = { refreshMenu() },
+                    onSelectDay = {
+                        selectedDay = it
+                        selectedOption = 0
+                    },
+                    onSelectOption = { selectedOption = it },
+                    onToggleMeal = { mealId ->
+                        if (mealId in eaten) eaten.remove(mealId) else eaten.add(mealId)
+                    },
                 )
-                1 -> MenuTab(meta, eaten.toSet(), menuVersion) { name ->
-                    if (name in eaten) eaten.remove(name) else eaten.add(name)
-                }
+                1 -> MenuTab(
+                    meta = meta,
+                    weeklyPlan = weeklyPlan,
+                    menuVersion = menuVersion,
+                    selectedDay = selectedDay,
+                    selectedOption = activeOptionIndex,
+                    eaten = eaten.toSet(),
+                    onSelectDay = {
+                        selectedDay = it
+                        selectedOption = 0
+                    },
+                    onSelectOption = { selectedOption = it },
+                    onToggleMeal = { mealId ->
+                        if (mealId in eaten) eaten.remove(mealId) else eaten.add(mealId)
+                    },
+                )
                 2 -> SupplementsTab(
                     selected = supplement,
                     customName = customSupplement,
@@ -225,8 +283,16 @@ private fun PlanTab(
     athlete: com.healthfit.android.ui.home.AthleteProfile,
     wellness: com.healthfit.android.ui.home.DailyWellness,
     meta: Int,
+    weeklyPlan: WeeklyMealPlan,
+    menuVersion: Int,
+    selectedDay: Int,
+    selectedOption: Int,
+    eaten: Set<String>,
     onDeficit: (Int) -> Unit,
     onUpdateMenu: () -> Unit,
+    onSelectDay: (Int) -> Unit,
+    onSelectOption: (Int) -> Unit,
+    onToggleMeal: (String) -> Unit,
 ) {
     val objective = athlete.objective
     val height = athlete.heightCm.toFloatOrNull()?.takeIf { it > 0f } ?: 176f
@@ -289,6 +355,25 @@ private fun PlanTab(
     }
     Spacer(Modifier.height(12.dp))
     GradientButton(text = "Atualizar Cardápio", onClick = onUpdateMenu, icon = Icons.Filled.Add)
+    if (menuVersion > 0) {
+        Spacer(Modifier.height(14.dp))
+        Text("Cardápio semanal", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Atualizado · $meta kcal · ${athlete.objective}",
+            color = HealthFitColors.Accent,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+        )
+        WeeklyPlanBrowser(
+            weeklyPlan = weeklyPlan,
+            selectedDay = selectedDay,
+            selectedOption = selectedOption,
+            eaten = eaten,
+            onSelectDay = onSelectDay,
+            onSelectOption = onSelectOption,
+            onToggleMeal = onToggleMeal,
+        )
+    }
     Spacer(Modifier.height(16.dp))
     Text("Você tolera lactose?", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(8.dp))
@@ -344,34 +429,165 @@ private fun PlanTab(
 }
 
 @Composable
-private fun MenuTab(meta: Int, eaten: Set<String>, menuVersion: Int, onToggle: (String) -> Unit) {
-    val doneKcal = eaten.size * (meta / 6)
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+private fun MenuTab(
+    meta: Int,
+    weeklyPlan: WeeklyMealPlan,
+    menuVersion: Int,
+    selectedDay: Int,
+    selectedOption: Int,
+    eaten: Set<String>,
+    onSelectDay: (Int) -> Unit,
+    onSelectOption: (Int) -> Unit,
+    onToggleMeal: (String) -> Unit,
+) {
+    if (menuVersion == 0) {
+        Text("Cardápio semanal", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Toque em Atualizar Cardápio na aba Plano para gerar os 7 dias com opções.",
+            color = Color(0xFFB7C0C8),
+            fontSize = 13.sp,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        return
+    }
+    Text("Cardápio semanal", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+    Text(
+        "Meta $meta kcal · escolha o dia e a opção",
+        color = HealthFitColors.Accent,
+        fontSize = 12.sp,
+        modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+    )
+    WeeklyPlanBrowser(
+        weeklyPlan = weeklyPlan,
+        selectedDay = selectedDay,
+        selectedOption = selectedOption,
+        eaten = eaten,
+        onSelectDay = onSelectDay,
+        onSelectOption = onSelectOption,
+        onToggleMeal = onToggleMeal,
+    )
+}
+
+@Composable
+private fun WeeklyPlanBrowser(
+    weeklyPlan: WeeklyMealPlan,
+    selectedDay: Int,
+    selectedOption: Int,
+    eaten: Set<String>,
+    onSelectDay: (Int) -> Unit,
+    onSelectOption: (Int) -> Unit,
+    onToggleMeal: (String) -> Unit,
+) {
+    val day = weeklyPlan.day(selectedDay.coerceIn(0, weeklyPlan.days.lastIndex)) ?: return
+    val optionIndex = selectedOption.coerceIn(0, (day.options.size - 1).coerceAtLeast(0))
+    val option = day.options[optionIndex]
+    val doneMeals = option.meals.count { it.id in eaten }
+    val doneKcal = option.meals.filter { it.id in eaten }.sumOf { it.kcal }
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        weeklyPlan.days.forEachIndexed { index, daily ->
+            val selected = index == selectedDay
+            Text(
+                daily.dayOfWeek.take(3),
+                color = if (selected) Color.White else HealthFitColors.TextSecondary,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (selected) HealthFitColors.Accent else HealthFitColors.CardBackground)
+                    .clickable { onSelectDay(index) }
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+            )
+        }
+    }
+    Spacer(Modifier.height(12.dp))
+    Text(
+        "${day.dayOfWeek} — escolha um cardápio",
+        color = Color.White,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 14.sp,
+    )
+    Spacer(Modifier.height(8.dp))
+    day.options.chunked(2).forEach { row ->
+        Row(
+            Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            row.forEach { opt ->
+                val index = day.options.indexOf(opt)
+                val selected = index == optionIndex
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (selected) HealthFitColors.Accent else Color(0xFF12161A))
+                        .clickable { onSelectOption(index) }
+                        .padding(horizontal = 10.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        opt.name,
+                        color = if (selected) Color.Black else Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        opt.subtitle,
+                        color = if (selected) Color.Black.copy(alpha = 0.75f) else HealthFitColors.TextSecondary,
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                    )
+                    Text(
+                        "${opt.totalCalories} kcal",
+                        color = if (selected) Color.Black else Color(0xFFFF9A3C),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+            if (row.size == 1) Spacer(Modifier.weight(1f))
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
         Column(Modifier.weight(1f)) {
-            Text("$meta kcal", color = Color(0xFFFF9A3C), fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Text("vs meta diária", color = Color(0xFF8E989F), fontSize = 12.sp)
+            Text("${option.totalCalories} kcal", color = Color(0xFFFF9A3C), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text("Proteína ${option.totalProtein} g · vs meta ${weeklyPlan.calorieTarget}", color = Color(0xFF8E989F), fontSize = 12.sp)
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(if (doneKcal >= meta) "Na meta" else "Em andamento", color = HealthFitColors.Accent, fontWeight = FontWeight.Bold)
-            Text("$doneKcal kcal feitas", color = Color(0xFF8E989F), fontSize = 12.sp)
+            Text(
+                if (doneKcal >= weeklyPlan.calorieTarget) "Na meta" else "Em andamento",
+                color = HealthFitColors.Accent,
+                fontWeight = FontWeight.Bold,
+            )
+            Text("$doneMeals/${option.meals.size} · $doneKcal kcal", color = Color(0xFF8E989F), fontSize = 12.sp)
         }
     }
-    Text("Refeições: ${eaten.size}/6 concluídas", color = Color(0xFFB7C0C8), fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
-    if (menuVersion > 0) {
-        Text("Cardápio atualizado para a meta de $meta kcal.", color = HealthFitColors.Accent, fontSize = 12.sp)
-    }
     Text(
-        "Toque na refeição para selecionar e marque como concluída quando comer.",
+        "Toque na refeição para marcar como concluída quando comer.",
         color = Color(0xFFB7C0C8),
         fontSize = 13.sp,
-        modifier = Modifier.padding(bottom = 10.dp),
+        modifier = Modifier.padding(top = 8.dp, bottom = 10.dp),
     )
-    MealRow("Café da Manhã", "Claras com Vegetais", "500 kcal", "P:57g C:21g G:14g", Icons.Filled.WbSunny, "Café da Manhã" in eaten) { onToggle("Café da Manhã") }
-    MealRow("Lanche", "Maçã com Pasta de Amendoim", "250 kcal", "P:8g C:27g G:12g", Icons.Filled.Spa, "Lanche" in eaten) { onToggle("Lanche") }
-    MealRow("Almoço", "Carne Magra com Feijão Light", "750 kcal", "P:76g C:53g G:20g", Icons.Filled.WbSunny, "Almoço" in eaten) { onToggle("Almoço") }
-    MealRow("Lanche da Tarde", "Tapioca com Queijo", "250 kcal", "P:13g C:30g G:8g", Icons.Filled.Spa, "Lanche da Tarde" in eaten) { onToggle("Lanche da Tarde") }
-    MealRow("Jantar", "Atum com Salada", "550 kcal", "P:47g C:36g G:18g", Icons.Filled.NightsStay, "Jantar" in eaten) { onToggle("Jantar") }
-    MealRow("Ceia", "Iogurte de Coco", "200 kcal", "P:6g C:12g G:13g", Icons.Filled.NightsStay, "Ceia" in eaten) { onToggle("Ceia") }
+    option.meals.forEach { meal ->
+        MealRow(
+            whenLabel = meal.slot,
+            title = meal.title,
+            kcal = meal.kcalLabel,
+            macros = meal.macrosLabel,
+            icon = meal.icon,
+            done = meal.id in eaten,
+            onToggle = { onToggleMeal(meal.id) },
+        )
+    }
 }
 
 @Composable
