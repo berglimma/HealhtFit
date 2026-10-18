@@ -2,6 +2,7 @@ import Foundation
 
 extension Notification.Name {
     static let healthFitRestDayMarked = Notification.Name("healthFitRestDayMarked")
+    static let healthFitDidExplicitLogout = Notification.Name("healthFitDidExplicitLogout")
 }
 
 /// Dia de descanso declarado + alerta de 7 dias seguidos (meditação não conta como treino).

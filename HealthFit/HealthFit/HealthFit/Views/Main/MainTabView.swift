@@ -410,22 +410,23 @@ struct MainTabView: View {
         case warning
     }
 
-    /// Reduz footprint antes do Jetsam: abas lazy + overlays minimizados + cache de capas.
+    /// Reduz footprint antes do Jetsam — sem esvaziar a UI em background leve
+    /// (isso deixava só o fundo escuro sem tab bar até o próximo paint).
     private func reclaimMemoryUnderPressure(reason: MemoryReclaimReason) {
-        // Mantém só a aba visível — as outras remontam na próxima visita.
-        loadedTabs = [selectedTab]
-
         // Overlay full-screen invisível (opacity 0) ainda segura Map/SwiftUI pesado.
-        // Sessão continua no WorkoutStore / RunTrackingService.
         if workoutStore.isActiveWorkoutMinimized {
             clearHostedWorkoutOverlays()
         }
 
-        CoverAssetDecoder.shared.clear()
-        Task { await PulseImageCache.shared.clear() }
-
         if reason == .warning {
+            // Memória crítica: mantém home + aba atual; limpa caches pesados.
+            loadedTabs = [0, selectedTab]
+            CoverAssetDecoder.shared.clear()
+            Task { await PulseImageCache.shared.clear() }
             URLCache.shared.removeAllCachedResponses()
+        } else {
+            // Background normal: só solta capas decodificadas — abas ficam montadas.
+            CoverAssetDecoder.shared.clear()
         }
     }
 

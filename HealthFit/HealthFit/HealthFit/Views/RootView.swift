@@ -4,21 +4,33 @@ import SwiftUI
 /// Sem isso, `@State didCompleteWelcomeForSession` volta a `false` e a UI trava em "Carregando…".
 private enum WelcomeSessionGate {
     static var didCompleteWelcomeThisLaunch = false
-    /// Firebase às vezes emite nil→user no resume; evita reiniciar welcome (tela verde).
+    /// Firebase às vezes emite nil→user no resume; evita reiniciar welcome (tela preta/verde).
     static var lastAuthenticatedUserId: String?
-    static var lastLogoutAt: Date?
+    static var lastAuthInterruptAt: Date?
 
-    static func noteLogout() {
-        // `AuthService` zera `currentUser` antes de `isAuthenticated=false` — não depender do id aqui.
-        lastLogoutAt = Date()
+    /// Blip transitório do Firebase (nil→user). NÃO derruba o MainTab.
+    static func noteAuthInterrupted() {
+        lastAuthInterruptAt = Date()
+    }
+
+    /// Logout explícito do usuário — aí sim reinicia o welcome na próxima entrada.
+    static func noteExplicitLogout() {
+        lastAuthInterruptAt = Date()
         didCompleteWelcomeThisLaunch = false
+        lastAuthenticatedUserId = nil
+    }
+
+    /// Compat: chamadas antigas tratam como interrupção (não logout explícito).
+    static func noteLogout() {
+        noteAuthInterrupted()
     }
 
     static func shouldResumeSameSession(userId: String?) -> Bool {
-        guard let userId,
-              userId == lastAuthenticatedUserId,
-              let lastLogoutAt,
-              Date().timeIntervalSince(lastLogoutAt) < 4
+        guard let userId, userId == lastAuthenticatedUserId else { return false }
+        // Já tinha liberado o MainTab neste processo — Firebase nil transitório não pode esconder a UI.
+        if didCompleteWelcomeThisLaunch { return true }
+        guard let lastAuthInterruptAt,
+              Date().timeIntervalSince(lastAuthInterruptAt) < 30
         else { return false }
         return true
     }
@@ -59,49 +71,64 @@ struct RootView: View {
         WelcomeSessionGate.didCompleteWelcomeThisLaunch || didCompleteWelcomeForSession
     }
 
-    var body: some View {
-        Group {
-            if authService.isRestoringSession {
-                loadingScreen(message: "Carregando...")
-            } else if !authService.isAuthenticated {
-                LoginView()
-            } else if shouldShowMainTab {
-                MainTabView()
-                    .task {
-                        await runPostLoginStartupPipeline()
-                    }
-                    .sheet(isPresented: $wellnessService.showSleepCheckIn) {
-                        DailyWellnessCheckInView()
-                            .environmentObject(authService)
-                            .environmentObject(wellnessService)
-                            .environmentObject(healthKitManager)
-                    }
-                    // Welcome após 24h em overlay — não desmonta o MainTab (evita cold start no iPad).
-                    .fullScreenCover(isPresented: $showWelcomeMotivation) {
-                        // Evitar `if let welcomeContext` (shadow do @State) — crasha o typechecker do Swift.
-                        if let context = welcomeContext {
-                            WelcomeMotivationView(context: context) {
-                                dismissWelcomeOverlay()
-                            }
-                        } else {
-                            // Evita fullScreenCover vazio (não dismissível) se o contexto falhar.
-                            Color.clear
-                                .onAppear { dismissWelcomeOverlay() }
-                        }
-                    }
-            } else {
-                // Após login/sessão, a transição tem prioridade — nunca renderiza o painel antes.
-                if showWelcomeMotivation, let context = welcomeContext {
+    @ViewBuilder
+    private var mainTabRoot: some View {
+        MainTabView()
+            .task {
+                await runPostLoginStartupPipeline()
+            }
+            .sheet(isPresented: $wellnessService.showSleepCheckIn) {
+                DailyWellnessCheckInView()
+                    .environmentObject(authService)
+                    .environmentObject(wellnessService)
+                    .environmentObject(healthKitManager)
+            }
+            .fullScreenCover(isPresented: $showWelcomeMotivation) {
+                if let context = welcomeContext {
                     WelcomeMotivationView(context: context) {
-                        completeWelcomeAndShowMainTab()
+                        dismissWelcomeOverlay()
                     }
                 } else {
-                    loadingScreen(message: nil)
-                        .onAppear {
-                            presentWelcome(preserveMainTab: false)
-                            scheduleWelcomeFailsafe()
-                        }
+                    Color.clear
+                        .onAppear { dismissWelcomeOverlay() }
                 }
+            }
+    }
+
+    var body: some View {
+        Group {
+            // MainTab antes de isRestoringSession quando o welcome já liberou.
+            // Blip Firebase nil→user é absorvido no AuthService (debounce) — isAuthenticated
+            // permanece true e a UI não cai no loading preto.
+            if shouldShowMainTab, authService.isAuthenticated {
+                mainTabRoot
+            } else if authService.isRestoringSession {
+                loadingScreen(message: "Carregando...")
+                    .task {
+                        try? await Task.sleep(nanoseconds: 2_000_000_000)
+                        guard authService.isRestoringSession else { return }
+                        // AuthService também zera; aqui cobrimos remounts.
+                        if authService.isAuthenticated {
+                            completeWelcomeAndShowMainTab()
+                        }
+                    }
+            } else if !authService.isAuthenticated {
+                LoginView()
+            } else if showWelcomeMotivation, let context = welcomeContext {
+                WelcomeMotivationView(context: context) {
+                    completeWelcomeAndShowMainTab()
+                }
+            } else {
+                loadingScreen(message: "Carregando...")
+                    .onAppear {
+                        presentWelcome(preserveMainTab: false)
+                        scheduleWelcomeFailsafe(delayNanoseconds: 800_000_000)
+                    }
+                    .task(id: authService.currentUser?.id) {
+                        try? await Task.sleep(nanoseconds: 1_500_000_000)
+                        guard authService.isAuthenticated, !shouldShowMainTab else { return }
+                        completeWelcomeAndShowMainTab()
+                    }
             }
         }
         // No implicit .animation on auth/welcome flags — they animate layout of heavy MainTab
@@ -117,6 +144,12 @@ struct RootView: View {
                 await Task.yield()
                 AppIconInactivityService.shared.handleAppBecameActive()
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .healthFitDidExplicitLogout)) { _ in
+            WelcomeSessionGate.noteExplicitLogout()
+            didCompleteWelcomeForSession = false
+            showWelcomeMotivation = false
+            welcomeContext = nil
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -163,10 +196,10 @@ struct RootView: View {
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             if isAuthenticated {
-                // Blip Firebase (nil→user em <4s): restaura MainTab em vez da tela verde.
+                // Blip Firebase (nil→user): restaura MainTab em vez da tela preta/verde.
                 if WelcomeSessionGate.shouldResumeSameSession(userId: authService.currentUser?.id) {
                     WelcomeSessionGate.didCompleteWelcomeThisLaunch = true
-                    WelcomeSessionGate.lastLogoutAt = nil
+                    WelcomeSessionGate.lastAuthInterruptAt = nil
                     didCompleteWelcomeForSession = true
                     showWelcomeMotivation = false
                     welcomeContext = nil
@@ -187,8 +220,8 @@ struct RootView: View {
                     syncWorkoutCloudHistory()
                 }
             } else {
-                WelcomeSessionGate.noteLogout()
-                didCompleteWelcomeForSession = false
+                // Interrupção de auth (Firebase) — não zera o gate do MainTab.
+                WelcomeSessionGate.noteAuthInterrupted()
                 showWelcomeMotivation = false
                 welcomeContext = nil
                 workoutStore.configureCloudSync(userId: nil)
@@ -547,7 +580,7 @@ struct RootView: View {
     private func completeWelcomeAndShowMainTab() {
         WelcomeSessionGate.didCompleteWelcomeThisLaunch = true
         WelcomeSessionGate.rememberAuthenticatedUser(authService.currentUser?.id)
-        WelcomeSessionGate.lastLogoutAt = nil
+        WelcomeSessionGate.lastAuthInterruptAt = nil
         showWelcomeMotivation = false
         welcomeContext = nil
         didCompleteWelcomeForSession = true
