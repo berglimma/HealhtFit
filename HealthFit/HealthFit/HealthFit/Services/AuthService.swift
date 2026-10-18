@@ -19,10 +19,20 @@ final class AuthService: ObservableObject {
 
     private let legacyUserDefaultsKey = "healthfit_current_user"
     private var profileCloudSyncInFlight = false
+    /// Logout/delete explícito — Firebase nil nesses casos limpa a sessão de imediato.
+    private var expectsSignedOut = false
+    /// Debounce do blip nil→user do Firebase (evita tela preta no RootView).
+    private var pendingAuthNilTask: Task<Void, Never>?
 
     init() {
         FirebaseBootstrap.configure()
         observeAuthState()
+        // Failsafe: listener do Firebase às vezes não dispara → UI presa em "Carregando…".
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            guard let self, self.isRestoringSession else { return }
+            self.isRestoringSession = false
+        }
     }
 
     deinit {
@@ -246,12 +256,17 @@ final class AuthService: ObservableObject {
             MarcoCivilAccessLogService.rotateSessionId()
         }
 
+        expectsSignedOut = true
+        pendingAuthNilTask?.cancel()
+        pendingAuthNilTask = nil
+
         if FirebaseBootstrap.isConfigured {
             try? FirebaseAuthProvider.signOut()
         }
 
         AppAnalytics.setUserID(nil)
         clearLocalSession()
+        NotificationCenter.default.post(name: .healthFitDidExplicitLogout, object: nil)
     }
 
     func deleteAccount(
@@ -282,8 +297,12 @@ final class AuthService: ObservableObject {
                 mealPlanService: mealPlanService,
                 wellnessService: wellnessService
             )
+            expectsSignedOut = true
+            pendingAuthNilTask?.cancel()
+            pendingAuthNilTask = nil
             try await FirebaseAuthProvider.deleteCurrentUser()
             clearLocalSession()
+            NotificationCenter.default.post(name: .healthFitDidExplicitLogout, object: nil)
             isLoading = false
             return true
         } catch {
@@ -525,13 +544,45 @@ final class AuthService: ObservableObject {
         FirebaseAuthProvider.startObservingState { [box = WeakMainActorBox(self)] authUser in
             box.run { this in
                 if let authUser {
+                    this.expectsSignedOut = false
+                    this.pendingAuthNilTask?.cancel()
+                    this.pendingAuthNilTask = nil
                     this.applyAuthenticatedUser(authUser, fallbackName: nil)
+                    this.isRestoringSession = false
                 } else {
-                    this.clearLocalSession()
+                    this.handleFirebaseSignedOut()
                 }
-                this.isRestoringSession = false
             }
         }
+    }
+
+    /// Firebase emite `nil` transitório no resume; limpar na hora derruba o MainTab (tela preta).
+    private func handleFirebaseSignedOut() {
+        if expectsSignedOut {
+            pendingAuthNilTask?.cancel()
+            pendingAuthNilTask = nil
+            clearLocalSession()
+            isRestoringSession = false
+            return
+        }
+
+        // Já autenticado: espera o user voltar antes de limpar.
+        if isAuthenticated, currentUser != nil {
+            pendingAuthNilTask?.cancel()
+            pendingAuthNilTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 1_200_000_000)
+                guard let self, !Task.isCancelled else { return }
+                // Ainda nil após o debounce → sessão realmente acabou.
+                guard FirebaseAuthProvider.currentUser == nil else { return }
+                self.clearLocalSession()
+                self.isRestoringSession = false
+            }
+            isRestoringSession = false
+            return
+        }
+
+        clearLocalSession()
+        isRestoringSession = false
     }
 
     private func applyAuthenticatedUser(_ authUser: AuthenticatedFirebaseUser, fallbackName: String?) {
