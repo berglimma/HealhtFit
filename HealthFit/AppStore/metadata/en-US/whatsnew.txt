@@ -1,4 +1,4 @@
-• Study Focus: priority cards, durations from 30 min to 3h30 (or custom), and a realistic cover
-• Fixed Close on the post-session screen (returns to meditation without getting stuck on the timer)
-• Study reminders and progress in the Health Assistant
-• Stability improvements for meditation/study sessions
+• Fixed black screen when reopening the app after background
+• More reliable session restore (no stuck loading screen)
+• Rest day: no “haven’t trained yet” evening nudge
+• Lower memory use to reduce freezes
