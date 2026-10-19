@@ -41,12 +41,14 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,6 +84,10 @@ fun HomeScreen(
     val name = userName.ifBlank { "Berg" }
     val today = LocalDate.now()
     val weekStart = today.minusDays((today.dayOfWeek.value % 7).toLong())
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { wellness.bind(context) }
+    @Suppress("UNUSED_EXPRESSION")
+    wellness.revision
 
     Box(Modifier.fillMaxSize().background(HealthFitColors.Background)) {
         Box(
@@ -137,9 +143,15 @@ fun HomeScreen(
         Spacer(Modifier.height(16.dp))
         PulseHero(onClick = onOpenPulse)
         Spacer(Modifier.height(16.dp))
-        WeekStrip(weekStart = weekStart, today = today)
+        WeekStrip(
+            weekStart = weekStart,
+            today = today,
+            selectedDayKey = wellness.selectedDayKey,
+            wellness = wellness,
+            onSelectDay = { wellness.selectDay(DailyWellness.dayKey(it)) },
+        )
         Spacer(Modifier.height(16.dp))
-        SleepCard(hours = wellness.sleepHours, onHours = { wellness.sleepHours = it })
+        SleepCard(hours = wellness.sleepHours, onHours = { wellness.updateSleep(it) })
         Spacer(Modifier.height(12.dp))
         WaterCard(
             ml = wellness.waterMl,
@@ -300,7 +312,13 @@ private fun MiniLink(icon: ImageVector, label: String) {
 }
 
 @Composable
-private fun WeekStrip(weekStart: LocalDate, today: LocalDate) {
+private fun WeekStrip(
+    weekStart: LocalDate,
+    today: LocalDate,
+    selectedDayKey: String,
+    wellness: DailyWellness,
+    onSelectDay: (LocalDate) -> Unit,
+) {
     val labels = listOf("DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB")
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -308,31 +326,44 @@ private fun WeekStrip(weekStart: LocalDate, today: LocalDate) {
     ) {
         labels.forEachIndexed { index, label ->
             val date = weekStart.plusDays(index.toLong())
-            val selected = date == today
+            val key = DailyWellness.dayKey(date)
+            val selected = key == selectedDayKey
             val future = date.isAfter(today)
+            val past = date.isBefore(today)
+            val entry = wellness.entry(key)
+            // Igual iOS weekDayFill: completo 0.72, parcial 0.38; dias passados sem dado
+            // usam o verde mais escuro para manter a faixa legível como no iOS preenchido.
+            val fill = when {
+                selected -> HealthFitColors.Accent
+                entry.isComplete || past -> HealthFitColors.Accent.copy(alpha = 0.72f)
+                entry.isFilled -> HealthFitColors.Accent.copy(alpha = 0.38f)
+                else -> Color(0xFF171C20)
+            }
+            val onFilled = selected || entry.isFilled || past
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(if (selected) HealthFitColors.Accent else Color(0xFF171C20))
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(fill)
                     .border(
-                        1.dp,
-                        when {
-                            selected -> HealthFitColors.Accent
-                            future -> Color.White.copy(alpha = 0.04f)
-                            else -> HealthFitColors.Accent.copy(alpha = 0.28f)
+                        width = if (!selected && date == today) 1.5.dp else 0.dp,
+                        color = if (!selected && date == today) {
+                            HealthFitColors.Accent.copy(alpha = 0.55f)
+                        } else {
+                            Color.Transparent
                         },
-                        RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(14.dp),
                     )
-                    .padding(vertical = 8.dp),
+                    .clickable(enabled = !future) { onSelectDay(date) }
+                    .padding(vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
                     label,
                     color = when {
-                        selected -> Color.Black
+                        onFilled -> Color.White
                         future -> Color(0xFF6E777E)
-                        else -> Color(0xFFD5DDE3)
+                        else -> HealthFitColors.TextSecondary
                     },
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
@@ -340,22 +371,13 @@ private fun WeekStrip(weekStart: LocalDate, today: LocalDate) {
                 )
                 Text(
                     date.dayOfMonth.toString(),
-                    color = if (selected) Color.Black else Color.White,
+                    color = when {
+                        onFilled -> Color.White
+                        future -> Color(0xFF6E777E)
+                        else -> HealthFitColors.TextSecondary
+                    },
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Box(
-                    Modifier
-                        .padding(top = 3.dp)
-                        .size(4.dp)
-                        .clip(CircleShape)
-                        .background(
-                            when {
-                                selected -> Color.Black.copy(alpha = 0.45f)
-                                future -> Color.Transparent
-                                else -> HealthFitColors.Accent
-                            },
-                        ),
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
         }

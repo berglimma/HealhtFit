@@ -414,7 +414,7 @@ fun ProfileScreen(
             fontSize = 12.sp,
             modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
         )
-        SleepCard(hours = wellness.sleepHours, onHours = { wellness.sleepHours = it })
+        SleepCard(hours = wellness.sleepHours, onHours = { wellness.updateSleep(it) })
         Spacer(Modifier.height(12.dp))
         WaterCard(
             ml = wellness.waterMl,
