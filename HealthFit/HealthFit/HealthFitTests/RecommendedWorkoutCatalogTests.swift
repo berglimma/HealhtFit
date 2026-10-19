@@ -2,13 +2,13 @@ import XCTest
 @testable import HealthFit
 
 final class RecommendedWorkoutCatalogTests: XCTestCase {
-    func testWarmupBlocksHaveExactlyTwoExercises() {
-        let upper = GuidedWorkoutCatalog.warmupBlock(style: .upper, level: .intermediate)
-        let lower = GuidedWorkoutCatalog.warmupBlock(style: .lower, level: .intermediate)
+    func testStretchBlocksHaveExactlyTwoExercises() {
+        let upper = GuidedWorkoutCatalog.stretchBlock(style: .upper, level: .intermediate)
+        let lower = GuidedWorkoutCatalog.stretchBlock(style: .lower, level: .intermediate)
         XCTAssertEqual(upper.count, 2)
         XCTAssertEqual(lower.count, 2)
-        XCTAssertTrue(upper.allSatisfy { $0.notes == GuidedWorkoutCatalog.warmupNote })
-        XCTAssertTrue(lower.allSatisfy { $0.notes == GuidedWorkoutCatalog.warmupNote })
+        XCTAssertTrue(upper.allSatisfy { $0.notes == GuidedWorkoutCatalog.stretchNote })
+        XCTAssertTrue(lower.allSatisfy { $0.notes == GuidedWorkoutCatalog.stretchNote })
     }
 
     func testCohortIndexAdvancesEvery30Days() {
@@ -46,9 +46,9 @@ final class RecommendedWorkoutCatalogTests: XCTestCase {
         XCTAssertTrue(c0.contains("Masculino G — Pernas Hipertrofia"))
     }
 
-    func testBaselineSheetsIncludeTwoWarmupExercises() {
+    func testBaselineSheetsIncludeTwoStretchExercises() {
         let sheet = RecommendedWorkoutCatalog.baselineMaleSheets[0]
-        let warmups = sheet.exercises.filter { $0.notes == GuidedWorkoutCatalog.warmupNote }
-        XCTAssertEqual(warmups.count, 2)
+        let stretches = sheet.exercises.filter { $0.notes == GuidedWorkoutCatalog.stretchNote }
+        XCTAssertEqual(stretches.count, 2)
     }
 }

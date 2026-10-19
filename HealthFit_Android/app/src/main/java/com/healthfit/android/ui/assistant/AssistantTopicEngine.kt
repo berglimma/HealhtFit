@@ -786,15 +786,9 @@ object AssistantTopicEngine {
                 "ficha personalizada", "treino pelo assistente", "sugestao de treino",
             ),
             respond = {
+                // O fluxo interativo é tratado em AssistantScreen (montar treino).
                 """
-                Posso orientar um treino para quem não tem personal.
-
-                Abra a aba **Treinos** e escolha:
-                • Musculação (métodos e fichas A/B/C)
-                • Treine em Casa (peso corporal, fichas A–F)
-                • Cardio ou Meditação
-
-                Sem personal, comece por 3 dias: empurrar, puxar e pernas — ou full body em casa.
+                Digite **montar treino** (ou toque na sugestão) para começarmos: perfil masculino/feminino, casa ou academia, se já treina e o foco. A ficha aparece em **Treinos → Personalizados**.
 
                 $WorkoutProfessionalDisclaimer
 

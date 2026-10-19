@@ -256,6 +256,8 @@
 		B1000933 /* DuoMemberAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000933 /* DuoMemberAvatarView.swift */; };
 		B1000934 /* MarcoCivilAccessLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000934 /* MarcoCivilAccessLogService.swift */; };
 		B1000935 /* DuoNavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000935 /* DuoNavigationRouter.swift */; };
+		B1000WHR /* WorkoutHubNavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000WHR /* WorkoutHubNavigationRouter.swift */; };
+		B1000ANR /* AssistantNavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000ANR /* AssistantNavigationRouter.swift */; };
 		B1000936 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000936 /* PushNotificationService.swift */; };
 		B1000937 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD008 /* FirebaseMessaging */; };
 		B1000942 /* AssistantGratitudeAndCycleEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000942 /* AssistantGratitudeAndCycleEngine.swift */; };
@@ -693,6 +695,8 @@
 		F1000933 /* DuoMemberAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoMemberAvatarView.swift; sourceTree = "<group>"; };
 		F1000934 /* MarcoCivilAccessLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarcoCivilAccessLogService.swift; sourceTree = "<group>"; };
 		F1000935 /* DuoNavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoNavigationRouter.swift; sourceTree = "<group>"; };
+		F1000WHR /* WorkoutHubNavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHubNavigationRouter.swift; sourceTree = "<group>"; };
+		F1000ANR /* AssistantNavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantNavigationRouter.swift; sourceTree = "<group>"; };
 		F1000936 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		F1000942 /* AssistantGratitudeAndCycleEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantGratitudeAndCycleEngine.swift; sourceTree = "<group>"; };
 		F1000944 /* AppFeedbackFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeedbackFirestoreService.swift; sourceTree = "<group>"; };
@@ -1006,6 +1010,8 @@
 				F1000CA1 /* CoverAssetImage.swift */,
 				F1000P12 /* PulseShareService.swift */,
 				F1000935 /* DuoNavigationRouter.swift */,
+				F1000WHR /* WorkoutHubNavigationRouter.swift */,
+				F1000ANR /* AssistantNavigationRouter.swift */,
 				F1000PNR /* PulseNavigationRouter.swift */,
 				F1000914 /* NutritionNotificationPreferences.swift */,
 				F1000918 /* RecommendedWorkoutCatalog.swift */,
@@ -1809,6 +1815,8 @@
 				B1000934 /* MarcoCivilAccessLogService.swift in Sources */,
 				B1000936 /* PushNotificationService.swift in Sources */,
 				B1000935 /* DuoNavigationRouter.swift in Sources */,
+				B1000WHR /* WorkoutHubNavigationRouter.swift in Sources */,
+				B1000ANR /* AssistantNavigationRouter.swift in Sources */,
 				B1000PNR /* PulseNavigationRouter.swift in Sources */,
 				B1000933 /* DuoMemberAvatarView.swift in Sources */,
 				B1000928 /* MessageComposeView.swift in Sources */,

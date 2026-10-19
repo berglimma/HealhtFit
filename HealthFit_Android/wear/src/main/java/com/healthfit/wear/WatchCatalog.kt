@@ -73,11 +73,8 @@ object WatchCatalog {
         StrengthProgram("c-d", "Casa D — Pernas e Glúteos", "Afundo"),
         StrengthProgram("c-e", "Casa E — Superiores", "Flexão de braço"),
         StrengthProgram("c-f", "Casa F — Mobilidade e Postura", "Gato-camelo"),
-        StrengthProgram("mob-a", "Mobilidade A — Aquecimento Geral", "Círculos de ombro"),
-        StrengthProgram("mob-b", "Mobilidade B — Ombros e Peito", "Abertura peitoral"),
-        StrengthProgram("mob-c", "Mobilidade C — Quadril e Posterior", "Along. isquiotibial"),
-        StrengthProgram("mob-d", "Mobilidade D — Torácica e Escápulas", "Rotação torácica"),
-        StrengthProgram("mob-e", "Mobilidade E — Pós-treino", "Respiração + alongamento"),
+        StrengthProgram("mob-a", "Mobilidade A — Alongamento Dinâmico", "Alongamento mundial"),
+        StrengthProgram("mob-e", "Mobilidade E — Alongamento Estático", "Alongamento de peito"),
     )
 
     val cardioActivities = listOf(

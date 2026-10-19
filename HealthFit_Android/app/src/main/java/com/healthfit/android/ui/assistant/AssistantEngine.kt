@@ -12,7 +12,7 @@ object AssistantEngine {
 
     val suggestions = listOf(
         "Montar cardápio personalizado",
-        "Montar treino sem personal",
+        "Montar treino",
         "Treino em casa funciona?",
         "Como treinar em casa sem equipamento?",
         "Qual é meu IMC?",

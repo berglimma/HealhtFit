@@ -94,6 +94,20 @@ fun WorkoutsScreen(userId: String? = null) {
     val context = LocalContext.current
     val watchOwned by PhoneWorkoutSync.watchOwned.collectAsState()
 
+    fun reloadAssistantSheets() {
+        val male = com.healthfit.android.ui.assistant.AssistantGeneratedWorkouts.forGender(context, female = false)
+        val female = com.healthfit.android.ui.assistant.AssistantGeneratedWorkouts.forGender(context, female = true)
+        maleCustom.clear()
+        femaleCustom.clear()
+        maleCustom.addAll(male)
+        femaleCustom.addAll(female)
+    }
+    LaunchedEffect(dest) {
+        if (dest is WorkoutDest.Browse || dest is WorkoutDest.Program) {
+            reloadAssistantSheets()
+        }
+    }
+
     // When the watch starts a workout and the phone isn't already in a live session, mirror it.
     LaunchedEffect(watchOwned?.title, watchOwned?.exercise, dest) {
         val owned = watchOwned ?: return@LaunchedEffect
@@ -489,7 +503,7 @@ private fun StrengthTab(onOpen: (String) -> Unit) {
     Spacer(Modifier.height(10.dp))
     HeroCard(
         title = "MOBILIDADE",
-        subtitle = "Aquecimento e pós-treino com demos",
+        subtitle = "2 tipos de alongamento com demos",
         brush = Brush.linearGradient(listOf(Color(0xFF142030), Color(0xFF1A2838))),
         imageRes = R.drawable.workoutprogrammobility,
         eyebrow = "PARA MUSCULAÇÃO",

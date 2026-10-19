@@ -13,6 +13,7 @@ struct HealthChatView: View {
     @ObservedObject private var checkInService = PostWorkoutCheckInService.shared
     @ObservedObject private var dailyMorningService = DailyMorningCheckInService.shared
     @ObservedObject private var dailyEveningService = DailyEveningCheckInService.shared
+    @ObservedObject private var assistantNavigation = AssistantNavigationRouter.shared
     @State private var draft = ""
     /// HRV mais recente do HealthKit — leitura assíncrona, guardada para o contexto síncrono.
     @State private var latestHRVMs: Double?
@@ -325,10 +326,30 @@ struct HealthChatView: View {
                     assistant.recordUserInteraction()
                 }
             }
+            .onChange(of: assistantNavigation.pendingStartWorkoutBuilderTick) { _, _ in
+                handlePendingWorkoutBuilderCTA()
+            }
+            .onAppear {
+                handlePendingWorkoutBuilderCTA()
+            }
             .sheet(isPresented: $showPaywall) {
                 PaywallView(highlight: paywallFeature)
                     .environmentObject(subscriptions)
             }
+        }
+    }
+
+    private func handlePendingWorkoutBuilderCTA() {
+        guard let pending = assistantNavigation.consumePendingStart() else { return }
+        // Aguarda a aba montar e o bootstrap do chat antes de iniciar o fluxo.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            bootstrapOrResumeCheckIn()
+            let preferred = pending.preferredGender ?? authService.currentUser?.gender
+            assistant.startWorkoutBuilderFromExternalCTA(
+                context: context,
+                preferredGender: preferred
+            )
         }
     }
 

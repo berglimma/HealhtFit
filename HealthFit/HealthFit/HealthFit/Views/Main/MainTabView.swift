@@ -17,6 +17,8 @@ struct MainTabView: View {
     @ObservedObject private var duoNavigation = DuoNavigationRouter.shared
     @ObservedObject private var coachNavigation = CoachNavigationRouter.shared
     @ObservedObject private var pulseNavigation = PulseNavigationRouter.shared
+    @ObservedObject private var workoutHubNavigation = WorkoutHubNavigationRouter.shared
+    @ObservedObject private var assistantNavigation = AssistantNavigationRouter.shared
     @ObservedObject private var coachService = CoachService.shared
     @State private var selectedTab = 0
     /// Only mount heavy tab roots after first visit — TabView otherwise builds all 5 eagerly.
@@ -136,6 +138,14 @@ struct MainTabView: View {
             .onChange(of: duoNavigation.focusWorkoutsTabTick) { _, _ in
                 loadedTabs.insert(workoutsTabTag)
                 selectedTab = workoutsTabTag
+            }
+            .onChange(of: workoutHubNavigation.focusWorkoutsTabTick) { _, _ in
+                loadedTabs.insert(workoutsTabTag)
+                selectedTab = workoutsTabTag
+            }
+            .onChange(of: assistantNavigation.focusAssistantTabTick) { _, _ in
+                loadedTabs.insert(assistantTabTag)
+                selectedTab = assistantTabTag
             }
             .onChange(of: coachNavigation.focusProfileTabTick) { _, _ in
                 loadedTabs.insert(profileTabTag)

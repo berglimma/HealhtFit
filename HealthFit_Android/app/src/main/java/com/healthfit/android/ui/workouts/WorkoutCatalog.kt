@@ -334,20 +334,20 @@ object WorkoutCatalog {
 
     val mobility: List<WorkoutSheet> = listOf(
         sheet(
-            "Mobilidade A — Aquecimento Geral",
-            "Ativação articular antes de treinar com carga — 8–10 min",
+            "Mobilidade A — Alongamento Dinâmico",
+            "Alongamento dinâmico antes do treino — 8–10 min",
             listOf(
-                ex("Círculos de Tornozelo", 2, 12, null, Muscle.legs),
-                ex("Círculos de Punho", 2, 12, null, Muscle.arms),
-                ex("Inchworm", 2, 8, null, Muscle.fullBody),
                 ex("Alongamento Mundial", 2, 6, null, Muscle.fullBody),
                 ex("Alongamento de Coluna", 2, 10, null, Muscle.back),
                 ex("Alongamento de Costas Altas", 2, 10, null, Muscle.back),
+                ex("Alongamento de Flexor de Quadril", 2, 30, null, Muscle.legs),
+                ex("Alongamento de Posterior", 2, 30, null, Muscle.legs),
+                ex("Alongamento de Peito", 2, 30, null, Muscle.chest),
                 ex("Alongamento de Panturrilha", 2, 30, null, Muscle.legs),
             ),
         ),
         sheet(
-            "Mobilidade E — Pós-treino",
+            "Mobilidade E — Alongamento Estático",
             "Alongamento estático para recuperação após a musculação",
             listOf(
                 ex("Alongamento de Peito", 2, 40, null, Muscle.chest),

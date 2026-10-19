@@ -4,7 +4,6 @@ import Foundation
 /// Nível 1 e Nível 2, masculino e feminino, conforme as fichas do PDF.
 enum ShapeWorkoutCatalog {
     private static let nearFailure = "Próximo da falha"
-    private static let warmupLight = "Aquecimento (peso leve)"
     private static let noHeavyLoads = "Não utilize cargas altas"
     private static let dropSetLast = "Drop set ao final da última série"
     private static let methodNote =
@@ -38,8 +37,8 @@ enum ShapeWorkoutCatalog {
             title: "Shape Feminino A — Inferiores (Nível 1)",
             description: "\(methodNote). Ênfase em quadríceps.",
             gender: .female,
+            stretch: .lower,
             exercises: [
-                ex("Agachamento Corporal", sets: 1, reps: 15, notes: "Aquecimento", group: .legs),
                 ex("Agachamento Livre", sets: 3, notes: noHeavyLoads, group: .legs),
                 ex("Leg Press 45", sets: 3, group: .legs),
                 ex("Cadeira Extensora", sets: 2, group: .legs),
@@ -50,8 +49,8 @@ enum ShapeWorkoutCatalog {
             title: "Shape Feminino B — Superiores (Nível 1)",
             description: "\(methodNote). Costas, peito, ombros e braços.",
             gender: .female,
+            stretch: .upper,
             exercises: [
-                ex("Rotação Externa Polia Unilateral", sets: 2, reps: 10, notes: warmupLight, group: .shoulders),
                 ex("Puxada Alta Frente", sets: 3, group: .back),
                 ex("Supino Inclinado com Halteres", sets: 3, group: .chest),
                 ex("Elevação Lateral com Halteres", sets: 3, group: .shoulders),
@@ -65,6 +64,7 @@ enum ShapeWorkoutCatalog {
             title: "Shape Feminino C — Posterior e Abdutora (Nível 1)",
             description: "\(methodNote). Posterior de coxa, abdutora e panturrilha.",
             gender: .female,
+            stretch: .lower,
             exercises: [
                 ex("Cadeira Flexora", sets: 3, group: .legs),
                 ex("Mesa Flexora", sets: 3, group: .legs),
@@ -78,8 +78,8 @@ enum ShapeWorkoutCatalog {
             title: "Shape Feminino D — Costas e Braços (Nível 1)",
             description: "\(methodNote). Remada, peito e braços.",
             gender: .female,
+            stretch: .upper,
             exercises: [
-                ex("Rotação Externa Polia Unilateral", sets: 2, reps: 10, notes: warmupLight, group: .shoulders),
                 ex("Remada Baixa Pronada", sets: 3, group: .back),
                 ex("Crossover", sets: 3, group: .chest),
                 ex("Crucifixo Inverso Máquina", sets: 3, group: .shoulders),
@@ -97,6 +97,7 @@ enum ShapeWorkoutCatalog {
             title: "Shape Feminino E — Posterior e Glúteo (Nível 2)",
             description: "\(methodNote). Posterior, glúteo e panturrilha.",
             gender: .female,
+            stretch: .lower,
             exercises: [
                 ex("Stiff", sets: 3, group: .legs),
                 ex("Cadeira Flexora", sets: 3, group: .legs),
@@ -110,8 +111,8 @@ enum ShapeWorkoutCatalog {
             title: "Shape Feminino F — Superiores Completo (Nível 2)",
             description: "\(methodNote). Costas, ombros, braços e abdômen.",
             gender: .female,
+            stretch: .upper,
             exercises: [
-                ex("Elevação Lateral", sets: 2, reps: 10, notes: warmupLight, group: .shoulders),
                 ex("Puxada Alta Frente", sets: 3, group: .back),
                 ex("Remada Curvada com Halteres", sets: 3, group: .back),
                 ex("Remada Baixa", sets: 3, group: .back),
@@ -126,8 +127,9 @@ enum ShapeWorkoutCatalog {
             title: "Shape Feminino G — Quadríceps (Nível 2)",
             description: "\(methodNote). Ênfase em quadríceps.",
             gender: .female,
+            stretch: .lower,
             exercises: [
-                ex("Agachamento Búlgaro", sets: 2, reps: 10, notes: "\(warmupLight) — se não conseguir, faça afundo", group: .legs),
+                ex("Agachamento Búlgaro", sets: 2, reps: 10, notes: "Se não conseguir, faça afundo", group: .legs),
                 ex("Agachamento Livre", sets: 3, group: .legs),
                 ex("Leg Press", sets: 3, group: .legs),
                 ex("Cadeira Extensora", sets: 3, group: .legs),
@@ -137,8 +139,8 @@ enum ShapeWorkoutCatalog {
             title: "Shape Feminino H — Peito Ombros Braços (Nível 2)",
             description: "\(methodNote). Push superior com abdômen.",
             gender: .female,
+            stretch: .upper,
             exercises: [
-                ex("Elevação Lateral", sets: 2, reps: 10, notes: warmupLight, group: .shoulders),
                 ex("Desenvolvimento com Halteres", sets: 3, group: .shoulders),
                 ex("Crucifixo Inclinado com Halteres", sets: 3, group: .chest),
                 ex("Rosca Martelo Corda", sets: 3, group: .arms),
@@ -151,6 +153,7 @@ enum ShapeWorkoutCatalog {
             title: "Shape Feminino I — Glúteo (Nível 2)",
             description: "\(methodNote). Abdutora, sumô e elevação pélvica.",
             gender: .female,
+            stretch: .lower,
             exercises: [
                 ex("Abdução Lateral Polia Baixa", sets: 3, group: .legs),
                 ex("Sumô com Halteres", sets: 3, group: .legs),
@@ -168,8 +171,8 @@ enum ShapeWorkoutCatalog {
             title: "Shape Masculino A — Superiores (Nível 1)",
             description: "\(methodNote). Costas, peito, ombros e braços.",
             gender: .male,
+            stretch: .upper,
             exercises: [
-                ex("Rotação Externa Polia Unilateral", sets: 2, reps: 10, notes: warmupLight, group: .shoulders),
                 ex("Puxada Alta Frente", sets: 3, group: .back),
                 ex("Supino Inclinado com Halteres", sets: 3, group: .chest),
                 ex("Elevação Lateral com Halteres", sets: 3, group: .shoulders),
@@ -181,6 +184,7 @@ enum ShapeWorkoutCatalog {
             title: "Shape Masculino B — Inferiores (Nível 1)",
             description: "\(methodNote). Pernas e abdômen.",
             gender: .male,
+            stretch: .lower,
             exercises: [
                 ex("Leg Press 45", sets: 3, group: .legs),
                 ex("Mesa Flexora", sets: 3, group: .legs),
@@ -194,8 +198,8 @@ enum ShapeWorkoutCatalog {
             title: "Shape Masculino C — Costas e Braços (Nível 1)",
             description: "\(methodNote). Remada, peito e braços.",
             gender: .male,
+            stretch: .upper,
             exercises: [
-                ex("Rotação Externa Polia Unilateral", sets: 2, reps: 10, notes: warmupLight, group: .shoulders),
                 ex("Remada Baixa Pronada", sets: 3, group: .back),
                 ex("Crossover", sets: 3, group: .chest),
                 ex("Crucifixo Inverso Máquina", sets: 3, group: .shoulders),
@@ -207,6 +211,7 @@ enum ShapeWorkoutCatalog {
             title: "Shape Masculino D — Inferiores 2 (Nível 1)",
             description: "\(methodNote). Flexora, hack e abdutora.",
             gender: .male,
+            stretch: .lower,
             exercises: [
                 ex("Cadeira Flexora", sets: 3, group: .legs),
                 ex("Hack Squat", sets: 3, group: .legs),
@@ -224,8 +229,8 @@ enum ShapeWorkoutCatalog {
             title: "Shape Masculino E — Peito Ombros Tríceps (Nível 2)",
             description: "\(methodNote). Push clássico.",
             gender: .male,
+            stretch: .upper,
             exercises: [
-                ex("Rotação Externa Polia Unilateral", sets: 2, reps: 15, notes: "Aquecimento", group: .shoulders),
                 ex("Supino Inclinado com Halteres", sets: 3, group: .chest),
                 ex("Crucifixo Inclinado com Halteres", sets: 3, notes: "\(nearFailure) — cabo ou máquina também serve", group: .chest),
                 ex("Voador", sets: 3, group: .chest),
@@ -238,8 +243,8 @@ enum ShapeWorkoutCatalog {
             title: "Shape Masculino F — Inferiores e Abdômen (Nível 2)",
             description: "\(methodNote). Pernas completas + core.",
             gender: .male,
+            stretch: .lower,
             exercises: [
-                ex("Agachamento Corporal", sets: 1, reps: 15, notes: "Aquecimento", group: .legs),
                 ex("Agachamento Livre", sets: 3, group: .legs),
                 ex("Leg Press", sets: 4, group: .legs),
                 ex("Cadeira Flexora", sets: 3, group: .legs),
@@ -253,8 +258,8 @@ enum ShapeWorkoutCatalog {
             title: "Shape Masculino G — Costas Bíceps (Nível 2)",
             description: "\(methodNote). Dorsais, deltoide posterior e bíceps.",
             gender: .male,
+            stretch: .upper,
             exercises: [
-                ex("Rotação Externa Polia Unilateral", sets: 1, reps: 10, notes: "Aquecimento — cada lado", group: .shoulders),
                 ex("Puxada Alta Frente", sets: 3, group: .back),
                 ex("Remada Curvada Pronada", sets: 4, group: .back),
                 ex("Remada Unilateral", sets: 3, group: .back),
@@ -267,6 +272,7 @@ enum ShapeWorkoutCatalog {
             title: "Shape Masculino H — Inferiores Completo (Nível 2)",
             description: "\(methodNote). Posterior, press, sumô e panturrilha.",
             gender: .male,
+            stretch: .lower,
             exercises: [
                 ex("Mesa Flexora", sets: 4, group: .legs),
                 ex("Stiff", sets: 3, group: .legs),
@@ -282,6 +288,7 @@ enum ShapeWorkoutCatalog {
             title: "Shape Masculino I — Ombros Bíceps Tríceps (Nível 2)",
             description: "\(methodNote). Ênfase em ombros e braços.",
             gender: .male,
+            stretch: .upper,
             exercises: [
                 ex("Desenvolvimento com Halteres", sets: 3, group: .shoulders),
                 ex("Elevação Lateral com Halteres", sets: 4, group: .shoulders),
@@ -299,12 +306,14 @@ enum ShapeWorkoutCatalog {
         title: String,
         description: String,
         gender: Gender,
+        stretch: GuidedWorkoutCatalog.WarmupStyle,
         exercises: [Exercise]
     ) -> WorkoutSheet {
-        WorkoutSheet(
+        let stretches = GuidedWorkoutCatalog.stretchBlock(style: stretch, level: .intermediate)
+        return WorkoutSheet(
             title: title,
             description: description,
-            exercises: exercises,
+            exercises: stretches + exercises,
             targetGender: gender
         )
     }

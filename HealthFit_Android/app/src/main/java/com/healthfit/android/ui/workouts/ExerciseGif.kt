@@ -15,10 +15,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.ImageNotSupported
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,25 +36,51 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.healthfit.designsystem.HealthFitColors
+import java.io.File
 import java.text.Normalizer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-private const val GifCdn = "https://cdn.jsdelivr.net/gh/JahelCuadrado/ExerciseGymGifsDB@main/"
+/**
+ * Host primário: raw.githubusercontent (jsDelivr responde 403 em vários arquivos).
+ * UI mostra o GIF local **na hora** e só troca para o remoto se carregar rápido.
+ */
+private const val GifCdnPrimary = "https://raw.githubusercontent.com/JahelCuadrado/ExerciseGymGifsDB/main/"
+private const val GifCdnMirror = "https://cdn.jsdelivr.net/gh/JahelCuadrado/ExerciseGymGifsDB@main/"
 
 fun gifImageLoader(context: Context): ImageLoader =
-    ImageLoader.Builder(context)
-        .components { add(ImageDecoderDecoder.Factory()) }
+    ImageLoader.Builder(context.applicationContext)
+        .components {
+            add(ImageDecoderDecoder.Factory())
+            add(GifDecoder.Factory())
+        }
         .build()
 
 object ExerciseGifCatalog {
-    fun remoteUrl(exercise: WorkoutExercise): String = GifCdn + filePath(exercise)
+    fun remoteUrl(exercise: WorkoutExercise, mirror: Boolean = false): String {
+        val base = if (mirror) GifCdnMirror else GifCdnPrimary
+        return base + filePath(exercise)
+    }
 
-    fun bundledUrl(exercise: WorkoutExercise): String =
-        "file:///android_asset/gifs/${bundledName(exercise)}.gif"
+    fun bundledFile(context: Context, exercise: WorkoutExercise): File {
+        val name = bundledName(exercise)
+        val out = File(context.cacheDir, "exercise_gifs/$name.gif")
+        if (!out.exists() || out.length() == 0L) {
+            out.parentFile?.mkdirs()
+            context.assets.open("gifs/$name.gif").use { input ->
+                out.outputStream().use { output -> input.copyTo(output) }
+            }
+        }
+        return out
+    }
 
-    private fun filePath(exercise: WorkoutExercise): String {
+    fun filePath(exercise: WorkoutExercise): String {
+        exactPaths[exercise.name]?.let { return it }
         val name = fold(exercise.name)
         for ((keywords, path) in keywordPaths) {
             if (keywords.any { name.contains(it) }) return path
@@ -75,6 +103,8 @@ object ExerciseGifCatalog {
             name.contains("rosca") -> "biceps"
             name.contains("encolhimento") || name.contains("trapezio") -> "trapezio"
             name.contains("ombro") || name.contains("desenvolvimento") || name.contains("elevacao") -> "ombros"
+            name.contains("burpee") || name.contains("mountain") || name.contains("polichinelo") ||
+                name.contains("thruster") || name.contains("kettlebell") -> "corpo_inteiro"
             exercise.muscle == Muscle.chest -> "peito"
             exercise.muscle == Muscle.back -> "costas"
             exercise.muscle == Muscle.legs -> "pernas"
@@ -90,60 +120,76 @@ object ExerciseGifCatalog {
             .replace("\\p{Mn}+".toRegex(), "")
             .lowercase()
 
+    private val exactPaths = mapOf(
+        "Agachamento Livre" to "glutes/barbell-full-squat.gif",
+        "Flexão de Braços" to "pectorals/push-up.gif",
+        "Afundo" to "glutes/dumbbell-lunge.gif",
+        "Afundo Búlgaro" to "quads/dumbbell-single-leg-split-squat.gif",
+        "Mergulho no Banco" to "triceps/bench-dip-knees-bent.gif",
+        "Prancha" to "abs/front-plank-with-twist.gif",
+        "Prancha Lateral" to "abs/bodyweight-incline-side-plank.gif",
+        "Mountain Climber" to "cardio/mountain-climber.gif",
+        "Burpee" to "cardio/burpee.gif",
+        "Polichinelo" to "cardio/star-jump-male.gif",
+        "Ponte de Glúteos" to "glutes/low-glute-bridge-on-floor.gif",
+        "Superman" to "spine/hyperextension.gif",
+        "Isometria na Parede" to "glutes/march-sit-wall.gif",
+        "Flexão Diamante" to "triceps/diamond-push-up.gif",
+        "Flexão Inclinada" to "pectorals/incline-push-up.gif",
+        "Abdominal Bicicleta" to "abs/air-bike.gif",
+        "Abdominal Crunch" to "abs/band-bicycle-crunch.gif",
+        "Russian Twist" to "abs/russian-twist.gif",
+        "Elevação de Pernas" to "abs/hanging-leg-raise.gif",
+        "Inchworm" to "abs/inchworm.gif",
+        "Alongamento Mundial" to "hamstrings/world-greatest-stretch.gif",
+        "Agachamento Sumô" to "glutes/smith-sumo-squat.gif",
+        "Panturrilha Corporal" to "calves/bodyweight-standing-calf-raise.gif",
+        "Círculos de Braços" to "delts/weighted-round-arm.gif",
+        "Círculos de Tornozelo" to "calves/ankle-circles.gif",
+        "Círculos de Punho" to "forearms/wrist-circles.gif",
+        "Supino Reto" to "pectorals/barbell-bench-press.gif",
+        "Supino Inclinado" to "pectorals/barbell-incline-bench-press.gif",
+        "Remada Curvada" to "upper-back/barbell-bent-over-row.gif",
+        "Puxada Frontal" to "lats/cable-pulldown.gif",
+        "Leg Press 45°" to "glutes/sled-45-leg-press.gif",
+        "Desenvolvimento com Halteres" to "delts/dumbbell-seated-shoulder-press.gif",
+        "Elevação Lateral" to "delts/dumbbell-lateral-raise.gif",
+        "Rosca Direta" to "biceps/barbell-curl.gif",
+        "Tríceps Pulley" to "triceps/cable-pushdown.gif",
+        "Elevação Pélvica (Hip Thrust)" to "glutes/resistance-band-hip-thrusts-on-knees-female.gif",
+        "Stiff" to "glutes/barbell-romanian-deadlift.gif",
+        "Cadeira Abdutora" to "abductors/lever-seated-hip-abduction.gif",
+        "Cadeira Adutora" to "adductors/lever-seated-hip-adduction.gif",
+        "Remada Unilateral" to "upper-back/dumbbell-bent-over-row.gif",
+        "Abdominal Oblíquo" to "abs/russian-twist.gif",
+        "Bicicleta no Ar" to "abs/air-bike.gif",
+        "Kettlebell Swing" to "glutes/barbell-deadlift.gif",
+    )
+
     private val keywordPaths = listOf(
         listOf("supino reto") to "pectorals/barbell-bench-press.gif",
         listOf("supino inclinado") to "pectorals/barbell-incline-bench-press.gif",
-        listOf("supino declinado") to "pectorals/barbell-decline-bench-press.gif",
-        listOf("crucifixo inverso") to "delts/lever-seated-reverse-fly.gif",
-        listOf("crucifixo") to "pectorals/dumbbell-fly.gif",
-        listOf("crossover", "cross over") to "pectorals/cable-standing-up-straight-crossovers.gif",
-        listOf("voador") to "pectorals/lever-seated-fly.gif",
         listOf("flexao diamante") to "triceps/diamond-push-up.gif",
-        listOf("flexao inclinada") to "pectorals/incline-push-up.gif",
         listOf("flexao") to "pectorals/push-up.gif",
-        listOf("triceps corda", "triceps pulley", "triceps pushdown") to "triceps/cable-pushdown.gif",
-        listOf("triceps testa") to "triceps/barbell-lying-triceps-extension-skull-crusher.gif",
-        listOf("triceps frances") to "triceps/cable-overhead-triceps-extension-rope-attachment.gif",
         listOf("mergulho") to "triceps/bench-dip-knees-bent.gif",
-        listOf("rosca martelo", "martelo") to "biceps/dumbbell-hammer-curl.gif",
         listOf("rosca") to "biceps/barbell-curl.gif",
-        listOf("remada baixa") to "upper-back/cable-seated-row.gif",
         listOf("remada") to "upper-back/barbell-bent-over-row.gif",
-        listOf("pulldown triangulo", "puxada triangulo") to "lats/cable-lateral-pulldown-with-v-bar.gif",
-        listOf("puxada", "pulldown", "barra fixa") to "lats/cable-pulldown.gif",
+        listOf("puxada", "pulldown") to "lats/cable-pulldown.gif",
         listOf("hip thrust", "elevacao pelvica") to "glutes/resistance-band-hip-thrusts-on-knees-female.gif",
         listOf("agachamento sumo", "sumo") to "glutes/smith-sumo-squat.gif",
-        listOf("afundo") to "quads/dumbbell-single-leg-split-squat.gif",
+        listOf("afundo bulgaro") to "quads/dumbbell-single-leg-split-squat.gif",
+        listOf("afundo") to "glutes/dumbbell-lunge.gif",
         listOf("leg press") to "glutes/sled-45-leg-press.gif",
         listOf("agachamento") to "glutes/barbell-full-squat.gif",
-        listOf("flexora") to "hamstrings/lever-lying-leg-curl.gif",
-        listOf("extensora") to "quads/lever-leg-extension.gif",
-        listOf("stiff") to "hamstrings/barbell-straight-leg-deadlift.gif",
-        listOf("panturrilha") to "calves/lever-standing-calf-raise.gif",
-        listOf("desenvolvimento", "elevacao lateral", "elevacao", "arnold") to "delts/dumbbell-lateral-raise.gif",
-        listOf("encolhimento") to "traps/barbell-shrug.gif",
-        listOf("face pull") to "delts/cable-standing-rear-delt-row-with-rope.gif",
-        listOf("abdominal", "prancha", "mountain", "russian", "bicicleta") to "abs/crunch-floor.gif",
+        listOf("mountain climber", "mountain") to "cardio/mountain-climber.gif",
+        listOf("burpee") to "cardio/burpee.gif",
         listOf("polichinelo") to "cardio/star-jump-male.gif",
-        listOf("ponte de gluteos") to "glutes/low-glute-bridge-on-floor.gif",
-        listOf("superman") to "spine/hyperextension.gif",
-        listOf("isometria") to "glutes/march-sit-wall.gif",
-        listOf("burpee") to "glutes/barbell-deadlift.gif",
-        listOf("alongamento de peito") to "pectorals/chest-and-front-of-shoulder-stretch.gif",
-        listOf("alongamento de dorsal") to "lats/kneeling-lat-stretch.gif",
-        listOf("alongamento de posterior") to "hamstrings/hamstring-stretch.gif",
-        listOf("flexor de quadril") to "quads/intermediate-hip-flexor-and-quad-stretch.gif",
-        listOf("alongamento de gluteo") to "glutes/seated-glute-stretch.gif",
-        listOf("alongamento de triceps") to "triceps/overhead-triceps-stretch.gif",
-        listOf("alongamento de panturrilha") to "calves/calf-stretch-with-hands-against-wall.gif",
-        listOf("alongamento de pescoco") to "levator-scapulae/neck-side-stretch.gif",
-        listOf("alongamento de coluna") to "spine/spine-stretch.gif",
-        listOf("alongamento de costas") to "upper-back/upper-back-stretch.gif",
-        listOf("alongamento mundial") to "hamstrings/world-greatest-stretch.gif",
-        listOf("inchworm") to "abs/inchworm.gif",
-        listOf("tornozelo") to "calves/ankle-circles.gif",
-        listOf("punho") to "forearms/wrist-circles.gif",
-        listOf("terra") to "glutes/barbell-deadlift.gif",
+        listOf("prancha") to "abs/front-plank-with-twist.gif",
+        listOf("abdominal", "crunch", "russian", "bicicleta") to "abs/crunch-floor.gif",
+        listOf("desenvolvimento", "elevacao lateral") to "delts/dumbbell-lateral-raise.gif",
+        listOf("triceps") to "triceps/cable-pushdown.gif",
+        listOf("stiff") to "glutes/barbell-romanian-deadlift.gif",
+        listOf("terra", "kettlebell") to "glutes/barbell-deadlift.gif",
     )
 }
 
@@ -151,12 +197,36 @@ object ExerciseGifCatalog {
 fun ExerciseGifCard(exercise: WorkoutExercise, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val loader = remember { gifImageLoader(context) }
-    var useBundled by remember(exercise.name) { mutableStateOf(false) }
-    var loaded by remember(exercise.name, useBundled) { mutableStateOf(false) }
-    val model = if (useBundled) {
-        ExerciseGifCatalog.bundledUrl(exercise)
-    } else {
-        ExerciseGifCatalog.remoteUrl(exercise)
+    val bundled = remember(exercise.name) { ExerciseGifCatalog.bundledFile(context, exercise) }
+    // Começa no local → aparece na hora; remoto só substitui se carregar.
+    var model by remember(exercise.name) { mutableStateOf<Any>(bundled) }
+    var loaded by remember(exercise.name) { mutableStateOf(false) }
+    var failed by remember(exercise.name) { mutableStateOf(false) }
+
+    LaunchedEffect(exercise.name) {
+        loaded = false
+        failed = false
+        model = bundled
+        val upgraded = withContext(Dispatchers.IO) {
+            val urls = listOf(
+                ExerciseGifCatalog.remoteUrl(exercise, mirror = false),
+                ExerciseGifCatalog.remoteUrl(exercise, mirror = true),
+            )
+            for (url in urls) {
+                val ok = runCatching {
+                    val req = ImageRequest.Builder(context)
+                        .data(url)
+                        .allowHardware(false)
+                        .build()
+                    loader.execute(req) is SuccessResult
+                }.getOrDefault(false)
+                if (ok) return@withContext url
+            }
+            null
+        }
+        if (upgraded != null) {
+            model = upgraded
+        }
     }
 
     Column(
@@ -192,25 +262,50 @@ fun ExerciseGifCard(exercise: WorkoutExercise, modifier: Modifier = Modifier) {
             contentAlignment = Alignment.Center,
         ) {
             AsyncImage(
-                model = ImageRequest.Builder(context).data(model).crossfade(true).build(),
+                model = ImageRequest.Builder(context)
+                    .data(model)
+                    .crossfade(false)
+                    .allowHardware(false)
+                    .build(),
                 imageLoader = loader,
                 contentDescription = exercise.name,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit,
-                onSuccess = { loaded = true },
+                onSuccess = {
+                    loaded = true
+                    failed = false
+                },
                 onError = {
-                    loaded = false
-                    if (!useBundled) useBundled = true
+                    if (model != bundled) {
+                        model = bundled
+                    } else {
+                        failed = true
+                        loaded = false
+                    }
                 },
             )
-            if (!loaded) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = HealthFitColors.Accent, modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
-                    Text(
-                        "Carregando demonstração...",
-                        color = Color.White.copy(alpha = 0.7f),
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 8.dp),
+            when {
+                failed -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Filled.ImageNotSupported,
+                            null,
+                            tint = Color.White.copy(alpha = 0.55f),
+                            modifier = Modifier.size(28.dp),
+                        )
+                        Text(
+                            "Demonstração indisponível",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
+                }
+                !loaded -> {
+                    CircularProgressIndicator(
+                        color = HealthFitColors.Accent,
+                        modifier = Modifier.size(28.dp),
+                        strokeWidth = 2.dp,
                     )
                 }
             }

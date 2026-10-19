@@ -285,17 +285,18 @@ fun ProgramHubScreen(
             },
         )
         Spacer(Modifier.height(16.dp))
-        SectionHead("Personalizados", "Treinos criados para este programa")
+        SectionHead("Personalizados", "Criados por você ou pelo IAssistente")
         if (custom.isEmpty()) {
             Text(
-                "Nenhum personalizado ainda. Toque em + para criar ou importe uma ficha (câmera, foto ou PDF).",
+                "Nenhum personalizado ainda. Toque em + para criar, importe uma ficha, ou peça “montar treino” no IAssistente.",
                 color = Color(0xFFB7C0C8),
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 6.dp),
             )
         } else {
             custom.forEach { sheet ->
-                PhotoSheetCard(sheet, program.cover, "Personalizado") { onOpen(sheet) }
+                val badge = if (sheet.title.contains("IAssistente")) "IAssistente" else "Personalizado"
+                PhotoSheetCard(sheet, program.cover, badge) { onOpen(sheet) }
             }
         }
         Spacer(Modifier.height(16.dp))

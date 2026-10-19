@@ -31,6 +31,8 @@ struct WorkoutListView: View {
     @State private var sheetPendingDeletion: WorkoutSheet?
     @State private var selectedSection: WorkoutSection = .strength
     @State private var paywallFeature: AppFeature?
+    @State private var navigationPath = NavigationPath()
+    @ObservedObject private var workoutHubNavigation = WorkoutHubNavigationRouter.shared
 
     private var availableSections: [WorkoutSection] {
         let user = authService.currentUser
@@ -81,7 +83,7 @@ struct WorkoutListView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 LazyVStack(spacing: 16) {
                     if let duoName = workoutStore.activeDuoTeamName ?? workoutStore.activeDuoTeamId {
@@ -143,9 +145,15 @@ struct WorkoutListView: View {
             }
             .background(AppTheme.background)
             .navigationTitle("Treinos")
-            .onAppear { alignSelectedSectionWithPreferences() }
+            .onAppear {
+                alignSelectedSectionWithPreferences()
+                openPendingWorkoutHubIfNeeded()
+            }
             .onChange(of: authService.currentUser?.practicedModalityIDs) { _, _ in
                 alignSelectedSectionWithPreferences()
+            }
+            .onChange(of: workoutHubNavigation.openHubTick) { _, _ in
+                openPendingWorkoutHubIfNeeded()
             }
             .sheet(item: $paywallFeature) { feature in
                 PaywallView(highlight: feature)
@@ -283,6 +291,18 @@ struct WorkoutListView: View {
         if !availableSections.contains(selectedSection),
            let first = availableSections.first {
             selectedSection = first
+        }
+    }
+
+    private func openPendingWorkoutHubIfNeeded() {
+        guard let pending = workoutHubNavigation.consumePendingOpen() else { return }
+        // Mantém seção/gênero para o GenderWorkoutHubView rolar até o bloco certo.
+        workoutHubNavigation.keepSectionForScroll(gender: pending.gender, section: pending.section)
+        selectedSection = .strength
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(200))
+            navigationPath = NavigationPath()
+            navigationPath.append(pending.gender)
         }
     }
 
@@ -556,7 +576,7 @@ struct MobilityProgramHeroCard: View {
     var body: some View {
         WorkoutProgramHeroCard(
             title: L10n.Workout.mobility,
-            subtitle: "Aquecimento e pós-treino com demos",
+            subtitle: "2 tipos de alongamento com demos",
             accent: accent,
             imageName: "WorkoutProgramMobility",
             systemImage: "figure.flexibility",
@@ -594,7 +614,7 @@ struct MobilityWorkoutHubView: View {
                         Text("Recomendados")
                             .font(.headline)
                             .foregroundStyle(AppTheme.textPrimary)
-                        Text("Duas rotinas: aquecimento geral e pós-treino, com GIFs na execução")
+                        Text("Duas rotinas: alongamento dinâmico e estático, com GIFs na execução")
                             .font(.caption)
                             .foregroundStyle(AppTheme.textSecondary)
                     }
@@ -713,6 +733,7 @@ struct GenderWorkoutHubView: View {
     @EnvironmentObject var subscriptions: SubscriptionService
     @EnvironmentObject var authService: AuthService
     @ObservedObject private var coach = CoachService.shared
+    @ObservedObject private var workoutHubNavigation = WorkoutHubNavigationRouter.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     let gender: Gender
@@ -724,6 +745,7 @@ struct GenderWorkoutHubView: View {
     @State private var showScanWorkout = false
     @State private var showExperiencePrompt = false
     @State private var showExperiencePicker = false
+    @State private var scrollTarget: WorkoutHubSection?
 
     private var title: String {
         gender == .female ? "Programa Feminino" : "Programa Masculino"
@@ -798,91 +820,104 @@ struct GenderWorkoutHubView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                hubHeader
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 20) {
+                    hubHeader
 
-                if !coachPrescribedSheets.isEmpty {
-                    ForEach(coachMethodGroups, id: \.name) { group in
+                    montarTreinoPeloIACard
+
+                    if !coachPrescribedSheets.isEmpty {
+                        ForEach(coachMethodGroups, id: \.name) { group in
+                            workoutGroupSection(
+                                title: group.name,
+                                subtitle: coach.activePersonalLink.map { "Método prescrito por \($0.coachName)" }
+                                    ?? "Método do seu personal",
+                                sheets: group.sheets,
+                                highlighted: true
+                            )
+                        }
+
+                        if !coachSheetsWithoutMethod.isEmpty {
+                            workoutGroupSection(
+                                title: "Fichas do seu personal",
+                                subtitle: coach.activePersonalLink.map { "Em destaque · prescritas por \($0.coachName)" }
+                                    ?? "Em destaque · HealthFit Coach",
+                                sheets: coachSheetsWithoutMethod,
+                                highlighted: true
+                            )
+                        }
+                    }
+
+                    workoutGroupSection(
+                        title: "Personalizados",
+                        subtitle: "Treinos criados para este programa (inclui IAssistente)",
+                        sheets: customSheets,
+                        emptyMessage: "Nenhum personalizado ainda. Use “Montar treino pelo IA”, toque em + ou importe uma ficha."
+                    )
+                    .id(WorkoutHubSection.personalizados)
+
+                    GuidedWorkoutSections(gender: gender)
+
+                    if !shapeLevel1Sheets.isEmpty {
                         workoutGroupSection(
-                            title: group.name,
-                            subtitle: coach.activePersonalLink.map { "Método prescrito por \($0.coachName)" }
-                                ?? "Método do seu personal",
-                            sheets: group.sheets,
-                            highlighted: true
+                            title: "Foco no Shape · Nível 1",
+                            subtitle: "Base do método",
+                            sheets: shapeLevel1Sheets,
+                            cardStyle: .shapeLevel1
                         )
                     }
 
-                    if !coachSheetsWithoutMethod.isEmpty {
+                    if !shapeLevel2Sheets.isEmpty {
                         workoutGroupSection(
-                            title: "Fichas do seu personal",
-                            subtitle: coach.activePersonalLink.map { "Em destaque · prescritas por \($0.coachName)" }
-                                ?? "Em destaque · HealthFit Coach",
-                            sheets: coachSheetsWithoutMethod,
-                            highlighted: true
+                            title: "Foco no Shape · Nível 2",
+                            subtitle: "Progressão do método",
+                            sheets: shapeLevel2Sheets,
+                            cardStyle: .shapeLevel2
                         )
                     }
-                }
 
-                workoutGroupSection(
-                    title: "Personalizados",
-                    subtitle: "Treinos criados para este programa",
-                    sheets: customSheets,
-                    emptyMessage: "Nenhum personalizado ainda. Toque em + para criar ou importe uma ficha (câmera, foto ou PDF)."
-                )
+                    if !militarSoldadoSheets.isEmpty {
+                        workoutGroupSection(
+                            title: "Método Militar · Soldado",
+                            subtitle: "Base Push / Pull / Inferiores + condicionamento",
+                            sheets: militarSoldadoSheets,
+                            cardStyle: .militarSoldado
+                        )
+                    }
 
-                GuidedWorkoutSections(gender: gender)
+                    if !militarCaboSheets.isEmpty {
+                        workoutGroupSection(
+                            title: "Método Militar · Cabo",
+                            subtitle: "Progressão de volume e intensidade",
+                            sheets: militarCaboSheets,
+                            cardStyle: .militarCabo
+                        )
+                    }
 
-                if !shapeLevel1Sheets.isEmpty {
                     workoutGroupSection(
-                        title: "Foco no Shape · Nível 1",
-                        subtitle: "Base do método",
-                        sheets: shapeLevel1Sheets,
-                        cardStyle: .shapeLevel1
+                        title: "Recomendados",
+                        subtitle: recommendedSubtitle,
+                        sheets: recommendedSheets,
+                        cardStyle: .recommended
+                    )
+                    .id(WorkoutHubSection.recommended)
+
+                    RecentCompletedWorkoutsSection(
+                        sessions: recentCompletedSessions,
+                        selectedSession: $selectedRecentSession
                     )
                 }
-
-                if !shapeLevel2Sheets.isEmpty {
-                    workoutGroupSection(
-                        title: "Foco no Shape · Nível 2",
-                        subtitle: "Progressão do método",
-                        sheets: shapeLevel2Sheets,
-                        cardStyle: .shapeLevel2
-                    )
-                }
-
-                if !militarSoldadoSheets.isEmpty {
-                    workoutGroupSection(
-                        title: "Método Militar · Soldado",
-                        subtitle: "Base Push / Pull / Inferiores + condicionamento",
-                        sheets: militarSoldadoSheets,
-                        cardStyle: .militarSoldado
-                    )
-                }
-
-                if !militarCaboSheets.isEmpty {
-                    workoutGroupSection(
-                        title: "Método Militar · Cabo",
-                        subtitle: "Progressão de volume e intensidade",
-                        sheets: militarCaboSheets,
-                        cardStyle: .militarCabo
-                    )
-                }
-
-                workoutGroupSection(
-                    title: "Recomendados",
-                    subtitle: recommendedSubtitle,
-                    sheets: recommendedSheets,
-                    cardStyle: .recommended
-                )
-
-                RecentCompletedWorkoutsSection(
-                    sessions: recentCompletedSessions,
-                    selectedSession: $selectedRecentSession
-                )
+                .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
+                .adaptiveContentWidth()
             }
-            .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
-            .adaptiveContentWidth()
+            .onChange(of: scrollTarget) { _, target in
+                guard let target else { return }
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    proxy.scrollTo(target, anchor: .top)
+                }
+                scrollTarget = nil
+            }
         }
         .background(AppTheme.background)
         .navigationTitle(title)
@@ -894,6 +929,10 @@ struct GenderWorkoutHubView: View {
             if authService.currentUser?.musculacaoTrainingExperience == nil {
                 showExperiencePrompt = true
             }
+            applyPendingHubSectionScroll()
+        }
+        .onChange(of: workoutHubNavigation.openHubTick) { _, _ in
+            applyPendingHubSectionScroll()
         }
         .confirmationDialog(
             "Qual o seu nível na musculação?",
@@ -1036,6 +1075,54 @@ struct GenderWorkoutHubView: View {
         profile.musculacaoTrainingExperience = experience
         profile.updatedAt = .now
         authService.updateProfile(profile)
+    }
+
+    private var montarTreinoPeloIACard: some View {
+        Button {
+            AssistantNavigationRouter.shared.startWorkoutBuilder(preferredGender: gender)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "bubble.left.and.bubble.right.fill")
+                    .font(.title3)
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Montar treino pelo IA")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Text("O IAssistente pergunta se você já treina e cria ou recomenda fichas.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            .padding()
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                    .strokeBorder(accent.opacity(0.35), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Montar treino pelo IA")
+    }
+
+    private func applyPendingHubSectionScroll() {
+        guard let section = workoutHubNavigation.consumePendingSectionIfMatching(gender: gender) else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            scrollTarget = section
+        }
     }
 
     private var recommendedSubtitle: String {

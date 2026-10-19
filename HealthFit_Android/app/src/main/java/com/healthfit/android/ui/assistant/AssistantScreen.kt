@@ -117,6 +117,7 @@ fun AssistantScreen(
             ChatLine(false, AssistantEngine.welcome(name, wellness, athlete, profile, hasWorkoutAlert)),
         )
     }
+    var workoutDraft by remember { mutableStateOf(WorkoutBuilderDraft()) }
     var draft by remember { mutableStateOf("") }
     var isTyping by remember { mutableStateOf(false) }
     var replyJob by remember { mutableStateOf<Job?>(null) }
@@ -259,6 +260,48 @@ fun AssistantScreen(
         replyJob?.cancel()
         replyJob = scope.launch {
             delay(AssistantEngine.ReplyDelayMs)
+            val weight = athlete.heightCm.toFloatOrNull()?.let { 75f } ?: 75f
+            // Fluxo montar treino (igual iOS AssistantWorkoutBuilder)
+            if (workoutDraft.phase == WorkoutBuilderPhase.Idle && AssistantWorkoutBuilder.detectsIntent(clean)) {
+                workoutDraft = WorkoutBuilderDraft(phase = WorkoutBuilderPhase.AskingGender)
+                messages += ChatLine(false, AssistantWorkoutBuilder.startMessage(name))
+                isTyping = false
+                return@launch
+            }
+            if (workoutDraft.phase != WorkoutBuilderPhase.Idle) {
+                val (next, reply) = AssistantWorkoutBuilder.handle(
+                    text = clean,
+                    draft = workoutDraft,
+                    athlete = athlete,
+                    weightKg = weight,
+                    heightCm = athlete.heightCm.toFloatOrNull() ?: 175f,
+                    age = 28,
+                )
+                if (reply == "__CREATE__") {
+                    val gender = next.gender ?: AssistantWorkoutGender.Male
+                    val focus = next.focus ?: AssistantWorkoutGoalFocus.MuscleGain
+                    val exp = next.experience ?: AssistantTrainingExperience.Intermediate
+                    val loc = next.location ?: AssistantTrainingLocation.Gym
+                    val sheet = AssistantWorkoutBuilder.buildSheet(gender, focus, athlete, exp, loc, weight)
+                    AssistantGeneratedWorkouts.add(context, sheet, gender)
+                    workoutDraft = WorkoutBuilderDraft()
+                    messages += ChatLine(
+                        false,
+                        """
+                        Pronto! Com base no seu perfil (${exp.label}), criei a ficha **${sheet.title}** com ${sheet.exercises.size} exercícios (todos os grupos musculares).
+
+                        ${AssistantWorkoutBuilder.createdHint(gender, loc)}
+
+                        ${AssistantWorkoutBuilder.ProfessionalDisclaimer}
+                        """.trimIndent(),
+                    )
+                } else {
+                    workoutDraft = next
+                    messages += ChatLine(false, reply)
+                }
+                isTyping = false
+                return@launch
+            }
             val snap = AssistantRoutineStore.load(context, userId)
             val built = AssistantRoutineProfileEngine.buildProfile(snap)
             val week = AssistantRoutineProfileEngine.weeklyWorkoutCount(snap)
@@ -271,6 +314,8 @@ fun AssistantScreen(
             isTyping = false
         }
     }
+
+    val builderChips = AssistantWorkoutBuilder.quickReplies(workoutDraft.phase)
 
     Column(
         modifier = Modifier
@@ -307,6 +352,7 @@ fun AssistantScreen(
                             dismissKeyboard()
                             replyJob?.cancel()
                             isTyping = false
+                            workoutDraft = WorkoutBuilderDraft()
                             val fresh = AssistantRoutineStore.load(context, userId)
                             val built = AssistantRoutineProfileEngine.buildProfile(fresh)
                             val week = AssistantRoutineProfileEngine.weeklyWorkoutCount(fresh)
@@ -367,7 +413,7 @@ fun AssistantScreen(
             }
         }
 
-        AnimatedVisibility(visible = !imeVisible) {
+        AnimatedVisibility(visible = !imeVisible || builderChips.isNotEmpty()) {
             Column {
                 Row(
                     modifier = Modifier
@@ -375,7 +421,8 @@ fun AssistantScreen(
                         .padding(vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    AssistantEngine.suggestions.forEach { suggestion ->
+                    val chips = if (builderChips.isNotEmpty()) builderChips else AssistantEngine.suggestions
+                    chips.forEach { suggestion ->
                         Text(
                             suggestion,
                             color = Color.White,
@@ -383,7 +430,7 @@ fun AssistantScreen(
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(18.dp))
-                                .background(Color(0xFF1E4A32))
+                                .background(if (builderChips.isNotEmpty()) Color(0xFF2A5A3A) else Color(0xFF1E4A32))
                                 .clickable(enabled = !isTyping) {
                                     dismissKeyboard()
                                     send(suggestion)

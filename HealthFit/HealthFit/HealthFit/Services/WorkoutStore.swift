@@ -547,8 +547,8 @@ final class WorkoutStore: ObservableObject {
         "Casa F — Mobilidade e Postura",
     ]
     private static let mobilitySampleTitles: Set<String> = [
-        "Mobilidade A — Aquecimento Geral",
-        "Mobilidade E — Pós-treino",
+        "Mobilidade A — Alongamento Dinâmico",
+        "Mobilidade E — Alongamento Estático",
     ]
     private static let maleSampleTitles: Set<String> = RecommendedWorkoutCatalog.allMaleTitles
     private static let femaleSampleTitles: Set<String> = RecommendedWorkoutCatalog.allFemaleTitles
@@ -1819,12 +1819,16 @@ final class WorkoutStore: ObservableObject {
 
         workoutSheets = workoutSheets.map { sheet in
             guard let sample = sampleByTitle[sheet.title] else { return sheet }
-            let isShapeSheet = ShapeWorkoutCatalog.allTitles.contains(sheet.title)
-            let missingWarmup = !isShapeSheet
-                && !sheet.exercises.contains { $0.notes == GuidedWorkoutCatalog.warmupNote }
+            let hasOldWarmup = sheet.exercises.contains { exercise in
+                let notes = exercise.notes.lowercased()
+                return notes == GuidedWorkoutCatalog.warmupNote.lowercased()
+                    || notes.contains("aquecimento")
+            }
+            let missingStretch = !sheet.exercises.contains {
+                $0.notes == GuidedWorkoutCatalog.stretchNote
+            }
             let outdated = sheet.exercises.count != sample.exercises.count
-                || (!isShapeSheet && sheet.exercises.count < 10)
-            guard missingWarmup || outdated else { return sheet }
+            guard hasOldWarmup || missingStretch || outdated else { return sheet }
             didUpdate = true
             return WorkoutSheet(
                 id: sheet.id,
@@ -1854,9 +1858,10 @@ final class WorkoutStore: ObservableObject {
             }
             let existing = workoutSheets[index]
             let catalogSheet = guided.makeSheet(targetGender: existing.targetGender)
-            let missingWarmup = !existing.exercises.contains { $0.notes == GuidedWorkoutCatalog.warmupNote }
+            let hasOldWarmup = existing.exercises.contains { $0.notes == GuidedWorkoutCatalog.warmupNote }
+            let missingStretch = !existing.exercises.contains { $0.notes == GuidedWorkoutCatalog.stretchNote }
             let outdated = existing.exercises.count != catalogSheet.exercises.count
-            guard missingWarmup || outdated else { continue }
+            guard hasOldWarmup || missingStretch || outdated else { continue }
             workoutSheets[index] = WorkoutSheet(
                 id: existing.id,
                 title: catalogSheet.title,
@@ -1883,6 +1888,8 @@ final class WorkoutStore: ObservableObject {
         "Mobilidade B — Ombros e Peito",
         "Mobilidade C — Quadril e Posterior",
         "Mobilidade D — Torácica e Escápulas",
+        "Mobilidade A — Aquecimento Geral",
+        "Mobilidade E — Pós-treino",
     ]
 
     private static let legacySampleTitles: Set<String> = [
@@ -2068,23 +2075,23 @@ final class WorkoutStore: ObservableObject {
         )
     ]
 
-    /// Mobilidade voltada à musculação — apenas aquecimento e pós-treino.
+    /// Mobilidade — 2 tipos de alongamento (dinâmico e estático).
     static let mobilitySampleWorkouts: [WorkoutSheet] = [
         WorkoutSheet(
-            title: "Mobilidade A — Aquecimento Geral",
-            description: "Ativação articular antes de treinar com carga — 8–10 min",
+            title: "Mobilidade A — Alongamento Dinâmico",
+            description: "Alongamento dinâmico antes do treino — 8–10 min",
             exercises: [
-                Exercise(name: "Círculos de Tornozelo", sets: 2, reps: 12, restSeconds: 20, notes: "Cada lado · movimento lento", muscleGroup: .legs),
-                Exercise(name: "Círculos de Punho", sets: 2, reps: 12, restSeconds: 20, notes: "Cada direção", muscleGroup: .arms),
-                Exercise(name: "Inchworm", sets: 2, reps: 8, restSeconds: 30, muscleGroup: .fullBody),
                 Exercise(name: "Alongamento Mundial", sets: 2, reps: 6, restSeconds: 25, notes: "3 por lado", muscleGroup: .fullBody),
                 Exercise(name: "Alongamento de Coluna", sets: 2, reps: 10, restSeconds: 25, muscleGroup: .back),
                 Exercise(name: "Alongamento de Costas Altas", sets: 2, reps: 10, restSeconds: 25, muscleGroup: .back),
+                Exercise(name: "Alongamento de Flexor de Quadril", sets: 2, reps: 30, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Alongamento de Posterior", sets: 2, reps: 30, restSeconds: 20, notes: "Cada perna · reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Alongamento de Peito", sets: 2, reps: 30, restSeconds: 20, notes: "reps = segundos", muscleGroup: .chest),
                 Exercise(name: "Alongamento de Panturrilha", sets: 2, reps: 30, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .legs)
             ]
         ),
         WorkoutSheet(
-            title: "Mobilidade E — Pós-treino",
+            title: "Mobilidade E — Alongamento Estático",
             description: "Alongamento estático para recuperação após a musculação",
             exercises: [
                 Exercise(name: "Alongamento de Peito", sets: 2, reps: 40, restSeconds: 15, notes: "reps = segundos", muscleGroup: .chest),
