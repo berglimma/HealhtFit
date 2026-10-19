@@ -1,4 +1,4 @@
-• Foco em Estudo: cards com prioridades, durações de 30 min a 3h30 (ou personalizado) e capa realista
-• Correção do Fechar na tela pós-sessão (volta à meditação sem travar no cronômetro)
-• Lembretes e progresso de estudo no IAssistente
-• Melhorias de estabilidade na sessão de meditação/estudo
+• Correção da tela preta ao reabrir o app após o background
+• Restauração de sessão mais estável (sem travar no carregamento)
+• Dia de descanso: sem lembrete de “ainda não treinei”
+• Menor uso de memória para reduzir travamentos

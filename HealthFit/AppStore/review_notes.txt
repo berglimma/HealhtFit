@@ -1,15 +1,15 @@
-HealthFit 1.0.20 (33)
+HealthFit 1.0.21 (34)
 
 What's new in this binary:
-- Study Focus hub: study cards with priorities, durations 30 min–3h30 or custom, realistic cover
-- Fixed post-session Close returning to a stuck timer (single MainTab host; returns to meditation)
-- IAssistente study reminders / progress
-- Meditation/study session stability
+- Fixed black/dark loading screen after resume (Firebase auth nil→user blip)
+- Welcome/session gate failsafe so MainTab is not stuck behind loading
+- Softer background memory reclaim (keeps tab UI mounted)
+- Rest day suppresses evening “haven’t trained yet” nudge
 
-How to test Study Focus:
-1. Workouts → Meditation → Foco em Estudo
-2. Pick a card and duration → Start
-3. End session → on summary tap Fechar → should return to meditation (not stuck timer)
+How to verify black-screen fix:
+1. Sign in, open Home (Dashboard)
+2. Background the app (home button / app switcher) for ~30–60s
+3. Return to HealthFit — Dashboard/tab bar should appear (not solid dark loading)
 
 Demo login: healthfit.appreview@gmail.com
 Password: HealthFitReview2026!

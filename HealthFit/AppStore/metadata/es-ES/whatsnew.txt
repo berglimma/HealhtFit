@@ -1,4 +1,4 @@
-• Foco en Estudio: tarjetas con prioridades, duraciones de 30 min a 3h30 (o personalizado) y portada realista
-• Corrección de Cerrar en la pantalla post-sesión (vuelve a meditación sin quedarse en el cronómetro)
-• Recordatorios y progreso de estudio en el asistente
-• Mejoras de estabilidad en sesiones de meditación/estudio
+• Corrección de la pantalla negra al reabrir la app tras el background
+• Restauración de sesión más estable (sin quedarse en carga)
+• Día de descanso: sin recordatorio de “aún no entrené”
+• Menor uso de memoria para reducir bloqueos

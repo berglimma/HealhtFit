@@ -1,4 +1,4 @@
-• Focus Études : cartes avec priorités, durées de 30 min à 3h30 (ou personnalisé) et couverture réaliste
-• Correction de Fermer sur l’écran post-séance (retour à la méditation sans rester bloqué sur le chrono)
-• Rappels et progression d’étude dans l’assistant
-• Améliorations de stabilité des sessions méditation/étude
+• Correction de l’écran noir à la réouverture de l’app après background
+• Restauration de session plus stable (plus de chargement bloqué)
+• Jour de repos : plus de rappel « pas encore entraîné »
+• Moins de mémoire utilisée pour réduire les plantages
