@@ -16,10 +16,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -30,18 +33,27 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthfit.android.R
+import com.healthfit.android.core.AppLanguage
+import com.healthfit.android.core.AppLanguageStore
 import com.healthfit.android.ui.components.DarkCard
 import com.healthfit.designsystem.HealthFitColors
+import android.widget.Toast
 
 private val FieldColors
     @Composable get() = OutlinedTextFieldDefaults.colors(
@@ -217,28 +229,60 @@ fun RestTimerSection(
 }
 
 @Composable
-fun LanguageSection(selected: String, onSelect: (String) -> Unit) {
-    Text("Idioma", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
+fun LanguageSection(
+    selected: AppLanguage,
+    onSelect: (AppLanguage) -> Unit = {},
+) {
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+
+    Text(
+        stringResource(R.string.settings_language),
+        color = Color.White,
+        fontSize = 22.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(top = 16.dp),
+    )
     Spacer(Modifier.height(8.dp))
     DarkCard {
-        listOf(
-            "🇧🇷 Português",
-            "🇺🇸 English",
-            "🇪🇸 Español",
-            "🇫🇷 Français",
-            "🇩🇪 Deutsch",
-            "🇮🇹 Italiano",
-        ).forEach { language ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelect(language) }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(language, color = Color.White, modifier = Modifier.weight(1f))
-                if (language == selected) {
-                    Icon(Icons.Filled.Check, contentDescription = null, tint = HealthFitColors.Accent)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(selected.menuLabel, color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Icon(
+                if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                contentDescription = if (expanded) "Recolher" else "Expandir",
+                tint = HealthFitColors.TextSecondary,
+            )
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column(Modifier.padding(top = 4.dp)) {
+                AppLanguage.entries.forEach { language ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSelect(language)
+                                AppLanguageStore.set(context, language)
+                                expanded = false
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.language_changed, language.nativeName),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(language.menuLabel, color = Color.White, modifier = Modifier.weight(1f))
+                        if (language == selected) {
+                            Icon(Icons.Filled.Check, contentDescription = null, tint = HealthFitColors.Accent)
+                        }
+                    }
                 }
             }
         }

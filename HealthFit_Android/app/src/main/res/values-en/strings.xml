@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HealthFit</string>
+    <string name="tagline">Your smart personal trainer</string>
+    <string name="tab_home">Home</string>
+    <string name="tab_workouts">Workouts</string>
+    <string name="tab_nutrition">Nutrition</string>
+    <string name="tab_assistant">AI Assistant</string>
+    <string name="tab_profile">Profile</string>
+    <string name="settings_language">Language</string>
+    <string name="language_changed">Language: %1$s</string>
+    <string name="phase_badge">Phase 1 · Android</string>
+    <string name="health_connect_rationale">HealthFit reads steps, sleep, heart rate and workouts from Health Connect — the Android equivalent of Apple Health — to keep the same metrics as the iOS app.</string>
+</resources>

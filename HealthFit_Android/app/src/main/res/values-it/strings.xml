@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HealthFit</string>
+    <string name="tagline">Il tuo personal trainer intelligente</string>
+    <string name="tab_home">Home</string>
+    <string name="tab_workouts">Allenamenti</string>
+    <string name="tab_nutrition">Nutrizione</string>
+    <string name="tab_assistant">Assistente IA</string>
+    <string name="tab_profile">Profilo</string>
+    <string name="settings_language">Lingua</string>
+    <string name="language_changed">Lingua: %1$s</string>
+    <string name="phase_badge">Fase 1 · Android</string>
+    <string name="health_connect_rationale">HealthFit legge passi, sonno, frequenza cardiaca e allenamenti da Health Connect — l\'equivalente Android di Apple Health — per mantenere le stesse metriche dell\'app iOS.</string>
+</resources>

@@ -26,12 +26,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.healthfit.android.R
+import com.healthfit.android.core.AppLanguageStore
 import com.healthfit.android.ui.assistant.AssistantEngine
 import com.healthfit.android.ui.assistant.AssistantNotifications
 import com.healthfit.android.ui.assistant.AssistantScreen
@@ -51,14 +54,6 @@ import com.healthfit.core.health.HealthConnectGateway
 import com.healthfit.core.workout.WorkoutRepository
 import com.healthfit.designsystem.HealthFitColors
 
-private val Tabs = listOf(
-    TabSpec("home", "Início", Icons.Filled.Home),
-    TabSpec("workouts", "Treinos", Icons.Filled.FitnessCenter),
-    TabSpec("nutrition", "Nutrição", Icons.Filled.Restaurant),
-    TabSpec("assistant", "IAssistente", Icons.Filled.Chat, badge = 1),
-    TabSpec("profile", "Perfil", Icons.Filled.Person),
-)
-
 @Composable
 @Suppress("UNUSED_PARAMETER")
 fun HealthFitRoot(
@@ -68,9 +63,20 @@ fun HealthFitRoot(
     billingGateway: BillingGateway,
 ) {
     val user by authRepository.currentUser.collectAsState(initial = null)
+    val appLanguage by AppLanguageStore.language.collectAsState()
     val wellness = remember { DailyWellness() }
     val athlete = remember { com.healthfit.android.ui.home.AthleteProfile() }
     var showWelcome by remember { mutableStateOf(true) }
+    val tabs = listOf(
+        TabSpec("home", stringResource(R.string.tab_home), Icons.Filled.Home),
+        TabSpec("workouts", stringResource(R.string.tab_workouts), Icons.Filled.FitnessCenter),
+        TabSpec("nutrition", stringResource(R.string.tab_nutrition), Icons.Filled.Restaurant),
+        TabSpec("assistant", stringResource(R.string.tab_assistant), Icons.Filled.Chat, badge = 1),
+        TabSpec("profile", stringResource(R.string.tab_profile), Icons.Filled.Person),
+    )
+    // Recompose tab labels when language preference changes.
+    @Suppress("UNUSED_EXPRESSION")
+    appLanguage
     if (showWelcome) {
         WelcomeLoadingScreen(
             name = user?.displayName?.ifBlank { "Berg" } ?: "Berg",
@@ -129,7 +135,7 @@ fun HealthFitRoot(
         bottomBar = {
             if (showBottomBar) {
                 HealthFitTabBar(
-                    items = Tabs.map { tab ->
+                    items = tabs.map { tab ->
                         if (tab.route == "assistant") {
                             tab.copy(badge = if (current == "assistant") 0 else AssistantEngine.alerts(wellness).size)
                         } else {

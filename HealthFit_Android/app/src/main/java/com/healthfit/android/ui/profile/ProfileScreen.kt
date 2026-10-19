@@ -46,6 +46,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -53,6 +54,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.healthfit.android.core.AppLanguageStore
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -147,7 +149,7 @@ fun ProfileScreen(
     var preWorkout by remember { mutableIntStateOf(0) }
     var restAlert by remember { mutableIntStateOf(120) }
     var restNotify by remember { mutableStateOf(true) }
-    var language by remember { mutableStateOf("🇧🇷 Português") }
+    val language by AppLanguageStore.language.collectAsState()
     var feedbackKind by remember { mutableStateOf("Sugestão") }
     var feedbackText by remember { mutableStateOf("") }
     var feedbackSent by remember { mutableStateOf(false) }
@@ -620,7 +622,7 @@ fun ProfileScreen(
                     .padding(horizontal = 14.dp, vertical = 10.dp),
             )
         }
-        LanguageSection(language) { language = it }
+        LanguageSection(selected = language)
         Text(
             "Excluir conta",
             color = HealthFitColors.Danger,

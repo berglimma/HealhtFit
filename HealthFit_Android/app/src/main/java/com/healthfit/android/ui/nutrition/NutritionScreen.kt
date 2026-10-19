@@ -136,6 +136,7 @@ fun NutritionScreen(
         ShoppingListScreen(onBack = { showShopping = false })
         return
     }
+
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
@@ -269,7 +270,10 @@ fun NutritionScreen(
                 else -> {
                     @Suppress("UNUSED_EXPRESSION")
                     careRefresh
-                    NutritionCareTab(onOpenAnamnesis = { showAnamnesis = true })
+                    NutritionCareTab(
+                        reloadToken = careRefresh,
+                        onOpenAnamnesis = { showAnamnesis = true },
+                    )
                 }
             }
             Spacer(Modifier.height(12.dp))
