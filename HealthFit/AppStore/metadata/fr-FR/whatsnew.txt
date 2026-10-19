@@ -1,4 +1,4 @@
-• Correction de l’écran noir à la réouverture de l’app après background
-• Restauration de session plus stable (plus de chargement bloqué)
-• Jour de repos : plus de rappel « pas encore entraîné »
-• Moins de mémoire utilisée pour réduire les plantages
+• IAssistente : crée des séances selon le genre du profil, avec créer ou recommander
+• En créant, génère des fiches pour tous les groupes musculaires et ouvre les cartes
+• Entraînements : l’échauffement est remplacé par 2 étirements en début de fiche
+• Carte Constance : les photos de check-in se synchronisent entre iPhone et iPad

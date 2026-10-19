@@ -1,15 +1,14 @@
-HealthFit 1.0.21 (34)
+HealthFit 1.0.22 (35)
 
 What's new in this binary:
-- Fixed black/dark loading screen after resume (Firebase auth nil→user blip)
-- Welcome/session gate failsafe so MainTab is not stuck behind loading
-- Softer background memory reclaim (keeps tab UI mounted)
-- Rest day suppresses evening “haven’t trained yet” nudge
+- IAssistente workout builder: uses profile gender; create vs recommend; sheets for all muscle groups; navigates to Treinos cards
+- Warm-up exercises replaced by 2 stretch openers (guided / Shape / Militar / recommended)
+- Constancy card check-in photos sync iPhone ↔ iPad via Firebase Storage
+- Storage rules: users/{uid}/workoutCheckIn/
 
-How to verify black-screen fix:
-1. Sign in, open Home (Dashboard)
-2. Background the app (home button / app switcher) for ~30–60s
-3. Return to HealthFit — Dashboard/tab bar should appear (not solid dark loading)
+How to verify Constancy sync (optional):
+1. Sign in on iPhone, complete a workout, add check-in photo on Constância
+2. Sign in with same account on iPad — after sync, photo should appear on Constância
 
 Demo login: healthfit.appreview@gmail.com
 Password: HealthFitReview2026!

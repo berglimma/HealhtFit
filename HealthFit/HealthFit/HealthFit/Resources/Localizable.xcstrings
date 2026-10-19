@@ -3585,7 +3585,7 @@
     "Documento indisponível" : {
 
     },
-    "Duas rotinas: aquecimento geral e pós-treino, com GIFs na execução" : {
+    "Duas rotinas: alongamento dinâmico e estático, com GIFs na execução" : {
 
     },
     "Dupla / equipe" : {
@@ -5108,6 +5108,9 @@
     "Montar / enviar cardápio" : {
 
     },
+    "Montar treino pelo IA" : {
+
+    },
     "Monte seu cardápio: use as recomendações do catálogo ou crie refeições e alimentos do seu jeito." : {
 
     },
@@ -5648,6 +5651,9 @@
 
     },
     "O HealthFit precisa da versão mais recente para funcionar corretamente." : {
+
+    },
+    "O IAssistente pergunta se você já treina e cria ou recomenda fichas." : {
 
     },
     "O ícone do app na tela inicial usa a mesma cor." : {

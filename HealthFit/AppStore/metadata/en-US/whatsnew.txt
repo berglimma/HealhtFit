@@ -1,4 +1,4 @@
-• Fixed black screen when reopening the app after background
-• More reliable session restore (no stuck loading screen)
-• Rest day: no “haven’t trained yet” evening nudge
-• Lower memory use to reduce freezes
+• IAssistente: builds workouts from your profile gender, with create or recommend options
+• Creating a plan makes sheets for all muscle groups and opens the workout cards
+• Workouts: warm-up replaced by 2 stretches at the start of each sheet
+• Constancy card: check-in photos sync between iPhone and iPad

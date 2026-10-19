@@ -1,4 +1,4 @@
-• Correção da tela preta ao reabrir o app após o background
-• Restauração de sessão mais estável (sem travar no carregamento)
-• Dia de descanso: sem lembrete de “ainda não treinei”
-• Menor uso de memória para reduzir travamentos
+• IAssistente: monta treinos por gênero do perfil, com opção de criar ou recomendar
+• Ao criar, gera fichas para todos os grupos musculares e abre os cards no app
+• Treinos: aquecimento trocado por 2 alongamentos no início da ficha
+• Card Constância: fotos de check-in sincronizam entre iPhone e iPad

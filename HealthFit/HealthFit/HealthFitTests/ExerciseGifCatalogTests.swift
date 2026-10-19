@@ -10,6 +10,22 @@ final class ExerciseGifCatalogTests: XCTestCase {
         XCTAssertTrue(url?.absoluteString.contains("jsdelivr.net") == true)
     }
 
+    func testCrucifixoRetoUsesLyingFlyNotPress() {
+        let path = ExerciseGifCatalog.filePath(
+            forExerciseName: "Crucifixo Reto",
+            muscleGroup: .chest
+        )
+        XCTAssertEqual(path, "pectorals/cable-lying-fly.gif")
+    }
+
+    func testCrossoverUsesMiddleCableFly() {
+        let path = ExerciseGifCatalog.filePath(
+            forExerciseName: "Crossover",
+            muscleGroup: .chest
+        )
+        XCTAssertEqual(path, "pectorals/cable-middle-fly.gif")
+    }
+
     func testKeywordFallbackForCustomExerciseName() {
         let exercise = Exercise(name: "Supino com halteres inclinado", muscleGroup: .chest)
         let path = ExerciseGifCatalog.filePath(forExerciseName: exercise.name, muscleGroup: exercise.muscleGroup)

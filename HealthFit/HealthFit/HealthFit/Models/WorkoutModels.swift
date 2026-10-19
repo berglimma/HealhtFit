@@ -575,6 +575,8 @@ struct WorkoutSession: Identifiable, Codable {
     var duoTeamName: String?
     /// Nome do arquivo JPEG local da foto de check-in (calendário estilo GymRats).
     var checkInPhotoFileName: String?
+    /// Caminho no Firebase Storage para sincronizar a foto entre iPhone e iPad.
+    var checkInPhotoStoragePath: String?
 
     var isDuoTeamSession: Bool {
         guard let duoTeamId else { return false }
@@ -634,7 +636,8 @@ struct WorkoutSession: Identifiable, Codable {
         externalSourceName: String? = nil,
         duoTeamId: String? = nil,
         duoTeamName: String? = nil,
-        checkInPhotoFileName: String? = nil
+        checkInPhotoFileName: String? = nil,
+        checkInPhotoStoragePath: String? = nil
     ) {
         self.id = id
         self.workoutSheetId = workoutSheetId
@@ -674,6 +677,7 @@ struct WorkoutSession: Identifiable, Codable {
         self.duoTeamId = duoTeamId
         self.duoTeamName = duoTeamName
         self.checkInPhotoFileName = checkInPhotoFileName
+        self.checkInPhotoStoragePath = checkInPhotoStoragePath
     }
 
     init(from decoder: Decoder) throws {
@@ -720,6 +724,7 @@ struct WorkoutSession: Identifiable, Codable {
         duoTeamId = try container.decodeIfPresent(String.self, forKey: .duoTeamId)
         duoTeamName = try container.decodeIfPresent(String.self, forKey: .duoTeamName)
         checkInPhotoFileName = try container.decodeIfPresent(String.self, forKey: .checkInPhotoFileName)
+        checkInPhotoStoragePath = try container.decodeIfPresent(String.self, forKey: .checkInPhotoStoragePath)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -766,6 +771,7 @@ struct WorkoutSession: Identifiable, Codable {
         try container.encodeIfPresent(duoTeamId, forKey: .duoTeamId)
         try container.encodeIfPresent(duoTeamName, forKey: .duoTeamName)
         try container.encodeIfPresent(checkInPhotoFileName, forKey: .checkInPhotoFileName)
+        try container.encodeIfPresent(checkInPhotoStoragePath, forKey: .checkInPhotoStoragePath)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -778,12 +784,13 @@ struct WorkoutSession: Identifiable, Codable {
         case poolLengthMeters, swimLapCount, targetSwimLaps, swimPaceSecondsPer100m
         case waterSport, rowing, climbing, treadmill, tennis
         case endedEarly, earlyEndJustification, autoEndedByInactivity
-        case duoTeamId, duoTeamName, checkInPhotoFileName
+        case duoTeamId, duoTeamName, checkInPhotoFileName, checkInPhotoStoragePath
     }
 
     var hasCheckInPhoto: Bool {
-        guard let checkInPhotoFileName, !checkInPhotoFileName.isEmpty else { return false }
-        return true
+        if let checkInPhotoFileName, !checkInPhotoFileName.isEmpty { return true }
+        if let checkInPhotoStoragePath, !checkInPhotoStoragePath.isEmpty { return true }
+        return false
     }
 
     var isExternalHealthKitSession: Bool {

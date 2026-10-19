@@ -143,13 +143,17 @@ final class WorkoutStore: ObservableObject {
 
         do {
             let remoteSessions = try await WorkoutFirestoreService.fetchRecentSessions(userId: userId)
-            guard !remoteSessions.isEmpty else { return }
-
-            sessionHistory = mergeSessions(local: sessionHistory, remote: remoteSessions)
-            saveHistory()
+            if !remoteSessions.isEmpty {
+                sessionHistory = mergeSessions(local: sessionHistory, remote: remoteSessions)
+                saveHistory()
+            }
         } catch {
             print("[HealthFit] Falha ao carregar treinos do Firebase: \(error.localizedDescription)")
         }
+
+        // Storage pode falhar sem regras publicadas — nunca deve quebrar o histórico local.
+        await hydrateCheckInPhotosFromCloud(userId: userId)
+        await backfillCheckInPhotosToCloud(userId: userId)
     }
 
     /// Mescla fichas personalizadas / IA do Firestore (iPhone ↔ iPad).
@@ -1421,20 +1425,41 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
-    /// Anexa (ou troca) a foto de check-in usada no calendário de treinos.
+    /// Anexa (ou troca) a foto de check-in usada no calendário de treinos (Constância).
     @discardableResult
     func attachCheckInPhoto(sessionId: UUID, image: UIImage) -> Bool {
         guard let index = sessionHistory.firstIndex(where: { $0.id == sessionId }) else { return false }
         if let previous = sessionHistory[index].checkInPhotoFileName {
             WorkoutCheckInPhotoStore.delete(fileName: previous)
         }
+        let previousStoragePath = sessionHistory[index].checkInPhotoStoragePath
         guard let fileName = WorkoutCheckInPhotoStore.save(image, sessionId: sessionId) else { return false }
         sessionHistory[index].checkInPhotoFileName = fileName
         saveHistory()
         let updated = sessionHistory[index]
         if let userId = cloudUserId {
             Task {
-                try? await WorkoutFirestoreService.saveSession(updated, userId: userId)
+                if let previousStoragePath {
+                    await WorkoutCheckInPhotoStorageService.deletePaths([previousStoragePath])
+                }
+                if let data = WorkoutCheckInPhotoStore.jpegData(fileName: fileName),
+                   let path = try? await WorkoutCheckInPhotoStorageService.uploadJPEG(
+                    data: data,
+                    userId: userId,
+                    sessionId: sessionId
+                   ) {
+                    await MainActor.run {
+                        guard let idx = sessionHistory.firstIndex(where: { $0.id == sessionId }) else { return }
+                        sessionHistory[idx].checkInPhotoStoragePath = path
+                        saveHistory()
+                        let session = sessionHistory[idx]
+                        Task {
+                            try? await WorkoutFirestoreService.saveSession(session, userId: userId)
+                        }
+                    }
+                } else {
+                    try? await WorkoutFirestoreService.saveSession(updated, userId: userId)
+                }
             }
         }
         return true
@@ -1443,13 +1468,72 @@ final class WorkoutStore: ObservableObject {
     func clearCheckInPhoto(sessionId: UUID) {
         guard let index = sessionHistory.firstIndex(where: { $0.id == sessionId }) else { return }
         WorkoutCheckInPhotoStore.delete(fileName: sessionHistory[index].checkInPhotoFileName)
+        let previousStoragePath = sessionHistory[index].checkInPhotoStoragePath
         sessionHistory[index].checkInPhotoFileName = nil
+        sessionHistory[index].checkInPhotoStoragePath = nil
         saveHistory()
         let updated = sessionHistory[index]
         if let userId = cloudUserId {
             Task {
+                if let previousStoragePath {
+                    await WorkoutCheckInPhotoStorageService.deletePaths([previousStoragePath])
+                }
                 try? await WorkoutFirestoreService.saveSession(updated, userId: userId)
             }
+        }
+    }
+
+    /// Baixa fotos de Constância que existem na nuvem mas ainda não estão neste aparelho.
+    private func hydrateCheckInPhotosFromCloud(userId: String) async {
+        guard WorkoutCheckInPhotoStorageService.isAvailable else { return }
+        var didChange = false
+        for index in sessionHistory.indices {
+            let session = sessionHistory[index]
+            guard let storagePath = session.checkInPhotoStoragePath, !storagePath.isEmpty else { continue }
+            let fileName = session.checkInPhotoFileName ?? WorkoutCheckInPhotoStore.fileName(for: session.id)
+            if WorkoutCheckInPhotoStore.exists(fileName: fileName) {
+                if session.checkInPhotoFileName == nil {
+                    sessionHistory[index].checkInPhotoFileName = fileName
+                    didChange = true
+                }
+                continue
+            }
+            guard let data = await WorkoutCheckInPhotoStorageService.downloadData(storagePath: storagePath),
+                  WorkoutCheckInPhotoStore.save(data: data, sessionId: session.id) != nil else {
+                continue
+            }
+            sessionHistory[index].checkInPhotoFileName = fileName
+            didChange = true
+        }
+        if didChange {
+            saveHistory()
+            objectWillChange.send()
+        }
+    }
+
+    /// Envia à nuvem fotos locais que ainda não têm `checkInPhotoStoragePath` (aparelho antigo).
+    private func backfillCheckInPhotosToCloud(userId: String) async {
+        guard WorkoutCheckInPhotoStorageService.isAvailable else { return }
+        var didChange = false
+        for index in sessionHistory.indices {
+            let session = sessionHistory[index]
+            guard let fileName = session.checkInPhotoFileName,
+                  WorkoutCheckInPhotoStore.exists(fileName: fileName) else { continue }
+            if let path = session.checkInPhotoStoragePath, !path.isEmpty { continue }
+            guard let data = WorkoutCheckInPhotoStore.jpegData(fileName: fileName),
+                  let path = try? await WorkoutCheckInPhotoStorageService.uploadJPEG(
+                    data: data,
+                    userId: userId,
+                    sessionId: session.id
+                  ) else {
+                continue
+            }
+            sessionHistory[index].checkInPhotoStoragePath = path
+            didChange = true
+            try? await WorkoutFirestoreService.saveSession(sessionHistory[index], userId: userId)
+        }
+        if didChange {
+            saveHistory()
         }
     }
 
@@ -1907,10 +1991,20 @@ final class WorkoutStore: ObservableObject {
         }
         for session in remote {
             var incoming = session
-            // Foto de check-in fica no aparelho — não apagar referência local se o remoto ainda não tem.
+            let local = merged[session.id]
+            // Mantém referências locais enquanto o remoto ainda não sincronizou a foto.
             if incoming.checkInPhotoFileName == nil,
-               let localName = merged[session.id]?.checkInPhotoFileName {
+               let localName = local?.checkInPhotoFileName {
                 incoming.checkInPhotoFileName = localName
+            }
+            if (incoming.checkInPhotoStoragePath == nil || incoming.checkInPhotoStoragePath?.isEmpty == true),
+               let localPath = local?.checkInPhotoStoragePath,
+               !localPath.isEmpty {
+                incoming.checkInPhotoStoragePath = localPath
+            }
+            // Se o remoto já tem Storage e o local só tem arquivo, prioriza o path da nuvem.
+            if let remotePath = session.checkInPhotoStoragePath, !remotePath.isEmpty {
+                incoming.checkInPhotoStoragePath = remotePath
             }
             merged[session.id] = incoming
         }
