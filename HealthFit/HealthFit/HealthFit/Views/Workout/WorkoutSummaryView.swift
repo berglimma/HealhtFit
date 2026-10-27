@@ -64,6 +64,8 @@ struct WorkoutSummaryView: View {
     @State private var showPulsePaywall = false
     @State private var showPulseTrialExpiredAlert = false
     @State private var showRouteFlyover = false
+    @State private var constancyCalendarFeedback: String?
+    @State private var isSendingToConstancyCalendar = false
 
     private let shareCardAnchorID = "workoutShareCard"
 
@@ -466,14 +468,18 @@ struct WorkoutSummaryView: View {
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
 
-            Text("Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit. A foto também entra no calendário de treinos.")
+            Text("Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit. Use o botão abaixo para enviar ao calendário Constância.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
 
             if liveSessionHasCheckInPhoto {
-                Label("Salva no calendário de treinos", systemImage: "calendar.badge.checkmark")
+                Label("Salva no calendário Constância", systemImage: "calendar.badge.checkmark")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(AppTheme.accent)
+            } else if let constancyCalendarFeedback {
+                Label(constancyCalendarFeedback, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
             }
 
             if let resultMedia {
@@ -603,6 +609,8 @@ struct WorkoutSummaryView: View {
                     }
                     .buttonStyle(.bordered)
                 }
+
+                sendToConstancyCalendarButton
             } else {
                 Button {
                     showMediaSourceDialog = true
@@ -625,6 +633,8 @@ struct WorkoutSummaryView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
+                sendToConstancyCalendarButton
+
                 Text("Câmera, galeria ou vídeo · overlay com duração, km, kcal e HealthFit")
                     .font(.caption2)
                     .foregroundStyle(AppTheme.textSecondary)
@@ -636,6 +646,33 @@ struct WorkoutSummaryView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private var sendToConstancyCalendarButton: some View {
+        Button {
+            sendMediaToConstancyCalendar()
+        } label: {
+            HStack {
+                if isSendingToConstancyCalendar {
+                    ProgressView()
+                        .tint(AppTheme.accent)
+                } else {
+                    Image(systemName: liveSessionHasCheckInPhoto ? "calendar.badge.checkmark" : "calendar.badge.plus")
+                }
+                Text(
+                    liveSessionHasCheckInPhoto
+                        ? "Atualizar no calendário Constância"
+                        : "Enviar para calendário Constância"
+                )
+                .font(.subheadline.weight(.semibold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.bordered)
+        .tint(AppTheme.accent)
+        .disabled(isSendingToConstancyCalendar || isPreparingMediaShare)
+        .accessibilityHint("Salva a foto deste treino no card Constância do perfil e do dashboard.")
     }
 
     private var mediaOverlaySizeControls: some View {
@@ -737,7 +774,30 @@ struct WorkoutSummaryView: View {
     }
 
     private func persistCheckInPhoto(_ image: UIImage) {
-        _ = workoutStore.attachCheckInPhoto(sessionId: session.id, image: image)
+        let ok = workoutStore.attachCheckInPhoto(sessionId: session.id, image: image)
+        constancyCalendarFeedback = ok ? nil : "Não foi possível salvar no calendário Constância."
+    }
+
+    /// Envia a mídia atual (com overlay) ao calendário Constância; se ainda não houver mídia, abre o seletor.
+    private func sendMediaToConstancyCalendar() {
+        guard let resultMedia else {
+            showMediaSourceDialog = true
+            return
+        }
+        isSendingToConstancyCalendar = true
+        constancyCalendarFeedback = nil
+        defer { isSendingToConstancyCalendar = false }
+
+        let composed = WorkoutResultMediaOverlayRenderer.renderComposedImage(
+            image: resultMedia.previewImage,
+            session: session,
+            isCardioSession: isCardioSession || session.isOutdoorGPSCardio,
+            showVideoBadge: resultMedia.isVideo,
+            layout: resultMediaOverlayLayout
+        ) ?? resultMedia.previewImage
+
+        let ok = workoutStore.attachCheckInPhoto(sessionId: session.id, image: composed)
+        constancyCalendarFeedback = ok ? nil : "Não foi possível salvar no calendário Constância."
     }
 
     private func clearResultMedia() {

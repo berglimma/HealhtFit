@@ -299,10 +299,15 @@ struct WorkoutListView: View {
         // Mantém seção/gênero para o GenderWorkoutHubView rolar até o bloco certo.
         workoutHubNavigation.keepSectionForScroll(gender: pending.gender, section: pending.section)
         selectedSection = .strength
+        let gender = pending.gender
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(200))
-            navigationPath = NavigationPath()
-            navigationPath.append(pending.gender)
+            // Um único write: zerar e append no mesmo frame dispara
+            // "NavigationRequestObserver tried to update multiple times per frame"
+            // e o SwiftUI deixa a janela só com o fundo.
+            var path = NavigationPath()
+            path.append(gender)
+            navigationPath = path
         }
     }
 

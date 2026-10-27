@@ -1,4 +1,3 @@
-• IAssistente: monta treinos por gênero do perfil, com opção de criar ou recomendar
-• Ao criar, gera fichas para todos os grupos musculares e abre os cards no app
-• Treinos: aquecimento trocado por 2 alongamentos no início da ficha
-• Card Constância: fotos de check-in sincronizam entre iPhone e iPad
+• Correção urgente: treino iniciado não trava mais em tela preta
+• Encerrar, Continuar e Sair voltam a funcionar se já existir um treino em andamento
+• Sessão órfã é reconstruída ou encerrada, sem precisar apagar o app

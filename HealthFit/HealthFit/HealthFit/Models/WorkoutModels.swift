@@ -326,6 +326,13 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         isUserCreated || createdByAssistant || isCoachPrescribed
     }
 
+    func withExercises(_ exercises: [Exercise]) -> WorkoutSheet {
+        guard !exercises.isEmpty else { return self }
+        var copy = self
+        copy.exercises = exercises
+        return copy
+    }
+
     init(
         id: UUID = UUID(),
         title: String,

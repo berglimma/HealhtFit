@@ -1,14 +1,17 @@
-HealthFit 1.0.22 (35)
+HealthFit 1.0.25 (38)
 
 What's new in this binary:
-- IAssistente workout builder: uses profile gender; create vs recommend; sheets for all muscle groups; navigates to Treinos cards
-- Warm-up exercises replaced by 2 stretch openers (guided / Shape / Militar / recommended)
-- Constancy card check-in photos sync iPhone ↔ iPad via Firebase Storage
-- Storage rules: users/{uid}/workoutCheckIn/
+- Fix stuck black screen after starting a workout (hosted overlay lost the catalog sheet)
+- “Já existe um treino em andamento” End now force-ends the session even if the UI is blank
+- Continue remounts the workout; Dismiss minimizes so tabs return
+- Recovery overlay if the active workout UI cannot be rebuilt
 
-How to verify Constancy sync (optional):
-1. Sign in on iPhone, complete a workout, add check-in photo on Constância
-2. Sign in with same account on iPad — after sync, photo should appear on Constância
+How to verify:
+1. Sign in with demo account
+2. Start a recommended/catalog strength workout
+3. Background the app, force-quit if needed, reopen
+4. Confirm the workout UI returns (not a black screen)
+5. If the in-progress alert appears, tap Encerrar — the app must become usable again
 
 Demo login: healthfit.appreview@gmail.com
 Password: HealthFitReview2026!

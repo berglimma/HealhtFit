@@ -1363,6 +1363,9 @@
     "Atualizar nível na musculação" : {
 
     },
+    "Atualizar no calendário Constância" : {
+
+    },
     "Atualizar sugestões" : {
 
     },
@@ -3789,6 +3792,9 @@
     "Enviar mensagem motivacional" : {
 
     },
+    "Enviar para calendário Constância" : {
+
+    },
     "Enviar para nutricionista" : {
 
     },
@@ -5735,7 +5741,7 @@
     "OK vamos lá" : {
 
     },
-    "Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit. A foto também entra no calendário de treinos." : {
+    "Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit. Use o botão abaixo para enviar ao calendário Constância." : {
 
     },
     "Opcional e privado — só na sua conta." : {
@@ -11325,6 +11331,9 @@
     "Resgatar 30 dias" : {
 
     },
+    "Resgatar código da App Store" : {
+
+    },
     "Responda antes de montar o cardápio." : {
 
     },
@@ -11463,7 +11472,10 @@
     "Saltos por sessão" : {
 
     },
-    "Salva no calendário de treinos" : {
+    "Salva a foto deste treino no card Constância do perfil e do dashboard." : {
+
+    },
+    "Salva no calendário Constância" : {
 
     },
     "Salvando e sincronizando…" : {

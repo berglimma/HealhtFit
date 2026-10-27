@@ -1,4 +1,3 @@
-• IAssistente : crée des séances selon le genre du profil, avec créer ou recommander
-• En créant, génère des fiches pour tous les groupes musculaires et ouvre les cartes
-• Entraînements : l’échauffement est remplacé par 2 étirements en début de fiche
-• Carte Constance : les photos de check-in se synchronisent entre iPhone et iPad
+• Correction urgente : l’entraînement lancé ne reste plus bloqué sur un écran noir
+• Terminer, Continuer et Quitter fonctionnent à nouveau s’il y a déjà un entraînement en cours
+• Les séances orphelines sont rétablies ou clôturées sans supprimer l’app

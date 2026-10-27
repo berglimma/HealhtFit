@@ -1,4 +1,3 @@
-• IAssistente: arma entrenamientos según el género del perfil, con crear o recomendar
-• Al crear, genera fichas para todos los grupos musculares y abre las tarjetas
-• Entrenamientos: el calentamiento se sustituye por 2 estiramientos al inicio
-• Tarjeta Constancia: las fotos de check-in se sincronizan entre iPhone e iPad
+• Corrección urgente: el entrenamiento iniciado ya no se queda en pantalla negra
+• Finalizar, Continuar y Salir vuelven a funcionar si ya hay un entrenamiento en curso
+• Las sesiones huérfanas se reconstruyen o se cierran sin borrar la app

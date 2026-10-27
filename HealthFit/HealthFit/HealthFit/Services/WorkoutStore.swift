@@ -12,6 +12,8 @@ final class WorkoutStore: ObservableObject {
     @Published var isActiveWorkoutMinimized = false
     /// Alert ao tentar iniciar outro treino enquanto já há sessão ativa.
     @Published var showActiveWorkoutConflictAlert = false
+    /// Ficha da sessão de força ativa (catálogo / Watch) — não depende de `workoutSheets`.
+    @Published private(set) var sessionStrengthSheet: WorkoutSheet?
     /// Config da sessão de cardio ativa (persistida para retomar mapa / Encerrar).
     @Published private(set) var activeCardioConfig: CardioWorkoutConfig?
     /// Config da meditação ativa (para hospedar UI quando iniciada no Watch ou no iPhone).
@@ -56,6 +58,7 @@ final class WorkoutStore: ObservableObject {
     private let activePausedKey = "healthfit_exercise_timer_paused"
     private let exerciseLastProgressKey = "healthfit_exercise_last_progress_at"
     private let activeCardioConfigKey = "healthfit_active_cardio_config"
+    private let activeStrengthSheetKey = "healthfit_active_strength_sheet"
     private let activeDuoTeamIdKey = "healthfit_active_duo_team_id"
     private let activeDuoTeamNameKey = "healthfit_active_duo_team_name"
     private let activeDuoTeamModalitiesKey = "healthfit_active_duo_team_modalities"
@@ -95,6 +98,7 @@ final class WorkoutStore: ObservableObject {
         workoutSheets = []
         isActiveWorkoutMinimized = false
         showActiveWorkoutConflictAlert = false
+        sessionStrengthSheet = nil
         activeCardioConfig = nil
         activeMeditationConfig = nil
         sessionOriginatedFromWatch = false
@@ -682,6 +686,7 @@ final class WorkoutStore: ObservableObject {
             duoTeamName: duo.name
         )
         activeSession = session
+        rememberActiveStrengthSheet(sheet)
         activeCardioConfig = nil
         activeMeditationConfig = nil
         sessionOriginatedFromWatch = false
@@ -741,7 +746,68 @@ final class WorkoutStore: ObservableObject {
         guard let session = activeSession else { return nil }
         guard !WeeklyProgressAnalyzer.isCardioSession(session),
               !WeeklyProgressAnalyzer.isMeditationSession(session) else { return nil }
-        return workoutSheets.first(where: { $0.id == session.workoutSheetId })
+        if let hosted = sessionStrengthSheet, hosted.id == session.workoutSheetId {
+            return hosted.withExercises(activeSessionExercises.isEmpty ? hosted.exercises : activeSessionExercises)
+        }
+        if let saved = workoutSheets.first(where: { $0.id == session.workoutSheetId }) {
+            return saved.withExercises(activeSessionExercises.isEmpty ? saved.exercises : activeSessionExercises)
+        }
+        if let saved = workoutSheets.first(where: { $0.title == session.workoutTitle }) {
+            return saved.withExercises(activeSessionExercises.isEmpty ? saved.exercises : activeSessionExercises)
+        }
+        return reconstructedActiveStrengthSheet()
+    }
+
+    /// Encerra a sessão ativa sem depender da UI (tela preta / alert travado).
+    func forceEndActiveSession(justification: String = "Encerrado após falha da tela de treino.") {
+        showActiveWorkoutConflictAlert = false
+        guard var session = activeSession else {
+            sessionStrengthSheet = nil
+            clearPersistedActiveSession()
+            WorkoutLiveActivitySync.end()
+            return
+        }
+        session.endedAt = .now
+        session.exerciseRecords = exerciseRecords
+        session.completedExercises = exerciseRecords.filter(\.isCompleted).count
+        session.endedEarly = true
+        session.earlyEndJustification = justification
+        WorkoutLiveActivitySync.end()
+        endSession(persisting: session)
+    }
+
+    private func rememberActiveStrengthSheet(_ sheet: WorkoutSheet) {
+        sessionStrengthSheet = sheet
+        persistActiveStrengthSheet(sheet)
+    }
+
+    private func reconstructedActiveStrengthSheet() -> WorkoutSheet? {
+        guard let session = activeSession else { return nil }
+        let exercises: [Exercise]
+        if !activeSessionExercises.isEmpty {
+            exercises = activeSessionExercises
+        } else if !exerciseRecords.isEmpty {
+            exercises = exerciseRecords.map {
+                Exercise(
+                    id: $0.exerciseId,
+                    name: $0.exerciseName,
+                    weight: $0.recommendedWeight ?? $0.performedWeight
+                )
+            }
+        } else {
+            exercises = [
+                Exercise(name: session.workoutTitle.isEmpty ? "Treino" : session.workoutTitle)
+            ]
+        }
+        let sheet = WorkoutSheet(
+            id: session.workoutSheetId,
+            title: session.workoutTitle,
+            description: "Sessão em andamento",
+            exercises: exercises
+        )
+        sessionStrengthSheet = sheet
+        persistActiveStrengthSheet(sheet)
+        return sheet
     }
 
     /// Config de cardio ativa (persistida) ou reconstruída da sessão.
@@ -1355,6 +1421,7 @@ final class WorkoutStore: ObservableObject {
             calories: Int(session.caloriesBurned.rounded())
         )
         activeSession = nil
+        sessionStrengthSheet = nil
         activeCardioConfig = nil
         activeMeditationConfig = nil
         sessionOriginatedFromWatch = false
@@ -1570,6 +1637,7 @@ final class WorkoutStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: activePausedKey)
         UserDefaults.standard.removeObject(forKey: exerciseLastProgressKey)
         UserDefaults.standard.removeObject(forKey: activeCardioConfigKey)
+        UserDefaults.standard.removeObject(forKey: activeStrengthSheetKey)
         exerciseLastProgressAt = nil
         lastActivePersistAt = nil
         clearActiveWorkoutFromCloud()
@@ -1672,6 +1740,15 @@ final class WorkoutStore: ObservableObject {
         } else if includeProgressTimestampCleanup {
             UserDefaults.standard.removeObject(forKey: activeCardioConfigKey)
         }
+        persistActiveStrengthSheet(sessionStrengthSheet)
+    }
+
+    private func persistActiveStrengthSheet(_ sheet: WorkoutSheet?) {
+        if let sheet, let data = try? JSONEncoder().encode(sheet) {
+            UserDefaults.standard.set(data, forKey: activeStrengthSheetKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: activeStrengthSheetKey)
+        }
     }
 
     private func restorePersistedActiveSessionIfNeeded() {
@@ -1702,6 +1779,15 @@ final class WorkoutStore: ObservableObject {
             activeCardioConfig = CardioWorkoutConfig.reconstruct(from: session)
         } else {
             activeCardioConfig = nil
+        }
+        if let sheetData = UserDefaults.standard.data(forKey: activeStrengthSheetKey),
+           let sheet = try? JSONDecoder().decode(WorkoutSheet.self, from: sheetData) {
+            sessionStrengthSheet = sheet
+        } else if !WeeklyProgressAnalyzer.isCardioSession(session),
+                  !WeeklyProgressAnalyzer.isMeditationSession(session) {
+            _ = reconstructedActiveStrengthSheet()
+        } else {
+            sessionStrengthSheet = nil
         }
         let restoredIndex = UserDefaults.standard.integer(forKey: activeExerciseIndexKey)
         let maxIndex = max(activeSessionExercises.count, exerciseRecords.count) - 1
