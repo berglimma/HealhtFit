@@ -12,6 +12,8 @@ final class WorkoutStore: ObservableObject {
     @Published var isActiveWorkoutMinimized = false
     /// Alert ao tentar iniciar outro treino enquanto já há sessão ativa.
     @Published var showActiveWorkoutConflictAlert = false
+    /// Ficha da sessão de força ativa (catálogo / Watch) — não depende de `workoutSheets`.
+    @Published private(set) var sessionStrengthSheet: WorkoutSheet?
     /// Config da sessão de cardio ativa (persistida para retomar mapa / Encerrar).
     @Published private(set) var activeCardioConfig: CardioWorkoutConfig?
     /// Config da meditação ativa (para hospedar UI quando iniciada no Watch ou no iPhone).
@@ -56,6 +58,7 @@ final class WorkoutStore: ObservableObject {
     private let activePausedKey = "healthfit_exercise_timer_paused"
     private let exerciseLastProgressKey = "healthfit_exercise_last_progress_at"
     private let activeCardioConfigKey = "healthfit_active_cardio_config"
+    private let activeStrengthSheetKey = "healthfit_active_strength_sheet"
     private let activeDuoTeamIdKey = "healthfit_active_duo_team_id"
     private let activeDuoTeamNameKey = "healthfit_active_duo_team_name"
     private let activeDuoTeamModalitiesKey = "healthfit_active_duo_team_modalities"
@@ -95,6 +98,7 @@ final class WorkoutStore: ObservableObject {
         workoutSheets = []
         isActiveWorkoutMinimized = false
         showActiveWorkoutConflictAlert = false
+        sessionStrengthSheet = nil
         activeCardioConfig = nil
         activeMeditationConfig = nil
         sessionOriginatedFromWatch = false
@@ -143,13 +147,17 @@ final class WorkoutStore: ObservableObject {
 
         do {
             let remoteSessions = try await WorkoutFirestoreService.fetchRecentSessions(userId: userId)
-            guard !remoteSessions.isEmpty else { return }
-
-            sessionHistory = mergeSessions(local: sessionHistory, remote: remoteSessions)
-            saveHistory()
+            if !remoteSessions.isEmpty {
+                sessionHistory = mergeSessions(local: sessionHistory, remote: remoteSessions)
+                saveHistory()
+            }
         } catch {
             print("[HealthFit] Falha ao carregar treinos do Firebase: \(error.localizedDescription)")
         }
+
+        // Storage pode falhar sem regras publicadas — nunca deve quebrar o histórico local.
+        await hydrateCheckInPhotosFromCloud(userId: userId)
+        await backfillCheckInPhotosToCloud(userId: userId)
     }
 
     /// Mescla fichas personalizadas / IA do Firestore (iPhone ↔ iPad).
@@ -547,8 +555,8 @@ final class WorkoutStore: ObservableObject {
         "Casa F — Mobilidade e Postura",
     ]
     private static let mobilitySampleTitles: Set<String> = [
-        "Mobilidade A — Aquecimento Geral",
-        "Mobilidade E — Pós-treino",
+        "Mobilidade A — Alongamento Dinâmico",
+        "Mobilidade E — Alongamento Estático",
     ]
     private static let maleSampleTitles: Set<String> = RecommendedWorkoutCatalog.allMaleTitles
     private static let femaleSampleTitles: Set<String> = RecommendedWorkoutCatalog.allFemaleTitles
@@ -678,6 +686,7 @@ final class WorkoutStore: ObservableObject {
             duoTeamName: duo.name
         )
         activeSession = session
+        rememberActiveStrengthSheet(sheet)
         activeCardioConfig = nil
         activeMeditationConfig = nil
         sessionOriginatedFromWatch = false
@@ -737,7 +746,68 @@ final class WorkoutStore: ObservableObject {
         guard let session = activeSession else { return nil }
         guard !WeeklyProgressAnalyzer.isCardioSession(session),
               !WeeklyProgressAnalyzer.isMeditationSession(session) else { return nil }
-        return workoutSheets.first(where: { $0.id == session.workoutSheetId })
+        if let hosted = sessionStrengthSheet, hosted.id == session.workoutSheetId {
+            return hosted.withExercises(activeSessionExercises.isEmpty ? hosted.exercises : activeSessionExercises)
+        }
+        if let saved = workoutSheets.first(where: { $0.id == session.workoutSheetId }) {
+            return saved.withExercises(activeSessionExercises.isEmpty ? saved.exercises : activeSessionExercises)
+        }
+        if let saved = workoutSheets.first(where: { $0.title == session.workoutTitle }) {
+            return saved.withExercises(activeSessionExercises.isEmpty ? saved.exercises : activeSessionExercises)
+        }
+        return reconstructedActiveStrengthSheet()
+    }
+
+    /// Encerra a sessão ativa sem depender da UI (tela preta / alert travado).
+    func forceEndActiveSession(justification: String = "Encerrado após falha da tela de treino.") {
+        showActiveWorkoutConflictAlert = false
+        guard var session = activeSession else {
+            sessionStrengthSheet = nil
+            clearPersistedActiveSession()
+            WorkoutLiveActivitySync.end()
+            return
+        }
+        session.endedAt = .now
+        session.exerciseRecords = exerciseRecords
+        session.completedExercises = exerciseRecords.filter(\.isCompleted).count
+        session.endedEarly = true
+        session.earlyEndJustification = justification
+        WorkoutLiveActivitySync.end()
+        endSession(persisting: session)
+    }
+
+    private func rememberActiveStrengthSheet(_ sheet: WorkoutSheet) {
+        sessionStrengthSheet = sheet
+        persistActiveStrengthSheet(sheet)
+    }
+
+    private func reconstructedActiveStrengthSheet() -> WorkoutSheet? {
+        guard let session = activeSession else { return nil }
+        let exercises: [Exercise]
+        if !activeSessionExercises.isEmpty {
+            exercises = activeSessionExercises
+        } else if !exerciseRecords.isEmpty {
+            exercises = exerciseRecords.map {
+                Exercise(
+                    id: $0.exerciseId,
+                    name: $0.exerciseName,
+                    weight: $0.recommendedWeight ?? $0.performedWeight
+                )
+            }
+        } else {
+            exercises = [
+                Exercise(name: session.workoutTitle.isEmpty ? "Treino" : session.workoutTitle)
+            ]
+        }
+        let sheet = WorkoutSheet(
+            id: session.workoutSheetId,
+            title: session.workoutTitle,
+            description: "Sessão em andamento",
+            exercises: exercises
+        )
+        sessionStrengthSheet = sheet
+        persistActiveStrengthSheet(sheet)
+        return sheet
     }
 
     /// Config de cardio ativa (persistida) ou reconstruída da sessão.
@@ -1351,6 +1421,7 @@ final class WorkoutStore: ObservableObject {
             calories: Int(session.caloriesBurned.rounded())
         )
         activeSession = nil
+        sessionStrengthSheet = nil
         activeCardioConfig = nil
         activeMeditationConfig = nil
         sessionOriginatedFromWatch = false
@@ -1421,20 +1492,41 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
-    /// Anexa (ou troca) a foto de check-in usada no calendário de treinos.
+    /// Anexa (ou troca) a foto de check-in usada no calendário de treinos (Constância).
     @discardableResult
     func attachCheckInPhoto(sessionId: UUID, image: UIImage) -> Bool {
         guard let index = sessionHistory.firstIndex(where: { $0.id == sessionId }) else { return false }
         if let previous = sessionHistory[index].checkInPhotoFileName {
             WorkoutCheckInPhotoStore.delete(fileName: previous)
         }
+        let previousStoragePath = sessionHistory[index].checkInPhotoStoragePath
         guard let fileName = WorkoutCheckInPhotoStore.save(image, sessionId: sessionId) else { return false }
         sessionHistory[index].checkInPhotoFileName = fileName
         saveHistory()
         let updated = sessionHistory[index]
         if let userId = cloudUserId {
             Task {
-                try? await WorkoutFirestoreService.saveSession(updated, userId: userId)
+                if let previousStoragePath {
+                    await WorkoutCheckInPhotoStorageService.deletePaths([previousStoragePath])
+                }
+                if let data = WorkoutCheckInPhotoStore.jpegData(fileName: fileName),
+                   let path = try? await WorkoutCheckInPhotoStorageService.uploadJPEG(
+                    data: data,
+                    userId: userId,
+                    sessionId: sessionId
+                   ) {
+                    await MainActor.run {
+                        guard let idx = sessionHistory.firstIndex(where: { $0.id == sessionId }) else { return }
+                        sessionHistory[idx].checkInPhotoStoragePath = path
+                        saveHistory()
+                        let session = sessionHistory[idx]
+                        Task {
+                            try? await WorkoutFirestoreService.saveSession(session, userId: userId)
+                        }
+                    }
+                } else {
+                    try? await WorkoutFirestoreService.saveSession(updated, userId: userId)
+                }
             }
         }
         return true
@@ -1443,13 +1535,72 @@ final class WorkoutStore: ObservableObject {
     func clearCheckInPhoto(sessionId: UUID) {
         guard let index = sessionHistory.firstIndex(where: { $0.id == sessionId }) else { return }
         WorkoutCheckInPhotoStore.delete(fileName: sessionHistory[index].checkInPhotoFileName)
+        let previousStoragePath = sessionHistory[index].checkInPhotoStoragePath
         sessionHistory[index].checkInPhotoFileName = nil
+        sessionHistory[index].checkInPhotoStoragePath = nil
         saveHistory()
         let updated = sessionHistory[index]
         if let userId = cloudUserId {
             Task {
+                if let previousStoragePath {
+                    await WorkoutCheckInPhotoStorageService.deletePaths([previousStoragePath])
+                }
                 try? await WorkoutFirestoreService.saveSession(updated, userId: userId)
             }
+        }
+    }
+
+    /// Baixa fotos de Constância que existem na nuvem mas ainda não estão neste aparelho.
+    private func hydrateCheckInPhotosFromCloud(userId: String) async {
+        guard WorkoutCheckInPhotoStorageService.isAvailable else { return }
+        var didChange = false
+        for index in sessionHistory.indices {
+            let session = sessionHistory[index]
+            guard let storagePath = session.checkInPhotoStoragePath, !storagePath.isEmpty else { continue }
+            let fileName = session.checkInPhotoFileName ?? WorkoutCheckInPhotoStore.fileName(for: session.id)
+            if WorkoutCheckInPhotoStore.exists(fileName: fileName) {
+                if session.checkInPhotoFileName == nil {
+                    sessionHistory[index].checkInPhotoFileName = fileName
+                    didChange = true
+                }
+                continue
+            }
+            guard let data = await WorkoutCheckInPhotoStorageService.downloadData(storagePath: storagePath),
+                  WorkoutCheckInPhotoStore.save(data: data, sessionId: session.id) != nil else {
+                continue
+            }
+            sessionHistory[index].checkInPhotoFileName = fileName
+            didChange = true
+        }
+        if didChange {
+            saveHistory()
+            objectWillChange.send()
+        }
+    }
+
+    /// Envia à nuvem fotos locais que ainda não têm `checkInPhotoStoragePath` (aparelho antigo).
+    private func backfillCheckInPhotosToCloud(userId: String) async {
+        guard WorkoutCheckInPhotoStorageService.isAvailable else { return }
+        var didChange = false
+        for index in sessionHistory.indices {
+            let session = sessionHistory[index]
+            guard let fileName = session.checkInPhotoFileName,
+                  WorkoutCheckInPhotoStore.exists(fileName: fileName) else { continue }
+            if let path = session.checkInPhotoStoragePath, !path.isEmpty { continue }
+            guard let data = WorkoutCheckInPhotoStore.jpegData(fileName: fileName),
+                  let path = try? await WorkoutCheckInPhotoStorageService.uploadJPEG(
+                    data: data,
+                    userId: userId,
+                    sessionId: session.id
+                  ) else {
+                continue
+            }
+            sessionHistory[index].checkInPhotoStoragePath = path
+            didChange = true
+            try? await WorkoutFirestoreService.saveSession(sessionHistory[index], userId: userId)
+        }
+        if didChange {
+            saveHistory()
         }
     }
 
@@ -1486,6 +1637,7 @@ final class WorkoutStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: activePausedKey)
         UserDefaults.standard.removeObject(forKey: exerciseLastProgressKey)
         UserDefaults.standard.removeObject(forKey: activeCardioConfigKey)
+        UserDefaults.standard.removeObject(forKey: activeStrengthSheetKey)
         exerciseLastProgressAt = nil
         lastActivePersistAt = nil
         clearActiveWorkoutFromCloud()
@@ -1588,6 +1740,15 @@ final class WorkoutStore: ObservableObject {
         } else if includeProgressTimestampCleanup {
             UserDefaults.standard.removeObject(forKey: activeCardioConfigKey)
         }
+        persistActiveStrengthSheet(sessionStrengthSheet)
+    }
+
+    private func persistActiveStrengthSheet(_ sheet: WorkoutSheet?) {
+        if let sheet, let data = try? JSONEncoder().encode(sheet) {
+            UserDefaults.standard.set(data, forKey: activeStrengthSheetKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: activeStrengthSheetKey)
+        }
     }
 
     private func restorePersistedActiveSessionIfNeeded() {
@@ -1618,6 +1779,15 @@ final class WorkoutStore: ObservableObject {
             activeCardioConfig = CardioWorkoutConfig.reconstruct(from: session)
         } else {
             activeCardioConfig = nil
+        }
+        if let sheetData = UserDefaults.standard.data(forKey: activeStrengthSheetKey),
+           let sheet = try? JSONDecoder().decode(WorkoutSheet.self, from: sheetData) {
+            sessionStrengthSheet = sheet
+        } else if !WeeklyProgressAnalyzer.isCardioSession(session),
+                  !WeeklyProgressAnalyzer.isMeditationSession(session) {
+            _ = reconstructedActiveStrengthSheet()
+        } else {
+            sessionStrengthSheet = nil
         }
         let restoredIndex = UserDefaults.standard.integer(forKey: activeExerciseIndexKey)
         let maxIndex = max(activeSessionExercises.count, exerciseRecords.count) - 1
@@ -1819,12 +1989,16 @@ final class WorkoutStore: ObservableObject {
 
         workoutSheets = workoutSheets.map { sheet in
             guard let sample = sampleByTitle[sheet.title] else { return sheet }
-            let isShapeSheet = ShapeWorkoutCatalog.allTitles.contains(sheet.title)
-            let missingWarmup = !isShapeSheet
-                && !sheet.exercises.contains { $0.notes == GuidedWorkoutCatalog.warmupNote }
+            let hasOldWarmup = sheet.exercises.contains { exercise in
+                let notes = exercise.notes.lowercased()
+                return notes == GuidedWorkoutCatalog.warmupNote.lowercased()
+                    || notes.contains("aquecimento")
+            }
+            let missingStretch = !sheet.exercises.contains {
+                $0.notes == GuidedWorkoutCatalog.stretchNote
+            }
             let outdated = sheet.exercises.count != sample.exercises.count
-                || (!isShapeSheet && sheet.exercises.count < 10)
-            guard missingWarmup || outdated else { return sheet }
+            guard hasOldWarmup || missingStretch || outdated else { return sheet }
             didUpdate = true
             return WorkoutSheet(
                 id: sheet.id,
@@ -1854,9 +2028,10 @@ final class WorkoutStore: ObservableObject {
             }
             let existing = workoutSheets[index]
             let catalogSheet = guided.makeSheet(targetGender: existing.targetGender)
-            let missingWarmup = !existing.exercises.contains { $0.notes == GuidedWorkoutCatalog.warmupNote }
+            let hasOldWarmup = existing.exercises.contains { $0.notes == GuidedWorkoutCatalog.warmupNote }
+            let missingStretch = !existing.exercises.contains { $0.notes == GuidedWorkoutCatalog.stretchNote }
             let outdated = existing.exercises.count != catalogSheet.exercises.count
-            guard missingWarmup || outdated else { continue }
+            guard hasOldWarmup || missingStretch || outdated else { continue }
             workoutSheets[index] = WorkoutSheet(
                 id: existing.id,
                 title: catalogSheet.title,
@@ -1883,6 +2058,8 @@ final class WorkoutStore: ObservableObject {
         "Mobilidade B — Ombros e Peito",
         "Mobilidade C — Quadril e Posterior",
         "Mobilidade D — Torácica e Escápulas",
+        "Mobilidade A — Aquecimento Geral",
+        "Mobilidade E — Pós-treino",
     ]
 
     private static let legacySampleTitles: Set<String> = [
@@ -1900,10 +2077,20 @@ final class WorkoutStore: ObservableObject {
         }
         for session in remote {
             var incoming = session
-            // Foto de check-in fica no aparelho — não apagar referência local se o remoto ainda não tem.
+            let local = merged[session.id]
+            // Mantém referências locais enquanto o remoto ainda não sincronizou a foto.
             if incoming.checkInPhotoFileName == nil,
-               let localName = merged[session.id]?.checkInPhotoFileName {
+               let localName = local?.checkInPhotoFileName {
                 incoming.checkInPhotoFileName = localName
+            }
+            if (incoming.checkInPhotoStoragePath == nil || incoming.checkInPhotoStoragePath?.isEmpty == true),
+               let localPath = local?.checkInPhotoStoragePath,
+               !localPath.isEmpty {
+                incoming.checkInPhotoStoragePath = localPath
+            }
+            // Se o remoto já tem Storage e o local só tem arquivo, prioriza o path da nuvem.
+            if let remotePath = session.checkInPhotoStoragePath, !remotePath.isEmpty {
+                incoming.checkInPhotoStoragePath = remotePath
             }
             merged[session.id] = incoming
         }
@@ -2068,23 +2255,23 @@ final class WorkoutStore: ObservableObject {
         )
     ]
 
-    /// Mobilidade voltada à musculação — apenas aquecimento e pós-treino.
+    /// Mobilidade — 2 tipos de alongamento (dinâmico e estático).
     static let mobilitySampleWorkouts: [WorkoutSheet] = [
         WorkoutSheet(
-            title: "Mobilidade A — Aquecimento Geral",
-            description: "Ativação articular antes de treinar com carga — 8–10 min",
+            title: "Mobilidade A — Alongamento Dinâmico",
+            description: "Alongamento dinâmico antes do treino — 8–10 min",
             exercises: [
-                Exercise(name: "Círculos de Tornozelo", sets: 2, reps: 12, restSeconds: 20, notes: "Cada lado · movimento lento", muscleGroup: .legs),
-                Exercise(name: "Círculos de Punho", sets: 2, reps: 12, restSeconds: 20, notes: "Cada direção", muscleGroup: .arms),
-                Exercise(name: "Inchworm", sets: 2, reps: 8, restSeconds: 30, muscleGroup: .fullBody),
                 Exercise(name: "Alongamento Mundial", sets: 2, reps: 6, restSeconds: 25, notes: "3 por lado", muscleGroup: .fullBody),
                 Exercise(name: "Alongamento de Coluna", sets: 2, reps: 10, restSeconds: 25, muscleGroup: .back),
                 Exercise(name: "Alongamento de Costas Altas", sets: 2, reps: 10, restSeconds: 25, muscleGroup: .back),
+                Exercise(name: "Alongamento de Flexor de Quadril", sets: 2, reps: 30, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Alongamento de Posterior", sets: 2, reps: 30, restSeconds: 20, notes: "Cada perna · reps = segundos", muscleGroup: .legs),
+                Exercise(name: "Alongamento de Peito", sets: 2, reps: 30, restSeconds: 20, notes: "reps = segundos", muscleGroup: .chest),
                 Exercise(name: "Alongamento de Panturrilha", sets: 2, reps: 30, restSeconds: 20, notes: "Cada lado · reps = segundos", muscleGroup: .legs)
             ]
         ),
         WorkoutSheet(
-            title: "Mobilidade E — Pós-treino",
+            title: "Mobilidade E — Alongamento Estático",
             description: "Alongamento estático para recuperação após a musculação",
             exercises: [
                 Exercise(name: "Alongamento de Peito", sets: 2, reps: 40, restSeconds: 15, notes: "reps = segundos", muscleGroup: .chest),

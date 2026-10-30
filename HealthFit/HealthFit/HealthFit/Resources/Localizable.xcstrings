@@ -318,6 +318,26 @@
     "%lld ativas" : {
 
     },
+    "%lld ativas · %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld ativas · %2$@"
+          }
+        }
+      }
+    },
+    "%lld ativas. %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld ativas. %2$@"
+          }
+        }
+      }
+    },
     "%lld BPM" : {
 
     },
@@ -853,6 +873,12 @@
     "A senha deve conter:" : {
 
     },
+    "A tela anterior falhou. Encerre para voltar ao app ou continue se o treino reabrir." : {
+
+    },
+    "Abre a lista para marcar ou desmarcar" : {
+
+    },
     "Abrindo chat Coach…" : {
 
     },
@@ -1361,6 +1387,9 @@
 
     },
     "Atualizar nível na musculação" : {
+
+    },
+    "Atualizar no calendário Constância" : {
 
     },
     "Atualizar sugestões" : {
@@ -3585,7 +3614,7 @@
     "Documento indisponível" : {
 
     },
-    "Duas rotinas: aquecimento geral e pós-treino, com GIFs na execução" : {
+    "Duas rotinas: alongamento dinâmico e estático, com GIFs na execução" : {
 
     },
     "Dupla / equipe" : {
@@ -3726,10 +3755,16 @@
     "Encerrar antecipadamente" : {
 
     },
+    "Encerrar treino" : {
+
+    },
     "Encerrar treino em andamento" : {
 
     },
     "Encerrar treino sem concluir" : {
+
+    },
+    "Encerre o treino para destravar o app. O progresso já registrado entra no histórico." : {
 
     },
     "Encerre pedais de Bicicleta pedal ou Mountain bike para acumular km e a vida útil das peças." : {
@@ -3787,6 +3822,9 @@
 
     },
     "Enviar mensagem motivacional" : {
+
+    },
+    "Enviar para calendário Constância" : {
 
     },
     "Enviar para nutricionista" : {
@@ -4805,6 +4843,9 @@
     "Marcar como concluída" : {
 
     },
+    "Marcar como descanso" : {
+
+    },
     "Marcar como não concluída" : {
 
     },
@@ -5108,6 +5149,9 @@
     "Montar / enviar cardápio" : {
 
     },
+    "Montar treino pelo IA" : {
+
+    },
     "Monte seu cardápio: use as recomendações do catálogo ou crie refeições e alimentos do seu jeito." : {
 
     },
@@ -5145,6 +5189,9 @@
 
     },
     "Não foi possível ler a ficha" : {
+
+    },
+    "Não foi possível montar o exercício na tela." : {
 
     },
     "Não foi possível salvar" : {
@@ -5650,6 +5697,9 @@
     "O HealthFit precisa da versão mais recente para funcionar corretamente." : {
 
     },
+    "O IAssistente pergunta se você já treina e cria ou recomenda fichas." : {
+
+    },
     "O ícone do app na tela inicial usa a mesma cor." : {
 
     },
@@ -5729,7 +5779,7 @@
     "OK vamos lá" : {
 
     },
-    "Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit. A foto também entra no calendário de treinos." : {
+    "Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit. Use o botão abaixo para enviar ao calendário Constância." : {
 
     },
     "Opcional e privado — só na sua conta." : {
@@ -5875,6 +5925,9 @@
 
     },
     "Perfil" : {
+
+    },
+    "PERFIL" : {
 
     },
     "Perfil Coach" : {
@@ -6705,6 +6758,9 @@
 
     },
     "Publicar acompanhamento no vínculo" : {
+
+    },
+    "Publicar no Pulse" : {
 
     },
     "Publique algo esta semana para aparecer aqui." : {
@@ -11270,6 +11326,9 @@
     "Remover da ficha" : {
 
     },
+    "Remover descanso" : {
+
+    },
     "Remover foto" : {
 
     },
@@ -11317,6 +11376,9 @@
 
     },
     "Resgatar 30 dias" : {
+
+    },
+    "Resgatar código da App Store" : {
 
     },
     "Responda antes de montar o cardápio." : {
@@ -11374,6 +11436,12 @@
 
     },
     "Retomar treino em andamento" : {
+
+    },
+    "Retrospectiva" : {
+
+    },
+    "Retrospectiva do mês" : {
 
     },
     "Revisão IAssistente" : {
@@ -11457,7 +11525,10 @@
     "Saltos por sessão" : {
 
     },
-    "Salva no calendário de treinos" : {
+    "Salva a foto deste treino no card Constância do perfil e do dashboard." : {
+
+    },
+    "Salva no calendário Constância" : {
 
     },
     "Salvando e sincronizando…" : {
@@ -11512,6 +11583,9 @@
 
     },
     "Salvar Meu Cardápio (manter recomendações)" : {
+
+    },
+    "Salvar na galeria" : {
 
     },
     "Salvar na Galeria?" : {
@@ -11882,10 +11956,16 @@
     "Status" : {
 
     },
+    "Status do WhatsApp" : {
+
+    },
     "Stories continuam no topo do Feed" : {
 
     },
     "Stories do Instagram" : {
+
+    },
+    "Story no Instagram" : {
 
     },
     "Stroke rate em remadas por minuto. Split /500 m (quanto menor, melhor) e eficiência saem da distância, remadas e sensores." : {
@@ -12300,7 +12380,7 @@
     "Toque em + para incluir na lista" : {
 
     },
-    "Toque em um dia com treino ou descanso para ver detalhes." : {
+    "Toque em um dia passado para ver o treino ou marcar descanso." : {
 
     },
     "Toque em um exercício para treiná-lo agora (sem precisar seguir a ordem)." : {
@@ -12386,6 +12466,9 @@
 
     },
     "Treino Concluído" : {
+
+    },
+    "Treino em andamento" : {
 
     },
     "Treino em andamento: %@" : {

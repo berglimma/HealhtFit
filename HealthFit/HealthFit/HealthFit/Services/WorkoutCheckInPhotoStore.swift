@@ -29,9 +29,15 @@ enum WorkoutCheckInPhotoStore {
     /// Salva JPEG redimensionado e devolve o nome do arquivo.
     @discardableResult
     static func save(_ image: UIImage, sessionId: UUID) -> String? {
-        let name = fileName(for: sessionId)
         let resized = downsample(image, maxSide: maxSide)
         guard let data = resized.jpegData(compressionQuality: jpegQuality) else { return nil }
+        return save(data: data, sessionId: sessionId)
+    }
+
+    /// Persiste bytes JPEG já compactados (ex.: download do Storage).
+    @discardableResult
+    static func save(data: Data, sessionId: UUID) -> String? {
+        let name = fileName(for: sessionId)
         let url = fileURL(for: name)
         do {
             try data.write(to: url, options: .atomic)
@@ -40,6 +46,13 @@ enum WorkoutCheckInPhotoStore {
             print("[HealthFit] Falha ao salvar foto de check-in: \(error.localizedDescription)")
             return nil
         }
+    }
+
+    static func jpegData(fileName: String?) -> Data? {
+        guard let fileName, !fileName.isEmpty else { return nil }
+        let url = fileURL(for: fileName)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return try? Data(contentsOf: url)
     }
 
     static func load(fileName: String?) -> UIImage? {

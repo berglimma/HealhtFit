@@ -1,15 +1,17 @@
-HealthFit 1.0.21 (34)
+HealthFit 1.0.25 (38)
 
 What's new in this binary:
-- Fixed black/dark loading screen after resume (Firebase auth nil→user blip)
-- Welcome/session gate failsafe so MainTab is not stuck behind loading
-- Softer background memory reclaim (keeps tab UI mounted)
-- Rest day suppresses evening “haven’t trained yet” nudge
+- Fix stuck black screen after starting a workout (hosted overlay lost the catalog sheet)
+- “Já existe um treino em andamento” End now force-ends the session even if the UI is blank
+- Continue remounts the workout; Dismiss minimizes so tabs return
+- Recovery overlay if the active workout UI cannot be rebuilt
 
-How to verify black-screen fix:
-1. Sign in, open Home (Dashboard)
-2. Background the app (home button / app switcher) for ~30–60s
-3. Return to HealthFit — Dashboard/tab bar should appear (not solid dark loading)
+How to verify:
+1. Sign in with demo account
+2. Start a recommended/catalog strength workout
+3. Background the app, force-quit if needed, reopen
+4. Confirm the workout UI returns (not a black screen)
+5. If the in-progress alert appears, tap Encerrar — the app must become usable again
 
 Demo login: healthfit.appreview@gmail.com
 Password: HealthFitReview2026!

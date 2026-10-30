@@ -157,14 +157,17 @@ enum GuidedWorkoutCatalog {
         )
     }
 
-    // MARK: - Aquecimento e abdômen
+    // MARK: - Alongamento e abdômen
 
+    /// Nota nos 2 alongamentos no início da ficha (substitui o antigo "Aquecimento").
+    static let stretchNote = "Alongamento"
+    /// Legado — fichas antigas ainda podem ter esta nota; a migração troca por alongamento.
     static let warmupNote = "Aquecimento"
 
     enum WarmupStyle {
-        /// Aquecimento de membros superiores (2 exercícios).
+        /// Alongamento de membros superiores (2 exercícios).
         case upper
-        /// Aquecimento de membros inferiores (2 exercícios).
+        /// Alongamento de membros inferiores (2 exercícios).
         case lower
     }
 
@@ -177,31 +180,68 @@ enum GuidedWorkoutCatalog {
         case crunchBicycle
     }
 
-    /// Monta a ficha: aquecimento + trabalho principal (sem core) + 2 exercícios de abdômen.
+    /// Monta a ficha: 2 alongamentos + trabalho principal (sem core) + 2 exercícios de abdômen.
     static func withWarmupAndAbs(
         _ main: [Exercise],
         level: WorkoutLevel?,
         warmup: WarmupStyle = .upper,
         abs: AbsPair = .plankCrunch
     ) -> [Exercise] {
-        let mainWork = main.filter { $0.muscleGroup != .core && $0.notes != warmupNote }
-        return warmupBlock(style: warmup, level: level) + mainWork + absBlock(pair: abs, level: level)
+        let mainWork = main.filter {
+            $0.muscleGroup != .core
+                && $0.notes != warmupNote
+                && $0.notes != stretchNote
+        }
+        return stretchBlock(style: warmup, level: level) + mainWork + absBlock(pair: abs, level: level)
     }
 
-    static func warmupBlock(style: WarmupStyle, level: WorkoutLevel?) -> [Exercise] {
+    static func stretchBlock(style: WarmupStyle, level: WorkoutLevel?) -> [Exercise] {
         let volume = warmupVolume(for: level)
         switch style {
         case .upper:
             return [
-                Exercise(name: "Polichinelo", sets: volume.sets, reps: 20, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .fullBody),
-                Exercise(name: "Círculos de Braços", sets: volume.sets, reps: 15, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .shoulders)
+                Exercise(
+                    name: "Alongamento de Peito",
+                    sets: volume.sets,
+                    reps: 30,
+                    restSeconds: volume.rest,
+                    notes: stretchNote,
+                    muscleGroup: .chest
+                ),
+                Exercise(
+                    name: "Alongamento de Dorsal",
+                    sets: volume.sets,
+                    reps: 30,
+                    restSeconds: volume.rest,
+                    notes: stretchNote,
+                    muscleGroup: .back
+                ),
             ]
         case .lower:
             return [
-                Exercise(name: "Abertura de Quadril", sets: volume.sets, reps: 12, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .legs),
-                Exercise(name: "Agachamento Corporal", sets: volume.sets, reps: 12, restSeconds: volume.rest, notes: warmupNote, muscleGroup: .legs)
+                Exercise(
+                    name: "Alongamento de Posterior",
+                    sets: volume.sets,
+                    reps: 30,
+                    restSeconds: volume.rest,
+                    notes: stretchNote,
+                    muscleGroup: .legs
+                ),
+                Exercise(
+                    name: "Alongamento de Flexor de Quadril",
+                    sets: volume.sets,
+                    reps: 30,
+                    restSeconds: volume.rest,
+                    notes: stretchNote,
+                    muscleGroup: .legs
+                ),
             ]
         }
+    }
+
+    /// Mantido para chamadas antigas — delega aos alongamentos.
+    static func warmupBlock(style: WarmupStyle, level: WorkoutLevel?) -> [Exercise] {
+        stretchBlock(style: style, level: level)
     }
 
     static func absBlock(pair: AbsPair, level: WorkoutLevel?) -> [Exercise] {

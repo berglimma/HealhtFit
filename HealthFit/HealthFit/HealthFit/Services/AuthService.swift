@@ -847,6 +847,7 @@ final class AuthService: ObservableObject {
         // Ordem: subcollections → Storage → documento raiz.
         let bodyPaths = try await BodyEvolutionFirestoreService.deleteAllUserData(userId: userId)
         await BodyEvolutionStorageService.deleteAllUserData(userId: userId, knownPaths: bodyPaths)
+        await WorkoutCheckInPhotoStorageService.deleteAllUserData(userId: userId)
         try await DailyWellnessFirestoreService.deleteAllEntries(userId: userId)
         try await MealPlanFirestoreService.deleteAllUserData(userId: userId)
         try await MealPhotoAnalysisFirestoreService.deleteAllUserData(userId: userId)

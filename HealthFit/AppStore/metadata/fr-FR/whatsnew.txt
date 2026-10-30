@@ -1,4 +1,5 @@
-• Correction de l’écran noir à la réouverture de l’app après background
-• Restauration de session plus stable (plus de chargement bloqué)
-• Jour de repos : plus de rappel « pas encore entraîné »
-• Moins de mémoire utilisée pour réduire les plantages
+• Vidéo de rétrospective mensuelle dans le calendrier Constance, avec repos et partage
+• Carte des disciplines dans le profil pour choisir ce que vous pratiquez
+• Correction urgente : l’entraînement lancé ne reste plus bloqué sur un écran noir
+• Terminer, Continuer et Quitter fonctionnent à nouveau s’il y a déjà un entraînement en cours
+• Les séances orphelines sont rétablies ou clôturées sans supprimer l’app

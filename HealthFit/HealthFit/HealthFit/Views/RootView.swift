@@ -50,6 +50,7 @@ struct RootView: View {
     @EnvironmentObject var wellnessService: DailyWellnessService
     @EnvironmentObject var exerciseVideoRepository: ExerciseVideoRepository
     @EnvironmentObject var timerService: RestTimerService
+    @ObservedObject private var languageStore = AppLanguageStore.shared
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var showWelcomeMotivation = false
@@ -131,6 +132,7 @@ struct RootView: View {
                     }
             }
         }
+        .environment(\.locale, languageStore.locale)
         // No implicit .animation on auth/welcome flags — they animate layout of heavy MainTab
         // and make the first tab switch feel frozen on device.
         .onAppear {

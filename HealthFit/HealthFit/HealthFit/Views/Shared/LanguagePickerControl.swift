@@ -60,13 +60,33 @@ struct LanguagePickerControl: View {
     }
 
     private var listRow: some View {
-        Picker(selection: $languageStore.language) {
-            ForEach(AppLanguage.allCases) { language in
-                Text(language.menuLabel).tag(language)
-            }
-        } label: {
+        HStack {
             Label(L10n.Settings.language, systemImage: "globe")
+            Spacer(minLength: 12)
+            Menu {
+                ForEach(AppLanguage.allCases) { language in
+                    Button {
+                        languageStore.language = language
+                    } label: {
+                        if languageStore.language == language {
+                            Label(language.menuLabel, systemImage: "checkmark")
+                        } else {
+                            Text(language.menuLabel)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(languageStore.language.menuLabel)
+                        .foregroundStyle(.secondary)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
         }
+        .accessibilityElement(children: .combine)
         .accessibilityLabel(L10n.Settings.language)
+        .accessibilityValue(languageStore.language.nativeName)
     }
 }

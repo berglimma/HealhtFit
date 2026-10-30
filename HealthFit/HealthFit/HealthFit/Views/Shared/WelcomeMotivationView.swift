@@ -5,7 +5,9 @@ struct WelcomeMotivationView: View {
     let onComplete: () -> Void
 
     @State private var slideIndex = 0
-    @State private var contentOpacity: Double = 0
+    /// Visível de imediato. Opacity 0 deixava a janela só com o fundo escuro
+    /// quando o `onAppear` não commitava (resume / NavigationRequestObserver).
+    @State private var contentOpacity: Double = 1
     @State private var iconScale: CGFloat = 0.88
     @State private var progress: Double = 0
     @State private var didComplete = false
@@ -181,12 +183,9 @@ struct WelcomeMotivationView: View {
     private func finish() {
         guard !didComplete else { return }
         didComplete = true
-        withAnimation(.easeInOut(duration: 0.25)) {
-            contentOpacity = 0
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
-            onComplete()
-        }
+        // Não esconder o conteúdo antes de dispensar: se o dismiss falha,
+        // a tela fica presa no fundo escuro sem spinner nem tab bar.
+        onComplete()
     }
 }
 

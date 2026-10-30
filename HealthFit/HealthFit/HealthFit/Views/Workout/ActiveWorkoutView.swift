@@ -113,10 +113,18 @@ struct ActiveWorkoutView: View {
                 }
 
                 if showWorkoutStartMotivation && !workoutStore.hasShownStartMotivation {
-                    WorkoutStartMotivationOverlay {
-                        workoutStore.markStartMotivationShown()
-                        showWorkoutStartMotivation = false
-                    }
+                    WorkoutStartMotivationOverlay(
+                        onContinue: {
+                            workoutStore.markStartMotivationShown()
+                            showWorkoutStartMotivation = false
+                        },
+                        onEnd: {
+                            finishWorkout(
+                                endedEarly: true,
+                                justification: "Encerrado na tela inicial do treino."
+                            )
+                        }
+                    )
                 }
             }
             .navigationTitle(sheet.title)
@@ -344,6 +352,22 @@ struct ActiveWorkoutView: View {
                 } else {
                     exerciseExecutionCard(for: exercise, record: record)
                 }
+            } else {
+                VStack(spacing: 16) {
+                    Text("Não foi possível montar o exercício na tela.")
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Text("Encerre o treino para destravar o app. O progresso já registrado entra no histórico.")
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Button("Encerrar treino") {
+                        finishWorkout(endedEarly: true, justification: "Encerrado após falha da tela de treino.")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                }
+                .padding(24)
             }
         }
     }
@@ -987,14 +1011,16 @@ struct ExerciseTrackingRow: View {
 
 struct WorkoutStartMotivationOverlay: View {
     let onContinue: () -> Void
+    var onEnd: (() -> Void)? = nil
 
     private let cardMaxWidth: CGFloat = 310
-    private let cardMaxHeight: CGFloat = 240
+    private let cardMaxHeight: CGFloat = 280
 
     var body: some View {
         ZStack {
             Color.black.opacity(0.55)
                 .ignoresSafeArea()
+                .allowsHitTesting(true)
 
             VStack(spacing: 10) {
                 Image(systemName: "figure.strengthtraining.traditional")
@@ -1027,6 +1053,12 @@ struct WorkoutStartMotivationOverlay: View {
                         .padding(.vertical, 10)
                         .background(AppTheme.accent)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+
+                if let onEnd {
+                    Button("Encerrar treino", action: onEnd)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.red)
                 }
             }
             .padding(.horizontal, 16)

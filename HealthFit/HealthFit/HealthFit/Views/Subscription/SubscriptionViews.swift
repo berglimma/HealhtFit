@@ -312,6 +312,12 @@ struct PaywallView: View {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(AppTheme.accent)
 
+            Button("Resgatar código da App Store") {
+                Task { await subscriptions.presentOfferCodeRedeemSheet() }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(AppTheme.accent)
+
             if allowsCourtesyRedeem {
                 Button("Tenho um código de cortesia (TestFlight)") {
                     showCourtesyRedeem = true
@@ -443,6 +449,12 @@ struct SubscriptionPlanView: View {
 
             Button("Restaurar compras") {
                 Task { await subscriptions.restore() }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(AppTheme.accent)
+
+            Button("Resgatar código da App Store") {
+                Task { await subscriptions.presentOfferCodeRedeemSheet() }
             }
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(AppTheme.accent)

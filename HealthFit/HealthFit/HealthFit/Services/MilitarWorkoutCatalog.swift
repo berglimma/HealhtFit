@@ -6,7 +6,6 @@ import Foundation
 /// Exercícios e volumes são originais do HealthFit (não copiam PDF proprietário).
 enum MilitarWorkoutCatalog {
     private static let nearFailure = "Próximo da falha"
-    private static let warmupLight = "Aquecimento (peso leve)"
     private static let militaryCadence = "Cadência controlada · sem balanço"
     private static let finisherNote = "Finalizador · mantenha ritmo firme"
     private static let methodNote =
@@ -32,8 +31,8 @@ enum MilitarWorkoutCatalog {
             title: "Militar Feminino A — Peito Ombros Tríceps (Soldado)",
             description: "\(methodNote). Push superior · base Soldado.",
             gender: .female,
+            stretch: .upper,
             exercises: [
-                ex("Elevação Lateral com Halteres", sets: 2, reps: 12, notes: warmupLight, group: .shoulders),
                 ex("Supino Inclinado com Halteres", sets: 3, notes: militaryCadence, group: .chest),
                 ex("Crucifixo Inclinado com Halteres", sets: 3, group: .chest),
                 ex("Desenvolvimento com Halteres", sets: 3, group: .shoulders),
@@ -47,8 +46,8 @@ enum MilitarWorkoutCatalog {
             title: "Militar Feminino B — Costas Posterior Bíceps (Soldado)",
             description: "\(methodNote). Pull · dorsal e deltoide posterior.",
             gender: .female,
+            stretch: .upper,
             exercises: [
-                ex("Rotação Externa Polia Unilateral", sets: 2, reps: 12, notes: warmupLight, group: .shoulders),
                 ex("Puxada Alta Frente", sets: 3, notes: militaryCadence, group: .back),
                 ex("Remada Baixa Pronada", sets: 3, group: .back),
                 ex("Remada Unilateral", sets: 3, group: .back),
@@ -62,8 +61,8 @@ enum MilitarWorkoutCatalog {
             title: "Militar Feminino C — Inferiores e Glúteo (Soldado)",
             description: "\(methodNote). Pernas + glúteo · base Soldado.",
             gender: .female,
+            stretch: .lower,
             exercises: [
-                ex("Agachamento Corporal", sets: 1, reps: 15, notes: "Aquecimento", group: .legs),
                 ex("Agachamento Livre", sets: 3, notes: militaryCadence, group: .legs),
                 ex("Leg Press 45", sets: 3, group: .legs),
                 ex("Cadeira Extensora", sets: 3, group: .legs),
@@ -77,6 +76,7 @@ enum MilitarWorkoutCatalog {
             title: "Militar Feminino D — Condicionamento AEJ (Soldado)",
             description: "\(methodNote). Condicionamento estilo AEJ + core.",
             gender: .female,
+            stretch: .upper,
             exercises: [
                 ex("Polichinelo", sets: 3, reps: 30, notes: finisherNote, group: .fullBody),
                 ex("Agachamento Livre", sets: 3, reps: 15, notes: "Peso leve · ritmo", group: .legs),
@@ -97,8 +97,8 @@ enum MilitarWorkoutCatalog {
             title: "Militar Feminino E — Peito Ombros Tríceps (Cabo)",
             description: "\(methodNote). Push avançado · patente Cabo.",
             gender: .female,
+            stretch: .upper,
             exercises: [
-                ex("Elevação Lateral", sets: 2, reps: 12, notes: warmupLight, group: .shoulders),
                 ex("Supino Inclinado com Halteres", sets: 4, notes: militaryCadence, group: .chest),
                 ex("Crucifixo Inclinado com Halteres", sets: 3, notes: nearFailure, group: .chest),
                 ex("Crossover", sets: 3, group: .chest),
@@ -112,8 +112,8 @@ enum MilitarWorkoutCatalog {
             title: "Militar Feminino F — Costas Posterior Bíceps (Cabo)",
             description: "\(methodNote). Pull denso · Cabo.",
             gender: .female,
+            stretch: .upper,
             exercises: [
-                ex("Rotação Externa Polia Unilateral", sets: 2, reps: 12, notes: warmupLight, group: .shoulders),
                 ex("Puxada Alta Frente", sets: 4, notes: militaryCadence, group: .back),
                 ex("Remada Curvada com Halteres", sets: 3, group: .back),
                 ex("Remada Baixa", sets: 3, group: .back),
@@ -127,8 +127,8 @@ enum MilitarWorkoutCatalog {
             title: "Militar Feminino G — Inferiores Força (Cabo)",
             description: "\(methodNote). Quadríceps e força · Cabo.",
             gender: .female,
+            stretch: .lower,
             exercises: [
-                ex("Agachamento Búlgaro", sets: 2, reps: 10, notes: warmupLight, group: .legs),
                 ex("Agachamento Livre", sets: 4, notes: militaryCadence, group: .legs),
                 ex("Hack Squat", sets: 3, group: .legs),
                 ex("Leg Press", sets: 4, group: .legs),
@@ -141,6 +141,7 @@ enum MilitarWorkoutCatalog {
             title: "Militar Feminino H — Posterior e Glúteo (Cabo)",
             description: "\(methodNote). Posterior + glúteo · Cabo.",
             gender: .female,
+            stretch: .lower,
             exercises: [
                 ex("Stiff", sets: 4, notes: militaryCadence, group: .legs),
                 ex("Mesa Flexora", sets: 3, group: .legs),
@@ -156,6 +157,7 @@ enum MilitarWorkoutCatalog {
             title: "Militar Feminino I — Condicionamento Missão (Cabo)",
             description: "\(methodNote). Missão de condicionamento + core.",
             gender: .female,
+            stretch: .upper,
             exercises: [
                 ex("Burpee", sets: 3, reps: 10, notes: finisherNote, group: .fullBody),
                 ex("Mountain Climber", sets: 3, reps: 24, group: .fullBody),
@@ -176,8 +178,8 @@ enum MilitarWorkoutCatalog {
             title: "Militar Masculino A — Peito Ombros Tríceps (Soldado)",
             description: "\(methodNote). Push clássico · base Soldado.",
             gender: .male,
+            stretch: .upper,
             exercises: [
-                ex("Elevação Lateral com Halteres", sets: 2, reps: 12, notes: warmupLight, group: .shoulders),
                 ex("Supino Inclinado com Halteres", sets: 3, notes: militaryCadence, group: .chest),
                 ex("Supino Reto", sets: 3, group: .chest),
                 ex("Desenvolvimento Militar", sets: 3, group: .shoulders),
@@ -191,8 +193,8 @@ enum MilitarWorkoutCatalog {
             title: "Militar Masculino B — Costas Posterior Bíceps (Soldado)",
             description: "\(methodNote). Pull · dorsal e bíceps.",
             gender: .male,
+            stretch: .upper,
             exercises: [
-                ex("Rotação Externa Polia Unilateral", sets: 2, reps: 12, notes: warmupLight, group: .shoulders),
                 ex("Puxada Alta Frente", sets: 3, notes: militaryCadence, group: .back),
                 ex("Remada Curvada Pronada", sets: 3, group: .back),
                 ex("Remada Unilateral", sets: 3, group: .back),
@@ -206,8 +208,8 @@ enum MilitarWorkoutCatalog {
             title: "Militar Masculino C — Inferiores (Soldado)",
             description: "\(methodNote). Pernas completas · base Soldado.",
             gender: .male,
+            stretch: .lower,
             exercises: [
-                ex("Agachamento Corporal", sets: 1, reps: 15, notes: "Aquecimento", group: .legs),
                 ex("Agachamento Livre", sets: 3, notes: militaryCadence, group: .legs),
                 ex("Leg Press 45", sets: 3, group: .legs),
                 ex("Cadeira Extensora", sets: 3, group: .legs),
@@ -221,6 +223,7 @@ enum MilitarWorkoutCatalog {
             title: "Militar Masculino D — Condicionamento AEJ (Soldado)",
             description: "\(methodNote). Condicionamento estilo AEJ + core.",
             gender: .male,
+            stretch: .upper,
             exercises: [
                 ex("Polichinelo", sets: 3, reps: 40, notes: finisherNote, group: .fullBody),
                 ex("Burpee", sets: 3, reps: 10, notes: finisherNote, group: .fullBody),
@@ -241,8 +244,8 @@ enum MilitarWorkoutCatalog {
             title: "Militar Masculino E — Peito Ombros Tríceps (Cabo)",
             description: "\(methodNote). Push intenso · patente Cabo.",
             gender: .male,
+            stretch: .upper,
             exercises: [
-                ex("Rotação Externa Polia Unilateral", sets: 2, reps: 12, notes: warmupLight, group: .shoulders),
                 ex("Supino Inclinado com Halteres", sets: 4, notes: militaryCadence, group: .chest),
                 ex("Crucifixo Inclinado com Halteres", sets: 3, notes: nearFailure, group: .chest),
                 ex("Voador", sets: 3, group: .chest),
@@ -256,8 +259,8 @@ enum MilitarWorkoutCatalog {
             title: "Militar Masculino F — Costas Posterior Bíceps (Cabo)",
             description: "\(methodNote). Pull denso · Cabo.",
             gender: .male,
+            stretch: .upper,
             exercises: [
-                ex("Rotação Externa Polia Unilateral", sets: 2, reps: 12, notes: warmupLight, group: .shoulders),
                 ex("Puxada Alta Frente", sets: 4, notes: militaryCadence, group: .back),
                 ex("Remada Curvada Pronada", sets: 4, group: .back),
                 ex("Remada Unilateral", sets: 3, group: .back),
@@ -271,8 +274,8 @@ enum MilitarWorkoutCatalog {
             title: "Militar Masculino G — Inferiores Força (Cabo)",
             description: "\(methodNote). Força de pernas · Cabo.",
             gender: .male,
+            stretch: .lower,
             exercises: [
-                ex("Agachamento Corporal", sets: 1, reps: 15, notes: "Aquecimento", group: .legs),
                 ex("Agachamento Livre", sets: 4, notes: militaryCadence, group: .legs),
                 ex("Hack Squat", sets: 3, group: .legs),
                 ex("Leg Press", sets: 4, group: .legs),
@@ -286,6 +289,7 @@ enum MilitarWorkoutCatalog {
             title: "Militar Masculino H — Inferiores Posterior (Cabo)",
             description: "\(methodNote). Posterior e volume · Cabo.",
             gender: .male,
+            stretch: .lower,
             exercises: [
                 ex("Mesa Flexora", sets: 4, notes: militaryCadence, group: .legs),
                 ex("Stiff", sets: 4, group: .legs),
@@ -301,6 +305,7 @@ enum MilitarWorkoutCatalog {
             title: "Militar Masculino I — Condicionamento Missão (Cabo)",
             description: "\(methodNote). Missão de condicionamento + ombros/braços.",
             gender: .male,
+            stretch: .upper,
             exercises: [
                 ex("Burpee", sets: 3, reps: 12, notes: finisherNote, group: .fullBody),
                 ex("Desenvolvimento Militar", sets: 3, notes: militaryCadence, group: .shoulders),
@@ -320,12 +325,14 @@ enum MilitarWorkoutCatalog {
         title: String,
         description: String,
         gender: Gender,
+        stretch: GuidedWorkoutCatalog.WarmupStyle,
         exercises: [Exercise]
     ) -> WorkoutSheet {
-        WorkoutSheet(
+        let stretches = GuidedWorkoutCatalog.stretchBlock(style: stretch, level: .intermediate)
+        return WorkoutSheet(
             title: title,
             description: description,
-            exercises: exercises,
+            exercises: stretches + exercises,
             targetGender: gender
         )
     }

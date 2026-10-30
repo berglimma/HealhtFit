@@ -87,11 +87,8 @@ enum WatchCatalog {
         .init(id: "c-d", title: "Casa D — Pernas e Glúteos", icon: "house.fill", firstExercise: "Afundo"),
         .init(id: "c-e", title: "Casa E — Superiores", icon: "house.fill", firstExercise: "Flexão de braço"),
         .init(id: "c-f", title: "Casa F — Mobilidade e Postura", icon: "house.fill", firstExercise: "Gato-camelo"),
-        .init(id: "mob-a", title: "Mobilidade A — Aquecimento Geral", icon: "figure.flexibility", firstExercise: "Círculos de ombro"),
-        .init(id: "mob-b", title: "Mobilidade B — Ombros e Peito", icon: "figure.flexibility", firstExercise: "Abertura peitoral"),
-        .init(id: "mob-c", title: "Mobilidade C — Quadril e Posterior", icon: "figure.flexibility", firstExercise: "Along. isquiotibial"),
-        .init(id: "mob-d", title: "Mobilidade D — Torácica e Escápulas", icon: "figure.flexibility", firstExercise: "Rotação torácica"),
-        .init(id: "mob-e", title: "Mobilidade E — Pós-treino", icon: "figure.flexibility", firstExercise: "Respiração + alongamento"),
+        .init(id: "mob-a", title: "Mobilidade A — Alongamento Dinâmico", icon: "figure.flexibility", firstExercise: "Alongamento mundial"),
+        .init(id: "mob-e", title: "Mobilidade E — Alongamento Estático", icon: "figure.flexibility", firstExercise: "Alongamento de peito"),
     ]
 
     static let cardioActivities: [CardioActivity] = [

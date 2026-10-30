@@ -1214,7 +1214,7 @@ enum HealthAssistantEngine {
                 return """
                 Posso montar uma sugestão de treino para quem não tem personal.
 
-                Digite “montar treino” (ou toque na sugestão) para começarmos: perfil masculino/feminino, se treina só em casa ou na academia, experiência e o foco (massa, resistência ou perda de gordura).
+                Digite “montar treino” (ou toque na sugestão) para começarmos: uso o gênero do Perfil, pergunto se treina em casa ou academia, se já treina, e o foco — se criar, monto fichas para todos os grupos musculares.
 
                 \(AssistantWorkoutBuilder.professionalDisclaimer)
                 """
@@ -1829,8 +1829,10 @@ final class HealthAssistantService: ObservableObject {
         case askingAlreadyTrains
         case askingFirstTimeGym
         case askingExperienceLevel
+        case askingDeliveryMode
         case askingFocus
         case confirming
+        case confirmingRecommend
     }
 
     private enum MealPlanBuilderPhase {
@@ -1861,6 +1863,7 @@ final class HealthAssistantService: ObservableObject {
     private var draftWorkoutLocation: AssistantTrainingLocation?
     private var draftWorkoutExperience: AssistantTrainingExperience?
     private var draftWorkoutFocus: AssistantWorkoutGoalFocus?
+    private var draftWorkoutDeliveryMode: AssistantWorkoutDeliveryMode?
     private var mealPlanBuilderPhase: MealPlanBuilderPhase?
     private var draftMealPlanLactose: LactoseTolerance?
     private var draftMealPlanSweet: SweetConsumptionLevel?
@@ -1953,13 +1956,31 @@ final class HealthAssistantService: ObservableObject {
             return AssistantWorkoutBuilder.quickFirstTimeReplies
         case .askingExperienceLevel:
             return AssistantWorkoutBuilder.quickLevelReplies
+        case .askingDeliveryMode:
+            return AssistantWorkoutBuilder.quickDeliveryModeReplies
         case .askingFocus:
             return AssistantWorkoutBuilder.quickFocusReplies
-        case .confirming:
+        case .confirming, .confirmingRecommend:
             return AssistantWorkoutBuilder.quickConfirmReplies
         case .none:
             return []
         }
+    }
+
+    /// Inicia o fluxo a partir do CTA “Montar treino pelo IA” (aba Treinos).
+    func startWorkoutBuilderFromExternalCTA(
+        context: HealthAssistantContext,
+        preferredGender: Gender?
+    ) {
+        guard !isTyping else { return }
+        if isInWorkoutBuilder {
+            resetWorkoutBuilderDraft()
+        }
+        beginWorkoutBuilderFlow(
+            context: context,
+            forceDespitePersonal: false,
+            preferredGender: preferredGender ?? context.user?.gender
+        )
     }
 
     var mealPlanBuilderQuickReplies: [String] {
@@ -2129,7 +2150,11 @@ final class HealthAssistantService: ObservableObject {
         }
 
         if AssistantWorkoutBuilder.detectsWorkoutBuildIntent(trimmed) {
-            beginWorkoutBuilderFlow(context: context, forceDespitePersonal: AssistantWorkoutBuilder.detectsForceBuildDespitePersonal(trimmed))
+            beginWorkoutBuilderFlow(
+                context: context,
+                forceDespitePersonal: AssistantWorkoutBuilder.detectsForceBuildDespitePersonal(trimmed),
+                preferredGender: context.user?.gender
+            )
             return
         }
 
@@ -2381,6 +2406,7 @@ final class HealthAssistantService: ObservableObject {
         draftWorkoutLocation = nil
         draftWorkoutExperience = nil
         draftWorkoutFocus = nil
+        draftWorkoutDeliveryMode = nil
     }
 
     private func persistMusculacaoExperience(
@@ -2395,7 +2421,11 @@ final class HealthAssistantService: ObservableObject {
         authService?.updateProfile(profile)
     }
 
-    private func beginWorkoutBuilderFlow(context: HealthAssistantContext, forceDespitePersonal: Bool) {
+    private func beginWorkoutBuilderFlow(
+        context: HealthAssistantContext,
+        forceDespitePersonal: Bool,
+        preferredGender: Gender? = nil
+    ) {
         if context.user?.hasPersonalTrainerOnProfile == true || context.user?.hasPersonalTrainer == true,
            !forceDespitePersonal {
             deliverDelayedWorkoutBuilderMessage("""
@@ -2409,19 +2439,39 @@ final class HealthAssistantService: ObservableObject {
             return
         }
 
-        workoutBuilderPhase = .askingGender
-        draftWorkoutGender = nil
         draftWorkoutLocation = nil
         draftWorkoutExperience = nil
         draftWorkoutFocus = nil
+        draftWorkoutDeliveryMode = nil
 
         let name = context.user?.greetingName ?? ""
         let greeting = name.isEmpty ? "" : "\(name), "
+        let resolvedGender = preferredGender ?? context.user?.gender
+
+        if let resolvedGender {
+            draftWorkoutGender = resolvedGender
+            workoutBuilderPhase = .askingHomeOnly
+            let genderLabel = resolvedGender == .female ? "feminino" : "masculino"
+            deliverDelayedWorkoutBuilderMessage("""
+            \(greeting)posso montar uma sugestão de treino personalizada no perfil **\(genderLabel)** (do seu Perfil).
+
+            Vou perguntar local, se você já treina e o foco — se criar, gero fichas para **todos os grupos musculares**.
+
+            \(AssistantWorkoutBuilder.professionalDisclaimer)
+
+            Você deseja treinar **apenas em casa** (peso corporal, sem academia)?
+            Responda **Sim, só em casa** ou **Não, na academia**.
+            """)
+            return
+        }
+
+        workoutBuilderPhase = .askingGender
+        draftWorkoutGender = nil
 
         deliverDelayedWorkoutBuilderMessage("""
         \(greeting)posso montar uma sugestão de treino personalizada.
 
-        Vou entender seu perfil: se treina em casa ou academia, experiência e foco — depois gero a ficha.
+        Vou entender seu perfil: gênero, se treina em casa ou academia, experiência e foco — depois gero as fichas.
 
         \(AssistantWorkoutBuilder.professionalDisclaimer)
 
@@ -2525,16 +2575,17 @@ final class HealthAssistantService: ObservableObject {
                 return
             }
             draftWorkoutExperience = AssistantTrainingExperience.fromFirstTimeAnswer(isFirstTime)
+            draftWorkoutDeliveryMode = .create
             persistMusculacaoExperience(draftWorkoutExperience, authService: authService)
             workoutBuilderPhase = .askingFocus
             let experienceNote: String
             if draftWorkoutLocation == .homeOnly {
                 experienceNote = isFirstTime
-                    ? "Perfil: primeira vez em casa — cargas leves e foco em técnica (use os GIFs)."
+                    ? "Perfil: primeira vez em casa — cargas bem leves e foco em técnica (use os GIFs)."
                     : "Perfil: retomando em casa — progressão cuidadosa sem equipamentos."
             } else {
                 experienceNote = isFirstTime
-                    ? "Perfil: primeira vez na academia — cargas leves e foco em técnica."
+                    ? "Perfil: primeira vez na academia — cargas bem leves e foco em técnica."
                     : "Perfil: retomando após pausa — progressão cuidadosa."
             }
             deliverDelayedWorkoutBuilderMessage("""
@@ -2558,12 +2609,42 @@ final class HealthAssistantService: ObservableObject {
             }
             draftWorkoutExperience = level
             persistMusculacaoExperience(level, authService: authService)
-            workoutBuilderPhase = .askingFocus
+            workoutBuilderPhase = .askingDeliveryMode
             let loadNote = level.musculacaoPreference == .beginner
-                ? " Vou usar **cargas leves** nesta ficha."
+                ? " Se criar, uso **cargas leves**."
                 : ""
             deliverDelayedWorkoutBuilderMessage("""
             Nível \(level.rawValue.lowercased()) anotado.\(loadNote)
+
+            Você prefere que eu **crie fichas novas** (todos os grupos musculares) ou **recomende** as do catálogo?
+            • **Criar fichas**
+            • **Recomendar do catálogo**
+            """)
+
+        case .askingDeliveryMode:
+            guard let mode = AssistantWorkoutDeliveryMode.parse(from: text) else {
+                divertOrRepromptWorkoutBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: "prefere **Criar fichas** ou **Recomendar do catálogo**?",
+                    fallback: "Escolha: **Criar fichas** ou **Recomendar do catálogo**."
+                )
+                return
+            }
+            draftWorkoutDeliveryMode = mode
+            if mode == .recommend {
+                workoutBuilderPhase = .confirmingRecommend
+                deliverDelayedWorkoutBuilderMessage(
+                    AssistantWorkoutBuilder.recommendConfirmationSummary(
+                        gender: draftWorkoutGender ?? context.user?.gender ?? .male,
+                        experience: draftWorkoutExperience ?? .intermediate
+                    )
+                )
+                return
+            }
+            workoutBuilderPhase = .askingFocus
+            deliverDelayedWorkoutBuilderMessage("""
+            Vou criar fichas para **Peito, Costas, Pernas, Ombros, Braços e Abdômen**.
 
             Qual o foco do treino?
             • Ganho de massa
@@ -2582,6 +2663,7 @@ final class HealthAssistantService: ObservableObject {
                 return
             }
             draftWorkoutFocus = focus
+            draftWorkoutDeliveryMode = draftWorkoutDeliveryMode ?? .create
             workoutBuilderPhase = .confirming
 
             guard let profile = context.user, AssistantWorkoutBuilder.hasRequiredProfileData(profile) else {
@@ -2609,6 +2691,38 @@ final class HealthAssistantService: ObservableObject {
                 )
             )
 
+        case .confirmingRecommend:
+            if AssistantWorkoutBuilder.isNegative(text) {
+                resetWorkoutBuilderDraft()
+                deliverDelayedWorkoutBuilderMessage(
+                    "Tudo bem — cancelei. Quando quiser, diga “montar treino” novamente."
+                )
+                return
+            }
+
+            guard AssistantWorkoutBuilder.isAffirmative(text) else {
+                divertOrRepromptWorkoutBuilder(
+                    text,
+                    context: context,
+                    pendingQuestion: "posso abrir as recomendações? Responda **Sim, autorizo** ou **Não, cancelar**.",
+                    fallback: "Para continuar, responda **Sim, autorizo** ou **Não, cancelar**."
+                )
+                return
+            }
+
+            let gender = draftWorkoutGender ?? context.user?.gender ?? .male
+            resetWorkoutBuilderDraft()
+            WorkoutHubNavigationRouter.shared.openGenderHub(gender: gender, section: .recommended)
+            deliverDelayedWorkoutBuilderMessage("""
+            Pronto!
+
+            \(AssistantWorkoutBuilder.recommendedCatalogHint(gender: gender))
+
+            \(AssistantWorkoutBuilder.professionalDisclaimer)
+
+            \(HealthAssistantEngine.healthSafetyDisclaimer)
+            """)
+
         case .confirming:
             if AssistantWorkoutBuilder.isNegative(text) {
                 resetWorkoutBuilderDraft()
@@ -2622,7 +2736,7 @@ final class HealthAssistantService: ObservableObject {
                 divertOrRepromptWorkoutBuilder(
                     text,
                     context: context,
-                    pendingQuestion: "posso gerar a ficha? Responda **Sim, autorizo** ou **Não, cancelar**.",
+                    pendingQuestion: "posso gerar as fichas? Responda **Sim, autorizo** ou **Não, cancelar**.",
                     fallback: "Para continuar, responda **Sim, autorizo** ou **Não, cancelar**."
                 )
                 return
@@ -2644,25 +2758,30 @@ final class HealthAssistantService: ObservableObject {
             guard let workoutStore else {
                 resetWorkoutBuilderDraft()
                 deliverDelayedWorkoutBuilderMessage(
-                    "Não consegui salvar a ficha agora. Tente novamente em instantes."
+                    "Não consegui salvar as fichas agora. Tente novamente em instantes."
                 )
                 return
             }
 
-            let sheet = AssistantWorkoutBuilder.buildSheet(
+            let sheets = AssistantWorkoutBuilder.buildProgramSheets(
                 gender: gender,
                 focus: focus,
                 profile: profile,
                 experience: experience,
                 location: location
             )
-            workoutStore.addWorkoutSheet(sheet)
+            for sheet in sheets {
+                workoutStore.addWorkoutSheet(sheet)
+            }
+            let totalExercises = sheets.reduce(0) { $0 + $1.totalExercises }
             resetWorkoutBuilderDraft()
+            WorkoutHubNavigationRouter.shared.openGenderHub(gender: gender, section: .personalizados)
 
             deliverDelayedWorkoutBuilderMessage("""
-            Pronto! Com base no seu perfil (\(experience.summaryLabel(for: location))), criei a ficha **\(sheet.title)** com \(sheet.totalExercises) exercícios.
+            Pronto! Com base no seu perfil (\(experience.summaryLabel(for: location))), criei **\(sheets.count) fichas** \
+            (todos os grupos musculares) com \(totalExercises) exercícios no total.
 
-            \(AssistantWorkoutBuilder.createdSheetLocationHint(gender: gender, location: location))
+            \(AssistantWorkoutBuilder.createdSheetLocationHint(gender: gender, location: location, sheetCount: sheets.count))
 
             \(AssistantWorkoutBuilder.professionalDisclaimer)
 

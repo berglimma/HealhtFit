@@ -1,7 +1,8 @@
+import Combine
 import Foundation
 import StoreKit
+import UIKit
 
-import Combine
 /// StoreKit 2 — carrega produtos, compra, restaura e resolve o plano ativo.
 @MainActor
 final class SubscriptionService: ObservableObject {
@@ -121,6 +122,58 @@ final class SubscriptionService: ObservableObject {
         }
         // Cortesia não tem período da loja — marca o plano nas duas abas.
         return isCourtesyActive && activeCourtesyTier == tier
+    }
+
+    /// Abre a folha oficial da Apple para resgatar Subscription Offer Codes (caminho ASC).
+    /// O modifier SwiftUI `.offerCodeRedemptionSheet` foi removido no SDK 27.
+    /// Usa `from:` no iOS 27+; no deployment atual (18) usa a API `in:` (ainda válida).
+    func presentOfferCodeRedeemSheet() async {
+        lastErrorMessage = nil
+        do {
+            if #available(iOS 27.0, *) {
+                guard let viewController = Self.topViewController else {
+                    lastErrorMessage = "Não foi possível abrir o resgate. Tente de novo."
+                    return
+                }
+                _ = try await AppStore.presentOfferCodeRedeemSheet(from: viewController)
+            } else {
+                guard let scene = Self.foregroundWindowScene else {
+                    lastErrorMessage = "Não foi possível abrir o resgate. Tente de novo."
+                    return
+                }
+                try await AppStore.presentOfferCodeRedeemSheet(in: scene)
+            }
+            await updateEntitlementsFromStore()
+        } catch {
+            // Cancelamento do usuário não precisa de alerta.
+            let ns = error as NSError
+            if ns.domain == "SKErrorDomain", ns.code == 2 { return }
+            if error is CancellationError { return }
+            lastErrorMessage = error.localizedDescription
+        }
+    }
+
+    private static var foregroundWindowScene: UIWindowScene? {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        return scenes.first(where: { $0.activationState == .foregroundActive }) ?? scenes.first
+    }
+
+    private static var topViewController: UIViewController? {
+        guard let scene = foregroundWindowScene else { return nil }
+        guard var top = scene.keyWindow?.rootViewController
+            ?? scene.windows.first(where: \.isKeyWindow)?.rootViewController else {
+            return nil
+        }
+        while let presented = top.presentedViewController {
+            top = presented
+        }
+        if let nav = top as? UINavigationController {
+            top = nav.visibleViewController ?? top
+        }
+        if let tab = top as? UITabBarController {
+            top = tab.selectedViewController ?? top
+        }
+        return top
     }
 
     /// Resgata voucher de cortesia (Cloud Function + Firestore). Uso único, 30 dias, sem renovação.

@@ -1,4 +1,5 @@
-• Correção da tela preta ao reabrir o app após o background
-• Restauração de sessão mais estável (sem travar no carregamento)
-• Dia de descanso: sem lembrete de “ainda não treinei”
-• Menor uso de memória para reduzir travamentos
+• Vídeo da retrospectiva do mês no calendário Constância, com descanso e compartilhamento
+• Card de modalidades no perfil para escolher o que você pratica
+• Correção urgente: treino iniciado não trava mais em tela preta
+• Encerrar, Continuar e Sair voltam a funcionar se já existir um treino em andamento
+• Sessão órfã é reconstruída ou encerrada, sem precisar apagar o app

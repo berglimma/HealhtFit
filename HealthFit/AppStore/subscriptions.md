@@ -76,12 +76,16 @@ if subscriptions.canAccess(.aiChatUnlimited) { ... }
 
 Locks recomendados v1.1: `.advancedModalities`, `.mealPlan`, `.mealPhotoAnalysis`, `.aiChatUnlimited`, `.monthlyReport`, `.advancedSportAnalytics`, `.customWorkouts`.
 
-## Cortesia (removido do app — Guideline 3.1.1)
+## Offer Codes (caminho aprovado — App Store)
 
-Resgate in-app de vouchers/promo codes foi **removido** na 1.0.10 (23).
-Descontos/acesso gratuito devem usar **Offer Codes** oficiais da App Store Connect.
+Acesso gratuito/desconto de 30 dias: **Subscription Offer Codes** no Completo.
 
-Backend legado (`redeemCourtesyVoucher`) pode permanecer desligado; o cliente não aplica grants.
+1. App Store Connect → Assinaturas → Completo mensal (`healthfit.plan.complete.monthly`)
+2. Preços → **+** → **Criar códigos de oferta** → Grátis · 1 mês · Novos assinantes
+3. Gerar códigos de uso único (CSV) ou código personalizado
+4. No app: Perfil → Meu plano / Paywall → **Resgatar código da App Store** (`AppStore.presentOfferCodeRedeemSheet`)
+
+Cortesia Firebase (`redeemCourtesyVoucher`) fica só em **TestFlight/Debug** (`AppDistribution.allowsCourtesyVoucherRedeem`) — nunca na App Store production.
 
 ## Firebase (fase 4 — ainda não implementado)
 
@@ -95,5 +99,6 @@ Após compra estável: gravar `plan` + `expiresAt` no user Firestore; sempre rev
 - [x] Preço cobrado em destaque (anual = total/ano; equiv. mensal só como apoio, mesma moeda)  
 - [x] Free mínimo (gates off = usável sem assinatura no lançamento)  
 - [x] Gerenciar assinatura (`manageSubscriptionsSheet`)  
+- [x] Resgatar Offer Codes (`AppStore.presentOfferCodeRedeemSheet`)  
 - [x] Opção anual com preço claro e desconto  
 - [ ] Não prometer “nutricionista humano” (copy já usa “orientação assistida”)

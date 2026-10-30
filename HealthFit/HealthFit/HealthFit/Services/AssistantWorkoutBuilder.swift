@@ -124,6 +124,31 @@ enum AssistantTrainingLocation: String, CaseIterable, Identifiable {
     static let quickReplies = ["Sim, só em casa", "Não, na academia"]
 }
 
+/// Quem já treina pode pedir fichas novas ou só as recomendações do catálogo.
+enum AssistantWorkoutDeliveryMode: String, CaseIterable, Identifiable {
+    case create = "Criar fichas"
+    case recommend = "Recomendar do catálogo"
+
+    var id: String { rawValue }
+
+    static let quickReplies = [Self.create.rawValue, Self.recommend.rawValue]
+
+    static func parse(from text: String) -> AssistantWorkoutDeliveryMode? {
+        let normalized = text
+            .lowercased()
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "pt_BR"))
+
+        if normalized.contains("recomend") || normalized.contains("catalogo") || normalized.contains("pront") {
+            return .recommend
+        }
+        if normalized.contains("criar") || normalized.contains("montar") || normalized.contains("gerar")
+            || normalized.contains("nova") || normalized.contains("fichas novas") {
+            return .create
+        }
+        return nil
+    }
+}
+
 enum AssistantWorkoutBuilder {
     static let professionalDisclaimer =
         "Vou montar uma sugestão com base nos seus dados, mas é essencial consultar um profissional de Educação Física " +
@@ -134,12 +159,18 @@ enum AssistantWorkoutBuilder {
     static let quickAlreadyTrainsReplies = AssistantTrainingExperience.quickAlreadyTrainsReplies
     static let quickFirstTimeReplies = AssistantTrainingExperience.quickFirstTimeReplies
     static let quickLevelReplies = AssistantTrainingExperience.quickLevelReplies
+    static let quickDeliveryModeReplies = AssistantWorkoutDeliveryMode.quickReplies
     static let quickFocusReplies = [
         AssistantWorkoutGoalFocus.muscleGain.rawValue,
         AssistantWorkoutGoalFocus.endurance.rawValue,
         AssistantWorkoutGoalFocus.fatLoss.rawValue
     ]
     static let quickConfirmReplies = ["Sim, autorizo", "Não, cancelar"]
+
+    /// Grupos cobertos quando o IAssistente cria o programa.
+    static let programMuscleGroups: [MuscleGroup] = [
+        .chest, .back, .legs, .shoulders, .arms, .core
+    ]
 
     /// Lacunas que impedem ou enfraquecem a personalização.
     static func profileGaps(for user: UserProfile?) -> [String] {
@@ -273,6 +304,7 @@ enum AssistantWorkoutBuilder {
         return normalized.contains("mesmo assim") || normalized.contains("mesmo assim montar")
     }
 
+    /// Uma ficha mista (compatível com testes / atalhos). Preferir `buildProgramSheets` no fluxo completo.
     static func buildSheet(
         gender: Gender,
         focus: AssistantWorkoutGoalFocus,
@@ -280,15 +312,37 @@ enum AssistantWorkoutBuilder {
         experience: AssistantTrainingExperience = .intermediate,
         location: AssistantTrainingLocation = .gym
     ) -> WorkoutSheet {
-        let templates = templateExercises(
+        let sheets = buildProgramSheets(
             gender: gender,
             focus: focus,
+            profile: profile,
             experience: experience,
             location: location
         )
-        let exercises = templates.map {
-            adjust($0, profile: profile, focus: focus, experience: experience, location: location)
+        if sheets.count == 1, let only = sheets.first {
+            return only
         }
+        let exercises = sheets.flatMap(\.exercises)
+        let genderLabel = gender == .female ? "Feminino" : "Masculino"
+        let titlePrefix = location == .homeOnly ? "IAssistente — Casa ·" : "IAssistente —"
+        return WorkoutSheet(
+            title: "\(titlePrefix) \(focus.shortLabel) (\(genderLabel))",
+            description: sheets.first?.description ?? "",
+            exercises: exercises,
+            isUserCreated: true,
+            targetGender: gender,
+            createdByAssistant: true
+        )
+    }
+
+    /// Cria uma ficha por grupo muscular (peito, costas, pernas, ombros, braços, abdômen).
+    static func buildProgramSheets(
+        gender: Gender,
+        focus: AssistantWorkoutGoalFocus,
+        profile: UserProfile,
+        experience: AssistantTrainingExperience = .intermediate,
+        location: AssistantTrainingLocation = .gym
+    ) -> [WorkoutSheet] {
         let genderLabel = gender == .female ? "Feminino" : "Masculino"
         let biotypeNote = profile.biotype.rawValue
         let measuresNote = profile.bodyMeasurements.hasAnyValue
@@ -297,22 +351,35 @@ enum AssistantWorkoutBuilder {
         let locationNote = location == .homeOnly
             ? "Treino em casa · peso corporal (sem academia)."
             : "Treino para academia / equipamentos."
-
         let titlePrefix = location == .homeOnly ? "IAssistente — Casa ·" : "IAssistente —"
-        let description = """
-        Gerado pelo IAssistente · \(focus.rawValue) · \(experience.summaryLabel(for: location)) · \(locationNote) \
-        Biotipo \(biotypeNote) · \(Int(profile.weight)) kg. \(measuresNote) \
-        Sugestão educativa — essencial validar com profissional de Educação Física.
-        """
 
-        return WorkoutSheet(
-            title: "\(titlePrefix) \(focus.shortLabel) (\(genderLabel))",
-            description: description,
-            exercises: exercises,
-            isUserCreated: true,
-            targetGender: gender,
-            createdByAssistant: true
-        )
+        return programMuscleGroups.compactMap { group in
+            let templates = templateExercises(
+                gender: gender,
+                focus: focus,
+                experience: experience,
+                location: location,
+                muscleGroup: group
+            )
+            guard !templates.isEmpty else { return nil }
+            let exercises = templates.map {
+                adjust($0, profile: profile, focus: focus, experience: experience, location: location, gender: gender)
+            }
+            let description = """
+            Gerado pelo IAssistente · \(group.rawValue) · \(focus.rawValue) · \
+            \(experience.summaryLabel(for: location)) · \(locationNote) \
+            Biotipo \(biotypeNote) · \(Int(profile.weight)) kg. \(measuresNote) \
+            Sugestão educativa — essencial validar com profissional de Educação Física.
+            """
+            return WorkoutSheet(
+                title: "\(titlePrefix) \(group.rawValue) · \(focus.shortLabel) (\(genderLabel))",
+                description: description,
+                exercises: exercises,
+                isUserCreated: true,
+                targetGender: gender,
+                createdByAssistant: true
+            )
+        }
     }
 
     static func confirmationSummary(
@@ -327,15 +394,17 @@ enum AssistantWorkoutBuilder {
             ? "Medidas corporais encontradas no Perfil."
             : "Ainda sem medidas corporais detalhadas (pode gerar mesmo assim)."
         let locationExtra = location == .homeOnly
-            ? "Ficha de peso corporal para fazer em casa (com demos em GIF)."
-            : "Ficha pensada para academia / equipamentos."
+            ? "Fichas de peso corporal para fazer em casa (com demos em GIF)."
+            : "Fichas pensadas para academia / equipamentos."
+        let groupsLabel = programMuscleGroups.map(\.rawValue).joined(separator: ", ")
 
         return """
         Resumo da sugestão:
-        • Perfil de treino: \(genderLabel)
+        • Perfil de treino: \(genderLabel) (do seu Perfil)
         • Local: \(location.summaryLabel)
         • Experiência: \(experience.summaryLabel(for: location))
         • Foco: \(focus.rawValue)
+        • Grupos: \(groupsLabel) — uma ficha para cada
         • Peso: \(Int(profile.weight)) kg · Altura: \(Int(profile.height)) cm · Idade: \(profile.age)
         • Biotipo: \(profile.biotype.rawValue)
         • \(optionalMeasures)
@@ -343,15 +412,28 @@ enum AssistantWorkoutBuilder {
 
         \(professionalDisclaimer)
 
-        Autoriza criar a ficha e deixar disponível em Treinos → Personalizados?
+        Autoriza criar as fichas e abrir **Treinos → Personalizados**?
         Responda “Sim, autorizo” ou “Não, cancelar”.
         """
     }
 
-    static func createdSheetLocationHint(gender: Gender, location: AssistantTrainingLocation) -> String {
+    static func recommendConfirmationSummary(gender: Gender, experience: AssistantTrainingExperience) -> String {
+        let program = gender == .female ? "Feminino" : "Masculino"
+        return """
+        Beleza — vou te levar às fichas **Recomendadas** do programa \(program), \
+        calibradas para o nível **\(experience.rawValue.lowercased())**.
+
+        \(professionalDisclaimer)
+
+        Autoriza abrir **Treinos → Musculação → \(program) → Recomendados**?
+        Responda “Sim, autorizo” ou “Não, cancelar”.
+        """
+    }
+
+    static func createdSheetLocationHint(gender: Gender, location: AssistantTrainingLocation, sheetCount: Int) -> String {
         let program = gender == .female ? "Feminino" : "Masculino"
         var lines = [
-            "Onde encontrar: **Treinos → Musculação → \(program) → Personalizados** (badge IAssistente)."
+            "Abri **Treinos → Musculação → \(program) → Personalizados** com \(sheetCount) ficha\(sheetCount == 1 ? "" : "s") (badge IAssistente)."
         ]
         if location == .homeOnly {
             lines.append(
@@ -359,6 +441,11 @@ enum AssistantWorkoutBuilder {
             )
         }
         return lines.joined(separator: "\n\n")
+    }
+
+    static func recommendedCatalogHint(gender: Gender) -> String {
+        let program = gender == .female ? "Feminino" : "Masculino"
+        return "Abri **Treinos → Musculação → \(program) → Recomendados** para você escolher uma ficha do catálogo."
     }
 
     // MARK: - Private
@@ -390,210 +477,206 @@ enum AssistantWorkoutBuilder {
         gender: Gender,
         focus: AssistantWorkoutGoalFocus,
         experience: AssistantTrainingExperience,
+        location: AssistantTrainingLocation,
+        muscleGroup: MuscleGroup
+    ) -> [Exercise] {
+        let base: [Exercise]
+        if location == .homeOnly {
+            base = homeTemplateExercises(gender: gender, focus: focus, muscleGroup: muscleGroup)
+        } else {
+            base = gymTemplateExercises(gender: gender, focus: focus, muscleGroup: muscleGroup)
+        }
+        return trim(base, experience: experience, location: location)
+    }
+
+    private static func exerciseLimit(
+        for experience: AssistantTrainingExperience,
+        location: AssistantTrainingLocation
+    ) -> Int {
+        switch experience {
+        case .firstTime: return location == .homeOnly ? 3 : 3
+        case .returning, .beginner: return 4
+        case .intermediate: return 5
+        case .advanced: return 6
+        }
+    }
+
+    private static func trim(
+        _ base: [Exercise],
+        experience: AssistantTrainingExperience,
         location: AssistantTrainingLocation
     ) -> [Exercise] {
-        if location == .homeOnly {
-            return homeTemplateExercises(gender: gender, focus: focus, experience: experience)
+        let limit = exerciseLimit(for: experience, location: location)
+        let sliced = Array(base.prefix(limit))
+        switch experience {
+        case .firstTime:
+            return sliced.map { exercise in
+                var copy = exercise
+                copy.sets = min(3, copy.sets)
+                if copy.notes.isEmpty {
+                    copy.notes = location == .homeOnly
+                        ? "Foque na técnica e use o demo em GIF no app."
+                        : "Priorize técnica; peça orientação na academia se tiver dúvida."
+                }
+                return copy
+            }
+        case .returning, .beginner:
+            return sliced.map { exercise in
+                var copy = exercise
+                copy.sets = min(3, copy.sets)
+                return copy
+            }
+        case .intermediate, .advanced:
+            return sliced
         }
-        return gymTemplateExercises(gender: gender, focus: focus, experience: experience)
     }
 
     private static func homeTemplateExercises(
         gender: Gender,
         focus: AssistantWorkoutGoalFocus,
-        experience: AssistantTrainingExperience
+        muscleGroup: MuscleGroup
     ) -> [Exercise] {
-        let base: [Exercise]
-        switch (gender, focus) {
-        case (.male, .muscleGain):
-            base = named([
-                ("Agachamento Livre", 4, 15, 0, 45, .legs),
-                ("Flexão de Braços", 4, 12, 0, 45, .chest),
-                ("Afundo", 3, 12, 0, 45, .legs),
-                ("Mergulho no Banco", 3, 12, 0, 45, .arms),
-                ("Superman", 3, 15, 0, 40, .back),
-                ("Flexão Diamante", 3, 10, 0, 45, .arms),
-                ("Prancha", 3, 40, 0, 40, .core),
-                ("Mountain Climber", 3, 20, 0, 40, .fullBody)
+        let higherReps = focus != .muscleGain
+        switch muscleGroup {
+        case .chest:
+            return named([
+                ("Flexão de Braços", higherReps ? 3 : 4, higherReps ? 15 : 12, 0, 45, .chest),
+                ("Flexão Inclinação", 3, higherReps ? 14 : 10, 0, 45, .chest),
+                ("Flexão Diamante", 3, higherReps ? 12 : 8, 0, 45, .chest),
+                ("Flexão de Braços", 2, higherReps ? 12 : 10, 0, 40, .chest)
             ])
-        case (.male, .endurance):
-            base = named([
-                ("Polichinelo", 3, 40, 0, 30, .fullBody),
-                ("Agachamento Livre", 3, 20, 0, 35, .legs),
-                ("Flexão de Braços", 3, 15, 0, 35, .chest),
+        case .back:
+            return named([
+                ("Superman", higherReps ? 3 : 4, higherReps ? 18 : 15, 0, 40, .back),
+                ("Remada Invertida", 3, higherReps ? 14 : 10, 0, 45, .back),
+                ("Good Morning", 3, higherReps ? 15 : 12, 0, 40, .back),
+                ("Superman", 2, 12, 0, 35, .back)
+            ])
+        case .legs:
+            if gender == .female {
+                return named([
+                    ("Agachamento Livre", higherReps ? 3 : 4, higherReps ? 18 : 15, 0, 45, .legs),
+                    ("Ponte de Glúteos", higherReps ? 3 : 4, higherReps ? 18 : 15, 0, 40, .legs),
+                    ("Afundo", 3, higherReps ? 14 : 12, 0, 45, .legs),
+                    ("Elevação Pélvica (Hip Thrust)", 3, higherReps ? 15 : 12, 0, 45, .legs),
+                    ("Agachamento Sumô", 3, 15, 0, 40, .legs)
+                ])
+            }
+            return named([
+                ("Agachamento Livre", higherReps ? 3 : 4, higherReps ? 20 : 15, 0, 45, .legs),
+                ("Afundo", 3, higherReps ? 16 : 12, 0, 45, .legs),
+                ("Agachamento Sumô", 3, higherReps ? 16 : 12, 0, 40, .legs),
+                ("Ponte de Glúteos", 3, 15, 0, 40, .legs),
+                ("Afundo", 2, 12, 0, 40, .legs)
+            ])
+        case .shoulders:
+            return named([
+                ("Elevação Lateral", 3, higherReps ? 18 : 15, 0, 40, .shoulders),
+                ("Desenvolvimento com Halteres", 3, higherReps ? 15 : 12, 0, 45, .shoulders),
+                ("Elevação Frontal", 3, higherReps ? 15 : 12, 0, 40, .shoulders),
+                ("Prancha", 3, 40, 0, 40, .shoulders)
+            ])
+        case .arms:
+            return named([
+                ("Mergulho no Banco", higherReps ? 3 : 4, higherReps ? 14 : 12, 0, 45, .arms),
+                ("Flexão Diamante", 3, higherReps ? 12 : 10, 0, 45, .arms),
+                ("Rosca Direta", 3, higherReps ? 15 : 12, 0, 40, .arms),
+                ("Mergulho no Banco", 2, 10, 0, 40, .arms)
+            ])
+        case .core:
+            return named([
+                ("Prancha", 3, higherReps ? 45 : 40, 0, 40, .core),
+                ("Abdominal Crunch", 3, higherReps ? 24 : 20, 0, 30, .core),
+                ("Mountain Climber", 3, higherReps ? 30 : 20, 0, 35, .core),
+                ("Abdominal Oblíquo", 3, 20, 0, 30, .core),
+                ("Russian Twist", 3, 20, 0, 30, .core)
+            ])
+        case .fullBody:
+            return named([
                 ("Burpee", 3, 12, 0, 45, .fullBody),
                 ("Mountain Climber", 3, 30, 0, 30, .fullBody),
-                ("Afundo", 3, 16, 0, 35, .legs),
-                ("Prancha", 3, 45, 0, 30, .core),
-                ("Polichinelo", 2, 35, 0, 40, .fullBody)
+                ("Polichinelo", 3, 35, 0, 30, .fullBody)
             ])
-        case (.male, .fatLoss):
-            base = named([
-                ("Polichinelo", 3, 35, 0, 30, .fullBody),
-                ("Agachamento Livre", 3, 18, 0, 35, .legs),
-                ("Burpee", 3, 12, 0, 40, .fullBody),
-                ("Flexão de Braços", 3, 12, 0, 35, .chest),
-                ("Afundo", 3, 14, 0, 35, .legs),
-                ("Mountain Climber", 3, 30, 0, 30, .fullBody),
-                ("Abdominal Crunch", 3, 20, 0, 30, .core),
-                ("Prancha", 3, 40, 0, 30, .core)
-            ])
-        case (.female, .muscleGain):
-            base = named([
-                ("Agachamento Livre", 4, 15, 0, 45, .legs),
-                ("Ponte de Glúteos", 4, 15, 0, 40, .legs),
-                ("Afundo", 3, 12, 0, 45, .legs),
-                ("Elevação Pélvica (Hip Thrust)", 3, 15, 0, 45, .legs),
-                ("Flexão de Braços", 3, 10, 0, 45, .chest),
-                ("Superman", 3, 12, 0, 40, .back),
-                ("Prancha", 3, 40, 0, 40, .core),
-                ("Russian Twist", 3, 20, 0, 35, .core)
-            ])
-        case (.female, .endurance):
-            base = named([
-                ("Polichinelo", 3, 35, 0, 30, .fullBody),
-                ("Agachamento Livre", 3, 18, 0, 35, .legs),
-                ("Afundo", 3, 15, 0, 35, .legs),
-                ("Ponte de Glúteos", 3, 15, 0, 35, .legs),
-                ("Mountain Climber", 3, 30, 0, 30, .fullBody),
-                ("Bicicleta no Ar", 3, 24, 0, 30, .core),
-                ("Flexão de Braços", 3, 10, 0, 35, .chest),
-                ("Prancha", 3, 40, 0, 30, .core)
-            ])
-        case (.female, .fatLoss):
-            base = named([
-                ("Polichinelo", 3, 35, 0, 30, .fullBody),
-                ("Agachamento Livre", 3, 18, 0, 35, .legs),
-                ("Burpee", 3, 10, 0, 40, .fullBody),
-                ("Ponte de Glúteos", 3, 15, 0, 35, .legs),
-                ("Afundo", 3, 14, 0, 35, .legs),
-                ("Mountain Climber", 3, 30, 0, 30, .fullBody),
-                ("Abdominal Oblíquo", 3, 20, 0, 30, .core),
-                ("Prancha", 3, 40, 0, 30, .core)
-            ])
-        }
-
-        switch experience {
-        case .firstTime:
-            return Array(base.prefix(6)).map { exercise in
-                var copy = exercise
-                copy.sets = min(3, copy.sets)
-                copy.notes = copy.notes.isEmpty
-                    ? "Foque na técnica e use o demo em GIF no app."
-                    : copy.notes
-                return copy
-            }
-        case .returning:
-            return Array(base.prefix(7)).map { exercise in
-                var copy = exercise
-                copy.sets = min(3, copy.sets)
-                return copy
-            }
-        case .beginner, .intermediate, .advanced:
-            return base
         }
     }
 
     private static func gymTemplateExercises(
         gender: Gender,
         focus: AssistantWorkoutGoalFocus,
-        experience: AssistantTrainingExperience
+        muscleGroup: MuscleGroup
     ) -> [Exercise] {
-        let base: [Exercise]
-        switch (gender, focus) {
-        case (.male, .muscleGain):
-            base = named([
-                ("Supino Reto", 4, 8, 70, 90, .chest),
-                ("Supino Inclinado", 4, 10, 55, 90, .chest),
-                ("Remada Curvada", 4, 8, 60, 90, .back),
-                ("Puxada Frontal", 3, 10, 50, 75, .back),
-                ("Agachamento Livre", 4, 8, 90, 120, .legs),
-                ("Leg Press 45°", 3, 10, 180, 90, .legs),
-                ("Desenvolvimento com Halteres", 3, 10, 20, 75, .shoulders),
-                ("Rosca Direta", 3, 10, 16, 60, .arms),
-                ("Tríceps Pulley", 3, 10, 30, 60, .arms),
-                ("Prancha", 3, 40, 0, 45, .core)
+        let endurance = focus == .endurance
+        let fatLoss = focus == .fatLoss
+        let female = gender == .female
+        let repsBase = endurance || fatLoss ? 12 : 8
+        let setsBase = endurance || fatLoss ? 3 : 4
+
+        switch muscleGroup {
+        case .chest:
+            return named([
+                ("Supino Reto", setsBase, repsBase, 70, 90, .chest),
+                ("Supino Inclinado", 3, repsBase + 2, 55, 90, .chest),
+                ("Crucifixo Reto", 3, repsBase + 2, 14, 60, .chest),
+                ("Crossover", 3, repsBase + 2, 20, 60, .chest),
+                ("Flexão de Braços", 3, fatLoss ? 15 : 12, 0, 45, .chest)
             ])
-        case (.male, .endurance):
-            base = named([
-                ("Agachamento Livre", 3, 15, 50, 45, .legs),
-                ("Leg Press 45°", 3, 15, 100, 45, .legs),
-                ("Flexão de Braços", 3, 15, 0, 45, .chest),
-                ("Puxada Frontal", 3, 15, 35, 45, .back),
-                ("Elevação Lateral", 3, 15, 8, 40, .shoulders),
-                ("Mountain Climber", 3, 30, 0, 40, .core),
+        case .back:
+            return named([
+                ("Remada Curvada", setsBase, repsBase, 60, 90, .back),
+                ("Puxada Frontal", 3, repsBase + 2, 50, 75, .back),
+                ("Remada Unilateral", 3, repsBase + 2, 16, 60, .back),
+                ("Puxada Aberta", 3, repsBase + 2, 45, 75, .back),
+                ("Barra Fixa", 3, fatLoss ? 10 : 8, 0, 90, .back)
+            ])
+        case .legs:
+            if female {
+                return named([
+                    ("Elevação Pélvica (Hip Thrust)", setsBase, repsBase + 4, 40, 75, .legs),
+                    ("Agachamento Sumô", setsBase, repsBase + 4, 40, 90, .legs),
+                    ("Stiff", 3, repsBase + 4, 30, 75, .legs),
+                    ("Afundo Búlgaro", 3, repsBase + 4, 12, 75, .legs),
+                    ("Cadeira Abdutora", 3, 15, 40, 45, .legs),
+                    ("Leg Press 45°", 3, repsBase + 2, 140, 90, .legs)
+                ])
+            }
+            return named([
+                ("Agachamento Livre", setsBase, repsBase, 90, 120, .legs),
+                ("Leg Press 45°", 3, repsBase + 2, 180, 90, .legs),
+                ("Stiff", 3, repsBase + 2, 50, 90, .legs),
+                ("Afundo", 3, repsBase + 2, 16, 60, .legs),
+                ("Cadeira Extensora", 3, 12, 40, 60, .legs),
+                ("Panturrilha em Pé", 3, 15, 40, 45, .legs)
+            ])
+        case .shoulders:
+            return named([
+                ("Desenvolvimento com Halteres", setsBase, repsBase + 2, 20, 75, .shoulders),
+                ("Elevação Lateral", 3, repsBase + 4, 8, 45, .shoulders),
+                ("Elevação Frontal", 3, repsBase + 4, 8, 45, .shoulders),
+                ("Crucifixo Inverso", 3, repsBase + 2, 10, 45, .shoulders),
+                ("Desenvolvimento Arnold", 3, repsBase + 2, 14, 60, .shoulders)
+            ])
+        case .arms:
+            return named([
+                ("Rosca Direta", setsBase, repsBase + 2, 16, 60, .arms),
+                ("Tríceps Pulley", setsBase, repsBase + 2, 30, 60, .arms),
+                ("Rosca Martelo", 3, repsBase + 2, 12, 45, .arms),
+                ("Tríceps Testa", 3, repsBase + 2, 18, 60, .arms),
+                ("Mergulho no Banco", 3, fatLoss ? 14 : 10, 0, 45, .arms)
+            ])
+        case .core:
+            return named([
+                ("Prancha", 3, endurance ? 45 : 40, 0, 45, .core),
+                ("Abdominal Crunch", 3, 20, 0, 40, .core),
+                ("Abdominal Oblíquo", 3, 20, 0, 40, .core),
+                ("Mountain Climber", 3, fatLoss || endurance ? 30 : 20, 0, 40, .core),
+                ("Bicicleta no Ar", 3, 24, 0, 35, .core)
+            ])
+        case .fullBody:
+            return named([
                 ("Burpee", 3, 12, 0, 60, .fullBody),
                 ("Kettlebell Swing", 3, 15, 12, 45, .fullBody),
-                ("Prancha", 3, 45, 0, 40, .core)
+                ("Mountain Climber", 3, 30, 0, 40, .fullBody)
             ])
-        case (.male, .fatLoss):
-            base = named([
-                ("Agachamento Livre", 3, 12, 60, 60, .legs),
-                ("Remada Curvada", 3, 12, 45, 60, .back),
-                ("Supino Reto", 3, 12, 50, 60, .chest),
-                ("Afundo", 3, 12, 16, 45, .legs),
-                ("Elevação Lateral", 3, 15, 8, 40, .shoulders),
-                ("Burpee", 3, 12, 0, 45, .fullBody),
-                ("Mountain Climber", 3, 30, 0, 40, .core),
-                ("Abdominal Crunch", 3, 20, 0, 40, .core),
-                ("Kettlebell Swing", 3, 15, 12, 45, .fullBody)
-            ])
-        case (.female, .muscleGain):
-            base = named([
-                ("Elevação Pélvica (Hip Thrust)", 4, 12, 40, 75, .legs),
-                ("Agachamento Sumô", 4, 12, 40, 90, .legs),
-                ("Stiff", 4, 12, 30, 75, .legs),
-                ("Afundo Búlgaro", 3, 12, 12, 75, .legs),
-                ("Cadeira Abdutora", 3, 15, 40, 45, .legs),
-                ("Puxada Frontal", 3, 12, 30, 60, .back),
-                ("Remada Unilateral", 3, 12, 12, 60, .back),
-                ("Elevação Lateral", 3, 15, 6, 45, .shoulders),
-                ("Prancha", 3, 40, 0, 45, .core)
-            ])
-        case (.female, .endurance):
-            base = named([
-                ("Agachamento Livre", 3, 15, 30, 45, .legs),
-                ("Afundo", 3, 15, 8, 45, .legs),
-                ("Elevação Pélvica (Hip Thrust)", 3, 15, 25, 45, .legs),
-                ("Puxada Frontal", 3, 15, 25, 45, .back),
-                ("Elevação Lateral", 3, 15, 5, 40, .shoulders),
-                ("Mountain Climber", 3, 30, 0, 40, .core),
-                ("Bicicleta no Ar", 3, 20, 0, 40, .core),
-                ("Kettlebell Swing", 3, 15, 10, 45, .fullBody),
-                ("Prancha", 3, 40, 0, 40, .core)
-            ])
-        case (.female, .fatLoss):
-            base = named([
-                ("Agachamento Livre", 3, 12, 30, 50, .legs),
-                ("Elevação Pélvica (Hip Thrust)", 3, 12, 30, 50, .legs),
-                ("Afundo", 3, 12, 8, 45, .legs),
-                ("Cadeira Adutora", 3, 15, 35, 40, .legs),
-                ("Puxada Frontal", 3, 12, 25, 50, .back),
-                ("Flexão de Braços", 3, 10, 0, 45, .chest),
-                ("Mountain Climber", 3, 30, 0, 40, .core),
-                ("Abdominal Oblíquo", 3, 20, 0, 40, .core),
-                ("Kettlebell Swing", 3, 15, 10, 45, .fullBody)
-            ])
-        }
-
-        switch experience {
-        case .firstTime:
-            return Array(base.prefix(7)).map { exercise in
-                var copy = exercise
-                copy.sets = min(3, copy.sets)
-                if copy.notes.isEmpty {
-                    copy.notes = "Priorize técnica; peça orientação na academia se tiver dúvida."
-                }
-                return copy
-            }
-        case .returning:
-            return Array(base.prefix(8)).map { exercise in
-                var copy = exercise
-                copy.sets = min(3, copy.sets)
-                return copy
-            }
-        case .beginner, .intermediate, .advanced:
-            return base
         }
     }
 
@@ -617,7 +700,8 @@ enum AssistantWorkoutBuilder {
         profile: UserProfile,
         focus: AssistantWorkoutGoalFocus,
         experience: AssistantTrainingExperience,
-        location: AssistantTrainingLocation
+        location: AssistantTrainingLocation,
+        gender: Gender
     ) -> Exercise {
         var exercise = Exercise(
             name: template.name,
@@ -657,6 +741,7 @@ enum AssistantWorkoutBuilder {
         }
 
         let weightFactor = min(1.35, max(0.65, profile.weight / 75.0))
+        let genderFactor: Double = gender == .female ? 0.85 : 1.0
         let experienceFactor: Double
         switch experience {
         case .firstTime: experienceFactor = 0.45
@@ -666,8 +751,8 @@ enum AssistantWorkoutBuilder {
         case .advanced: experienceFactor = 1.15
         }
 
-        if let base = exercise.recommendedWeight, base > 0 {
-            var scaled = (base * weightFactor * experienceFactor).rounded()
+        if let base = exercise.weight, base > 0 {
+            var scaled = (base * weightFactor * experienceFactor * genderFactor).rounded()
             switch profile.biotype {
             case .ectomorph:
                 scaled *= focus == .muscleGain ? 0.9 : 0.95
@@ -676,7 +761,7 @@ enum AssistantWorkoutBuilder {
             case .mesomorph:
                 break
             }
-            exercise.recommendedWeight = max(2, scaled.rounded())
+            exercise.weight = max(2, scaled.rounded())
         }
 
         switch experience {

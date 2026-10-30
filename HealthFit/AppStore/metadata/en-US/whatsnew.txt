@@ -1,4 +1,5 @@
-• Fixed black screen when reopening the app after background
-• More reliable session restore (no stuck loading screen)
-• Rest day: no “haven’t trained yet” evening nudge
-• Lower memory use to reduce freezes
+• Monthly retrospective video on the Constancy calendar, including rest days and sharing
+• A modalities card in Profile to choose what you practice
+• Urgent fix: a started workout no longer gets stuck on a black screen
+• End, Continue, and Dismiss work again when a workout is already in progress
+• Orphan sessions are restored or ended without deleting the app

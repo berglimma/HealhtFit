@@ -356,14 +356,15 @@ final class PulseLocalStore: ObservableObject {
         community: PulseCommunity,
         workoutMeta: PulseWorkoutMeta?,
         music: PulseMusicAttachment? = nil,
-        authorAvatar: UIImage? = nil
+        authorAvatar: UIImage? = nil,
+        maxDuration: TimeInterval = PulseExperimental.maxVideoSeconds
     ) async throws -> PulsePost {
         guard PulseExperimental.isVideoPostsEnabledInBuild else {
             throw PulseStoreError.videoDisabled
         }
         ensureUserAvatar(userId: authorId, image: authorAvatar)
         let duration = try await videoDuration(url: sourceURL)
-        guard duration <= PulseExperimental.maxVideoSeconds + 0.5 else { throw PulseStoreError.videoTooLong }
+        guard duration <= maxDuration + 0.5 else { throw PulseStoreError.videoTooLong }
         let ext = ["mp4", "mov"].contains(sourceURL.pathExtension.lowercased())
             ? sourceURL.pathExtension.lowercased()
             : "mp4"

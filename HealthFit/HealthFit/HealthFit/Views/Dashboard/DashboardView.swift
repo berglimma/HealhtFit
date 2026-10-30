@@ -563,13 +563,7 @@ struct DashboardView: View {
     }
 
     private var monthlyReportSubtitle: String {
-        if monthlyReportService.isReportAvailable {
-            return "Sono, suplementos e medidas"
-        }
-        if monthlyReportService.daysUntilNextReport > 0 {
-            return "Próximo relatório em \(monthlyReportService.daysUntilNextReport) dia(s)"
-        }
-        return "Histórico dos últimos 30 dias"
+        "Vídeo da retrospectiva do mês"
     }
 
     private func compactReportCard(

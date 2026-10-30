@@ -17,7 +17,10 @@ struct MainTabView: View {
     @ObservedObject private var duoNavigation = DuoNavigationRouter.shared
     @ObservedObject private var coachNavigation = CoachNavigationRouter.shared
     @ObservedObject private var pulseNavigation = PulseNavigationRouter.shared
+    @ObservedObject private var workoutHubNavigation = WorkoutHubNavigationRouter.shared
+    @ObservedObject private var assistantNavigation = AssistantNavigationRouter.shared
     @ObservedObject private var coachService = CoachService.shared
+    @ObservedObject private var languageStore = AppLanguageStore.shared
     @State private var selectedTab = 0
     /// Only mount heavy tab roots after first visit — TabView otherwise builds all 5 eagerly.
     @State private var loadedTabs: Set<Int> = [0]
@@ -58,7 +61,16 @@ struct MainTabView: View {
     }
 
     private var canEndFromMinimizedBanner: Bool {
-        hostedActiveSheet != nil || hostedCardioConfig != nil || hostedMeditationConfig != nil
+        workoutStore.activeSession != nil
+    }
+
+    /// Sessão viva sem overlay (ficha de catálogo / tela preta) — mostra Encerrar na hora.
+    private var showsStuckWorkoutRecovery: Bool {
+        workoutStore.activeSession != nil
+            && !workoutStore.isActiveWorkoutMinimized
+            && hostedActiveSheet == nil
+            && hostedCardioConfig == nil
+            && hostedMeditationConfig == nil
     }
 
     private var isHostedWorkoutMinimized: Bool {
@@ -136,6 +148,14 @@ struct MainTabView: View {
             .onChange(of: duoNavigation.focusWorkoutsTabTick) { _, _ in
                 loadedTabs.insert(workoutsTabTag)
                 selectedTab = workoutsTabTag
+            }
+            .onChange(of: workoutHubNavigation.focusWorkoutsTabTick) { _, _ in
+                loadedTabs.insert(workoutsTabTag)
+                selectedTab = workoutsTabTag
+            }
+            .onChange(of: assistantNavigation.focusAssistantTabTick) { _, _ in
+                loadedTabs.insert(assistantTabTag)
+                selectedTab = assistantTabTag
             }
             .onChange(of: coachNavigation.focusProfileTabTick) { _, _ in
                 loadedTabs.insert(profileTabTag)
@@ -221,6 +241,7 @@ struct MainTabView: View {
             hostedActiveStrengthOverlay
             hostedActiveCardioOverlay
             hostedActiveMeditationOverlay
+            stuckWorkoutRecoveryOverlay
         }
     }
 
@@ -362,13 +383,16 @@ struct MainTabView: View {
 
     @ViewBuilder
     private var activeWorkoutConflictAlertButtons: some View {
-        Button("Encerrar") {
-            endActiveWorkoutFromConflictAlert()
+        Button("Encerrar", role: .destructive) {
+            forceEndStuckWorkout()
         }
         Button("Continuar") {
             resumeMinimizedWorkout()
         }
-        Button("Sair", role: .cancel) {}
+        Button("Sair", role: .cancel) {
+            workoutStore.minimizeActiveWorkout()
+            syncActiveWorkoutHosting()
+        }
     }
 
     // MARK: - Lifecycle handlers
@@ -468,6 +492,8 @@ struct MainTabView: View {
         Group {
             if loadedTabs.contains(tag) {
                 content()
+                    .environment(\.locale, languageStore.locale)
+                    .id(languageStore.language)
             } else {
                 AppTheme.background
                     .ignoresSafeArea()
@@ -511,6 +537,10 @@ struct MainTabView: View {
     private func resumeMinimizedWorkout() {
         workoutStore.resumeActiveWorkout()
         syncActiveWorkoutHosting()
+        if hostedActiveSheet == nil && hostedCardioConfig == nil && hostedMeditationConfig == nil {
+            // Continuar sem UI = usuário preso na tela preta. Encerrar na hora.
+            forceEndStuckWorkout()
+        }
     }
 
     private func endMinimizedWorkoutFromBanner() {
@@ -519,14 +549,11 @@ struct MainTabView: View {
         requestFinishOnHostedWorkout()
     }
 
-    private func endActiveWorkoutFromConflictAlert() {
-        workoutStore.resumeActiveWorkout()
-        syncActiveWorkoutHosting()
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(80))
-            syncActiveWorkoutHosting()
-            requestFinishOnHostedWorkout()
-        }
+    private func forceEndStuckWorkout() {
+        watchConnectivity.sendRestTimerStop()
+        watchConnectivity.stopWorkoutOnWatch()
+        workoutStore.forceEndActiveSession()
+        clearHostedWorkoutOverlays()
     }
 
     private func requestFinishOnHostedWorkout() {
@@ -540,6 +567,8 @@ struct MainTabView: View {
                 try? await Task.sleep(for: .milliseconds(80))
                 requestCardioFinishTick += 1
             }
+        } else {
+            forceEndStuckWorkout()
         }
     }
 
@@ -553,7 +582,7 @@ struct MainTabView: View {
         if let sheet = workoutStore.activeStrengthSheet() {
             if hostedCardioConfig != nil { hostedCardioConfig = nil }
             if hostedMeditationConfig != nil { hostedMeditationConfig = nil }
-            if hostedActiveSheet?.id != sheet.id {
+            if hostedActiveSheet != sheet {
                 hostedActiveSheet = sheet
             }
             return
@@ -576,6 +605,38 @@ struct MainTabView: View {
             if hostedMeditationConfig != meditation {
                 hostedMeditationConfig = meditation
             }
+        }
+    }
+
+    @ViewBuilder
+    private var stuckWorkoutRecoveryOverlay: some View {
+        if showsStuckWorkoutRecovery {
+            ZStack {
+                AppTheme.background.ignoresSafeArea()
+                VStack(spacing: 16) {
+                    Text("Treino em andamento")
+                        .font(.title2.bold())
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Text(workoutStore.activeSession?.workoutTitle ?? "Treino")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.textSecondary)
+                    Text("A tela anterior falhou. Encerre para voltar ao app ou continue se o treino reabrir.")
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .padding(.horizontal, 24)
+                    Button("Encerrar treino") {
+                        forceEndStuckWorkout()
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .padding(.horizontal, 24)
+                    Button("Minimizar") {
+                        workoutStore.minimizeActiveWorkout()
+                    }
+                    .foregroundStyle(AppTheme.accent)
+                }
+            }
+            .zIndex(4)
         }
     }
 }

@@ -147,6 +147,7 @@
 		B1000312 /* HealthFitHomeWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000312 /* HealthFitHomeWidget.swift */; };
 		B1000320 /* BodyEvolutionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000320 /* BodyEvolutionModels.swift */; };
 		B1000321 /* BodyEvolutionStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000321 /* BodyEvolutionStorageService.swift */; };
+		B1000CIP /* WorkoutCheckInPhotoStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000CIP /* WorkoutCheckInPhotoStorageService.swift */; };
 		B1000322 /* BodyEvolutionFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000322 /* BodyEvolutionFirestoreService.swift */; };
 		B1000323 /* BodyMeasurementsPDFBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000323 /* BodyMeasurementsPDFBuilder.swift */; };
 		B1000324 /* BodyEvolutionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000324 /* BodyEvolutionService.swift */; };
@@ -256,6 +257,8 @@
 		B1000933 /* DuoMemberAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000933 /* DuoMemberAvatarView.swift */; };
 		B1000934 /* MarcoCivilAccessLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000934 /* MarcoCivilAccessLogService.swift */; };
 		B1000935 /* DuoNavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000935 /* DuoNavigationRouter.swift */; };
+		B1000WHR /* WorkoutHubNavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000WHR /* WorkoutHubNavigationRouter.swift */; };
+		B1000ANR /* AssistantNavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000ANR /* AssistantNavigationRouter.swift */; };
 		B1000936 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000936 /* PushNotificationService.swift */; };
 		B1000937 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = PKGPROD008 /* FirebaseMessaging */; };
 		B1000942 /* AssistantGratitudeAndCycleEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000942 /* AssistantGratitudeAndCycleEngine.swift */; };
@@ -585,6 +588,7 @@
 		F1000312 /* HealthFitHomeWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitHomeWidget.swift; sourceTree = "<group>"; };
 		F1000320 /* BodyEvolutionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionModels.swift; sourceTree = "<group>"; };
 		F1000321 /* BodyEvolutionStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionStorageService.swift; sourceTree = "<group>"; };
+		F1000CIP /* WorkoutCheckInPhotoStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCheckInPhotoStorageService.swift; sourceTree = "<group>"; };
 		F1000322 /* BodyEvolutionFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionFirestoreService.swift; sourceTree = "<group>"; };
 		F1000323 /* BodyMeasurementsPDFBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyMeasurementsPDFBuilder.swift; sourceTree = "<group>"; };
 		F1000324 /* BodyEvolutionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionService.swift; sourceTree = "<group>"; };
@@ -693,6 +697,8 @@
 		F1000933 /* DuoMemberAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoMemberAvatarView.swift; sourceTree = "<group>"; };
 		F1000934 /* MarcoCivilAccessLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarcoCivilAccessLogService.swift; sourceTree = "<group>"; };
 		F1000935 /* DuoNavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoNavigationRouter.swift; sourceTree = "<group>"; };
+		F1000WHR /* WorkoutHubNavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHubNavigationRouter.swift; sourceTree = "<group>"; };
+		F1000ANR /* AssistantNavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantNavigationRouter.swift; sourceTree = "<group>"; };
 		F1000936 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		F1000942 /* AssistantGratitudeAndCycleEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantGratitudeAndCycleEngine.swift; sourceTree = "<group>"; };
 		F1000944 /* AppFeedbackFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeedbackFirestoreService.swift; sourceTree = "<group>"; };
@@ -1006,6 +1012,8 @@
 				F1000CA1 /* CoverAssetImage.swift */,
 				F1000P12 /* PulseShareService.swift */,
 				F1000935 /* DuoNavigationRouter.swift */,
+				F1000WHR /* WorkoutHubNavigationRouter.swift */,
+				F1000ANR /* AssistantNavigationRouter.swift */,
 				F1000PNR /* PulseNavigationRouter.swift */,
 				F1000914 /* NutritionNotificationPreferences.swift */,
 				F1000918 /* RecommendedWorkoutCatalog.swift */,
@@ -1322,6 +1330,7 @@
 				F1000202 /* ProfileFirestoreService.swift */,
 				F1000204 /* DailyWellnessFirestoreService.swift */,
 				F1000321 /* BodyEvolutionStorageService.swift */,
+				F1000CIP /* WorkoutCheckInPhotoStorageService.swift */,
 				F1000322 /* BodyEvolutionFirestoreService.swift */,
 				F1000082 /* ExerciseVideoFirestoreService.swift */,
 				F1000084 /* ExerciseVideoStorageService.swift */,
@@ -1809,6 +1818,8 @@
 				B1000934 /* MarcoCivilAccessLogService.swift in Sources */,
 				B1000936 /* PushNotificationService.swift in Sources */,
 				B1000935 /* DuoNavigationRouter.swift in Sources */,
+				B1000WHR /* WorkoutHubNavigationRouter.swift in Sources */,
+				B1000ANR /* AssistantNavigationRouter.swift in Sources */,
 				B1000PNR /* PulseNavigationRouter.swift in Sources */,
 				B1000933 /* DuoMemberAvatarView.swift in Sources */,
 				B1000928 /* MessageComposeView.swift in Sources */,
@@ -1931,6 +1942,7 @@
 				B1000079 /* WorkoutFirestoreService.swift in Sources */,
 				B1000202 /* ProfileFirestoreService.swift in Sources */,
 				B1000321 /* BodyEvolutionStorageService.swift in Sources */,
+				B1000CIP /* WorkoutCheckInPhotoStorageService.swift in Sources */,
 				B1000322 /* BodyEvolutionFirestoreService.swift in Sources */,
 				B1000323 /* BodyMeasurementsPDFBuilder.swift in Sources */,
 				B1000951 /* PhysicalAssessmentPDFBuilder.swift in Sources */,
@@ -2286,7 +2298,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthFit/HealthFitDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 39;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -2318,7 +2330,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.21;
+				MARKETING_VERSION = 1.0.26;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2337,7 +2349,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthFit/HealthFit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 39;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -2369,7 +2381,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.21;
+				MARKETING_VERSION = 1.0.26;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2388,7 +2400,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthFitWatch/HealthFitWatch.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 39;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = NO;
@@ -2405,7 +2417,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.21;
+				MARKETING_VERSION = 1.0.26;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.watchkitapp;
 				PRODUCT_NAME = HealthFitWatch;
 				SDKROOT = watchos;
@@ -2429,7 +2441,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthFitWatch/HealthFitWatch.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 39;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = NO;
@@ -2446,7 +2458,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.21;
+				MARKETING_VERSION = 1.0.26;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.watchkitapp;
 				PRODUCT_NAME = HealthFitWatch;
 				SDKROOT = watchos;
@@ -2467,7 +2479,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 39;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
@@ -2479,7 +2491,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.21;
+				MARKETING_VERSION = 1.0.26;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -2495,7 +2507,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 39;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
@@ -2507,7 +2519,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.21;
+				MARKETING_VERSION = 1.0.26;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -2525,7 +2537,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 39;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -2534,7 +2546,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.21;
+				MARKETING_VERSION = 1.0.26;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2551,7 +2563,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 39;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -2560,7 +2572,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.21;
+				MARKETING_VERSION = 1.0.26;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2576,7 +2588,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 39;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -2585,7 +2597,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.21;
+				MARKETING_VERSION = 1.0.26;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2601,7 +2613,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 39;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -2610,7 +2622,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.21;
+				MARKETING_VERSION = 1.0.26;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

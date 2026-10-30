@@ -3,6 +3,7 @@ import SwiftUI
 import Combine
 struct LoginView: View {
     @EnvironmentObject var authService: AuthService
+    @ObservedObject private var languageStore = AppLanguageStore.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var email = ""
     @State private var password = ""
@@ -158,6 +159,7 @@ struct LoginView: View {
             .sheet(isPresented: $showForgotPassword) {
                 ForgotPasswordView(initialEmail: email)
             }
+            .environment(\.locale, languageStore.locale)
         }
     }
 }

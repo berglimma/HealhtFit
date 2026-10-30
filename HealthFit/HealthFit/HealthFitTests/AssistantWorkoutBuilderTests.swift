@@ -133,4 +133,37 @@ final class AssistantWorkoutBuilderTests: XCTestCase {
         XCTAssertLessThan(beginnerLoad, advancedLoad)
         XCTAssertTrue(beginner.description.localizedCaseInsensitiveContains("primeira vez"))
     }
+
+    func testParsesCreateOrRecommendDeliveryMode() {
+        XCTAssertEqual(AssistantWorkoutDeliveryMode.parse(from: "Criar fichas"), .create)
+        XCTAssertEqual(AssistantWorkoutDeliveryMode.parse(from: "Recomendar do catálogo"), .recommend)
+        XCTAssertEqual(AssistantWorkoutDeliveryMode.parse(from: "quero as recomendações"), .recommend)
+    }
+
+    func testBuildProgramSheetsCoversAllMuscleGroups() {
+        let profile = UserProfile(
+            name: "Ana",
+            email: "a@b.com",
+            biotype: .mesomorph,
+            gender: .female,
+            weight: 62,
+            height: 165,
+            age: 30
+        )
+        let sheets = AssistantWorkoutBuilder.buildProgramSheets(
+            gender: .female,
+            focus: .muscleGain,
+            profile: profile,
+            experience: .beginner,
+            location: .gym
+        )
+        for group in AssistantWorkoutBuilder.programMuscleGroups {
+            XCTAssertTrue(sheets.contains { $0.title.contains(group.rawValue) }, "Missing sheet for \(group.rawValue)")
+            XCTAssertTrue(sheets.contains { $0.exercises.contains { $0.muscleGroup == group } },
+                          "Missing exercises for \(group.rawValue)")
+        }
+        XCTAssertEqual(sheets.count, AssistantWorkoutBuilder.programMuscleGroups.count)
+        XCTAssertTrue(sheets.allSatisfy(\.createdByAssistant))
+        XCTAssertTrue(sheets.allSatisfy { $0.targetGender == .female })
+    }
 }
