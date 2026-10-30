@@ -192,7 +192,7 @@ struct WorkoutPhotoCalendarView: View {
                 } else {
                     Image(systemName: "film")
                 }
-                Text("Gerar Retrospectiva Mensal")
+                Text(verbatim: "Gerar Retrospectiva Mensal")
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
