@@ -147,6 +147,7 @@ struct WorkoutPhotoCalendarView: View {
     }
 
     private var monthHeader: some View {
+        VStack(spacing: 0) {
         HStack {
             Button {
                 shiftMonth(by: -1)
@@ -166,27 +167,6 @@ struct WorkoutPhotoCalendarView: View {
                 Text(monthSummaryLine)
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
-                Button {
-                    Task { await makeRetrospective() }
-                } label: {
-                    HStack(spacing: 4) {
-                        if isMakingRetrospective {
-                            ProgressView()
-                                .controlSize(.mini)
-                        } else {
-                            Image(systemName: "film")
-                        }
-                        Text("Vídeo")
-                    }
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(AppTheme.accent)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(AppTheme.accent.opacity(0.14), in: Capsule())
-                }
-                .buttonStyle(.plain)
-                .disabled(isMakingRetrospective)
-                .accessibilityLabel("Retrospectiva do mês")
             }
 
             Spacer()
@@ -201,6 +181,32 @@ struct WorkoutPhotoCalendarView: View {
             .buttonStyle(.plain)
             .disabled(isCurrentOrFutureMonth)
             .opacity(isCurrentOrFutureMonth ? 0.35 : 1)
+        }
+        Button {
+            Task { await makeRetrospective() }
+        } label: {
+            HStack(spacing: 4) {
+                if isMakingRetrospective {
+                    ProgressView()
+                        .controlSize(.mini)
+                } else {
+                    Image(systemName: "film")
+                }
+                Text("Gerar Retrospectiva Mensal")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(AppTheme.accent)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(AppTheme.accent.opacity(0.14), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(isMakingRetrospective)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 6)
+        .accessibilityLabel("Gerar Retrospectiva Mensal")
         }
     }
 
