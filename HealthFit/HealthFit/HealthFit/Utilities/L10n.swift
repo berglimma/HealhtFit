@@ -1,11 +1,28 @@
 import Foundation
 
-/// Chaves de localização (pt-BR, en, es, fr).
+/// Chaves de localização (pt-BR, en, es, fr, de, it).
 enum L10n {
     static func tr(_ key: String) -> String {
         let code = UserDefaults.standard.string(forKey: AppLanguage.storageKey)
         let language = AppLanguage.resolved(fromStoredCode: code)
+        if let bundle = localizationBundle(for: language) {
+            let value = bundle.localizedString(forKey: key, value: nil, table: "Localizable")
+            if value != key {
+                return value
+            }
+        }
         return String(localized: String.LocalizationValue(key), locale: language.locale)
+    }
+
+    private static func localizationBundle(for language: AppLanguage) -> Bundle? {
+        let codes = [language.rawValue, String(language.rawValue.prefix(while: { $0 != "-" }))]
+        for code in codes {
+            if let path = Bundle.main.path(forResource: code, ofType: "lproj"),
+               let bundle = Bundle(path: path) {
+                return bundle
+            }
+        }
+        return nil
     }
 
     enum Tab {

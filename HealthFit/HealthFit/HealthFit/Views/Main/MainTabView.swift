@@ -20,6 +20,7 @@ struct MainTabView: View {
     @ObservedObject private var workoutHubNavigation = WorkoutHubNavigationRouter.shared
     @ObservedObject private var assistantNavigation = AssistantNavigationRouter.shared
     @ObservedObject private var coachService = CoachService.shared
+    @ObservedObject private var languageStore = AppLanguageStore.shared
     @State private var selectedTab = 0
     /// Only mount heavy tab roots after first visit — TabView otherwise builds all 5 eagerly.
     @State private var loadedTabs: Set<Int> = [0]
@@ -491,6 +492,8 @@ struct MainTabView: View {
         Group {
             if loadedTabs.contains(tag) {
                 content()
+                    .environment(\.locale, languageStore.locale)
+                    .id(languageStore.language)
             } else {
                 AppTheme.background
                     .ignoresSafeArea()

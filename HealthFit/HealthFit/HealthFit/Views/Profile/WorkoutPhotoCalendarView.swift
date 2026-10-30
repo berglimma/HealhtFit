@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 import UIKit
 
@@ -5,6 +6,7 @@ import UIKit
 struct WorkoutPhotoCalendarView: View {
     @EnvironmentObject private var workoutStore: WorkoutStore
     @EnvironmentObject private var wellnessService: DailyWellnessService
+    @EnvironmentObject private var authService: AuthService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var visibleMonth: Date = Calendar.current.startOfDay(for: .now)
@@ -13,6 +15,11 @@ struct WorkoutPhotoCalendarView: View {
     @State private var showPhotoSourceDialog = false
     @State private var showGalleryPicker = false
     @State private var showCameraPicker = false
+    @State private var isMakingRetrospective = false
+    @State private var retrospectiveURL: URL?
+    @State private var showRetrospectiveActions = false
+    @State private var showRetrospectiveShare = false
+    @State private var retrospectiveNote: String?
 
     private var calendar: Calendar { Calendar.current }
 
@@ -70,7 +77,7 @@ struct WorkoutPhotoCalendarView: View {
                 if let selectedDay {
                     dayDetail(for: selectedDay)
                 } else {
-                    Text("Toque em um dia com treino ou descanso para ver detalhes.")
+                    Text("Toque em um dia passado para ver o treino ou marcar descanso.")
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
@@ -115,6 +122,28 @@ struct WorkoutPhotoCalendarView: View {
             }
             .ignoresSafeArea()
         }
+        .confirmationDialog("Retrospectiva", isPresented: $showRetrospectiveActions, titleVisibility: .visible) {
+            Button("Salvar na galeria") { Task { await saveRetrospectiveToGallery() } }
+            Button("Story no Instagram") { Task { await shareRetrospectiveToInstagram() } }
+            Button("Status do WhatsApp") { showRetrospectiveShare = true }
+            Button("Publicar no Pulse") { Task { await publishRetrospectiveToPulse() } }
+            Button("Cancelar", role: .cancel) {}
+        }
+        .sheet(isPresented: $showRetrospectiveShare) {
+            if let retrospectiveURL {
+                ActivityShareSheet(items: [retrospectiveURL]) {
+                    showRetrospectiveShare = false
+                }
+            }
+        }
+        .alert("Retrospectiva", isPresented: Binding(
+            get: { retrospectiveNote != nil },
+            set: { if !$0 { retrospectiveNote = nil } }
+        )) {
+            Button("OK", role: .cancel) { retrospectiveNote = nil }
+        } message: {
+            Text(retrospectiveNote ?? "")
+        }
     }
 
     private var monthHeader: some View {
@@ -137,6 +166,27 @@ struct WorkoutPhotoCalendarView: View {
                 Text(monthSummaryLine)
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
+                Button {
+                    Task { await makeRetrospective() }
+                } label: {
+                    HStack(spacing: 4) {
+                        if isMakingRetrospective {
+                            ProgressView()
+                                .controlSize(.mini)
+                        } else {
+                            Image(systemName: "film")
+                        }
+                        Text("Vídeo")
+                    }
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(AppTheme.accent.opacity(0.14), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(isMakingRetrospective)
+                .accessibilityLabel("Retrospectiva do mês")
             }
 
             Spacer()
@@ -339,6 +389,21 @@ struct WorkoutPhotoCalendarView: View {
                     sessionRow(session)
                 }
             }
+
+            if canMarkRest(on: day) {
+                Button {
+                    wellnessService.setRestDay(on: day, rest: !isRest)
+                } label: {
+                    Label(
+                        isRest ? "Remover descanso" : "Marcar como descanso",
+                        systemImage: "bed.double.fill"
+                    )
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -399,6 +464,115 @@ struct WorkoutPhotoCalendarView: View {
 
     // MARK: - Helpers
 
+    private var retrospectiveMonthStart: Date {
+        let current = calendar.date(from: calendar.dateComponents([.year, .month], from: .now)) ?? .now
+        if monthStart < current { return monthStart }
+        return MonthlyRetrospectiveVideo.finishedMonthStart()
+    }
+
+    private var athleteName: String {
+        authService.currentUser?.greetingName
+            ?? authService.currentUser?.name
+            ?? "Atleta"
+    }
+
+    private func makeRetrospective() async {
+        guard !isMakingRetrospective else { return }
+        isMakingRetrospective = true
+        defer { isMakingRetrospective = false }
+        let start = retrospectiveMonthStart
+        guard let end = calendar.date(byAdding: .month, value: 1, to: start) else { return }
+        var restKeys: [String] = []
+        var cursor = start
+        while cursor < end {
+            if wellnessService.isRestDay(on: cursor) {
+                restKeys.append(DailyWellnessEntry.dayKey(for: cursor))
+            }
+            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        guard let result = await MonthlyRetrospectiveVideo.make(
+            sessions: workoutStore.sessionHistory,
+            restDayKeys: restKeys,
+            monthStart: start
+        ) else {
+            retrospectiveNote = "Não foi possível montar o vídeo."
+            return
+        }
+        retrospectiveURL = result.url
+        showRetrospectiveActions = true
+    }
+
+    private func saveRetrospectiveToGallery() async {
+        guard let retrospectiveURL else { return }
+        do {
+            try await PhotoLibrarySaver.saveVideo(at: retrospectiveURL)
+            retrospectiveNote = "Vídeo salvo na galeria."
+        } catch {
+            retrospectiveNote = "Não foi possível salvar na galeria."
+        }
+    }
+
+    private func shareRetrospectiveToInstagram() async {
+        guard let retrospectiveURL else { return }
+        guard let scheme = URL(string: "instagram-stories://share"),
+              UIApplication.shared.canOpenURL(scheme) else {
+            retrospectiveNote = "O Instagram não está disponível. Use o status do WhatsApp."
+            return
+        }
+        let fileSize = (try? FileManager.default.attributesOfItem(atPath: retrospectiveURL.path)[.size] as? NSNumber)?.intValue ?? 0
+        guard fileSize > 0, fileSize <= 7_500_000 else {
+            showRetrospectiveShare = true
+            retrospectiveNote = "Escolha o Instagram na tela de compartilhar."
+            return
+        }
+        do {
+            let data = try Data(contentsOf: retrospectiveURL, options: [.mappedIfSafe])
+            let appID = Bundle.main.bundleIdentifier ?? "luan.com.healthfit.app"
+            UIPasteboard.general.setItems(
+                [[
+                    "com.instagram.sharedSticker.backgroundVideo": data,
+                    "com.instagram.sharedSticker.appID": appID,
+                ]],
+                options: [.expirationDate: Date().addingTimeInterval(60 * 5)]
+            )
+            var components = URLComponents(string: "instagram-stories://share")
+            components?.queryItems = [URLQueryItem(name: "source_application", value: appID)]
+            if let openURL = components?.url {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                await UIApplication.shared.open(openURL)
+            }
+        } catch {
+            showRetrospectiveShare = true
+        }
+    }
+
+    private func publishRetrospectiveToPulse() async {
+        guard let retrospectiveURL else { return }
+        let month = MonthlyRetrospectiveVideo.monthTitle(retrospectiveMonthStart)
+        do {
+            _ = try await PulseLocalStore.shared.addVideoPost(
+                authorId: authService.currentUser?.id ?? "local",
+                authorName: athleteName,
+                authorCountryCode: authService.currentUser?.countryCode ?? "BR",
+                caption: "Retrospectiva HealthFit de \(month). Superação para o próximo mês.",
+                sourceURL: retrospectiveURL,
+                community: .musculacao,
+                workoutMeta: PulseWorkoutMeta(
+                    modality: "Retrospectiva",
+                    durationSeconds: nil,
+                    intensity: nil,
+                    duoTeamName: nil
+                ),
+                authorAvatar: authService.profileImage,
+                maxDuration: 75.5
+            )
+            retrospectiveNote = "Retrospectiva publicada no Pulse."
+        } catch {
+            retrospectiveNote = error.localizedDescription
+        }
+    }
+
     private func shiftMonth(by value: Int) {
         guard let next = calendar.date(byAdding: .month, value: value, to: monthStart) else { return }
         if value > 0 {
@@ -442,6 +616,10 @@ struct WorkoutPhotoCalendarView: View {
 
     private func isRestDay(on date: Date) -> Bool {
         wellnessService.isRestDay(on: date)
+    }
+
+    private func canMarkRest(on date: Date) -> Bool {
+        calendar.startOfDay(for: date) <= calendar.startOfDay(for: .now)
     }
 
     private func cellBackground(hasWorkout: Bool, hasPhoto: Bool, isRest: Bool, isSelected: Bool) -> Color {
@@ -589,5 +767,504 @@ struct WorkoutPhotoCalendarCard: View {
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Vídeo da retrospectiva do mês já encerrado.
+/// Usa só as fotos locais do calendário Constância. Não grava nada no Firebase.
+/// Duração máxima: 75 segundos.
+enum MonthlyRetrospectiveVideo {
+    static let maxSeconds = 75
+    private static let fps: Int32 = 10
+    private static let width = 720
+    private static let height = 1280
+
+    struct Result {
+        let url: URL
+        let monthTitle: String
+        let nextMonthTitle: String
+        let workoutCount: Int
+        let photoCount: Int
+    }
+
+    private struct Slide: Sendable {
+        enum Kind: String, Sendable {
+            case intro
+            case photo
+            case rest
+            case phrase
+            case outro
+        }
+
+        var kind: Kind
+        var phrase: String
+        var caption: String
+        var detail: String
+        var photoPath: String?
+        var frames: Int
+    }
+
+    private static let phrases = [
+        "Cada treino contou.",
+        "Você apareceu. Isso muda tudo.",
+        "Constância é o seu diferencial.",
+        "O corpo lembra o que você repetiu.",
+        "Um dia de cada vez, o mês inteiro.",
+        "Disciplina virou resultado.",
+        "Você não pulou o dia difícil.",
+        "A evolução está nessas fotos.",
+        "Orgulho do caminho, não só da chegada.",
+        "Força se constrói quando ninguém vê.",
+        "Sua presença foi o treino mais importante.",
+        "O mês ficou marcado na Constância.",
+    ]
+
+    private static let restPhrases = [
+        "Descansar também é treinar.",
+        "O corpo cresce no descanso.",
+        "Recuperação faz parte da constância.",
+        "Você respeitou o limite.",
+        "Superação inclui saber parar.",
+        "O próximo treino agradece essa pausa.",
+    ]
+
+    static func finishedMonthStart(now: Date = .now, calendar: Calendar = .current) -> Date {
+        let parts = calendar.dateComponents([.year, .month], from: now)
+        let startOfThisMonth = calendar.date(from: parts) ?? now
+        return calendar.date(byAdding: .month, value: -1, to: startOfThisMonth) ?? startOfThisMonth
+    }
+
+    static func monthTitle(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.dateFormat = "MMMM 'de' yyyy"
+        let raw = formatter.string(from: date)
+        return raw.prefix(1).uppercased() + raw.dropFirst()
+    }
+
+    static func make(
+        sessions: [WorkoutSession],
+        restDayKeys: [String] = [],
+        monthStart requestedMonth: Date? = nil,
+        now: Date = .now
+    ) async -> Result? {
+        let calendar = Calendar.current
+        let monthStart: Date
+        if let requestedMonth {
+            let parts = calendar.dateComponents([.year, .month], from: requestedMonth)
+            monthStart = calendar.date(from: parts) ?? requestedMonth
+        } else {
+            monthStart = finishedMonthStart(now: now, calendar: calendar)
+        }
+        let nextStart = calendar.date(byAdding: .month, value: 1, to: monthStart) ?? monthStart
+        let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart) ?? now
+        let monthSessions = sessions
+            .filter { session in
+                let date = session.endedAt ?? session.startedAt
+                return date >= monthStart && date < monthEnd
+            }
+            .sorted { ($0.endedAt ?? $0.startedAt) < ($1.endedAt ?? $1.startedAt) }
+        let photos: [(path: String, title: String, day: String, dayKey: String)] = monthSessions.compactMap { session in
+            guard let name = session.checkInPhotoFileName, !name.isEmpty else { return nil }
+            let url = WorkoutCheckInPhotoStore.fileURL(for: name)
+            guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+            let when = session.endedAt ?? session.startedAt
+            return (url.path, session.workoutTitle, dayTitle(when), DailyWellnessEntry.dayKey(for: when))
+        }
+        let monthLabel = monthTitle(monthStart)
+        let nextLabel = monthTitle(nextStart)
+        let monthPrefix = monthTitleStamp(monthStart)
+        let rests = restDayKeys
+            .filter { $0.hasPrefix(monthPrefix) }
+            .sorted()
+        let slides = storyboard(
+            monthTitle: monthLabel,
+            nextTitle: nextLabel,
+            workoutCount: monthSessions.count,
+            photos: photos,
+            restDayKeys: rests
+        )
+        let totalFrames = slides.reduce(0) { $0 + $1.frames }
+        guard totalFrames <= maxSeconds * Int(fps) else { return nil }
+        let workoutCount = monthSessions.count
+        let photoCount = photos.count
+        return await Task.detached(priority: .userInitiated) {
+            guard let url = write(slides: slides, monthStart: monthStart) else { return nil }
+            return Result(
+                url: url,
+                monthTitle: monthLabel,
+                nextMonthTitle: nextLabel,
+                workoutCount: workoutCount,
+                photoCount: photoCount
+            )
+        }.value
+    }
+
+    private static func storyboard(
+        monthTitle: String,
+        nextTitle: String,
+        workoutCount: Int,
+        photos: [(path: String, title: String, day: String, dayKey: String)],
+        restDayKeys: [String]
+    ) -> [Slide] {
+        let introFrames = 4 * Int(fps)
+        let outroFrames = 6 * Int(fps)
+        let budget = maxSeconds * Int(fps) - introFrames - outroFrames
+        let restLine = restDayKeys.isEmpty
+            ? "Nenhum dia de descanso"
+            : count(restDayKeys.count, one: "dia de descanso", many: "dias de descanso")
+        let photoLine = photos.isEmpty
+            ? "Sem fotos neste mês"
+            : count(photos.count, one: "foto na Constância", many: "fotos na Constância")
+        var slides: [Slide] = [
+            Slide(
+                kind: .intro,
+                phrase: monthTitle,
+                caption: count(workoutCount, one: "treino", many: "treinos"),
+                detail: "\(photoLine)\n\(restLine)",
+                photoPath: nil,
+                frames: introFrames
+            ),
+        ]
+        let moments: [(sort: String, slide: Slide)] = photos.map { photo in
+            (photo.dayKey, Slide(kind: .photo, phrase: "", caption: photo.title, detail: photo.day, photoPath: photo.path, frames: 0))
+        } + restDayKeys.map { key in
+            (key, Slide(kind: .rest, phrase: "", caption: dayTitle(fromDayKey: key), detail: "", photoPath: nil, frames: 0))
+        }
+        let ordered = moments.sorted { $0.sort < $1.sort }.map(\.slide)
+        if ordered.isEmpty {
+            let phraseFrames = min(4 * Int(fps), budget / 4)
+            for (index, phrase) in phrases.prefix(4).enumerated() {
+                slides.append(
+                    Slide(
+                        kind: .phrase,
+                        phrase: phrase,
+                        caption: "Constância  ·  \(index + 1)",
+                        detail: "",
+                        photoPath: nil,
+                        frames: phraseFrames
+                    )
+                )
+            }
+        } else {
+            let minFrames = Int((2.4 * Double(fps)).rounded())
+            let maxFrames = Int((4.2 * Double(fps)).rounded())
+            let cap = max(budget / minFrames, 1)
+            let chosen = sample(ordered, limit: cap)
+            var per = min(max(budget / chosen.count, minFrames), maxFrames)
+            while chosen.count * per > budget && per > 1 {
+                per -= 1
+            }
+            for (index, moment) in chosen.enumerated() {
+                var slide = moment
+                slide.frames = per
+                if slide.kind == .rest {
+                    slide.phrase = restPhrases[index % restPhrases.count]
+                } else {
+                    slide.phrase = phrases[index % phrases.count]
+                }
+                slides.append(slide)
+            }
+        }
+        slides.append(
+            Slide(
+                kind: .outro,
+                phrase: "SUPERAÇÃO",
+                caption: "para \(nextTitle)",
+                detail: "Vá além do que você fez em \(monthTitle).",
+                photoPath: nil,
+                frames: outroFrames
+            )
+        )
+        return slides
+    }
+
+    private static func write(slides: [Slide], monthStart: Date) -> URL? {
+        let folder = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let dir = folder.appendingPathComponent("retrospective", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let stamp = DateFormatter()
+        stamp.locale = Locale(identifier: "en_US_POSIX")
+        stamp.dateFormat = "yyyy-MM"
+        let url = dir.appendingPathComponent("HealthFit-Retrospectiva-\(stamp.string(from: monthStart)).mp4")
+        try? FileManager.default.removeItem(at: url)
+
+        let heart = UIImage(named: "BrandHeart")
+        guard let writer = try? AVAssetWriter(outputURL: url, fileType: .mp4) else { return nil }
+        let settings: [String: Any] = [
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: width,
+            AVVideoHeightKey: height,
+            AVVideoCompressionPropertiesKey: [
+                AVVideoAverageBitRateKey: 2_500_000,
+                AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+            ],
+        ]
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
+        input.expectsMediaDataInRealTime = false
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(
+            assetWriterInput: input,
+            sourcePixelBufferAttributes: [
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+                kCVPixelBufferWidthKey as String: width,
+                kCVPixelBufferHeightKey as String: height,
+            ]
+        )
+        guard writer.canAdd(input) else { return nil }
+        writer.add(input)
+        guard writer.startWriting() else { return nil }
+        writer.startSession(atSourceTime: .zero)
+
+        var kept: [CVPixelBuffer] = []
+        var frameIndex: Int64 = 0
+        for slide in slides {
+            let image = render(slide, heart: heart)
+            guard let buffer = pixelBuffer(from: image) else { return nil }
+            kept.append(buffer)
+            for _ in 0..<slide.frames {
+                var spins = 0
+                while !input.isReadyForMoreMediaData {
+                    if spins > 500 { return nil }
+                    Thread.sleep(forTimeInterval: 0.01)
+                    spins += 1
+                }
+                let time = CMTime(value: frameIndex, timescale: fps)
+                if !adaptor.append(buffer, withPresentationTime: time) {
+                    return nil
+                }
+                frameIndex += 1
+            }
+        }
+        input.markAsFinished()
+        writer.finishWriting { }
+        var waits = 0
+        while writer.status == .writing && waits < 400 {
+            Thread.sleep(forTimeInterval: 0.05)
+            waits += 1
+        }
+        _ = kept.count
+        guard writer.status == .completed, FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return url
+    }
+
+    private static func render(_ slide: Slide, heart: UIImage?) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format)
+        return renderer.image { context in
+            let canvas = context.cgContext
+            switch slide.kind {
+            case .photo:
+                if let path = slide.photoPath, let photo = UIImage(contentsOfFile: path) {
+                    drawCover(photo, in: CGRect(x: 0, y: 0, width: width, height: height))
+                } else {
+                    UIColor(red: 0.027, green: 0.063, blue: 0.094, alpha: 1).setFill()
+                    canvas.fill(CGRect(x: 0, y: 0, width: width, height: height))
+                }
+                drawVerticalFade(canvas, from: 0.42)
+                drawTopFade(canvas)
+                drawMark(heart, x: 48, y: 56, size: 72)
+                _ = drawText(slide.detail, y: 980, font: .systemFont(ofSize: 22, weight: .medium), color: muted)
+                _ = drawText(slide.caption, y: 1020, font: .systemFont(ofSize: 36, weight: .bold), color: .white)
+                _ = drawText(slide.phrase, y: 1110, font: .systemFont(ofSize: 40, weight: .bold), color: .white)
+            case .intro:
+                fillBackground(canvas)
+                drawHeart(heart, top: 390, size: 220)
+                var y: CGFloat = 640
+                y = drawText("HEALTHFIT", y: y, font: .systemFont(ofSize: 34, weight: .bold), color: accent) + 28
+                y = drawText("RETROSPECTIVA", y: y, font: .systemFont(ofSize: 54, weight: .bold), color: .white) + 18
+                y = drawText(slide.phrase, y: y, font: .systemFont(ofSize: 32, weight: .semibold), color: .white) + 36
+                y = drawText(slide.caption, y: y, font: .systemFont(ofSize: 28, weight: .medium), color: muted) + 12
+                _ = drawText(slide.detail, y: y, font: .systemFont(ofSize: 26, weight: .semibold), color: accent)
+            case .rest:
+                fillBackground(canvas)
+                drawHeart(heart, top: 360, size: 200)
+                var y: CGFloat = 600
+                y = drawText("HEALTHFIT", y: y, font: .systemFont(ofSize: 28, weight: .bold), color: accent) + 28
+                y = drawText("DIA DE DESCANSO", y: y, font: .systemFont(ofSize: 46, weight: .bold), color: .white) + 16
+                y = drawText(slide.caption, y: y, font: .systemFont(ofSize: 30, weight: .semibold), color: .white) + 40
+                _ = drawText(slide.phrase, y: y, font: .systemFont(ofSize: 36, weight: .bold), color: .white)
+            case .phrase:
+                fillBackground(canvas)
+                drawHeart(heart, top: 430, size: 180)
+                _ = drawText("HEALTHFIT", y: 660, font: .systemFont(ofSize: 28, weight: .bold), color: accent)
+                _ = drawText(slide.phrase, y: 760, font: .systemFont(ofSize: 48, weight: .bold), color: .white)
+                _ = drawText(slide.caption, y: 1040, font: .systemFont(ofSize: 24, weight: .medium), color: muted)
+            case .outro:
+                fillBackground(canvas)
+                drawHeart(heart, top: 340, size: 240)
+                var y: CGFloat = 620
+                y = drawText("HEALTHFIT", y: y, font: .systemFont(ofSize: 36, weight: .bold), color: accent) + 36
+                y = drawText(slide.phrase, y: y, font: .systemFont(ofSize: 58, weight: .bold), color: .white) + 16
+                y = drawText(slide.caption, y: y, font: .systemFont(ofSize: 32, weight: .semibold), color: .white) + 48
+                _ = drawText(slide.detail, y: y, font: .systemFont(ofSize: 28, weight: .medium), color: muted)
+            }
+        }
+    }
+
+    private static func fillBackground(_ canvas: CGContext) {
+        UIColor(red: 0.027, green: 0.063, blue: 0.094, alpha: 1).setFill()
+        canvas.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    }
+
+    private static func drawHeart(_ heart: UIImage?, top: CGFloat, size: CGFloat) {
+        let rect = CGRect(x: (CGFloat(width) - size) / 2, y: top, width: size, height: size)
+        if let heart {
+            heart.draw(in: rect)
+        } else {
+            accent.setFill()
+            UIBezierPath(ovalIn: rect).fill()
+        }
+    }
+
+    private static func drawMark(_ heart: UIImage?, x: CGFloat, y: CGFloat, size: CGFloat) {
+        heart?.draw(in: CGRect(x: x, y: y, width: size, height: size))
+        let text = NSAttributedString(
+            string: "HEALTHFIT",
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 26, weight: .bold),
+                .foregroundColor: UIColor.white,
+            ]
+        )
+        text.draw(at: CGPoint(x: x + size + 16, y: y + size * 0.28))
+    }
+
+    private static func drawCover(_ image: UIImage, in rect: CGRect) {
+        let scale = max(rect.width / image.size.width, rect.height / image.size.height)
+        let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let dest = CGRect(
+            x: rect.midX - size.width / 2,
+            y: rect.midY - size.height / 2,
+            width: size.width,
+            height: size.height
+        )
+        image.draw(in: dest)
+    }
+
+    private static func drawVerticalFade(_ canvas: CGContext, from start: CGFloat) {
+        let colors = [
+            UIColor.clear.cgColor,
+            UIColor(red: 0.027, green: 0.063, blue: 0.094, alpha: 0.94).cgColor,
+        ] as CFArray
+        guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) else { return }
+        canvas.drawLinearGradient(
+            gradient,
+            start: CGPoint(x: 0, y: CGFloat(height) * start),
+            end: CGPoint(x: 0, y: CGFloat(height)),
+            options: []
+        )
+    }
+
+    private static func drawTopFade(_ canvas: CGContext) {
+        let colors = [
+            UIColor(red: 0.027, green: 0.063, blue: 0.094, alpha: 0.8).cgColor,
+            UIColor.clear.cgColor,
+        ] as CFArray
+        guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) else { return }
+        canvas.drawLinearGradient(
+            gradient,
+            start: CGPoint(x: 0, y: 0),
+            end: CGPoint(x: 0, y: 280),
+            options: []
+        )
+    }
+
+    @discardableResult
+    private static func drawText(_ text: String, y: CGFloat, font: UIFont, color: UIColor) -> CGFloat {
+        let style = NSMutableParagraphStyle()
+        style.alignment = .center
+        style.lineBreakMode = .byWordWrapping
+        let attributed = NSAttributedString(
+            string: text,
+            attributes: [
+                .font: font,
+                .foregroundColor: color,
+                .paragraphStyle: style,
+            ]
+        )
+        let bounds = attributed.boundingRect(
+            with: CGSize(width: CGFloat(width) - 96, height: 800),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let rect = CGRect(x: 48, y: y, width: CGFloat(width) - 96, height: ceil(bounds.height) + 4)
+        attributed.draw(with: rect, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
+        return y + rect.height
+    }
+
+    private static func pixelBuffer(from image: UIImage) -> CVPixelBuffer? {
+        let attrs: [CFString: Any] = [
+            kCVPixelBufferCGImageCompatibilityKey: true,
+            kCVPixelBufferCGBitmapContextCompatibilityKey: true,
+            kCVPixelBufferIOSurfacePropertiesKey: [:] as CFDictionary,
+        ]
+        var buffer: CVPixelBuffer?
+        let status = CVPixelBufferCreate(
+            kCFAllocatorDefault,
+            width,
+            height,
+            kCVPixelFormatType_32BGRA,
+            attrs as CFDictionary,
+            &buffer
+        )
+        guard status == kCVReturnSuccess, let buffer else { return nil }
+        CVPixelBufferLockBaseAddress(buffer, [])
+        defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
+        guard let base = CVPixelBufferGetBaseAddress(buffer) else { return nil }
+        guard let context = CGContext(
+            data: base,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: CVPixelBufferGetBytesPerRow(buffer),
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue
+        ) else { return nil }
+        context.translateBy(x: 0, y: CGFloat(height))
+        context.scaleBy(x: 1, y: -1)
+        if let cgImage = image.cgImage {
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        }
+        return buffer
+    }
+
+    private static var accent: UIColor { UIColor(red: 0.239, green: 0.863, blue: 0.227, alpha: 1) }
+    private static var muted: UIColor { UIColor(red: 0.718, green: 0.753, blue: 0.784, alpha: 1) }
+
+    private static func monthTitleStamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM"
+        return formatter.string(from: date)
+    }
+
+    private static func dayTitle(fromDayKey key: String) -> String {
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.dateFormat = "yyyy-MM-dd"
+        guard let date = parser.date(from: key) else { return key }
+        return dayTitle(date)
+    }
+
+    private static func dayTitle(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.dateFormat = "d 'de' MMMM"
+        return formatter.string(from: date)
+    }
+
+    private static func count(_ value: Int, one: String, many: String) -> String {
+        value == 1 ? "1 \(one)" : "\(value) \(many)"
+    }
+
+    private static func sample<T>(_ items: [T], limit: Int) -> [T] {
+        guard items.count > limit, limit > 0 else { return items }
+        if limit == 1 { return [items[items.count / 2]] }
+        return (0..<limit).map { index in
+            let position = Double(index) * Double(items.count - 1) / Double(limit - 1)
+            return items[Int(position.rounded())]
+        }
     }
 }

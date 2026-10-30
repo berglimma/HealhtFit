@@ -59,6 +59,7 @@ final class DailyWellnessService: ObservableObject {
     private let trackingStartPrefix = "healthfit_wellness_tracking_start"
     /// Dia em que o sheet matinal de sono/água já foi concluído ou dispensado (não reaparece no mesmo dia).
     private let morningCheckInHandledPrefix = "healthfit_wellness_morning_checkin_handled"
+    private let calendarRestPrefix = "healthfit_calendar_rest_days"
 
     private init() {}
 
@@ -482,7 +483,29 @@ final class DailyWellnessService: ObservableObject {
 
     /// Dia de descanso marcado (perfil / wellness) para a data informada.
     func isRestDay(on date: Date) -> Bool {
-        entry(for: DailyWellnessEntry.dayKey(for: date)).isRestDay
+        let key = DailyWellnessEntry.dayKey(for: date)
+        return storedRestDayKeys().contains(key) || entry(for: key).isRestDay
+    }
+
+    /// Marca ou remove descanso em um dia já passado ou em hoje. Não altera o esquema do Firebase.
+    func setRestDay(on date: Date, rest: Bool) {
+        let calendar = Calendar.current
+        let day = calendar.startOfDay(for: date)
+        guard day <= calendar.startOfDay(for: .now) else { return }
+        let key = DailyWellnessEntry.dayKey(for: day)
+        storeRestDay(key, rest: rest)
+        if key == DailyWellnessEntry.dayKey(for: .now) {
+            var entry = currentTodayEntry()
+            guard entry.isRestDay != rest else { return }
+            entry.isRestDay = rest
+            entry.restDayMarkedAt = rest ? .now : nil
+            save(entry)
+            return
+        }
+        var entry = entry(for: key)
+        entry.isRestDay = rest
+        entry.restDayMarkedAt = rest ? .now : nil
+        save(entry)
     }
 
     func updateEnergyDrinksCount(_ count: Int) {
@@ -548,6 +571,7 @@ final class DailyWellnessService: ObservableObject {
         guard !entry.isRestDay else { return }
         entry.isRestDay = true
         entry.restDayMarkedAt = .now
+        storeRestDay(entry.dayKey, rest: true)
         save(entry)
         EveningTrainingNudgeService.handleRestDayMarked()
         let message = AssistantRestDayEngine.restDayMarkedMessage(context: assistantContext)
@@ -556,9 +580,10 @@ final class DailyWellnessService: ObservableObject {
 
     func clearRestDay() {
         var entry = currentTodayEntry()
-        guard entry.isRestDay else { return }
+        guard entry.isRestDay || storedRestDayKeys().contains(entry.dayKey) else { return }
         entry.isRestDay = false
         entry.restDayMarkedAt = nil
+        storeRestDay(entry.dayKey, rest: false)
         save(entry)
         EveningTrainingNudgeService.handleRestDayCleared()
     }
@@ -696,6 +721,24 @@ final class DailyWellnessService: ObservableObject {
                 await pushMetaToCloudSafely()
             }
         }
+    }
+
+    private func calendarRestDefaultsKey() -> String {
+        calendarRestPrefix + "." + (userEmail ?? "local")
+    }
+
+    private func storedRestDayKeys() -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: calendarRestDefaultsKey()) ?? [])
+    }
+
+    private func storeRestDay(_ dayKey: String, rest: Bool) {
+        var keys = storedRestDayKeys()
+        if rest {
+            keys.insert(dayKey)
+        } else {
+            keys.remove(dayKey)
+        }
+        UserDefaults.standard.set(Array(keys), forKey: calendarRestDefaultsKey())
     }
 
     private func persistLocally(_ entry: DailyWellnessEntry) {

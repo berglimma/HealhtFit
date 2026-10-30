@@ -13,6 +13,7 @@ struct ProfileView: View {
     @ObservedObject private var coach = CoachService.shared
     @ObservedObject private var nutritionNotifPrefs = NutritionNotificationPreferences.shared
     @ObservedObject private var bleHeartRate = BluetoothHeartRateService.shared
+    @ObservedObject private var languageStore = AppLanguageStore.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showLogoutAlert = false
     @State private var showDeleteAccountSheet = false
@@ -24,6 +25,7 @@ struct ProfileView: View {
     @State private var showBackgroundSourceDialog = false
     @State private var showBackgroundGalleryPicker = false
     @State private var showBackgroundCameraPicker = false
+    @State private var showPracticedModalities = false
     @State private var trainerName = ""
     @State private var trainerEmail = ""
     @State private var usesPersonalTrainer = false
@@ -77,7 +79,8 @@ struct ProfileView: View {
         NavigationStack {
             profileList
                 .adaptiveContentWidth()
-                .navigationTitle("Perfil")
+                .navigationTitle(L10n.Tab.profile)
+                .environment(\.locale, languageStore.locale)
                 .scrollDismissesKeyboard(.interactively)
                 // No keyboard toolbar on this List — avoids TabView+List toolbar race that can abort the process.
                 .task { await handleProfileAppear() }
@@ -724,6 +727,52 @@ struct ProfileView: View {
     @ViewBuilder
     private func practicedModalitiesSection(for user: UserProfile) -> some View {
         Section {
+            Button {
+                showPracticedModalities = true
+            } label: {
+                PracticedModalitiesEntryCard(
+                    activeCount: user.practicedModalityCount,
+                    preview: practicedModalityPreview(for: user)
+                )
+            }
+            .buttonStyle(.plain)
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            .listRowBackground(Color.clear)
+            .sheet(isPresented: $showPracticedModalities) {
+                NavigationStack {
+                    List {
+                        practicedModalitiesEditor(for: user)
+                    }
+                    .scrollContentBackground(.hidden)
+                    .background(AppTheme.background)
+                    .navigationTitle("Modalidades que pratico")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Fechar") { showPracticedModalities = false }
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                    }
+                }
+                .presentationDetents([.large])
+            }
+        }
+    }
+
+    private func practicedModalityPreview(for user: UserProfile) -> String {
+        let titles = PracticeModalityOption.catalog
+            .filter { user.practices($0.id) }
+            .prefix(3)
+            .map(\.title)
+        if titles.isEmpty { return "Toque para escolher" }
+        let extra = user.practicedModalityCount - titles.count
+        if extra > 0 { return titles.joined(separator: " · ") + " +\(extra)" }
+        return titles.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private func practicedModalitiesEditor(for user: UserProfile) -> some View {
+        Section {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Marque o que você pratica. A lista de treinos mostra só as modalidades ativas.")
                     .font(.caption)
@@ -768,13 +817,68 @@ struct ProfileView: View {
                     }
                 }
             }
-        } header: {
-            Text("Modalidades que pratico")
         } footer: {
             Text("Perfis novos ou sem preferência exibem todas as modalidades. É preciso manter ao menos uma marcada.")
                 .font(.caption2)
         }
         .listRowBackground(AppTheme.cardBackground)
+    }
+
+    private struct PracticedModalitiesEntryCard: View {
+        let activeCount: Int
+        let preview: String
+
+        var body: some View {
+            ZStack(alignment: .bottomLeading) {
+                HStack(spacing: 2) {
+                    cover("CardioCoverCorrida")
+                    VStack(spacing: 2) {
+                        cover("CardioCoverKitesurf")
+                        HStack(spacing: 2) {
+                            cover("FightCoverLuta")
+                            cover("MeditacaoCoverFoco")
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .frame(height: 168)
+                .clipped()
+
+                LinearGradient(
+                    colors: [.black.opacity(0.05), .black.opacity(0.78)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("PERFIL")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(AppTheme.accent)
+                        .tracking(1.1)
+                    Text("Modalidades que pratico")
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
+                    Text("\(activeCount) ativas · \(preview)")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.88))
+                        .lineLimit(2)
+                }
+                .padding(16)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Modalidades que pratico")
+            .accessibilityValue("\(activeCount) ativas. \(preview)")
+            .accessibilityHint("Abre a lista para marcar ou desmarcar")
+        }
+
+        private func cover(_ name: String) -> some View {
+            Image(name)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+        }
     }
 
     private func practicedModalityToggleRow(
