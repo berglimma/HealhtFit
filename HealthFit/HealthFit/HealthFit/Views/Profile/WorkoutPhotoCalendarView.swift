@@ -688,19 +688,22 @@ struct WorkoutPhotoCalendarCard: View {
 
     private var calendar: Calendar { .current }
 
-    private var recentPhotoDays: [(date: Date, image: UIImage)] {
-        var seen = Set<Date>()
-        var result: [(Date, UIImage)] = []
-        for session in workoutStore.sessionHistory where session.endedAt != nil {
-            let day = calendar.startOfDay(for: session.endedAt ?? session.startedAt)
-            guard seen.insert(day).inserted else { continue }
-            guard let image = WorkoutCheckInPhotoStore.loadThumbnail(fileName: session.checkInPhotoFileName) else {
-                continue
-            }
-            result.append((day, image))
+    private var recentPhotos: [UIImage] {
+        var seen = Set<String>()
+        var result: [UIImage] = []
+        for session in workoutStore.sessionHistory {
+            guard let name = session.checkInPhotoFileName, seen.insert(name).inserted else { continue }
+            guard let image = WorkoutCheckInPhotoStore.loadThumbnail(fileName: name, maxSide: 320) else { continue }
+            result.append(image)
             if result.count >= 5 { break }
         }
         return result
+    }
+
+    private var footerLine: String {
+        if wellnessService.isTodayRestDay { return "Descanso hoje" }
+        if recentPhotos.isEmpty { return "Anexe fotos" }
+        return "\(recentPhotos.count) com foto"
     }
 
     private var trainedDaysThisMonth: Int {
@@ -739,33 +742,55 @@ struct WorkoutPhotoCalendarCard: View {
     var body: some View {
         NavigationLink {
             WorkoutPhotoCalendarView()
-        } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                WorkoutProgramHeroCard(
-                    title: "Constância",
-                    subtitle: "Calendário de treinos · \(summaryLine)",
-                    accent: AppTheme.accent,
-                    imageName: "ConstancyCover",
-                    systemImage: "calendar",
-                    coverColors: [AppTheme.accent, AppTheme.accentSecondary],
-                    footerLabels: [
-                        (
-                            icon: wellnessService.isTodayRestDay ? "bed.double.fill" : "photo.fill",
-                            text: wellnessService.isTodayRestDay
-                                ? "Descanso hoje"
-                                : (recentPhotoDays.isEmpty ? "Anexe fotos" : "\(recentPhotoDays.count) com foto")
-                        ),
-                        (icon: "calendar", text: "\(trainedDaysThisMonth) dias")
-                    ]
-                )
+        }         label: {
+            VStack(spacing: 0) {
+                ZStack(alignment: .bottomLeading) {
+                    CoverAssetImage(name: "ConstancyCover")
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 180)
+                        .clipped()
+                    LinearGradient(
+                        colors: [Color.black.opacity(0.08), Color.black.opacity(0.78)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "calendar")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text(verbatim: "CALENDÁRIO")
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        .foregroundStyle(AppTheme.accent)
+                        Text(verbatim: "Constância")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.top, 6)
+                        Text(verbatim: "Calendário de treinos · \(summaryLine)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white.opacity(0.88))
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 4)
+                        Text(verbatim: footerLine)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .padding(.top, 8)
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 180)
+                .clipped()
 
-                if !recentPhotoDays.isEmpty {
+                if !recentPhotos.isEmpty {
                     HStack(spacing: 8) {
-                        ForEach(Array(recentPhotoDays.enumerated()), id: \.offset) { _, item in
+                        ForEach(Array(recentPhotos.enumerated()), id: \.offset) { _, photo in
                             Color.clear
                                 .frame(width: 52, height: 52)
                                 .overlay {
-                                    Image(uiImage: item.image)
+                                    Image(uiImage: photo)
                                         .resizable()
                                         .scaledToFill()
                                 }
@@ -776,10 +801,11 @@ struct WorkoutPhotoCalendarCard: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(AppTheme.cardBackground)
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -1308,6 +1334,10 @@ enum MonthlyRetrospectiveVideo {
                 y: CGFloat(height) / extent.height
             ))
         }
+        // O codificador mostra a primeira linha do buffer no rodapé do vídeo.
+        // Sem esse giro, o quadro sai de cabeça para baixo no player.
+        ciImage = ciImage.transformed(by: CGAffineTransform(scaleX: 1, y: -1)
+            .translatedBy(x: 0, y: -CGFloat(height)))
         let ciContext = CIContext(options: [
             .workingColorSpace: NSNull(),
             .cacheIntermediates: false,
