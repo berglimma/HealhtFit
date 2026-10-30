@@ -480,7 +480,7 @@ struct WorkoutPhotoCalendarView: View {
 
     private var retrospectiveMonthStart: Date {
         let current = calendar.date(from: calendar.dateComponents([.year, .month], from: .now)) ?? .now
-        if monthStart < current { return monthStart }
+        if monthStart <= current { return monthStart }
         return MonthlyRetrospectiveVideo.finishedMonthStart()
     }
 
@@ -519,25 +519,24 @@ struct WorkoutPhotoCalendarView: View {
     }
 
     private func saveRetrospectiveToGallery() async -> String {
-        guard let retrospectiveURL else { return "O vídeo não está disponível." }
+        guard let retrospectiveURL else { return "Não foi salvo na galeria." }
         do {
             try await PhotoLibrarySaver.saveVideo(at: retrospectiveURL)
-            return "Vídeo salvo na galeria."
+            return "Salvo na galeria."
         } catch {
-            return "Não foi possível salvar na galeria."
+            return "Não foi salvo na galeria."
         }
     }
 
     private func shareRetrospectiveToInstagram() async -> String {
-        guard let retrospectiveURL else { return "O vídeo não está disponível." }
+        guard let retrospectiveURL else { return "Não foi publicado no Instagram Stories." }
         guard let scheme = URL(string: "instagram-stories://share"),
               UIApplication.shared.canOpenURL(scheme) else {
-            return "O Instagram não está disponível. Use o WhatsApp."
+            return "Não foi publicado no Instagram Stories."
         }
         let fileSize = (try? FileManager.default.attributesOfItem(atPath: retrospectiveURL.path)[.size] as? NSNumber)?.intValue ?? 0
-        guard fileSize > 0, fileSize <= 7_500_000 else {
-            showRetrospectiveShare = true
-            return "Escolha o Instagram na tela de compartilhar."
+        guard fileSize > 0 else {
+            return "Não foi publicado no Instagram Stories."
         }
         do {
             let data = try Data(contentsOf: retrospectiveURL, options: [.mappedIfSafe])
@@ -551,14 +550,14 @@ struct WorkoutPhotoCalendarView: View {
             )
             var components = URLComponents(string: "instagram-stories://share")
             components?.queryItems = [URLQueryItem(name: "source_application", value: appID)]
-            if let openURL = components?.url {
-                try? await Task.sleep(nanoseconds: 100_000_000)
-                await UIApplication.shared.open(openURL)
+            guard let openURL = components?.url else {
+                return "Não foi publicado no Instagram Stories."
             }
-            return "Abrindo o Instagram Stories."
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            let opened = await UIApplication.shared.open(openURL)
+            return opened ? "Publicado no Instagram Stories." : "Não foi publicado no Instagram Stories."
         } catch {
-            showRetrospectiveShare = true
-            return "Não foi possível abrir o Instagram. Escolha o app na lista."
+            return "Não foi publicado no Instagram Stories."
         }
     }
 
@@ -582,9 +581,9 @@ struct WorkoutPhotoCalendarView: View {
                 authorAvatar: authService.profileImage,
                 maxDuration: 75.5
             )
-            return "Retrospectiva publicada no Pulse."
+            return "Publicado no Pulse."
         } catch {
-            return error.localizedDescription
+            return "Não foi publicado no Pulse."
         }
     }
 
@@ -821,7 +820,7 @@ private struct RetrospectivePlayerSheet: View {
 
     @State private var player: AVPlayer?
     @State private var showShare = false
-    @State private var status: String?
+    @State private var status = "Toque em uma ação para confirmar."
     @State private var busy = false
 
     var body: some View {
@@ -835,18 +834,20 @@ private struct RetrospectivePlayerSheet: View {
                         .font(.headline)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                    if let status {
-                        Text(status)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(AppTheme.accent)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
-                    }
+                    Text(status)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
                     actionButton("Salvar na galeria") { await onGallery() }
                     actionButton("Publicar no Pulse") { await onPulse() }
                     actionButton("WhatsApp") {
+                        guard let scheme = URL(string: "whatsapp://"),
+                              UIApplication.shared.canOpenURL(scheme) else {
+                            return "Não foi publicado no WhatsApp."
+                        }
                         showShare = true
-                        return "Escolha o WhatsApp para enviar o vídeo."
+                        return "Escolha o WhatsApp para publicar."
                     }
                     actionButton("Instagram Stories") { await onInstagram() }
                 }
@@ -872,7 +873,10 @@ private struct RetrospectivePlayerSheet: View {
         }
         .onDisappear { player?.pause() }
         .sheet(isPresented: $showShare) {
-            ActivityShareSheet(items: [url]) { showShare = false }
+            ActivityShareSheet(items: [url], onFinish: { completed in
+                showShare = false
+                status = completed ? "Publicado no WhatsApp." : "Não foi publicado no WhatsApp."
+            })
         }
     }
 
@@ -988,22 +992,23 @@ enum MonthlyRetrospectiveVideo {
         let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart) ?? now
         let monthSessions = sessions
             .filter { session in
-                let date = session.endedAt ?? session.startedAt
+                guard session.endedAt != nil else { return false }
+                let date = session.displayDate
                 return date >= monthStart && date < monthEnd
             }
-            .sorted { ($0.endedAt ?? $0.startedAt) < ($1.endedAt ?? $1.startedAt) }
-        let photos: [(path: String, title: String, day: String, dayKey: String)] = monthSessions.compactMap { session in
-            guard let name = session.checkInPhotoFileName, !name.isEmpty else { return nil }
-            let url = WorkoutCheckInPhotoStore.fileURL(for: name)
-            guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-            let when = session.endedAt ?? session.startedAt
-            return (url.path, session.workoutTitle, dayTitle(when), DailyWellnessEntry.dayKey(for: when))
-        }
+            .sorted { $0.displayDate < $1.displayDate }
+        let photos = photosFromCalendarDays(
+            sessions: sessions,
+            monthStart: monthStart,
+            monthEnd: monthEnd,
+            calendar: calendar
+        )
         let monthLabel = monthTitle(monthStart)
         let nextLabel = monthTitle(nextStart)
         let monthPrefix = monthTitleStamp(monthStart)
+        let photoDays = Set(photos.map(\.dayKey))
         let rests = restDayKeys
-            .filter { $0.hasPrefix(monthPrefix) }
+            .filter { $0.hasPrefix(monthPrefix) && !photoDays.contains($0) }
             .sorted()
         let slides = storyboard(
             monthTitle: monthLabel,
@@ -1191,7 +1196,7 @@ enum MonthlyRetrospectiveVideo {
             let canvas = context.cgContext
             switch slide.kind {
             case .photo:
-                if let path = slide.photoPath, let photo = UIImage(contentsOfFile: path) {
+                if let photo = loadCalendarPhoto(path: slide.photoPath) {
                     drawCover(photo, in: CGRect(x: 0, y: 0, width: width, height: height))
                 } else {
                     UIColor(red: 0.027, green: 0.063, blue: 0.094, alpha: 1).setFill()
@@ -1374,6 +1379,43 @@ enum MonthlyRetrospectiveVideo {
 
     private static var accent: UIColor { UIColor(red: 0.239, green: 0.863, blue: 0.227, alpha: 1) }
     private static var muted: UIColor { UIColor(red: 0.718, green: 0.753, blue: 0.784, alpha: 1) }
+
+    /// Uma foto por arquivo, na ordem dos dias do calendário — a mesma imagem da célula.
+    private static func photosFromCalendarDays(
+        sessions: [WorkoutSession],
+        monthStart: Date,
+        monthEnd: Date,
+        calendar: Calendar
+    ) -> [(path: String, title: String, day: String, dayKey: String)] {
+        var photos: [(path: String, title: String, day: String, dayKey: String)] = []
+        var seen = Set<String>()
+        var cursor = monthStart
+        while cursor < monthEnd {
+            let daySessions = sessions
+                .filter { $0.endedAt != nil && calendar.isDate($0.displayDate, inSameDayAs: cursor) }
+                .sorted { $0.displayDate < $1.displayDate }
+            for session in daySessions {
+                guard let name = session.checkInPhotoFileName, !name.isEmpty, seen.insert(name).inserted else { continue }
+                let url = WorkoutCheckInPhotoStore.fileURL(for: name)
+                guard FileManager.default.fileExists(atPath: url.path) else { continue }
+                photos.append((
+                    url.path,
+                    session.workoutTitle,
+                    dayTitle(cursor),
+                    DailyWellnessEntry.dayKey(for: cursor)
+                ))
+            }
+            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return photos
+    }
+
+    private static func loadCalendarPhoto(path: String?) -> UIImage? {
+        guard let path, !path.isEmpty else { return nil }
+        if let image = UIImage(contentsOfFile: path) { return image }
+        return WorkoutCheckInPhotoStore.load(fileName: URL(fileURLWithPath: path).lastPathComponent)
+    }
 
     private static func monthTitleStamp(_ date: Date) -> String {
         let formatter = DateFormatter()

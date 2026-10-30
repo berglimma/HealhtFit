@@ -1728,11 +1728,15 @@ enum WorkoutShareCardRenderer {
 struct ActivityShareSheet: UIViewControllerRepresentable {
     let items: [Any]
     var onComplete: (() -> Void)? = nil
+    var onFinish: ((Bool) -> Void)? = nil
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        controller.completionWithItemsHandler = { _, _, _, _ in
-            DispatchQueue.main.async { onComplete?() }
+        controller.completionWithItemsHandler = { _, completed, _, error in
+            DispatchQueue.main.async {
+                onFinish?(completed && error == nil)
+                onComplete?()
+            }
         }
         if let popover = controller.popoverPresentationController {
             // UIView() órfão derruba o app no iPad — ancora na janela ativa.
