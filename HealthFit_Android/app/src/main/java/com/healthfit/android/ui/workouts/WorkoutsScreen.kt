@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -449,10 +450,15 @@ fun WorkoutsScreen(userId: String? = null) {
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp),
     ) {
-        Text("Treinos", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.tab_workouts), color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(12.dp))
         ChipRow(
-            labels = listOf("Musculação", "Treine em Casa", "Cardio", "Meditação"),
+            labels = listOf(
+                stringResource(R.string.workout_strength),
+                stringResource(R.string.workout_home),
+                stringResource(R.string.workout_cardio),
+                stringResource(R.string.workout_meditation),
+            ),
             selected = tab,
             onSelect = { tab = it },
         )
@@ -491,13 +497,13 @@ private fun StrengthTab(onOpen: (String) -> Unit) {
         },
     )
     Spacer(Modifier.height(16.dp))
-    SectionLabel("Escolha o programa")
+    SectionLabel(stringResource(R.string.workout_pick_program))
     Spacer(Modifier.height(10.dp))
-    ProgramCard("MASCULINO", "Peito, costas, pernas e ombros", "${WorkoutCatalog.male.size} recomendados", "0 personalizados", R.drawable.workoutprogrammale) {
+    ProgramCard(stringResource(R.string.workout_male), stringResource(R.string.workout_male_sub), "${WorkoutCatalog.male.size} recomendados", "0 personalizados", R.drawable.workoutprogrammale) {
         onOpen("male")
     }
     Spacer(Modifier.height(10.dp))
-    ProgramCard("FEMININO", "Glúteos, pernas, postura e core", "${WorkoutCatalog.female.size} recomendados", "0 personalizados", R.drawable.workoutprogramfemale) {
+    ProgramCard(stringResource(R.string.workout_female), stringResource(R.string.workout_female_sub), "${WorkoutCatalog.female.size} recomendados", "0 personalizados", R.drawable.workoutprogramfemale) {
         onOpen("female")
     }
     Spacer(Modifier.height(10.dp))

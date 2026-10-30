@@ -1,10 +1,12 @@
 package com.healthfit.android.ui.home
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -48,6 +50,78 @@ object ConstancyStore {
             if (it.id == sessionId) it.copy(photoPath = photoPath) else it
         }
         saveSessions(context, updated)
+    }
+
+    /**
+     * Salva bitmap (foto com overlay) no calendário Constância —
+     * anexa à sessão do dia com o mesmo título, ou cria um check-in.
+     */
+    fun attachBitmapToSession(
+        context: Context,
+        bitmap: Bitmap,
+        title: String,
+        kind: String = "workout",
+        dayKey: String = dayKey(),
+    ): Boolean {
+        val dir = File(context.filesDir, "WorkoutCheckInPhotos").apply { mkdirs() }
+        val dest = File(dir, "checkin_${System.currentTimeMillis()}.jpg")
+        val wrote = runCatching {
+            FileOutputStream(dest).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 88, out)
+            }
+            dest.exists() && dest.length() > 0L
+        }.getOrDefault(false)
+        if (!wrote) return false
+        return attachLocalPath(context, dest.absolutePath, title, kind, dayKey)
+    }
+
+    fun attachFileToSession(
+        context: Context,
+        sourceFile: File,
+        title: String,
+        kind: String = "workout",
+        dayKey: String = dayKey(),
+    ): Boolean {
+        if (!sourceFile.exists() || sourceFile.length() == 0L) return false
+        val dir = File(context.filesDir, "WorkoutCheckInPhotos").apply { mkdirs() }
+        val dest = File(dir, "checkin_${System.currentTimeMillis()}.jpg")
+        val ok = runCatching {
+            sourceFile.copyTo(dest, overwrite = true)
+            dest.exists() && dest.length() > 0L
+        }.getOrDefault(false)
+        if (!ok) return false
+        return attachLocalPath(context, dest.absolutePath, title, kind, dayKey)
+    }
+
+    fun hasPhotoForTitleToday(context: Context, title: String, dayKey: String = dayKey()): Boolean =
+        sessionsOnDay(context, dayKey).any {
+            it.title.equals(title, ignoreCase = true) && !it.photoPath.isNullOrBlank()
+        }
+
+    private fun attachLocalPath(
+        context: Context,
+        photoPath: String,
+        title: String,
+        kind: String,
+        dayKey: String,
+    ): Boolean {
+        val onDay = sessionsOnDay(context, dayKey)
+        val target = onDay.lastOrNull { it.title.equals(title, ignoreCase = true) }
+            ?: onDay.lastOrNull()
+        if (target != null) {
+            attachPhoto(context, target.id, photoPath)
+        } else {
+            val ended = runCatching { dayFmt.parse(dayKey)?.time }.getOrNull()
+                ?: System.currentTimeMillis()
+            recordSession(
+                context,
+                title = title,
+                kind = kind,
+                endedAtMillis = ended,
+                photoPath = photoPath,
+            )
+        }
+        return true
     }
 
     /** Copy gallery/camera URI into app files and attach to a session (or create one for the day). */

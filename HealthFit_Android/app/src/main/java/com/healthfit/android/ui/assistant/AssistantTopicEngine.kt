@@ -768,11 +768,9 @@ object AssistantTopicEngine {
                 • Fotos são opcionais e privadas — só você pode ver ou acessar.
                 • O relatório principal usa as medidas corporais do Perfil.
                 • Após 30 dias, registre uma nova avaliação (com ou sem fotos).
-                • Os PDFs das avaliações ficam salvos na sua conta.
+                • Os PDFs das últimas 4 avaliações ficam neste aparelho.
 
-                Ainda não há comparativo detalhado de medidas no Android — preencha e acompanhe em **Perfil → Medidas Corporais**.
-
-                Abra Perfil para registrar medidas e acompanhar sua evolução.
+                Abra **Perfil → Evolução Corporal** para o ciclo de 30 dias e **Perfil → Medidas Corporais** para circunferências.
                 """.trimIndent()
             },
         ),

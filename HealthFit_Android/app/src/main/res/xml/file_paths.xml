@@ -3,8 +3,13 @@
     <cache-path name="reports" path="reports/" />
     <cache-path name="cards" path="cards/" />
     <cache-path name="flyover" path="flyover/" />
+    <cache-path name="retrospective" path="retrospective/" />
     <cache-path name="share" path="share/" />
     <cache-path name="nutrition" path="nutrition/" />
     <files-path name="checkin_photos" path="WorkoutCheckInPhotos/" />
+    <files-path name="body_evolution" path="BodyEvolution/" />
     <cache-path name="checkin_camera" path="checkin_camera/" />
+    <cache-path name="body_evolution_draft" path="BodyEvolutionDraft/" />
+    <cache-path name="pulse_camera" path="pulse_camera/" />
+    <files-path name="pulse_media" path="PulseExperimentalMedia/" />
 </paths>

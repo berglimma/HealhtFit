@@ -133,6 +133,90 @@ object FlyoverVideo {
         }
     }
 
+    internal fun encodeHeldFrames(file: File, slides: List<Pair<Bitmap, Int>>, fps: Int) {
+        if (file.exists()) file.delete()
+        val first = slides.firstOrNull()?.first ?: error("Sem quadros para o vídeo.")
+        val width = first.width
+        val height = first.height
+        val encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+        val color = pickColor(encoder)
+        val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height).apply {
+            setInteger(MediaFormat.KEY_COLOR_FORMAT, color)
+            setInteger(MediaFormat.KEY_BIT_RATE, 2_500_000)
+            setInteger(MediaFormat.KEY_FRAME_RATE, fps)
+            setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
+        }
+        encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        encoder.start()
+        val muxer = MediaMuxer(file.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        var track = -1
+        var started = false
+        val bufferInfo = MediaCodec.BufferInfo()
+        val timeout = 10_000L
+        var frameIndex = 0
+        try {
+            slides.forEach { (bitmap, frames) ->
+                val yuv = toYuv(bitmap, width, height, color)
+                bitmap.recycle()
+                repeat(frames.coerceAtLeast(1)) {
+                    val inIndex = encoder.dequeueInputBuffer(timeout)
+                    if (inIndex < 0) error("O codificador de vídeo não aceitou o quadro.")
+                    val input = encoder.getInputBuffer(inIndex) ?: error("Buffer de vídeo indisponível.")
+                    input.clear()
+                    input.put(yuv)
+                    val time = frameIndex * 1_000_000L / fps
+                    encoder.queueInputBuffer(inIndex, 0, yuv.size, time, 0)
+                    frameIndex += 1
+                    val drained = drain(encoder, muxer, bufferInfo, track, started)
+                    track = drained.first
+                    started = drained.second
+                }
+            }
+            val endIndex = encoder.dequeueInputBuffer(timeout)
+            if (endIndex >= 0) {
+                encoder.queueInputBuffer(
+                    endIndex,
+                    0,
+                    0,
+                    frameIndex * 1_000_000L / fps,
+                    MediaCodec.BUFFER_FLAG_END_OF_STREAM,
+                )
+            }
+            var eos = false
+            var waits = 0
+            while (!eos && waits < 80) {
+                val out = encoder.dequeueOutputBuffer(bufferInfo, timeout)
+                when {
+                    out == MediaCodec.INFO_TRY_AGAIN_LATER -> waits += 1
+                    out == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+                        if (!started) {
+                            track = muxer.addTrack(encoder.outputFormat)
+                            muxer.start()
+                            started = true
+                        }
+                    }
+                    out >= 0 -> {
+                        val encoded = encoder.getOutputBuffer(out)
+                        if (encoded != null && bufferInfo.size > 0 && started) {
+                            encoded.position(bufferInfo.offset)
+                            encoded.limit(bufferInfo.offset + bufferInfo.size)
+                            muxer.writeSampleData(track, encoded, bufferInfo)
+                        }
+                        encoder.releaseOutputBuffer(out, false)
+                        eos = bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
+                    }
+                    else -> waits += 1
+                }
+            }
+        } finally {
+            runCatching { encoder.stop() }
+            encoder.release()
+            if (started) runCatching { muxer.stop() }
+            muxer.release()
+        }
+        if (!file.exists() || file.length() == 0L) error("O vídeo da retrospectiva ficou vazio.")
+    }
+
     private fun pickColor(encoder: MediaCodec): Int {
         val formats = encoder.codecInfo.getCapabilitiesForType(MediaFormat.MIMETYPE_VIDEO_AVC).colorFormats
         return when {

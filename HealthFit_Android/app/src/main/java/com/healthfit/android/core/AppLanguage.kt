@@ -1,11 +1,14 @@
 package com.healthfit.android.core
 
 import android.content.Context
+import android.content.res.Configuration
+import android.os.LocaleList
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.Locale
 
 /** Idiomas alinhados ao iOS `AppLanguage` / Localizable. */
 enum class AppLanguage(
@@ -22,6 +25,8 @@ enum class AppLanguage(
 
     val menuLabel: String get() = "$flag $nativeName"
 
+    val locale: Locale get() = Locale.forLanguageTag(code)
+
     companion object {
         const val StorageKey = "healthfit_app_language"
 
@@ -34,8 +39,17 @@ enum class AppLanguage(
     }
 }
 
+fun Context.withAppLocale(language: AppLanguage): Context {
+    val locale = language.locale
+    Locale.setDefault(locale)
+    val config = Configuration(resources.configuration)
+    config.setLocales(LocaleList(locale))
+    return createConfigurationContext(config)
+}
+
 /**
- * Preferência de idioma do app (persiste entre sessões) e aplica locale via AppCompat.
+ * Preferência de idioma do app (persiste entre sessões) e aplica locale via AppCompat
+ * para que `stringResource` / Resources sigam a escolha do usuário.
  */
 object AppLanguageStore {
     private const val Prefs = "app_language.v1"
@@ -44,24 +58,26 @@ object AppLanguageStore {
     val language: StateFlow<AppLanguage> = _language.asStateFlow()
 
     fun init(context: Context) {
-        val saved = prefs(context).getString(AppLanguage.StorageKey, null)
+        val appCompatTags = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+            .ifBlank { null }
+        val saved = appCompatTags
+            ?: prefs(context).getString(AppLanguage.StorageKey, null)
         val resolved = AppLanguage.fromCode(saved)
         _language.value = resolved
+        prefs(context).edit().putString(AppLanguage.StorageKey, resolved.code).apply()
         applyLocales(resolved)
     }
 
     fun set(context: Context, language: AppLanguage) {
-        if (_language.value == language) {
-            applyLocales(language)
-            return
-        }
-        prefs(context).edit().putString(AppLanguage.StorageKey, language.code).apply()
+        prefs(context.applicationContext).edit().putString(AppLanguage.StorageKey, language.code).apply()
         _language.value = language
         applyLocales(language)
     }
 
     private fun applyLocales(language: AppLanguage) {
-        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(language.code))
+        Locale.setDefault(language.locale)
+        val locales = LocaleListCompat.forLanguageTags(language.code)
+        AppCompatDelegate.setApplicationLocales(locales)
     }
 
     private fun prefs(context: Context) =

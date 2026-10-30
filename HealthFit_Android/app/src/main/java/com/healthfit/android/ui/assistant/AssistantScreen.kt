@@ -69,6 +69,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.healthfit.android.R
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -329,8 +331,8 @@ fun AssistantScreen(
                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("IAssistente", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("Treino, nutrição e o seu dia", color = HealthFitColors.TextSecondary, fontSize = 13.sp)
+                    Text(stringResource(R.string.tab_assistant), color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(stringResource(R.string.assistant_subtitle), color = HealthFitColors.TextSecondary, fontSize = 13.sp)
                 }
                 Box(
                     modifier = Modifier

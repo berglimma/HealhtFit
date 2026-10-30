@@ -29,10 +29,31 @@ class OfflineAuthRepository : AuthRepository {
         return Result.success(profile)
     }
 
-    override suspend fun signUpWithEmail(email: String, password: String): Result<UserProfile> =
-        signInWithEmail(email, password)
+    override suspend fun signUpWithEmail(
+        email: String,
+        password: String,
+        displayName: String,
+    ): Result<UserProfile> {
+        val profile = UserProfile(
+            uid = "offline-local",
+            displayName = displayName.trim().ifEmpty { email.substringBefore('@') },
+            email = email.trim(),
+        )
+        user.value = profile
+        return Result.success(profile)
+    }
+
+    override suspend fun signInWithGoogleIdToken(idToken: String): Result<UserProfile> =
+        Result.failure(IllegalStateException("Google Sign-In indisponível offline"))
+
+    override suspend fun sendPasswordReset(email: String): Result<Unit> = Result.success(Unit)
 
     override fun signOut() {
         user.value = null
+    }
+
+    override suspend fun deleteAccount(password: String?): Result<Unit> {
+        user.value = null
+        return Result.success(Unit)
     }
 }

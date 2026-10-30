@@ -48,8 +48,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import com.healthfit.android.core.AppLanguageStore
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -85,6 +88,8 @@ fun HomeScreen(
     val today = LocalDate.now()
     val weekStart = today.minusDays((today.dayOfWeek.value % 7).toLong())
     val context = LocalContext.current
+    val language by AppLanguageStore.language.collectAsState()
+    val locale = language.locale
     LaunchedEffect(Unit) { wellness.bind(context) }
     @Suppress("UNUSED_EXPRESSION")
     wellness.revision
@@ -107,11 +112,11 @@ fun HomeScreen(
             .padding(horizontal = 16.dp)
             .padding(bottom = 12.dp),
     ) {
-        val dateLabel = today.format(DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", Locale("pt", "BR")))
-            .replaceFirstChar { it.titlecase(Locale("pt", "BR")) }
+        val dateLabel = today.format(DateTimeFormatter.ofPattern("EEEE, d MMM", locale))
+            .replaceFirstChar { it.titlecase(locale) }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "HOJE",
+                stringResource(R.string.home_today),
                 color = HealthFitColors.Accent,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -131,7 +136,7 @@ fun HomeScreen(
                     lineHeight = 30.sp,
                 )
                 Text(
-                    "Pronto para treinar hoje?",
+                    stringResource(R.string.home_ready_to_train),
                     color = Color(0xFFB7C0C8),
                     fontSize = 15.sp,
                     modifier = Modifier.padding(top = 2.dp),
@@ -148,6 +153,7 @@ fun HomeScreen(
             today = today,
             selectedDayKey = wellness.selectedDayKey,
             wellness = wellness,
+            locale = locale,
             onSelectDay = { wellness.selectDay(DailyWellness.dayKey(it)) },
         )
         Spacer(Modifier.height(16.dp))
@@ -275,7 +281,7 @@ private fun PulseHero(onClick: () -> Unit) {
         )
         Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
             Text(
-                "COMUNIDADE",
+                stringResource(R.string.home_community),
                 color = HealthFitColors.Accent,
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
@@ -283,14 +289,14 @@ private fun PulseHero(onClick: () -> Unit) {
             )
             Text("HealthFit Pulse", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
             Text(
-                "Sozinho você treina. Junto, você permanece.",
+                stringResource(R.string.home_pulse_tagline),
                 color = Color.White.copy(alpha = 0.9f),
                 fontSize = 13.sp,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 8.dp)) {
-                MiniLink(Icons.Filled.NightsStay, "Stories")
-                MiniLink(Icons.Filled.Groups, "Comunidades")
-                MiniLink(Icons.Filled.Favorite, "Ranking")
+                MiniLink(Icons.Filled.NightsStay, stringResource(R.string.home_stories))
+                MiniLink(Icons.Filled.Groups, stringResource(R.string.home_communities))
+                MiniLink(Icons.Filled.Favorite, stringResource(R.string.home_ranking))
             }
         }
     }
@@ -317,9 +323,15 @@ private fun WeekStrip(
     today: LocalDate,
     selectedDayKey: String,
     wellness: DailyWellness,
+    locale: Locale,
     onSelectDay: (LocalDate) -> Unit,
 ) {
-    val labels = listOf("DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB")
+    val labels = (0..6).map { index ->
+        weekStart.plusDays(index.toLong())
+            .format(DateTimeFormatter.ofPattern("EEE", locale))
+            .uppercase(locale)
+            .replace(".", "")
+    }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -391,10 +403,10 @@ fun SleepCard(hours: Float, onHours: (Float) -> Unit) {
     val wake = 7 * 60 + 30
     val bed = wake - (hours * 60).roundToInt()
     val (status, statusColor) = when {
-        hours in 7f..9f -> "Sono ideal" to HealthFitColors.Accent
-        hours in 6f..10f -> "Quase na meta" to HealthFitColors.AccentSecondary
-        hours < 6f -> "Sono curto" to Color(0xFFFF6B6B)
-        else -> "Sono longo" to HealthFitColors.AccentSecondary
+        hours in 7f..9f -> stringResource(R.string.home_sleep_ideal) to HealthFitColors.Accent
+        hours in 6f..10f -> stringResource(R.string.home_sleep_almost) to HealthFitColors.AccentSecondary
+        hours < 6f -> stringResource(R.string.home_sleep_short) to Color(0xFFFF6B6B)
+        else -> stringResource(R.string.home_sleep_long) to HealthFitColors.AccentSecondary
     }
     Box(
         modifier = Modifier
@@ -416,8 +428,8 @@ fun SleepCard(hours: Float, onHours: (Float) -> Unit) {
                 Icon(Icons.Filled.NightsStay, contentDescription = null, tint = Color(0xFFC9D4FF), modifier = Modifier.size(20.dp))
             }
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text("Sono de hoje", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1)
-                Text("Meta 8 horas", color = Color(0xFFB7C0C8), fontSize = 12.sp, maxLines = 1)
+                Text(stringResource(R.string.home_sleep_today), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1)
+                Text(stringResource(R.string.home_sleep_goal), color = Color(0xFFB7C0C8), fontSize = 12.sp, maxLines = 1)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
@@ -450,12 +462,12 @@ fun SleepCard(hours: Float, onHours: (Float) -> Unit) {
             ),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SleepStat(Icons.Filled.Bed, clock(bed), "Horário de sono", Modifier.weight(1f))
-            SleepStat(Icons.Filled.WbSunny, clock(wake), "Acordou às", Modifier.weight(1f))
+            SleepStat(Icons.Filled.Bed, clock(bed), stringResource(R.string.home_sleep_bedtime), Modifier.weight(1f))
+            SleepStat(Icons.Filled.WbSunny, clock(wake), stringResource(R.string.home_sleep_woke), Modifier.weight(1f))
             SleepStat(
                 Icons.Filled.Watch,
                 "${whole}h ${mins.toString().padStart(2, '0')}min",
-                "Tempo total",
+                stringResource(R.string.home_sleep_total),
                 Modifier.weight(1f),
             )
         }
@@ -470,8 +482,8 @@ fun SleepCard(hours: Float, onHours: (Float) -> Unit) {
         ) {
             Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = HealthFitColors.Accent, modifier = Modifier.size(16.dp))
             Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                Text("Monitoramento ativo", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                Text("O Watch atualiza o card após a próxima noite.", color = Color(0xFFB7C0C8), fontSize = 12.sp)
+                Text(stringResource(R.string.home_watch_monitoring), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Text(stringResource(R.string.home_watch_updates), color = Color(0xFFB7C0C8), fontSize = 12.sp)
             }
             Row(
                 modifier = Modifier
@@ -533,8 +545,8 @@ fun WaterCard(
                     Icon(Icons.Filled.WaterDrop, contentDescription = null, tint = Color(0xFF7EBEFF), modifier = Modifier.size(20.dp))
                 }
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                    Text("Água de hoje", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                    Text("Meta ${formatMl(goal)} ml · 35 ml/kg", color = Color(0xFF8E989F), fontSize = 12.sp)
+                    Text(stringResource(R.string.home_water_today), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                    Text(stringResource(R.string.home_water_goal, formatMl(goal)), color = Color(0xFF8E989F), fontSize = 12.sp)
                 }
             }
             Spacer(Modifier.height(14.dp))
@@ -573,8 +585,8 @@ fun WaterCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                WaterQuick("+1 copo", onCup, Modifier.weight(1f))
-                WaterQuick("+1 garrafa", onBottle, Modifier.weight(1f))
+                WaterQuick(stringResource(R.string.home_water_cup), onCup, Modifier.weight(1f))
+                WaterQuick(stringResource(R.string.home_water_bottle), onBottle, Modifier.weight(1f))
                 WaterRing(percent)
             }
         }
@@ -625,7 +637,7 @@ private fun WaterRing(percent: Float) {
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("${(percent * 100).toInt()}%", color = HealthFitColors.Accent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Text("da meta", color = Color(0xFFB7C0C8), fontSize = 9.sp)
+            Text(stringResource(R.string.home_water_of_goal), color = Color(0xFFB7C0C8), fontSize = 9.sp)
         }
     }
 }
@@ -657,4 +669,4 @@ private fun clock(totalMinutes: Int): String {
 }
 
 private fun formatMl(value: Int): String =
-    String.format(Locale("pt", "BR"), "%,d", value)
+    String.format(AppLanguageStore.language.value.locale, "%,d", value)

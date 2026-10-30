@@ -17,12 +17,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Play Billing gateway (StoreKit 2 analogue).
- * Product IDs must be created in Play Console — do NOT reuse App Store product IDs blindly.
- * Entitlements on device stay local until a dual-platform entitlement strategy is agreed;
- * do not write new Firestore entitlement docs that iOS does not already read.
+ * Play Billing for the same plan catalog as iOS (same product id strings).
+ * Entitlement stays on this device. Do not write a new Firestore entitlement
+ * document — iOS reads StoreKit, not a shared purchase record.
  */
 class BillingGateway(context: Context) {
+
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     private val _connected = MutableStateFlow(false)
     val connected: StateFlow<Boolean> = _connected.asStateFlow()
@@ -30,8 +32,15 @@ class BillingGateway(context: Context) {
     private val _products = MutableStateFlow<List<ProductDetails>>(emptyList())
     val products: StateFlow<List<ProductDetails>> = _products.asStateFlow()
 
-    private val client = BillingClient.newBuilder(context)
-        .setListener { _, _ -> /* purchases updated — Phase 1 stub */ }
+    private val _activeProductId = MutableStateFlow(prefs.getString(KEY_ACTIVE, null))
+    val activeProductId: StateFlow<String?> = _activeProductId.asStateFlow()
+
+    private val client = BillingClient.newBuilder(appContext)
+        .setListener { result, purchases ->
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                handlePurchases(purchases.orEmpty())
+            }
+        }
         .enablePendingPurchases(
             PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
         )
@@ -40,7 +49,12 @@ class BillingGateway(context: Context) {
     fun startConnection() {
         client.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
-                _connected.value = result.responseCode == BillingClient.BillingResponseCode.OK
+                val ok = result.responseCode == BillingClient.BillingResponseCode.OK
+                _connected.value = ok
+                if (ok) {
+                    querySubscriptions(PRODUCT_IDS)
+                    restorePurchases()
+                }
             }
 
             override fun onBillingServiceDisconnected() {
@@ -65,8 +79,9 @@ class BillingGateway(context: Context) {
         }
     }
 
-    fun launchPurchase(activity: Activity, details: ProductDetails) {
-        val offer = details.subscriptionOfferDetails?.firstOrNull() ?: return
+    fun launchPurchase(activity: Activity, productId: String): Boolean {
+        val details = _products.value.firstOrNull { it.productId == productId } ?: return false
+        val offer = details.subscriptionOfferDetails?.firstOrNull() ?: return false
         val productParams = BillingFlowParams.ProductDetailsParams.newBuilder()
             .setProductDetails(details)
             .setOfferToken(offer.offerToken)
@@ -74,18 +89,76 @@ class BillingGateway(context: Context) {
         val flow = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(listOf(productParams))
             .build()
-        client.launchBillingFlow(activity, flow)
+        val result = client.launchBillingFlow(activity, flow)
+        return result.responseCode == BillingClient.BillingResponseCode.OK
+    }
+
+    fun restorePurchases() {
+        if (!_connected.value) return
+        val params = QueryPurchasesParams.newBuilder()
+            .setProductType(BillingClient.ProductType.SUBS)
+            .build()
+        client.queryPurchasesAsync(params) { result, purchases ->
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                handlePurchases(purchases)
+            }
+        }
+    }
+
+    fun formattedPrice(productId: String): String? {
+        val details = _products.value.firstOrNull { it.productId == productId } ?: return null
+        val phases = details.subscriptionOfferDetails
+            ?.firstOrNull()
+            ?.pricingPhases
+            ?.pricingPhaseList
+            .orEmpty()
+        return phases.lastOrNull()?.formattedPrice
     }
 
     fun endConnection() {
         client.endConnection()
     }
 
+    private fun handlePurchases(purchases: List<Purchase>) {
+        val owned = purchases.filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+        owned.filter { !it.isAcknowledged }.forEach { purchase ->
+            val params = AcknowledgePurchaseParams.newBuilder()
+                .setPurchaseToken(purchase.purchaseToken)
+                .build()
+            client.acknowledgePurchase(params) { }
+        }
+        val active = owned
+            .flatMap { it.products }
+            .mapNotNull { id -> PLANS.firstOrNull { it.productId == id } }
+            .maxByOrNull { it.rank }
+        val productId = active?.productId
+        _activeProductId.value = productId
+        prefs.edit().putString(KEY_ACTIVE, productId).apply()
+    }
+
+    data class PlanOffer(
+        val name: String,
+        val productId: String,
+        val period: String,
+        val referencePrice: String,
+        val rank: Int,
+    )
+
     companion object {
-        /** Placeholder SKUs — create in Play Console before enabling purchase UI. */
-        val PHASE1_PRODUCT_IDS = listOf(
-            "healthfit_fit_monthly",
-            "healthfit_completo_monthly",
+        private const val PREFS = "healthfit_billing"
+        private const val KEY_ACTIVE = "active_product_id"
+
+        val PLANS = listOf(
+            PlanOffer("Básico", "healthfit.plan.basic.monthly", "Mensal", "R$ 9,90", 1),
+            PlanOffer("Fit", "healthfit.plan.fit.monthly", "Mensal", "R$ 12,90", 2),
+            PlanOffer("IA Plus", "healthfit.plan.ai.monthly", "Mensal", "R$ 19,90", 3),
+            PlanOffer("Completo", "healthfit.plan.complete.monthly", "Mensal", "R$ 24,90", 4),
+            PlanOffer("Básico", "healthfit.plan.basic.yearly", "Anual", "R$ 94,90", 1),
+            PlanOffer("Fit", "healthfit.plan.fit.yearly", "Anual", "R$ 123,90", 2),
+            PlanOffer("IA Plus", "healthfit.plan.ai.yearly", "Anual", "R$ 190,90", 3),
+            PlanOffer("Completo", "healthfit.plan.complete.yearly", "Anual", "R$ 239,90", 4),
         )
+
+        val PRODUCT_IDS = PLANS.map { it.productId }
     }
 }

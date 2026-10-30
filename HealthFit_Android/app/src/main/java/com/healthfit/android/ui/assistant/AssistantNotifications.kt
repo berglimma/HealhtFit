@@ -232,7 +232,7 @@ object AssistantNotifications {
     }
 
     fun activate(context: Context, wellness: DailyWellness, name: String, userId: String?) {
-        ensureBackgroundDelivery(context, name, userId, requestBatteryExemption = true)
+        ensureBackgroundDelivery(context, name, userId, requestBatteryExemption = false)
         if (!hasNotificationPermission(context)) return
         val day = AssistantRoutineStore.dayKey()
         val prefs = prefs(context)
@@ -482,6 +482,10 @@ object AssistantNotifications {
             }
             context.startActivity(intent)
         }
+    }
+
+    fun requestBatteryExemptionForActiveWorkout(context: Context) {
+        maybeRequestBatteryExemption(context)
     }
 
     private fun maybeRequestBatteryExemption(context: Context) {

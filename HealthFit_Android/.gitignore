@@ -14,3 +14,7 @@
 google-services.json
 !google-services.json.example
 local.properties
+keystore.properties
+*.jks
+*.keystore
+/keystore/

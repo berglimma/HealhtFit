@@ -14,7 +14,7 @@ Do **not** enable cloud writes until each row is verified against the current iO
 | Nutrition care publish | `coachLinks/.../nutritionCare` | **Blocked** (`WRITES_HARD_DISABLED`) |
 | Coach chat / invite accept | messages / invites | **Blocked** (writes) |
 | Consultations | existing coach paths | Later |
-| Pulse posts | `pulsePosts` (+ Storage) | Phase 4 |
+| Pulse posts | `pulsePosts` / `pulseStories` / `pulseProfiles` / `pulseFollows` / `pulseBlocks` / `pulseReports` (+ Storage `pulse/{uid}/{id}`) | **Write enabled** — same payload as iOS (`authorId == uid`, `source=healthfit-pulse`, caption ≤350, posts 24h, stories 12h, hearts/comments/follow/block/report) |
 | Duo teams | `duoTeams/{id}` | Later |
 | `appConfig/android` | remote flags | **Read-only** |
 

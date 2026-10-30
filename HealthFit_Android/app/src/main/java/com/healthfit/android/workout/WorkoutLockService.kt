@@ -16,6 +16,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.healthfit.android.MainActivity
 import com.healthfit.android.R
+import com.healthfit.android.ui.assistant.AssistantNotifications
 import com.healthfit.core.workout.WorkoutWearContract
 
 object WorkoutLockPublisher {
@@ -69,12 +70,17 @@ class WorkoutLockService : Service() {
         }
 
         syncWatch(snapshot)
+        AssistantNotifications.requestBatteryExemptionForActiveWorkout(this)
         return START_STICKY
     }
 
     private fun promoteForeground(notification: Notification) {
         if (Build.VERSION.SDK_INT >= 34) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            try {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
+            } catch (_: SecurityException) {
+                getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
+            }
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }

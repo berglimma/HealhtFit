@@ -52,15 +52,67 @@ fun WorkoutFinishedScreen(session: FinishedWorkout, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     var flyover by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
+    var sendingConstancy by remember { mutableStateOf(false) }
     var loaded by remember { mutableStateOf<LoadedShare?>(null) }
+    var savedToConstancy by remember {
+        mutableStateOf(ConstancyStore.hasPhotoForTitleToday(context, session.title))
+    }
+    var constancyFeedback by remember { mutableStateOf<String?>(null) }
+    var pendingConstancySend by remember { mutableStateOf(false) }
+
+    fun sendLoadedToConstancy(media: LoadedShare): Boolean {
+        val kind = when {
+            session.isCardio -> "cardio"
+            session.title.contains("medita", ignoreCase = true) -> "meditation"
+            session.title.startsWith("Estudo", ignoreCase = true) -> "study"
+            else -> "workout"
+        }
+        return when (media) {
+            is LoadedShare.Photo -> ConstancyStore.attachBitmapToSession(
+                context = context,
+                bitmap = media.bitmap,
+                title = session.title,
+                kind = kind,
+            )
+            is LoadedShare.Video -> ConstancyStore.attachBitmapToSession(
+                context = context,
+                bitmap = media.cover,
+                title = session.title,
+                kind = kind,
+            )
+        }
+    }
+
     val mediaPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
+        if (uri == null) {
+            pendingConstancySend = false
+            return@rememberLauncherForActivityResult
+        }
         scope.launch {
             val result = withContext(Dispatchers.Default) {
                 runCatching { loadShare(context, uri, session) }
             }
-            result.onSuccess { loaded = it }
-                .onFailure { Toast.makeText(context, it.message ?: "Não foi possível abrir a mídia", Toast.LENGTH_LONG).show() }
+            result.onSuccess { media ->
+                loaded = media
+                if (pendingConstancySend) {
+                    pendingConstancySend = false
+                    sendingConstancy = true
+                    val ok = withContext(Dispatchers.IO) { sendLoadedToConstancy(media) }
+                    sendingConstancy = false
+                    savedToConstancy = ok || savedToConstancy
+                    constancyFeedback = if (ok) {
+                        null
+                    } else {
+                        "Não foi possível salvar no calendário Constância."
+                    }
+                    if (ok) {
+                        Toast.makeText(context, "Salva no calendário Constância", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }.onFailure {
+                pendingConstancySend = false
+                Toast.makeText(context, it.message ?: "Não foi possível abrir a mídia", Toast.LENGTH_LONG).show()
+            }
         }
     }
     fun postCard(target: SharePublisher.Target) {
@@ -261,11 +313,30 @@ fun WorkoutFinishedScreen(session: FinishedWorkout, onClose: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         Text("Foto ou vídeo do treino", color = Color.White, fontWeight = FontWeight.SemiBold)
         Text(
-            "A mídia abre aqui no app, com os dados desta modalidade, para publicar ou salvar na galeria.",
+            "Opcional — anexe uma foto ou vídeo com os dados da sessão e a marca HealthFit. Use o botão abaixo para enviar ao calendário Constância.",
             color = HealthFitColors.TextSecondary,
             fontSize = 12.sp,
             modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
         )
+        if (savedToConstancy) {
+            Text(
+                "Salva no calendário Constância",
+                color = HealthFitColors.Accent,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        } else {
+            constancyFeedback?.let { feedback ->
+                Text(
+                    feedback,
+                    color = Color(0xFFFF9F0A),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+            }
+        }
         loaded?.let { media ->
             LoadedSharePreview(media, session)
             Spacer(Modifier.height(10.dp))
@@ -285,8 +356,47 @@ fun WorkoutFinishedScreen(session: FinishedWorkout, onClose: () -> Unit) {
         GradientButton(
             "Adicionar foto ou vídeo",
             onClick = {
+                pendingConstancySend = false
                 mediaPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
             },
+        )
+        Spacer(Modifier.height(8.dp))
+        ConstancyCalendarButton(
+            alreadySaved = savedToConstancy,
+            busy = sendingConstancy || saving,
+            onClick = {
+                val media = loaded
+                if (media == null) {
+                    pendingConstancySend = true
+                    mediaPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                    return@ConstancyCalendarButton
+                }
+                if (sendingConstancy) return@ConstancyCalendarButton
+                sendingConstancy = true
+                constancyFeedback = null
+                scope.launch {
+                    val ok = withContext(Dispatchers.IO) { sendLoadedToConstancy(media) }
+                    sendingConstancy = false
+                    savedToConstancy = ok || savedToConstancy
+                    constancyFeedback = if (ok) {
+                        null
+                    } else {
+                        "Não foi possível salvar no calendário Constância."
+                    }
+                    if (ok) {
+                        Toast.makeText(context, "Salva no calendário Constância", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+        )
+        Text(
+            "Câmera, galeria ou vídeo · overlay com duração, km, kcal e HealthFit",
+            color = HealthFitColors.TextSecondary,
+            fontSize = 11.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp),
         )
         if (supportsFlyover(session)) {
             Spacer(Modifier.height(10.dp))
@@ -295,6 +405,32 @@ fun WorkoutFinishedScreen(session: FinishedWorkout, onClose: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         GradientButton("Fechar", onClick = onClose)
     }
+}
+
+@Composable
+private fun ConstancyCalendarButton(
+    alreadySaved: Boolean,
+    busy: Boolean,
+    onClick: () -> Unit,
+) {
+    Text(
+        text = when {
+            busy -> "Enviando…"
+            alreadySaved -> "Atualizar no calendário Constância"
+            else -> "Enviar para calendário Constância"
+        },
+        color = HealthFitColors.Accent,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 15.sp,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(HealthFitColors.CardBackground)
+            .clickable(enabled = !busy, onClick = onClick)
+            .padding(vertical = 14.dp)
+            .padding(horizontal = 8.dp),
+    )
 }
 
 private fun supportsFlyover(session: FinishedWorkout): Boolean {

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -88,11 +89,12 @@ fun LoadedSharePreview(media: LoadedShare, session: FinishedWorkout) {
         is LoadedShare.Photo -> Image(
             bitmap = media.bitmap.asImageBitmap(),
             contentDescription = "Foto com os dados de ${session.title}",
-            contentScale = ContentScale.Crop,
+            contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(420.dp)
-                .clip(RoundedCornerShape(16.dp)),
+                .heightIn(min = 220.dp, max = 480.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF0E1113)),
         )
         is LoadedShare.Video -> Box(
             Modifier

@@ -68,6 +68,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.healthfit.android.R
 import com.healthfit.android.ui.components.DarkCard
 import com.healthfit.designsystem.HealthFitColors
 
@@ -83,8 +85,8 @@ fun DashboardLowerSections(
     Spacer(Modifier.height(12.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         ReportTile(
-            "Relatório Semanal",
-            "Veja seu progresso da semana",
+            stringResource(R.string.home_weekly_report),
+            stringResource(R.string.home_weekly_report_sub),
             showNew = !weeklySeen,
             tint = HealthFitColors.Accent,
             icon = Icons.Filled.BarChart,
@@ -92,8 +94,8 @@ fun DashboardLowerSections(
             onClick = { onOpenReport(ReportKind.Weekly) },
         )
         ReportTile(
-            "Relatório Mensal",
-            "Próximo relatório em 2 dias",
+            stringResource(R.string.home_monthly_report),
+            stringResource(R.string.home_monthly_report_sub),
             showNew = false,
             tint = HealthFitColors.AccentSecondary,
             icon = Icons.Filled.Watch,
@@ -120,7 +122,7 @@ fun DashboardLowerSections(
     }
     var expandedSlot by remember { mutableStateOf<String?>(null) }
     ExpandableShareSlot(
-        title = "Último card individual",
+        title = stringResource(R.string.home_last_individual),
         subtitle = "Militar Masculino E — Peito Ombros Tríceps (Cabo) · 08 out. 2026 · 19:58",
         icon = Icons.Filled.FitnessCenter,
         expanded = expandedSlot == "individual",
@@ -162,6 +164,52 @@ fun DashboardLowerSections(
                 .padding(top = 8.dp)
                 .clickable {
                     photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                },
+        )
+        var savedToConstancy by remember {
+            mutableStateOf(ConstancyStore.hasPhotoForTitleToday(context, DemoSessions.strength.title))
+        }
+        Text(
+            text = if (savedToConstancy) {
+                "Atualizar no calendário Constância"
+            } else {
+                "Enviar para calendário Constância"
+            },
+            color = HealthFitColors.Accent,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
+            modifier = Modifier
+                .padding(top = 8.dp)
+                .clickable {
+                    val media = loaded
+                    if (media == null) {
+                        photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                        return@clickable
+                    }
+                    scope.launch {
+                        val ok = withContext(Dispatchers.IO) {
+                            when (media) {
+                                is LoadedShare.Photo -> ConstancyStore.attachBitmapToSession(
+                                    context,
+                                    media.bitmap,
+                                    DemoSessions.strength.title,
+                                    "workout",
+                                )
+                                is LoadedShare.Video -> ConstancyStore.attachBitmapToSession(
+                                    context,
+                                    media.cover,
+                                    DemoSessions.strength.title,
+                                    "workout",
+                                )
+                            }
+                        }
+                        if (ok) {
+                            savedToConstancy = true
+                            Toast.makeText(context, "Salva no calendário Constância", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Não foi possível salvar no calendário Constância.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 },
         )
         loaded?.let { media ->
@@ -217,7 +265,7 @@ fun DashboardLowerSections(
     }
     Spacer(Modifier.height(12.dp))
     ExpandableShareSlot(
-        title = "Último card em grupo",
+        title = stringResource(R.string.home_last_group),
         subtitle = "Nenhum card de grupo ainda. Ative o modo equipe e finalize um treino para postar.",
         icon = Icons.Filled.Groups,
         expanded = expandedSlot == "group",
@@ -238,20 +286,20 @@ fun DashboardLowerSections(
     }
     Spacer(Modifier.height(16.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        MetricTile(Icons.Filled.DirectionsWalk, "0", "Passos", HealthFitColors.Accent, Modifier.weight(1f))
-        MetricTile(Icons.Filled.LocalFireDepartment, "0", "Calorias", Color(0xFFFF9A3C), Modifier.weight(1f))
+        MetricTile(Icons.Filled.DirectionsWalk, "0", stringResource(R.string.home_steps), HealthFitColors.Accent, Modifier.weight(1f))
+        MetricTile(Icons.Filled.LocalFireDepartment, "0", stringResource(R.string.home_calories), Color(0xFFFF9A3C), Modifier.weight(1f))
         MetricTile(Icons.Filled.Favorite, "87", "BPM", Color(0xFFFF4D4D), Modifier.weight(1f))
     }
     Spacer(Modifier.height(14.dp))
     WeeklyChart()
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        MetricTile(Icons.Filled.DirectionsWalk, "6142", "Média Passos", HealthFitColors.Accent, Modifier.weight(1f))
-        MetricTile(Icons.Filled.LocalFireDepartment, "3860", "Total Calorias", Color(0xFFFF9A3C), Modifier.weight(1f))
-        MetricTile(Icons.Filled.Favorite, "72", "FC Média", HealthFitColors.Accent, Modifier.weight(1f))
+        MetricTile(Icons.Filled.DirectionsWalk, "6142", stringResource(R.string.home_avg_steps), HealthFitColors.Accent, Modifier.weight(1f))
+        MetricTile(Icons.Filled.LocalFireDepartment, "3860", stringResource(R.string.home_total_calories), Color(0xFFFF9A3C), Modifier.weight(1f))
+        MetricTile(Icons.Filled.Favorite, "72", stringResource(R.string.home_avg_hr), HealthFitColors.Accent, Modifier.weight(1f))
     }
     Spacer(Modifier.height(16.dp))
-    SectionTitle("Desempenho Carga Treinos")
+    SectionTitle(stringResource(R.string.home_load_title))
     Spacer(Modifier.height(8.dp))
     LoadChart()
     Spacer(Modifier.height(12.dp))
@@ -260,7 +308,7 @@ fun DashboardLowerSections(
             Icon(Icons.Filled.Watch, contentDescription = null, tint = HealthFitColors.Accent)
             Column(Modifier.weight(1f).padding(start = 10.dp)) {
                 Text("Galaxy Watch7", color = Color.White, fontWeight = FontWeight.SemiBold)
-                Text("Conectado · Toque para sincronizar", color = Color(0xFF8E989F), fontSize = 12.sp)
+                Text(stringResource(R.string.home_watch_connected), color = Color(0xFF8E989F), fontSize = 12.sp)
             }
             Box(Modifier.size(10.dp).clip(CircleShape).background(HealthFitColors.Accent))
         }
@@ -270,14 +318,14 @@ fun DashboardLowerSections(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Bluetooth, contentDescription = null, tint = Color(0xFFFF9A3C))
             Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                Text("Sensor Bluetooth", color = Color.White, fontWeight = FontWeight.SemiBold)
-                Text("Passos/kcal via Health Connect · toque para parear BPM", color = Color(0xFF8E989F), fontSize = 12.sp)
+                Text(stringResource(R.string.home_sensor_bt), color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.home_sensor_sub), color = Color(0xFF8E989F), fontSize = 12.sp)
             }
             Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFF8E989F))
         }
     }
     Spacer(Modifier.height(16.dp))
-    SectionTitle("Treinos Recentes")
+    SectionTitle(stringResource(R.string.home_recent_workouts))
     Spacer(Modifier.height(8.dp))
     DemoSessions.all.forEach { session ->
         RecentRow(session, onClick = { onOpenRecent(session) })
@@ -317,7 +365,7 @@ private fun ReportTile(
             Spacer(Modifier.weight(1f))
             if (showNew) {
                 Text(
-                    "NOVO",
+                    stringResource(R.string.home_new_badge),
                     color = Color.White,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
@@ -460,8 +508,8 @@ private fun WeeklyChart() {
             .padding(14.dp),
     ) {
         Row {
-            Text("Desempenho Semanal", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Text("Treino (min)", color = HealthFitColors.Accent, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+            Text(stringResource(R.string.home_weekly_performance), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.home_workout_min), color = HealthFitColors.Accent, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
         }
         val values = listOf(0f, 0f, 0.72f, 0.84f, 0.18f, 1f, 0f)
         val labels = listOf("sáb.", "dom.", "seg.", "ter.", "qua.", "qui.", "sex.")

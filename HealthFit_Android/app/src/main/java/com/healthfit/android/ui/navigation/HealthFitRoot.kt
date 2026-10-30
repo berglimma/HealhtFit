@@ -34,7 +34,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.healthfit.android.R
-import com.healthfit.android.core.AppLanguageStore
 import com.healthfit.android.ui.assistant.AssistantEngine
 import com.healthfit.android.ui.assistant.AssistantNotifications
 import com.healthfit.android.ui.assistant.AssistantScreen
@@ -63,7 +62,6 @@ fun HealthFitRoot(
     billingGateway: BillingGateway,
 ) {
     val user by authRepository.currentUser.collectAsState(initial = null)
-    val appLanguage by AppLanguageStore.language.collectAsState()
     val wellness = remember { DailyWellness() }
     val athlete = remember { com.healthfit.android.ui.home.AthleteProfile() }
     var showWelcome by remember { mutableStateOf(true) }
@@ -74,9 +72,6 @@ fun HealthFitRoot(
         TabSpec("assistant", stringResource(R.string.tab_assistant), Icons.Filled.Chat, badge = 1),
         TabSpec("profile", stringResource(R.string.tab_profile), Icons.Filled.Person),
     )
-    // Recompose tab labels when language preference changes.
-    @Suppress("UNUSED_EXPRESSION")
-    appLanguage
     if (showWelcome) {
         WelcomeLoadingScreen(
             name = user?.displayName?.ifBlank { "Berg" } ?: "Berg",
@@ -93,30 +88,37 @@ fun HealthFitRoot(
     val context = LocalContext.current
     val greetingName = signedIn.displayName?.ifBlank { "Berg" } ?: "Berg"
     val notificationPermission = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        if (granted) {
-            AssistantNotifications.ensureBackgroundDelivery(
-                context = context,
-                name = greetingName,
-                userId = signedIn.uid,
-                requestBatteryExemption = true,
-            )
-        }
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        AssistantNotifications.ensureBackgroundDelivery(
+            context = context,
+            name = greetingName,
+            userId = signedIn.uid,
+            requestBatteryExemption = false,
+        )
     }
     LaunchedEffect(signedIn.uid) {
-        val needsPermission = Build.VERSION.SDK_INT >= 33 &&
+        val needsNotification = Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
-        if (needsPermission) {
-            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        val needsActivity = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACTIVITY_RECOGNITION,
+        ) != PackageManager.PERMISSION_GRANTED
+        if (needsNotification || needsActivity) {
+            notificationPermission.launch(
+                buildList {
+                    if (needsNotification) add(Manifest.permission.POST_NOTIFICATIONS)
+                    if (needsActivity) add(Manifest.permission.ACTIVITY_RECOGNITION)
+                }.toTypedArray(),
+            )
         } else {
             // Ativa lembretes em qualquer aba (Início, Treinos, etc.) — IAssistente não precisa estar aberto.
             AssistantNotifications.ensureBackgroundDelivery(
                 context = context,
                 name = greetingName,
                 userId = signedIn.uid,
-                requestBatteryExemption = true,
+                requestBatteryExemption = false,
             )
         }
     }
@@ -185,11 +187,21 @@ fun HealthFitRoot(
                     profile = signedIn,
                     wellness = wellness,
                     athlete = athlete,
+                    billingGateway = billingGateway,
                     onSignOut = { authRepository.signOut() },
+                    onDeleteAccount = { password -> authRepository.deleteAccount(password) },
                 )
             }
             composable("pulse") {
-                PulseScreen(onClose = { navController.popBackStack() })
+                PulseScreen(
+                    onClose = { navController.popBackStack() },
+                    authorId = signedIn.uid,
+                    authorName = signedIn.displayName.ifBlank {
+                        signedIn.email.substringBefore('@')
+                    }.ifBlank { "HealthFit" },
+                    authorCountryCode = signedIn.countryCode.ifBlank { "BR" },
+                    authorEmail = signedIn.email,
+                )
             }
         }
     }

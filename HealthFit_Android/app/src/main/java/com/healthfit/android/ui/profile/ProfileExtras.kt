@@ -33,10 +33,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.healthfit.core.billing.BillingGateway
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -156,7 +158,7 @@ fun HealthIconSection(healthy: Boolean) {
 fun SleepWaterProfileSection(hours: Float, onHours: (Float) -> Unit, weightKg: String) {
     val kg = weightKg.toFloatOrNull() ?: 92f
     val waterMl = (kg * 35f).toInt()
-    Text("Sono e Hidratação", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
+    Text(stringResource(R.string.profile_sleep_hydration), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
     Spacer(Modifier.height(8.dp))
     DarkCard {
         Text("Horas de sono (hoje)", color = Color.White, fontWeight = FontWeight.SemiBold)
@@ -229,6 +231,55 @@ fun RestTimerSection(
 }
 
 @Composable
+fun CompactLanguagePicker() {
+    val context = LocalContext.current
+    val selected by AppLanguageStore.language.collectAsState()
+    var expanded by remember { mutableStateOf(false) }
+
+    DarkCard {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(selected.menuLabel, color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Icon(
+                if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                contentDescription = if (expanded) {
+                    stringResource(R.string.action_collapse)
+                } else {
+                    stringResource(R.string.action_expand)
+                },
+                tint = HealthFitColors.TextSecondary,
+            )
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column(Modifier.padding(top = 4.dp)) {
+                AppLanguage.entries.forEach { language ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                AppLanguageStore.set(context, language)
+                                expanded = false
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(language.menuLabel, color = Color.White, modifier = Modifier.weight(1f))
+                        if (language == selected) {
+                            Icon(Icons.Filled.Check, contentDescription = null, tint = HealthFitColors.Accent)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun LanguageSection(
     selected: AppLanguage,
     onSelect: (AppLanguage) -> Unit = {},
@@ -255,7 +306,11 @@ fun LanguageSection(
             Text(selected.menuLabel, color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             Icon(
                 if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                contentDescription = if (expanded) "Recolher" else "Expandir",
+                contentDescription = if (expanded) {
+                    stringResource(R.string.action_collapse)
+                } else {
+                    stringResource(R.string.action_expand)
+                },
                 tint = HealthFitColors.TextSecondary,
             )
         }
@@ -290,46 +345,104 @@ fun LanguageSection(
 }
 
 @Composable
-fun PlanPage(current: String, onSelect: (String) -> Unit, onBack: () -> Unit) {
-    val plans = listOf(
-        "Gratuito" to "R$ 0",
-        "Básico" to "R$ 9,90/mês",
-        "Fit" to "R$ 12,90/mês",
-        "IA Plus" to "R$ 19,90/mês",
-        "Completo" to "R$ 24,90/mês",
-    )
+fun PlanPage(
+    billingGateway: BillingGateway,
+    onPlanName: (String) -> Unit,
+    onBack: () -> Unit,
+) {
+    val context = LocalContext.current
+    val activeId by billingGateway.activeProductId.collectAsState()
+    val products by billingGateway.products.collectAsState()
+    var yearly by remember { mutableStateOf(false) }
+    val period = if (yearly) "Anual" else "Mensal"
+    val activeName = BillingGateway.PLANS.firstOrNull { it.productId == activeId }?.name ?: "Gratuito"
     PageColumn(onBack) {
         Text("Meu plano", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        plans.forEach { (name, price) ->
-            val selected = name == current
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(if (selected) HealthFitColors.Accent else HealthFitColors.CardBackground)
-                    .clickable { onSelect(name) }
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(name, color = if (selected) Color.Black else Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text(price, color = if (selected) Color.Black else Color(0xFFB7C0C8))
+        Text(
+            "Plano atual: $activeName. A cobrança é feita pela Google Play e renova até você cancelar.",
+            color = Color(0xFFB7C0C8),
+            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(false to "Mensal", true to "Anual").forEach { (isYear, label) ->
+                Text(
+                    label,
+                    color = if (yearly == isYear) Color.Black else Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (yearly == isYear) HealthFitColors.Accent else Color(0xFF243033))
+                        .clickable { yearly = isYear }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                )
             }
         }
+        PlanRow("Gratuito", "R$ 0", selected = activeId == null) {
+            onPlanName("Gratuito")
+        }
+        BillingGateway.PLANS.filter { it.period == period }.forEach { offer ->
+            val price = billingGateway.formattedPrice(offer.productId) ?: offer.referencePrice
+            PlanRow(offer.name, price, selected = activeId == offer.productId) {
+                val activity = context as? android.app.Activity
+                val started = activity != null && billingGateway.launchPurchase(activity, offer.productId)
+                if (started) onPlanName(offer.name)
+            }
+        }
+        Text(
+            if (products.isEmpty()) {
+                "Se o botão não abrir a Play, a assinatura ainda está sendo ativada na loja. O app gratuito continua disponível."
+            } else {
+                "Toque em um plano para assinar. Cancele quando quiser em Assinaturas do Google Play."
+            },
+            color = Color(0xFF8E989F),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 12.dp),
+        )
+        Text(
+            "Restaurar compras",
+            color = HealthFitColors.Accent,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier
+                .padding(top = 12.dp)
+                .clickable { billingGateway.restorePurchases() },
+        )
+    }
+}
+
+@Composable
+private fun PlanRow(name: String, price: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (selected) HealthFitColors.Accent else Color(0xFF243033))
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(name, color = if (selected) Color.Black else Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Text(price, color = if (selected) Color.Black else Color.White)
     }
 }
 
 @Composable
 fun MeasuresPage(values: MutableMap<String, String>, onBack: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val groups = listOf(
         "Superior" to listOf("Pescoço", "Ombros", "Peito", "Braço direito", "Braço esquerdo"),
         "Tronco" to listOf("Cintura", "Abdômen", "Quadril"),
         "Inferior" to listOf("Coxa direita", "Coxa esquerda", "Panturrilha direita", "Panturrilha esquerda"),
     )
-    PageColumn(onBack) {
+    PageColumn(
+        onBack = {
+            BodyMeasurementsStore.saveCurrent(context, values)
+            onBack()
+        },
+    ) {
         Text("Medidas corporais", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Text(
-            "Digite as circunferências em centímetros. Campos vazios não entram no relatório.",
+            "Digite as circunferências em centímetros. Campos vazios não entram no relatório. O comparativo de Evolução Corporal usa essas medidas após 30 dias.",
             color = Color(0xFFB7C0C8),
         )
         groups.forEach { (title, fields) ->
@@ -344,14 +457,42 @@ fun MeasuresPage(values: MutableMap<String, String>, onBack: () -> Unit) {
                 )
             }
         }
+        Text(
+            "Salvar medidas",
+            color = Color.Black,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .padding(top = 16.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(HealthFitColors.Accent)
+                .clickable {
+                    BodyMeasurementsStore.saveCurrent(context, values)
+                    onBack()
+                }
+                .padding(vertical = 12.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
     }
 }
 
 @Composable
-fun InfoPage(title: String, body: String, onBack: () -> Unit) {
+fun InfoPage(title: String, body: String, onBack: () -> Unit, url: String? = null) {
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     PageColumn(onBack) {
         Text(title, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Text(body, color = Color(0xFFD5DDE3), modifier = Modifier.padding(top = 8.dp))
+        if (!url.isNullOrBlank()) {
+            Text(
+                "Abrir página completa",
+                color = HealthFitColors.Accent,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .clickable { runCatching { uriHandler.openUri(url) } },
+            )
+            Text(url, color = Color(0xFF8E989F), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        }
     }
 }
 
@@ -363,7 +504,7 @@ private fun PageColumn(onBack: () -> Unit, content: @Composable () -> Unit) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        Text("Voltar", color = HealthFitColors.Accent, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onBack))
+        Text(stringResource(R.string.common_back), color = HealthFitColors.Accent, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onBack))
         Spacer(Modifier.height(12.dp))
         content()
     }

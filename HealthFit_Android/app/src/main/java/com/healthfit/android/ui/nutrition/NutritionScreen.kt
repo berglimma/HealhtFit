@@ -53,6 +53,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.healthfit.android.R
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -145,7 +147,7 @@ fun NutritionScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Nutrição",
+                stringResource(R.string.tab_nutrition),
                 color = Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
@@ -181,8 +183,8 @@ fun NutritionScreen(
                             Icon(Icons.Filled.FitnessCenter, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
                         }
                         Column(Modifier.padding(start = 10.dp)) {
-                            Text("Cardápio alinhado ao treino", color = Color.White, fontWeight = FontWeight.Bold)
-                            Text("Série iniciantes", color = HealthFitColors.Accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.nutrition_menu_aligned), color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.nutrition_beginner), color = HealthFitColors.Accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                             Text(
                                 "Manutenção calórica com proteína adequada para adaptação. Iniciante Full Body",
                                 color = Color(0xFFB7C0C8),
@@ -194,7 +196,13 @@ fun NutritionScreen(
                 Spacer(Modifier.height(12.dp))
             }
             ChipRow(
-                labels = listOf("Plano", "Cardápio", "Suplementos", "Análise", "Acompanhar"),
+                labels = listOf(
+                    stringResource(R.string.nutrition_plan),
+                    stringResource(R.string.nutrition_menu),
+                    stringResource(R.string.nutrition_supplements),
+                    stringResource(R.string.nutrition_analysis),
+                    stringResource(R.string.nutrition_track),
+                ),
                 selected = tab,
                 onSelect = { tab = it },
             )

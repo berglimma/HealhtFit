@@ -4,6 +4,8 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.ui.platform.LocalContext
 import java.io.File
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -53,12 +56,18 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import com.healthfit.android.core.AppLanguageStore
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -71,6 +80,7 @@ import com.healthfit.android.ui.home.DailyWellness
 import com.healthfit.android.ui.home.SleepCard
 import com.healthfit.android.ui.home.WaterCard
 import com.healthfit.android.ui.components.DarkCard
+import com.healthfit.core.billing.BillingGateway
 import com.healthfit.core.model.UserProfile
 import com.healthfit.designsystem.HealthFitColors
 import androidx.compose.material.icons.filled.SportsTennis
@@ -82,7 +92,9 @@ fun ProfileScreen(
     profile: UserProfile,
     wellness: DailyWellness,
     athlete: com.healthfit.android.ui.home.AthleteProfile,
+    billingGateway: BillingGateway,
     onSignOut: () -> Unit,
+    onDeleteAccount: suspend (password: String) -> Result<Unit>,
 ) {
     val modalities = remember {
         mutableStateListOf(
@@ -154,35 +166,45 @@ fun ProfileScreen(
     var feedbackText by remember { mutableStateOf("") }
     var feedbackSent by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
+    var deletePassword by remember { mutableStateOf("") }
+    var deleteError by remember { mutableStateOf<String?>(null) }
+    var deletingAccount by remember { mutableStateOf(false) }
+    val deleteScope = rememberCoroutineScope()
     val measures = remember {
-        mutableStateMapOf(
-            "Pescoço" to "",
-            "Ombros" to "",
-            "Peito" to "",
-            "Braço direito" to "",
-            "Braço esquerdo" to "",
-            "Cintura" to "",
-            "Abdômen" to "",
-            "Quadril" to "",
-            "Coxa direita" to "",
-            "Coxa esquerda" to "",
-            "Panturrilha direita" to "",
-            "Panturrilha esquerda" to "",
-        )
+        mutableStateMapOf<String, String>().also { map ->
+            map.putAll(BodyMeasurementsStore.asEditableMap(context))
+        }
     }
+    val evolutionStatus = remember(page) { BodyEvolutionStore.statusLabel(context) }
     if (page != "main") {
         when (page) {
-            "plan" -> PlanPage(plan, { plan = it }, { page = "main" })
-            "measures" -> MeasuresPage(measures, { page = "main" })
+            "plan" -> PlanPage(
+                billingGateway = billingGateway,
+                onPlanName = { plan = it },
+                onBack = { page = "main" },
+            )
+            "measures" -> MeasuresPage(
+                values = measures,
+                onBack = {
+                    BodyMeasurementsStore.saveCurrent(context, measures)
+                    page = "main"
+                },
+            )
+            "evolution" -> BodyEvolutionScreen(
+                athleteName = nickname.ifBlank { profile.displayName },
+                onBack = { page = "main" },
+            )
             "privacy" -> InfoPage(
                 "Política de Privacidade",
                 "O HealthFit guarda sono, água, treinos e medidas neste aparelho. Fotos de evolução ficam privadas. Passos e batimentos entram pelo Health Connect quando você autoriza.",
                 { page = "main" },
+                url = "https://healthfit-30d87.web.app/privacidade/",
             )
             "terms" -> InfoPage(
                 "Termos de Uso",
-                "O HealthFit é um diário de treino e nutrição. Não substitui personal, nutricionista ou médico. A assinatura é cobrada pela loja do aparelho.",
+                "O HealthFit é um diário de treino e nutrição. Não substitui personal, nutricionista ou médico. Assinaturas, quando ativas, são cobradas pela Google Play.",
                 { page = "main" },
+                url = "https://healthfit-30d87.web.app/termos/",
             )
             "coach" -> CoachHubScreen(
                 role = CoachAccountRole.fromProfileLabel(role),
@@ -206,15 +228,13 @@ fun ProfileScreen(
             "coach-fichas" -> CoachSheetScreen(onBack = { page = "coach" })
             "coach-invite" -> CoachInviteScreen(onBack = { page = "coach" })
             "coach-join" -> CoachJoinScreen(onBack = { page = "coach" })
-            "coach-search" -> CoachSearchPlaceholder(
+            "coach-search" -> DirectorySearchScreen(
                 onBack = { page = "coach" },
-                title = "Buscar na região",
-                body = "Encontre personals e nutricionistas próximos, como no iOS.",
+                mode = DirectorySearchMode.Region,
             )
-            "coach-student-search" -> CoachSearchPlaceholder(
+            "coach-student-search" -> DirectorySearchScreen(
                 onBack = { page = "coach" },
-                title = "Buscar alunos",
-                body = "Encontre alunos interessados na sua região.",
+                mode = DirectorySearchMode.Students,
             )
             "coach-profile-setup" -> CoachSearchPlaceholder(
                 onBack = { page = "coach" },
@@ -226,10 +246,16 @@ fun ProfileScreen(
                 title = "Agenda de consultas",
                 body = "Disponibilidade e consultas do aluno vinculado — em breve.",
             )
+            "modalities" -> ModalitiesPage(
+                modalities = modalities,
+                active = active,
+                onBack = { page = "main" },
+            )
             "support" -> InfoPage(
                 "Suporte",
                 "Escreva para o suporte pelo formulário de feedback nesta tela, com o tipo Dúvida. A resposta usa o e-mail da sua conta.",
                 { page = "main" },
+                url = "https://healthfit-30d87.web.app/suporte/",
             )
             else -> ProfileDetail(page, wellness.weightKg, athlete.heightCm, rest, synced, { wellness.weightKg = it }, { athlete.heightCm = it }, { rest = it }, { synced = true }) {
                 page = "main"
@@ -245,7 +271,7 @@ fun ProfileScreen(
             .padding(horizontal = 16.dp),
     ) {
         Text(
-            "Perfil",
+            stringResource(R.string.tab_profile),
             color = Color.White,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
@@ -282,16 +308,16 @@ fun ProfileScreen(
         NicknameSection(nickname) { nickname = it }
         PlanRow(plan) { page = "plan" }
         Spacer(Modifier.height(12.dp))
-        Text("Você é", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        Text(stringResource(R.string.profile_you_are), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            RoleCard("Aluno", Icons.Filled.DirectionsRun, Color(0xFF1F6B32), Modifier.weight(1f), role == "Aluno") { role = "Aluno" }
-            RoleCard("Personal", Icons.Filled.FitnessCenter, Color(0xFF1A3A6A), Modifier.weight(1f), role == "Personal") { role = "Personal" }
+            RoleCard(stringResource(R.string.profile_role_student), Icons.Filled.DirectionsRun, Color(0xFF1F6B32), Modifier.weight(1f), role == "Aluno") { role = "Aluno" }
+            RoleCard(stringResource(R.string.profile_role_personal), Icons.Filled.FitnessCenter, Color(0xFF1A3A6A), Modifier.weight(1f), role == "Personal") { role = "Personal" }
         }
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            RoleCard("Nutricionista", Icons.Filled.Spa, Color(0xFF8A5A2A), Modifier.weight(1f), role == "Nutricionista") { role = "Nutricionista" }
-            RoleCard("Personal e Nutrição", Icons.Filled.Groups, Color(0xFFB4232C), Modifier.weight(1f), role == "Personal e Nutrição") { role = "Personal e Nutrição" }
+            RoleCard(stringResource(R.string.profile_role_nutritionist), Icons.Filled.Spa, Color(0xFF8A5A2A), Modifier.weight(1f), role == "Nutricionista") { role = "Nutricionista" }
+            RoleCard(stringResource(R.string.profile_role_both), Icons.Filled.Groups, Color(0xFFB4232C), Modifier.weight(1f), role == "Personal e Nutrição") { role = "Personal e Nutrição" }
         }
         Text(
             "Aluno treina com o app. Personal e nutricionista usam como profissionais — dá para marcar os dois.",
@@ -309,8 +335,430 @@ fun ProfileScreen(
         Spacer(Modifier.height(16.dp))
         BiotypeSection(athlete.bodyType) { athlete.bodyType = it }
         Spacer(Modifier.height(18.dp))
-        Text("Modalidades que pratico", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        val modalityPreview = active.take(3).joinToString(" · ").ifBlank { "Toque para escolher" }
+        val extraModalities = (active.size - 3).coerceAtLeast(0)
+        PracticedModalitiesCard(
+            activeCount = active.size,
+            preview = if (extraModalities > 0) "$modalityPreview +$extraModalities" else modalityPreview,
+            onClick = { page = "modalities" },
+        )
+        LinkedProSection(
+            title = "Personal",
+            question = "Você tem personal?",
+            enabled = hasTrainer,
+            onEnabled = { hasTrainer = it },
+            name = trainerName,
+            onName = { trainerName = it },
+            email = trainerEmail,
+            onEmail = { trainerEmail = it },
+            hint = "Informe o e-mail para enviar a ficha de treino.",
+        )
+        LinkedProSection(
+            title = "Nutricionista",
+            question = "Você tem nutricionista?",
+            enabled = hasNutri,
+            onEnabled = { hasNutri = it },
+            name = nutriName,
+            onName = { nutriName = it },
+            email = nutriEmail,
+            onEmail = { nutriEmail = it },
+            hint = "Cadastre o e-mail para enviar o relatório de nutrição.",
+        )
+        HealthIconSection(healthy = wellness.sleepHours > 0f && wellness.waterMl > 0)
+        Text(
+            stringResource(R.string.profile_sleep_hydration),
+            color = Color.White,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 16.dp),
+        )
+        Text(
+            "O mesmo registro da tela inicial. A meta de água usa 35 ml por kg.",
+            color = Color(0xFF8E989F),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+        )
+        SleepCard(hours = wellness.sleepHours, onHours = { wellness.updateSleep(it) })
+        Spacer(Modifier.height(12.dp))
+        WaterCard(
+            ml = wellness.waterMl,
+            goal = wellness.goalMl,
+            onMinus = { wellness.addWater(-250) },
+            onPlus = { wellness.addWater(250) },
+            onCup = { wellness.addWater(250) },
+            onBottle = { wellness.addWater(500) },
+        )
+        EnergySection(energy, { energy = it }, preWorkout, { preWorkout = it })
+        Spacer(Modifier.height(16.dp))
+        Text(stringResource(R.string.profile_body_evolution), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
+        DarkCard(onClick = { page = "evolution" }) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = HealthFitColors.Accent)
+                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                    Text(stringResource(R.string.profile_photos_compare), color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        evolutionStatus,
+                        color = Color(0xFF8E989F),
+                        fontSize = 12.sp,
+                    )
+                }
+                Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFF8E989F))
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        DarkCard {
+            Text(stringResource(R.string.profile_your_data), color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Esses dados alimentam o cálculo de calorias e o cardápio em Nutrição. A data de nascimento é obrigatória.",
+                color = Color(0xFF8E989F),
+                fontSize = 12.sp,
+            )
+            OutlinedTextField(
+                wellness.weightKg,
+                { wellness.weightKg = it.filter { char -> char.isDigit() || char == '.' }.take(5) },
+                label = { Text("Peso (kg)") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = HealthFitColors.Accent,
+                    unfocusedBorderColor = Color(0xFF3A4148),
+                ),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            OutlinedTextField(
+                athlete.heightCm,
+                { athlete.heightCm = it.filter { char -> char.isDigit() }.take(3) },
+                label = { Text("Altura (cm)") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = HealthFitColors.Accent,
+                    unfocusedBorderColor = Color(0xFF3A4148),
+                ),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            OutlinedTextField(
+                birth,
+                { birth = it.take(10) },
+                label = { Text("Data de nascimento") },
+                placeholder = { Text("dd/mm/aaaa") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = HealthFitColors.Accent,
+                    unfocusedBorderColor = Color(0xFF3A4148),
+                ),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            Text(
+                "Ajustar descanso entre séries",
+                color = HealthFitColors.Accent,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 8.dp).clickable { page = "body" },
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        var todayRest by remember { mutableStateOf(ConstancyStore.isTodayRestDay(context)) }
+        DarkCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.profile_rest_today), color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Aparece no calendário de Constância no Início",
+                        color = Color(0xFF8E989F),
+                        fontSize = 12.sp,
+                    )
+                }
+                Switch(
+                    checked = todayRest,
+                    onCheckedChange = {
+                        todayRest = it
+                        ConstancyStore.setTodayRestDay(context, it)
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = HealthFitColors.Accent),
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        DarkCard(onClick = { page = "measures" }) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.profile_body_measures), color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text("Pescoço, cintura, quadril e demais circunferências", color = Color(0xFF8E989F), fontSize = 12.sp)
+                }
+                Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFF8E989F))
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(stringResource(R.string.profile_integrations), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        DarkCard(onClick = { page = "integrations" }) {
+            IntegrationRow(Icons.Filled.Favorite, "Health Connect", "Disponível", HealthFitColors.Accent)
+            IntegrationRow(Icons.Filled.Watch, "Galaxy Watch7", if (synced) "Sincronizado agora" else "Sincronização ativa", Color(0xFFB7C0C8))
+            IntegrationRow(Icons.Filled.Notifications, "Notificações", "Ativas", Color(0xFFB7C0C8))
+            IntegrationRow(Icons.Filled.Favorite, "Sensor Bluetooth", "Toque para parear BPM", Color(0xFFB7C0C8))
+        }
+        Text(
+            "Passos e calorias entram pelo Health Connect. O relógio sincroniza treinos e batimentos.",
+            color = Color(0xFF8E989F),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(vertical = 8.dp),
+        )
+        Text(stringResource(R.string.profile_nutrition_notifications), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Spacer(Modifier.height(8.dp))
+        DarkCard {
+            ToggleRow("Notificações de suplementos", supplementsOn) { supplementsOn = it }
+            ToggleRow("Notificações de alimentação", mealsOn) { mealsOn = it }
+        }
+        Text(
+            "Suplementos: lembretes a cada 3h (06h–21h). Alimentação: alertas no horário de cada refeição.",
+            color = Color(0xFF8E989F),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+        RestTimerSection(rest, { rest = it }, restAlert, { restAlert = it }, restNotify) { restNotify = it }
+        Text(stringResource(R.string.profile_about), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
+        Spacer(Modifier.height(8.dp))
+        DarkCard {
+            Text(stringResource(R.string.profile_app), color = Color(0xFF8E989F), fontSize = 12.sp)
+            Text("HealthFit", color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.profile_version), color = Color(0xFFB7C0C8), fontSize = 13.sp)
+        }
+        Text(stringResource(R.string.profile_legal), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
+        Spacer(Modifier.height(8.dp))
+        DarkCard(onClick = { page = "privacy" }) {
+            Text(stringResource(R.string.legal_privacy), color = Color.White, fontWeight = FontWeight.SemiBold)
+        }
+        Spacer(Modifier.height(8.dp))
+        DarkCard(onClick = { page = "terms" }) {
+            Text(stringResource(R.string.legal_terms), color = Color.White, fontWeight = FontWeight.SemiBold)
+        }
+        Spacer(Modifier.height(8.dp))
+        DarkCard(onClick = { page = "support" }) {
+            Text(stringResource(R.string.legal_support), color = Color.White, fontWeight = FontWeight.SemiBold)
+        }
+        Text(stringResource(R.string.profile_feedback), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
+        Spacer(Modifier.height(8.dp))
+        DarkCard {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Reclamação", "Sugestão", "Melhoria", "Dúvida").forEach { kind ->
+                    Text(
+                        kind,
+                        color = if (feedbackKind == kind) Color.Black else Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (feedbackKind == kind) HealthFitColors.Accent else Color(0xFF2A3138))
+                            .clickable { feedbackKind = kind }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                    )
+                }
+            }
+            OutlinedTextField(
+                value = feedbackText,
+                onValueChange = { feedbackText = it },
+                label = { Text("Escreva sua reclamação, sugestão, melhoria ou dúvida…") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = HealthFitColors.Accent,
+                    unfocusedBorderColor = Color(0xFF3A4148),
+                    cursorColor = HealthFitColors.Accent,
+                    focusedLabelColor = HealthFitColors.Accent,
+                    unfocusedLabelColor = Color(0xFF8E989F),
+                ),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            Text(
+                if (feedbackSent) "Enviado" else "Enviar feedback",
+                color = if (feedbackText.isBlank()) Color(0xFF8E989F) else Color.Black,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (feedbackText.isBlank()) Color(0xFF2A3138) else HealthFitColors.Accent)
+                    .clickable(enabled = feedbackText.isNotBlank()) {
+                        feedbackSent = true
+                        feedbackText = ""
+                    }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            )
+        }
+        LanguageSection(selected = language)
+        Text(
+            stringResource(R.string.profile_delete_account),
+            color = HealthFitColors.Danger,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier
+                .padding(top = 16.dp)
+                .clickable { showDelete = true },
+        )
+        Text(
+            stringResource(R.string.profile_sign_out),
+            color = HealthFitColors.Danger,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier
+                .padding(vertical = 16.dp)
+                .clickable(onClick = onSignOut),
+        )
+        if (showDelete) {
+            AlertDialog(
+                onDismissRequest = { if (!deletingAccount) showDelete = false },
+                containerColor = HealthFitColors.CardBackground,
+                title = { Text(stringResource(R.string.profile_delete_account), color = Color.White) },
+                text = {
+                    Column {
+                        Text(
+                            "Apaga a conta e os dados desta pessoa no mesmo banco do iPhone: diretório, treinos, nutrição, Pulse e perfil profissional. Esta ação não desfaz.",
+                            color = Color(0xFFD5DDE3),
+                        )
+                        OutlinedTextField(
+                            value = deletePassword,
+                            onValueChange = { deletePassword = it },
+                            label = { Text("Senha da conta") },
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedBorderColor = HealthFitColors.Accent,
+                                unfocusedBorderColor = Color(0xFF3A4148),
+                                cursorColor = HealthFitColors.Accent,
+                                focusedLabelColor = HealthFitColors.Accent,
+                                unfocusedLabelColor = Color(0xFF8E989F),
+                            ),
+                            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                        )
+                        deleteError?.let {
+                            Text(it, color = HealthFitColors.Danger, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = !deletingAccount,
+                        onClick = {
+                            deletingAccount = true
+                            deleteError = null
+                            deleteScope.launch {
+                                val result = onDeleteAccount(deletePassword)
+                                deletingAccount = false
+                                result.onSuccess {
+                                    LocalAccountWipe.clear(context)
+                                    showDelete = false
+                                    deletePassword = ""
+                                }.onFailure { error ->
+                                    deleteError = error.message ?: "Não foi possível excluir a conta."
+                                }
+                            }
+                        },
+                    ) { Text(if (deletingAccount) "Excluindo…" else "Excluir", color = HealthFitColors.Danger) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { if (!deletingAccount) showDelete = false }) {
+                        Text(stringResource(R.string.common_cancel), color = HealthFitColors.Accent)
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun PracticedModalitiesCard(
+    activeCount: Int,
+    preview: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(168.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick),
+    ) {
+        Row(Modifier.matchParentSize()) {
+            Image(
+                painter = painterResource(R.drawable.cardiocovercorrida),
+                contentDescription = null,
+                modifier = Modifier.weight(0.55f).fillMaxHeight(),
+                contentScale = ContentScale.Crop,
+            )
+            Column(Modifier.weight(0.45f).fillMaxHeight()) {
+                Image(
+                    painter = painterResource(R.drawable.cardiocoverkitesurf),
+                    contentDescription = null,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentScale = ContentScale.Crop,
+                )
+                Row(Modifier.weight(1f).fillMaxWidth()) {
+                    Image(
+                        painter = painterResource(R.drawable.fightcoverluta),
+                        contentDescription = null,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        contentScale = ContentScale.Crop,
+                    )
+                    Image(
+                        painter = painterResource(R.drawable.meditacaocoverfoco),
+                        contentDescription = null,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+            }
+        }
+        Box(
+            Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.Black.copy(alpha = 0.05f), Color.Black.copy(alpha = 0.78f)),
+                    ),
+                ),
+        )
+        Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
+            Text("PERFIL", color = HealthFitColors.Accent, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Text("Modalidades que pratico", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+            Text(
+                "$activeCount ativas · $preview",
+                color = Color.White.copy(alpha = 0.88f),
+                fontSize = 13.sp,
+                maxLines = 2,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ModalitiesPage(
+    modalities: List<Modality>,
+    active: MutableList<String>,
+    onBack: () -> Unit,
+) {
+    BackHandler(onBack = onBack)
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(HealthFitColors.Background)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)) {
+            Text(
+                "Fechar",
+                color = HealthFitColors.Accent,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clickable(onClick = onBack).padding(8.dp),
+            )
+            Text(
+                "Modalidades que pratico",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
         DarkCard {
             Text(
                 "Marque o que você pratica. A lista de treinos mostra só as modalidades ativas.",
@@ -378,284 +826,7 @@ fun ProfileScreen(
                 }
             }
         }
-        LinkedProSection(
-            title = "Personal",
-            question = "Você tem personal?",
-            enabled = hasTrainer,
-            onEnabled = { hasTrainer = it },
-            name = trainerName,
-            onName = { trainerName = it },
-            email = trainerEmail,
-            onEmail = { trainerEmail = it },
-            hint = "Informe o e-mail para enviar a ficha de treino.",
-        )
-        LinkedProSection(
-            title = "Nutricionista",
-            question = "Você tem nutricionista?",
-            enabled = hasNutri,
-            onEnabled = { hasNutri = it },
-            name = nutriName,
-            onName = { nutriName = it },
-            email = nutriEmail,
-            onEmail = { nutriEmail = it },
-            hint = "Cadastre o e-mail para enviar o relatório de nutrição.",
-        )
-        HealthIconSection(healthy = wellness.sleepHours > 0f && wellness.waterMl > 0)
-        Text(
-            "Sono e Hidratação",
-            color = Color.White,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 16.dp),
-        )
-        Text(
-            "O mesmo registro da tela inicial. A meta de água usa 35 ml por kg.",
-            color = Color(0xFF8E989F),
-            fontSize = 12.sp,
-            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
-        )
-        SleepCard(hours = wellness.sleepHours, onHours = { wellness.updateSleep(it) })
-        Spacer(Modifier.height(12.dp))
-        WaterCard(
-            ml = wellness.waterMl,
-            goal = wellness.goalMl,
-            onMinus = { wellness.addWater(-250) },
-            onPlus = { wellness.addWater(250) },
-            onCup = { wellness.addWater(250) },
-            onBottle = { wellness.addWater(500) },
-        )
-        EnergySection(energy, { energy = it }, preWorkout, { preWorkout = it })
-        Spacer(Modifier.height(16.dp))
-        Text("Evolução Corporal", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        DarkCard(onClick = { page = "evolution" }) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = HealthFitColors.Accent)
-                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                    Text("Fotos e comparativo (30 dias)", color = Color.White, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        "Inicie o acompanhamento (fotos opcionais e privadas).",
-                        color = Color(0xFF8E989F),
-                        fontSize = 12.sp,
-                    )
-                }
-                Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFF8E989F))
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        DarkCard {
-            Text("Seus dados", color = Color.White, fontWeight = FontWeight.SemiBold)
-            Text(
-                "Esses dados alimentam o cálculo de calorias e o cardápio em Nutrição. A data de nascimento é obrigatória.",
-                color = Color(0xFF8E989F),
-                fontSize = 12.sp,
-            )
-            OutlinedTextField(
-                wellness.weightKg,
-                { wellness.weightKg = it.filter { char -> char.isDigit() || char == '.' }.take(5) },
-                label = { Text("Peso (kg)") },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = HealthFitColors.Accent,
-                    unfocusedBorderColor = Color(0xFF3A4148),
-                ),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
-            OutlinedTextField(
-                athlete.heightCm,
-                { athlete.heightCm = it.filter { char -> char.isDigit() }.take(3) },
-                label = { Text("Altura (cm)") },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = HealthFitColors.Accent,
-                    unfocusedBorderColor = Color(0xFF3A4148),
-                ),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
-            OutlinedTextField(
-                birth,
-                { birth = it.take(10) },
-                label = { Text("Data de nascimento") },
-                placeholder = { Text("dd/mm/aaaa") },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = HealthFitColors.Accent,
-                    unfocusedBorderColor = Color(0xFF3A4148),
-                ),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
-            Text(
-                "Ajustar descanso entre séries",
-                color = HealthFitColors.Accent,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 8.dp).clickable { page = "body" },
-            )
-        }
-        Spacer(Modifier.height(10.dp))
-        var todayRest by remember { mutableStateOf(ConstancyStore.isTodayRestDay(context)) }
-        DarkCard {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Hoje é dia de descanso", color = Color.White, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        "Aparece no calendário de Constância no Início",
-                        color = Color(0xFF8E989F),
-                        fontSize = 12.sp,
-                    )
-                }
-                Switch(
-                    checked = todayRest,
-                    onCheckedChange = {
-                        todayRest = it
-                        ConstancyStore.setTodayRestDay(context, it)
-                    },
-                    colors = SwitchDefaults.colors(checkedTrackColor = HealthFitColors.Accent),
-                )
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        DarkCard(onClick = { page = "measures" }) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Medidas corporais", color = Color.White, fontWeight = FontWeight.SemiBold)
-                    Text("Pescoço, cintura, quadril e demais circunferências", color = Color(0xFF8E989F), fontSize = 12.sp)
-                }
-                Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFF8E989F))
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        Text("Integrações", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        DarkCard(onClick = { page = "integrations" }) {
-            IntegrationRow(Icons.Filled.Favorite, "Health Connect", "Disponível", HealthFitColors.Accent)
-            IntegrationRow(Icons.Filled.Watch, "Galaxy Watch7", if (synced) "Sincronizado agora" else "Sincronização ativa", Color(0xFFB7C0C8))
-            IntegrationRow(Icons.Filled.Notifications, "Notificações", "Ativas", Color(0xFFB7C0C8))
-            IntegrationRow(Icons.Filled.Favorite, "Sensor Bluetooth", "Toque para parear BPM", Color(0xFFB7C0C8))
-        }
-        Text(
-            "Passos e calorias entram pelo Health Connect. O relógio sincroniza treinos e batimentos.",
-            color = Color(0xFF8E989F),
-            fontSize = 12.sp,
-            modifier = Modifier.padding(vertical = 8.dp),
-        )
-        Text("Notificações de Nutrição", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Spacer(Modifier.height(8.dp))
-        DarkCard {
-            ToggleRow("Notificações de suplementos", supplementsOn) { supplementsOn = it }
-            ToggleRow("Notificações de alimentação", mealsOn) { mealsOn = it }
-        }
-        Text(
-            "Suplementos: lembretes a cada 3h (06h–21h). Alimentação: alertas no horário de cada refeição.",
-            color = Color(0xFF8E989F),
-            fontSize = 12.sp,
-            modifier = Modifier.padding(top = 6.dp),
-        )
-        RestTimerSection(rest, { rest = it }, restAlert, { restAlert = it }, restNotify) { restNotify = it }
-        Text("Sobre", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
-        Spacer(Modifier.height(8.dp))
-        DarkCard {
-            Text("App", color = Color(0xFF8E989F), fontSize = 12.sp)
-            Text("HealthFit", color = Color.White, fontWeight = FontWeight.SemiBold)
-            Text("Versão 1.0", color = Color(0xFFB7C0C8), fontSize = 13.sp)
-        }
-        Text("Legal", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
-        Spacer(Modifier.height(8.dp))
-        DarkCard(onClick = { page = "privacy" }) {
-            Text("Política de Privacidade", color = Color.White, fontWeight = FontWeight.SemiBold)
-        }
-        Spacer(Modifier.height(8.dp))
-        DarkCard(onClick = { page = "terms" }) {
-            Text("Termos de Uso", color = Color.White, fontWeight = FontWeight.SemiBold)
-        }
-        Spacer(Modifier.height(8.dp))
-        DarkCard(onClick = { page = "support" }) {
-            Text("Suporte", color = Color.White, fontWeight = FontWeight.SemiBold)
-        }
-        Text("Feedback", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
-        Spacer(Modifier.height(8.dp))
-        DarkCard {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Reclamação", "Sugestão", "Melhoria", "Dúvida").forEach { kind ->
-                    Text(
-                        kind,
-                        color = if (feedbackKind == kind) Color.Black else Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (feedbackKind == kind) HealthFitColors.Accent else Color(0xFF2A3138))
-                            .clickable { feedbackKind = kind }
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                    )
-                }
-            }
-            OutlinedTextField(
-                value = feedbackText,
-                onValueChange = { feedbackText = it },
-                label = { Text("Escreva sua reclamação, sugestão, melhoria ou dúvida…") },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = HealthFitColors.Accent,
-                    unfocusedBorderColor = Color(0xFF3A4148),
-                    cursorColor = HealthFitColors.Accent,
-                    focusedLabelColor = HealthFitColors.Accent,
-                    unfocusedLabelColor = Color(0xFF8E989F),
-                ),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
-            Text(
-                if (feedbackSent) "Enviado" else "Enviar feedback",
-                color = if (feedbackText.isBlank()) Color(0xFF8E989F) else Color.Black,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (feedbackText.isBlank()) Color(0xFF2A3138) else HealthFitColors.Accent)
-                    .clickable(enabled = feedbackText.isNotBlank()) {
-                        feedbackSent = true
-                        feedbackText = ""
-                    }
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-            )
-        }
-        LanguageSection(selected = language)
-        Text(
-            "Excluir conta",
-            color = HealthFitColors.Danger,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier
-                .padding(top = 16.dp)
-                .clickable { showDelete = true },
-        )
-        Text(
-            "Sair",
-            color = HealthFitColors.Danger,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier
-                .padding(vertical = 16.dp)
-                .clickable(onClick = onSignOut),
-        )
-        if (showDelete) {
-            AlertDialog(
-                onDismissRequest = { showDelete = false },
-                containerColor = HealthFitColors.CardBackground,
-                title = { Text("Excluir conta", color = Color.White) },
-                text = { Text("A sessão local deste aparelho será encerrada.", color = Color(0xFFD5DDE3)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        showDelete = false
-                        onSignOut()
-                    }) { Text("Excluir", color = HealthFitColors.Danger) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDelete = false }) { Text("Cancelar", color = HealthFitColors.Accent) }
-                },
-            )
-        }
+        Spacer(Modifier.height(24.dp))
     }
 }
 
@@ -703,19 +874,11 @@ private fun ProfileDetail(
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        Text("Voltar", color = HealthFitColors.Accent, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onBack))
+        Text(stringResource(R.string.common_back), color = HealthFitColors.Accent, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onBack))
         Spacer(Modifier.height(12.dp))
         when (page) {
-            "evolution" -> {
-                Text("Evolução corporal", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                Text("Comparativo de 30 dias. As fotos ficam só neste aparelho.", color = HealthFitColors.TextSecondary)
-                DarkCard(modifier = Modifier.padding(top = 12.dp)) {
-                    Text("Acompanhamento iniciado", color = Color.White, fontWeight = FontWeight.SemiBold)
-                    Text("Frente, lado e costas. Próxima foto sugerida em 30 dias.", color = Color(0xFF8E989F), fontSize = 13.sp)
-                }
-            }
             "body" -> {
-                Text("Seus dados", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.profile_your_data), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 Text("Peso e altura alimentam o TDEE da Nutrição.", color = HealthFitColors.TextSecondary)
                 listOf("60", "75", "90", "120").forEach { option ->
                     Text(
@@ -757,7 +920,7 @@ private fun ProfileDetail(
                 }
             }
             else -> {
-                Text("Integrações", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.profile_integrations), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 Text(
                     if (synced) "Galaxy Watch7 sincronizado. Passos e batimentos entram pelo Health Connect." else "Health Connect disponível. O Galaxy Watch7 sincroniza treino e BPM.",
                     color = HealthFitColors.TextSecondary,

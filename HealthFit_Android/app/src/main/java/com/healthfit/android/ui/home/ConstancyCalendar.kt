@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,18 +55,26 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import com.google.firebase.auth.FirebaseAuth
 import com.healthfit.android.R
+import com.healthfit.android.ui.pulse.PulseStore
+import com.healthfit.core.pulse.PulseWorkoutMeta
 import com.healthfit.designsystem.HealthFitColors
 import java.io.File
 import java.text.SimpleDateFormat
+import java.time.YearMonth
 import java.util.Calendar
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ConstancyCard(onOpen: () -> Unit) {
@@ -137,7 +146,7 @@ fun ConstancyCard(onOpen: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.CalendarMonth, null, tint = HealthFitColors.Accent, modifier = Modifier.size(16.dp))
                     Text(
-                        "CALENDÁRIO",
+                        stringResource(R.string.home_constancy_calendar),
                         color = HealthFitColors.Accent,
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
@@ -145,14 +154,14 @@ fun ConstancyCard(onOpen: () -> Unit) {
                     )
                 }
                 Text(
-                    "Constância",
+                    stringResource(R.string.home_constancy),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 22.sp,
                     modifier = Modifier.padding(top = 6.dp),
                 )
                 Text(
-                    "Calendário de treinos · $summary",
+                    stringResource(R.string.home_constancy_subtitle, summary),
                     color = Color.White.copy(alpha = 0.88f),
                     fontSize = 12.sp,
                     modifier = Modifier.padding(top = 4.dp),
@@ -197,6 +206,9 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
     var visible by remember { mutableStateOf(Calendar.getInstance().apply { set(Calendar.DAY_OF_MONTH, 1) }) }
     var selectedDay by remember { mutableStateOf<String?>(null) }
     var tick by remember { mutableStateOf(0) }
+    var makingVideo by remember { mutableStateOf(false) }
+    var retrospective by remember { mutableStateOf<MonthlyRetrospective.Video?>(null) }
+    val scope = rememberCoroutineScope()
 
     val year = visible.get(Calendar.YEAR)
     val month = visible.get(Calendar.MONTH)
@@ -266,6 +278,34 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
                     ),
             )
         }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            Text(
+                if (makingVideo) "…" else "Vídeo",
+                color = HealthFitColors.Accent,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(HealthFitColors.Accent.copy(alpha = 0.14f))
+                    .clickable(enabled = !makingVideo) {
+                        val nowMonth = YearMonth.now()
+                        val visibleMonth = YearMonth.of(year, month + 1)
+                        val target = if (visibleMonth < nowMonth) visibleMonth else nowMonth.minusMonths(1)
+                        makingVideo = true
+                        scope.launch {
+                            val ready = runCatching {
+                                withContext(Dispatchers.IO) { MonthlyRetrospective.render(context, target) }
+                            }
+                            makingVideo = false
+                            ready.onSuccess { retrospective = it }
+                                .onFailure {
+                                    Toast.makeText(context, "Não foi possível montar o vídeo", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                    }
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+        }
 
         Spacer(Modifier.height(12.dp))
         WeekdayHeader()
@@ -292,11 +332,69 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
                 onPhotoChanged = { tick++ },
             )
         } ?: Text(
-            "Toque em um dia com treino ou descanso para ver detalhes.",
+            "Toque em um dia passado para ver o treino ou marcar descanso.",
             color = HealthFitColors.TextSecondary,
             fontSize = 12.sp,
         )
         Spacer(Modifier.height(28.dp))
+    }
+    retrospective?.let { video ->
+        AlertDialog(
+            onDismissRequest = { retrospective = null },
+            title = { Text("Retrospectiva") },
+            text = { Text(video.monthLabel) },
+            confirmButton = {
+                TextButton(onClick = {
+                    toastShare(context) {
+                        SharePublisher.saveVideo(context, video.file, "HealthFit-Retrospectiva")
+                        Toast.makeText(context, "Vídeo salvo na galeria", Toast.LENGTH_SHORT).show()
+                    }
+                }) { Text("Galeria") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        toastShare(context) {
+                            SharePublisher.post(context, video.file, "video/mp4", SharePublisher.Target.InstagramStories)
+                        }
+                    }) { Text("Instagram") }
+                    TextButton(onClick = {
+                        toastShare(context) {
+                            SharePublisher.post(context, video.file, "video/mp4", SharePublisher.Target.WhatsAppStatus)
+                        }
+                    }) { Text("WhatsApp") }
+                    TextButton(onClick = {
+                        scope.launch {
+                            val published = runCatching {
+                                val uri = FileProvider.getUriForFile(
+                                    context,
+                                    "${context.packageName}.fileprovider",
+                                    video.file,
+                                )
+                                val user = FirebaseAuth.getInstance().currentUser
+                                withContext(Dispatchers.IO) {
+                                    PulseStore(context).addVideoPost(
+                                        authorId = user?.uid ?: "local",
+                                        authorName = user?.displayName?.ifBlank { null } ?: "Atleta",
+                                        authorCountryCode = "BR",
+                                        caption = "Retrospectiva HealthFit de ${video.monthLabel}. Superação para ${video.nextMonthLabel}.",
+                                        videoUri = uri,
+                                        community = "musculacao",
+                                        workoutMeta = PulseWorkoutMeta(modality = "Retrospectiva"),
+                                        maxSeconds = 75.5,
+                                    )
+                                }
+                            }
+                            Toast.makeText(
+                                context,
+                                if (published.isSuccess) "Publicado no Pulse" else (published.exceptionOrNull()?.message ?: "Não foi possível publicar"),
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                    }) { Text("Pulse") }
+                }
+            },
+        )
     }
 }
 
@@ -593,15 +691,25 @@ private fun DayDetail(
                 }
                 .padding(vertical = 8.dp),
         )
-        Text(
-            if (rest) "Remover descanso" else "Marcar como descanso",
-            color = HealthFitColors.Accent,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier
-                .clip(RoundedCornerShape(10.dp))
-                .clickable { onRestToggle(!rest) }
-                .padding(vertical = 8.dp),
-        )
+        val todayKey = ConstancyStore.dayKey()
+        if (dayKey <= todayKey) {
+            Text(
+                if (rest) "Remover descanso" else "Marcar como descanso",
+                color = HealthFitColors.Accent,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { onRestToggle(!rest) }
+                    .padding(vertical = 8.dp),
+            )
+        } else {
+            Text(
+                "Dias futuros ainda não podem ser descanso.",
+                color = HealthFitColors.TextSecondary,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
     }
 }
 
