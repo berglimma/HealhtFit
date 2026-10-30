@@ -280,7 +280,7 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             Text(
-                if (makingVideo) "…" else "Vídeo",
+                if (makingVideo) "…" else "Gerar Retrospectiva Mensal",
                 color = HealthFitColors.Accent,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
