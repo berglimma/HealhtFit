@@ -68,6 +68,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.healthfit.android.R
+import com.healthfit.android.ui.components.GradientButton
 import com.healthfit.android.ui.pulse.PulseStore
 import com.healthfit.core.pulse.PulseWorkoutMeta
 import com.healthfit.designsystem.HealthFitColors
@@ -304,7 +305,8 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
                             }
                             makingVideo = false
                             ready.onSuccess { retrospective = it }
-                                .onFailure {
+                                .onFailure { error ->
+                                    android.util.Log.e("HealthFitVideo", "Retrospectiva", error)
                                     Toast.makeText(context, "Não foi possível montar o vídeo", Toast.LENGTH_SHORT).show()
                                 }
                         }
@@ -380,16 +382,39 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
                     video.monthLabel,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    textAlign = TextAlign.Center,
                 )
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = {
-                        toastShare(context) {
+                var shareStatus by remember(video.file.absolutePath) { mutableStateOf<String?>(null) }
+                shareStatus?.let { message ->
+                    Text(
+                        message,
+                        color = HealthFitColors.Accent,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    )
+                }
+                Column(
+                    Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    GradientButton(text = "Salvar na galeria", onClick = {
+                        val saved = runCatching {
                             SharePublisher.saveVideo(context, video.file, "HealthFit-Retrospectiva")
-                            Toast.makeText(context, "Vídeo salvo na galeria", Toast.LENGTH_SHORT).show()
                         }
-                    }) { Text("Salvar na galeria", color = HealthFitColors.Accent) }
-                    TextButton(onClick = {
+                        shareStatus = if (saved.isSuccess) {
+                            "Vídeo salvo na galeria."
+                        } else {
+                            saved.exceptionOrNull()?.message ?: "Não foi possível salvar na galeria."
+                        }
+                    })
+                    GradientButton(text = "Publicar no Pulse", onClick = {
+                        shareStatus = "Publicando no Pulse…"
                         scope.launch {
                             val published = runCatching {
                                 val uri = FileProvider.getUriForFile(
@@ -411,23 +436,33 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
                                     )
                                 }
                             }
-                            Toast.makeText(
-                                context,
-                                if (published.isSuccess) "Publicado no Pulse" else (published.exceptionOrNull()?.message ?: "Não foi possível publicar"),
-                                Toast.LENGTH_LONG,
-                            ).show()
+                            shareStatus = if (published.isSuccess) {
+                                "Retrospectiva publicada no Pulse."
+                            } else {
+                                published.exceptionOrNull()?.message ?: "Não foi possível publicar no Pulse."
+                            }
                         }
-                    }) { Text("Publicar no Pulse", color = HealthFitColors.Accent) }
-                    TextButton(onClick = {
-                        toastShare(context) {
+                    })
+                    GradientButton(text = "WhatsApp", onClick = {
+                        val sent = runCatching {
                             SharePublisher.post(context, video.file, "video/mp4", SharePublisher.Target.WhatsAppStatus)
                         }
-                    }) { Text("WhatsApp", color = HealthFitColors.Accent) }
-                    TextButton(onClick = {
-                        toastShare(context) {
+                        shareStatus = if (sent.isSuccess) {
+                            "Abrindo o WhatsApp."
+                        } else {
+                            sent.exceptionOrNull()?.message ?: "Não foi possível abrir o WhatsApp."
+                        }
+                    })
+                    GradientButton(text = "Instagram Stories", onClick = {
+                        val sent = runCatching {
                             SharePublisher.post(context, video.file, "video/mp4", SharePublisher.Target.InstagramStories)
                         }
-                    }) { Text("Instagram Stories", color = HealthFitColors.Accent) }
+                        shareStatus = if (sent.isSuccess) {
+                            "Abrindo o Instagram Stories."
+                        } else {
+                            sent.exceptionOrNull()?.message ?: "Não foi possível abrir o Instagram."
+                        }
+                    })
                 }
             }
         }

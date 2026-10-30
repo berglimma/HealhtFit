@@ -10,6 +10,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.media.Image
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
@@ -17,11 +18,14 @@ import android.media.MediaMuxer
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import java.io.File
 import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.sin
 
 object FlyoverVideo {
+    private const val TAG = "HealthFitVideo"
     fun render(context: Context, title: String, athlete: String, minutes: String): File {
         val width = 720
         val height = 1280
@@ -135,39 +139,73 @@ object FlyoverVideo {
 
     internal fun encodeHeldFrames(file: File, slides: List<Pair<Bitmap, Int>>, fps: Int) {
         if (file.exists()) file.delete()
-        val first = slides.firstOrNull()?.first ?: error("Sem quadros para o vídeo.")
+        if (slides.isEmpty()) error("Sem quadros para o vídeo.")
+        val names = listOf("c2.qti.avc.encoder", "c2.android.avc.encoder", "OMX.google.h264.encoder")
+        var last: Throwable? = null
+        try {
+            for (name in names) {
+                val encoder = runCatching { MediaCodec.createByCodecName(name) }.getOrNull() ?: continue
+                try {
+                    if (file.exists()) file.delete()
+                    encodeWith(encoder, file, slides, fps)
+                    if (file.exists() && file.length() > 0L) return
+                    last = IllegalStateException("O vídeo da retrospectiva ficou vazio.")
+                } catch (error: Throwable) {
+                    last = error
+                    Log.e(TAG, "Falha ao montar o vídeo com $name", error)
+                }
+            }
+            throw last ?: IllegalStateException("Este aparelho não gera vídeo.")
+        } finally {
+            slides.forEach { (bitmap, _) -> if (!bitmap.isRecycled) bitmap.recycle() }
+        }
+    }
+
+    private fun encodeWith(encoder: MediaCodec, file: File, slides: List<Pair<Bitmap, Int>>, fps: Int) {
+        val first = slides.first().first
         val width = first.width
         val height = first.height
-        val encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
         val color = pickColor(encoder)
         val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height).apply {
             setInteger(MediaFormat.KEY_COLOR_FORMAT, color)
             setInteger(MediaFormat.KEY_BIT_RATE, 2_500_000)
             setInteger(MediaFormat.KEY_FRAME_RATE, fps)
             setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
+            setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, width * height * 3 / 2)
         }
-        encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-        encoder.start()
-        val muxer = MediaMuxer(file.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        var muxer: MediaMuxer? = null
         var track = -1
         var started = false
         val bufferInfo = MediaCodec.BufferInfo()
         val timeout = 10_000L
         var frameIndex = 0
         try {
+            encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+            encoder.start()
+            muxer = MediaMuxer(file.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+            val output = muxer
             slides.forEach { (bitmap, frames) ->
-                val yuv = toYuv(bitmap, width, height, color)
-                bitmap.recycle()
+                val planes = yuvPlanes(bitmap, width, height)
                 repeat(frames.coerceAtLeast(1)) {
                     val inIndex = encoder.dequeueInputBuffer(timeout)
                     if (inIndex < 0) error("O codificador de vídeo não aceitou o quadro.")
                     val input = encoder.getInputBuffer(inIndex) ?: error("Buffer de vídeo indisponível.")
-                    input.clear()
-                    input.put(yuv)
+                    val image = encoder.getInputImage(inIndex)
+                    val size = if (image != null) {
+                        writePlanes(planes, image)
+                        val frameBytes = width * height * 3 / 2
+                        if (input.capacity() >= frameBytes) frameBytes else input.capacity()
+                    } else {
+                        val yuv = planes.toSemiPlanar()
+                        if (input.capacity() < yuv.size) error("Buffer de vídeo menor que o quadro.")
+                        input.clear()
+                        input.put(yuv)
+                        yuv.size
+                    }
                     val time = frameIndex * 1_000_000L / fps
-                    encoder.queueInputBuffer(inIndex, 0, yuv.size, time, 0)
+                    encoder.queueInputBuffer(inIndex, 0, size, time, 0)
                     frameIndex += 1
-                    val drained = drain(encoder, muxer, bufferInfo, track, started)
+                    val drained = drain(encoder, output, bufferInfo, track, started)
                     track = drained.first
                     started = drained.second
                 }
@@ -190,8 +228,8 @@ object FlyoverVideo {
                     out == MediaCodec.INFO_TRY_AGAIN_LATER -> waits += 1
                     out == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                         if (!started) {
-                            track = muxer.addTrack(encoder.outputFormat)
-                            muxer.start()
+                            track = output.addTrack(encoder.outputFormat)
+                            output.start()
                             started = true
                         }
                     }
@@ -200,7 +238,7 @@ object FlyoverVideo {
                         if (encoded != null && bufferInfo.size > 0 && started) {
                             encoded.position(bufferInfo.offset)
                             encoded.limit(bufferInfo.offset + bufferInfo.size)
-                            muxer.writeSampleData(track, encoded, bufferInfo)
+                            output.writeSampleData(track, encoded, bufferInfo)
                         }
                         encoder.releaseOutputBuffer(out, false)
                         eos = bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
@@ -210,11 +248,123 @@ object FlyoverVideo {
             }
         } finally {
             runCatching { encoder.stop() }
-            encoder.release()
-            if (started) runCatching { muxer.stop() }
-            muxer.release()
+            runCatching { encoder.release() }
+            if (started) runCatching { muxer?.stop() }
+            runCatching { muxer?.release() }
         }
         if (!file.exists() || file.length() == 0L) error("O vídeo da retrospectiva ficou vazio.")
+    }
+
+    private class YuvPlanes(
+        val width: Int,
+        val height: Int,
+        val y: ByteArray,
+        val u: ByteArray,
+        val v: ByteArray,
+    ) {
+        fun toSemiPlanar(): ByteArray {
+            val ySize = width * height
+            val out = ByteArray(ySize + u.size * 2)
+            y.copyInto(out)
+            interleaved(uThenV = true).copyInto(out, ySize)
+            return out
+        }
+
+        fun interleaved(uThenV: Boolean): ByteArray {
+            val cached = if (uThenV) uv else vu
+            if (cached != null) return cached
+            val out = ByteArray(u.size * 2)
+            var index = 0
+            for (i in u.indices) {
+                out[index++] = if (uThenV) u[i] else v[i]
+                out[index++] = if (uThenV) v[i] else u[i]
+            }
+            if (uThenV) uv = out else vu = out
+            return out
+        }
+
+        private var uv: ByteArray? = null
+        private var vu: ByteArray? = null
+    }
+
+    private fun yuvPlanes(bitmap: Bitmap, width: Int, height: Int): YuvPlanes {
+        val argb = IntArray(width * height)
+        bitmap.getPixels(argb, 0, width, 0, 0, width, height)
+        val chromaWidth = width / 2
+        val chromaHeight = height / 2
+        val y = ByteArray(width * height)
+        val u = ByteArray(chromaWidth * chromaHeight)
+        val v = ByteArray(chromaWidth * chromaHeight)
+        var yIndex = 0
+        for (row in 0 until height) {
+            for (col in 0 until width) {
+                val pixel = argb[yIndex]
+                val r = (pixel shr 16) and 0xFF
+                val g = (pixel shr 8) and 0xFF
+                val b = pixel and 0xFF
+                y[yIndex] = (((66 * r + 129 * g + 25 * b + 128) shr 8) + 16).coerceIn(0, 255).toByte()
+                yIndex += 1
+                if (row % 2 == 0 && col % 2 == 0) {
+                    val chroma = (row / 2) * chromaWidth + col / 2
+                    u[chroma] = (((-38 * r - 74 * g + 112 * b + 128) shr 8) + 128).coerceIn(0, 255).toByte()
+                    v[chroma] = (((112 * r - 94 * g - 18 * b + 128) shr 8) + 128).coerceIn(0, 255).toByte()
+                }
+            }
+        }
+        return YuvPlanes(width, height, y, u, v)
+    }
+
+    private fun writePlanes(planes: YuvPlanes, image: Image) {
+        val crop = image.cropRect
+        val width = min(planes.width, crop.width())
+        val height = min(planes.height, crop.height())
+        copyPlane(image.planes[0], planes.y, width, height, planes.width)
+        val uPlane = image.planes[1]
+        val vPlane = image.planes[2]
+        if (uPlane.pixelStride == 2 && vPlane.pixelStride == 2 &&
+            uPlane.rowStride == planes.width && vPlane.rowStride == planes.width
+        ) {
+            val uBuffer = uPlane.buffer
+            val vBuffer = vPlane.buffer
+            val uFirst = uBuffer.position() <= vBuffer.position()
+            val packed = planes.interleaved(uThenV = uFirst)
+            val buffer = if (uFirst) uBuffer else vBuffer
+            val copy = buffer.duplicate()
+            copy.position(buffer.position())
+            copy.put(packed, 0, min(packed.size, copy.remaining()))
+            return
+        }
+        copyPlane(uPlane, planes.u, width / 2, height / 2, planes.width / 2)
+        copyPlane(vPlane, planes.v, width / 2, height / 2, planes.width / 2)
+    }
+
+    private fun copyPlane(plane: Image.Plane, src: ByteArray, width: Int, height: Int, srcStride: Int) {
+        val buffer = plane.buffer
+        val rowStride = plane.rowStride
+        val pixelStride = plane.pixelStride
+        val base = buffer.position()
+        if (pixelStride == 1 && rowStride == width && srcStride == width) {
+            val copy = buffer.duplicate()
+            copy.position(base)
+            copy.put(src, 0, width * height)
+            return
+        }
+        if (pixelStride == 1) {
+            val copy = buffer.duplicate()
+            for (row in 0 until height) {
+                copy.position(base + row * rowStride)
+                copy.put(src, row * srcStride, width)
+            }
+            return
+        }
+        for (row in 0 until height) {
+            val rowStart = base + row * rowStride
+            val srcRow = row * srcStride
+            for (col in 0 until width) {
+                val index = rowStart + col * pixelStride
+                if (index < buffer.limit()) buffer.put(index, src[srcRow + col])
+            }
+        }
     }
 
     private fun pickColor(encoder: MediaCodec): Int {

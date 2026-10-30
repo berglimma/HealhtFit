@@ -9,7 +9,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
-import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
@@ -104,8 +103,7 @@ object MonthlyRetrospective {
         check(frames <= MAX_SECONDS * FPS) { "A retrospectiva passou de 75 segundos." }
         val dir = File(context.cacheDir, "retrospective").apply { mkdirs() }
         val file = File(dir, "HealthFit-Retrospectiva-${month.year}-${month.monthValue}.mp4")
-        val upright = slides.map { (bitmap, frames) -> flipVertical(bitmap) to frames }
-        FlyoverVideo.encodeHeldFrames(file, upright, FPS)
+        FlyoverVideo.encodeHeldFrames(file, slides, FPS)
         photos.forEach { runCatching { it.bitmap.recycle() } }
         return Video(file, monthLabel, nextLabel, sessions.size, photos.size)
     }
@@ -342,13 +340,6 @@ object MonthlyRetrospective {
             y + 48f,
         )
         return bitmap
-    }
-
-    private fun flipVertical(source: Bitmap): Bitmap {
-        val matrix = Matrix().apply { postScale(1f, -1f, source.width / 2f, source.height / 2f) }
-        val flipped = Bitmap.createBitmap(source, 0, 0, source.width, source.height, matrix, true)
-        if (flipped != source) source.recycle()
-        return flipped
     }
 
     private fun canvasBitmap() = Bitmap.createBitmap(WIDTH, HEIGHT, Bitmap.Config.ARGB_8888)
