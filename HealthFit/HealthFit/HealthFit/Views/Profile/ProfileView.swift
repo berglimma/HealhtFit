@@ -841,11 +841,12 @@ struct ProfileView: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .frame(height: 168)
+                .frame(maxWidth: .infinity)
+                .frame(height: 196)
                 .clipped()
 
                 LinearGradient(
-                    colors: [.black.opacity(0.05), .black.opacity(0.78)],
+                    colors: [.black.opacity(0.05), .black.opacity(0.82)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -858,13 +859,21 @@ struct ProfileView: View {
                     Text("Modalidades que pratico")
                         .font(.title3.bold())
                         .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text("\(activeCount) ativas · \(preview)")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.88))
-                        .lineLimit(2)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(maxWidth: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Modalidades que pratico")
