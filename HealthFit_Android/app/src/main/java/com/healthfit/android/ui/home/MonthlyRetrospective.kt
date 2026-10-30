@@ -3,19 +3,24 @@ package com.healthfit.android.ui.home
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import androidx.core.content.FileProvider
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ImageDecoder
 import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import android.os.Build
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.util.Log
+import androidx.core.content.FileProvider
+import androidx.exifinterface.media.ExifInterface
 import com.healthfit.android.R
 import java.io.File
 import java.time.YearMonth
@@ -77,19 +82,12 @@ object MonthlyRetrospective {
         val monthLabel = label(month)
         val nextLabel = label(next)
         val sessions = sessionsIn(context, month)
-        val photos = sessions.mapNotNull { session ->
-            val path = session.photoPath ?: return@mapNotNull null
-            val image = decodePhoto(path) ?: return@mapNotNull null
-            Photo(
-                image,
-                session.title.ifBlank { "Treino" },
-                dayLabel(session.endedAtMillis),
-                ConstancyStore.dayKey(session.endedAtMillis),
-            )
-        }
+        val photos = photosFromCalendarDays(context, month)
+        Log.i("HealthFitVideo", "Retrospectiva ${monthLabel}: ${photos.size} foto(s) do calendário, ${sessions.size} treino(s)")
         val monthPrefix = "%04d-%02d".format(java.util.Locale.US, month.year, month.monthValue)
         val restDays = ConstancyStore.loadRestDays(context)
             .filter { it.startsWith(monthPrefix) }
+            .filter { key -> photos.none { it.dayKey == key } }
             .sorted()
         val slides = storyboard(
             context = context,
@@ -148,6 +146,32 @@ object MonthlyRetrospective {
                     cal.get(Calendar.MONTH) == month.monthValue - 1
             }
             .sortedBy { it.endedAtMillis }
+    }
+
+    /** Uma foto por dia do calendário, na ordem dos dias — a mesma imagem da célula. */
+    private fun photosFromCalendarDays(context: Context, month: YearMonth): List<Photo> {
+        val photos = ArrayList<Photo>()
+        val seen = HashSet<String>()
+        for (day in 1..month.lengthOfMonth()) {
+            val key = "%04d-%02d-%02d".format(Locale.US, month.year, month.monthValue, day)
+            val sessions = ConstancyStore.sessionsOnDay(context, key)
+            val paths = buildList {
+                sessions.mapNotNull { it.photoPath }.filter { it.isNotBlank() }.forEach { add(it) }
+                ConstancyStore.photoPathOnDay(context, key)?.let { add(it) }
+            }.distinct()
+            for (path in paths) {
+                if (!seen.add(path)) continue
+                val image = decodePhoto(path) ?: continue
+                val session = sessions.firstOrNull { it.photoPath == path }
+                photos += Photo(
+                    image,
+                    session?.title?.ifBlank { "Treino" } ?: "Treino",
+                    dayLabelFromKey(key),
+                    key,
+                )
+            }
+        }
+        return photos
     }
 
     private fun storyboard(
@@ -433,14 +457,62 @@ object MonthlyRetrospective {
         if (value == 1) "1 $one" else "$value $many"
 
     private fun decodePhoto(path: String): Bitmap? {
-        if (!File(path).exists()) return null
+        val file = File(path)
+        if (!file.exists() || file.length() == 0L) return null
+        val sampled = decodeSampledFile(file)
+        return if (sampled != null) applyExif(sampled, path) else decodeWithImageDecoder(file)
+    }
+
+    private fun decodeSampledFile(file: File): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(path, bounds)
+        BitmapFactory.decodeFile(file.absolutePath, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         var sample = 1
         while (bounds.outWidth / sample > 1600 || bounds.outHeight / sample > 1600) sample *= 2
         val options = BitmapFactory.Options().apply { inSampleSize = sample }
-        return BitmapFactory.decodeFile(path, options)
+        return BitmapFactory.decodeFile(file.absolutePath, options)
+    }
+
+    private fun decodeWithImageDecoder(file: File): Bitmap? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
+        return runCatching {
+            ImageDecoder.decodeBitmap(ImageDecoder.createSource(file)) { decoder, info, _ ->
+                val longest = max(info.size.width, info.size.height)
+                if (longest > 1600) {
+                    decoder.setTargetSampleSize((longest / 1600).coerceAtLeast(2))
+                }
+                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            }
+        }.getOrNull()
+    }
+
+    private fun applyExif(bitmap: Bitmap, path: String): Bitmap {
+        val orientation = runCatching {
+            ExifInterface(path).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL,
+            )
+        }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.setScale(-1f, 1f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.setRotate(180f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.setScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.setRotate(90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.setRotate(90f)
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.setRotate(-90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(-90f)
+            else -> return bitmap
+        }
+        val oriented = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        if (oriented !== bitmap && !bitmap.isRecycled) bitmap.recycle()
+        return oriented
     }
 
     private fun <T> sample(items: List<T>, limit: Int): List<T> {

@@ -18,12 +18,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -297,7 +303,7 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
                     .clickable(enabled = !makingVideo) {
                         val nowMonth = YearMonth.now()
                         val visibleMonth = YearMonth.of(year, month + 1)
-                        val target = if (visibleMonth < nowMonth) visibleMonth else nowMonth.minusMonths(1)
+                        val target = if (visibleMonth <= nowMonth) visibleMonth else nowMonth.minusMonths(1)
                         makingVideo = true
                         scope.launch {
                             val ready = runCatching {
@@ -349,68 +355,102 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
     retrospective?.let { video ->
         Dialog(
             onDismissRequest = { retrospective = null },
-            properties = DialogProperties(usePlatformDefaultWidth = false),
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
         ) {
+            var shareStatus by remember(video.file.absolutePath) { mutableStateOf("Toque em uma ação para confirmar.") }
             Column(
                 Modifier
                     .fillMaxSize()
-                    .background(Color.Black),
+                    .background(Color.Black)
+                    .windowInsetsPadding(WindowInsets.safeDrawing),
             ) {
-                Text(
-                    "Fechar",
-                    color = HealthFitColors.Accent,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier
-                        .clickable { retrospective = null }
-                        .padding(16.dp),
-                )
-                AndroidView(
-                    factory = { ctx ->
-                        VideoView(ctx).apply {
-                            setVideoPath(video.file.absolutePath)
-                            setOnPreparedListener { player ->
-                                player.isLooping = true
-                                start()
-                            }
-                        }
-                    },
-                    modifier = Modifier
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Fechar",
+                        color = HealthFitColors.Accent,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { retrospective = null }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                    )
+                    Text(
+                        "Retrospectiva",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.size(64.dp))
+                }
+                Box(
+                    Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
-                )
+                        .fillMaxWidth()
+                        .heightIn(min = 160.dp)
+                        .padding(horizontal = 28.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .clipToBounds()
+                        .background(Color(0xFF0E1113)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AndroidView(
+                        factory = { ctx ->
+                            VideoView(ctx).apply {
+                                setVideoPath(video.file.absolutePath)
+                                setOnPreparedListener { player ->
+                                    player.isLooping = true
+                                    start()
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .aspectRatio(9f / 16f, matchHeightConstraintsFirst = true),
+                    )
+                }
                 Text(
                     video.monthLabel,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 4.dp),
                     textAlign = TextAlign.Center,
                 )
-                var shareStatus by remember(video.file.absolutePath) { mutableStateOf<String?>(null) }
-                shareStatus?.let { message ->
-                    Text(
-                        message,
-                        color = HealthFitColors.Accent,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                    )
-                }
+                Text(
+                    shareStatus,
+                    color = HealthFitColors.Accent,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 2.dp),
+                )
                 Column(
-                    Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     GradientButton(text = "Salvar na galeria", onClick = {
                         val saved = runCatching {
                             SharePublisher.saveVideo(context, video.file, "HealthFit-Retrospectiva")
                         }
                         shareStatus = if (saved.isSuccess) {
-                            "Vídeo salvo na galeria."
+                            "Salvo na galeria."
                         } else {
-                            saved.exceptionOrNull()?.message ?: "Não foi possível salvar na galeria."
+                            "Não foi salvo na galeria."
                         }
                     })
                     GradientButton(text = "Publicar no Pulse", onClick = {
@@ -437,9 +477,9 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
                                 }
                             }
                             shareStatus = if (published.isSuccess) {
-                                "Retrospectiva publicada no Pulse."
+                                "Publicado no Pulse."
                             } else {
-                                published.exceptionOrNull()?.message ?: "Não foi possível publicar no Pulse."
+                                "Não foi publicado no Pulse."
                             }
                         }
                     })
@@ -448,9 +488,9 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
                             SharePublisher.post(context, video.file, "video/mp4", SharePublisher.Target.WhatsAppStatus)
                         }
                         shareStatus = if (sent.isSuccess) {
-                            "Abrindo o WhatsApp."
+                            "Publicado no WhatsApp."
                         } else {
-                            sent.exceptionOrNull()?.message ?: "Não foi possível abrir o WhatsApp."
+                            "Não foi publicado no WhatsApp."
                         }
                     })
                     GradientButton(text = "Instagram Stories", onClick = {
@@ -458,9 +498,9 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
                             SharePublisher.post(context, video.file, "video/mp4", SharePublisher.Target.InstagramStories)
                         }
                         shareStatus = if (sent.isSuccess) {
-                            "Abrindo o Instagram Stories."
+                            "Publicado no Instagram Stories."
                         } else {
-                            sent.exceptionOrNull()?.message ?: "Não foi possível abrir o Instagram."
+                            "Não foi publicado no Instagram Stories."
                         }
                     })
                 }
