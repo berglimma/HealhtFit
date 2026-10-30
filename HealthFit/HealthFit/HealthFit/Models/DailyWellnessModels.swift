@@ -249,6 +249,15 @@ extension UserProfile {
         return min(raw, WaterServing.maxDailyIntakeML)
     }
 
+    var dailyWaterGoalIsCoachSet: Bool { customDailyWaterML != nil }
+
+    var dailyWaterGoalCaption: String {
+        if dailyWaterGoalIsCoachSet {
+            return "Meta definida pelo personal"
+        }
+        return "35 ml/kg"
+    }
+
     /// Sugestão automática por peso (ignora override do personal).
     var weightBasedDailyWaterML: Int {
         let raw = max(Int((weight * 35).rounded()), 1500)

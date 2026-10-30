@@ -7,6 +7,8 @@ private enum WelcomeSessionGate {
     /// Firebase às vezes emite nil→user no resume; evita reiniciar welcome (tela preta/verde).
     static var lastAuthenticatedUserId: String?
     static var lastAuthInterruptAt: Date?
+    /// @State zera no remount iPad; o processo ainda veio de background.
+    static var didEnterBackground = false
 
     /// Blip transitório do Firebase (nil→user). NÃO derruba o MainTab.
     static func noteAuthInterrupted() {
@@ -26,9 +28,10 @@ private enum WelcomeSessionGate {
     }
 
     static func shouldResumeSameSession(userId: String?) -> Bool {
-        guard let userId, userId == lastAuthenticatedUserId else { return false }
-        // Já tinha liberado o MainTab neste processo — Firebase nil transitório não pode esconder a UI.
+        // Já tinha liberado o MainTab neste processo — blip Firebase / remount iPad
+        // não pode esconder a UI nem reiniciar o welcome.
         if didCompleteWelcomeThisLaunch { return true }
+        guard let userId, userId == lastAuthenticatedUserId else { return false }
         guard let lastAuthInterruptAt,
               Date().timeIntervalSince(lastAuthInterruptAt) < 30
         else { return false }
@@ -74,26 +77,26 @@ struct RootView: View {
 
     @ViewBuilder
     private var mainTabRoot: some View {
-        MainTabView()
-            .task {
-                await runPostLoginStartupPipeline()
-            }
-            .sheet(isPresented: $wellnessService.showSleepCheckIn) {
-                DailyWellnessCheckInView()
-                    .environmentObject(authService)
-                    .environmentObject(wellnessService)
-                    .environmentObject(healthKitManager)
-            }
-            .fullScreenCover(isPresented: $showWelcomeMotivation) {
-                if let context = welcomeContext {
-                    WelcomeMotivationView(context: context) {
-                        dismissWelcomeOverlay()
-                    }
-                } else {
-                    Color.clear
-                        .onAppear { dismissWelcomeOverlay() }
+        ZStack {
+            MainTabView()
+                .task {
+                    await runPostLoginStartupPipeline()
                 }
+                .sheet(isPresented: $wellnessService.showSleepCheckIn) {
+                    DailyWellnessCheckInView()
+                        .environmentObject(authService)
+                        .environmentObject(wellnessService)
+                        .environmentObject(healthKitManager)
+                }
+
+            // Overlay no ZStack — `fullScreenCover` no iPad fica preto após background/Stage Manager.
+            if showWelcomeMotivation, let context = welcomeContext {
+                WelcomeMotivationView(context: context) {
+                    dismissWelcomeOverlay()
+                }
+                .zIndex(20)
             }
+        }
     }
 
     var body: some View {
@@ -167,8 +170,9 @@ struct RootView: View {
                     } else if showWelcomeMotivation {
                         scheduleStuckWelcomeOverlayDismiss(delayNanoseconds: 7_000_000_000)
                     }
-                    let returningFromBackground = didEnterBackground
+                    let returningFromBackground = didEnterBackground || WelcomeSessionGate.didEnterBackground
                     didEnterBackground = false
+                    WelcomeSessionGate.didEnterBackground = false
                     if returningFromBackground {
                         // Só após background real: catch-up + pipeline (evita lag no Control Center / Stage Manager).
                         runLightweightForegroundCatchUp()
@@ -183,6 +187,7 @@ struct RootView: View {
                 }
             case .background:
                 didEnterBackground = true
+                WelcomeSessionGate.didEnterBackground = true
                 KeyboardDismiss.hide()
                 workoutStore.handleAppEnteredBackground()
                 timerService.handleAppEnteredBackground()
@@ -198,7 +203,7 @@ struct RootView: View {
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             if isAuthenticated {
-                // Blip Firebase (nil→user): restaura MainTab em vez da tela preta/verde.
+                // Blip Firebase (nil→user) ou remount iPad: restaura MainTab, não o welcome.
                 if WelcomeSessionGate.shouldResumeSameSession(userId: authService.currentUser?.id) {
                     WelcomeSessionGate.didCompleteWelcomeThisLaunch = true
                     WelcomeSessionGate.lastAuthInterruptAt = nil

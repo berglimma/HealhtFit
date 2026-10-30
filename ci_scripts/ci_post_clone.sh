@@ -12,16 +12,18 @@ EXAMPLE_PATH="$PLIST_DIR/GoogleService-Info.plist.example"
 
 echo "[ci_post_clone] repo=$REPO_ROOT"
 
-if [ -f "$PLIST_PATH" ]; then
-  echo "[ci_post_clone] GoogleService-Info.plist já existe."
-elif [ -n "${CI_GOOGLE_SERVICE_INFO_BASE64:-}" ]; then
+if [ -n "${CI_GOOGLE_SERVICE_INFO_BASE64:-}" ]; then
   echo "[ci_post_clone] Gerando GoogleService-Info.plist a partir do secret CI_GOOGLE_SERVICE_INFO_BASE64."
   printf '%s' "$CI_GOOGLE_SERVICE_INFO_BASE64" | base64 --decode > "$PLIST_PATH"
-elif [ -f "$EXAMPLE_PATH" ]; then
-  echo "[ci_post_clone] AVISO: secret ausente — copiando .example (Firebase fica desligado no build Cloud)."
-  cp "$EXAMPLE_PATH" "$PLIST_PATH"
+elif [ -f "$PLIST_PATH" ]; then
+  echo "[ci_post_clone] GoogleService-Info.plist já existe no clone."
 else
-  echo "[ci_post_clone] ERRO: sem GoogleService-Info.plist nem .example."
+  echo "[ci_post_clone] ERRO: GoogleService-Info.plist ausente. Não usar .example na App Store."
+  exit 1
+fi
+
+if grep -q 'REPLACE_ME' "$PLIST_PATH"; then
+  echo "[ci_post_clone] ERRO: GoogleService-Info.plist ainda é o placeholder. O login da App Store fica sem Firebase."
   exit 1
 fi
 

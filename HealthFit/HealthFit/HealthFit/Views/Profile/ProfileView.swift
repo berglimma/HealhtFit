@@ -1457,7 +1457,9 @@ struct ProfileView: View {
                     .foregroundStyle(AppTheme.textSecondary)
             }
 
-            Text("Cálculo: 35 ml por kg de peso corporal (\(String(format: "%.1f", user.weight)) kg). Equivale a cerca de \(user.recommendedWaterGlasses) copos (\(WaterServing.glassML) ml) ou \(user.recommendedWaterBottles) garrafas (\(WaterServing.bottleML) ml).")
+            Text(user.dailyWaterGoalIsCoachSet
+                 ? "Meta definida pelo personal. Equivale a cerca de \(user.recommendedWaterGlasses) copos (\(WaterServing.glassML) ml) ou \(user.recommendedWaterBottles) garrafas (\(WaterServing.bottleML) ml)."
+                 : "Cálculo: 35 ml por kg de peso corporal (\(String(format: "%.1f", user.weight)) kg). Equivale a cerca de \(user.recommendedWaterGlasses) copos (\(WaterServing.glassML) ml) ou \(user.recommendedWaterBottles) garrafas (\(WaterServing.bottleML) ml).")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
 

@@ -130,7 +130,9 @@ struct DailyWellnessCheckInView: View {
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(AppTheme.textPrimary)
 
-                Text("Com base no seu peso (\(String(format: "%.1f", user.weight)) kg), beba:")
+                Text(user.dailyWaterGoalIsCoachSet
+                     ? "Meta definida pelo personal:"
+                     : "Com base no seu peso (\(String(format: "%.1f", user.weight)) kg), beba:")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.textSecondary)
 

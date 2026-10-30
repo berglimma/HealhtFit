@@ -24,7 +24,7 @@ enum ProfileFirestoreService {
         db.collection("users").document(userId)
     }
 
-    static func saveProfile(_ profile: UserProfile) async throws {
+    static func saveProfile(_ profile: UserProfile, overwriteWaterGoal: Bool = false) async throws {
         guard isAvailable else { return }
 
         var profile = profile
@@ -52,6 +52,11 @@ enum ProfileFirestoreService {
             "createdAt": Timestamp(date: profile.createdAt),
         ]
         applyMenstrualCycleFields(from: profile, to: &data)
+        if let customWater = profile.customDailyWaterML {
+            data["customDailyWaterML"] = customWater
+        } else if overwriteWaterGoal {
+            data["customDailyWaterML"] = FieldValue.delete()
+        }
         if let dateOfBirth = profile.dateOfBirth {
             data["dateOfBirth"] = Timestamp(date: dateOfBirth)
         } else {
@@ -111,7 +116,35 @@ enum ProfileFirestoreService {
               let payload = json.data(using: .utf8) else {
             return nil
         }
-        return try decoder.decode(UserProfile.self, from: payload)
+        var profile = try decoder.decode(UserProfile.self, from: payload)
+        hydrateCoachOwnedFields(from: data, into: &profile)
+        return profile
+    }
+
+    /// Live updates for coach-owned fields (water goal, weight) on the student card.
+    static func listenProfile(
+        userId: String,
+        handler: @escaping (UserProfile?) -> Void
+    ) -> ListenerRegistration? {
+        guard isAvailable else { return nil }
+        return userDocument(userId: userId).addSnapshotListener { snapshot, _ in
+            guard let snapshot, snapshot.exists, !snapshot.metadata.hasPendingWrites else { return }
+            guard let data = snapshot.data(),
+                  let json = data["profilePayload"] as? String,
+                  let payload = json.data(using: .utf8),
+                  var profile = try? decoder.decode(UserProfile.self, from: payload) else {
+                return
+            }
+            profile.id = userId
+            hydrateCoachOwnedFields(from: data, into: &profile)
+            handler(profile)
+        }
+    }
+
+    private static func hydrateCoachOwnedFields(from data: [String: Any], into profile: inout UserProfile) {
+        if let top = data["customDailyWaterML"] as? NSNumber, top.intValue >= 500 {
+            profile.customDailyWaterML = top.intValue
+        }
     }
 
     // MARK: - Diretório público (nome + como quer ser chamado)

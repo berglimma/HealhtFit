@@ -1,5 +1,3 @@
-• Vidéo de rétrospective mensuelle dans le calendrier Constance, avec repos et partage
-• Carte des disciplines dans le profil pour choisir ce que vous pratiquez
-• Correction urgente : l’entraînement lancé ne reste plus bloqué sur un écran noir
-• Terminer, Continuer et Quitter fonctionnent à nouveau s’il y a déjà un entraînement en cours
-• Les séances orphelines sont rétablies ou clôturées sans supprimer l’app
+• Correction urgente : la connexion Firebase fonctionne à nouveau après la mise à jour App Store
+• Sur iPad, quitter puis revenir n’affiche plus un écran sombre
+• L’objectif d’eau défini par le coach s’affiche tout de suite sur la carte de l’élève

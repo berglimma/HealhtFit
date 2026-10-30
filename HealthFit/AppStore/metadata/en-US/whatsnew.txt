@@ -1,5 +1,3 @@
-• Monthly retrospective video on the Constancy calendar, including rest days and sharing
-• A modalities card in Profile to choose what you practice
-• Urgent fix: a started workout no longer gets stuck on a black screen
-• End, Continue, and Dismiss work again when a workout is already in progress
-• Orphan sessions are restored or ended without deleting the app
+• Urgent fix: sign-in connects to Firebase again after the App Store update
+• On iPad, leaving and returning no longer leaves a dark screen
+• The water goal set by the trainer now updates live on the student’s water card

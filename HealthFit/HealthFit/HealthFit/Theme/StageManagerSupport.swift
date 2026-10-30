@@ -27,4 +27,25 @@ enum StageManagerSupport {
             }
         }
     }
+
+    /// iPad/Stage Manager: a cena pode voltar sem janela key visível (tela só com o fundo escuro).
+    @MainActor
+    static func repairForegroundWindow() {
+        applyWindowChrome()
+        guard UIDevice.current.userInterfaceIdiom == .pad else { return }
+
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let activeScenes = scenes.filter { $0.activationState == .foregroundActive }
+        let targets = activeScenes.isEmpty ? scenes : activeScenes
+
+        for scene in targets {
+            let window = scene.windows.first(where: { $0.rootViewController != nil && !$0.isHidden })
+                ?? scene.windows.first(where: \.isKeyWindow)
+                ?? scene.windows.first(where: { $0.rootViewController != nil })
+                ?? scene.windows.first
+            guard let window else { continue }
+            window.isHidden = false
+            window.makeKeyAndVisible()
+        }
+    }
 }

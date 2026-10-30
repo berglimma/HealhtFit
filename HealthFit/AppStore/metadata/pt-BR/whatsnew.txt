@@ -1,5 +1,3 @@
-• Vídeo da retrospectiva do mês no calendário Constância, com descanso e compartilhamento
-• Card de modalidades no perfil para escolher o que você pratica
-• Correção urgente: treino iniciado não trava mais em tela preta
-• Encerrar, Continuar e Sair voltam a funcionar se já existir um treino em andamento
-• Sessão órfã é reconstruída ou encerrada, sem precisar apagar o app
+• Correção urgente: o login volta a conectar no Firebase após a atualização da App Store
+• No iPad, sair e voltar do app não deixa mais a tela escura
+• A meta de água definida pelo personal aparece na hora no card do aluno

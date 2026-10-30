@@ -2043,6 +2043,7 @@ struct CoachStudentMetricsView: View {
                 HStack(spacing: 16) {
                     Button {
                         adjustWaterGoal(by: -250)
+                        persistWaterGoal()
                     } label: {
                         Image(systemName: "minus.circle.fill")
                             .font(.title2)
@@ -2053,6 +2054,7 @@ struct CoachStudentMetricsView: View {
 
                     Button {
                         adjustWaterGoal(by: 250)
+                        persistWaterGoal()
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
@@ -2066,6 +2068,7 @@ struct CoachStudentMetricsView: View {
                     if student?.customDailyWaterML != nil {
                         Button("Usar 35 ml/kg") {
                             resetWaterGoalToWeightBased()
+                            persistWaterGoal()
                         }
                         .font(.caption.weight(.semibold))
                     }
@@ -2073,7 +2076,7 @@ struct CoachStudentMetricsView: View {
             } header: {
                 Text("Água diária do aluno")
             } footer: {
-                Text("O personal define a meta em ml. Sem override, o app usa 35 ml por kg de peso.")
+                Text("A meta aparece na hora no card de água do aluno. Sem override, o app usa 35 ml por kg de peso.")
             }
 
             Section("Circunferências") {
@@ -2208,6 +2211,10 @@ struct CoachStudentMetricsView: View {
         student = profile
     }
 
+    private func persistWaterGoal() {
+        Task { await save(includeMeasurements: false, showSuccessAlert: false) }
+    }
+
     private func loadStudent() async {
         isLoading = true
         loadError = nil
@@ -2296,7 +2303,7 @@ struct CoachStudentMetricsView: View {
 
         profile.updatedAt = .now
         do {
-            try await ProfileFirestoreService.saveProfile(profile)
+            try await ProfileFirestoreService.saveProfile(profile, overwriteWaterGoal: true)
             apply(profile)
             if showSuccessAlert {
                 showSavedAlert = true

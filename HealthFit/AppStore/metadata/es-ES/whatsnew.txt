@@ -1,5 +1,3 @@
-• Video de retrospectiva mensual en el calendario Constancia, con descanso y compartir
-• Tarjeta de modalidades en el perfil para elegir lo que practicas
-• Corrección urgente: el entrenamiento iniciado ya no se queda en pantalla negra
-• Finalizar, Continuar y Salir vuelven a funcionar si ya hay un entrenamiento en curso
-• Las sesiones huérfanas se reconstruyen o se cierran sin borrar la app
+• Corrección urgente: el inicio de sesión vuelve a conectar con Firebase tras la actualización de App Store
+• En iPad, salir y volver ya no deja la pantalla oscura
+• La meta de agua del entrenador se actualiza al momento en la tarjeta del alumno

@@ -74,11 +74,11 @@ struct HealthFitApp: App {
                     mealPlanService: mealPlanService
                 )
                 Task { await appUpdateService.checkForRequiredUpdate(force: true) }
-                StageManagerSupport.applyWindowChrome()
+                StageManagerSupport.repairForegroundWindow()
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                 Task { await appUpdateService.checkForRequiredUpdate() }
-                StageManagerSupport.applyWindowChrome()
+                StageManagerSupport.repairForegroundWindow()
             }
             .task(priority: .utility) {
                 await Task.yield()

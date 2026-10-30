@@ -22,9 +22,12 @@
 # Swift Package Manager (cache local)
 .swiftpm/xcode/package.xcworkspace/xcuserdata/
 
-# Firebase — NÃO commitar (contém API_KEY e CLIENT_ID)
+# Firebase Android continua fora do git.
+# O plist iOS PRECISA ir no git: sem ele o Xcode Cloud copia o .example
+# e a App Store abre com "Firebase não configurado".
 **/GoogleService-Info.plist
 !**/GoogleService-Info.plist.example
+!HealthFit/HealthFit/HealthFit/GoogleService-Info.plist
 functions/serviceAccountKey.json
 
 # Segredos / ambiente

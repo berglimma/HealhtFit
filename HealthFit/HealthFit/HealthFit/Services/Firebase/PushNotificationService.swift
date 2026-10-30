@@ -118,18 +118,13 @@ final class HealthFitAppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
-    func application(
-        _ application: UIApplication,
-        configurationForConnecting connectingSceneSession: UISceneSession,
-        options: UIScene.ConnectionOptions
-    ) -> UISceneConfiguration {
-        let config = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
-        return config
-    }
+    // NÃO implementar `configurationForConnecting`. O manifesto de cena é gerado pelo SwiftUI
+    // (`UIApplicationSceneManifest_Generation`). Devolver "Default Configuration" no iPad cria
+    // uma janela vazia ao voltar do background — tela só com o fundo escuro até forçar o fechamento.
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         Task { @MainActor in
-            StageManagerSupport.applyWindowChrome()
+            StageManagerSupport.repairForegroundWindow()
         }
     }
 

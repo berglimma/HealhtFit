@@ -4,6 +4,7 @@ import UIKit
 import ImageIO
 import AuthenticationServices
 import FirebaseAuth
+import FirebaseFirestore
 
 @MainActor
 final class AuthService: ObservableObject {
@@ -23,6 +24,8 @@ final class AuthService: ObservableObject {
     private var expectsSignedOut = false
     /// Debounce do blip nil→user do Firebase (evita tela preta no RootView).
     private var pendingAuthNilTask: Task<Void, Never>?
+    private var profileListener: ListenerRegistration?
+    private var profileListenerUserId: String?
 
     init() {
         FirebaseBootstrap.configure()
@@ -361,6 +364,7 @@ final class AuthService: ObservableObject {
         currentUser = profile
         saveCachedProfile(profile)
         markProfileDirty(true, userId: profile.id)
+        DailyWellnessService.shared.refreshWaterGoal(from: profile)
         NotificationService.shared.refreshRecurringNotifications()
         syncProfileToCloud(profile)
         Task {
@@ -667,6 +671,8 @@ final class AuthService: ObservableObject {
                 if let local, dirty || local.updatedAt > remoteProfile.updatedAt {
                     // Local é mais recente (ou sync pendente): não sobrescreve e empurra ao Firebase.
                     var kept = local
+                    // Meta de água é do personal — não descartar o valor remoto.
+                    kept.customDailyWaterML = remoteProfile.customDailyWaterML
                     if kept.email != email {
                         kept.email = email
                         kept.updatedAt = .now
@@ -716,6 +722,8 @@ final class AuthService: ObservableObject {
         currentUser = profile
         isAuthenticated = true
         AppAnalytics.setUserID(profile.id)
+        startListeningToProfile(profile.id)
+        DailyWellnessService.shared.refreshWaterGoal(from: profile)
 
         guard profileChanged else { return }
 
@@ -734,7 +742,6 @@ final class AuthService: ObservableObject {
             await MarcoCivilAccessLogService.recordSessionStartIfNeeded(userId: profile.id)
         }
         PushNotificationService.shared.bind(userId: profile.id)
-        DailyWellnessService.shared.refreshWaterGoal(from: profile)
         NotificationService.shared.refreshRecurringNotifications(force: true)
         NotificationService.shared.refreshWorkoutInactivityReminder(
             lastWorkoutAt: nil,
@@ -751,11 +758,43 @@ final class AuthService: ObservableObject {
     }
 
     private func clearLocalSession() {
+        stopListeningToProfile()
         PushNotificationService.shared.clearBinding()
         currentUser = nil
         profileImage = nil
         profileBackgroundImage = nil
         isAuthenticated = false
+    }
+
+    private func startListeningToProfile(_ userId: String) {
+        guard profileListenerUserId != userId else { return }
+        stopListeningToProfile()
+        profileListenerUserId = userId
+        profileListener = ProfileFirestoreService.listenProfile(userId: userId) { [weak self] remote in
+            guard let remote else { return }
+            Task { @MainActor in
+                self?.applyRemoteProfileSnapshot(remote)
+            }
+        }
+    }
+
+    private func stopListeningToProfile() {
+        profileListener?.remove()
+        profileListener = nil
+        profileListenerUserId = nil
+    }
+
+    /// Aplica a meta de água (e o peso se o perfil local não estiver sujo) sem apagar edições locais.
+    private func applyRemoteProfileSnapshot(_ remote: UserProfile) {
+        guard var local = currentUser, local.id == remote.id else { return }
+        local.customDailyWaterML = remote.customDailyWaterML
+        if !isProfileDirty(userId: local.id) {
+            local.weight = remote.weight
+        }
+        guard local != currentUser else { return }
+        currentUser = local
+        saveCachedProfile(local)
+        DailyWellnessService.shared.refreshWaterGoal(from: local)
     }
 
     private func profileCacheKey(for uid: String) -> String {

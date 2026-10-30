@@ -405,9 +405,14 @@ struct DashboardView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
-                Label("Água", systemImage: "drop.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.blue)
+                VStack(alignment: .leading, spacing: 2) {
+                    Label("Água", systemImage: "drop.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.blue)
+                    Text(authService.currentUser?.dailyWaterGoalCaption ?? "35 ml/kg")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
 
                 Spacer(minLength: 8)
 
