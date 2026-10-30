@@ -736,6 +736,7 @@ struct ProfileView: View {
                 )
             }
             .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
             .listRowBackground(Color.clear)
             .sheet(isPresented: $showPracticedModalities) {
@@ -829,27 +830,11 @@ struct ProfileView: View {
         let preview: String
 
         var body: some View {
-            ZStack(alignment: .bottomLeading) {
-                HStack(spacing: 2) {
-                    cover("CardioCoverCorrida")
-                    VStack(spacing: 2) {
-                        cover("CardioCoverKitesurf")
-                        HStack(spacing: 2) {
-                            cover("FightCoverLuta")
-                            cover("MeditacaoCoverFoco")
-                        }
-                    }
+            VStack(alignment: .leading, spacing: 0) {
+                photoCollage
+                    .frame(height: 132)
                     .frame(maxWidth: .infinity)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 196)
-                .clipped()
-
-                LinearGradient(
-                    colors: [.black.opacity(0.05), .black.opacity(0.82)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+                    .clipped()
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("PERFIL")
@@ -857,23 +842,24 @@ struct ProfileView: View {
                         .foregroundStyle(AppTheme.accent)
                         .tracking(1.1)
                     Text("Modalidades que pratico")
-                        .font(.title3.bold())
+                        .font(.headline.bold())
                         .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.85)
                         .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("\(activeCount) ativas · \(preview)")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("\(activeCount) ativas")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.92))
+                    Text(preview)
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.88))
-                        .lineLimit(3)
+                        .foregroundStyle(.white.opacity(0.78))
                         .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(16)
+                .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(red: 0.027, green: 0.063, blue: 0.094))
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Modalidades que pratico")
@@ -881,11 +867,34 @@ struct ProfileView: View {
             .accessibilityHint("Abre a lista para marcar ou desmarcar")
         }
 
-        private func cover(_ name: String) -> some View {
+        private var photoCollage: some View {
+            GeometryReader { geo in
+                let width = geo.size.width
+                let height = geo.size.height
+                let gap: CGFloat = 2
+                let left = (width - gap) * 0.56
+                let right = width - left - gap
+                HStack(spacing: gap) {
+                    cover("CardioCoverCorrida", width: left, height: height)
+                    VStack(spacing: gap) {
+                        cover("CardioCoverKitesurf", width: right, height: (height - gap) * 0.58)
+                        HStack(spacing: gap) {
+                            let tile = (right - gap) / 2
+                            cover("FightCoverLuta", width: tile, height: (height - gap) * 0.42)
+                            cover("MeditacaoCoverFoco", width: tile, height: (height - gap) * 0.42)
+                        }
+                    }
+                    .frame(width: right, height: height)
+                }
+                .frame(width: width, height: height, alignment: .topLeading)
+            }
+        }
+
+        private func cover(_ name: String, width: CGFloat, height: CGFloat) -> some View {
             Image(name)
                 .resizable()
                 .scaledToFill()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(width: max(width, 1), height: max(height, 1))
                 .clipped()
         }
     }
