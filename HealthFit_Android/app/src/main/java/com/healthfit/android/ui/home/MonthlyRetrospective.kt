@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
@@ -103,7 +104,8 @@ object MonthlyRetrospective {
         check(frames <= MAX_SECONDS * FPS) { "A retrospectiva passou de 75 segundos." }
         val dir = File(context.cacheDir, "retrospective").apply { mkdirs() }
         val file = File(dir, "HealthFit-Retrospectiva-${month.year}-${month.monthValue}.mp4")
-        FlyoverVideo.encodeHeldFrames(file, slides, FPS)
+        val upright = slides.map { (bitmap, frames) -> flipVertical(bitmap) to frames }
+        FlyoverVideo.encodeHeldFrames(file, upright, FPS)
         photos.forEach { runCatching { it.bitmap.recycle() } }
         return Video(file, monthLabel, nextLabel, sessions.size, photos.size)
     }
@@ -174,16 +176,28 @@ object MonthlyRetrospective {
                 slides += drawPhrase(heart, phrase, index + 1) to phraseFrames
             }
         } else {
-            val minFrames = (2.4 * FPS).roundToInt()
-            val maxFrames = (4.2 * FPS).roundToInt()
-            val cap = (budget / minFrames).coerceAtLeast(1)
-            val chosen = sample(moments, cap)
-            var per = (budget / chosen.size).coerceIn(minFrames, maxFrames)
-            while (chosen.size * per > budget && per > 1) per -= 1
+            val room = (budget / FPS).coerceAtLeast(1)
+            val shots = moments.filterIsInstance<Moment.Shot>()
+            val rests = moments.filterIsInstance<Moment.Rest>()
+            val chosen = when {
+                moments.size <= room -> moments
+                shots.size >= room -> sample(shots, room)
+                else -> {
+                    val restKeep = sample(rests, room - shots.size).map { it.sortKey }.toSet()
+                    moments.filter { it is Moment.Shot || (it is Moment.Rest && it.sortKey in restKeep) }
+                }
+            }
+            val per = (budget / chosen.size).coerceAtLeast(1)
             chosen.forEachIndexed { index, moment ->
                 val bitmap = when (moment) {
                     is Moment.Shot -> drawPhoto(heart, moment.photo, phrases[index % phrases.size])
-                    is Moment.Rest -> drawRest(heart, moment.label, restPhrases[index % restPhrases.size])
+                    is Moment.Rest -> drawRest(
+                        context,
+                        heart,
+                        moment.label,
+                        restPhrases[index % restPhrases.size],
+                        index,
+                    )
                 }
                 slides += bitmap to per
             }
@@ -248,16 +262,56 @@ object MonthlyRetrospective {
         return bitmap
     }
 
-    private fun drawRest(heart: Bitmap?, day: String, phrase: String): Bitmap {
+    private val restCovers = intArrayOf(
+        R.drawable.meditacaocoverrecuperacao,
+        R.drawable.meditacaocoverrelaxamento,
+        R.drawable.meditacaocoversono,
+        R.drawable.meditacaocoverrespiracao,
+    )
+
+    private fun drawRest(context: Context, heart: Bitmap?, day: String, phrase: String, coverIndex: Int): Bitmap {
         val bitmap = canvasBitmap()
         val canvas = Canvas(bitmap)
-        paintBackground(canvas)
-        drawHeart(canvas, heart, 360f, 200)
-        var y = 600f
+        val cover = BitmapFactory.decodeResource(
+            context.resources,
+            restCovers[coverIndex % restCovers.size],
+        )
+        if (cover != null) {
+            drawCover(canvas, cover)
+            if (!cover.isRecycled) cover.recycle()
+        } else {
+            paintBackground(canvas)
+        }
+        val scrim = Paint().apply {
+            shader = LinearGradient(
+                0f,
+                HEIGHT * 0.28f,
+                0f,
+                HEIGHT.toFloat(),
+                Color.TRANSPARENT,
+                Color.parseColor("#F0071018"),
+                Shader.TileMode.CLAMP,
+            )
+        }
+        canvas.drawRect(0f, HEIGHT * 0.28f, WIDTH.toFloat(), HEIGHT.toFloat(), scrim)
+        val top = Paint().apply {
+            shader = LinearGradient(
+                0f,
+                0f,
+                0f,
+                280f,
+                Color.parseColor("#CC071018"),
+                Color.TRANSPARENT,
+                Shader.TileMode.CLAMP,
+            )
+        }
+        canvas.drawRect(0f, 0f, WIDTH.toFloat(), 280f, top)
+        drawHeart(canvas, heart, 280f, 180)
+        var y = 500f
         y = drawCentered(canvas, "HEALTHFIT", titlePaint(28f, accent()), y)
-        y = drawCentered(canvas, "DIA DE DESCANSO", titlePaint(46f, Color.WHITE), y + 28f)
-        y = drawCentered(canvas, day, bodyPaint(30f, Color.WHITE), y + 16f)
-        drawCentered(canvas, phrase, titlePaint(36f, Color.WHITE), y + 40f)
+        y = drawCentered(canvas, "DIA DE DESCANSO", titlePaint(44f, Color.WHITE), y + 20f)
+        y = drawCentered(canvas, day, bodyPaint(28f, Color.WHITE), y + 12f)
+        drawCentered(canvas, phrase, titlePaint(34f, Color.WHITE), y + 28f)
         return bitmap
     }
 
@@ -288,6 +342,13 @@ object MonthlyRetrospective {
             y + 48f,
         )
         return bitmap
+    }
+
+    private fun flipVertical(source: Bitmap): Bitmap {
+        val matrix = Matrix().apply { postScale(1f, -1f, source.width / 2f, source.height / 2f) }
+        val flipped = Bitmap.createBitmap(source, 0, 0, source.width, source.height, matrix, true)
+        if (flipped != source) source.recycle()
+        return flipped
     }
 
     private fun canvasBitmap() = Bitmap.createBitmap(WIDTH, HEIGHT, Bitmap.Config.ARGB_8888)

@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.Toast
+import android.widget.VideoView
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -54,6 +55,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -200,7 +204,6 @@ fun ConstancyCard(onOpen: () -> Unit) {
 
 @Composable
 fun ConstancyCalendarScreen(onBack: () -> Unit) {
-    BackHandler(onBack = onBack)
     val context = LocalContext.current
     val locale = Locale("pt", "BR")
     var visible by remember { mutableStateOf(Calendar.getInstance().apply { set(Calendar.DAY_OF_MONTH, 1) }) }
@@ -209,6 +212,9 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
     var makingVideo by remember { mutableStateOf(false) }
     var retrospective by remember { mutableStateOf<MonthlyRetrospective.Video?>(null) }
     val scope = rememberCoroutineScope()
+    BackHandler {
+        if (retrospective != null) retrospective = null else onBack()
+    }
 
     val year = visible.get(Calendar.YEAR)
     val month = visible.get(Calendar.MONTH)
@@ -339,30 +345,50 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(28.dp))
     }
     retrospective?.let { video ->
-        AlertDialog(
+        Dialog(
             onDismissRequest = { retrospective = null },
-            title = { Text("Retrospectiva") },
-            text = { Text(video.monthLabel) },
-            confirmButton = {
-                TextButton(onClick = {
-                    toastShare(context) {
-                        SharePublisher.saveVideo(context, video.file, "HealthFit-Retrospectiva")
-                        Toast.makeText(context, "Vídeo salvo na galeria", Toast.LENGTH_SHORT).show()
-                    }
-                }) { Text("Galeria") }
-            },
-            dismissButton = {
-                Row {
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+            ) {
+                Text(
+                    "Fechar",
+                    color = HealthFitColors.Accent,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clickable { retrospective = null }
+                        .padding(16.dp),
+                )
+                AndroidView(
+                    factory = { ctx ->
+                        VideoView(ctx).apply {
+                            setVideoPath(video.file.absolutePath)
+                            setOnPreparedListener { player ->
+                                player.isLooping = true
+                                start()
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                )
+                Text(
+                    video.monthLabel,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = {
                         toastShare(context) {
-                            SharePublisher.post(context, video.file, "video/mp4", SharePublisher.Target.InstagramStories)
+                            SharePublisher.saveVideo(context, video.file, "HealthFit-Retrospectiva")
+                            Toast.makeText(context, "Vídeo salvo na galeria", Toast.LENGTH_SHORT).show()
                         }
-                    }) { Text("Instagram") }
-                    TextButton(onClick = {
-                        toastShare(context) {
-                            SharePublisher.post(context, video.file, "video/mp4", SharePublisher.Target.WhatsAppStatus)
-                        }
-                    }) { Text("WhatsApp") }
+                    }) { Text("Salvar na galeria", color = HealthFitColors.Accent) }
                     TextButton(onClick = {
                         scope.launch {
                             val published = runCatching {
@@ -391,10 +417,20 @@ fun ConstancyCalendarScreen(onBack: () -> Unit) {
                                 Toast.LENGTH_LONG,
                             ).show()
                         }
-                    }) { Text("Pulse") }
+                    }) { Text("Publicar no Pulse", color = HealthFitColors.Accent) }
+                    TextButton(onClick = {
+                        toastShare(context) {
+                            SharePublisher.post(context, video.file, "video/mp4", SharePublisher.Target.WhatsAppStatus)
+                        }
+                    }) { Text("WhatsApp", color = HealthFitColors.Accent) }
+                    TextButton(onClick = {
+                        toastShare(context) {
+                            SharePublisher.post(context, video.file, "video/mp4", SharePublisher.Target.InstagramStories)
+                        }
+                    }) { Text("Instagram Stories", color = HealthFitColors.Accent) }
                 }
-            },
-        )
+            }
+        }
     }
 }
 
