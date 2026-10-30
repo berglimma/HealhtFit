@@ -130,9 +130,9 @@ struct WorkoutPhotoCalendarView: View {
                 RetrospectivePlayerSheet(
                     url: retrospectiveURL,
                     monthTitle: retrospectiveTitle,
-                    onGallery: { Task { await saveRetrospectiveToGallery() } },
-                    onInstagram: { Task { await shareRetrospectiveToInstagram() } },
-                    onPulse: { Task { await publishRetrospectiveToPulse() } },
+                    onGallery: { await saveRetrospectiveToGallery() },
+                    onInstagram: { await shareRetrospectiveToInstagram() },
+                    onPulse: { await publishRetrospectiveToPulse() },
                     onClose: { showRetrospectiveActions = false }
                 )
             }
@@ -518,28 +518,26 @@ struct WorkoutPhotoCalendarView: View {
         showRetrospectiveActions = true
     }
 
-    private func saveRetrospectiveToGallery() async {
-        guard let retrospectiveURL else { return }
+    private func saveRetrospectiveToGallery() async -> String {
+        guard let retrospectiveURL else { return "O vídeo não está disponível." }
         do {
             try await PhotoLibrarySaver.saveVideo(at: retrospectiveURL)
-            retrospectiveNote = "Vídeo salvo na galeria."
+            return "Vídeo salvo na galeria."
         } catch {
-            retrospectiveNote = "Não foi possível salvar na galeria."
+            return "Não foi possível salvar na galeria."
         }
     }
 
-    private func shareRetrospectiveToInstagram() async {
-        guard let retrospectiveURL else { return }
+    private func shareRetrospectiveToInstagram() async -> String {
+        guard let retrospectiveURL else { return "O vídeo não está disponível." }
         guard let scheme = URL(string: "instagram-stories://share"),
               UIApplication.shared.canOpenURL(scheme) else {
-            retrospectiveNote = "O Instagram não está disponível. Use o status do WhatsApp."
-            return
+            return "O Instagram não está disponível. Use o WhatsApp."
         }
         let fileSize = (try? FileManager.default.attributesOfItem(atPath: retrospectiveURL.path)[.size] as? NSNumber)?.intValue ?? 0
         guard fileSize > 0, fileSize <= 7_500_000 else {
             showRetrospectiveShare = true
-            retrospectiveNote = "Escolha o Instagram na tela de compartilhar."
-            return
+            return "Escolha o Instagram na tela de compartilhar."
         }
         do {
             let data = try Data(contentsOf: retrospectiveURL, options: [.mappedIfSafe])
@@ -557,13 +555,15 @@ struct WorkoutPhotoCalendarView: View {
                 try? await Task.sleep(nanoseconds: 100_000_000)
                 await UIApplication.shared.open(openURL)
             }
+            return "Abrindo o Instagram Stories."
         } catch {
             showRetrospectiveShare = true
+            return "Não foi possível abrir o Instagram. Escolha o app na lista."
         }
     }
 
-    private func publishRetrospectiveToPulse() async {
-        guard let retrospectiveURL else { return }
+    private func publishRetrospectiveToPulse() async -> String {
+        guard let retrospectiveURL else { return "O vídeo não está disponível." }
         let month = MonthlyRetrospectiveVideo.monthTitle(retrospectiveMonthStart)
         do {
             _ = try await PulseLocalStore.shared.addVideoPost(
@@ -582,9 +582,9 @@ struct WorkoutPhotoCalendarView: View {
                 authorAvatar: authService.profileImage,
                 maxDuration: 75.5
             )
-            retrospectiveNote = "Retrospectiva publicada no Pulse."
+            return "Retrospectiva publicada no Pulse."
         } catch {
-            retrospectiveNote = error.localizedDescription
+            return error.localizedDescription
         }
     }
 
@@ -814,13 +814,15 @@ struct WorkoutPhotoCalendarCard: View {
 private struct RetrospectivePlayerSheet: View {
     let url: URL
     let monthTitle: String
-    var onGallery: () -> Void
-    var onInstagram: () -> Void
-    var onPulse: () -> Void
+    var onGallery: () async -> String
+    var onInstagram: () async -> String
+    var onPulse: () async -> String
     var onClose: () -> Void
 
     @State private var player: AVPlayer?
     @State private var showShare = false
+    @State private var status: String?
+    @State private var busy = false
 
     var body: some View {
         NavigationStack {
@@ -828,18 +830,26 @@ private struct RetrospectivePlayerSheet: View {
                 VideoPlayer(player: player)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.black)
-                VStack(spacing: 10) {
+                VStack(spacing: 12) {
                     Text(monthTitle)
                         .font(.headline)
                         .foregroundStyle(.white)
-                    Button("Salvar na galeria", action: onGallery)
-                    Button("Publicar no Pulse", action: onPulse)
-                    Button("WhatsApp") { showShare = true }
-                    Button("Instagram Stories", action: onInstagram)
+                        .frame(maxWidth: .infinity)
+                    if let status {
+                        Text(status)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                    }
+                    actionButton("Salvar na galeria") { await onGallery() }
+                    actionButton("Publicar no Pulse") { await onPulse() }
+                    actionButton("WhatsApp") {
+                        showShare = true
+                        return "Escolha o WhatsApp para enviar o vídeo."
+                    }
+                    actionButton("Instagram Stories") { await onInstagram() }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(AppTheme.accent)
-                .foregroundStyle(.black)
                 .padding(16)
                 .frame(maxWidth: .infinity)
                 .background(Color(red: 0.027, green: 0.063, blue: 0.094))
@@ -850,6 +860,7 @@ private struct RetrospectivePlayerSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Fechar", action: onClose)
+                        .foregroundStyle(AppTheme.accent)
                 }
             }
         }
@@ -863,6 +874,20 @@ private struct RetrospectivePlayerSheet: View {
         .sheet(isPresented: $showShare) {
             ActivityShareSheet(items: [url]) { showShare = false }
         }
+    }
+
+    private func actionButton(_ title: String, action: @escaping () async -> String) -> some View {
+        Button(title) {
+            guard !busy else { return }
+            busy = true
+            status = "Aguarde…"
+            Task {
+                status = await action()
+                busy = false
+            }
+        }
+        .buttonStyle(PrimaryButtonStyle(isEnabled: !busy))
+        .disabled(busy)
     }
 }
 
@@ -1334,10 +1359,6 @@ enum MonthlyRetrospectiveVideo {
                 y: CGFloat(height) / extent.height
             ))
         }
-        // O codificador mostra a primeira linha do buffer no rodapé do vídeo.
-        // Sem esse giro, o quadro sai de cabeça para baixo no player.
-        ciImage = ciImage.transformed(by: CGAffineTransform(scaleX: 1, y: -1)
-            .translatedBy(x: 0, y: -CGFloat(height)))
         let ciContext = CIContext(options: [
             .workingColorSpace: NSNull(),
             .cacheIntermediates: false,
