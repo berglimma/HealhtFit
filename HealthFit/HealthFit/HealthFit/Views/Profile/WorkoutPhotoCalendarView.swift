@@ -1,4 +1,6 @@
 import AVFoundation
+import AVKit
+import CoreImage
 import SwiftUI
 import UIKit
 
@@ -17,6 +19,7 @@ struct WorkoutPhotoCalendarView: View {
     @State private var showCameraPicker = false
     @State private var isMakingRetrospective = false
     @State private var retrospectiveURL: URL?
+    @State private var retrospectiveTitle = ""
     @State private var showRetrospectiveActions = false
     @State private var showRetrospectiveShare = false
     @State private var retrospectiveNote: String?
@@ -122,12 +125,17 @@ struct WorkoutPhotoCalendarView: View {
             }
             .ignoresSafeArea()
         }
-        .confirmationDialog("Retrospectiva", isPresented: $showRetrospectiveActions, titleVisibility: .visible) {
-            Button("Salvar na galeria") { Task { await saveRetrospectiveToGallery() } }
-            Button("Story no Instagram") { Task { await shareRetrospectiveToInstagram() } }
-            Button("Status do WhatsApp") { showRetrospectiveShare = true }
-            Button("Publicar no Pulse") { Task { await publishRetrospectiveToPulse() } }
-            Button("Cancelar", role: .cancel) {}
+        .sheet(isPresented: $showRetrospectiveActions) {
+            if let retrospectiveURL {
+                RetrospectivePlayerSheet(
+                    url: retrospectiveURL,
+                    monthTitle: retrospectiveTitle,
+                    onGallery: { Task { await saveRetrospectiveToGallery() } },
+                    onInstagram: { Task { await shareRetrospectiveToInstagram() } },
+                    onPulse: { Task { await publishRetrospectiveToPulse() } },
+                    onClose: { showRetrospectiveActions = false }
+                )
+            }
         }
         .sheet(isPresented: $showRetrospectiveShare) {
             if let retrospectiveURL {
@@ -506,6 +514,7 @@ struct WorkoutPhotoCalendarView: View {
             return
         }
         retrospectiveURL = result.url
+        retrospectiveTitle = result.monthTitle
         showRetrospectiveActions = true
     }
 
@@ -776,6 +785,61 @@ struct WorkoutPhotoCalendarCard: View {
     }
 }
 
+private struct RetrospectivePlayerSheet: View {
+    let url: URL
+    let monthTitle: String
+    var onGallery: () -> Void
+    var onInstagram: () -> Void
+    var onPulse: () -> Void
+    var onClose: () -> Void
+
+    @State private var player: AVPlayer?
+    @State private var showShare = false
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                VideoPlayer(player: player)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black)
+                VStack(spacing: 10) {
+                    Text(monthTitle)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    Button("Salvar na galeria", action: onGallery)
+                    Button("Publicar no Pulse", action: onPulse)
+                    Button("WhatsApp") { showShare = true }
+                    Button("Instagram Stories", action: onInstagram)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppTheme.accent)
+                .foregroundStyle(.black)
+                .padding(16)
+                .frame(maxWidth: .infinity)
+                .background(Color(red: 0.027, green: 0.063, blue: 0.094))
+            }
+            .background(Color.black)
+            .navigationTitle("Retrospectiva")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Fechar", action: onClose)
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .onAppear {
+            let av = AVPlayer(url: url)
+            player = av
+            av.play()
+        }
+        .onDisappear { player?.pause() }
+        .sheet(isPresented: $showShare) {
+            ActivityShareSheet(items: [url]) { showShare = false }
+        }
+    }
+}
+
 /// Vídeo da retrospectiva do mês já encerrado.
 /// Usa só as fotos locais do calendário Constância. Não grava nada no Firebase.
 /// Duração máxima: 75 segundos.
@@ -823,6 +887,13 @@ enum MonthlyRetrospectiveVideo {
         "Força se constrói quando ninguém vê.",
         "Sua presença foi o treino mais importante.",
         "O mês ficou marcado na Constância.",
+    ]
+
+    private static let restCovers = [
+        "MeditacaoCoverRecuperacao",
+        "MeditacaoCoverRelaxamento",
+        "MeditacaoCoverSono",
+        "MeditacaoCoverRespiracao",
     ]
 
     private static let restPhrases = [
@@ -953,19 +1024,25 @@ enum MonthlyRetrospectiveVideo {
                 )
             }
         } else {
-            let minFrames = Int((2.4 * Double(fps)).rounded())
-            let maxFrames = Int((4.2 * Double(fps)).rounded())
-            let cap = max(budget / minFrames, 1)
-            let chosen = sample(ordered, limit: cap)
-            var per = min(max(budget / chosen.count, minFrames), maxFrames)
-            while chosen.count * per > budget && per > 1 {
-                per -= 1
+            let minFrames = Int(fps)
+            let room = max(budget / minFrames, 1)
+            let photosOnly = ordered.filter { $0.kind == .photo }
+            let restsOnly = ordered.filter { $0.kind == .rest }
+            let chosen: [Slide]
+            if ordered.count <= room {
+                chosen = ordered
+            } else if photosOnly.count >= room {
+                chosen = sample(photosOnly, limit: room)
+            } else {
+                chosen = photosOnly + sample(restsOnly, limit: room - photosOnly.count)
             }
+            let per = max(budget / max(chosen.count, 1), 1)
             for (index, moment) in chosen.enumerated() {
                 var slide = moment
                 slide.frames = per
                 if slide.kind == .rest {
                     slide.phrase = restPhrases[index % restPhrases.count]
+                    slide.photoPath = restCovers[index % restCovers.count]
                 } else {
                     slide.phrase = phrases[index % phrases.count]
                 }
@@ -1085,13 +1162,19 @@ enum MonthlyRetrospectiveVideo {
                 y = drawText(slide.caption, y: y, font: .systemFont(ofSize: 28, weight: .medium), color: muted) + 12
                 _ = drawText(slide.detail, y: y, font: .systemFont(ofSize: 26, weight: .semibold), color: accent)
             case .rest:
-                fillBackground(canvas)
-                drawHeart(heart, top: 360, size: 200)
-                var y: CGFloat = 600
-                y = drawText("HEALTHFIT", y: y, font: .systemFont(ofSize: 28, weight: .bold), color: accent) + 28
-                y = drawText("DIA DE DESCANSO", y: y, font: .systemFont(ofSize: 46, weight: .bold), color: .white) + 16
-                y = drawText(slide.caption, y: y, font: .systemFont(ofSize: 30, weight: .semibold), color: .white) + 40
-                _ = drawText(slide.phrase, y: y, font: .systemFont(ofSize: 36, weight: .bold), color: .white)
+                if let name = slide.photoPath, let photo = UIImage(named: name) {
+                    drawCover(photo, in: CGRect(x: 0, y: 0, width: width, height: height))
+                } else {
+                    fillBackground(canvas)
+                }
+                drawVerticalFade(canvas, from: 0.28)
+                drawTopFade(canvas)
+                drawHeart(heart, top: 280, size: 180)
+                var y: CGFloat = 500
+                y = drawText("HEALTHFIT", y: y, font: .systemFont(ofSize: 28, weight: .bold), color: accent) + 20
+                y = drawText("DIA DE DESCANSO", y: y, font: .systemFont(ofSize: 44, weight: .bold), color: .white) + 12
+                y = drawText(slide.caption, y: y, font: .systemFont(ofSize: 28, weight: .semibold), color: .white) + 28
+                _ = drawText(slide.phrase, y: y, font: .systemFont(ofSize: 34, weight: .bold), color: .white)
             case .phrase:
                 fillBackground(canvas)
                 drawHeart(heart, top: 430, size: 180)
@@ -1216,23 +1299,25 @@ enum MonthlyRetrospectiveVideo {
             &buffer
         )
         guard status == kCVReturnSuccess, let buffer else { return nil }
-        CVPixelBufferLockBaseAddress(buffer, [])
-        defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
-        guard let base = CVPixelBufferGetBaseAddress(buffer) else { return nil }
-        guard let context = CGContext(
-            data: base,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: CVPixelBufferGetBytesPerRow(buffer),
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue
-        ) else { return nil }
-        context.translateBy(x: 0, y: CGFloat(height))
-        context.scaleBy(x: 1, y: -1)
-        if let cgImage = image.cgImage {
-            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard var ciImage = CIImage(image: image) else { return nil }
+        let extent = ciImage.extent.integral
+        if extent.width > 0, extent.height > 0,
+           abs(extent.width - CGFloat(width)) > 0.5 || abs(extent.height - CGFloat(height)) > 0.5 {
+            ciImage = ciImage.transformed(by: CGAffineTransform(
+                scaleX: CGFloat(width) / extent.width,
+                y: CGFloat(height) / extent.height
+            ))
         }
+        let ciContext = CIContext(options: [
+            .workingColorSpace: NSNull(),
+            .cacheIntermediates: false,
+        ])
+        ciContext.render(
+            ciImage,
+            to: buffer,
+            bounds: CGRect(x: 0, y: 0, width: width, height: height),
+            colorSpace: CGColorSpaceCreateDeviceRGB()
+        )
         return buffer
     }
 
