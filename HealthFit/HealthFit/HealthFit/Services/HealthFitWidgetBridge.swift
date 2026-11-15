@@ -6,7 +6,9 @@ enum HealthFitWidgetBridge {
     static func refresh(
         workoutStore: WorkoutStore,
         gender: Gender? = nil,
-        todayCalories: Double
+        todayCalories: Double,
+        hasPersonalTrainer: Bool? = nil,
+        personalName: String? = nil
     ) {
         let resolvedGender = gender ?? .male
         let sessions = workoutStore.sessionHistory
@@ -20,10 +22,17 @@ enum HealthFitWidgetBridge {
         candidates += workoutStore.customWorkoutSheets(for: resolvedGender)
         candidates += sheets.filter { $0.isCoachPrescribed && $0.isActive }
 
+        let linkedPersonal = CoachService.shared.activePersonalLink != nil
+        let resolvedHasPersonal = hasPersonalTrainer ?? linkedPersonal
+        let resolvedPersonalName = personalName
+            ?? CoachService.shared.activePersonalLink?.coachName
+
         let suggestion = WorkoutDaySuggestionAnalyzer.suggestWorkoutOfTheDay(
             sessions: sessions,
             candidateSheets: candidates,
-            sheetsCatalog: sheets
+            sheetsCatalog: sheets,
+            hasPersonalTrainer: resolvedHasPersonal,
+            personalName: resolvedPersonalName
         )
         let lift = WorkoutDaySuggestionAnalyzer.bestRecentLift(sessions: sessions, sheets: sheets)
         let weekCount = WorkoutDaySuggestionAnalyzer.strengthSessionsThisWeek(sessions: sessions)

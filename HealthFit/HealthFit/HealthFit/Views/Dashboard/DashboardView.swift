@@ -81,10 +81,17 @@ struct DashboardView: View {
                 try? await Task.sleep(nanoseconds: 250_000_000)
                 await healthKitManager.refreshFromHealthKit()
                 _ = await wellnessService.syncSleepFromAppleHealth()
+                let user = authService.currentUser
+                let hasPersonal = CoachService.shared.activePersonalLink != nil
+                    || (user?.hasPersonalTrainerOnProfile == true)
+                    || (user?.hasPersonalTrainer == true)
                 HealthFitWidgetBridge.refresh(
                     workoutStore: workoutStore,
-                    gender: authService.currentUser?.gender,
-                    todayCalories: healthKitManager.todayCalories
+                    gender: user?.gender,
+                    todayCalories: healthKitManager.todayCalories,
+                    hasPersonalTrainer: hasPersonal,
+                    personalName: CoachService.shared.activePersonalLink?.coachName
+                        ?? user?.personalTrainerName
                 )
             }
             .task(id: authService.currentUser?.id) {

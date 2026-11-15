@@ -1,11 +1,19 @@
 import Foundation
 
 struct WorkoutOfTheDaySuggestion: Identifiable, Hashable {
+    enum Source: String, Hashable {
+        case coachRoutine
+        case userHistory
+    }
+
     var id: String { sheet.id.uuidString }
     let sheet: WorkoutSheet
     let avoidedMuscles: [MuscleGroup]
     let focusMuscles: [MuscleGroup]
     let reason: String
+    let source: Source
+
+    var isFromCoach: Bool { source == .coachRoutine }
 }
 
 struct MuscleGroupStat: Identifiable, Hashable {
@@ -91,11 +99,142 @@ enum WorkoutDaySuggestionAnalyzer {
 
     // MARK: - Treino do dia
 
+    /// - Parameter hasPersonalTrainer: vínculo/perfil com personal.
+    ///   Com personal + fichas prescritas ativas, a sugestão segue a rotina do coach;
+    ///   sem personal (ou sem fichas), mantém a análise pelos treinos feitos pelo usuário.
     static func suggestWorkoutOfTheDay(
         sessions: [WorkoutSession],
         candidateSheets: [WorkoutSheet],
         sheetsCatalog: [WorkoutSheet],
+        hasPersonalTrainer: Bool = false,
+        personalName: String? = nil,
         referenceDate: Date = .now
+    ) -> WorkoutOfTheDaySuggestion? {
+        let coachSheets = Dictionary(
+            candidateSheets.filter { $0.isCoachPrescribed && $0.isActive && !$0.exercises.isEmpty }
+                .map { ($0.id, $0) },
+            uniquingKeysWith: { _, last in last }
+        ).values.sorted { $0.updatedAt > $1.updatedAt }
+
+        if hasPersonalTrainer, !coachSheets.isEmpty {
+            return suggestCoachRoutine(
+                sessions: sessions,
+                coachSheets: Array(coachSheets),
+                sheetsCatalog: sheetsCatalog,
+                personalName: personalName,
+                referenceDate: referenceDate
+            )
+        }
+
+        return suggestFromUserHistory(
+            sessions: sessions,
+            candidateSheets: candidateSheets,
+            sheetsCatalog: sheetsCatalog,
+            referenceDate: referenceDate
+        )
+    }
+
+    /// Próxima ficha da rotina do personal: prioriza as menos cumpridas recentemente.
+    private static func suggestCoachRoutine(
+        sessions: [WorkoutSession],
+        coachSheets: [WorkoutSheet],
+        sheetsCatalog: [WorkoutSheet],
+        personalName: String?,
+        referenceDate: Date
+    ) -> WorkoutOfTheDaySuggestion? {
+        let calendar = Calendar.current
+        let since2d = calendar.date(byAdding: .day, value: -2, to: referenceDate) ?? referenceDate.addingTimeInterval(-172_800)
+        let since7d = calendar.date(byAdding: .day, value: -7, to: referenceDate) ?? referenceDate.addingTimeInterval(-604_800)
+        let avoided = musclesTrained(in: sessions, sheets: sheetsCatalog, since: since2d, until: referenceDate)
+        let coachIds = Set(coachSheets.map(\.id))
+
+        let recentCoachSessions = strengthSessions(sessions, from: since7d, to: referenceDate)
+            .filter { session in
+                guard let id = session.workoutSheetId else { return false }
+                return coachIds.contains(id)
+            }
+        let daysSinceCoach: Int? = {
+            guard let last = recentCoachSessions
+                .compactMap({ $0.endedAt ?? $0.startedAt })
+                .max() else { return nil }
+            return max(0, calendar.dateComponents([.day], from: calendar.startOfDay(for: last), to: calendar.startOfDay(for: referenceDate)).day ?? 0)
+        }()
+        let isBehind = recentCoachSessions.isEmpty
+
+        var lastDone: [UUID: Date] = [:]
+        for session in strengthSessions(sessions, from: .distantPast, to: referenceDate) {
+            guard let id = session.workoutSheetId, coachIds.contains(id) else { continue }
+            let when = session.endedAt ?? session.startedAt
+            if let prev = lastDone[id], prev >= when { continue }
+            lastDone[id] = when
+        }
+
+        let recent2dIds = Set(
+            strengthSessions(sessions, from: since2d, to: referenceDate)
+                .compactMap(\.workoutSheetId)
+        )
+
+        struct Scored {
+            let sheet: WorkoutSheet
+            let focus: [MuscleGroup]
+            let score: Int
+        }
+
+        let scored: [Scored] = coachSheets.map { sheet in
+            let focus = primaryMuscles(in: sheet)
+            var score = 200
+            let overlap = Set(focus).intersection(avoided)
+            score -= overlap.count * 30
+            if recent2dIds.contains(sheet.id) { score -= 50 }
+            if let done = lastDone[sheet.id] {
+                let days = calendar.dateComponents([.day], from: done, to: referenceDate).day ?? 0
+                score += min(days, 21) * 4
+            } else {
+                score += 80 // nunca feita — prioridade máxima na rotina
+            }
+            if !avoided.isEmpty {
+                score += Set(focus).subtracting(avoided).count * 12
+            }
+            return Scored(sheet: sheet, focus: focus, score: score)
+        }
+        .sorted { lhs, rhs in
+            if lhs.score != rhs.score { return lhs.score > rhs.score }
+            return lhs.sheet.title.localizedCaseInsensitiveCompare(rhs.sheet.title) == .orderedAscending
+        }
+
+        guard let best = scored.first else { return nil }
+        let avoidedList = avoided.sorted { $0.rawValue < $1.rawValue }
+        let coachLabel = {
+            let trimmed = personalName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return trimmed.isEmpty ? "seu personal" : trimmed
+        }()
+
+        let reason: String
+        if isBehind {
+            reason = "Você tem rotina de \(coachLabel) e está há 7+ dias sem cumprir as fichas prescritas. Priorize “\(best.sheet.title)” para voltar ao plano."
+        } else if let days = daysSinceCoach, days >= 3 {
+            reason = "Rotina de \(coachLabel): faz \(days) dia(s) desde o último treino prescrito. Hoje a sugestão é “\(best.sheet.title)”."
+        } else if avoidedList.isEmpty {
+            reason = "Seguindo a rotina de \(coachLabel) — próxima ficha sugerida: “\(best.sheet.title)”."
+        } else {
+            let names = avoidedList.map(\.rawValue).joined(separator: ", ")
+            reason = "Rotina de \(coachLabel): você treinou \(names) recentemente. “\(best.sheet.title)” encaixa melhor no plano e na recuperação."
+        }
+
+        return WorkoutOfTheDaySuggestion(
+            sheet: best.sheet,
+            avoidedMuscles: avoidedList,
+            focusMuscles: best.focus,
+            reason: reason,
+            source: .coachRoutine
+        )
+    }
+
+    private static func suggestFromUserHistory(
+        sessions: [WorkoutSession],
+        candidateSheets: [WorkoutSheet],
+        sheetsCatalog: [WorkoutSheet],
+        referenceDate: Date
     ) -> WorkoutOfTheDaySuggestion? {
         let calendar = Calendar.current
         let since = calendar.date(byAdding: .day, value: -2, to: referenceDate) ?? referenceDate.addingTimeInterval(-172_800)
@@ -125,12 +264,10 @@ enum WorkoutDaySuggestionAnalyzer {
             let overlap = Set(focus).intersection(avoided)
             score -= overlap.count * 35
             if recentSheetIds.contains(sheet.id) { score -= 40 }
-            // Prefer sheets that cover undertrained areas when we have history.
             if !avoided.isEmpty {
                 let fresh = Set(focus).subtracting(avoided)
                 score += fresh.count * 18
             }
-            // Slight preference for structured splits.
             let title = sheet.title.lowercased()
             if title.contains("push") || title.contains("pull") || title.contains("legs") || title.contains("peito") || title.contains("costas") || title.contains("pernas") {
                 score += 6
@@ -156,7 +293,8 @@ enum WorkoutDaySuggestionAnalyzer {
             sheet: best.sheet,
             avoidedMuscles: avoidedList,
             focusMuscles: best.focus,
-            reason: reason
+            reason: reason,
+            source: .userHistory
         )
     }
 

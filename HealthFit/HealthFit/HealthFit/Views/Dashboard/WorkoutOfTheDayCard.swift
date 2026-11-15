@@ -3,6 +3,7 @@ import SwiftUI
 struct WorkoutOfTheDayCard: View {
     @EnvironmentObject var workoutStore: WorkoutStore
     @EnvironmentObject var authService: AuthService
+    @ObservedObject private var coach = CoachService.shared
 
     @State private var sheetToOpen: WorkoutSheet?
     @State private var showGenderPicker = false
@@ -13,6 +14,22 @@ struct WorkoutOfTheDayCard: View {
 
     private var coverImageName: String {
         profileGender == .female ? "WorkoutProgramFemale" : "WorkoutProgramMale"
+    }
+
+    private var hasPersonalTrainer: Bool {
+        if coach.activePersonalLink != nil { return true }
+        guard let user = authService.currentUser else { return false }
+        return user.hasPersonalTrainerOnProfile || user.hasPersonalTrainer
+    }
+
+    private var personalDisplayName: String? {
+        if let name = coach.activePersonalLink?.coachName,
+           !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return name
+        }
+        let profileName = authService.currentUser?.personalTrainerName
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return profileName.isEmpty ? nil : profileName
     }
 
     private var suggestion: WorkoutOfTheDaySuggestion? {
@@ -27,7 +44,9 @@ struct WorkoutOfTheDayCard: View {
         return WorkoutDaySuggestionAnalyzer.suggestWorkoutOfTheDay(
             sessions: workoutStore.sessionHistory,
             candidateSheets: candidates,
-            sheetsCatalog: workoutStore.workoutSheets
+            sheetsCatalog: workoutStore.workoutSheets,
+            hasPersonalTrainer: hasPersonalTrainer,
+            personalName: personalDisplayName
         )
     }
 
@@ -76,7 +95,10 @@ struct WorkoutOfTheDayCard: View {
                 )
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Label("TREINO DO DIA", systemImage: "sparkles")
+                    Label(
+                        suggestion.isFromCoach ? "TREINO DO DIA · PERSONAL" : "TREINO DO DIA",
+                        systemImage: suggestion.isFromCoach ? "person.badge.shield.checkmark.fill" : "sparkles"
+                    )
                         .font(.caption2.weight(.bold))
                         .tracking(0.8)
                         .foregroundStyle(AppTheme.accent)
@@ -260,6 +282,13 @@ struct WorkoutOfTheDayCard: View {
     }
 
     private func suggestionLabel(for suggestion: WorkoutOfTheDaySuggestion) -> String {
+        if suggestion.isFromCoach {
+            if suggestion.focusMuscles.isEmpty {
+                return "Rotina do personal"
+            }
+            let names = suggestion.focusMuscles.map(\.rawValue).joined(separator: " · ")
+            return "Rotina do personal · \(names)"
+        }
         if suggestion.focusMuscles.isEmpty {
             return "Sugestão com base no seu histórico"
         }
