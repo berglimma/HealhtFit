@@ -251,6 +251,8 @@ fun HeroCard(
     imageRes: Int? = null,
     eyebrow: String? = null,
     eyebrowColor: Color = HealthFitColors.Accent,
+    bannerText: String? = null,
+    bannerColor: Color = HealthFitColors.Accent,
     footer: @Composable (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
@@ -280,10 +282,25 @@ fun HeroCard(
         } else {
             Box(Modifier.matchParentSize().background(brush))
         }
+        bannerText?.let { label ->
+            Text(
+                text = label,
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .background(bannerColor)
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
+            )
+        }
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(16.dp),
+                .padding(16.dp)
+                .padding(top = if (bannerText != null) 18.dp else 0.dp),
         ) {
             eyebrow?.let {
                 Text(

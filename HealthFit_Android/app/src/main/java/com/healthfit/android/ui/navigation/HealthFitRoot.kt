@@ -3,6 +3,8 @@ package com.healthfit.android.ui.navigation
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.WindowInsets
@@ -17,6 +19,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,6 +45,7 @@ import com.healthfit.android.ui.components.HealthFitTabBar
 import com.healthfit.android.ui.components.TabSpec
 import com.healthfit.android.ui.home.DailyWellness
 import com.healthfit.android.ui.home.HomeScreen
+import com.healthfit.android.ui.home.UserHydrationSync
 import com.healthfit.android.ui.home.WelcomeLoadingScreen
 import com.healthfit.android.ui.nutrition.NutritionScreen
 import com.healthfit.android.ui.profile.ProfileScreen
@@ -87,6 +91,15 @@ fun HealthFitRoot(
 
     val context = LocalContext.current
     val greetingName = signedIn.displayName?.ifBlank { "Berg" } ?: "Berg"
+    DisposableEffect(signedIn.uid) {
+        val main = Handler(Looper.getMainLooper())
+        val registration = UserHydrationSync.listen(signedIn.uid) { customMl, weightKg ->
+            main.post { wellness.applyCoachHydration(customMl, weightKg) }
+        }
+        onDispose {
+            registration?.remove()
+        }
+    }
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
@@ -170,6 +183,30 @@ fun HealthFitRoot(
                     userName = signedIn.displayName?.ifBlank { signedIn.email.substringBefore('@') }.orEmpty(),
                     wellness = wellness,
                     onOpenPulse = { navController.navigate("pulse") },
+                    countryCode = signedIn.countryCode.ifBlank { "BR" },
+                    female = false,
+                    onChooseMusculacao = { femaleProgram ->
+                        com.healthfit.android.ui.workouts.WorkoutHubNav.openProgram(
+                            if (femaleProgram) "female" else "male",
+                        )
+                        navController.navigate("workouts") {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onOpenCardio = {
+                        com.healthfit.android.ui.workouts.WorkoutHubNav.openCardio()
+                        navController.navigate("workouts") {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                 )
             }
             composable("workouts") { WorkoutsScreen(userId = signedIn.uid) }

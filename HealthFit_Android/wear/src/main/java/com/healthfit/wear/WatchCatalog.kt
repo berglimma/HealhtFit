@@ -73,7 +73,18 @@ object WatchCatalog {
         StrengthProgram("c-d", "Casa D — Pernas e Glúteos", "Afundo"),
         StrengthProgram("c-e", "Casa E — Superiores", "Flexão de braço"),
         StrengthProgram("c-f", "Casa F — Mobilidade e Postura", "Gato-camelo"),
+        StrengthProgram("c-g", "Casa G — Atleta Full Body", "Flexão de braço"),
+        StrengthProgram("c-h", "Casa H — Push Em Casa", "Flexão de braço"),
+        StrengthProgram("c-i", "Casa I — Pull Em Casa", "Superman"),
+        StrengthProgram("c-j", "Casa J — Pernas Em Casa", "Agachamento livre"),
+        StrengthProgram("c-k", "Casa K — Core Power", "Prancha"),
+        StrengthProgram("c-l", "Casa L — HIIT Queima", "Joelho alto"),
+        StrengthProgram("c-m", "Casa M — Posterior Em Casa", "Ponte de glúteos"),
+        StrengthProgram("c-n", "Casa N — Express Full Body", "Polichinelos"),
         StrengthProgram("mob-a", "Mobilidade A — Alongamento Dinâmico", "Alongamento mundial"),
+        StrengthProgram("mob-b", "Mobilidade B — Ombros e Peito", "Abertura peitoral"),
+        StrengthProgram("mob-c", "Mobilidade C — Quadril e Posterior", "Along. isquiotibial"),
+        StrengthProgram("mob-d", "Mobilidade D — Torácica e Escápulas", "Rotação torácica"),
         StrengthProgram("mob-e", "Mobilidade E — Alongamento Estático", "Alongamento de peito"),
     )
 

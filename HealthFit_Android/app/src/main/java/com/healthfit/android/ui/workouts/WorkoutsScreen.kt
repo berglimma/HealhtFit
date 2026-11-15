@@ -94,6 +94,20 @@ fun WorkoutsScreen(userId: String? = null) {
     val femaleCustom = remember { mutableStateListOf<WorkoutSheet>() }
     val context = LocalContext.current
     val watchOwned by PhoneWorkoutSync.watchOwned.collectAsState()
+    val pendingProgram by WorkoutHubNav.pendingProgramKey.collectAsState()
+    val pendingCardio by WorkoutHubNav.pendingCardioTab.collectAsState()
+
+    LaunchedEffect(pendingProgram) {
+        val key = WorkoutHubNav.consumePending() ?: return@LaunchedEffect
+        tab = 0
+        dest = WorkoutDest.Program(key)
+    }
+
+    LaunchedEffect(pendingCardio) {
+        if (!WorkoutHubNav.consumePendingCardio()) return@LaunchedEffect
+        dest = WorkoutDest.Browse
+        tab = 2
+    }
 
     fun reloadAssistantSheets() {
         val male = com.healthfit.android.ui.assistant.AssistantGeneratedWorkouts.forGender(context, female = false)
@@ -543,6 +557,8 @@ private fun ProgramCard(
         brush = Night,
         imageRes = imageRes,
         height = 168.dp,
+        bannerText = "Novos treinos liberados",
+        bannerColor = Color(0xFF2E9E94),
         onClick = onClick,
         footer = {
             Spacer(Modifier.height(8.dp))
@@ -556,6 +572,10 @@ private fun HomeTab(onOpen: (Int) -> Unit) {
     SectionLabel("Treinos com peso corporal — sem academia")
     Spacer(Modifier.height(10.dp))
     WorkoutCatalog.home.forEachIndexed { index, sheet ->
+        val isNewMethod = sheet.title.startsWith("Casa K") ||
+            sheet.title.startsWith("Casa L") ||
+            sheet.title.startsWith("Casa M") ||
+            sheet.title.startsWith("Casa N")
         HeroCard(
             title = sheet.title,
             subtitle = sheet.description,
@@ -563,8 +583,10 @@ private fun HomeTab(onOpen: (Int) -> Unit) {
             imageRes = R.drawable.workoutprogramhome,
             eyebrow = "TREINO EM CASA",
             height = 156.dp,
+            bannerText = if (isNewMethod) "Novos treinos liberados" else null,
+            bannerColor = Color(0xFF2E9E94),
             footer = {
-                Spacer(Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 MetaRow(Icons.Filled.Star, "${sheet.exercises.size} exercícios · ~${sheet.minutes} min", Color(0xFFFFD60A))
             },
             onClick = { onOpen(index) },

@@ -152,6 +152,14 @@ fun AssistantScreen(
 
     fun appendProactiveInsights() {
         if (isTyping) return
+        if (AssistantPulseNudgeEngine.shouldDeliver(context)) {
+            val text = AssistantPulseNudgeEngine.message(name)
+            if (messages.none { !it.fromUser && it.text == text }) {
+                messages += ChatLine(false, text)
+            }
+            AssistantPulseNudgeEngine.markDelivered(context)
+            return
+        }
         val studySessions = com.healthfit.android.ui.workouts.StudyFocusStore.loadSessions(context)
         val studyProfile = AssistantStudyFocusEngine.buildProfile(studySessions)
         AssistantStudyFocusEngine.evaluateInactivity(

@@ -63,6 +63,7 @@ data class ProgramContent(
     val shape2: List<WorkoutSheet>,
     val soldado: List<WorkoutSheet>,
     val cabo: List<WorkoutSheet>,
+    val atleta: List<WorkoutSheet>,
     val recommended: List<WorkoutSheet>,
     val recent: List<WorkoutSheet>,
     val catalog: List<WorkoutSheet>,
@@ -71,6 +72,9 @@ data class ProgramContent(
     fun sheets(titles: List<String>, description: String) =
         titles.mapIndexed { index, title -> clone(title, description, baseOf(catalog, index)) }
 }
+
+private fun isAtletaSheet(sheet: WorkoutSheet): Boolean =
+    sheet.title.startsWith("Atleta Masculino") || sheet.title.startsWith("Atleta Feminino")
 
 private val sharedFocus = listOf(
     Triple("Ganho de massa muscular", "Hipertrofia com superávit calórico", listOf("Guiado — Massa Peito/Costas", "Guiado — Massa Pernas/Ombros")),
@@ -119,11 +123,14 @@ object MaleProgram {
         "H — Inferiores Posterior (Cabo)",
         "I — Condicionamento Missão (Cabo)",
     ).mapIndexed { index, title -> clone(title, "Progressão de volume e intensidade", base(index + 4)) }
+    private val atleta = WorkoutCatalog.male.filter(::isAtletaSheet)
+    private val recommended = WorkoutCatalog.male.filterNot(::isAtletaSheet)
+
     val content = ProgramContent(
         screenTitle = "Programa Masculino",
         eyebrow = "MASCULINO",
         cover = R.drawable.workoutprogrammale,
-        headerLine = "1 do personal · ${WorkoutCatalog.male.size} recomendados",
+        headerLine = "1 do personal · ${recommended.size} recomendados · ${atleta.size} Atleta",
         personal = personal,
         levels = sharedLevels,
         focus = sharedFocus,
@@ -131,7 +138,8 @@ object MaleProgram {
         shape2 = shape2,
         soldado = soldado,
         cabo = cabo,
-        recommended = WorkoutCatalog.male,
+        atleta = atleta,
+        recommended = recommended,
         recent = listOf(cabo[0], soldado[1]),
         catalog = WorkoutCatalog.male,
         recommendedSubtitle = "Fichas do programa masculino · novas opções em 3 dias",
@@ -173,11 +181,14 @@ object FemaleProgram {
         "Militar Feminino H — Posterior e Glúteo (Cabo)",
         "Militar Feminino I — Condicionamento Missão (Cabo)",
     ).mapIndexed { index, title -> sheet(title, "Progressão de volume e intensidade", index + 4) }
+    private val atleta = WorkoutCatalog.female.filter(::isAtletaSheet)
+    private val recommended = WorkoutCatalog.female.filterNot(::isAtletaSheet)
+
     val content = ProgramContent(
         screenTitle = "Programa Feminino",
         eyebrow = "FEMININO",
         cover = R.drawable.workoutprogramfemale,
-        headerLine = "1 do personal · ${WorkoutCatalog.female.size} recomendados",
+        headerLine = "1 do personal · ${recommended.size} recomendados · ${atleta.size} Atleta",
         personal = personal,
         levels = sharedLevels,
         focus = sharedFocus,
@@ -185,7 +196,8 @@ object FemaleProgram {
         shape2 = shape2,
         soldado = soldado,
         cabo = cabo,
-        recommended = WorkoutCatalog.female,
+        atleta = atleta,
+        recommended = recommended,
         recent = listOf(cabo[0], soldado[1]),
         catalog = WorkoutCatalog.female,
         recommendedSubtitle = "Fichas do programa feminino · novas opções em 3 dias",
@@ -328,6 +340,15 @@ fun ProgramHubScreen(
         Spacer(Modifier.height(12.dp))
         SectionHead("Método Militar · Cabo", "Progressão de volume e intensidade", ProgramAccents.militarCabo)
         program.cabo.forEach { PhotoSheetCard(it, program.cover, "Método Militar · Cabo") { onOpen(it) } }
+        if (program.atleta.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            SectionHead(
+                "Método Atleta · PPL 2×",
+                "Push / Pull / Legs · demos em GIF · novos treinos liberados",
+                ProgramAccents.atleta,
+            )
+            program.atleta.forEach { PhotoSheetCard(it, program.cover, "Método Atleta · PPL 2×") { onOpen(it) } }
+        }
         Spacer(Modifier.height(12.dp))
         SectionHead("Recomendados", program.recommendedSubtitle)
         program.recommended.forEach { PhotoSheetCard(it, program.cover, "Recomendado") { onOpen(it) } }
@@ -408,6 +429,7 @@ private object ProgramAccents {
     val shapeLevel2 = Color(0xFFFF8C33) // orange / AccentSecondary
     val militarSoldado = Color(0xFF738C52) // olive
     val militarCabo = Color(0xFFB89E61) // sand
+    val atleta = Color(0xFF2E9E94) // teal
     val level = Color(0xFF9B7BFF)
     val focus = Color(0xFF4ECDC4)
 }
@@ -416,6 +438,7 @@ private fun methodAccent(method: String): Color = when {
     method.contains("Shape", ignoreCase = true) && method.contains("Nível 2", ignoreCase = true) ->
         ProgramAccents.shapeLevel2
     method.contains("Shape", ignoreCase = true) -> ProgramAccents.shapeLevel1
+    method.contains("Atleta", ignoreCase = true) -> ProgramAccents.atleta
     method.contains("Cabo", ignoreCase = true) -> ProgramAccents.militarCabo
     method.contains("Soldado", ignoreCase = true) || method.contains("Militar", ignoreCase = true) ->
         ProgramAccents.militarSoldado

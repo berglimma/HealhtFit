@@ -79,6 +79,9 @@ fun DashboardLowerSections(
     onOpenReport: (ReportKind) -> Unit = {},
     onOpenConstancy: () -> Unit = {},
     weeklySeen: Boolean = false,
+    female: Boolean = false,
+    onChooseMusculacao: (femaleProgram: Boolean) -> Unit = {},
+    onOpenCardio: () -> Unit = {},
 ) {
     Spacer(Modifier.height(12.dp))
     ConstancyCard(onOpen = onOpenConstancy)
@@ -264,6 +267,12 @@ fun DashboardLowerSections(
         )
     }
     Spacer(Modifier.height(12.dp))
+    WorkoutOfTheDayCard(
+        female = female,
+        onChooseProgram = onChooseMusculacao,
+        onOpenCardio = onOpenCardio,
+    )
+    Spacer(Modifier.height(12.dp))
     ExpandableShareSlot(
         title = stringResource(R.string.home_last_group),
         subtitle = "Nenhum card de grupo ainda. Ative o modo equipe e finalize um treino para postar.",
@@ -302,6 +311,8 @@ fun DashboardLowerSections(
     SectionTitle(stringResource(R.string.home_load_title))
     Spacer(Modifier.height(8.dp))
     LoadChart()
+    Spacer(Modifier.height(12.dp))
+    MuscleGroupStatsCard()
     Spacer(Modifier.height(12.dp))
     DarkCard {
         Row(verticalAlignment = Alignment.CenterVertically) {

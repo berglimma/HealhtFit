@@ -349,6 +349,26 @@ object AssistantNotifications {
         )
 
         slots += Slot(
+            hour = 10,
+            minute = 0,
+            id = 1010,
+            title = "HealthFit Pulse 💚",
+            bodyProvider = {
+                "Bom dia! Abra o Pulse, veja a comunidade e compartilhe seu treino de hoje."
+            },
+        )
+
+        slots += Slot(
+            hour = 19,
+            minute = 0,
+            id = 1910,
+            title = "HealthFit Pulse 🌙",
+            bodyProvider = {
+                "Antes de dormir: passe no Pulse, curta treinos e mantenha a constância com a galera."
+            },
+        )
+
+        slots += Slot(
             hour = 21,
             minute = 0,
             id = 2101,

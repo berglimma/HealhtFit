@@ -19,8 +19,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +35,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material.icons.filled.WaterDrop
@@ -59,6 +63,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
@@ -68,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthfit.android.R
 import com.healthfit.designsystem.HealthFitColors
+import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -78,6 +84,10 @@ fun HomeScreen(
     userName: String,
     wellness: DailyWellness,
     onOpenPulse: () -> Unit,
+    countryCode: String = "BR",
+    female: Boolean = false,
+    onChooseMusculacao: (femaleProgram: Boolean) -> Unit = {},
+    onOpenCardio: () -> Unit = {},
 ) {
     var finished by remember { mutableStateOf<FinishedWorkout?>(null) }
     var reportKind by remember { mutableStateOf<ReportKind?>(null) }
@@ -127,6 +137,8 @@ fun HomeScreen(
         }
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
+            ProfileAvatar(name = name, countryCode = countryCode)
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     greeting(name),
@@ -162,6 +174,7 @@ fun HomeScreen(
         WaterCard(
             ml = wellness.waterMl,
             goal = goalMl,
+            goalCaption = wellness.goalCaption,
             onMinus = { wellness.addWater(-250) },
             onPlus = { wellness.addWater(250) },
             onCup = { wellness.addWater(250) },
@@ -175,6 +188,9 @@ fun HomeScreen(
             },
             onOpenConstancy = { showConstancy = true },
             weeklySeen = weeklySeen,
+            female = female,
+            onChooseMusculacao = onChooseMusculacao,
+            onOpenCardio = onOpenCardio,
         )
     }
         if (showConstancy) {
@@ -228,6 +244,62 @@ private fun BrandLogo(onClick: () -> Unit) {
             modifier = Modifier.size(42.dp).scale(scale),
             contentScale = ContentScale.Fit,
         )
+    }
+}
+
+@Composable
+private fun ProfileAvatar(name: String, countryCode: String = "BR") {
+    val context = LocalContext.current
+    val bitmap = remember {
+        val file = File(context.filesDir, "profile/avatar.jpg")
+        if (file.exists()) {
+            runCatching { BitmapFactory.decodeFile(file.absolutePath) }.getOrNull()
+        } else {
+            null
+        }
+    }
+    val flag = remember(countryCode) { countryFlagEmoji(countryCode) }
+    Box(modifier = Modifier.size(44.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape)
+                .background(Color(0xFF1F2A30))
+                .border(1.5.dp, HealthFitColors.Accent.copy(alpha = 0.45f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Foto de perfil",
+                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                val initial = name.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+                if (initial != "?") {
+                    Text(initial, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                } else {
+                    Icon(Icons.Filled.Person, contentDescription = null, tint = Color(0xFF8E989F))
+                }
+            }
+        }
+        Text(
+            flag,
+            fontSize = 14.sp,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 2.dp, y = 1.dp),
+        )
+    }
+}
+
+private fun countryFlagEmoji(isoCode: String): String {
+    val code = isoCode.trim().uppercase()
+    if (code.length != 2 || !code.all { it in 'A'..'Z' }) return "🏳️"
+    val base = 0x1F1E6 - 'A'.code
+    return buildString {
+        code.forEach { append(Character.toChars(base + it.code)) }
     }
 }
 
@@ -519,6 +591,7 @@ private fun SleepStat(icon: ImageVector, value: String, label: String, modifier:
 fun WaterCard(
     ml: Int,
     goal: Int,
+    goalCaption: String = "35 ml/kg",
     onMinus: () -> Unit,
     onPlus: () -> Unit,
     onCup: () -> Unit,

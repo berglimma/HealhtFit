@@ -119,7 +119,7 @@ fun buildReport(kind: ReportKind, athlete: String, wellness: DailyWellness): Pro
                     ReportSection(
                         "Hidratação",
                         listOf(
-                            ReportLine("Meta", "${wellness.goalMl} ml · 35 ml por kg"),
+                            ReportLine("Meta", "${wellness.goalMl} ml · ${wellness.goalCaption}"),
                             ReportLine("Hoje", "${wellness.waterMl} ml já registrados"),
                         ),
                     ),

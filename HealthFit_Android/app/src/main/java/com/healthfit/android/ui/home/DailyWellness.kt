@@ -26,6 +26,8 @@ class DailyWellness {
     var sleepHours by mutableFloatStateOf(7f)
     var waterMl by mutableIntStateOf(1250)
     var weightKg by mutableStateOf("94.7")
+    /** Meta em ml definida pelo personal no Firestore. `null` = 35 ml/kg. */
+    var customDailyWaterML by mutableStateOf<Int?>(null)
 
     /** Dia focado na faixa da semana. */
     var selectedDayKey by mutableStateOf(dayKeyToday())
@@ -43,7 +45,12 @@ class DailyWellness {
         get() = weightKg.toFloatOrNull()?.takeIf { it in 30f..250f } ?: 94.7f
 
     val goalMl: Int
-        get() = (weight * 35f).roundToInt().coerceAtLeast(500)
+        get() = customDailyWaterML
+            ?.coerceIn(500, 10_000)
+            ?: (weight * 35f).roundToInt().coerceIn(1_500, 10_000)
+
+    val goalCaption: String
+        get() = if (customDailyWaterML != null) "definida pelo personal" else "35 ml/kg"
 
     fun bind(context: Context) {
         if (appContext != null) return
@@ -140,5 +147,16 @@ class DailyWellness {
         fun dayKeyToday(): String = LocalDate.now().format(fmt)
 
         fun dayKey(date: LocalDate): String = date.format(fmt)
+    }
+
+    fun applyCoachHydration(customMl: Int?, weightKg: Double?) {
+        customDailyWaterML = customMl
+        if (weightKg != null && weightKg in 30.0..250.0) {
+            this.weightKg = if (weightKg % 1.0 == 0.0) {
+                weightKg.toInt().toString()
+            } else {
+                java.lang.String.format(java.util.Locale.US, "%.1f", weightKg)
+            }
+        }
     }
 }
