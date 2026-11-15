@@ -60,12 +60,14 @@ fun WorkoutOfTheDayCard(
     val linkedPros = remember { ProfileLinkedProsStore.load(context) }
     val hasPersonal = linkedPros.hasTrainer
     val personalName = linkedPros.trainerName.trim().takeIf { it.isNotEmpty() }
-    val suggestion = remember(female, hasPersonal, personalName) {
+    val restWeekdays = linkedPros.restWeekdays
+    val suggestion = remember(female, hasPersonal, personalName, restWeekdays) {
         WorkoutDaySuggestionAnalyzer.suggestWorkoutOfTheDay(
             sessions = ConstancyStore.loadSessions(context),
             female = female,
             hasPersonalTrainer = hasPersonal,
             personalName = personalName,
+            coachRestWeekdays = restWeekdays,
         )
     }
     val coverRes = if (female) R.drawable.workoutprogramfemale else R.drawable.workoutprogrammale
@@ -116,24 +118,25 @@ fun WorkoutOfTheDayCard(
         return
     }
 
-    if (showPreview) {
+    if (showPreview && suggestion.sheet != null) {
+        val sheet = suggestion.sheet
         AlertDialog(
             onDismissRequest = { showPreview = false },
-            title = { Text(suggestion.sheet.title) },
+            title = { Text(sheet.title) },
             text = {
                 Column {
                     Text(suggestion.reason, color = Color(0xFFB7C0C8), fontSize = 13.sp)
                     Spacer(Modifier.height(10.dp))
-                    suggestion.sheet.exercises.take(8).forEach { ex ->
+                    sheet.exercises.take(8).forEach { ex ->
                         Text(
                             "• ${ex.name} · ${ex.sets}x${ex.reps}",
                             color = Color.White,
                             fontSize = 13.sp,
                         )
                     }
-                    if (suggestion.sheet.exercises.size > 8) {
+                    if (sheet.exercises.size > 8) {
                         Text(
-                            "… e mais ${suggestion.sheet.exercises.size - 8}",
+                            "… e mais ${sheet.exercises.size - 8}",
                             color = Color(0xFF8E989F),
                             fontSize = 12.sp,
                         )
@@ -144,7 +147,7 @@ fun WorkoutOfTheDayCard(
                 TextButton(
                     onClick = {
                         showPreview = false
-                        onOpenSheet(suggestion.sheet)
+                        onOpenSheet(sheet)
                     },
                 ) { Text("Abrir ficha") }
             },
@@ -193,7 +196,12 @@ fun WorkoutOfTheDayCard(
                     .padding(16.dp),
             ) {
                 Text(
-                    if (suggestion.isFromCoach) "TREINO DO DIA · PERSONAL" else "TREINO DO DIA",
+                    when (suggestion.source) {
+                        WorkoutSuggestionSource.CoachRest -> "DESCANSO · PERSONAL"
+                        WorkoutSuggestionSource.RoutineRest -> "DESCANSO · RECUPERAÇÃO"
+                        WorkoutSuggestionSource.CoachRoutine -> "TREINO DO DIA · PERSONAL"
+                        WorkoutSuggestionSource.UserHistory -> "TREINO DO DIA"
+                    },
                     color = HealthFitColors.Accent,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
@@ -201,7 +209,7 @@ fun WorkoutOfTheDayCard(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    suggestion.sheet.title,
+                    suggestion.title,
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
@@ -222,96 +230,140 @@ fun WorkoutOfTheDayCard(
         Column(Modifier.padding(16.dp)) {
             Text(suggestion.reason, color = Color(0xFFB7C0C8), fontSize = 13.sp, lineHeight = 18.sp)
 
-            if (suggestion.focusMuscles.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    suggestion.focusMuscles.forEach { muscle ->
-                        MuscleChip(muscle)
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.FitnessCenter, contentDescription = null, tint = Color(0xFF8E989F), modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(4.dp))
+            if (suggestion.isRestDay) {
+                Spacer(Modifier.height(14.dp))
                 Text(
-                    "${suggestion.sheet.exercises.size} exercícios",
-                    color = Color(0xFF8E989F),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-                Spacer(Modifier.width(12.dp))
-                Icon(Icons.Filled.Schedule, contentDescription = null, tint = Color(0xFF8E989F), modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    "~${suggestion.sheet.minutes} min",
-                    color = Color(0xFF8E989F),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-
-            Spacer(Modifier.height(14.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    "Abrir sugestão",
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(HealthFitColors.Accent)
-                        .clickable { showPreview = true }
-                        .padding(vertical = 12.dp),
-                )
-                Text(
-                    "Escolher treino",
+                    "Treinar mesmo assim",
                     color = HealthFitColors.Accent,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
                         .background(HealthFitColors.Accent.copy(alpha = 0.16f))
                         .clickable { showGenderPicker = true }
                         .padding(vertical = 12.dp),
                 )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Cardio leve / caminhada",
+                    color = Color(0xFF4DD0E1),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF4DD0E1).copy(alpha = 0.16f))
+                        .clickable(onClick = onOpenCardio)
+                        .padding(vertical = 12.dp),
+                )
+            } else {
+                val sheet = suggestion.sheet
+                if (suggestion.focusMuscles.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        suggestion.focusMuscles.forEach { muscle ->
+                            MuscleChip(muscle)
+                        }
+                    }
+                }
+
+                if (sheet != null) {
+                    Spacer(Modifier.height(14.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.FitnessCenter, contentDescription = null, tint = Color(0xFF8E989F), modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            "${sheet.exercises.size} exercícios",
+                            color = Color(0xFF8E989F),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Icon(Icons.Filled.Schedule, contentDescription = null, tint = Color(0xFF8E989F), modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            "~${sheet.minutes} min",
+                            color = Color(0xFF8E989F),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        "Abrir sugestão",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(HealthFitColors.Accent)
+                            .clickable { showPreview = true }
+                            .padding(vertical = 12.dp),
+                    )
+                    Text(
+                        "Escolher treino",
+                        color = HealthFitColors.Accent,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(HealthFitColors.Accent.copy(alpha = 0.16f))
+                            .clickable { showGenderPicker = true }
+                            .padding(vertical = 12.dp),
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Realizar cardio",
+                    color = Color(0xFF4DD0E1),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF4DD0E1).copy(alpha = 0.16f))
+                        .clickable(onClick = onOpenCardio)
+                        .padding(vertical = 12.dp),
+                )
             }
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "Realizar cardio",
-                color = Color(0xFF4DD0E1),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF4DD0E1).copy(alpha = 0.16f))
-                    .clickable(onClick = onOpenCardio)
-                    .padding(vertical = 12.dp),
-            )
         }
     }
 }
 
 private fun suggestionLabel(suggestion: WorkoutOfTheDaySuggestion): String {
     val focus = suggestion.focusMuscles
-    if (suggestion.isFromCoach) {
-        if (focus.isEmpty()) return "Rotina do personal"
-        val names = focus.joinToString(" · ") { WorkoutDaySuggestionAnalyzer.muscleLabel(it) }
-        return "Rotina do personal · $names"
+    return when (suggestion.source) {
+        WorkoutSuggestionSource.CoachRest -> "Rotina do personal · dia livre"
+        WorkoutSuggestionSource.RoutineRest -> "Sugestão de recuperação"
+        WorkoutSuggestionSource.CoachRoutine -> {
+            if (focus.isEmpty()) "Rotina do personal"
+            else {
+                val names = focus.joinToString(" · ") { WorkoutDaySuggestionAnalyzer.muscleLabel(it) }
+                "Rotina do personal · $names"
+            }
+        }
+        WorkoutSuggestionSource.UserHistory -> {
+            if (focus.isEmpty()) "Sugestão com base no seu histórico"
+            else {
+                val names = focus.joinToString(" · ") { WorkoutDaySuggestionAnalyzer.muscleLabel(it) }
+                "Sugestão · foco em $names"
+            }
+        }
     }
-    if (focus.isEmpty()) return "Sugestão com base no seu histórico"
-    val names = focus.joinToString(" · ") { WorkoutDaySuggestionAnalyzer.muscleLabel(it) }
-    return "Sugestão · foco em $names"
 }
 
 @Composable

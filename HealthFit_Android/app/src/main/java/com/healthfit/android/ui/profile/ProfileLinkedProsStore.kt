@@ -14,6 +14,7 @@ object ProfileLinkedProsStore {
     private const val KeyHasNutri = "has_nutri"
     private const val KeyNutriName = "nutri_name"
     private const val KeyNutriEmail = "nutri_email"
+    private const val KeyRestWeekdays = "rest_weekdays"
 
     data class Snapshot(
         val hasTrainer: Boolean = false,
@@ -22,6 +23,8 @@ object ProfileLinkedProsStore {
         val hasNutri: Boolean = false,
         val nutriName: String = "",
         val nutriEmail: String = "",
+        /** Calendar.DAY_OF_WEEK: 1=domingo … 7=sábado */
+        val restWeekdays: List<Int> = emptyList(),
     )
 
     fun userId(): String =
@@ -31,6 +34,12 @@ object ProfileLinkedProsStore {
     fun load(context: Context): Snapshot {
         val p = prefs(context)
         val uid = userId()
+        val restRaw = p.getString(scoped(KeyRestWeekdays, uid), "").orEmpty()
+        val restWeekdays = restRaw.split(',')
+            .mapNotNull { it.trim().toIntOrNull() }
+            .filter { it in 1..7 }
+            .distinct()
+            .sorted()
         return Snapshot(
             hasTrainer = p.getBoolean(scoped(KeyHasTrainer, uid), false),
             trainerName = p.getString(scoped(KeyTrainerName, uid), "").orEmpty(),
@@ -38,7 +47,16 @@ object ProfileLinkedProsStore {
             hasNutri = p.getBoolean(scoped(KeyHasNutri, uid), false),
             nutriName = p.getString(scoped(KeyNutriName, uid), "").orEmpty(),
             nutriEmail = p.getString(scoped(KeyNutriEmail, uid), "").orEmpty(),
+            restWeekdays = restWeekdays,
         )
+    }
+
+    fun saveRestWeekdays(context: Context, weekdays: List<Int>) {
+        val uid = userId()
+        val normalized = weekdays.filter { it in 1..7 }.distinct().sorted()
+        prefs(context).edit()
+            .putString(scoped(KeyRestWeekdays, uid), normalized.joinToString(","))
+            .apply()
     }
 
     fun saveTrainer(

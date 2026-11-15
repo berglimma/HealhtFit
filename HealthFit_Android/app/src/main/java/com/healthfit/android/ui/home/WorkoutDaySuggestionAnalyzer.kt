@@ -10,17 +10,24 @@ import java.util.concurrent.TimeUnit
 
 enum class WorkoutSuggestionSource {
     CoachRoutine,
+    CoachRest,
+    RoutineRest,
     UserHistory,
 }
 
 data class WorkoutOfTheDaySuggestion(
-    val sheet: WorkoutSheet,
+    val sheet: WorkoutSheet? = null,
     val avoidedMuscles: List<Muscle>,
     val focusMuscles: List<Muscle>,
     val reason: String,
     val source: WorkoutSuggestionSource = WorkoutSuggestionSource.UserHistory,
 ) {
-    val isFromCoach: Boolean get() = source == WorkoutSuggestionSource.CoachRoutine
+    val isFromCoach: Boolean
+        get() = source == WorkoutSuggestionSource.CoachRoutine || source == WorkoutSuggestionSource.CoachRest
+    val isRestDay: Boolean
+        get() = source == WorkoutSuggestionSource.CoachRest || source == WorkoutSuggestionSource.RoutineRest
+    val title: String
+        get() = if (isRestDay) "Dia de descanso" else sheet?.title ?: "Treino do dia"
 }
 
 data class MuscleGroupStat(
@@ -67,8 +74,17 @@ object WorkoutDaySuggestionAnalyzer {
         female: Boolean = false,
         hasPersonalTrainer: Boolean = false,
         personalName: String? = null,
+        coachRestWeekdays: List<Int> = emptyList(),
         nowMillis: Long = System.currentTimeMillis(),
     ): WorkoutOfTheDaySuggestion? {
+        suggestRestDay(
+            sessions = sessions,
+            hasPersonalTrainer = hasPersonalTrainer,
+            personalName = personalName,
+            coachRestWeekdays = coachRestWeekdays,
+            nowMillis = nowMillis,
+        )?.let { return it }
+
         val coachSheets = coachPrescribedSheets(female)
             .filter { it.exercises.isNotEmpty() }
             .distinctBy { it.title }
@@ -87,6 +103,86 @@ object WorkoutDaySuggestionAnalyzer {
             female = female,
             nowMillis = nowMillis,
         )
+    }
+
+    private fun suggestRestDay(
+        sessions: List<ConstancySession>,
+        hasPersonalTrainer: Boolean,
+        personalName: String?,
+        coachRestWeekdays: List<Int>,
+        nowMillis: Long,
+    ): WorkoutOfTheDaySuggestion? {
+        val cal = Calendar.getInstance().apply { timeInMillis = nowMillis }
+        val weekday = cal.get(Calendar.DAY_OF_WEEK) // 1=Sunday … 7=Saturday
+        val restDays = coachRestWeekdays.filter { it in 1..7 }.distinct().sorted()
+        val coachLabel = personalName?.trim().orEmpty().ifBlank { "seu personal" }
+
+        if (hasPersonalTrainer && weekday in restDays) {
+            val dayName = cal.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.LONG, java.util.Locale("pt", "BR"))
+                ?: "hoje"
+            return WorkoutOfTheDaySuggestion(
+                sheet = null,
+                avoidedMuscles = emptyList(),
+                focusMuscles = emptyList(),
+                reason = "$coachLabel estabeleceu $dayName como dia de descanso. Priorize recuperação — o corpo cresce no descanso.",
+                source = WorkoutSuggestionSource.CoachRest,
+            )
+        }
+
+        val consecutive = consecutiveStrengthDaysEndingYesterday(sessions, nowMillis)
+        val startOfToday = Calendar.getInstance().apply {
+            timeInMillis = nowMillis
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val trainedToday = strengthSessions(sessions, startOfToday, nowMillis).isNotEmpty()
+        if (trainedToday) return null
+
+        if (consecutive >= 2) {
+            val reason = if (hasPersonalTrainer) {
+                "Você encadeou $consecutive dias de musculação. Pela rotina, hoje encaixa melhor como descanso de recuperação — volte amanhã às fichas de $coachLabel."
+            } else {
+                "Você encadeou $consecutive dias de musculação. Hoje a sugestão é descanso ativo: sono, mobilidade leve ou caminhada curta."
+            }
+            return WorkoutOfTheDaySuggestion(
+                sheet = null,
+                avoidedMuscles = emptyList(),
+                focusMuscles = emptyList(),
+                reason = reason,
+                source = WorkoutSuggestionSource.RoutineRest,
+            )
+        }
+        return null
+    }
+
+    private fun consecutiveStrengthDaysEndingYesterday(
+        sessions: List<ConstancySession>,
+        nowMillis: Long,
+    ): Int {
+        val cal = Calendar.getInstance().apply { timeInMillis = nowMillis }
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        cal.add(Calendar.DAY_OF_YEAR, -1)
+
+        val dayKeys = strengthSessions(sessions, 0L, nowMillis).map { session ->
+            val c = Calendar.getInstance().apply { timeInMillis = session.endedAtMillis }
+            c.set(Calendar.HOUR_OF_DAY, 0)
+            c.set(Calendar.MINUTE, 0)
+            c.set(Calendar.SECOND, 0)
+            c.set(Calendar.MILLISECOND, 0)
+            c.timeInMillis
+        }.toSet()
+
+        var streak = 0
+        while (cal.timeInMillis in dayKeys) {
+            streak += 1
+            cal.add(Calendar.DAY_OF_YEAR, -1)
+        }
+        return streak
     }
 
     private fun suggestCoachRoutine(
