@@ -149,10 +149,7 @@ enum WorkoutDaySuggestionAnalyzer {
         let coachIds = Set(coachSheets.map(\.id))
 
         let recentCoachSessions = strengthSessions(sessions, from: since7d, to: referenceDate)
-            .filter { session in
-                guard let id = session.workoutSheetId else { return false }
-                return coachIds.contains(id)
-            }
+            .filter { coachIds.contains($0.workoutSheetId) }
         let daysSinceCoach: Int? = {
             guard let last = recentCoachSessions
                 .compactMap({ $0.endedAt ?? $0.startedAt })
@@ -163,7 +160,8 @@ enum WorkoutDaySuggestionAnalyzer {
 
         var lastDone: [UUID: Date] = [:]
         for session in strengthSessions(sessions, from: .distantPast, to: referenceDate) {
-            guard let id = session.workoutSheetId, coachIds.contains(id) else { continue }
+            let id = session.workoutSheetId
+            guard coachIds.contains(id) else { continue }
             let when = session.endedAt ?? session.startedAt
             if let prev = lastDone[id], prev >= when { continue }
             lastDone[id] = when
@@ -171,7 +169,7 @@ enum WorkoutDaySuggestionAnalyzer {
 
         let recent2dIds = Set(
             strengthSessions(sessions, from: since2d, to: referenceDate)
-                .compactMap(\.workoutSheetId)
+                .map(\.workoutSheetId)
         )
 
         struct Scored {
@@ -249,7 +247,7 @@ enum WorkoutDaySuggestionAnalyzer {
 
         let recentSheetIds = Set(
             strengthSessions(sessions, from: since, to: referenceDate)
-                .compactMap(\.workoutSheetId)
+                .map(\.workoutSheetId)
         )
 
         struct Scored {
