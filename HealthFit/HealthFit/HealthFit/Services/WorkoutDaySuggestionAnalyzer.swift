@@ -3,17 +3,29 @@ import Foundation
 struct WorkoutOfTheDaySuggestion: Identifiable, Hashable {
     enum Source: String, Hashable {
         case coachRoutine
+        case coachRest
+        case routineRest
         case userHistory
     }
 
-    var id: String { sheet.id.uuidString }
-    let sheet: WorkoutSheet
+    var id: String {
+        if let sheet { return sheet.id.uuidString }
+        return "rest-\(source.rawValue)"
+    }
+
+    let sheet: WorkoutSheet?
     let avoidedMuscles: [MuscleGroup]
     let focusMuscles: [MuscleGroup]
     let reason: String
     let source: Source
 
-    var isFromCoach: Bool { source == .coachRoutine }
+    var isFromCoach: Bool { source == .coachRoutine || source == .coachRest }
+    var isRestDay: Bool { source == .coachRest || source == .routineRest }
+
+    var title: String {
+        if isRestDay { return "Dia de descanso" }
+        return sheet?.title ?? "Treino do dia"
+    }
 }
 
 struct MuscleGroupStat: Identifiable, Hashable {
@@ -101,6 +113,7 @@ enum WorkoutDaySuggestionAnalyzer {
 
     /// - Parameter hasPersonalTrainer: vínculo/perfil com personal.
     ///   Com personal + fichas prescritas ativas, a sugestão segue a rotina do coach;
+    ///   dias de descanso prescritos (ou recuperação pela rotina) viram sugestão de descanso;
     ///   sem personal (ou sem fichas), mantém a análise pelos treinos feitos pelo usuário.
     static func suggestWorkoutOfTheDay(
         sessions: [WorkoutSession],
@@ -108,8 +121,20 @@ enum WorkoutDaySuggestionAnalyzer {
         sheetsCatalog: [WorkoutSheet],
         hasPersonalTrainer: Bool = false,
         personalName: String? = nil,
+        coachRestWeekdays: [Int] = [],
         referenceDate: Date = .now
     ) -> WorkoutOfTheDaySuggestion? {
+        if let rest = suggestRestDay(
+            sessions: sessions,
+            sheetsCatalog: sheetsCatalog,
+            hasPersonalTrainer: hasPersonalTrainer,
+            personalName: personalName,
+            coachRestWeekdays: coachRestWeekdays,
+            referenceDate: referenceDate
+        ) {
+            return rest
+        }
+
         let coachSheets = Dictionary(
             candidateSheets.filter { $0.isCoachPrescribed && $0.isActive && !$0.exercises.isEmpty }
                 .map { ($0.id, $0) },
@@ -132,6 +157,103 @@ enum WorkoutDaySuggestionAnalyzer {
             sheetsCatalog: sheetsCatalog,
             referenceDate: referenceDate
         )
+    }
+
+    /// Descanso prescrito pelo personal ou recuperação inferida pela rotina recente.
+    private static func suggestRestDay(
+        sessions: [WorkoutSession],
+        sheetsCatalog: [WorkoutSheet],
+        hasPersonalTrainer: Bool,
+        personalName: String?,
+        coachRestWeekdays: [Int],
+        referenceDate: Date
+    ) -> WorkoutOfTheDaySuggestion? {
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: referenceDate)
+        let normalizedRest = CoachLink.normalizedRestWeekdays(coachRestWeekdays)
+        let coachLabel = {
+            let trimmed = personalName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return trimmed.isEmpty ? "seu personal" : trimmed
+        }()
+
+        if hasPersonalTrainer, normalizedRest.contains(weekday) {
+            let dayName = weekdayDisplayName(weekday, calendar: calendar)
+            return WorkoutOfTheDaySuggestion(
+                sheet: nil,
+                avoidedMuscles: [],
+                focusMuscles: [],
+                reason: "\(coachLabel) estabeleceu \(dayName) como dia de descanso. Priorize recuperação — o corpo cresce no descanso.",
+                source: .coachRest
+            )
+        }
+
+        let consecutive = consecutiveStrengthDaysEndingYesterday(
+            sessions: sessions,
+            referenceDate: referenceDate
+        )
+        let since2d = calendar.date(byAdding: .day, value: -2, to: referenceDate) ?? referenceDate.addingTimeInterval(-172_800)
+        let avoided = musclesTrained(in: sessions, sheets: sheetsCatalog, since: since2d, until: referenceDate)
+        let trainedToday = !strengthSessions(
+            sessions,
+            from: calendar.startOfDay(for: referenceDate),
+            to: referenceDate
+        ).isEmpty
+
+        // Já treinou hoje → não sugerir descanso como card do dia.
+        if trainedToday { return nil }
+
+        if consecutive >= 2 {
+            let avoidedList = avoided.sorted { $0.rawValue < $1.rawValue }
+            let recoveryNote: String
+            if avoidedList.isEmpty {
+                recoveryNote = "Você encadeou \(consecutive) dias de musculação."
+            } else {
+                let names = avoidedList.map(\.rawValue).joined(separator: ", ")
+                recoveryNote = "Você encadeou \(consecutive) dias de musculação (\(names))."
+            }
+            let reason: String
+            if hasPersonalTrainer {
+                reason = "\(recoveryNote) Pela rotina, hoje encaixa melhor como descanso prescrito de recuperação — volte amanhã às fichas de \(coachLabel)."
+            } else {
+                reason = "\(recoveryNote) Hoje a sugestão é descanso ativo: sono, mobilidade leve ou caminhada curta."
+            }
+            return WorkoutOfTheDaySuggestion(
+                sheet: nil,
+                avoidedMuscles: avoidedList,
+                focusMuscles: [],
+                reason: reason,
+                source: .routineRest
+            )
+        }
+
+        return nil
+    }
+
+    private static func consecutiveStrengthDaysEndingYesterday(
+        sessions: [WorkoutSession],
+        referenceDate: Date
+    ) -> Int {
+        let calendar = Calendar.current
+        let days = Set(
+            strengthSessions(sessions, from: .distantPast, to: referenceDate).map {
+                calendar.startOfDay(for: $0.endedAt ?? $0.startedAt)
+            }
+        )
+        var streak = 0
+        var cursor = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: referenceDate))
+            ?? calendar.startOfDay(for: referenceDate)
+        while days.contains(cursor) {
+            streak += 1
+            guard let prev = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
+            cursor = prev
+        }
+        return streak
+    }
+
+    private static func weekdayDisplayName(_ weekday: Int, calendar: Calendar) -> String {
+        let symbols = calendar.weekdaySymbols
+        guard weekday >= 1, weekday <= symbols.count else { return "hoje" }
+        return symbols[weekday - 1]
     }
 
     /// Próxima ficha da rotina do personal: prioriza as menos cumpridas recentemente.

@@ -237,9 +237,97 @@ struct CoachLink: Identifiable, Codable, Equatable, Hashable {
     var createdAt: Date
     var updatedAt: Date
     var activatedAt: Date?
+    /// Dias de descanso prescritos (Calendar.weekday: 1 = domingo … 7 = sábado).
+    var restWeekdays: [Int]
 
     var isActiveLike: Bool {
         status == .active || status == .blockedPlan
+    }
+
+    init(
+        id: String,
+        coachUid: String,
+        coachName: String,
+        coachPhotoURL: String? = nil,
+        studentUid: String,
+        studentName: String,
+        studentPhotoURL: String? = nil,
+        profession: CoachProfession,
+        status: CoachLinkStatus,
+        memberUids: [String],
+        createdAt: Date,
+        updatedAt: Date,
+        activatedAt: Date? = nil,
+        restWeekdays: [Int] = []
+    ) {
+        self.id = id
+        self.coachUid = coachUid
+        self.coachName = coachName
+        self.coachPhotoURL = coachPhotoURL
+        self.studentUid = studentUid
+        self.studentName = studentName
+        self.studentPhotoURL = studentPhotoURL
+        self.profession = profession
+        self.status = status
+        self.memberUids = memberUids
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.activatedAt = activatedAt
+        self.restWeekdays = Self.normalizedRestWeekdays(restWeekdays)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        coachUid = try container.decode(String.self, forKey: .coachUid)
+        coachName = try container.decode(String.self, forKey: .coachName)
+        coachPhotoURL = try container.decodeIfPresent(String.self, forKey: .coachPhotoURL)
+        studentUid = try container.decode(String.self, forKey: .studentUid)
+        studentName = try container.decode(String.self, forKey: .studentName)
+        studentPhotoURL = try container.decodeIfPresent(String.self, forKey: .studentPhotoURL)
+        profession = try container.decode(CoachProfession.self, forKey: .profession)
+        status = try container.decode(CoachLinkStatus.self, forKey: .status)
+        memberUids = try container.decodeIfPresent([String].self, forKey: .memberUids) ?? []
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        activatedAt = try container.decodeIfPresent(Date.self, forKey: .activatedAt)
+        restWeekdays = Self.normalizedRestWeekdays(
+            try container.decodeIfPresent([Int].self, forKey: .restWeekdays) ?? []
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(coachUid, forKey: .coachUid)
+        try container.encode(coachName, forKey: .coachName)
+        try container.encodeIfPresent(coachPhotoURL, forKey: .coachPhotoURL)
+        try container.encode(studentUid, forKey: .studentUid)
+        try container.encode(studentName, forKey: .studentName)
+        try container.encodeIfPresent(studentPhotoURL, forKey: .studentPhotoURL)
+        try container.encode(profession, forKey: .profession)
+        try container.encode(status, forKey: .status)
+        try container.encode(memberUids, forKey: .memberUids)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(updatedAt, forKey: .updatedAt)
+        try container.encodeIfPresent(activatedAt, forKey: .activatedAt)
+        try container.encode(Self.normalizedRestWeekdays(restWeekdays), forKey: .restWeekdays)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, coachUid, coachName, coachPhotoURL
+        case studentUid, studentName, studentPhotoURL
+        case profession, status, memberUids
+        case createdAt, updatedAt, activatedAt, restWeekdays
+    }
+
+    static func normalizedRestWeekdays(_ days: [Int]) -> [Int] {
+        Array(Set(days.filter { (1...7).contains($0) })).sorted()
+    }
+
+    func isRestWeekday(on date: Date = .now, calendar: Calendar = .current) -> Bool {
+        let weekday = calendar.component(.weekday, from: date)
+        return restWeekdays.contains(weekday)
     }
 }
 

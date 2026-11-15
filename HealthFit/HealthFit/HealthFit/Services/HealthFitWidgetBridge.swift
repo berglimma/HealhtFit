@@ -26,13 +26,15 @@ enum HealthFitWidgetBridge {
         let resolvedHasPersonal = hasPersonalTrainer ?? linkedPersonal
         let resolvedPersonalName = personalName
             ?? CoachService.shared.activePersonalLink?.coachName
+        let restWeekdays = CoachService.shared.activePersonalLink?.restWeekdays ?? []
 
         let suggestion = WorkoutDaySuggestionAnalyzer.suggestWorkoutOfTheDay(
             sessions: sessions,
             candidateSheets: candidates,
             sheetsCatalog: sheets,
             hasPersonalTrainer: resolvedHasPersonal,
-            personalName: resolvedPersonalName
+            personalName: resolvedPersonalName,
+            coachRestWeekdays: restWeekdays
         )
         let lift = WorkoutDaySuggestionAnalyzer.bestRecentLift(sessions: sessions, sheets: sheets)
         let weekCount = WorkoutDaySuggestionAnalyzer.strengthSessionsThisWeek(sessions: sessions)
@@ -46,7 +48,7 @@ enum HealthFitWidgetBridge {
             workoutsThisWeek: weekCount,
             weeklyGoal: WorkoutDaySuggestionAnalyzer.weeklyGoalDefault,
             todayCalories: max(0, Int(todayCalories.rounded())),
-            workoutOfDayTitle: suggestion?.sheet.title ?? "Treino do dia",
+            workoutOfDayTitle: suggestion?.title ?? "Treino do dia",
             workoutOfDaySubtitle: suggestion?.reason ?? "Abra o app para personalizar a sugestão",
             streakDays: streak
         )

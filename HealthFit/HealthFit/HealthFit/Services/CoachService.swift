@@ -752,6 +752,26 @@ final class CoachService: ObservableObject {
         }
     }
 
+    /// Atualiza dias de descanso prescritos (Calendar.weekday 1…7) no vínculo personal.
+    func updateRestWeekdays(link: CoachLink, weekdays: [Int]) async -> Bool {
+        guard let uid = currentUid, uid == link.coachUid else { return false }
+        guard link.profession == .personal, canPrescribeWorkouts(on: link) else {
+            lastError = "Somente personal pode definir dias de descanso da rotina."
+            return false
+        }
+        var updated = link
+        updated.restWeekdays = CoachLink.normalizedRestWeekdays(weekdays)
+        updated.updatedAt = .now
+        do {
+            try await CoachFirestoreService.saveLink(updated)
+            upsertLink(updated)
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
     // MARK: - Prescribe workout
 
     func publishWorkout(link: CoachLink, sheet: WorkoutSheet) async -> Bool {

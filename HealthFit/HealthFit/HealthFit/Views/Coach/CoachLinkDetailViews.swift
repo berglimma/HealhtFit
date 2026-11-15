@@ -121,6 +121,15 @@ struct CoachLinkDetailView: View {
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .listRowBackground(Color.clear)
                 }
+                if liveLink.profession == .personal, !liveLink.restWeekdays.isEmpty {
+                    Section("Dias de descanso do personal") {
+                        Text(CoachRestWeekdaysEditor.labels(for: liveLink.restWeekdays))
+                            .font(.subheadline)
+                        Text("Nesses dias o card Treino do dia sugere descanso da rotina.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
 
             if liveLink.status == .blockedPlan {
@@ -178,6 +187,23 @@ struct CoachLinkDetailView: View {
                             }
                         }
                     }
+                }
+            }
+
+            if isCoach, liveLink.isActiveLike, canPrescribeWorkouts {
+                Section {
+                    CoachRestWeekdaysEditor(link: liveLink) { weekdays in
+                        Task {
+                            let ok = await coach.updateRestWeekdays(link: liveLink, weekdays: weekdays)
+                            statusMessage = ok
+                                ? "Dias de descanso atualizados. O aluno verá no Treino do dia."
+                                : (coach.lastError ?? "Falha ao salvar descanso.")
+                        }
+                    }
+                } header: {
+                    Text("Dias de descanso")
+                } footer: {
+                    Text("Marque os dias livres da rotina. No Treino do dia do aluno, esses dias aparecem como sugestão de descanso.")
                 }
             }
 
@@ -2408,5 +2434,82 @@ struct CoachStudentMetricsView: View {
         guard !trimmed.isEmpty else { return nil }
         guard let value = Double(trimmed), value > 0, value < 500 else { return nil }
         return value
+    }
+}
+
+/// Seletor de dias de descanso da rotina (Calendar.weekday 1…7).
+private struct CoachRestWeekdaysEditor: View {
+    let link: CoachLink
+    var onSave: ([Int]) -> Void
+
+    @State private var selected: Set<Int>
+
+    private static let options: [(Int, String)] = [
+        (2, "Seg"),
+        (3, "Ter"),
+        (4, "Qua"),
+        (5, "Qui"),
+        (6, "Sex"),
+        (7, "Sáb"),
+        (1, "Dom"),
+    ]
+
+    static func labels(for weekdays: [Int]) -> String {
+        let set = Set(weekdays)
+        let names = options.compactMap { set.contains($0.0) ? $0.1 : nil }
+        return names.isEmpty ? "Nenhum" : names.joined(separator: " · ")
+    }
+
+    init(link: CoachLink, onSave: @escaping ([Int]) -> Void) {
+        self.link = link
+        self.onSave = onSave
+        _selected = State(initialValue: Set(link.restWeekdays))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                ForEach(Self.options, id: \.0) { weekday, title in
+                    let isOn = selected.contains(weekday)
+                    Button {
+                        if isOn {
+                            selected.remove(weekday)
+                        } else {
+                            selected.insert(weekday)
+                        }
+                    } label: {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(isOn ? AppTheme.accent.opacity(0.22) : AppTheme.cardBackground)
+                            .foregroundStyle(isOn ? AppTheme.accent : AppTheme.textSecondary)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .strokeBorder(isOn ? AppTheme.accent.opacity(0.55) : Color.clear, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Button {
+                onSave(Array(selected).sorted())
+            } label: {
+                Text(selected.isEmpty ? "Limpar dias de descanso" : "Salvar dias de descanso")
+                    .font(.subheadline.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(AppTheme.accent)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 4)
+        .onChange(of: link.restWeekdays) { _, newValue in
+            selected = Set(newValue)
+        }
     }
 }

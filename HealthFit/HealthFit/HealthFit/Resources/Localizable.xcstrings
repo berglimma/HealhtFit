@@ -2659,6 +2659,9 @@
     "Cardio" : {
 
     },
+    "Cardio leve / caminhada" : {
+
+    },
     "Carga" : {
 
     },
@@ -3169,6 +3172,9 @@
     "Confirmadas" : {
 
     },
+    "Confirmar descanso do personal" : {
+
+    },
     "Confirmar encerramento" : {
 
     },
@@ -3441,6 +3447,9 @@
     "Descanso encerrado!" : {
 
     },
+    "Descanso marcado na constância" : {
+
+    },
     "Descanso padrão: %llds" : {
 
     },
@@ -3535,6 +3544,12 @@
 
     },
     "Diários de natação, bike e surf/kite ficam dentro de cada modalidade." : {
+
+    },
+    "Dias de descanso" : {
+
+    },
+    "Dias de descanso do personal" : {
 
     },
     "Dieta" : {
@@ -4788,6 +4803,9 @@
     "Limpar conversa" : {
 
     },
+    "Limpar dias de descanso" : {
+
+    },
     "Limpar texto desta refeição" : {
 
     },
@@ -4891,6 +4909,9 @@
     "Marcar como não concluída" : {
 
     },
+    "Marcar descanso hoje" : {
+
+    },
     "Marcar salto no iPhone" : {
 
     },
@@ -4925,6 +4946,9 @@
 
     },
     "Marque o que você pratica. A lista de treinos mostra só as modalidades ativas." : {
+
+    },
+    "Marque os dias livres da rotina. No Treino do dia do aluno, esses dias aparecem como sugestão de descanso." : {
 
     },
     "Marque só o que você exerce. Personal exige CREF; nutricionista exige CRN. Não precisa dos dois se for apenas uma área." : {
@@ -5394,6 +5418,9 @@
 
     },
     "Nenhuma via registrada ainda. Toque em Registrar ao terminar cada tentativa." : {
+
+    },
+    "Nesses dias o card Treino do dia sugere descanso da rotina." : {
 
     },
     "Nesta fase o corpo retém mais líquido — evite usar as medidas para comparar evolução." : {
@@ -11610,6 +11637,9 @@
     "Salvar dados" : {
 
     },
+    "Salvar dias de descanso" : {
+
+    },
     "Salvar e substituir o recomendado" : {
 
     },
@@ -12504,6 +12534,9 @@
           }
         }
       }
+    },
+    "Treinar mesmo assim" : {
+
     },
     "Treine em Casa" : {
 
