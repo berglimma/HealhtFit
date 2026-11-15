@@ -2,7 +2,7 @@
   "name": "healthfit-functions",
   "description": "Cloud Functions — TTL accessLogs + Duo FCM + cortesia",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "main": "lib/index.js",
   "scripts": {
@@ -13,7 +13,8 @@
     "lint": "tsc --noEmit && eslint src --ext .ts",
     "seed:courtesy": "node scripts/seed-courtesy-vouchers.cjs",
     "seed:courtesy:deploy": "node scripts/seed-courtesy-vouchers.cjs --deploy",
-    "ensure:demo-account": "node scripts/ensure-demo-account.cjs"
+    "ensure:demo-account": "node scripts/ensure-demo-account.cjs",
+    "grant:special-courtesy": "node scripts/grant-special-courtesy-90d.cjs"
   },
   "dependencies": {
     "firebase-admin": "^12.7.0",

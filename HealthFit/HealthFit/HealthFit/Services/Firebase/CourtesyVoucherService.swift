@@ -69,6 +69,53 @@ enum CourtesyVoucherService {
         }
     }
 
+    /// Contas allowlist: garante cortesia Completo por 90 dias via Cloud Function.
+    @discardableResult
+    static func ensureSpecialCourtesyIfNeeded() async -> CourtesyGrant? {
+        guard FirebaseBootstrap.isConfigured else { return nil }
+        guard let user = Auth.auth().currentUser else { return nil }
+        guard CourtesySpecialAccounts.isSpecial(user.email) else { return nil }
+
+        do {
+            let token = try await user.getIDToken()
+            let url = try callableURL(name: "ensureSpecialCourtesy")
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["data": [:] as [String: Any]])
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if let errorMessage = callableErrorMessage(from: data) {
+                #if DEBUG
+                print("ensureSpecialCourtesy: \(errorMessage)")
+                #endif
+                return await fetchGrant(userId: user.uid)
+            }
+            guard (200..<300).contains(status) else {
+                return await fetchGrant(userId: user.uid)
+            }
+
+            if let payload = try? JSONDecoder().decode(CallableRedeemResponse.self, from: data) {
+                let result = payload.result
+                if let plan = PlanTier(courtesyRaw: result.plan) {
+                    let grant = CourtesyGrant(
+                        plan: plan,
+                        expiresAt: Date(timeIntervalSince1970: TimeInterval(result.expiresAtMs) / 1000),
+                        code: CourtesySpecialAccounts.code,
+                        durationDays: result.durationDays
+                    )
+                    persistCache(grant, userId: user.uid)
+                    return grant.isActive ? grant : nil
+                }
+            }
+            return await fetchGrant(userId: user.uid)
+        } catch {
+            return await fetchGrant(userId: user.uid)
+        }
+    }
+
     static func redeem(code rawCode: String) async throws -> CourtesyGrant {
         let code = CourtesyVoucher.normalize(rawCode)
         guard CourtesyVoucher.isValidFormat(code) else {

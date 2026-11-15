@@ -1,3 +1,4 @@
-• Correção urgente: o login volta a conectar no Firebase após a atualização da App Store
-• No iPad, sair e voltar do app não deixa mais a tela escura
-• A meta de água definida pelo personal aparece na hora no card do aluno
+• Método Atleta PPL 2× em masculino e feminino, com demos em GIF
+• Novos treinos em casa (Core Power, HIIT Queima, Posterior e Express)
+• Apple Watch: musculação iniciada no relógio avança séries e exercícios
+• Faixa “Novos treinos liberados” nos programas atualizados

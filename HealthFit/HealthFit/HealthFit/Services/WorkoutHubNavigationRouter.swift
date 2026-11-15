@@ -19,7 +19,9 @@ final class WorkoutHubNavigationRouter: ObservableObject {
 
     @Published private(set) var focusWorkoutsTabTick: Int = 0
     @Published private(set) var openHubTick: Int = 0
+    @Published private(set) var openCardioTick: Int = 0
     private var pending: PendingOpen?
+    private var pendingCardio = false
     /// Alvo de scroll do hub. Separado de `pending` para o consume da lista
     /// não rearmar um segundo push de navegação no mesmo frame.
     private var scrollHint: PendingOpen?
@@ -30,6 +32,19 @@ final class WorkoutHubNavigationRouter: ObservableObject {
         pending = PendingOpen(gender: gender, section: section)
         focusWorkoutsTabTick &+= 1
         openHubTick &+= 1
+    }
+
+    /// Abre a aba Treinos → Cardio (lista de modalidades).
+    func openCardio() {
+        pendingCardio = true
+        focusWorkoutsTabTick &+= 1
+        openCardioTick &+= 1
+    }
+
+    func consumePendingCardio() -> Bool {
+        let value = pendingCardio
+        pendingCardio = false
+        return value
     }
 
     /// Consome o pedido de navegação até o hub (lista de treinos).

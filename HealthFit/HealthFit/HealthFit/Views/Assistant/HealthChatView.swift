@@ -196,6 +196,7 @@ struct HealthChatView: View {
                     sessions: workoutStore.sessionHistory,
                     accountCreatedAt: authService.currentUser?.createdAt
                 )
+                assistant.checkPulseNudgeIfNeeded(context: context)
                 assistant.checkStudyFocusInsightsIfNeeded(
                     context: context,
                     sessions: workoutStore.sessionHistory
@@ -250,6 +251,7 @@ struct HealthChatView: View {
                         sessions: workoutStore.sessionHistory,
                         accountCreatedAt: authService.currentUser?.createdAt
                     )
+                    assistant.checkPulseNudgeIfNeeded(context: context)
                     assistant.checkStudyFocusInsightsIfNeeded(
                         context: context,
                         sessions: workoutStore.sessionHistory
@@ -299,6 +301,7 @@ struct HealthChatView: View {
                         sessions: workoutStore.sessionHistory,
                         accountCreatedAt: authService.currentUser?.createdAt
                     )
+                    assistant.checkPulseNudgeIfNeeded(context: context)
                     assistant.checkStudyFocusInsightsIfNeeded(
                         context: context,
                         sessions: workoutStore.sessionHistory

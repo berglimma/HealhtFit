@@ -145,6 +145,13 @@
 		B1000310 /* WorkoutLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000306 /* WorkoutLiveActivityAttributes.swift */; };
 		B1000311 /* HealthFitWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1000311 /* HealthFitWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B1000312 /* HealthFitHomeWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000312 /* HealthFitHomeWidget.swift */; };
+		B1000W01 /* HealthFitWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000W01 /* HealthFitWidgetSnapshot.swift */; };
+		B1000W02 /* HealthFitWidgetBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000W02 /* HealthFitWidgetBridge.swift */; };
+		B1000W03 /* WorkoutDaySuggestionAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000W03 /* WorkoutDaySuggestionAnalyzer.swift */; };
+		B1000W04 /* WorkoutOfTheDayCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000W04 /* WorkoutOfTheDayCard.swift */; };
+		B1000W05 /* MuscleGroupStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000W05 /* MuscleGroupStatsView.swift */; };
+		B1000W06 /* HealthFitLockScreenWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000W06 /* HealthFitLockScreenWidgets.swift */; };
+		B1000W07 /* HealthFitWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000W01 /* HealthFitWidgetSnapshot.swift */; };
 		B1000320 /* BodyEvolutionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000320 /* BodyEvolutionModels.swift */; };
 		B1000321 /* BodyEvolutionStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000321 /* BodyEvolutionStorageService.swift */; };
 		B1000CIP /* WorkoutCheckInPhotoStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000CIP /* WorkoutCheckInPhotoStorageService.swift */; };
@@ -264,6 +271,8 @@
 		B1000942 /* AssistantGratitudeAndCycleEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000942 /* AssistantGratitudeAndCycleEngine.swift */; };
 		B1000944 /* AppFeedbackFirestoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000944 /* AppFeedbackFirestoreService.swift */; };
 		B1000945 /* CourtesyVoucher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000945 /* CourtesyVoucher.swift */; };
+		B1000952 /* CourtesySpecialAccounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000952 /* CourtesySpecialAccounts.swift */; };
+		B1000953 /* AssistantPulseNudgeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000953 /* AssistantPulseNudgeEngine.swift */; };
 		B1000946 /* CourtesyVoucherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000946 /* CourtesyVoucherService.swift */; };
 		B1000947 /* AssistantRestDayEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000947 /* AssistantRestDayEngine.swift */; };
 		B1000948 /* CreateUserMealSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000948 /* CreateUserMealSheet.swift */; };
@@ -288,6 +297,7 @@
 		B1000979 /* ForceAppUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000979 /* ForceAppUpdateView.swift */; };
 		B1000988 /* ShapeWorkoutCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000988 /* ShapeWorkoutCatalog.swift */; };
 		B1000989 /* MilitarWorkoutCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000989 /* MilitarWorkoutCatalog.swift */; };
+		B1000990 /* AtletaWorkoutCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000990 /* AtletaWorkoutCatalog.swift */; };
 		B1000991 /* AssistantBirthdayCongratsEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000991 /* AssistantBirthdayCongratsEngine.swift */; };
 		B1000992 /* StrengthPerformanceAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000992 /* StrengthPerformanceAnalyzer.swift */; };
 		B1000993 /* StrengthPerformanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000993 /* StrengthPerformanceView.swift */; };
@@ -586,6 +596,13 @@
 		F1000310 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000311 /* HealthFitWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HealthFitWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1000312 /* HealthFitHomeWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitHomeWidget.swift; sourceTree = "<group>"; };
+		F1000W07 /* HealthFitWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HealthFitWidgets.entitlements; sourceTree = "<group>"; };
+		F1000W06 /* HealthFitLockScreenWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitLockScreenWidgets.swift; sourceTree = "<group>"; };
+		F1000W05 /* MuscleGroupStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleGroupStatsView.swift; sourceTree = "<group>"; };
+		F1000W04 /* WorkoutOfTheDayCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutOfTheDayCard.swift; sourceTree = "<group>"; };
+		F1000W03 /* WorkoutDaySuggestionAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDaySuggestionAnalyzer.swift; sourceTree = "<group>"; };
+		F1000W02 /* HealthFitWidgetBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitWidgetBridge.swift; sourceTree = "<group>"; };
+		F1000W01 /* HealthFitWidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthFitWidgetSnapshot.swift; sourceTree = "<group>"; };
 		F1000320 /* BodyEvolutionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionModels.swift; sourceTree = "<group>"; };
 		F1000321 /* BodyEvolutionStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyEvolutionStorageService.swift; sourceTree = "<group>"; };
 		F1000CIP /* WorkoutCheckInPhotoStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCheckInPhotoStorageService.swift; sourceTree = "<group>"; };
@@ -703,6 +720,8 @@
 		F1000942 /* AssistantGratitudeAndCycleEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantGratitudeAndCycleEngine.swift; sourceTree = "<group>"; };
 		F1000944 /* AppFeedbackFirestoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeedbackFirestoreService.swift; sourceTree = "<group>"; };
 		F1000945 /* CourtesyVoucher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtesyVoucher.swift; sourceTree = "<group>"; };
+		F1000952 /* CourtesySpecialAccounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtesySpecialAccounts.swift; sourceTree = "<group>"; };
+		F1000953 /* AssistantPulseNudgeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPulseNudgeEngine.swift; sourceTree = "<group>"; };
 		F1000946 /* CourtesyVoucherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtesyVoucherService.swift; sourceTree = "<group>"; };
 		F1000947 /* AssistantRestDayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRestDayEngine.swift; sourceTree = "<group>"; };
 		F1000948 /* CreateUserMealSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateUserMealSheet.swift; sourceTree = "<group>"; };
@@ -727,6 +746,7 @@
 		F1000979 /* ForceAppUpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceAppUpdateView.swift; sourceTree = "<group>"; };
 		F1000988 /* ShapeWorkoutCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapeWorkoutCatalog.swift; sourceTree = "<group>"; };
 		F1000989 /* MilitarWorkoutCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilitarWorkoutCatalog.swift; sourceTree = "<group>"; };
+		F1000990 /* AtletaWorkoutCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtletaWorkoutCatalog.swift; sourceTree = "<group>"; };
 		F1000991 /* AssistantBirthdayCongratsEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantBirthdayCongratsEngine.swift; sourceTree = "<group>"; };
 		F1000992 /* StrengthPerformanceAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrengthPerformanceAnalyzer.swift; sourceTree = "<group>"; };
 		F1000993 /* StrengthPerformanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrengthPerformanceView.swift; sourceTree = "<group>"; };
@@ -959,6 +979,7 @@
 				F1000704 /* CountryOption.swift */,
 				F1000600 /* SubscriptionModels.swift */,
 				F1000945 /* CourtesyVoucher.swift */,
+				F1000952 /* CourtesySpecialAccounts.swift */,
 				F1000420 /* RunTrackingModels.swift */,
 				F1000004 /* MealModels.swift */,
 				F1000994 /* NutritionCareModels.swift */,
@@ -988,6 +1009,9 @@
 		G1000006 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				F1000W01 /* HealthFitWidgetSnapshot.swift */,
+				F1000W02 /* HealthFitWidgetBridge.swift */,
+				F1000W03 /* WorkoutDaySuggestionAnalyzer.swift */,
 				F1000005 /* AuthService.swift */,
 				G1000070 /* Firebase */,
 				F1000006 /* HealthKitManager.swift */,
@@ -1019,6 +1043,7 @@
 				F1000918 /* RecommendedWorkoutCatalog.swift */,
 				F1000988 /* ShapeWorkoutCatalog.swift */,
 				F1000989 /* MilitarWorkoutCatalog.swift */,
+				F1000990 /* AtletaWorkoutCatalog.swift */,
 				F1000915 /* WorkoutSheetOCRParser.swift */,
 				F1000010 /* RestTimerService.swift */,
 				F1000306 /* WorkoutLiveActivityAttributes.swift */,
@@ -1075,6 +1100,7 @@
 				F1000115 /* SupplementationGuideEngine.swift */,
 				F1000116 /* AssistantInactivityFollowUpEngine.swift */,
 				F1000205 /* AssistantCardioMeditationNudgeEngine.swift */,
+				F1000953 /* AssistantPulseNudgeEngine.swift */,
 				F1000947 /* AssistantRestDayEngine.swift */,
 				F1000346 /* AssistantSupplementNudgeEngine.swift */,
 				F1000976 /* AssistantCoachComplianceNudgeEngine.swift */,
@@ -1162,6 +1188,8 @@
 				F1000018 /* DashboardView.swift */,
 				F1000019 /* HealthChartsView.swift */,
 				F1000993 /* StrengthPerformanceView.swift */,
+				F1000W04 /* WorkoutOfTheDayCard.swift */,
+				F1000W05 /* MuscleGroupStatsView.swift */,
 				F1000049 /* WeeklyReportView.swift */,
 				F1000350 /* MonthlyReportView.swift */,
 			);
@@ -1288,7 +1316,9 @@
 			isa = PBXGroup;
 			children = (
 				F1000312 /* HealthFitHomeWidget.swift */,
+				F1000W06 /* HealthFitLockScreenWidgets.swift */,
 				F1000309 /* WorkoutLiveActivityWidget.swift */,
+				F1000W07 /* HealthFitWidgets.entitlements */,
 				F1000310 /* Info.plist */,
 			);
 			path = HealthFitWidgets;
@@ -1780,6 +1810,8 @@
 				B1000942 /* AssistantGratitudeAndCycleEngine.swift in Sources */,
 				B1000944 /* AppFeedbackFirestoreService.swift in Sources */,
 				B1000945 /* CourtesyVoucher.swift in Sources */,
+				B1000952 /* CourtesySpecialAccounts.swift in Sources */,
+				B1000953 /* AssistantPulseNudgeEngine.swift in Sources */,
 				B1000946 /* CourtesyVoucherService.swift in Sources */,
 				B1000947 /* AssistantRestDayEngine.swift in Sources */,
 				B1000906 /* ClimbingGearService.swift in Sources */,
@@ -1796,12 +1828,18 @@
 				B1000005 /* AuthService.swift in Sources */,
 				B1000006 /* HealthKitManager.swift in Sources */,
 				B1000007 /* WorkoutStore.swift in Sources */,
+				B1000W01 /* HealthFitWidgetSnapshot.swift in Sources */,
+				B1000W02 /* HealthFitWidgetBridge.swift in Sources */,
+				B1000W03 /* WorkoutDaySuggestionAnalyzer.swift in Sources */,
+				B1000W04 /* WorkoutOfTheDayCard.swift in Sources */,
+				B1000W05 /* MuscleGroupStatsView.swift in Sources */,
 				B1000008 /* MealPlanService.swift in Sources */,
 				B1000009 /* NotificationService.swift in Sources */,
 				B1000914 /* NutritionNotificationPreferences.swift in Sources */,
 				B1000918 /* RecommendedWorkoutCatalog.swift in Sources */,
 				B1000988 /* ShapeWorkoutCatalog.swift in Sources */,
 				B1000989 /* MilitarWorkoutCatalog.swift in Sources */,
+				B1000990 /* AtletaWorkoutCatalog.swift in Sources */,
 				B1000915 /* WorkoutSheetOCRParser.swift in Sources */,
 				B1000916 /* WorkoutSheetDocumentScanner.swift in Sources */,
 				B1000917 /* ScanWorkoutSheetView.swift in Sources */,
@@ -2062,6 +2100,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				B1000312 /* HealthFitHomeWidget.swift in Sources */,
+				B1000W06 /* HealthFitLockScreenWidgets.swift in Sources */,
+				B1000W07 /* HealthFitWidgetSnapshot.swift in Sources */,
 				B1000309 /* WorkoutLiveActivityWidget.swift in Sources */,
 				B1000310 /* WorkoutLiveActivityAttributes.swift in Sources */,
 				B1000403 /* EveningTrainingNudgeAttributes.swift in Sources */,
@@ -2298,7 +2338,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthFit/HealthFitDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 49;
+				CURRENT_PROJECT_VERSION = 50;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -2331,7 +2371,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.27;
+				MARKETING_VERSION = 1.0.28;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2350,7 +2390,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthFit/HealthFit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 49;
+				CURRENT_PROJECT_VERSION = 50;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -2383,7 +2423,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.27;
+				MARKETING_VERSION = 1.0.28;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2402,7 +2442,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthFitWatch/HealthFitWatch.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 49;
+				CURRENT_PROJECT_VERSION = 50;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = NO;
@@ -2419,7 +2459,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.27;
+				MARKETING_VERSION = 1.0.28;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.watchkitapp;
 				PRODUCT_NAME = HealthFitWatch;
 				SDKROOT = watchos;
@@ -2443,7 +2483,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthFitWatch/HealthFitWatch.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 49;
+				CURRENT_PROJECT_VERSION = 50;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = NO;
@@ -2460,7 +2500,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.27;
+				MARKETING_VERSION = 1.0.28;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.watchkitapp;
 				PRODUCT_NAME = HealthFitWatch;
 				SDKROOT = watchos;
@@ -2480,8 +2520,9 @@
 		XC100020 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = HealthFitWidgets/HealthFitWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 49;
+				CURRENT_PROJECT_VERSION = 50;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
@@ -2493,7 +2534,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.27;
+				MARKETING_VERSION = 1.0.28;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -2508,8 +2549,9 @@
 		XC100021 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = HealthFitWidgets/HealthFitWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 49;
+				CURRENT_PROJECT_VERSION = 50;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthFitWidgets/Info.plist;
@@ -2521,7 +2563,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.27;
+				MARKETING_VERSION = 1.0.28;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -2539,7 +2581,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 49;
+				CURRENT_PROJECT_VERSION = 50;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -2548,7 +2590,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.27;
+				MARKETING_VERSION = 1.0.28;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2565,7 +2607,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 49;
+				CURRENT_PROJECT_VERSION = 50;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -2574,7 +2616,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.27;
+				MARKETING_VERSION = 1.0.28;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2590,7 +2632,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 49;
+				CURRENT_PROJECT_VERSION = 50;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -2599,7 +2641,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.27;
+				MARKETING_VERSION = 1.0.28;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2615,7 +2657,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 49;
+				CURRENT_PROJECT_VERSION = 50;
 				DEVELOPMENT_TEAM = A56XUZKJFJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -2624,7 +2666,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.27;
+				MARKETING_VERSION = 1.0.28;
 				PRODUCT_BUNDLE_IDENTIFIER = luan.com.healthfit.app.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

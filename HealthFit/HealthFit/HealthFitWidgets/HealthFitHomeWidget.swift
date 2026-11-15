@@ -5,46 +5,22 @@ import WidgetKit
 
 struct HealthFitHomeEntry: TimelineEntry {
     let date: Date
-    let title: String
-    let subtitle: String
-    let streakDays: Int
-    let workoutsThisWeek: Int
+    let snapshot: HealthFitWidgetSnapshot
 }
 
 struct HealthFitHomeProvider: TimelineProvider {
     func placeholder(in context: Context) -> HealthFitHomeEntry {
-        sampleEntry(date: Date())
+        HealthFitHomeEntry(date: Date(), snapshot: .placeholder)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (HealthFitHomeEntry) -> Void) {
-        completion(sampleEntry(date: Date()))
+        completion(HealthFitHomeEntry(date: Date(), snapshot: HealthFitWidgetSnapshot.load()))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<HealthFitHomeEntry>) -> Void) {
-        let entry = sampleEntry(date: Date())
+        let entry = HealthFitHomeEntry(date: Date(), snapshot: HealthFitWidgetSnapshot.load())
         let next = Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date().addingTimeInterval(3600)
         completion(Timeline(entries: [entry], policy: .after(next)))
-    }
-
-    private func sampleEntry(date: Date) -> HealthFitHomeEntry {
-        let hour = Calendar.current.component(.hour, from: date)
-        let (title, subtitle): (String, String) = {
-            switch hour {
-            case 5..<12:
-                return ("Bom treino", "Comece o dia com energia")
-            case 12..<18:
-                return ("Mantém o ritmo", "Seu plano de hoje te espera")
-            default:
-                return ("Fecha o dia bem", "Uma sessão curta ainda conta")
-            }
-        }()
-        return HealthFitHomeEntry(
-            date: date,
-            title: title,
-            subtitle: subtitle,
-            streakDays: 3,
-            workoutsThisWeek: 4
-        )
     }
 }
 
@@ -68,7 +44,7 @@ struct HealthFitHomeWidget: Widget {
                 }
         }
         .configurationDisplayName("HealthFit")
-        .description("Resumo rápido do seu treino na Tela de Início.")
+        .description("Carga, treinos da semana e calorias na Tela de Início.")
         .supportedFamilies([
             .systemSmall,
             .systemMedium,
@@ -84,6 +60,7 @@ private struct HealthFitHomeWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: HealthFitHomeEntry
 
+    private var snapshot: HealthFitWidgetSnapshot { entry.snapshot }
     private let accent = Color(red: 0.30, green: 0.85, blue: 0.45)
 
     var body: some View {
@@ -116,37 +93,49 @@ private struct HealthFitHomeWidgetView: View {
         VStack(alignment: .leading, spacing: 8) {
             brandHeader
             Spacer(minLength: 0)
-            Text(entry.title)
-                .font(.headline.weight(.bold))
+            Text(snapshot.liftPrimaryLabel)
+                .font(.title.weight(.bold))
                 .foregroundStyle(.white)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-            Text("\(entry.workoutsThisWeek) treinos · semana")
+            Text(snapshot.liftSecondaryLabel)
                 .font(.caption2)
                 .foregroundStyle(.white.opacity(0.7))
+                .lineLimit(2)
+            Text("\(snapshot.progressLabel) treinos · \(snapshot.todayCalories) kcal")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.55))
                 .lineLimit(1)
         }
         .padding(4)
     }
 
     private var mediumLayout: some View {
-        HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                brandHeader
-                Text(entry.title)
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                Text(entry.subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.7))
-                    .lineLimit(2)
+        VStack(alignment: .leading, spacing: 10) {
+            brandHeader
+            HStack(alignment: .top, spacing: 12) {
+                metricBlock(
+                    value: snapshot.liftPrimaryLabel,
+                    label: snapshot.liftSecondaryLabel,
+                    accent: .white
+                )
+                metricBlock(
+                    value: snapshot.progressLabel,
+                    label: "treinos",
+                    accent: accent
+                )
+                metricBlock(
+                    value: "\(snapshot.todayCalories)",
+                    label: "kcal",
+                    accent: Color.orange
+                )
             }
-            Spacer(minLength: 0)
-            VStack(alignment: .trailing, spacing: 10) {
-                statChip(value: "\(entry.streakDays)", label: "dias")
-                statChip(value: "\(entry.workoutsThisWeek)", label: "semana")
-            }
+            Text(snapshot.workoutOfDayTitle)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.9))
+                .lineLimit(1)
+            Text(snapshot.workoutOfDaySubtitle)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.55))
+                .lineLimit(2)
         }
         .padding(4)
     }
@@ -154,38 +143,39 @@ private struct HealthFitHomeWidgetView: View {
     private func largeLayout(columns: Int) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             brandHeader
-            Text(entry.title)
+            Text(snapshot.workoutOfDayTitle)
                 .font(.title2.weight(.bold))
                 .foregroundStyle(.white)
-            Text(entry.subtitle)
+                .lineLimit(2)
+            Text(snapshot.workoutOfDaySubtitle)
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.75))
+                .lineLimit(3)
 
             HStack(spacing: 12) {
                 detailCard(
-                    icon: "flame.fill",
-                    title: "Sequência",
-                    value: "\(entry.streakDays) dias",
-                    tint: Color.orange
+                    icon: "dumbbell.fill",
+                    title: "Carga",
+                    value: snapshot.liftPrimaryLabel,
+                    tint: .white
                 )
                 detailCard(
-                    icon: "figure.strengthtraining.traditional",
-                    title: "Esta semana",
-                    value: "\(entry.workoutsThisWeek) treinos",
+                    icon: "checkmark.circle.fill",
+                    title: "Semana",
+                    value: "\(snapshot.progressLabel) treinos",
                     tint: accent
                 )
                 if columns > 2 {
                     detailCard(
-                        icon: "sparkles",
-                        title: "Foco",
-                        value: "Consistência",
-                        tint: Color.cyan
+                        icon: "flame.fill",
+                        title: "Hoje",
+                        value: "\(snapshot.todayCalories) kcal",
+                        tint: .orange
                     )
                 }
             }
 
             Spacer(minLength: 0)
-
             Text("Toque para abrir o HealthFit")
                 .font(.caption2)
                 .foregroundStyle(.white.opacity(0.55))
@@ -193,15 +183,20 @@ private struct HealthFitHomeWidgetView: View {
         .padding(6)
     }
 
-    private func statChip(value: String, label: String) -> some View {
-        VStack(alignment: .trailing, spacing: 2) {
+    private func metricBlock(value: String, label: String, accent: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.title2.monospacedDigit().weight(.bold))
+                .font(.title3.monospacedDigit().weight(.bold))
                 .foregroundStyle(accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Text(label)
                 .font(.caption2)
                 .foregroundStyle(.white.opacity(0.65))
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func detailCard(icon: String, title: String, value: String, tint: Color) -> some View {
@@ -215,7 +210,7 @@ private struct HealthFitHomeWidgetView: View {
             Text(value)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.white)
-                .lineLimit(1)
+                .lineLimit(2)
                 .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -228,47 +223,11 @@ private struct HealthFitHomeWidgetView: View {
 #Preview("Small", as: .systemSmall) {
     HealthFitHomeWidget()
 } timeline: {
-    HealthFitHomeEntry(
-        date: .now,
-        title: "Bom treino",
-        subtitle: "Comece o dia com energia",
-        streakDays: 3,
-        workoutsThisWeek: 4
-    )
+    HealthFitHomeEntry(date: .now, snapshot: .placeholder)
 }
 
 #Preview("Medium", as: .systemMedium) {
     HealthFitHomeWidget()
 } timeline: {
-    HealthFitHomeEntry(
-        date: .now,
-        title: "Bom treino",
-        subtitle: "Comece o dia com energia",
-        streakDays: 3,
-        workoutsThisWeek: 4
-    )
-}
-
-#Preview("Large", as: .systemLarge) {
-    HealthFitHomeWidget()
-} timeline: {
-    HealthFitHomeEntry(
-        date: .now,
-        title: "Bom treino",
-        subtitle: "Comece o dia com energia",
-        streakDays: 3,
-        workoutsThisWeek: 4
-    )
-}
-
-#Preview("Extra Large", as: .systemExtraLarge) {
-    HealthFitHomeWidget()
-} timeline: {
-    HealthFitHomeEntry(
-        date: .now,
-        title: "Bom treino",
-        subtitle: "Comece o dia com energia",
-        streakDays: 3,
-        workoutsThisWeek: 4
-    )
+    HealthFitHomeEntry(date: .now, snapshot: .placeholder)
 }

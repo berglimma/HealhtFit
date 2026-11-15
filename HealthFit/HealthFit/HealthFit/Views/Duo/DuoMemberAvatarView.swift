@@ -22,43 +22,44 @@ struct DuoMemberAvatarView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Group {
-                if let localImage {
-                    Image(uiImage: localImage)
-                        .resizable()
-                        .scaledToFill()
-                } else if let photoURL, let url = URL(string: photoURL) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        case .failure:
-                            placeholder
-                        case .empty:
-                            ProgressView()
-                        @unknown default:
-                            placeholder
-                        }
+        Group {
+            if let localImage {
+                Image(uiImage: localImage)
+                    .resizable()
+                    .scaledToFill()
+            } else if let photoURL, let url = URL(string: photoURL) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        placeholder
+                    case .empty:
+                        ProgressView()
+                    @unknown default:
+                        placeholder
                     }
-                } else {
-                    placeholder
                 }
-            }
-            .frame(width: size, height: size)
-            .clipShape(Circle())
-            .overlay(Circle().stroke(AppTheme.accent.opacity(0.25), lineWidth: 1))
-
-            if showsFlag {
-                Text(flag)
-                    .font(.system(size: max(14, size * 0.42)))
-                    .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
-                    .offset(x: 4, y: 4)
+            } else {
+                placeholder
             }
         }
-        .frame(width: size + 4, height: size + 4)
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .overlay(Circle().stroke(AppTheme.accent.opacity(0.25), lineWidth: 1))
+        .overlay(alignment: .bottomTrailing) {
+            if showsFlag {
+                Text(flag)
+                    .font(.system(size: max(13, size * 0.36)))
+                    .shadow(color: .black.opacity(0.3), radius: 1, y: 0.5)
+                    // Canto inferior direito da foto (não abaixo / não à esquerda).
+                    .offset(x: 2, y: 1)
+                    .environment(\.layoutDirection, .leftToRight)
+            }
+        }
+        .environment(\.layoutDirection, .leftToRight)
         .accessibilityLabel(showsFlag ? "\(name), \(flag)" : name)
     }
 

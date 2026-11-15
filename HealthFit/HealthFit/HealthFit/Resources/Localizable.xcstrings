@@ -25,6 +25,9 @@
     "·" : {
 
     },
+    "· %lld ex." : {
+
+    },
     "· preview" : {
 
     },
@@ -150,6 +153,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ · %2$lld/%3$lld"
+          }
+        }
+      }
+    },
+    "%@ · %lld×" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld×"
           }
         }
       }
@@ -318,16 +331,6 @@
     "%lld ativas" : {
 
     },
-    "%lld ativas · %@" : {
-      "localizations" : {
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld ativas · %2$@"
-          }
-        }
-      }
-    },
     "%lld ativas. %@" : {
       "localizations" : {
         "pt-BR" : {
@@ -393,7 +396,7 @@
         }
       }
     },
-    "%lld fichas · peso corporal · demos em vídeo" : {
+    "%lld fichas · peso corporal · demos em GIF" : {
 
     },
     "%lld fichas · preparo para carga · demos em GIF" : {
@@ -528,6 +531,9 @@
         }
       }
     },
+    "%lld treinos de musculação no período" : {
+
+    },
     "%lld un na lista de compras" : {
 
     },
@@ -616,6 +622,9 @@
 
     },
     "%lld×" : {
+
+    },
+    "%lld× no período" : {
 
     },
     "%lldº" : {
@@ -858,6 +867,9 @@
     "A menstruação começou hoje" : {
 
     },
+    "A meta aparece na hora no card de água do aluno. Sem override, o app usa 35 ml por kg de peso." : {
+
+    },
     "A mídia recebe duração, kcal e outros dados da sessão com a marca HealthFit. Opcional — não impede fechar o treino." : {
 
     },
@@ -879,6 +891,9 @@
     "Abre a lista para marcar ou desmarcar" : {
 
     },
+    "Abrimos o programa do seu perfil por padrão. Você pode trocar quando quiser." : {
+
+    },
     "Abrindo chat Coach…" : {
 
     },
@@ -892,6 +907,9 @@
 
     },
     "Abrir mapa" : {
+
+    },
+    "Abrir sugestão" : {
 
     },
     "Aceitar" : {
@@ -2638,6 +2656,9 @@
     "Cardápio do nutricionista" : {
 
     },
+    "Cardio" : {
+
+    },
     "Carga" : {
 
     },
@@ -3297,6 +3318,9 @@
     "Crie metas (ex.: reduzir açúcar, beber 3 L de água). Com nutricionista, sincronize para acompanhamento." : {
 
     },
+    "Crie ou abra um programa em Treinos para receber a sugestão do dia." : {
+
+    },
     "Crie um card com foto ou vídeo para aparecer no feed do Pulse (24h)." : {
 
     },
@@ -3924,6 +3948,12 @@
     "Escolher outro" : {
 
     },
+    "Escolher programa de musculação" : {
+
+    },
+    "Escolher treino" : {
+
+    },
     "Escopo" : {
 
     },
@@ -4177,6 +4207,9 @@
     "FEMININO" : {
 
     },
+    "Feminino (seu perfil)" : {
+
+    },
     "Ficha de avaliação — gordura regional" : {
 
     },
@@ -4189,7 +4222,7 @@
     "Fichas" : {
 
     },
-    "Fichas de peso corporal com demonstrações durante o treino" : {
+    "Fichas de peso corporal com demos em GIF durante o treino" : {
 
     },
     "Fichas prescritas" : {
@@ -4277,6 +4310,9 @@
 
     },
     "Foto de fundo" : {
+
+    },
+    "Foto de perfil" : {
 
     },
     "Foto do dia" : {
@@ -4367,6 +4403,9 @@
     "Gerar PDF do relatório" : {
 
     },
+    "Gerar Retrospectiva Mensal" : {
+
+    },
     "Gerar vídeo Flyover" : {
 
     },
@@ -4413,6 +4452,9 @@
 
     },
     "Grupos (sugestão rápida)" : {
+
+    },
+    "Grupos musculares" : {
 
     },
     "Grupos Musculares" : {
@@ -4894,6 +4936,9 @@
     "MASCULINO" : {
 
     },
+    "Masculino (seu perfil)" : {
+
+    },
     "Medida" : {
 
     },
@@ -5000,6 +5045,19 @@
     },
     "Meta de zona alta" : {
 
+    },
+    "Meta definida pelo personal:" : {
+
+    },
+    "Meta definida pelo personal. Equivale a cerca de %lld copos (%lld ml) ou %lld garrafas (%lld ml)." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Meta definida pelo personal. Equivale a cerca de %1$lld copos (%2$lld ml) ou %3$lld garrafas (%4$lld ml)."
+          }
+        }
+      }
     },
     "Meta diária" : {
 
@@ -5240,6 +5298,9 @@
 
     },
     "Nenhum cardápio ativo. Gere seu plano em Nutrição." : {
+
+    },
+    "Nenhum cardio registrado neste período." : {
 
     },
     "Nenhum compromisso futuro com %@. Toque num horário disponível para agendar." : {
@@ -5713,9 +5774,6 @@
 
     },
     "O pagamento será cobrado na Conta Apple ao confirmar a compra. A assinatura renova automaticamente, a menos que a renovação automática seja desativada pelo menos 24 horas antes do fim do período vigente. Gerencie ou cancele em Ajustes → [seu nome] → Assinaturas." : {
-
-    },
-    "O personal define a meta em ml. Sem override, o app usa 35 ml por kg de peso." : {
 
     },
     "O que melhorar" : {
@@ -6758,9 +6816,6 @@
 
     },
     "Publicar acompanhamento no vínculo" : {
-
-    },
-    "Publicar no Pulse" : {
 
     },
     "Publique algo esta semana para aparecer aqui." : {
@@ -11178,6 +11233,9 @@
     "Ranking do grupo" : {
 
     },
+    "Realizar cardio" : {
+
+    },
     "Reativar" : {
 
     },
@@ -11441,9 +11499,6 @@
     "Retrospectiva" : {
 
     },
-    "Retrospectiva do mês" : {
-
-    },
     "Revisão IAssistente" : {
 
     },
@@ -11585,9 +11640,6 @@
     "Salvar Meu Cardápio (manter recomendações)" : {
 
     },
-    "Salvar na galeria" : {
-
-    },
     "Salvar na Galeria?" : {
 
     },
@@ -11646,6 +11698,9 @@
 
     },
     "Sem dados suficientes." : {
+
+    },
+    "Sem fichas disponíveis" : {
 
     },
     "Sem horários livres" : {
@@ -11956,16 +12011,10 @@
     "Status" : {
 
     },
-    "Status do WhatsApp" : {
-
-    },
     "Stories continuam no topo do Feed" : {
 
     },
     "Stories do Instagram" : {
-
-    },
-    "Story no Instagram" : {
 
     },
     "Stroke rate em remadas por minuto. Split /500 m (quanto menor, melhor) e eficiência saem da distância, remadas e sensores." : {
@@ -12002,6 +12051,9 @@
           }
         }
       }
+    },
+    "Sugestões para melhorar" : {
+
     },
     "Superfície" : {
 
@@ -12466,6 +12518,9 @@
 
     },
     "Treino Concluído" : {
+
+    },
+    "TREINO DO DIA" : {
 
     },
     "Treino em andamento" : {

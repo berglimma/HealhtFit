@@ -95,6 +95,14 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var chronometerSecondaryText = ""
     @Published var cardioDistanceMeters: Double = 0
     @Published var currentSpeedMps: Double = 0
+    /// Sessão de musculação iniciada no Watch — progressão local de séries/exercícios.
+    @Published var strengthOwnedByWatch = false
+    @Published var strengthCurrentSet = 1
+    @Published var strengthTotalSets = 0
+    @Published var strengthRepsLabel = ""
+    @Published var strengthExerciseNumber = 1
+    @Published var strengthExerciseCount = 0
+    @Published var strengthProgramFinished = false
 
     private var session: WCSession?
     private var heartRateTimer: Timer?
@@ -114,6 +122,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var pauseStartedAt: Date?
     private var localMeditationPrompts: [String] = []
     private var meditationOwnedByWatch = false
+    private var localStrengthExercises: [WatchCatalog.StrengthExercise] = []
+    private var strengthExerciseIndex = 0
+    private var pendingStrengthAdvanceExercise = false
     /// Detecção de salto (motion + giroscópio do DeviceMotion).
     private var isInAir = false
     private var possibleTakeoffAltitude: Double?
@@ -280,6 +291,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         resetWorkoutState()
         meditationOwnedByWatch = false
         localMeditationPrompts = []
+        clearLocalStrengthOwnership()
         workoutName = name
         currentExerciseName = exerciseName
         isCardioWorkout = false
@@ -292,13 +304,69 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     /// Inicia programa de musculação/casa/mobilidade escolhido no Watch.
     func beginLocalStrength(_ program: WatchCatalog.StrengthProgram) {
-        startWorkout(name: program.title, exerciseName: program.firstExercise)
+        let exercises = program.exercises
+        let firstName = exercises.first?.name ?? program.firstExercise
+        startWorkout(name: program.title, exerciseName: firstName)
+        localStrengthExercises = exercises
+        strengthOwnedByWatch = !exercises.isEmpty
+        strengthExerciseIndex = 0
+        pendingStrengthAdvanceExercise = false
+        strengthProgramFinished = false
+        applyLocalStrengthExerciseState()
         notifyPhoneWatchStarted(
             kind: "strength",
             workoutName: program.title,
-            exerciseName: program.firstExercise
+            exerciseName: firstName
         )
         WKInterfaceDevice.current().play(.start)
+    }
+
+    /// Marca a série atual como concluída (somente sessões iniciadas no Watch).
+    func completeStrengthSet() {
+        guard strengthOwnedByWatch,
+              isActive,
+              !isCardioWorkout,
+              !isMeditationWorkout,
+              !isResting,
+              !isPaused,
+              !strengthProgramFinished,
+              strengthExerciseIndex < localStrengthExercises.count else { return }
+
+        let exercise = localStrengthExercises[strengthExerciseIndex]
+        WKInterfaceDevice.current().play(.click)
+
+        if strengthCurrentSet < exercise.sets {
+            strengthCurrentSet += 1
+            pendingStrengthAdvanceExercise = false
+            startRestCountdown(seconds: exercise.restSeconds, exerciseName: exercise.name)
+            return
+        }
+
+        let nextIndex = strengthExerciseIndex + 1
+        if nextIndex < localStrengthExercises.count {
+            pendingStrengthAdvanceExercise = true
+            let nextName = localStrengthExercises[nextIndex].name
+            startRestCountdown(seconds: exercise.restSeconds, exerciseName: nextName)
+            return
+        }
+
+        strengthProgramFinished = true
+        pendingStrengthAdvanceExercise = false
+        WKInterfaceDevice.current().play(.success)
+    }
+
+    /// Encerra o descanso local e segue para a próxima série/exercício.
+    func dismissLocalRest() {
+        guard strengthOwnedByWatch, isResting, !isPaused else { return }
+        let shouldAdvance = pendingStrengthAdvanceExercise
+        pendingStrengthAdvanceExercise = false
+        stopRestCountdown()
+        if shouldAdvance {
+            loadLocalStrengthExercise(at: strengthExerciseIndex + 1)
+        } else {
+            exerciseElapsedSeconds = 0
+        }
+        WKInterfaceDevice.current().play(.click)
     }
 
     /// Inicia cardio escolhido no Watch (com duração alvo opcional).
@@ -363,6 +431,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         resetWorkoutState()
         meditationOwnedByWatch = false
         localMeditationPrompts = []
+        clearLocalStrengthOwnership()
         workoutName = name
         isCardioWorkout = true
         isMeditationWorkout = false
@@ -498,6 +567,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         if !meditationOwnedByWatch {
             localMeditationPrompts = []
         }
+        clearLocalStrengthOwnership()
         resetWorkoutStateKeepingMeditationOwnership()
         workoutName = name
         isCardioWorkout = false
@@ -597,6 +667,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isMeditationWorkout = false
         meditationOwnedByWatch = false
         localMeditationPrompts = []
+        clearLocalStrengthOwnership()
         lastPhoneStopTimestamp = max(lastPhoneStopTimestamp, Date().timeIntervalSince1970)
         stopWaterSportMotion()
         stopTennisMotion()
@@ -690,7 +761,59 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         lastLandDistanceMeters = 0
         lastLandDistanceAt = nil
         isBikeStyleCardio = false
+        if !strengthOwnedByWatch {
+            localStrengthExercises = []
+            strengthExerciseIndex = 0
+            pendingStrengthAdvanceExercise = false
+            strengthCurrentSet = 1
+            strengthTotalSets = 0
+            strengthRepsLabel = ""
+            strengthExerciseNumber = 1
+            strengthExerciseCount = 0
+            strengthProgramFinished = false
+        }
         resetAirborneJumpState()
+    }
+
+    private func clearLocalStrengthOwnership() {
+        strengthOwnedByWatch = false
+        localStrengthExercises = []
+        strengthExerciseIndex = 0
+        pendingStrengthAdvanceExercise = false
+        strengthCurrentSet = 1
+        strengthTotalSets = 0
+        strengthRepsLabel = ""
+        strengthExerciseNumber = 1
+        strengthExerciseCount = 0
+        strengthProgramFinished = false
+    }
+
+    private func applyLocalStrengthExerciseState() {
+        guard strengthExerciseIndex < localStrengthExercises.count else {
+            strengthProgramFinished = true
+            strengthTotalSets = 0
+            strengthRepsLabel = ""
+            return
+        }
+        let exercise = localStrengthExercises[strengthExerciseIndex]
+        currentExerciseName = exercise.name
+        strengthCurrentSet = 1
+        strengthTotalSets = exercise.sets
+        strengthRepsLabel = exercise.reps
+        strengthExerciseNumber = strengthExerciseIndex + 1
+        strengthExerciseCount = localStrengthExercises.count
+        exerciseElapsedSeconds = 0
+        strengthProgramFinished = false
+    }
+
+    private func loadLocalStrengthExercise(at index: Int) {
+        guard index < localStrengthExercises.count else {
+            strengthProgramFinished = true
+            WKInterfaceDevice.current().play(.success)
+            return
+        }
+        strengthExerciseIndex = index
+        applyLocalStrengthExerciseState()
     }
 
     private func resetAirborneJumpState() {
@@ -2140,6 +2263,19 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             notePhoneStart(timestamp: messageTimestamp)
             let name = message["workoutName"] as? String ?? "Treino"
             let exerciseName = message["exerciseName"] as? String ?? ""
+            // Sessão iniciada no Watch: o espelho do iPhone só confirma, não rouba a progressão.
+            if isActive,
+               strengthOwnedByWatch,
+               !isCardioWorkout,
+               !isMeditationWorkout,
+               workoutName == name {
+                applyPhoneSync(
+                    workoutElapsedSeconds: message["workoutElapsedSeconds"] as? Int,
+                    exerciseElapsedSeconds: message["exerciseElapsedSeconds"] as? Int
+                )
+                sendWatchAckStarted(kind: "strength", workoutName: workoutName, playHaptic: false)
+                return
+            }
             // iPhone é a fonte da verdade: substitui sessão genérica do HK launch.
             if isActive,
                !isCardioWorkout,
@@ -2156,6 +2292,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
             meditationOwnedByWatch = false
             localMeditationPrompts = []
+            // iPhone iniciou/assumiu a musculação — progressão local do Watch cede.
             startWorkout(name: name, exerciseName: exerciseName)
             applyPhoneSync(
                 workoutElapsedSeconds: message["workoutElapsedSeconds"] as? Int,
@@ -2217,6 +2354,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             // Não reinicia sessão a partir de sync — startWorkout já cobre o início.
             // Um sync atrasado após stopWorkout reabria o treino no Watch.
             guard isActive else { return }
+            if strengthOwnedByWatch {
+                // Watch é a fonte da verdade nesta sessão — não rebobina exercício/série.
+                applyPhonePausedFlag(message)
+                return
+            }
             applyPhoneSync(
                 workoutElapsedSeconds: message["workoutElapsedSeconds"] as? Int,
                 exerciseElapsedSeconds: message["exerciseElapsedSeconds"] as? Int,

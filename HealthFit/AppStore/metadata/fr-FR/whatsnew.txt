@@ -1,3 +1,4 @@
-• Correction urgente : la connexion Firebase fonctionne à nouveau après la mise à jour App Store
-• Sur iPad, quitter puis revenir n’affiche plus un écran sombre
-• L’objectif d’eau défini par le coach s’affiche tout de suite sur la carte de l’élève
+• Méthode Athlète PPL 2× (homme et femme) avec démos GIF
+• Nouveaux entraînements à la maison (Core, HIIT, Postérieur, Express)
+• Apple Watch : la musculation démarrée sur la montre avance séries et exercices
+• Bannière « Nouveaux entraînements » sur les programmes mis à jour

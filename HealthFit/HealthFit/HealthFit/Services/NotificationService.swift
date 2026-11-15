@@ -47,6 +47,15 @@ enum EveningTrainingNudgeConfiguration {
     static let category = "EVENING_TRAINING_NUDGE"
 }
 
+/// Incentivo ao HealthFit Pulse — 2×/dia (manhã e fim de tarde).
+enum PulseNudgeNotificationConfiguration {
+    static let morningHour = 10
+    static let eveningHour = 19
+    static let morningIdentifier = "pulse_nudge_morning"
+    static let eveningIdentifier = "pulse_nudge_evening"
+    static let category = "PULSE_NUDGE"
+}
+
 /// Lembretes de registro de suplementação: a cada 3h das 06:00 até ≤ 23:30.
 enum SupplementReminderConfiguration {
     static let intervalHours = 3
@@ -136,6 +145,8 @@ final class NotificationService {
     private let dailyMotivationIdentifierPrefix = "daily_motivation_"
     private let dailyAssistantCheckInIdentifier = "daily_assistant_checkin_9am"
     private let dailyEveningAssistantCheckInIdentifier = "daily_assistant_checkin_9pm"
+    private let pulseNudgeMorningIdentifier = PulseNudgeNotificationConfiguration.morningIdentifier
+    private let pulseNudgeEveningIdentifier = PulseNudgeNotificationConfiguration.eveningIdentifier
     private let eveningTrainingNudgeIdentifier = EveningTrainingNudgeConfiguration.notificationIdentifier
     private let healthIconYellowNotifiedDayKey = "healthfit_health_icon_yellow_notified_day"
     private let healthIconRedNotifiedAnchorKey = "healthfit_health_icon_red_notified_anchor"
@@ -247,6 +258,7 @@ final class NotificationService {
         scheduleDailyMotivationNotifications()
         scheduleDailyAssistantCheckIn()
         scheduleDailyEveningAssistantCheckIn()
+        schedulePulseNudgeNotifications()
         scheduleWaterReminders()
         refreshSupplementRemindersFromPreferences()
         refreshMealRemindersFromPreferences()
@@ -321,6 +333,43 @@ final class NotificationService {
     func cancelDailyEveningAssistantCheckIn() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: [dailyEveningAssistantCheckInIdentifier]
+        )
+    }
+
+    func schedulePulseNudgeNotifications() {
+        cancelPulseNudgeNotifications()
+        guard PulseEntitlement.isPulseVisible else { return }
+
+        let morning = localTimeComponents(
+            hour: PulseNudgeNotificationConfiguration.morningHour,
+            minute: 0
+        )
+        scheduleOnPhone(
+            title: "HealthFit Pulse 💚",
+            body: "Bom dia! Abra o Pulse, veja a comunidade e compartilhe seu treino de hoje.",
+            category: PulseNudgeNotificationConfiguration.category,
+            identifier: pulseNudgeMorningIdentifier,
+            trigger: UNCalendarNotificationTrigger(dateMatching: morning, repeats: true),
+            userInfo: ["openPulse": true]
+        )
+
+        let evening = localTimeComponents(
+            hour: PulseNudgeNotificationConfiguration.eveningHour,
+            minute: 0
+        )
+        scheduleOnPhone(
+            title: "HealthFit Pulse 🌙",
+            body: "Antes de dormir: passe no Pulse, curta treinos e mantenha a constância com a galera.",
+            category: PulseNudgeNotificationConfiguration.category,
+            identifier: pulseNudgeEveningIdentifier,
+            trigger: UNCalendarNotificationTrigger(dateMatching: evening, repeats: true),
+            userInfo: ["openPulse": true]
+        )
+    }
+
+    func cancelPulseNudgeNotifications() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [pulseNudgeMorningIdentifier, pulseNudgeEveningIdentifier]
         )
     }
 

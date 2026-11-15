@@ -499,6 +499,39 @@ struct WatchContentView: View {
                     .font(.system(size: 20, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
+
+            if workoutManager.strengthOwnedByWatch {
+                if workoutManager.strengthProgramFinished {
+                    Text("Treino concluído")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.green)
+                    Text("Deslize ↑ p/ Encerrar")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                } else if workoutManager.strengthExerciseCount > 0 {
+                    Text("Ex. \(workoutManager.strengthExerciseNumber)/\(workoutManager.strengthExerciseCount)")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    Text(
+                        "Série \(workoutManager.strengthCurrentSet)/\(workoutManager.strengthTotalSets)"
+                        + (workoutManager.strengthRepsLabel.isEmpty
+                            ? ""
+                            : " · \(workoutManager.strengthRepsLabel)")
+                    )
+                    .font(.system(size: 11, weight: .semibold))
+
+                    Button {
+                        workoutManager.completeStrengthSet()
+                    } label: {
+                        Label("Série ok", systemImage: "checkmark.circle.fill")
+                            .font(.caption2.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .disabled(workoutManager.isPaused)
+                }
+            }
         }
     }
 
@@ -797,6 +830,19 @@ struct WatchContentView: View {
                 Text("Hora de voltar!")
                     .font(.caption2)
                     .foregroundStyle(.orange)
+            }
+
+            if workoutManager.strengthOwnedByWatch {
+                Button {
+                    workoutManager.dismissLocalRest()
+                } label: {
+                    Label("Continuar", systemImage: "arrow.right.circle.fill")
+                        .font(.caption2.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .disabled(workoutManager.isPaused)
             }
         }
     }

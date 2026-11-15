@@ -36,12 +36,15 @@ final class PulseNavigationRouter: ObservableObject {
     func handleNotificationUserInfo(_ userInfo: [AnyHashable: Any], category: String) {
         let kind = stringValue(userInfo["kind"])
         let type = stringValue(userInfo["type"])
+        let openPulseFlag = (userInfo["openPulse"] as? Bool) == true
+            || stringValue(userInfo["openPulse"]).lowercased() == "true"
         let isFollowRequest =
             kind == "pulseFollowRequest"
             || type == "pulseFollowRequest"
             || category == "PULSE_FOLLOW"
-        guard isFollowRequest else { return }
-        openPulse(peopleTab: true)
+        let isPulseNudge = category == PulseNudgeNotificationConfiguration.category || openPulseFlag
+        guard isFollowRequest || isPulseNudge else { return }
+        openPulse(peopleTab: isFollowRequest)
     }
 
     private func stringValue(_ raw: Any?) -> String {

@@ -12,6 +12,9 @@ struct WorkoutProgramHeroCard: View {
     var coverColors: [Color] = [AppTheme.accent, AppTheme.accent.opacity(0.7)]
     var eyebrow: String? = nil
     var eyebrowSystemImage: String? = nil
+    /// Faixa no topo do card (ex.: “Novos treinos liberados”).
+    var bannerText: String? = nil
+    var bannerSystemImage: String? = "sparkles"
     /// Linha extra abaixo do subtítulo (ex.: contagens do programa).
     var footerLabels: [(icon: String, text: String)] = []
     /// Plano mínimo quando a modalidade está bloqueada — desenha o cadeado no card.
@@ -72,11 +75,39 @@ struct WorkoutProgramHeroCard: View {
                 }
             }
             .padding(16)
+            .padding(.top, bannerText == nil ? 0 : 22)
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let bannerText {
+                HStack(spacing: 6) {
+                    if let bannerSystemImage {
+                        Image(systemName: bannerSystemImage)
+                            .font(.caption2.weight(.bold))
+                    }
+                    Text(bannerText)
+                        .font(.caption2.weight(.bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    LinearGradient(
+                        colors: [resolvedAccent, resolvedAccent.opacity(0.82)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            }
 
             if let lockedByPlan {
                 PlanRequirementBadge(tier: lockedByPlan, compact: true)
                     .padding(12)
+                    .padding(.top, bannerText == nil ? 0 : 28)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             }
         }
@@ -116,6 +147,7 @@ enum MusculacaoSheetCardStyle {
     case shapeLevel2
     case militarSoldado
     case militarCabo
+    case metodoAtleta
     case recommended
     case standard
 
@@ -123,6 +155,7 @@ enum MusculacaoSheetCardStyle {
     private static let shapeLevel2Orange = AppTheme.accentSecondary
     private static let militarOlive = Color(red: 0.45, green: 0.55, blue: 0.32)
     private static let militarSand = Color(red: 0.72, green: 0.62, blue: 0.38)
+    private static let atletaTeal = Color(red: 0.18, green: 0.62, blue: 0.58)
 
     var badgeTitle: String? {
         switch self {
@@ -131,6 +164,7 @@ enum MusculacaoSheetCardStyle {
         case .shapeLevel2: return "Shape · Nível 2"
         case .militarSoldado: return "Militar · Soldado"
         case .militarCabo: return "Militar · Cabo"
+        case .metodoAtleta: return "Método Atleta"
         case .recommended: return "Recomendado"
         case .standard: return nil
         }
@@ -140,6 +174,7 @@ enum MusculacaoSheetCardStyle {
         switch self {
         case .shape, .shapeLevel1, .shapeLevel2: return "flame.fill"
         case .militarSoldado, .militarCabo: return "shield.fill"
+        case .metodoAtleta: return "figure.run"
         case .recommended: return "star.fill"
         case .standard: return "dumbbell.fill"
         }
@@ -159,6 +194,8 @@ enum MusculacaoSheetCardStyle {
             return Self.militarOlive
         case .militarCabo:
             return Self.militarSand
+        case .metodoAtleta:
+            return Self.atletaTeal
         case .recommended:
             return gender == .female
                 ? Color(red: 0.86, green: 0.45, blue: 0.58)
@@ -291,6 +328,7 @@ struct MusculacaoPhotoSheetCard: View {
         if let displayTitle, !displayTitle.isEmpty { return displayTitle }
         var title = sheet.title
         for prefix in [
+            "Atleta Feminino ", "Atleta Masculino ",
             "Militar Feminino ", "Militar Masculino ",
             "Shape Feminino ", "Shape Masculino ",
             "Feminino ", "Masculino ",

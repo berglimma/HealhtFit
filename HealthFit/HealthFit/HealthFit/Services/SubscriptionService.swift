@@ -329,6 +329,10 @@ final class SubscriptionService: ObservableObject {
         if courtesyGrant == nil {
             courtesyGrant = CourtesyVoucherService.cachedGrant(userId: uid)
         }
+        if let special = await CourtesyVoucherService.ensureSpecialCourtesyIfNeeded() {
+            courtesyGrant = special
+            return
+        }
         courtesyGrant = await CourtesyVoucherService.fetchGrant(userId: uid)
     }
 

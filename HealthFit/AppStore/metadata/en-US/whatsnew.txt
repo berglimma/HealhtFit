@@ -1,3 +1,4 @@
-• Urgent fix: sign-in connects to Firebase again after the App Store update
-• On iPad, leaving and returning no longer leaves a dark screen
-• The water goal set by the trainer now updates live on the student’s water card
+• Athlete Method PPL 2× for male and female programs, with GIF demos
+• New home workouts (Core Power, HIIT Burn, Posterior, and Express)
+• Apple Watch: strength sessions started on watch now progress sets and exercises
+• “New workouts unlocked” banner on updated programs

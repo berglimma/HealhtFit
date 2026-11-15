@@ -432,10 +432,12 @@ struct WorkoutSheet: Identifiable, Codable, Hashable {
         let lower = title.lowercased()
         if lower.hasPrefix("masculino")
             || lower.hasPrefix("shape masculino")
-            || lower.hasPrefix("militar masculino") { return .male }
+            || lower.hasPrefix("militar masculino")
+            || lower.hasPrefix("atleta masculino") { return .male }
         if lower.hasPrefix("feminino")
             || lower.hasPrefix("shape feminino")
-            || lower.hasPrefix("militar feminino") { return .female }
+            || lower.hasPrefix("militar feminino")
+            || lower.hasPrefix("atleta feminino") { return .female }
         return nil
     }
 

@@ -273,9 +273,11 @@ final class WorkoutStore: ObservableObject {
             saveData()
             _ = autoEndStaleActiveSessionIfNeeded()
         } else {
-            // Seed Shape / Militar right away so method hubs aren't empty while other samples refresh.
+            // Seed Shape / Militar / Atleta right away so method hubs aren't empty while other samples refresh.
             ensureShapeWorkoutsSeeded()
             ensureMilitarWorkoutsSeeded()
+            ensureAtletaWorkoutsSeeded()
+            ensureHomeWorkoutsSeeded()
             // Returning users: full sample merge can wait — don't hitch first tab switches.
             try? await Task.sleep(nanoseconds: 1_200_000_000)
             refreshSampleWorkoutsIfNeeded()
@@ -488,6 +490,18 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
+    /// Fichas Método Atleta (PPL 2×). Catálogo como fonte; prefere cópia persistida (ID estável).
+    func atletaStandardWorkouts(for gender: Gender) -> [WorkoutSheet] {
+        let catalog = AtletaWorkoutCatalog.sheets(for: gender)
+        let storedByTitle = Dictionary(
+            workoutSheets.map { ($0.title, $0) },
+            uniquingKeysWith: { current, _ in current }
+        )
+        return catalog.map { sample in
+            storedByTitle[sample.title] ?? sample
+        }
+    }
+
     /// Garante que as fichas Foco no Shape existam no store (usuários que já tinham o app instalado).
     @discardableResult
     func ensureShapeWorkoutsSeeded() -> Bool {
@@ -510,6 +524,38 @@ final class WorkoutStore: ObservableObject {
         var existingTitles = Set(workoutSheets.map(\.title))
         var didAdd = false
         for sample in Self.militarSampleWorkouts where !existingTitles.contains(sample.title) {
+            workoutSheets.append(sample)
+            existingTitles.insert(sample.title)
+            didAdd = true
+        }
+        if didAdd {
+            saveDataLocalOnly()
+        }
+        return didAdd
+    }
+
+    /// Garante que as fichas Método Atleta existam no store (upgrade de app já instalado).
+    @discardableResult
+    func ensureAtletaWorkoutsSeeded() -> Bool {
+        var existingTitles = Set(workoutSheets.map(\.title))
+        var didAdd = false
+        for sample in Self.atletaSampleWorkouts where !existingTitles.contains(sample.title) {
+            workoutSheets.append(sample)
+            existingTitles.insert(sample.title)
+            didAdd = true
+        }
+        if didAdd {
+            saveDataLocalOnly()
+        }
+        return didAdd
+    }
+
+    /// Garante fichas Casa novas (G–N) para quem já tinha o app instalado.
+    @discardableResult
+    func ensureHomeWorkoutsSeeded() -> Bool {
+        var existingTitles = Set(workoutSheets.map(\.title))
+        var didAdd = false
+        for sample in Self.homeSampleWorkouts where !existingTitles.contains(sample.title) {
             workoutSheets.append(sample)
             existingTitles.insert(sample.title)
             didAdd = true
@@ -553,6 +599,14 @@ final class WorkoutStore: ObservableObject {
         "Casa D — Pernas e Glúteos",
         "Casa E — Superiores",
         "Casa F — Mobilidade e Postura",
+        "Casa G — Atleta Full Body",
+        "Casa H — Push Em Casa",
+        "Casa I — Pull Em Casa",
+        "Casa J — Pernas Em Casa",
+        "Casa K — Core Power",
+        "Casa L — HIIT Queima",
+        "Casa M — Posterior Em Casa",
+        "Casa N — Express Full Body",
     ]
     private static let mobilitySampleTitles: Set<String> = [
         "Mobilidade A — Alongamento Dinâmico",
@@ -564,6 +618,7 @@ final class WorkoutStore: ObservableObject {
         RecommendedWorkoutCatalog.allRecommendedTitles
             .union(ShapeWorkoutCatalog.allTitles)
             .union(MilitarWorkoutCatalog.allTitles)
+            .union(AtletaWorkoutCatalog.allTitles)
             .union(homeSampleTitles)
             .union(mobilitySampleTitles)
     }()
@@ -1437,6 +1492,10 @@ final class WorkoutStore: ObservableObject {
         saveHistory()
         NotificationService.shared.cancelActiveWorkoutBackgroundReminder()
         WorkoutLiveActivitySync.end()
+        HealthFitWidgetBridge.refresh(
+            workoutStore: self,
+            todayCalories: HealthKitManager.shared.todayCalories
+        )
 
         if let userId = cloudUserId {
             Task {
@@ -2150,6 +2209,7 @@ final class WorkoutStore: ObservableObject {
         + femaleSampleWorkouts
         + shapeSampleWorkouts
         + militarSampleWorkouts
+        + atletaSampleWorkouts
         + homeSampleWorkouts
         + mobilitySampleWorkouts
 
@@ -2166,6 +2226,10 @@ final class WorkoutStore: ObservableObject {
     /// Método Militar — fichas masculino e feminino (Soldado / Cabo).
     static let militarSampleWorkouts: [WorkoutSheet] =
         MilitarWorkoutCatalog.allMaleSheets + MilitarWorkoutCatalog.allFemaleSheets
+
+    /// Método Atleta — PPL 2× masculino e feminino.
+    static let atletaSampleWorkouts: [WorkoutSheet] =
+        AtletaWorkoutCatalog.allMaleSheets + AtletaWorkoutCatalog.allFemaleSheets
 
     /// Programa em casa — peso corporal com demos em vídeo/GIF durante o treino.
     static let homeSampleWorkouts: [WorkoutSheet] = [
@@ -2251,6 +2315,118 @@ final class WorkoutStore: ObservableObject {
                 Exercise(name: "Russian Twist", sets: 3, reps: 20, restSeconds: 40, muscleGroup: .core),
                 Exercise(name: "Bicicleta no Ar", sets: 3, reps: 24, restSeconds: 40, muscleGroup: .core),
                 Exercise(name: "Isometria na Parede", sets: 3, reps: 35, restSeconds: 45, notes: "Segure a posição (reps = segundos)", muscleGroup: .legs)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa G — Atleta Full Body",
+            description: "Método Atleta em casa — circuito Push + Pull + Legs sem equipamentos · demos em GIF",
+            exercises: [
+                Exercise(name: "Flexão de Braços", sets: 4, reps: 12, restSeconds: 45, muscleGroup: .chest),
+                Exercise(name: "Superman", sets: 3, reps: 12, restSeconds: 40, muscleGroup: .back),
+                Exercise(name: "Agachamento Livre", sets: 4, reps: 15, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Afundo", sets: 3, reps: 12, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Mergulho no Banco", sets: 3, reps: 12, restSeconds: 45, muscleGroup: .arms),
+                Exercise(name: "Ponte de Glúteos", sets: 3, reps: 15, restSeconds: 40, muscleGroup: .legs),
+                Exercise(name: "Prancha", sets: 3, reps: 40, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Burpee", sets: 3, reps: 10, restSeconds: 50, notes: "Finalizador", muscleGroup: .fullBody)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa H — Push Em Casa",
+            description: "Empurrar em casa — peito, ombros e tríceps · demos em GIF",
+            exercises: [
+                Exercise(name: "Flexão de Braços", sets: 4, reps: 12, restSeconds: 45, muscleGroup: .chest),
+                Exercise(name: "Flexão Inclinada", sets: 3, reps: 12, restSeconds: 45, notes: "Mãos em sofá ou banco", muscleGroup: .chest),
+                Exercise(name: "Flexão Diamante", sets: 3, reps: 10, restSeconds: 45, muscleGroup: .arms),
+                Exercise(name: "Mergulho no Banco", sets: 3, reps: 12, restSeconds: 45, muscleGroup: .arms),
+                Exercise(name: "Prancha", sets: 3, reps: 40, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Prancha Lateral", sets: 3, reps: 30, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Polichinelo", sets: 3, reps: 30, restSeconds: 35, muscleGroup: .fullBody),
+                Exercise(name: "Flexão de Braços", sets: 2, reps: 10, restSeconds: 50, notes: "Séries finais próximas da falha", muscleGroup: .chest)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa I — Pull Em Casa",
+            description: "Puxar em casa — costas, posterior e core · demos em GIF",
+            exercises: [
+                Exercise(name: "Superman", sets: 4, reps: 12, restSeconds: 40, muscleGroup: .back),
+                Exercise(name: "Ponte de Glúteos", sets: 3, reps: 15, restSeconds: 40, muscleGroup: .legs),
+                Exercise(name: "Prancha", sets: 3, reps: 45, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Prancha Lateral", sets: 3, reps: 30, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Elevação de Pernas", sets: 3, reps: 12, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Bicicleta no Ar", sets: 3, reps: 24, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Russian Twist", sets: 3, reps: 24, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Mountain Climber", sets: 3, reps: 24, restSeconds: 40, muscleGroup: .fullBody)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa J — Pernas Em Casa",
+            description: "Pernas e glúteos em casa no estilo Atleta · demos em GIF",
+            exercises: [
+                Exercise(name: "Agachamento Livre", sets: 4, reps: 15, restSeconds: 50, muscleGroup: .legs),
+                Exercise(name: "Afundo", sets: 4, reps: 12, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Agachamento Sumô", sets: 3, reps: 15, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 4, reps: 15, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Ponte de Glúteos", sets: 3, reps: 15, restSeconds: 40, muscleGroup: .legs),
+                Exercise(name: "Isometria na Parede", sets: 3, reps: 40, restSeconds: 45, notes: "Segure a posição (reps = segundos)", muscleGroup: .legs),
+                Exercise(name: "Panturrilha Corporal", sets: 4, reps: 20, restSeconds: 30, muscleGroup: .legs),
+                Exercise(name: "Prancha", sets: 3, reps: 35, restSeconds: 40, muscleGroup: .core)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa K — Core Power",
+            description: "Core avançado em casa — estabilidade, anti-rotação e baixo abdômen · demos em GIF",
+            exercises: [
+                Exercise(name: "Prancha", sets: 3, reps: 45, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Dead Bug", sets: 3, reps: 12, restSeconds: 40, notes: "Alternado · controle o lombar", muscleGroup: .core),
+                Exercise(name: "Bird Dog", sets: 3, reps: 12, restSeconds: 40, notes: "Alternado · tronco estável", muscleGroup: .back),
+                Exercise(name: "Prancha Lateral", sets: 3, reps: 30, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Elevação de Pernas", sets: 3, reps: 12, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Flutter Kick", sets: 3, reps: 30, restSeconds: 40, notes: "reps = segundos ou batidas", muscleGroup: .core),
+                Exercise(name: "Bicicleta no Ar", sets: 3, reps: 24, restSeconds: 40, muscleGroup: .core),
+                Exercise(name: "Russian Twist", sets: 3, reps: 24, restSeconds: 40, muscleGroup: .core)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa L — HIIT Queima",
+            description: "HIIT de queima — joelhos altos, saltos e burpees · demos em GIF",
+            exercises: [
+                Exercise(name: "Joelho Alto", sets: 4, reps: 40, restSeconds: 30, notes: "reps = segundos · ritmo alto", muscleGroup: .fullBody),
+                Exercise(name: "Agachamento com Salto", sets: 4, reps: 12, restSeconds: 40, muscleGroup: .legs),
+                Exercise(name: "Burpee", sets: 4, reps: 10, restSeconds: 40, muscleGroup: .fullBody),
+                Exercise(name: "Mountain Climber", sets: 4, reps: 30, restSeconds: 30, muscleGroup: .fullBody),
+                Exercise(name: "Polichinelo", sets: 3, reps: 40, restSeconds: 30, muscleGroup: .fullBody),
+                Exercise(name: "Afundo", sets: 3, reps: 16, restSeconds: 35, muscleGroup: .legs),
+                Exercise(name: "Flexão de Braços", sets: 3, reps: 12, restSeconds: 35, muscleGroup: .chest),
+                Exercise(name: "Prancha", sets: 3, reps: 40, restSeconds: 30, muscleGroup: .core)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa M — Posterior Em Casa",
+            description: "Cadeia posterior em casa — glúteos, lombar e isquiotibiais · demos em GIF",
+            exercises: [
+                Exercise(name: "Ponte de Glúteos", sets: 4, reps: 15, restSeconds: 40, muscleGroup: .legs),
+                Exercise(name: "Elevação Pélvica (Hip Thrust)", sets: 4, reps: 15, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Superman", sets: 3, reps: 12, restSeconds: 40, muscleGroup: .back),
+                Exercise(name: "Bird Dog", sets: 3, reps: 12, restSeconds: 40, muscleGroup: .back),
+                Exercise(name: "Afundo", sets: 3, reps: 12, restSeconds: 45, notes: "Passo longo · foco no glúteo", muscleGroup: .legs),
+                Exercise(name: "Agachamento Sumô", sets: 3, reps: 15, restSeconds: 45, muscleGroup: .legs),
+                Exercise(name: "Panturrilha Corporal", sets: 3, reps: 20, restSeconds: 30, muscleGroup: .legs),
+                Exercise(name: "Prancha", sets: 3, reps: 40, restSeconds: 40, muscleGroup: .core)
+            ]
+        ),
+        WorkoutSheet(
+            title: "Casa N — Express Full Body",
+            description: "Circuito express ~15–20 min — corpo inteiro sem equipamentos · demos em GIF",
+            exercises: [
+                Exercise(name: "Polichinelo", sets: 3, reps: 30, restSeconds: 25, muscleGroup: .fullBody),
+                Exercise(name: "Agachamento Livre", sets: 3, reps: 15, restSeconds: 30, muscleGroup: .legs),
+                Exercise(name: "Flexão de Braços", sets: 3, reps: 10, restSeconds: 30, muscleGroup: .chest),
+                Exercise(name: "Afundo", sets: 3, reps: 12, restSeconds: 30, muscleGroup: .legs),
+                Exercise(name: "Flexão Pike", sets: 3, reps: 8, restSeconds: 35, notes: "Ombros · quadril alto", muscleGroup: .shoulders),
+                Exercise(name: "Ponte de Glúteos", sets: 3, reps: 15, restSeconds: 30, muscleGroup: .legs),
+                Exercise(name: "Mountain Climber", sets: 3, reps: 20, restSeconds: 25, muscleGroup: .fullBody),
+                Exercise(name: "Prancha", sets: 2, reps: 40, restSeconds: 30, muscleGroup: .core)
             ]
         )
     ]

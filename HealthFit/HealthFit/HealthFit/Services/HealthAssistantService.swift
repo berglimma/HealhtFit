@@ -1848,6 +1848,7 @@ final class HealthAssistantService: ObservableObject {
     private var lastUserMessageAt: Date?
     private var inactivityFollowUpDelivered = false
     private var cardioMeditationNudgeDelivered = false
+    private var pulseNudgeDelivered = false
     private var studyFocusInsightDelivered = false
     private var supplementNudgeDelivered = false
     private var coachComplianceNudgeDelivered = false
@@ -2105,6 +2106,7 @@ final class HealthAssistantService: ObservableObject {
         lastUserMessageAt = Date()
         inactivityFollowUpDelivered = false
         cardioMeditationNudgeDelivered = false
+        pulseNudgeDelivered = false
         studyFocusInsightDelivered = false
         supplementNudgeDelivered = false
         coachComplianceNudgeDelivered = false
@@ -3230,6 +3232,7 @@ final class HealthAssistantService: ObservableObject {
         lastUserMessageAt = nil
         inactivityFollowUpDelivered = false
         cardioMeditationNudgeDelivered = false
+        pulseNudgeDelivered = false
         studyFocusInsightDelivered = false
         supplementNudgeDelivered = false
         coachComplianceNudgeDelivered = false
@@ -3300,6 +3303,25 @@ final class HealthAssistantService: ObservableObject {
         deliverAssistantMessage(text)
         inactivityFollowUpDelivered = true
         lastUserInteractionAt = Date()
+    }
+
+    func checkPulseNudgeIfNeeded(context: HealthAssistantContext) {
+        guard !isTyping else { return }
+        guard !isInGuidedCheckIn else { return }
+        guard !pulseNudgeDelivered else { return }
+        guard AssistantPulseNudgeEngine.shouldDeliver() else { return }
+
+        let name = context.user?.greetingName ?? "Atleta"
+        let text = AssistantPulseNudgeEngine.message(athleteName: name)
+        if let last = messages.last, !last.isUser, last.text == text {
+            pulseNudgeDelivered = true
+            AssistantPulseNudgeEngine.markDelivered()
+            return
+        }
+
+        deliverAssistantMessage(text)
+        AssistantPulseNudgeEngine.markDelivered()
+        pulseNudgeDelivered = true
     }
 
     func checkCardioMeditationNudgeIfNeeded(

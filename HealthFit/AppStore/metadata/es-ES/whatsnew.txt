@@ -1,3 +1,4 @@
-• Corrección urgente: el inicio de sesión vuelve a conectar con Firebase tras la actualización de App Store
-• En iPad, salir y volver ya no deja la pantalla oscura
-• La meta de agua del entrenador se actualiza al momento en la tarjeta del alumno
+• Método Atleta PPL 2× para masculino y femenino, con demos en GIF
+• Nuevos entrenamientos en casa (Core Power, HIIT, Posterior y Express)
+• Apple Watch: la musculación iniciada en el reloj avanza series y ejercicios
+• Franja “Nuevos entrenamientos” en los programas actualizados

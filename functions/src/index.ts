@@ -582,6 +582,103 @@ function isValidCourtesyCode(code: string): boolean {
   return [...match[2]].every((ch) => COURTESY_ALPHABET.includes(ch));
 }
 
+/** Contas com cortesia Completo de 90 dias (allowlist fechada). */
+const SPECIAL_COURTESY_EMAILS = new Set([
+  "berg.limma@gmail.com",
+  "cristianeribeiiro14@gmail.com",
+]);
+const SPECIAL_COURTESY_DURATION_DAYS = 90;
+const SPECIAL_COURTESY_PLAN = "complete";
+const SPECIAL_COURTESY_CODE = "ADMIN-SPECIAL-COMPLETE-90D";
+
+/**
+ * Garante cortesia Completo 90 dias apenas para e-mails da allowlist.
+ * Idempotente: renova expiresAt para agora + 90 dias quando aplicável.
+ */
+export const ensureSpecialCourtesy = onCall(
+  {
+    cors: true,
+    invoker: "public",
+    timeoutSeconds: 15,
+    memory: "256MiB",
+  },
+  async (request) => {
+    const auth = request.auth;
+    const uid = auth?.uid;
+    if (!auth || !uid) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Entre na sua conta para ativar a cortesia."
+      );
+    }
+
+    let email = (auth.token.email as string | undefined)?.trim().toLowerCase() ?? "";
+    if (!email) {
+      try {
+        const user = await getAuth().getUser(uid);
+        email = (user.email ?? "").trim().toLowerCase();
+      } catch {
+        email = "";
+      }
+    }
+    if (!SPECIAL_COURTESY_EMAILS.has(email)) {
+      throw new HttpsError(
+        "permission-denied",
+        "Esta conta não está na lista de cortesia especial."
+      );
+    }
+
+    const grantRef = db.collection("courtesyGrants").doc(uid);
+    const now = Timestamp.now();
+    const targetExpires = Timestamp.fromMillis(
+      Date.now() + SPECIAL_COURTESY_DURATION_DAYS * 24 * 60 * 60 * 1000
+    );
+
+    const existing = await grantRef.get();
+    if (existing.exists) {
+      const data = existing.data() ?? {};
+      const existingExpires = data.expiresAt as Timestamp | undefined;
+      const stillActive =
+        existingExpires != null && existingExpires.toMillis() > Date.now();
+      const existingRank = COURTESY_PLAN_RANK[String(data.plan)] ?? 0;
+      const targetRank = COURTESY_PLAN_RANK[SPECIAL_COURTESY_PLAN] ?? 0;
+      if (
+        stillActive &&
+        existingRank >= targetRank &&
+        existingExpires != null &&
+        existingExpires.toMillis() >= targetExpires.toMillis()
+      ) {
+        return {
+          plan: String(data.plan),
+          durationDays: Number(data.durationDays) || SPECIAL_COURTESY_DURATION_DAYS,
+          expiresAtMs: existingExpires.toMillis(),
+        };
+      }
+    }
+
+    await grantRef.set({
+      plan: SPECIAL_COURTESY_PLAN,
+      durationDays: SPECIAL_COURTESY_DURATION_DAYS,
+      code: SPECIAL_COURTESY_CODE,
+      redeemedAt: now,
+      expiresAt: targetExpires,
+      email,
+    });
+
+    logger.info("ensureSpecialCourtesy", {
+      uid,
+      email,
+      durationDays: SPECIAL_COURTESY_DURATION_DAYS,
+    });
+
+    return {
+      plan: SPECIAL_COURTESY_PLAN,
+      durationDays: SPECIAL_COURTESY_DURATION_DAYS,
+      expiresAtMs: targetExpires.toMillis(),
+    };
+  }
+);
+
 /**
  * Resgata um voucher de cortesia (30 dias) para o usuário autenticado.
  * Códigos são de uso único; o brinde fica em courtesyGrants/{uid}.

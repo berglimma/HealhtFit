@@ -62,6 +62,7 @@ struct DashboardView: View {
                         HealthChartsView()
                         // Direto abaixo de Desempenho Semanal: 1RM estimado + volume por grupo muscular.
                         StrengthPerformanceView()
+                        MuscleGroupStatsView()
                     } else {
                         Color.clear.frame(height: 280)
                     }
@@ -80,6 +81,11 @@ struct DashboardView: View {
                 try? await Task.sleep(nanoseconds: 250_000_000)
                 await healthKitManager.refreshFromHealthKit()
                 _ = await wellnessService.syncSleepFromAppleHealth()
+                HealthFitWidgetBridge.refresh(
+                    workoutStore: workoutStore,
+                    gender: authService.currentUser?.gender,
+                    todayCalories: healthKitManager.todayCalories
+                )
             }
             .task(id: authService.currentUser?.id) {
                 await wellnessService.ensureCurrentWeekLoaded()
@@ -824,6 +830,7 @@ struct DashboardView: View {
     private var shareCardsSection: some View {
         VStack(spacing: 16) {
             shareCardSlotSection(slot: .individual)
+            WorkoutOfTheDayCard()
             shareCardSlotSection(slot: .duoTeam)
         }
     }
@@ -1135,7 +1142,16 @@ struct DashboardView: View {
     }
 
     private var headerSection: some View {
-        HStack(alignment: .center) {
+        HStack(alignment: .center, spacing: 12) {
+            DuoMemberAvatarView(
+                name: authService.currentUser?.greetingName ?? "Atleta",
+                photoURL: nil,
+                countryCode: authService.currentUser?.countryCode,
+                localImage: authService.profileImage,
+                size: DeviceLayout.isPad ? 52 : 44
+            )
+            .accessibilityLabel("Foto de perfil")
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(MotivationMessages.namedGreeting(name: authService.currentUser?.greetingName ?? "Atleta"))
                     .font(.title2.bold())
@@ -1144,7 +1160,7 @@ struct DashboardView: View {
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.textSecondary)
             }
-            Spacer()
+            Spacer(minLength: 0)
             PulsingHeartIconView(
                 size: DeviceLayout.isPad ? 52 : 44,
                 glowColor: healthStatus.glowColor

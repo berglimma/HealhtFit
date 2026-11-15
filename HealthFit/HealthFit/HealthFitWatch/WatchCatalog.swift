@@ -2,11 +2,21 @@ import Foundation
 
 /// Catálogos leves espelhando o iPhone — o Watch não compartilha o target principal.
 enum WatchCatalog {
+    struct StrengthExercise: Identifiable, Hashable {
+        let id: String
+        let name: String
+        let sets: Int
+        let reps: String
+        let restSeconds: Int
+    }
+
     struct StrengthProgram: Identifiable, Hashable {
         let id: String
         let title: String
         let icon: String
-        let firstExercise: String
+        let exercises: [StrengthExercise]
+
+        var firstExercise: String { exercises.first?.name ?? title }
     }
 
     struct CardioActivity: Identifiable, Hashable {
@@ -72,23 +82,310 @@ enum WatchCatalog {
         var seconds: Int { rawValue * 60 }
     }
 
+    private static func ex(
+        _ name: String,
+        sets: Int = 3,
+        reps: String = "12",
+        rest: Int = 60
+    ) -> StrengthExercise {
+        StrengthExercise(
+            id: name.lowercased().replacingOccurrences(of: " ", with: "-"),
+            name: name,
+            sets: sets,
+            reps: reps,
+            restSeconds: rest
+        )
+    }
+
     static let strengthPrograms: [StrengthProgram] = [
-        .init(id: "m-a", title: "Masculino A — Peito e Tríceps", icon: "figure.strengthtraining.traditional", firstExercise: "Supino reto"),
-        .init(id: "m-b", title: "Masculino B — Costas e Bíceps", icon: "figure.strengthtraining.traditional", firstExercise: "Puxada frontal"),
-        .init(id: "m-c", title: "Masculino C — Pernas", icon: "figure.strengthtraining.traditional", firstExercise: "Agachamento"),
-        .init(id: "m-d", title: "Masculino D — Ombros e Trapézio", icon: "figure.strengthtraining.traditional", firstExercise: "Desenvolvimento"),
-        .init(id: "f-a", title: "Feminino A — Glúteos e Posteriores", icon: "figure.strengthtraining.functional", firstExercise: "Elevação pélvica"),
-        .init(id: "f-b", title: "Feminino B — Pernas e Core", icon: "figure.strengthtraining.functional", firstExercise: "Agachamento sumô"),
-        .init(id: "f-c", title: "Feminino C — Costas e Postura", icon: "figure.strengthtraining.functional", firstExercise: "Remada curvada"),
-        .init(id: "f-d", title: "Feminino D — Full Body e Ombros", icon: "figure.strengthtraining.functional", firstExercise: "Desenvolvimento"),
-        .init(id: "c-a", title: "Casa A — Full Body", icon: "house.fill", firstExercise: "Agachamento livre"),
-        .init(id: "c-b", title: "Casa B — Core e Abdômen", icon: "house.fill", firstExercise: "Prancha"),
-        .init(id: "c-c", title: "Casa C — HIIT Em Casa", icon: "house.fill", firstExercise: "Polichinelos"),
-        .init(id: "c-d", title: "Casa D — Pernas e Glúteos", icon: "house.fill", firstExercise: "Afundo"),
-        .init(id: "c-e", title: "Casa E — Superiores", icon: "house.fill", firstExercise: "Flexão de braço"),
-        .init(id: "c-f", title: "Casa F — Mobilidade e Postura", icon: "house.fill", firstExercise: "Gato-camelo"),
-        .init(id: "mob-a", title: "Mobilidade A — Alongamento Dinâmico", icon: "figure.flexibility", firstExercise: "Alongamento mundial"),
-        .init(id: "mob-e", title: "Mobilidade E — Alongamento Estático", icon: "figure.flexibility", firstExercise: "Alongamento de peito"),
+        .init(
+            id: "m-a",
+            title: "Masculino A — Peito e Tríceps",
+            icon: "figure.strengthtraining.traditional",
+            exercises: [
+                ex("Supino reto", sets: 4, reps: "8-10", rest: 90),
+                ex("Supino inclinado", sets: 3, reps: "10", rest: 75),
+                ex("Crucifixo", sets: 3, reps: "12", rest: 60),
+                ex("Tríceps pulley", sets: 3, reps: "12", rest: 60),
+                ex("Tríceps testa", sets: 3, reps: "10", rest: 60)
+            ]
+        ),
+        .init(
+            id: "m-b",
+            title: "Masculino B — Costas e Bíceps",
+            icon: "figure.strengthtraining.traditional",
+            exercises: [
+                ex("Puxada frontal", sets: 4, reps: "8-10", rest: 90),
+                ex("Remada curvada", sets: 3, reps: "10", rest: 75),
+                ex("Remada unilateral", sets: 3, reps: "10", rest: 60),
+                ex("Rosca direta", sets: 3, reps: "12", rest: 60),
+                ex("Rosca martelo", sets: 3, reps: "12", rest: 60)
+            ]
+        ),
+        .init(
+            id: "m-c",
+            title: "Masculino C — Pernas",
+            icon: "figure.strengthtraining.traditional",
+            exercises: [
+                ex("Agachamento", sets: 4, reps: "8-10", rest: 90),
+                ex("Leg press", sets: 3, reps: "12", rest: 75),
+                ex("Afundo", sets: 3, reps: "10", rest: 60),
+                ex("Mesa flexora", sets: 3, reps: "12", rest: 60),
+                ex("Panturrilha em pé", sets: 4, reps: "15", rest: 45)
+            ]
+        ),
+        .init(
+            id: "m-d",
+            title: "Masculino D — Ombros e Trapézio",
+            icon: "figure.strengthtraining.traditional",
+            exercises: [
+                ex("Desenvolvimento", sets: 4, reps: "8-10", rest: 90),
+                ex("Elevação lateral", sets: 3, reps: "12", rest: 60),
+                ex("Elevação frontal", sets: 3, reps: "12", rest: 60),
+                ex("Encolhimento", sets: 3, reps: "12", rest: 60),
+                ex("Face pull", sets: 3, reps: "15", rest: 45)
+            ]
+        ),
+        .init(
+            id: "f-a",
+            title: "Feminino A — Glúteos e Posteriores",
+            icon: "figure.strengthtraining.functional",
+            exercises: [
+                ex("Elevação pélvica", sets: 4, reps: "12", rest: 60),
+                ex("Stiff", sets: 3, reps: "10", rest: 75),
+                ex("Abdução no cabo", sets: 3, reps: "15", rest: 45),
+                ex("Coice no cabo", sets: 3, reps: "12", rest: 45),
+                ex("Mesa flexora", sets: 3, reps: "12", rest: 60)
+            ]
+        ),
+        .init(
+            id: "f-b",
+            title: "Feminino B — Pernas e Core",
+            icon: "figure.strengthtraining.functional",
+            exercises: [
+                ex("Agachamento sumô", sets: 4, reps: "12", rest: 75),
+                ex("Leg press", sets: 3, reps: "12", rest: 60),
+                ex("Afundo", sets: 3, reps: "10", rest: 60),
+                ex("Prancha", sets: 3, reps: "40s", rest: 45),
+                ex("Abdominal bicicleta", sets: 3, reps: "20", rest: 45)
+            ]
+        ),
+        .init(
+            id: "f-c",
+            title: "Feminino C — Costas e Postura",
+            icon: "figure.strengthtraining.functional",
+            exercises: [
+                ex("Remada curvada", sets: 3, reps: "12", rest: 60),
+                ex("Puxada frontal", sets: 3, reps: "12", rest: 60),
+                ex("Face pull", sets: 3, reps: "15", rest: 45),
+                ex("Superman", sets: 3, reps: "12", rest: 45),
+                ex("Prancha", sets: 3, reps: "40s", rest: 45)
+            ]
+        ),
+        .init(
+            id: "f-d",
+            title: "Feminino D — Full Body e Ombros",
+            icon: "figure.strengthtraining.functional",
+            exercises: [
+                ex("Desenvolvimento", sets: 3, reps: "10", rest: 60),
+                ex("Agachamento livre", sets: 3, reps: "12", rest: 60),
+                ex("Remada curvada", sets: 3, reps: "12", rest: 60),
+                ex("Elevação lateral", sets: 3, reps: "12", rest: 45),
+                ex("Prancha", sets: 3, reps: "40s", rest: 45)
+            ]
+        ),
+        .init(
+            id: "c-a",
+            title: "Casa A — Full Body",
+            icon: "house.fill",
+            exercises: [
+                ex("Agachamento livre", sets: 3, reps: "15", rest: 45),
+                ex("Flexão de braço", sets: 3, reps: "10", rest: 45),
+                ex("Afundo", sets: 3, reps: "12", rest: 45),
+                ex("Remada com mochila", sets: 3, reps: "12", rest: 45),
+                ex("Prancha", sets: 3, reps: "40s", rest: 40)
+            ]
+        ),
+        .init(
+            id: "c-b",
+            title: "Casa B — Core e Abdômen",
+            icon: "house.fill",
+            exercises: [
+                ex("Prancha", sets: 3, reps: "40s", rest: 40),
+                ex("Abdominal crunch", sets: 3, reps: "20", rest: 40),
+                ex("Abdominal bicicleta", sets: 3, reps: "20", rest: 40),
+                ex("Elevação de pernas", sets: 3, reps: "12", rest: 40),
+                ex("Prancha lateral", sets: 3, reps: "30s", rest: 40)
+            ]
+        ),
+        .init(
+            id: "c-c",
+            title: "Casa C — HIIT Em Casa",
+            icon: "house.fill",
+            exercises: [
+                ex("Polichinelos", sets: 4, reps: "30s", rest: 30),
+                ex("Burpees", sets: 3, reps: "10", rest: 40),
+                ex("Agachamento livre", sets: 3, reps: "15", rest: 30),
+                ex("Mountain climbers", sets: 3, reps: "30s", rest: 30),
+                ex("Flexão de braço", sets: 3, reps: "10", rest: 40)
+            ]
+        ),
+        .init(
+            id: "c-d",
+            title: "Casa D — Pernas e Glúteos",
+            icon: "house.fill",
+            exercises: [
+                ex("Afundo", sets: 3, reps: "12", rest: 45),
+                ex("Agachamento livre", sets: 3, reps: "15", rest: 45),
+                ex("Elevação pélvica", sets: 3, reps: "15", rest: 40),
+                ex("Elevação de panturrilha", sets: 3, reps: "20", rest: 30),
+                ex("Agachamento sumô", sets: 3, reps: "15", rest: 45)
+            ]
+        ),
+        .init(
+            id: "c-e",
+            title: "Casa E — Superiores",
+            icon: "house.fill",
+            exercises: [
+                ex("Flexão de braço", sets: 3, reps: "10", rest: 45),
+                ex("Remada com mochila", sets: 3, reps: "12", rest: 45),
+                ex("Elevação lateral", sets: 3, reps: "12", rest: 40),
+                ex("Tríceps no banco", sets: 3, reps: "12", rest: 40),
+                ex("Prancha", sets: 3, reps: "40s", rest: 40)
+            ]
+        ),
+        .init(
+            id: "c-f",
+            title: "Casa F — Mobilidade e Postura",
+            icon: "house.fill",
+            exercises: [
+                ex("Gato-camelo", sets: 3, reps: "10", rest: 20),
+                ex("Rotação torácica", sets: 3, reps: "8", rest: 20),
+                ex("Alongamento de peito", sets: 2, reps: "30s", rest: 15),
+                ex("Alongamento de quadril", sets: 2, reps: "30s", rest: 15),
+                ex("Respiração diafragmática", sets: 2, reps: "60s", rest: 10)
+            ]
+        ),
+        .init(
+            id: "c-g",
+            title: "Casa G — Atleta Full Body",
+            icon: "house.fill",
+            exercises: [
+                ex("Flexão de braço", sets: 4, reps: "12", rest: 45),
+                ex("Superman", sets: 3, reps: "12", rest: 40),
+                ex("Agachamento livre", sets: 4, reps: "15", rest: 45),
+                ex("Afundo", sets: 3, reps: "12", rest: 45),
+                ex("Prancha", sets: 3, reps: "40s", rest: 40)
+            ]
+        ),
+        .init(
+            id: "c-h",
+            title: "Casa H — Push Em Casa",
+            icon: "house.fill",
+            exercises: [
+                ex("Flexão de braço", sets: 4, reps: "12", rest: 45),
+                ex("Flexão inclinada", sets: 3, reps: "12", rest: 45),
+                ex("Flexão diamante", sets: 3, reps: "10", rest: 45),
+                ex("Mergulho no banco", sets: 3, reps: "12", rest: 45),
+                ex("Prancha", sets: 3, reps: "40s", rest: 40)
+            ]
+        ),
+        .init(
+            id: "c-i",
+            title: "Casa I — Pull Em Casa",
+            icon: "house.fill",
+            exercises: [
+                ex("Superman", sets: 4, reps: "12", rest: 40),
+                ex("Ponte de glúteos", sets: 3, reps: "15", rest: 40),
+                ex("Prancha", sets: 3, reps: "45s", rest: 40),
+                ex("Elevação de pernas", sets: 3, reps: "12", rest: 40),
+                ex("Mountain climbers", sets: 3, reps: "24", rest: 40)
+            ]
+        ),
+        .init(
+            id: "c-j",
+            title: "Casa J — Pernas Em Casa",
+            icon: "house.fill",
+            exercises: [
+                ex("Agachamento livre", sets: 4, reps: "15", rest: 50),
+                ex("Afundo", sets: 4, reps: "12", rest: 45),
+                ex("Elevação pélvica", sets: 4, reps: "15", rest: 45),
+                ex("Isometria na parede", sets: 3, reps: "40s", rest: 45),
+                ex("Panturrilha", sets: 4, reps: "20", rest: 30)
+            ]
+        ),
+        .init(
+            id: "c-k",
+            title: "Casa K — Core Power",
+            icon: "house.fill",
+            exercises: [
+                ex("Prancha", sets: 3, reps: "45s", rest: 40),
+                ex("Dead bug", sets: 3, reps: "12", rest: 40),
+                ex("Bird dog", sets: 3, reps: "12", rest: 40),
+                ex("Flutter kick", sets: 3, reps: "30s", rest: 40),
+                ex("Russian twist", sets: 3, reps: "24", rest: 40)
+            ]
+        ),
+        .init(
+            id: "c-l",
+            title: "Casa L — HIIT Queima",
+            icon: "house.fill",
+            exercises: [
+                ex("Joelho alto", sets: 4, reps: "40s", rest: 30),
+                ex("Agachamento com salto", sets: 4, reps: "12", rest: 40),
+                ex("Burpees", sets: 4, reps: "10", rest: 40),
+                ex("Mountain climbers", sets: 4, reps: "30", rest: 30),
+                ex("Polichinelos", sets: 3, reps: "40", rest: 30)
+            ]
+        ),
+        .init(
+            id: "c-m",
+            title: "Casa M — Posterior Em Casa",
+            icon: "house.fill",
+            exercises: [
+                ex("Ponte de glúteos", sets: 4, reps: "15", rest: 40),
+                ex("Elevação pélvica", sets: 4, reps: "15", rest: 45),
+                ex("Superman", sets: 3, reps: "12", rest: 40),
+                ex("Bird dog", sets: 3, reps: "12", rest: 40),
+                ex("Afundo", sets: 3, reps: "12", rest: 45)
+            ]
+        ),
+        .init(
+            id: "c-n",
+            title: "Casa N — Express Full Body",
+            icon: "house.fill",
+            exercises: [
+                ex("Polichinelos", sets: 3, reps: "30", rest: 25),
+                ex("Agachamento livre", sets: 3, reps: "15", rest: 30),
+                ex("Flexão de braço", sets: 3, reps: "10", rest: 30),
+                ex("Flexão pike", sets: 3, reps: "8", rest: 35),
+                ex("Prancha", sets: 2, reps: "40s", rest: 30)
+            ]
+        ),
+        .init(
+            id: "mob-a",
+            title: "Mobilidade A — Alongamento Dinâmico",
+            icon: "figure.flexibility",
+            exercises: [
+                ex("Alongamento mundial", sets: 2, reps: "10", rest: 15),
+                ex("Círculos de braço", sets: 2, reps: "12", rest: 15),
+                ex("Rotação de quadril", sets: 2, reps: "10", rest: 15),
+                ex("Afundo com rotação", sets: 2, reps: "8", rest: 20),
+                ex("Agachamento livre", sets: 2, reps: "10", rest: 20)
+            ]
+        ),
+        .init(
+            id: "mob-e",
+            title: "Mobilidade E — Alongamento Estático",
+            icon: "figure.flexibility",
+            exercises: [
+                ex("Alongamento de peito", sets: 2, reps: "40s", rest: 15),
+                ex("Alongamento de quadríceps", sets: 2, reps: "40s", rest: 15),
+                ex("Alongamento de posteriores", sets: 2, reps: "40s", rest: 15),
+                ex("Alongamento de ombro", sets: 2, reps: "40s", rest: 15),
+                ex("Alongamento de pescoço", sets: 2, reps: "30s", rest: 10)
+            ]
+        )
     ]
 
     static let cardioActivities: [CardioActivity] = [

@@ -148,12 +148,16 @@ struct WorkoutListView: View {
             .onAppear {
                 alignSelectedSectionWithPreferences()
                 openPendingWorkoutHubIfNeeded()
+                openPendingCardioIfNeeded()
             }
             .onChange(of: authService.currentUser?.practicedModalityIDs) { _, _ in
                 alignSelectedSectionWithPreferences()
             }
             .onChange(of: workoutHubNavigation.openHubTick) { _, _ in
                 openPendingWorkoutHubIfNeeded()
+            }
+            .onChange(of: workoutHubNavigation.openCardioTick) { _, _ in
+                openPendingCardioIfNeeded()
             }
             .sheet(item: $paywallFeature) { feature in
                 PaywallView(highlight: feature)
@@ -308,6 +312,14 @@ struct WorkoutListView: View {
             var path = NavigationPath()
             path.append(gender)
             navigationPath = path
+        }
+    }
+
+    private func openPendingCardioIfNeeded() {
+        guard workoutHubNavigation.consumePendingCardio() else { return }
+        navigationPath = NavigationPath()
+        if availableSections.contains(.cardio) {
+            selectedSection = .cardio
         }
     }
 
@@ -499,6 +511,7 @@ struct HomeProgramHeroCard: View {
             coverColors: [accent, accent.opacity(0.55)],
             eyebrow: "SEM EQUIPAMENTOS",
             eyebrowSystemImage: "house.fill",
+            bannerText: "Novos treinos liberados",
             footerLabels: [(icon: "star.fill", text: "\(recommendedCount) fichas recomendadas")]
         )
     }
@@ -524,7 +537,7 @@ struct HomeWorkoutHubView: View {
                         Text("Recomendados")
                             .font(.headline)
                             .foregroundStyle(AppTheme.textPrimary)
-                        Text("Fichas de peso corporal com demonstrações durante o treino")
+                        Text("Fichas de peso corporal com demos em GIF durante o treino")
                             .font(.caption)
                             .foregroundStyle(AppTheme.textSecondary)
                     }
@@ -545,6 +558,9 @@ struct HomeWorkoutHubView: View {
         .background(AppTheme.background)
         .navigationTitle("Treine em Casa")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            workoutStore.ensureHomeWorkoutsSeeded()
+        }
     }
 
     private var hubHeader: some View {
@@ -560,7 +576,7 @@ struct HomeWorkoutHubView: View {
                 Text("TREINE EM CASA")
                     .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
-                Text("\(recommendedSheets.count) fichas · peso corporal · demos em vídeo")
+                Text("\(recommendedSheets.count) fichas · peso corporal · demos em GIF")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
             }
@@ -728,6 +744,8 @@ struct GenderProgramHeroCard: View {
             imageName: imageName,
             systemImage: "dumbbell.fill",
             coverColors: [accent, accent.opacity(0.55)],
+            bannerText: "Novos treinos liberados",
+            bannerSystemImage: "sparkles",
             footerLabels: footerLabels
         )
     }
@@ -816,6 +834,10 @@ struct GenderWorkoutHubView: View {
         militarSheets.filter { $0.title.contains("Cabo") }
     }
 
+    private var atletaSheets: [WorkoutSheet] {
+        workoutStore.atletaStandardWorkouts(for: gender)
+    }
+
     private var customSheets: [WorkoutSheet] {
         workoutStore.customWorkoutSheets(for: gender).filter { !$0.isCoachPrescribed }
     }
@@ -882,6 +904,15 @@ struct GenderWorkoutHubView: View {
                         )
                     }
 
+                    if !atletaSheets.isEmpty {
+                        workoutGroupSection(
+                            title: "Método Atleta · PPL 2×",
+                            subtitle: "Push / Pull / Legs × 2 · demos em GIF em cada exercício",
+                            sheets: atletaSheets,
+                            cardStyle: .metodoAtleta
+                        )
+                    }
+
                     if !militarSoldadoSheets.isEmpty {
                         workoutGroupSection(
                             title: "Método Militar · Soldado",
@@ -930,6 +961,8 @@ struct GenderWorkoutHubView: View {
         .onAppear {
             workoutStore.ensureShapeWorkoutsSeeded()
             workoutStore.ensureMilitarWorkoutsSeeded()
+            workoutStore.ensureAtletaWorkoutsSeeded()
+            workoutStore.ensureHomeWorkoutsSeeded()
             _ = workoutStore.refreshRecommendedRotationIfNeeded()
             if authService.currentUser?.musculacaoTrainingExperience == nil {
                 showExperiencePrompt = true
