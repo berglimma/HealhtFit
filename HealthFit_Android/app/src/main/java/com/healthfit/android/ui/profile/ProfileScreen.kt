@@ -151,12 +151,13 @@ fun ProfileScreen(
     var nickname by remember { mutableStateOf(profile.displayName.ifBlank { "Berg" }) }
     var plan by remember { mutableStateOf("Fit") }
     var role by remember { mutableStateOf("Aluno") }
-    var hasTrainer by remember { mutableStateOf(false) }
-    var trainerName by remember { mutableStateOf("") }
-    var trainerEmail by remember { mutableStateOf("") }
-    var hasNutri by remember { mutableStateOf(false) }
-    var nutriName by remember { mutableStateOf("") }
-    var nutriEmail by remember { mutableStateOf("") }
+    val linkedPros = remember { ProfileLinkedProsStore.load(context) }
+    var hasTrainer by remember { mutableStateOf(linkedPros.hasTrainer) }
+    var trainerName by remember { mutableStateOf(linkedPros.trainerName) }
+    var trainerEmail by remember { mutableStateOf(linkedPros.trainerEmail) }
+    var hasNutri by remember { mutableStateOf(linkedPros.hasNutri) }
+    var nutriName by remember { mutableStateOf(linkedPros.nutriName) }
+    var nutriEmail by remember { mutableStateOf(linkedPros.nutriEmail) }
     var energy by remember { mutableIntStateOf(0) }
     var preWorkout by remember { mutableIntStateOf(0) }
     var restAlert by remember { mutableIntStateOf(120) }
@@ -346,22 +347,40 @@ fun ProfileScreen(
             title = "Personal",
             question = "Você tem personal?",
             enabled = hasTrainer,
-            onEnabled = { hasTrainer = it },
+            onEnabled = {
+                hasTrainer = it
+                ProfileLinkedProsStore.saveTrainer(context, it, trainerName, trainerEmail)
+            },
             name = trainerName,
-            onName = { trainerName = it },
+            onName = {
+                trainerName = it
+                ProfileLinkedProsStore.saveTrainer(context, hasTrainer, it, trainerEmail)
+            },
             email = trainerEmail,
-            onEmail = { trainerEmail = it },
+            onEmail = {
+                trainerEmail = it
+                ProfileLinkedProsStore.saveTrainer(context, hasTrainer, trainerName, it)
+            },
             hint = "Informe o e-mail para enviar a ficha de treino.",
         )
         LinkedProSection(
             title = "Nutricionista",
             question = "Você tem nutricionista?",
             enabled = hasNutri,
-            onEnabled = { hasNutri = it },
+            onEnabled = {
+                hasNutri = it
+                ProfileLinkedProsStore.saveNutri(context, it, nutriName, nutriEmail)
+            },
             name = nutriName,
-            onName = { nutriName = it },
+            onName = {
+                nutriName = it
+                ProfileLinkedProsStore.saveNutri(context, hasNutri, it, nutriEmail)
+            },
             email = nutriEmail,
-            onEmail = { nutriEmail = it },
+            onEmail = {
+                nutriEmail = it
+                ProfileLinkedProsStore.saveNutri(context, hasNutri, nutriName, it)
+            },
             hint = "Cadastre o e-mail para enviar o relatório de nutrição.",
         )
         HealthIconSection(healthy = wellness.sleepHours > 0f && wellness.waterMl > 0)

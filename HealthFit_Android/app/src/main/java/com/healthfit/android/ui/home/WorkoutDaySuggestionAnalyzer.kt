@@ -1,17 +1,27 @@
 package com.healthfit.android.ui.home
 
+import com.healthfit.android.ui.workouts.FemaleProgram
+import com.healthfit.android.ui.workouts.MaleProgram
 import com.healthfit.android.ui.workouts.Muscle
 import com.healthfit.android.ui.workouts.WorkoutCatalog
 import com.healthfit.android.ui.workouts.WorkoutSheet
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
+enum class WorkoutSuggestionSource {
+    CoachRoutine,
+    UserHistory,
+}
+
 data class WorkoutOfTheDaySuggestion(
     val sheet: WorkoutSheet,
     val avoidedMuscles: List<Muscle>,
     val focusMuscles: List<Muscle>,
     val reason: String,
-)
+    val source: WorkoutSuggestionSource = WorkoutSuggestionSource.UserHistory,
+) {
+    val isFromCoach: Boolean get() = source == WorkoutSuggestionSource.CoachRoutine
+}
 
 data class MuscleGroupStat(
     val group: Muscle,
@@ -48,10 +58,114 @@ object WorkoutDaySuggestionAnalyzer {
         Muscle.fullBody -> "Corpo inteiro"
     }
 
+    /**
+     * Com personal + fichas prescritas, verifica cumprimento da rotina do coach.
+     * Sem personal (ou sem fichas), mantém a análise pelos treinos feitos pelo usuário.
+     */
     fun suggestWorkoutOfTheDay(
         sessions: List<ConstancySession>,
         female: Boolean = false,
+        hasPersonalTrainer: Boolean = false,
+        personalName: String? = null,
         nowMillis: Long = System.currentTimeMillis(),
+    ): WorkoutOfTheDaySuggestion? {
+        val coachSheets = coachPrescribedSheets(female)
+            .filter { it.exercises.isNotEmpty() }
+            .distinctBy { it.title }
+
+        if (hasPersonalTrainer && coachSheets.isNotEmpty()) {
+            return suggestCoachRoutine(
+                sessions = sessions,
+                coachSheets = coachSheets,
+                personalName = personalName,
+                nowMillis = nowMillis,
+            )
+        }
+
+        return suggestFromUserHistory(
+            sessions = sessions,
+            female = female,
+            nowMillis = nowMillis,
+        )
+    }
+
+    private fun suggestCoachRoutine(
+        sessions: List<ConstancySession>,
+        coachSheets: List<WorkoutSheet>,
+        personalName: String?,
+        nowMillis: Long,
+    ): WorkoutOfTheDaySuggestion? {
+        val since2d = nowMillis - TimeUnit.DAYS.toMillis(2)
+        val since7d = nowMillis - TimeUnit.DAYS.toMillis(7)
+        val recent2d = strengthSessions(sessions, since2d, nowMillis)
+        val avoided = musclesTrained(recent2d).toMutableSet().also { it.remove(Muscle.fullBody) }
+        val coachKeys = coachSheets.map { normalize(it.title) }.toSet()
+        val recentCoach = strengthSessions(sessions, since7d, nowMillis)
+            .filter { normalize(it.title) in coachKeys }
+        val daysSinceCoach = recentCoach.maxOfOrNull { it.endedAtMillis }?.let { last ->
+            TimeUnit.MILLISECONDS.toDays(nowMillis - last).toInt().coerceAtLeast(0)
+        }
+        val isBehind = recentCoach.isEmpty()
+
+        val lastDone = mutableMapOf<String, Long>()
+        for (session in strengthSessions(sessions, 0L, nowMillis)) {
+            val key = normalize(session.title)
+            if (key !in coachKeys) continue
+            val prev = lastDone[key] ?: 0L
+            if (session.endedAtMillis >= prev) lastDone[key] = session.endedAtMillis
+        }
+        val recent2dTitles = recent2d.map { normalize(it.title) }.toSet()
+
+        data class Scored(val sheet: WorkoutSheet, val focus: List<Muscle>, val score: Int)
+
+        val scored = coachSheets.map { sheet ->
+            val focus = primaryMuscles(sheet)
+            var score = 200
+            val key = normalize(sheet.title)
+            val overlap = focus.toSet().intersect(avoided)
+            score -= overlap.size * 30
+            if (key in recent2dTitles) score -= 50
+            val done = lastDone[key]
+            if (done != null) {
+                val days = TimeUnit.MILLISECONDS.toDays(nowMillis - done).toInt()
+                score += days.coerceAtMost(21) * 4
+            } else {
+                score += 80
+            }
+            if (avoided.isNotEmpty()) {
+                score += focus.toSet().subtract(avoided).size * 12
+            }
+            Scored(sheet, focus, score)
+        }.sortedWith(compareByDescending<Scored> { it.score }.thenBy { it.sheet.title })
+
+        val best = scored.firstOrNull() ?: return null
+        val avoidedList = avoided.sortedBy { muscleLabel(it) }
+        val coachLabel = personalName?.trim().orEmpty().ifBlank { "seu personal" }
+        val reason = when {
+            isBehind ->
+                "Você tem rotina de $coachLabel e está há 7+ dias sem cumprir as fichas prescritas. Priorize “${best.sheet.title}” para voltar ao plano."
+            daysSinceCoach != null && daysSinceCoach >= 3 ->
+                "Rotina de $coachLabel: faz $daysSinceCoach dia(s) desde o último treino prescrito. Hoje a sugestão é “${best.sheet.title}”."
+            avoidedList.isEmpty() ->
+                "Seguindo a rotina de $coachLabel — próxima ficha sugerida: “${best.sheet.title}”."
+            else -> {
+                val names = avoidedList.joinToString(", ") { muscleLabel(it) }
+                "Rotina de $coachLabel: você treinou $names recentemente. “${best.sheet.title}” encaixa melhor no plano e na recuperação."
+            }
+        }
+        return WorkoutOfTheDaySuggestion(
+            sheet = best.sheet,
+            avoidedMuscles = avoidedList,
+            focusMuscles = best.focus,
+            reason = reason,
+            source = WorkoutSuggestionSource.CoachRoutine,
+        )
+    }
+
+    private fun suggestFromUserHistory(
+        sessions: List<ConstancySession>,
+        female: Boolean,
+        nowMillis: Long,
     ): WorkoutOfTheDaySuggestion? {
         val catalog = if (female) WorkoutCatalog.female else WorkoutCatalog.male
         val home = WorkoutCatalog.home
@@ -96,7 +210,21 @@ object WorkoutDaySuggestionAnalyzer {
             avoidedMuscles = avoidedList,
             focusMuscles = best.focus,
             reason = reason,
+            source = WorkoutSuggestionSource.UserHistory,
         )
+    }
+
+    private fun coachPrescribedSheets(female: Boolean): List<WorkoutSheet> {
+        val personal = if (female) FemaleProgram.personal else MaleProgram.personal
+        return listOf(personal).filter { isCoachPrescribed(it) || it.exercises.isNotEmpty() }
+    }
+
+    private fun isCoachPrescribed(sheet: WorkoutSheet): Boolean {
+        val blob = "${sheet.title} ${sheet.description}".lowercase()
+        return blob.contains("ficha do personal") ||
+            blob.contains("prescrita") ||
+            blob.contains("prescrito") ||
+            blob.contains("do personal")
     }
 
     fun report(
@@ -235,7 +363,8 @@ object WorkoutDaySuggestionAnalyzer {
 
     private fun findSheet(title: String): WorkoutSheet? {
         val key = normalize(title)
-        val all = WorkoutCatalog.male + WorkoutCatalog.female + WorkoutCatalog.home + WorkoutCatalog.mobility
+        val all = WorkoutCatalog.male + WorkoutCatalog.female + WorkoutCatalog.home +
+            WorkoutCatalog.mobility + listOf(MaleProgram.personal, FemaleProgram.personal)
         return all.firstOrNull { normalize(it.title) == key }
             ?: all.firstOrNull { key.contains(normalize(it.title)) || normalize(it.title).contains(key) }
     }

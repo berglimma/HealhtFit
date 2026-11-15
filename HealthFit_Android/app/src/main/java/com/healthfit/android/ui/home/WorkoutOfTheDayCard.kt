@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthfit.android.R
+import com.healthfit.android.ui.profile.ProfileLinkedProsStore
 import com.healthfit.android.ui.workouts.Muscle
 import com.healthfit.android.ui.workouts.WorkoutSheet
 import com.healthfit.designsystem.HealthFitColors
@@ -56,10 +57,15 @@ fun WorkoutOfTheDayCard(
     val context = LocalContext.current
     var showPreview by remember { mutableStateOf(false) }
     var showGenderPicker by remember { mutableStateOf(false) }
-    val suggestion = remember(female) {
+    val linkedPros = remember { ProfileLinkedProsStore.load(context) }
+    val hasPersonal = linkedPros.hasTrainer
+    val personalName = linkedPros.trainerName.trim().takeIf { it.isNotEmpty() }
+    val suggestion = remember(female, hasPersonal, personalName) {
         WorkoutDaySuggestionAnalyzer.suggestWorkoutOfTheDay(
             sessions = ConstancyStore.loadSessions(context),
             female = female,
+            hasPersonalTrainer = hasPersonal,
+            personalName = personalName,
         )
     }
     val coverRes = if (female) R.drawable.workoutprogramfemale else R.drawable.workoutprogrammale
@@ -187,7 +193,7 @@ fun WorkoutOfTheDayCard(
                     .padding(16.dp),
             ) {
                 Text(
-                    "TREINO DO DIA",
+                    if (suggestion.isFromCoach) "TREINO DO DIA · PERSONAL" else "TREINO DO DIA",
                     color = HealthFitColors.Accent,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
@@ -204,7 +210,7 @@ fun WorkoutOfTheDayCard(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    suggestionLabel(suggestion.focusMuscles),
+                    suggestionLabel(suggestion),
                     color = Color.White.copy(alpha = 0.9f),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -296,7 +302,13 @@ fun WorkoutOfTheDayCard(
     }
 }
 
-private fun suggestionLabel(focus: List<Muscle>): String {
+private fun suggestionLabel(suggestion: WorkoutOfTheDaySuggestion): String {
+    val focus = suggestion.focusMuscles
+    if (suggestion.isFromCoach) {
+        if (focus.isEmpty()) return "Rotina do personal"
+        val names = focus.joinToString(" · ") { WorkoutDaySuggestionAnalyzer.muscleLabel(it) }
+        return "Rotina do personal · $names"
+    }
     if (focus.isEmpty()) return "Sugestão com base no seu histórico"
     val names = focus.joinToString(" · ") { WorkoutDaySuggestionAnalyzer.muscleLabel(it) }
     return "Sugestão · foco em $names"
