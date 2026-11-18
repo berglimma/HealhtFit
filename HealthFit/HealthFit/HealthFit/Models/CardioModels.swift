@@ -339,6 +339,10 @@ struct CardioWorkoutConfig: Hashable, Codable {
     let treadmillSetup: TreadmillSetup?
     /// Setup de tênis (tipo, formato, superfície, metas de zona).
     let tennisSetup: TennisSetup?
+    /// Formato CrossFit / Hyrox (AMRAP, EMOM, prova…).
+    let crossFitFormatTitle: String?
+    /// Meta de tempo do formato; `0` = cronômetro livre (For Time / prova).
+    let crossFitTargetSeconds: Int?
 
     init(
         exercise: CardioExercise,
@@ -353,7 +357,9 @@ struct CardioWorkoutConfig: Hashable, Codable {
         rowingSetup: RowingSetup? = nil,
         climbingSetup: ClimbingSetup? = nil,
         treadmillSetup: TreadmillSetup? = nil,
-        tennisSetup: TennisSetup? = nil
+        tennisSetup: TennisSetup? = nil,
+        crossFitFormatTitle: String? = nil,
+        crossFitTargetSeconds: Int? = nil
     ) {
         self.exercise = exercise
         self.intensity = intensity
@@ -368,6 +374,8 @@ struct CardioWorkoutConfig: Hashable, Codable {
         self.climbingSetup = climbingSetup
         self.treadmillSetup = treadmillSetup
         self.tennisSetup = tennisSetup
+        self.crossFitFormatTitle = crossFitFormatTitle
+        self.crossFitTargetSeconds = crossFitTargetSeconds
     }
 
     /// Rebuilds a usable config from a persisted active session (app relaunch / stuck session).
@@ -394,6 +402,10 @@ struct CardioWorkoutConfig: Hashable, Codable {
             }
             if lower.contains("esteira") {
                 return "Esteira Ergométrica"
+            }
+            if lower.contains("hyrox") { return CrossFitTrack.metodoHyrox.rawValue }
+            if lower.contains("crossfit") || lower.contains("cross fit") {
+                return CrossFitTrack.treinoCrossfit.rawValue
             }
             if let afterDash = title.components(separatedBy: " — ").dropFirst().first?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
@@ -545,6 +557,30 @@ struct CardioWorkoutConfig: Hashable, Codable {
     /// Luta: só cronômetro de combate, sem meta de distância, ritmo ou GPS.
     var isFightSession: Bool { exercise.isFight }
     var fightModality: FightModality? { exercise.fightModality }
+    /// CrossFit / Hyrox: metcon ou estações, com formato opcional.
+    var isCrossFitSession: Bool { exercise.isCrossFit }
+    var crossFitTrack: CrossFitTrack? { exercise.crossFitTrack }
+    /// Sessão aberta (For Time, prova, livre) — anel sem meta de tempo.
+    var isCrossFitOpenSession: Bool {
+        isCrossFitSession && (crossFitTargetSeconds ?? 0) <= 0
+    }
+
+    var crossFitFormatKey: String {
+        (crossFitFormatTitle ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    var isCrossFitAMRAP: Bool {
+        isCrossFitSession && crossFitFormatKey.hasPrefix("amrap")
+    }
+
+    var isCrossFitEMOM: Bool {
+        isCrossFitSession && crossFitFormatKey.hasPrefix("emom")
+    }
+
+    /// Countdown (AMRAP/EMOM com meta) vs count-up (For Time / livre / Hyrox).
+    var isCrossFitCountdown: Bool {
+        isCrossFitSession && !isCrossFitOpenSession && (isCrossFitAMRAP || isCrossFitEMOM)
+    }
     /// Escalada em rocha — clima, mapa e GPS só fazem sentido fora do ginásio.
     var isOutdoorClimbingSession: Bool {
         isClimbingSession && (climbingSetup?.discipline.isOutdoor ?? true)
@@ -576,6 +612,9 @@ struct CardioWorkoutConfig: Hashable, Codable {
         if exercise.name.localizedCaseInsensitiveContains("luta")
             || exercise.name.localizedCaseInsensitiveContains("box") {
             return .martialArts
+        }
+        if isCrossFitSession {
+            return .highIntensityIntervalTraining
         }
         return .other
     }
@@ -695,6 +734,13 @@ struct CardioWorkoutConfig: Hashable, Codable {
         if isFightSession {
             return "Luta — \(exercise.name)"
         }
+        if isCrossFitSession {
+            if let format = crossFitFormatTitle?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !format.isEmpty {
+                return "CrossFit — \(exercise.name) · \(format)"
+            }
+            return "CrossFit — \(exercise.name)"
+        }
         if isFreeRun {
             if isOutdoorCyclingSession || isOutdoorWalkingSession || isRunningSession {
                 return "Cardio — \(exercise.name) livre"
@@ -734,6 +780,9 @@ struct CardioWorkoutConfig: Hashable, Codable {
         // Meta de calorias é sessão aberta: o treino só encerra quando o usuário tocar em Finalizar.
         if hasCalorieGoal {
             return 0
+        }
+        if isCrossFitSession {
+            return max(0, crossFitTargetSeconds ?? 0)
         }
         if isTennisSession {
             if let minutes = tennisSetup?.targetMinutes, minutes > 0 {

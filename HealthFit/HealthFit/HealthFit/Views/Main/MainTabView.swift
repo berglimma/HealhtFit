@@ -579,20 +579,21 @@ struct MainTabView: View {
             return
         }
 
-        if let sheet = workoutStore.activeStrengthSheet() {
-            if hostedCardioConfig != nil { hostedCardioConfig = nil }
-            if hostedMeditationConfig != nil { hostedMeditationConfig = nil }
-            if hostedActiveSheet != sheet {
-                hostedActiveSheet = sheet
-            }
-            return
-        }
-
+        // CrossFit / Luta / cardio: prioriza cronômetro (activeCardioConfig) antes da ficha de musculação.
         if let config = workoutStore.resolvedActiveCardioConfig() {
             if hostedActiveSheet != nil { hostedActiveSheet = nil }
             if hostedMeditationConfig != nil { hostedMeditationConfig = nil }
             if hostedCardioConfig != config {
                 hostedCardioConfig = config
+            }
+            return
+        }
+
+        if let sheet = workoutStore.activeStrengthSheet() {
+            if hostedCardioConfig != nil { hostedCardioConfig = nil }
+            if hostedMeditationConfig != nil { hostedMeditationConfig = nil }
+            if hostedActiveSheet != sheet {
+                hostedActiveSheet = sheet
             }
             return
         }

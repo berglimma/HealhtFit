@@ -145,6 +145,6 @@ extension CardioExercise {
     /// Fora de `catalog` de propósito — luta aparece no card "Luta", não na lista de cardio.
     static let fightCatalog: [CardioExercise] = FightModality.allCases.map(\.cardioExercise)
 
-    /// Cardio somado às lutas — use ao reconstruir sessões salvas por nome.
-    static var allKnown: [CardioExercise] { catalog + fightCatalog }
+    /// Cardio + luta + CrossFit — use ao reconstruir sessões salvas por nome.
+    static var allKnown: [CardioExercise] { catalog + fightCatalog + crossFitCatalog }
 }

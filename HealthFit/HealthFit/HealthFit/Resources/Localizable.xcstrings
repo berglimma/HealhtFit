@@ -499,6 +499,9 @@
         }
       }
     },
+    "%lld rounds" : {
+
+    },
     "%lld salto(s) · ciano = subida · laranja = descida (sobre o GPS)" : {
 
     },
@@ -2529,6 +2532,9 @@
     "Cada modalidade é uma comunidade. Ative para aparecer no Feed ao lado de Todos e nos posts como ATIVO." : {
 
     },
+    "Cada trilha tem formatos prontos, cronômetro, Watch e histórico — como nas outras modalidades." : {
+
+    },
     "Cadastrar" : {
 
     },
@@ -3342,7 +3348,16 @@
     "Cronômetro de Descanso" : {
 
     },
+    "Cronômetro livre · pause se precisar · encerre ao completar" : {
+
+    },
     "Cronômetro pausado" : {
+
+    },
+    "CrossFit" : {
+
+    },
+    "CROSSFIT" : {
 
     },
     "curtida" : {
@@ -3915,7 +3930,13 @@
     "Escolha a modalidade" : {
 
     },
+    "Escolha a trilha" : {
+
+    },
     "Escolha com qual exercício deseja começar. Você pode mudar a qualquer momento durante o treino." : {
+
+    },
+    "Escolha como quer treinar hoje — a meta de tempo acompanha o formato." : {
 
     },
     "Escolha em qual seção da lista o item deve aparecer." : {
@@ -3994,6 +4015,12 @@
 
     },
     "Esta faixa não tem preview para cortar o trecho." : {
+
+    },
+    "Estações" : {
+
+    },
+    "Estações Hyrox" : {
 
     },
     "Este aparelho não pode enviar SMS. Use e-mail ou compartilhe o código." : {
@@ -4315,6 +4342,9 @@
     "Formato" : {
 
     },
+    "Formato da sessão" : {
+
+    },
     "Foto" : {
 
     },
@@ -4623,6 +4653,9 @@
     "Ingredientes" : {
 
     },
+    "Iniciar %@" : {
+
+    },
     "Iniciar Caminhada" : {
 
     },
@@ -4833,9 +4866,6 @@
     "LUTA" : {
 
     },
-    "Luta pausada" : {
-
-    },
     "m" : {
 
     },
@@ -5040,7 +5070,13 @@
     "Mesmo conteúdo da aba Nutrição → Acompanhar do aluno. Preencha anamnese, questionários e metas; publique para sincronizar." : {
 
     },
+    "Mesmo fluxo das outras modalidades: setup → sessão ao vivo → resumo → compartilhar." : {
+
+    },
     "Meta" : {
+
+    },
+    "Meta %@ · BPM e kcal no Apple Watch" : {
 
     },
     "Meta %@ km" : {
@@ -5098,9 +5134,6 @@
     "Meta zona alta" : {
 
     },
-    "Meta: %@" : {
-
-    },
     "Meta: %@ km" : {
 
     },
@@ -5138,6 +5171,9 @@
     "Metas prescritas" : {
 
     },
+    "Metcon, estações Hyrox, BPM e calorias no Apple Watch" : {
+
+    },
     "Método" : {
 
     },
@@ -5155,6 +5191,16 @@
     },
     "Meu plano" : {
 
+    },
+    "Min %lld/%lld" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Min %1$lld/%2$lld"
+          }
+        }
+      }
     },
     "Minha agenda" : {
 
@@ -5948,6 +5994,9 @@
     "Para" : {
 
     },
+    "Para a melhor experiência" : {
+
+    },
     "Para: %@" : {
 
     },
@@ -6164,6 +6213,9 @@
     "Porção consumida" : {
 
     },
+    "Posicione o celular e prepare-se" : {
+
+    },
     "Possui nutricionista?" : {
 
     },
@@ -6213,6 +6265,9 @@
 
     },
     "Preencha questionários e metas. Ao vincular um nutricionista, você pode sincronizar." : {
+
+    },
+    "PREP" : {
 
     },
     "Preparando card..." : {
@@ -6849,6 +6904,9 @@
 
     },
     "Pular Descanso" : {
+
+    },
+    "Pular prep" : {
 
     },
     "Pulse" : {
@@ -11574,6 +11632,9 @@
     "Rotas" : {
 
     },
+    "Rounds" : {
+
+    },
     "s" : {
 
     },
@@ -12345,9 +12406,6 @@
 
     },
     "Tempo de combate, BPM e calorias no Apple Watch" : {
-
-    },
-    "Tempo de luta" : {
 
     },
     "Tempo de pausa" : {
@@ -13263,6 +13321,12 @@
           }
         }
       }
+    },
+    "WOD" : {
+
+    },
+    "WORK" : {
+
     },
     "workout.female" : {
       "extractionState" : "stale",

@@ -78,6 +78,9 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     /// Batch de GPS do Watch (Surf / Kitesurf) — rota na água quando o iPhone fica em terra.
     @Published private(set) var lastWatchGPSBatch: [WatchGPSRoutePoint] = []
     @Published private(set) var watchGPSBatchTick: Int = 0
+    /// Rounds AMRAP reportados pelo Apple Watch (CrossFit).
+    @Published private(set) var watchCrossFitRounds: Int = 0
+    @Published private(set) var watchCrossFitRoundsTick: Int = 0
 
     private var session: WCSession?
     /// Store de treinos do iPhone — necessário para espelhar início no Watch.
@@ -264,7 +267,9 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         poolLengthMeters: Double = 25,
         spotBuddyEnabled: Bool = false,
         activityType: HKWorkoutActivityType = .other,
-        locationOutdoor: Bool = false
+        locationOutdoor: Bool = false,
+        crossFitFormatTitle: String? = nil,
+        crossFitRounds: Int? = nil
     ) {
         let resolvedActivity = activityType == .other
             ? Self.inferredCardioActivityType(
@@ -301,7 +306,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         lastCardioStartSignature = signature
         lastCardioStartAttemptAt = .now
 
-        let message: [String: Any] = [
+        var message: [String: Any] = [
             "action": "startCardio",
             "workoutName": workoutName,
             "targetSeconds": targetSeconds,
@@ -316,6 +321,12 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             "locationOutdoor": resolvedOutdoor,
             "timestamp": Date().timeIntervalSince1970
         ]
+        if let format = crossFitFormatTitle, !format.isEmpty {
+            message["crossFitFormatTitle"] = format
+        }
+        if let rounds = crossFitRounds {
+            message["crossFitRounds"] = rounds
+        }
         // Não força `isWorkoutActiveOnWatch = false` de novo se já está false — evita churn.
         sendToWatch(message, realtime: true)
         publishWorkoutContext(message)
@@ -481,7 +492,8 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         if name.contains("remo") || name.contains("row") { return .rowing }
         if name.contains("corda") || name.contains("jump rope") || name.contains("pular") { return .jumpRope }
         if name.contains("escada") || name.contains("stair") { return .stairClimbing }
-        if name.contains("hiit") || name.contains("burpee") || name.contains("polichinel") {
+        if name.contains("hiit") || name.contains("burpee") || name.contains("polichinel")
+            || name.contains("crossfit") || name.contains("hyrox") {
             return .highIntensityIntervalTraining
         }
         if name.contains("luta") || name.contains("fight") || name.contains("box") || name.contains("mma") {
@@ -520,11 +532,13 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         targetCalories: Int? = nil,
         isKitesurf: Bool = false,
         spotBuddyEnabled: Bool = false,
-        isPaused: Bool = false
+        isPaused: Bool = false,
+        crossFitFormatTitle: String? = nil,
+        crossFitRounds: Int? = nil
     ) {
         guard !shouldSuppressWatchSessionCommands else { return }
         // Não envia estimativa do iPhone como calorias — o Watch é a fonte.
-        let message: [String: Any] = [
+        var message: [String: Any] = [
             "action": "syncCardioProgress",
             "workoutName": workoutNameIfActive(),
             "elapsedSeconds": elapsedSeconds,
@@ -536,6 +550,12 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             "isPaused": isPaused,
             "timestamp": Date().timeIntervalSince1970
         ]
+        if let format = crossFitFormatTitle, !format.isEmpty {
+            message["crossFitFormatTitle"] = format
+        }
+        if let rounds = crossFitRounds {
+            message["crossFitRounds"] = rounds
+        }
         sendToWatch(message, realtime: true)
     }
 
@@ -678,6 +698,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         watchCalories = 0
         watchSwimLapCount = 0
         watchSwimDistanceMeters = 0
+        watchCrossFitRounds = 0
         // Passos do dia permanecem; vêm do HealthKit/Watch ao longo do dia.
     }
 
@@ -1024,6 +1045,13 @@ extension WatchConnectivityManager: WCSessionDelegate {
         if action == "watchStartedSession" {
             mirrorWatchStartedSession(message)
         }
+        if action == "crossFitRounds" {
+            let rounds = (message["rounds"] as? Int)
+                ?? (message["rounds"] as? NSNumber)?.intValue
+                ?? 0
+            watchCrossFitRounds = max(0, rounds)
+            watchCrossFitRoundsTick += 1
+        }
         if action == "watchStoppedSession" {
             isWorkoutActiveOnWatch = false
             isWatchSessionPaused = false
@@ -1110,6 +1138,11 @@ extension WatchConnectivityManager: WCSessionDelegate {
             return
         }
 
+        let crossFitFormat = (message["crossFitFormatTitle"] as? String) ?? ""
+        let crossFitTarget = (message["crossFitTargetSeconds"] as? Int)
+            ?? (message["crossFitTargetSeconds"] as? NSNumber)?.intValue
+            ?? targetSeconds
+
         let started = workoutStore.startSessionFromAppleWatch(
             kind: kind,
             workoutName: workoutName,
@@ -1122,7 +1155,9 @@ extension WatchConnectivityManager: WCSessionDelegate {
             colorName: colorName,
             waterSetupModeName: (message["waterSetupModeName"] as? String) ?? "",
             waterSetupBoardName: (message["waterSetupBoardName"] as? String) ?? "",
-            autoDetected: autoDetected
+            autoDetected: autoDetected,
+            crossFitFormatTitle: crossFitFormat,
+            crossFitTargetSeconds: crossFitTarget
         )
 
         if started {

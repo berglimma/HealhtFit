@@ -237,11 +237,13 @@
 		B1000910 /* ClimbingLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000910 /* ClimbingLogbookView.swift */; };
 		B1000911 /* ClimbingAttemptEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000911 /* ClimbingAttemptEditorView.swift */; };
 		B1000912 /* FightModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000912 /* FightModels.swift */; };
+		B100091A /* CrossFitModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100091A /* CrossFitModels.swift */; };
 		B1000T01 /* TennisModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000T01 /* TennisModels.swift */; };
 		B1000T02 /* TennisLogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000T02 /* TennisLogbookView.swift */; };
 		B1000C01 /* WorkoutCheckInPhotoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000C01 /* WorkoutCheckInPhotoStore.swift */; };
 		B1000C02 /* WorkoutPhotoCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000C02 /* WorkoutPhotoCalendarView.swift */; };
 		B1000913 /* FightHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000913 /* FightHubView.swift */; };
+		B100091B /* CrossFitHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100091B /* CrossFitHubView.swift */; };
 		B1000914 /* NutritionNotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000914 /* NutritionNotificationPreferences.swift */; };
 		B1000915 /* WorkoutSheetOCRParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000915 /* WorkoutSheetOCRParser.swift */; };
 		B1000916 /* WorkoutSheetDocumentScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000916 /* WorkoutSheetDocumentScanner.swift */; };
@@ -687,11 +689,13 @@
 		F1000910 /* ClimbingLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingLogbookView.swift; sourceTree = "<group>"; };
 		F1000911 /* ClimbingAttemptEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingAttemptEditorView.swift; sourceTree = "<group>"; };
 		F1000912 /* FightModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightModels.swift; sourceTree = "<group>"; };
+		F100091A /* CrossFitModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossFitModels.swift; sourceTree = "<group>"; };
 		F1000T01 /* TennisModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisModels.swift; sourceTree = "<group>"; };
 		F1000T02 /* TennisLogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisLogbookView.swift; sourceTree = "<group>"; };
 		F1000C01 /* WorkoutCheckInPhotoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCheckInPhotoStore.swift; sourceTree = "<group>"; };
 		F1000C02 /* WorkoutPhotoCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPhotoCalendarView.swift; sourceTree = "<group>"; };
 		F1000913 /* FightHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightHubView.swift; sourceTree = "<group>"; };
+		F100091B /* CrossFitHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossFitHubView.swift; sourceTree = "<group>"; };
 		F1000914 /* NutritionNotificationPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionNotificationPreferences.swift; sourceTree = "<group>"; };
 		F1000915 /* WorkoutSheetOCRParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSheetOCRParser.swift; sourceTree = "<group>"; };
 		F1000916 /* WorkoutSheetDocumentScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSheetDocumentScanner.swift; sourceTree = "<group>"; };
@@ -972,6 +976,7 @@
 				F1000700 /* SurfKiteModels.swift */,
 				F1000801 /* RowingModels.swift */,
 				F1000912 /* FightModels.swift */,
+				F100091A /* CrossFitModels.swift */,
 				F1000T01 /* TennisModels.swift */,
 				F1000902 /* ClimbingGearModels.swift */,
 				F1000901 /* ClimbingModels.swift */,
@@ -1220,6 +1225,7 @@
 				F1000707 /* WaterWindConditionsView.swift */,
 				F1000422 /* RunRouteMapView.swift */,
 				F1000913 /* FightHubView.swift */,
+				F100091B /* CrossFitHubView.swift */,
 				F1000911 /* ClimbingAttemptEditorView.swift */,
 				F1000910 /* ClimbingLogbookView.swift */,
 				F1000T02 /* TennisLogbookView.swift */,
@@ -1798,6 +1804,7 @@
 				B1000701 /* JumpMetricsService.swift in Sources */,
 				B1000801 /* RowingModels.swift in Sources */,
 				B1000912 /* FightModels.swift in Sources */,
+				B100091A /* CrossFitModels.swift in Sources */,
 				B1000T01 /* TennisModels.swift in Sources */,
 				B1000T02 /* TennisLogbookView.swift in Sources */,
 				B1000C01 /* WorkoutCheckInPhotoStore.swift in Sources */,
@@ -2051,6 +2058,7 @@
 				B1000421 /* RunTrackingService.swift in Sources */,
 				B1000422 /* RunRouteMapView.swift in Sources */,
 				B1000913 /* FightHubView.swift in Sources */,
+				B100091B /* CrossFitHubView.swift in Sources */,
 				B1000911 /* ClimbingAttemptEditorView.swift in Sources */,
 				B1000910 /* ClimbingLogbookView.swift in Sources */,
 				B1000909 /* ClimbingMapView.swift in Sources */,

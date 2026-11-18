@@ -329,6 +329,10 @@ enum PracticeModalityID {
     static let meditation = "meditation"
     /// Card "Luta" (hub de modalidades de combate) — fora do catálogo de cardio.
     static let fight = "cardio.Luta"
+    /// Card "CrossFit" na musculação (hub Treino Crossfit + Método Hyrox).
+    static let crossfit = "strength.CrossFit"
+    /// ID antigo (cardio) — migrado para `crossfit` no perfil.
+    static let crossfitLegacy = "cardio.CrossFit"
 
     static func cardio(_ exerciseName: String) -> String {
         "cardio.\(exerciseName)"
@@ -336,7 +340,7 @@ enum PracticeModalityID {
 
     /// Lista completa usada como padrão (perfil antigo / vazio = todas).
     static var allDefaultIDs: [String] {
-        [strength, home, meditation] + CardioExercise.catalog.map { cardio($0.name) } + [fight]
+        [strength, home, crossfit, meditation] + CardioExercise.catalog.map { cardio($0.name) } + [fight]
     }
 }
 
@@ -370,6 +374,13 @@ struct PracticeModalityOption: Identifiable, Hashable {
                 icon: "house.fill",
                 group: .training,
                 detail: "Peso corporal, HIIT e core"
+            ),
+            PracticeModalityOption(
+                id: PracticeModalityID.crossfit,
+                title: "CrossFit",
+                icon: "figure.cross.training",
+                group: .training,
+                detail: "WODs (AMRAP/EMOM) e Método Hyrox"
             )
         ]
         items += CardioExercise.catalog.map { exercise in
@@ -925,13 +936,19 @@ struct UserProfile: Codable, Identifiable, Equatable {
 
     /// Conjunto efetivo: lista salva ou todas as modalidades (perfil sem preferência).
     var effectivePracticedModalityIDs: Set<String> {
-        let cleaned = practicedModalityIDs
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+        var cleaned = Set(
+            practicedModalityIDs
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        )
+        if cleaned.contains(PracticeModalityID.crossfitLegacy) {
+            cleaned.remove(PracticeModalityID.crossfitLegacy)
+            cleaned.insert(PracticeModalityID.crossfit)
+        }
         if cleaned.isEmpty {
             return Set(PracticeModalityID.allDefaultIDs)
         }
-        return Set(cleaned)
+        return cleaned
     }
 
     var practicesAllModalities: Bool {
@@ -955,6 +972,10 @@ struct UserProfile: Codable, Identifiable, Equatable {
 
     var practicesFight: Bool {
         practices(PracticeModalityID.fight)
+    }
+
+    var practicesCrossFit: Bool {
+        practices(PracticeModalityID.crossfit)
     }
 
     var practicedCardioExercises: [CardioExercise] {

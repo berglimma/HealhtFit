@@ -227,7 +227,7 @@ enum AppFeature: String, CaseIterable, Identifiable {
         case .customWorkouts:
             return "Monte e edite suas próprias fichas de treino."
         case .advancedModalities:
-            return "Surf, Kitesurf, Remo, Escalada e Luta — modalidades com sensores dedicados, cronômetro de combate e registro de condições."
+            return "Surf, Kitesurf, Remo, Escalada, Luta e CrossFit/Hyrox — modalidades com sensores dedicados, cronômetro e registro de condições."
         case .mealPlan:
             return "Cardápio do dia, metas calóricas e registro de refeições."
         case .shoppingList:
@@ -344,7 +344,7 @@ struct PlanMarketingCopy: Identifiable, Hashable {
         case .fit:
             return [
                 "Tudo do Básico",
-                "Surf, Kitesurf, Remo, Escalada e Luta",
+                "Surf, Kitesurf, Remo, Escalada, Luta e CrossFit",
                 "Criar treinos personalizados",
                 "Cardápio, metas e lista de compras",
                 "IAssistente com 5 mensagens por dia"

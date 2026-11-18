@@ -799,6 +799,8 @@ final class WorkoutStore: ObservableObject {
 
     func activeStrengthSheet() -> WorkoutSheet? {
         guard let session = activeSession else { return nil }
+        // CrossFit/Hyrox/Luta/cardio nunca usam ficha de musculação.
+        if activeCardioConfig != nil { return nil }
         guard !WeeklyProgressAnalyzer.isCardioSession(session),
               !WeeklyProgressAnalyzer.isMeditationSession(session) else { return nil }
         if let hosted = sessionStrengthSheet, hosted.id == session.workoutSheetId {
@@ -868,7 +870,7 @@ final class WorkoutStore: ObservableObject {
     /// Config de cardio ativa (persistida) ou reconstruída da sessão.
     func resolvedActiveCardioConfig() -> CardioWorkoutConfig? {
         guard let session = activeSession,
-              WeeklyProgressAnalyzer.isCardioSession(session) else { return nil }
+              (WeeklyProgressAnalyzer.isCardioSession(session) || activeCardioConfig != nil) else { return nil }
         if let activeCardioConfig { return activeCardioConfig }
         let rebuilt = CardioWorkoutConfig.reconstruct(from: session)
         activeCardioConfig = rebuilt
@@ -1018,7 +1020,9 @@ final class WorkoutStore: ObservableObject {
         colorName: String = "purple",
         waterSetupModeName: String = "",
         waterSetupBoardName: String = "",
-        autoDetected: Bool = false
+        autoDetected: Bool = false,
+        crossFitFormatTitle: String = "",
+        crossFitTargetSeconds: Int = 0
     ) -> Bool {
         // Já espelhando a mesma sessão (títulos do Watch e do iPhone podem diferir levemente)
         if let active = activeSession {
@@ -1030,6 +1034,20 @@ final class WorkoutStore: ObservableObject {
                 && title.localizedCaseInsensitiveContains(exerciseName)
             if sameTitle || sameExercise {
                 sessionOriginatedFromWatch = true
+                // Se o Watch reenviou formato CrossFit, completa o config ativo.
+                if activeCardioConfig?.isCrossFitSession == true,
+                   let format = Optional(crossFitFormatTitle), !format.isEmpty,
+                   activeCardioConfig?.crossFitFormatTitle != format {
+                    let target = crossFitTargetSeconds > 0 ? crossFitTargetSeconds : targetSeconds
+                    if let exercise = activeCardioConfig?.exercise {
+                        activeCardioConfig = CardioWorkoutConfig(
+                            exercise: exercise,
+                            intensity: activeCardioConfig?.intensity ?? .high,
+                            crossFitFormatTitle: format,
+                            crossFitTargetSeconds: target
+                        )
+                    }
+                }
                 return true
             }
         }
@@ -1041,12 +1059,15 @@ final class WorkoutStore: ObservableObject {
         case "cardio":
             started = startWatchMirroredCardio(
                 exerciseName: exerciseName,
+                workoutName: workoutName,
                 waterSportMode: waterSportMode,
                 isKitesurf: isKitesurf,
                 swimmingMode: swimmingMode,
                 modeName: waterSetupModeName,
                 boardName: waterSetupBoardName,
-                autoDetected: autoDetected
+                autoDetected: autoDetected,
+                crossFitFormatTitle: crossFitFormatTitle,
+                crossFitTargetSeconds: crossFitTargetSeconds > 0 ? crossFitTargetSeconds : targetSeconds
             )
         case "meditation":
             started = startWatchMirroredMeditation(
@@ -1107,14 +1128,23 @@ final class WorkoutStore: ObservableObject {
 
     private func startWatchMirroredCardio(
         exerciseName: String,
+        workoutName: String = "",
         waterSportMode: Bool,
         isKitesurf: Bool,
         swimmingMode: Bool,
         modeName: String = "",
         boardName: String = "",
-        autoDetected: Bool = false
+        autoDetected: Bool = false,
+        crossFitFormatTitle: String = "",
+        crossFitTargetSeconds: Int = 0
     ) -> Bool {
-        let exercise = CardioExercise.catalog.first {
+        // Inclui luta / CrossFit / Hyrox (`allKnown`), não só o catálogo genérico.
+        let combinedName = "\(exerciseName) \(workoutName)"
+        let exercise = CardioExercise.allKnown.first {
+            $0.name.caseInsensitiveCompare(exerciseName) == .orderedSame
+        } ?? CardioExercise.allKnown.first {
+            combinedName.localizedCaseInsensitiveContains($0.name)
+        } ?? CardioExercise.catalog.first {
             $0.name.caseInsensitiveCompare(exerciseName) == .orderedSame
         } ?? CardioExercise.catalog.first {
             exerciseName.localizedCaseInsensitiveContains($0.name)
@@ -1124,6 +1154,19 @@ final class WorkoutStore: ObservableObject {
             icon: swimmingMode ? "figure.pool.swim" : (waterSportMode ? "figure.surfing" : "figure.run"),
             caloriesPerMinute: 10
         )
+
+        let resolvedFormat: String = {
+            if !crossFitFormatTitle.isEmpty { return crossFitFormatTitle }
+            if exercise.isCrossFit,
+               let afterDot = workoutName.components(separatedBy: " · ").last,
+               afterDot != workoutName {
+                return afterDot
+            }
+            return ""
+        }()
+        let isCrossFit = exercise.isCrossFit || !resolvedFormat.isEmpty
+            || combinedName.localizedCaseInsensitiveContains("crossfit")
+            || combinedName.localizedCaseInsensitiveContains("hyrox")
 
         let setup: WaterSportSetup? = {
             guard waterSportMode || exercise.isWaterSport else { return nil }
@@ -1156,19 +1199,30 @@ final class WorkoutStore: ObservableObject {
             }
         }()
 
+        let crossFitExercise: CardioExercise = {
+            guard isCrossFit else { return exercise }
+            if exercise.isCrossFit { return exercise }
+            if combinedName.localizedCaseInsensitiveContains("hyrox") {
+                return CrossFitTrack.metodoHyrox.cardioExercise
+            }
+            return CrossFitTrack.treinoCrossfit.cardioExercise
+        }()
+
         let config = CardioWorkoutConfig(
-            exercise: exercise,
-            intensity: .medium,
+            exercise: crossFitExercise,
+            intensity: isCrossFit || exercise.isFight ? .high : .medium,
             runningDistance: nil,
             targetCalories: nil,
-            isFreeRun: true,
+            isFreeRun: !isCrossFit && !exercise.isFight,
             poolLengthMeters: (swimmingMode || exercise.supportsSwimmingPool) ? 25 : nil,
             targetSwimLaps: nil,
             customTargetDistanceKm: nil,
             waterSportSetup: setup,
             climbingSetup: exercise.isClimbing ? .default : nil,
             treadmillSetup: exercise.isTreadmill ? .default : nil,
-            tennisSetup: exercise.isTennis ? .default : nil
+            tennisSetup: exercise.isTennis ? .default : nil,
+            crossFitFormatTitle: isCrossFit ? (resolvedFormat.isEmpty ? "Livre" : resolvedFormat) : nil,
+            crossFitTargetSeconds: isCrossFit ? max(0, crossFitTargetSeconds) : nil
         )
         guard startCardioSession(config: config) else { return false }
 

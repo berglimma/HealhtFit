@@ -39,7 +39,7 @@ struct WorkoutListView: View {
         return WorkoutSection.allCases.filter { section in
             guard let user else { return true }
             switch section {
-            case .strength: return user.practices(PracticeModalityID.strength)
+            case .strength: return user.practices(PracticeModalityID.strength) || user.practicesCrossFit
             case .home: return user.practices(PracticeModalityID.home)
             case .cardio: return user.practicesAnyCardio
             case .meditation: return user.practices(PracticeModalityID.meditation)
@@ -75,6 +75,11 @@ struct WorkoutListView: View {
     /// Sem usuário ou preferência “todas” → Luta aparece; senão respeita o toggle do perfil.
     private var showsFightCard: Bool {
         authService.currentUser?.practicesFight ?? true
+    }
+
+    /// Sem usuário ou preferência “todas” → CrossFit aparece; senão respeita o toggle do perfil.
+    private var showsCrossFitCard: Bool {
+        authService.currentUser?.practicesCrossFit ?? true
     }
 
     private var hasHiddenCardioModalities: Bool {
@@ -207,6 +212,10 @@ struct WorkoutListView: View {
             }
             .navigationDestination(for: FightHubRoute.self) { _ in
                 FightHubView()
+                    .onAppear { discardAlignedMealPlanForOtherWorkout() }
+            }
+            .navigationDestination(for: CrossFitHubRoute.self) { _ in
+                CrossFitHubView()
                     .onAppear { discardAlignedMealPlanForOtherWorkout() }
             }
             .navigationDestination(for: MeditationTopic.self) { topic in
@@ -387,6 +396,10 @@ struct WorkoutListView: View {
             }
             .buttonStyle(.plain)
 
+            if showsCrossFitCard {
+                crossFitCardEntry
+            }
+
             Text("Mobilidade, cardio, treino em casa e meditação continuam disponíveis mesmo com personal.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
@@ -462,6 +475,24 @@ struct WorkoutListView: View {
                 paywallFeature = feature
             } label: {
                 FightProgramHeroCard(lockedByPlan: FeatureGate.minimumPlan(for: feature))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private var crossFitCardEntry: some View {
+        let feature = AppFeature.advancedModalities
+        if subscriptions.canAccess(feature) {
+            NavigationLink(value: CrossFitHubRoute()) {
+                CrossFitProgramHeroCard()
+            }
+            .buttonStyle(.plain)
+        } else {
+            Button {
+                paywallFeature = feature
+            } label: {
+                CrossFitProgramHeroCard(lockedByPlan: FeatureGate.minimumPlan(for: feature))
             }
             .buttonStyle(.plain)
         }

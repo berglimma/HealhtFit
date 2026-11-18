@@ -68,6 +68,25 @@ enum WatchCatalog {
         let prompts: [String]
     }
 
+    /// Trilha CrossFit / Hyrox — nomes alinhados ao iPhone (`CrossFitTrack`).
+    struct CrossFitTrack: Identifiable, Hashable {
+        let id: String
+        let name: String
+        let icon: String
+        let formats: [CrossFitFormat]
+    }
+
+    struct CrossFitFormat: Identifiable, Hashable {
+        let id: String
+        let title: String
+        let detail: String
+        /// `0` = cronômetro livre (For Time / prova).
+        let targetSeconds: Int
+
+        var isAMRAP: Bool { title.uppercased().hasPrefix("AMRAP") }
+        var isEMOM: Bool { title.uppercased().hasPrefix("EMOM") }
+    }
+
     enum DurationOption: Int, CaseIterable, Identifiable {
         case five = 5
         case ten = 10
@@ -406,6 +425,36 @@ enum WatchCatalog {
         .init(id: "tennis", name: "Tênis", icon: "figure.tennis", isWaterSport: false, isKitesurf: false, isSwimming: false),
         .init(id: "jack", name: "Polichinelo", icon: "figure.mixed.cardio", isWaterSport: false, isKitesurf: false, isSwimming: false),
         .init(id: "burpee", name: "Burpees", icon: "figure.highintensity.intervaltraining", isWaterSport: false, isKitesurf: false, isSwimming: false),
+    ]
+
+    static let crossFitTracks: [CrossFitTrack] = [
+        .init(
+            id: "wod",
+            name: "Treino Crossfit",
+            icon: "figure.cross.training",
+            formats: [
+                .init(id: "amrap12", title: "AMRAP 12", detail: "Máximo de rounds em 12 min", targetSeconds: 12 * 60),
+                .init(id: "amrap15", title: "AMRAP 15", detail: "Máximo de rounds em 15 min", targetSeconds: 15 * 60),
+                .init(id: "amrap20", title: "AMRAP 20", detail: "Clássico de condicionamento", targetSeconds: 20 * 60),
+                .init(id: "emom12", title: "EMOM 12", detail: "A cada minuto, um bloco", targetSeconds: 12 * 60),
+                .init(id: "emom16", title: "EMOM 16", detail: "Blocos longos", targetSeconds: 16 * 60),
+                .init(id: "fortime", title: "For Time", detail: "Complete o WOD no menor tempo", targetSeconds: 0),
+                .init(id: "chipper", title: "Chipper", detail: "Lista longa, uma vez", targetSeconds: 0),
+                .init(id: "open", title: "Livre", detail: "Cronômetro aberto", targetSeconds: 0)
+            ]
+        ),
+        .init(
+            id: "hyrox",
+            name: "Método Hyrox",
+            icon: "flag.checkered",
+            formats: [
+                .init(id: "race", title: "Simulação de prova", detail: "8 estações + corridas", targetSeconds: 0),
+                .init(id: "half", title: "Meia prova", detail: "~30–45 min", targetSeconds: 40 * 60),
+                .init(id: "station", title: "Foco em estação", detail: "Técnica e volume", targetSeconds: 20 * 60),
+                .init(id: "doubles", title: "Doubles", detail: "Revezamento em dupla", targetSeconds: 0),
+                .init(id: "open", title: "Livre", detail: "Cronômetro aberto", targetSeconds: 0)
+            ]
+        )
     ]
 
     static let meditationTopics: [MeditationTopic] = [

@@ -52,6 +52,12 @@ struct WatchContentView: View {
                 }
 
                 NavigationLink {
+                    crossFitList
+                } label: {
+                    Label("CrossFit", systemImage: "figure.cross.training")
+                }
+
+                NavigationLink {
                     meditationList
                 } label: {
                     Label("Meditação", systemImage: "brain.head.profile")
@@ -184,6 +190,53 @@ struct WatchContentView: View {
             }
         }
         .navigationTitle(activity.name)
+    }
+
+    private var crossFitList: some View {
+        List {
+            Section {
+                Text("Escolha a trilha e o formato — o iPhone abre o WOD em sync.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(WatchCatalog.crossFitTracks) { track in
+                NavigationLink {
+                    crossFitFormatPicker(track: track)
+                } label: {
+                    Label(track.name, systemImage: track.icon)
+                        .font(.caption)
+                }
+            }
+        }
+        .navigationTitle("CrossFit")
+    }
+
+    private func crossFitFormatPicker(track: WatchCatalog.CrossFitTrack) -> some View {
+        List {
+            Section {
+                Text(track.name)
+                    .font(.headline)
+                Text("10 s de PREP · depois o cronômetro do WOD")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            Section("Formato") {
+                ForEach(track.formats) { format in
+                    Button {
+                        workoutManager.beginLocalCrossFit(track: track, format: format)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(format.title)
+                                .font(.caption.weight(.semibold))
+                            Text(format.detail)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle(track.name)
     }
 
     private var meditationList: some View {
@@ -620,8 +673,13 @@ struct WatchContentView: View {
             if workoutManager.isSwimmingMode {
                 swimmingCardioExtras
             }
+            if workoutManager.isCrossFitMode {
+                crossFitCardioExtras
+            }
 
-            if workoutManager.usesSegmentedChronometer {
+            if workoutManager.isCrossFitPrepActive {
+                crossFitPrepSection
+            } else if workoutManager.usesSegmentedChronometer {
                 segmentedChronometerCardio
                 if hasCalorieGoal {
                     ProgressView(value: calorieProgress)
@@ -666,17 +724,42 @@ struct WatchContentView: View {
                         .lineLimit(2)
                 }
             } else {
-                Label("Cronômetro", systemImage: "stopwatch.fill")
+                Label(
+                    workoutManager.isCrossFitMode ? "WOD" : "Cronômetro",
+                    systemImage: "stopwatch.fill"
+                )
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
-                Text(formatDuration(workoutManager.workoutElapsedSeconds))
+                Text(formatDuration(workoutManager.crossFitDisplaySeconds))
                     .font(.system(size: 40, weight: .bold, design: .monospaced))
-                    .foregroundStyle(workoutManager.isPaused ? Color.yellow : Color.orange)
+                    .foregroundStyle(
+                        workoutManager.isPaused
+                        ? Color.yellow
+                        : (workoutManager.isCrossFitCountdown
+                           && workoutManager.crossFitDisplaySeconds <= 10
+                           ? Color.red
+                           : Color.orange)
+                    )
                     .minimumScaleFactor(0.65)
                     .lineLimit(1)
 
-                if workoutManager.cardioTargetSeconds > 0 {
+                if workoutManager.isCrossFitCountdown {
+                    Text(
+                        workoutManager.crossFitDisplaySeconds == 0
+                        ? "Tempo esgotado"
+                        : "Restantes"
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    ProgressView(
+                        value: Double(
+                            max(0, workoutManager.cardioTargetSeconds - workoutManager.crossFitDisplaySeconds)
+                        ),
+                        total: Double(max(workoutManager.cardioTargetSeconds, 1))
+                    )
+                    .tint(.orange)
+                } else if workoutManager.cardioTargetSeconds > 0 {
                     Text("Meta: \(formatDuration(workoutManager.cardioTargetSeconds))")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -687,6 +770,63 @@ struct WatchContentView: View {
                     )
                     .tint(.orange)
                 }
+            }
+        }
+    }
+
+    private var crossFitPrepSection: some View {
+        VStack(spacing: 4) {
+            Text("PREP")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.orange)
+            Text("\(workoutManager.crossFitPrepRemaining)")
+                .font(.system(size: 48, weight: .bold, design: .rounded))
+            Text(workoutManager.crossFitFormatTitle)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Button("Pular") {
+                workoutManager.skipCrossFitPrep()
+            }
+            .font(.caption2.weight(.semibold))
+            .tint(.orange)
+        }
+    }
+
+    private var crossFitCardioExtras: some View {
+        VStack(spacing: 6) {
+            if !workoutManager.crossFitFormatTitle.isEmpty {
+                Text(workoutManager.crossFitFormatTitle)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.orange)
+                    .lineLimit(1)
+            }
+            if workoutManager.isCrossFitAMRAP, !workoutManager.isCrossFitPrepActive {
+                HStack(spacing: 10) {
+                    Button {
+                        workoutManager.decrementCrossFitRound()
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                    }
+                    .tint(.orange)
+                    .disabled(workoutManager.crossFitRounds == 0)
+
+                    VStack(spacing: 0) {
+                        Text("\(workoutManager.crossFitRounds)")
+                            .font(.title3.bold())
+                        Text("rounds")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Button {
+                        workoutManager.incrementCrossFitRound()
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                    }
+                    .tint(.orange)
+                }
+                .buttonStyle(.plain)
             }
         }
     }

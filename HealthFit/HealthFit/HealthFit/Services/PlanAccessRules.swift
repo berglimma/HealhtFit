@@ -9,7 +9,7 @@ enum PlanAccessRules {
             return .fullWorkouts
         }
         if exercise.isWaterSport || exercise.isRowing || exercise.isClimbing
-            || exercise.isFight || exercise.isTennis {
+            || exercise.isFight || exercise.isTennis || exercise.isCrossFit {
             return .advancedModalities
         }
         return nil

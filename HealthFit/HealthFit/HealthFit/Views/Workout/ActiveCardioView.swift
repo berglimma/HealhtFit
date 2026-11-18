@@ -1,3 +1,4 @@
+import AudioToolbox
 import Charts
 import Combine
 import CoreLocation
@@ -68,6 +69,13 @@ struct ActiveCardioView: View {
     @State private var tennisPeakHR: Double = 0
     @State private var lastTennisBurstAt: Date = .distantPast
     @State private var lastTennisBurstTick = 0
+    /// CrossFit: countdown de preparação (10…1) antes do WOD contar.
+    @State private var crossFitPrepRemaining: Int?
+    @State private var crossFitPrepActive = false
+    @State private var didArmCrossFitPrep = false
+    @State private var crossFitRounds = 0
+    @State private var crossFitCheckedStations: Set<String> = []
+    @State private var lastCrossFitEMOMMinute = -1
 
     /// Side-effects; display uses wall clock from session start minus pauses.
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -83,6 +91,8 @@ struct ActiveCardioView: View {
     private var isClimbing: Bool { config.isClimbingSession }
     private var isTennis: Bool { config.isTennisSession }
     private var isFight: Bool { config.isFightSession }
+    private var isCrossFit: Bool { config.isCrossFitSession }
+    private var isTimedOpenSession: Bool { isFight || config.isCrossFitOpenSession }
     private var isTreadmill: Bool { config.isTreadmillSession }
     private var treadmillHasElevation: Bool { config.treadmillSetup?.hasElevation == true }
     private var climbingSetup: ClimbingSetup { config.climbingSetup ?? .default }
@@ -183,8 +193,8 @@ struct ActiveCardioView: View {
     }
 
     private var primaryProgress: Double {
-        // Luta é cronômetro puro: sem meta, o anel fica só como moldura do tempo.
-        if isFight { return 0 }
+        // Luta / CrossFit livre: cronômetro puro — anel só como moldura do tempo.
+        if isTimedOpenSession { return 0 }
         if config.hasCalorieGoal {
             return calorieProgressClamped
         }
@@ -205,8 +215,232 @@ struct ActiveCardioView: View {
         config.isRunningSession
     }
 
+    private var timedOpenCaption: String {
+        if isFight {
+            return isPaused ? "Luta pausada" : "Tempo de luta"
+        }
+        if isCrossFit {
+            if config.isCrossFitCountdown {
+                let remaining = max(0, config.targetDurationSeconds - elapsedSeconds)
+                if remaining == 0 { return "Tempo esgotado" }
+                return isPaused ? "Pausado" : "Restantes"
+            }
+            if config.isCrossFitOpenSession {
+                return isPaused ? "Sessão pausada" : "Tempo de WOD"
+            }
+            return "Meta: \(DurationFormatting.format(seconds: config.targetDurationSeconds))"
+        }
+        return "Meta: \(DurationFormatting.format(seconds: config.targetDurationSeconds))"
+    }
+
+    private var crossFitDisplaySeconds: Int {
+        if config.isCrossFitCountdown {
+            return max(0, config.targetDurationSeconds - elapsedSeconds)
+        }
+        return elapsedSeconds
+    }
+
+    /// Orientação de WOD/Hyrox sem ficha de exercício — padrão de timer CrossFit.
+    @ViewBuilder
+    private var crossFitLiveGuidance: some View {
+        let format = config.crossFitFormatTitle ?? "Sessão"
+        let track = config.crossFitTrack
+        VStack(spacing: 10) {
+            Text(format)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(AppTheme.textPrimary)
+            Text(crossFitFormatCoachText(format: format, track: track))
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+            if let stations = track?.stationsHint {
+                Text(stations)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
+            }
+            Text(config.isCrossFitOpenSession
+                  ? "Cronômetro livre · pause se precisar · encerre ao completar"
+                  : "Meta \(DurationFormatting.format(seconds: config.targetDurationSeconds)) · BPM e kcal no Apple Watch")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private func crossFitFormatCoachText(format: String, track: CrossFitTrack?) -> String {
+        let key = format.lowercased()
+        if key.hasPrefix("amrap") {
+            return "Faça o máximo de rounds possíveis até o tempo acabar. Anote rounds + reps no final."
+        }
+        if key.hasPrefix("emom") {
+            return "A cada minuto, complete o bloco de reps. O restante do minuto é descanso."
+        }
+        if key.contains("for time") {
+            return "Complete o WOD o mais rápido possível. Toque em Encerrar quando terminar."
+        }
+        if key.contains("chipper") {
+            return "Passe pela lista de movimentos uma vez, na ordem. Sem rounds — só terminar."
+        }
+        if track == .metodoHyrox {
+            if key.contains("simulação") || key.contains("prova") {
+                return "Alterne corrida e as 8 estações. Foque no ritmo contínuo da prova."
+            }
+            if key.contains("estação") {
+                return "Concentre técnica e volume em uma estação. Use o cronômetro como bloco de trabalho."
+            }
+            if key.contains("doubles") {
+                return "Revezamento em dupla: um trabalha, o outro recupera. Mantenha o relógio rodando."
+            }
+            return "Treino Hyrox — use o tempo como referência da sessão funcional."
+        }
+        return "Treino CrossFit sem demonstração de exercício — foque no relógio e no formato escolhido."
+    }
+
+    private var crossFitPhaseCaption: some View {
+        HStack(spacing: 8) {
+            Image(systemName: crossFitPrepActive ? "hourglass" : "bolt.heart.fill")
+            Text(crossFitPrepActive ? "PREP" : (config.isCrossFitCountdown ? "WORK" : "WOD"))
+                .font(.caption.weight(.bold))
+            if config.isCrossFitAMRAP {
+                Text("·")
+                Text("\(crossFitRounds) rounds")
+                    .font(.caption.weight(.semibold))
+            }
+            if config.isCrossFitEMOM, !crossFitPrepActive {
+                let minute = max(1, (elapsedSeconds / 60) + 1)
+                let total = max(1, config.targetDurationSeconds / 60)
+                Text("·")
+                Text("Min \(min(minute, total))/\(total)")
+                    .font(.caption.weight(.semibold))
+            }
+        }
+        .foregroundStyle(AppTheme.accent)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(AppTheme.accent.opacity(0.12))
+        .clipShape(Capsule())
+    }
+
+    private var crossFitLiveControls: some View {
+        VStack(spacing: 12) {
+            if config.isCrossFitAMRAP {
+                HStack(spacing: 12) {
+                    Button {
+                        crossFitRounds = max(0, crossFitRounds - 1)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        syncWithWatch()
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.title2)
+                    }
+                    .disabled(crossFitRounds == 0 || crossFitPrepActive)
+
+                    VStack(spacing: 2) {
+                        Text("\(crossFitRounds)")
+                            .font(.system(size: 40, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Rounds")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    .frame(minWidth: 88)
+
+                    Button {
+                        crossFitRounds += 1
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        syncWithWatch()
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                    }
+                    .disabled(crossFitPrepActive)
+                }
+                .foregroundStyle(AppTheme.accent)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            if let stations = config.crossFitTrack?.stations, !stations.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Estações", systemImage: "flag.checkered")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    ForEach(stations, id: \.self) { station in
+                        Button {
+                            if crossFitCheckedStations.contains(station) {
+                                crossFitCheckedStations.remove(station)
+                            } else {
+                                crossFitCheckedStations.insert(station)
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: crossFitCheckedStations.contains(station)
+                                      ? "checkmark.circle.fill"
+                                      : "circle")
+                                    .foregroundStyle(
+                                        crossFitCheckedStations.contains(station)
+                                        ? AppTheme.accent
+                                        : AppTheme.textSecondary
+                                    )
+                                Text(station)
+                                    .font(.subheadline)
+                                    .foregroundStyle(
+                                        crossFitCheckedStations.contains(station)
+                                        ? AppTheme.textSecondary
+                                        : AppTheme.textPrimary
+                                    )
+                                    .strikethrough(crossFitCheckedStations.contains(station))
+                                Spacer()
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(crossFitPrepActive)
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+    }
+
+    private func crossFitPrepOverlay(remaining: Int) -> some View {
+        VStack(spacing: 16) {
+            Text("PREP")
+                .font(.caption.weight(.bold))
+                .tracking(2)
+                .foregroundStyle(AppTheme.accent)
+            Text("\(remaining)")
+                .font(.system(size: 96, weight: .bold, design: .rounded))
+                .foregroundStyle(AppTheme.textPrimary)
+                .contentTransition(.numericText())
+            Text(config.crossFitFormatTitle ?? "WOD")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+            Text("Posicione o celular e prepare-se")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.textSecondary)
+            Button("Pular prep") {
+                finishCrossFitPrep(skipped: true)
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(AppTheme.accent)
+            .padding(.top, 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(AppTheme.background.opacity(0.92).ignoresSafeArea())
+        .transition(.opacity)
+    }
+
     private var navigationTitleText: String {
-        if isFight { return config.exercise.name }
+        if isFight || isCrossFit { return config.exercise.name }
         if isSwimming { return "Natação" }
         if isWaterSport {
             return config.isKitesurfSession ? "Kitesurf" : "Surf"
@@ -269,6 +503,11 @@ struct ActiveCardioView: View {
                     }
                     .padding(DeviceLayout.adaptivePadding(for: horizontalSizeClass))
                     .adaptiveContentWidth()
+                }
+                .opacity(crossFitPrepActive ? 0.25 : 1)
+
+                if crossFitPrepActive, let remaining = crossFitPrepRemaining, remaining > 0 {
+                    crossFitPrepOverlay(remaining: remaining)
                 }
 
                 sessionHooks
@@ -351,6 +590,9 @@ struct ActiveCardioView: View {
             if isTennis {
                 AnyView(tennisLiveSection)
             }
+            if isCrossFit {
+                AnyView(crossFitLiveControls)
+            }
         }
     }
 
@@ -360,6 +602,9 @@ struct ActiveCardioView: View {
         if isSwimming {
             AnyView(swimmingLapControls)
             AnyView(swimWatchSyncButton)
+        }
+        if isCrossFit {
+            AnyView(crossFitPhaseCaption)
         }
         AnyView(calorieEvolutionSection)
         if let superationMessage {
@@ -425,11 +670,16 @@ struct ActiveCardioView: View {
         sessionHookAnchor
         .onReceive(clock) { _ in
             clockTickCount += 1
+            if crossFitPrepActive {
+                tickCrossFitPrep()
+                return
+            }
             if !isPaused {
                 elapsedSeconds = activeElapsedSeconds()
                 if isRowing {
                     syncRowingKinematics()
                 }
+                tickCrossFitEMOMCueIfNeeded()
             }
 
             let minimized = workoutStore.isActiveWorkoutMinimized
@@ -542,7 +792,7 @@ struct ActiveCardioView: View {
             finishedSession = session
         }
         .onChange(of: watchConnectivity.isWatchSessionPaused) { _, paused in
-            guard !isFinishing, finishedSession == nil else { return }
+            guard !isFinishing, finishedSession == nil, !crossFitPrepActive else { return }
             if paused, !isPaused {
                 pauseCardio(fromWatch: true)
             } else if !paused, isPaused {
@@ -553,11 +803,16 @@ struct ActiveCardioView: View {
             guard tick > 0, !isFinishing, finishedSession == nil else { return }
             finishCardio()
         }
+        .onChange(of: watchConnectivity.watchCrossFitRoundsTick) { _, tick in
+            guard tick > 0, isCrossFit, config.isCrossFitAMRAP else { return }
+            crossFitRounds = max(crossFitRounds, watchConnectivity.watchCrossFitRounds)
+        }
         .onAppear {
             elapsedSeconds = activeElapsedSeconds()
             syncWithWatch()
             startSessionHardwareIfVisible()
             handleExternalFinishTickIfNeeded()
+            armCrossFitPrepIfNeeded()
             // Aplica GPS do Watch que chegou enquanto a tela estava em background.
             if isWaterSport, !watchConnectivity.lastWatchGPSBatch.isEmpty {
                 runTracker.ingestWatchGPSPoints(watchConnectivity.lastWatchGPSBatch)
@@ -1298,6 +1553,10 @@ struct ActiveCardioView: View {
                 Image(systemName: modality.icon)
                 Text(modality.name)
                     .font(.subheadline.weight(.semibold))
+            } else if isCrossFit {
+                Image(systemName: config.exercise.icon)
+                Text(config.crossFitFormatTitle ?? config.exercise.name)
+                    .font(.subheadline.weight(.semibold))
             } else {
                 Image(systemName: config.intensity.icon)
                 Text("Intensidade \(config.intensity.rawValue)")
@@ -1389,6 +1648,8 @@ struct ActiveCardioView: View {
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
                     .multilineTextAlignment(.center)
+            } else if isCrossFit {
+                crossFitLiveGuidance
             } else if config.hasCalorieGoal {
                 Text("Meta calórica: \(config.targetCalories ?? 0) kcal · sincronizado com Apple Watch")
                     .font(.caption)
@@ -1494,13 +1755,30 @@ struct ActiveCardioView: View {
                     if isPaused || totalPausedSeconds > 0 {
                         pauseChronometer
                     }
+                } else if isCrossFit {
+                    Text(DurationFormatting.formatElapsedClock(seconds: crossFitDisplaySeconds))
+                        .font(.system(size: 44, weight: .bold, design: .monospaced))
+                        .foregroundStyle(
+                            config.isCrossFitCountdown && crossFitDisplaySeconds <= 10 && crossFitDisplaySeconds > 0
+                            ? .red
+                            : (isPaused || crossFitPrepActive ? AppTheme.textSecondary : AppTheme.textPrimary)
+                        )
+                    Text(timedOpenCaption)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                    if let format = config.crossFitFormatTitle {
+                        Text(format)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    if isPaused || totalPausedSeconds > 0 {
+                        pauseChronometer
+                    }
                 } else {
                     Text(DurationFormatting.formatElapsedClock(seconds: elapsedSeconds))
                         .font(.system(size: 36, weight: .bold, design: .monospaced))
                         .foregroundStyle(isPaused ? AppTheme.textSecondary : AppTheme.textPrimary)
-                    Text(isFight
-                          ? (isPaused ? "Luta pausada" : "Tempo de luta")
-                          : "Meta: \(DurationFormatting.format(seconds: config.targetDurationSeconds))")
+                    Text(timedOpenCaption)
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                     if isPaused || totalPausedSeconds > 0 {
@@ -1932,7 +2210,7 @@ struct ActiveCardioView: View {
             )
         }
         .buttonStyle(.plain)
-        .disabled(isFinishing)
+        .disabled(isFinishing || crossFitPrepActive)
         .accessibilityLabel(isPaused ? "Retomar treino" : "Pausar treino")
     }
 
@@ -1959,6 +2237,68 @@ struct ActiveCardioView: View {
             return max(0, totalPausedSeconds) + max(0, Int(date.timeIntervalSince(pauseStartedAt)))
         }
         return max(0, totalPausedSeconds)
+    }
+
+    private func armCrossFitPrepIfNeeded() {
+        guard isCrossFit, !didArmCrossFitPrep else { return }
+        didArmCrossFitPrep = true
+        // Início no Watch: o PREP roda no relógio — iPhone só espelha o WOD.
+        if workoutStore.sessionOriginatedFromWatch {
+            crossFitPrepActive = false
+            crossFitPrepRemaining = nil
+            return
+        }
+        // Sessão já em andamento (retomada) — sem prep de novo.
+        if activeElapsedSeconds() > 5 || finalizedPausedSeconds() > 5 {
+            crossFitPrepActive = false
+            crossFitPrepRemaining = nil
+            return
+        }
+        crossFitPrepRemaining = 10
+        crossFitPrepActive = true
+        if !isPaused {
+            pauseCardio()
+        }
+        UIApplication.shared.isIdleTimerDisabled = true
+    }
+
+    private func tickCrossFitPrep() {
+        guard crossFitPrepActive, let remaining = crossFitPrepRemaining else { return }
+        if remaining <= 1 {
+            finishCrossFitPrep(skipped: false)
+            return
+        }
+        let next = remaining - 1
+        crossFitPrepRemaining = next
+        if next <= 3 {
+            UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+            AudioServicesPlaySystemSound(1104)
+        }
+    }
+
+    private func finishCrossFitPrep(skipped: Bool) {
+        guard crossFitPrepActive else { return }
+        crossFitPrepActive = false
+        crossFitPrepRemaining = 0
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        AudioServicesPlaySystemSound(1057)
+        resumeCardio()
+        elapsedSeconds = activeElapsedSeconds()
+        lastCrossFitEMOMMinute = elapsedSeconds / 60
+        if skipped {
+            progressMessage = nil
+        }
+    }
+
+    private func tickCrossFitEMOMCueIfNeeded() {
+        guard config.isCrossFitEMOM, !isPaused, !crossFitPrepActive else { return }
+        let minute = elapsedSeconds / 60
+        guard minute > 0, minute != lastCrossFitEMOMMinute else { return }
+        // Só no limite exato do minuto (evita beep a cada tick após o minuto).
+        guard elapsedSeconds % 60 == 0 else { return }
+        lastCrossFitEMOMMinute = minute
+        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+        AudioServicesPlaySystemSound(1005)
     }
 
     private func togglePause() {
@@ -2026,7 +2366,7 @@ struct ActiveCardioView: View {
 
     private func syncWithWatch() {
         guard !isFinishing, finishedSession == nil, workoutStore.activeSession != nil else { return }
-        if !watchConnectivity.isWorkoutActiveOnWatch {
+        if !watchConnectivity.isWorkoutActiveOnWatch, !workoutStore.sessionOriginatedFromWatch {
             watchConnectivity.startCardioOnWatch(
                 workoutName: config.title,
                 targetSeconds: config.targetDurationSeconds,
@@ -2038,7 +2378,9 @@ struct ActiveCardioView: View {
                 poolLengthMeters: config.resolvedPoolLengthMeters,
                 spotBuddyEnabled: isKitesurf && spotBuddy.isActive,
                 activityType: config.healthKitActivityType,
-                locationOutdoor: config.prefersOutdoorHealthKitLocation
+                locationOutdoor: config.prefersOutdoorHealthKitLocation,
+                crossFitFormatTitle: isCrossFit ? config.crossFitFormatTitle : nil,
+                crossFitRounds: isCrossFit && config.isCrossFitAMRAP ? crossFitRounds : nil
             )
         }
         watchConnectivity.syncCardioProgress(
@@ -2048,7 +2390,9 @@ struct ActiveCardioView: View {
             targetCalories: config.targetCalories,
             isKitesurf: isKitesurf,
             spotBuddyEnabled: isKitesurf && spotBuddy.isActive,
-            isPaused: isPaused
+            isPaused: isPaused || crossFitPrepActive,
+            crossFitFormatTitle: isCrossFit ? config.crossFitFormatTitle : nil,
+            crossFitRounds: isCrossFit && config.isCrossFitAMRAP ? crossFitRounds : nil
         )
         // Sem BPM fresco e Watch alcançável: pede métricas (throttle interno no manager).
         if liveHeartRateBPM <= 0,
@@ -2849,11 +3193,23 @@ struct ActiveCardioView: View {
                         let type = tennisSetup.sessionType.rawValue
                         return "Tênis · \(type) (\(config.intensity.rawValue))"
                     }
+                    if isCrossFit {
+                        let format = config.crossFitFormatTitle ?? "WOD"
+                        var label = "\(config.exercise.name) · \(format)"
+                        if config.isCrossFitAMRAP, crossFitRounds > 0 {
+                            label += " · \(crossFitRounds) rounds"
+                        }
+                        if !crossFitCheckedStations.isEmpty {
+                            label += " · \(crossFitCheckedStations.count) estações"
+                        }
+                        return label
+                    }
                     return "\(config.exercise.name) (\(config.intensity.rawValue))"
                 }(),
                 elapsedSeconds: elapsedSeconds,
                 restSeconds: 0,
-                isCompleted: goalReached
+                isCompleted: goalReached,
+                completedSets: isCrossFit && config.isCrossFitAMRAP ? crossFitRounds : 0
             )
         ]
         session.completedExercises = session.exerciseRecords.filter(\.isCompleted).count

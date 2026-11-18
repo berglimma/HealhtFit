@@ -103,8 +103,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var strengthExerciseNumber = 1
     @Published var strengthExerciseCount = 0
     @Published var strengthProgramFinished = false
+    /// CrossFit / Hyrox iniciado no Watch ou espelhado do iPhone.
+    @Published var isCrossFitMode = false
+    @Published var crossFitFormatTitle = ""
+    @Published var crossFitRounds = 0
+    @Published var crossFitPrepRemaining = 0
+    @Published var isCrossFitPrepActive = false
 
     private var session: WCSession?
+    private var crossFitPrepTimer: Timer?
+    private var lastCrossFitEMOMMinute = -1
     private var heartRateTimer: Timer?
     private var workoutClockTimer: Timer?
     private var restTimer: Timer?
@@ -369,6 +377,32 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         WKInterfaceDevice.current().play(.click)
     }
 
+    /// Inicia CrossFit / Hyrox no Watch e espelha no iPhone.
+    func beginLocalCrossFit(track: WatchCatalog.CrossFitTrack, format: WatchCatalog.CrossFitFormat) {
+        let title = "CrossFit — \(track.name) · \(format.title)"
+        startCardio(
+            name: title,
+            targetSeconds: format.targetSeconds,
+            exerciseName: track.name,
+            targetCalories: 0,
+            waterSportMode: false,
+            isKitesurf: false,
+            swimmingMode: false,
+            activityTypeRaw: HKWorkoutActivityType.highIntensityIntervalTraining.rawValue,
+            crossFitFormatTitle: format.title
+        )
+        notifyPhoneWatchStarted(
+            kind: "cardio",
+            workoutName: title,
+            exerciseName: track.name,
+            targetSeconds: format.targetSeconds,
+            crossFitFormatTitle: format.title,
+            crossFitTargetSeconds: format.targetSeconds
+        )
+        armCrossFitPrepIfNeeded()
+        WKInterfaceDevice.current().play(.start)
+    }
+
     /// Inicia cardio escolhido no Watch (com duração alvo opcional).
     func beginLocalCardio(_ activity: WatchCatalog.CardioActivity, targetSeconds: Int) {
         beginLocalCardio(
@@ -426,7 +460,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         setupBoardName: String = "",
         spotBuddyEnabled: Bool = false,
         locationOutdoor: Bool = false,
-        activityTypeRaw: UInt? = nil
+        activityTypeRaw: UInt? = nil,
+        crossFitFormatTitle: String = ""
     ) {
         resetWorkoutState()
         meditationOwnedByWatch = false
@@ -445,6 +480,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         currentExerciseName = exerciseName
         waterSetupModeName = setupModeName
         waterSetupBoardName = setupBoardName
+        configureCrossFitMode(
+            workoutName: name,
+            exerciseName: exerciseName,
+            formatTitle: crossFitFormatTitle
+        )
         isActive = true
         let activity = Self.resolveCardioActivityType(
             activityTypeRaw: activityTypeRaw,
@@ -748,6 +788,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         waterLastJumpMeters = 0
         waterPeakG = 1
         waterRelativeAltitude = 0
+        isCrossFitMode = false
+        crossFitFormatTitle = ""
+        crossFitRounds = 0
+        lastCrossFitEMOMMinute = -1
+        clearCrossFitPrep()
         waterBaselineAltitude = nil
         waterSensorStatus = ""
         watchSyncStatus = ""
@@ -883,7 +928,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         colorName: String = "",
         waterSetupModeName: String = "",
         waterSetupBoardName: String = "",
-        autoDetected: Bool = false
+        autoDetected: Bool = false,
+        crossFitFormatTitle: String = "",
+        crossFitTargetSeconds: Int = 0
     ) {
         var payload: [String: Any] = [
             "action": "watchStartedSession",
@@ -904,6 +951,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             if !waterSetupBoardName.isEmpty {
                 payload["waterSetupBoardName"] = waterSetupBoardName
             }
+            if !crossFitFormatTitle.isEmpty {
+                payload["crossFitFormatTitle"] = crossFitFormatTitle
+                payload["crossFitTargetSeconds"] = crossFitTargetSeconds
+            }
         }
         if kind == "meditation" {
             payload["topicIcon"] = topicIcon
@@ -913,6 +964,143 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         // Métricas logo após o início (BPM/kcal).
         sendMetricsToPhone()
         refreshPhoneReachability()
+    }
+
+    private func configureCrossFitMode(workoutName: String, exerciseName: String, formatTitle: String) {
+        let combined = "\(workoutName) \(exerciseName) \(formatTitle)"
+            .folding(options: .diacriticInsensitive, locale: .current)
+            .lowercased()
+        let isCF = combined.contains("crossfit")
+            || combined.contains("cross fit")
+            || combined.contains("hyrox")
+            || !formatTitle.isEmpty && (
+                formatTitle.uppercased().hasPrefix("AMRAP")
+                || formatTitle.uppercased().hasPrefix("EMOM")
+                || formatTitle.localizedCaseInsensitiveContains("for time")
+                || formatTitle.localizedCaseInsensitiveContains("chipper")
+                || formatTitle.localizedCaseInsensitiveContains("prova")
+                || formatTitle.localizedCaseInsensitiveContains("estação")
+                || formatTitle.localizedCaseInsensitiveContains("doubles")
+            )
+        isCrossFitMode = isCF
+        if isCF {
+            if !formatTitle.isEmpty {
+                crossFitFormatTitle = formatTitle
+            } else if let afterDot = workoutName.components(separatedBy: " · ").last,
+                      afterDot != workoutName {
+                crossFitFormatTitle = afterDot
+            } else {
+                crossFitFormatTitle = "WOD"
+            }
+        } else {
+            crossFitFormatTitle = ""
+        }
+        crossFitRounds = 0
+        lastCrossFitEMOMMinute = -1
+        clearCrossFitPrep()
+    }
+
+    var isCrossFitAMRAP: Bool {
+        crossFitFormatTitle.uppercased().hasPrefix("AMRAP")
+    }
+
+    var isCrossFitEMOM: Bool {
+        crossFitFormatTitle.uppercased().hasPrefix("EMOM")
+    }
+
+    var isCrossFitCountdown: Bool {
+        isCrossFitMode && cardioTargetSeconds > 0 && (isCrossFitAMRAP || isCrossFitEMOM)
+    }
+
+    var crossFitDisplaySeconds: Int {
+        if isCrossFitPrepActive {
+            return max(0, crossFitPrepRemaining)
+        }
+        if isCrossFitCountdown {
+            return max(0, cardioTargetSeconds - workoutElapsedSeconds)
+        }
+        return workoutElapsedSeconds
+    }
+
+    func incrementCrossFitRound() {
+        guard isCrossFitMode, !isCrossFitPrepActive else { return }
+        crossFitRounds += 1
+        WKInterfaceDevice.current().play(.click)
+        sendCrossFitRoundsToPhone()
+    }
+
+    func decrementCrossFitRound() {
+        guard isCrossFitMode, crossFitRounds > 0, !isCrossFitPrepActive else { return }
+        crossFitRounds -= 1
+        WKInterfaceDevice.current().play(.click)
+        sendCrossFitRoundsToPhone()
+    }
+
+    func skipCrossFitPrep() {
+        finishCrossFitPrep()
+    }
+
+    private func armCrossFitPrepIfNeeded() {
+        guard isCrossFitMode, !isCrossFitPrepActive, workoutElapsedSeconds < 3 else { return }
+        clearCrossFitPrep()
+        isCrossFitPrepActive = true
+        crossFitPrepRemaining = 10
+        if !isPaused {
+            setPaused(true, notifyPhone: true)
+        }
+        let box = WeakMainActorBox(self)
+        let timer = Timer(timeInterval: 1, repeats: true) { _ in
+            box.run { this in
+                this.tickCrossFitPrep()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        crossFitPrepTimer = timer
+    }
+
+    private func tickCrossFitPrep() {
+        guard isCrossFitPrepActive else { return }
+        if crossFitPrepRemaining <= 1 {
+            finishCrossFitPrep()
+            return
+        }
+        crossFitPrepRemaining -= 1
+        if crossFitPrepRemaining <= 3 {
+            WKInterfaceDevice.current().play(.directionUp)
+        }
+    }
+
+    private func finishCrossFitPrep() {
+        guard isCrossFitPrepActive else { return }
+        clearCrossFitPrep()
+        WKInterfaceDevice.current().play(.success)
+        if isPaused {
+            setPaused(false, notifyPhone: true)
+        }
+        lastCrossFitEMOMMinute = workoutElapsedSeconds / 60
+    }
+
+    private func clearCrossFitPrep() {
+        crossFitPrepTimer?.invalidate()
+        crossFitPrepTimer = nil
+        isCrossFitPrepActive = false
+        crossFitPrepRemaining = 0
+    }
+
+    private func sendCrossFitRoundsToPhone() {
+        sendToPhone([
+            "action": "crossFitRounds",
+            "rounds": crossFitRounds,
+            "timestamp": Date().timeIntervalSince1970
+        ])
+    }
+
+    private func tickCrossFitEMOMCueIfNeeded() {
+        guard isCrossFitEMOM, isActive, !isPaused, !isCrossFitPrepActive else { return }
+        let minute = workoutElapsedSeconds / 60
+        guard minute > 0, minute != lastCrossFitEMOMMinute, workoutElapsedSeconds % 60 == 0 else { return }
+        lastCrossFitEMOMMinute = minute
+        WKInterfaceDevice.current().play(.notification)
     }
 
     private func refreshPhoneReachability() {
@@ -951,6 +1139,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
         workoutElapsedSeconds = elapsed
         advanceLocalMeditationPromptIfNeeded()
+        tickCrossFitEMOMCueIfNeeded()
     }
 
     private func accumulatedPausedSeconds(at date: Date) -> TimeInterval {
@@ -1077,9 +1266,25 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 totalPrompts: 1
             )
             sendWatchAckStarted(kind: "meditation", workoutName: "Meditação")
-        case .traditionalStrengthTraining, .functionalStrengthTraining, .highIntensityIntervalTraining:
+        case .traditionalStrengthTraining, .functionalStrengthTraining:
             startWorkout(name: "Treino", exerciseName: "")
             sendWatchAckStarted(kind: "strength", workoutName: "Treino")
+        case .highIntensityIntervalTraining:
+            // CrossFit / HIIT do iPhone — nunca tratar como ficha de musculação.
+            if let context = session?.receivedApplicationContext,
+               let action = context["action"] as? String,
+               action == "startCardio" {
+                handlePhoneMessage(context)
+            } else {
+                startCardio(
+                    name: "CrossFit",
+                    targetSeconds: 0,
+                    exerciseName: "Treino Crossfit",
+                    activityTypeRaw: HKWorkoutActivityType.highIntensityIntervalTraining.rawValue,
+                    crossFitFormatTitle: "Livre"
+                )
+                sendWatchAckStarted(kind: "cardio", workoutName: "CrossFit")
+            }
         default:
             let swimming = configuration.activityType == .swimming
             let name: String = {
@@ -1684,7 +1889,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         if name.contains("remo") || name.contains("row") { return .rowing }
         if name.contains("corda") || name.contains("jump rope") || name.contains("pular") { return .jumpRope }
         if name.contains("escada") || name.contains("stair") { return .stairClimbing }
-        if name.contains("hiit") || name.contains("burpee") || name.contains("polichinel") { return .highIntensityIntervalTraining }
+        if name.contains("hiit") || name.contains("burpee") || name.contains("polichinel")
+            || name.contains("crossfit") || name.contains("cross fit") || name.contains("hyrox") {
+            return .highIntensityIntervalTraining
+        }
         if name.contains("luta") || name.contains("fight") || name.contains("box") || name.contains("mma") { return .martialArts }
         if name.contains("tenis") || name.contains("tennis") { return .tennis }
         if name.contains("surf") { return .surfingSports }
@@ -2336,6 +2544,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
             meditationOwnedByWatch = false
             localMeditationPrompts = []
+            let formatTitle = (message["crossFitFormatTitle"] as? String) ?? ""
             startCardio(
                 name: name,
                 targetSeconds: targetSeconds,
@@ -2347,9 +2556,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 poolLengthMeters: poolLen,
                 spotBuddyEnabled: spotBuddy,
                 locationOutdoor: outdoor,
-                activityTypeRaw: activityRaw
+                activityTypeRaw: activityRaw,
+                crossFitFormatTitle: formatTitle
             )
+            // PREP só no início local do Watch — início pelo iPhone já faz PREP no telefone.
             sendWatchAckStarted(kind: "cardio", workoutName: name)
+        case "crossFitRounds":
+            guard isActive, isCrossFitMode else { return }
+            if let rounds = message["rounds"] as? Int ?? (message["rounds"] as? NSNumber)?.intValue {
+                crossFitRounds = max(0, rounds)
+            }
         case "syncWorkoutProgress":
             // Não reinicia sessão a partir de sync — startWorkout já cobre o início.
             // Um sync atrasado após stopWorkout reabria o treino no Watch.
@@ -2379,6 +2595,15 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             if let enabled = message["spotBuddyEnabled"] as? Bool
                 ?? (message["spotBuddyEnabled"] as? NSNumber)?.boolValue {
                 spotBuddyEnabled = enabled && isKitesurfMode
+            }
+            if let rounds = message["crossFitRounds"] as? Int
+                ?? (message["crossFitRounds"] as? NSNumber)?.intValue,
+               isCrossFitMode {
+                crossFitRounds = max(0, rounds)
+            }
+            if let format = message["crossFitFormatTitle"] as? String, !format.isEmpty {
+                crossFitFormatTitle = format
+                isCrossFitMode = true
             }
             applyPhonePausedFlag(message)
         case "kiteSpotBuddy":
