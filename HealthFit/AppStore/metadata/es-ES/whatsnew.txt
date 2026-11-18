@@ -1,4 +1,4 @@
-• Método Atleta PPL 2× para masculino y femenino, con demos en GIF
-• Nuevos entrenamientos en casa (Core Power, HIIT, Posterior y Express)
-• Apple Watch: la musculación iniciada en el reloj avanza series y ejercicios
-• Franja “Nuevos entrenamientos” en los programas actualizados
+• CrossFit y Método Hyrox en Entrenamientos, con AMRAP, EMOM, For Time y estaciones
+• Temporizador WOD con prep de 10 s y contador de rounds en AMRAP
+• Apple Watch: inicia CrossFit en el reloj con sync en el iPhone (BPM y kcal)
+• Entrenamiento del día sigue la rutina del personal y sugiere días de descanso

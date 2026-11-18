@@ -1,17 +1,18 @@
-HealthFit 1.0.25 (38)
+HealthFit 1.0.30 (52)
 
 What's new in this binary:
-- Fix stuck black screen after starting a workout (hosted overlay lost the catalog sheet)
-- “Já existe um treino em andamento” End now force-ends the session even if the UI is blank
-- Continue remounts the workout; Dismiss minimizes so tabs return
-- Recovery overlay if the active workout UI cannot be rebuilt
+- CrossFit + Hyrox Method hub under Workouts (Musculação / strength list)
+- WOD timer (not strength sheet): 10s PREP, AMRAP rounds, EMOM cues, Hyrox station checklist
+- Apple Watch: CrossFit start on watch mirrors to iPhone; phone start mirrors to watch
+- Cardio session detection includes CrossFit/Hyrox titles so the live timer opens correctly
+- Workout of the day still prioritizes personal trainer routine and rest-day suggestions
 
 How to verify:
-1. Sign in with demo account
-2. Start a recommended/catalog strength workout
-3. Background the app, force-quit if needed, reopen
-4. Confirm the workout UI returns (not a black screen)
-5. If the in-progress alert appears, tap Encerrar — the app must become usable again
+1. Sign in with the demo account
+2. Enable CrossFit in Profile → Modalidades (TREINO) if the card is hidden
+3. Workouts → Musculação → CrossFit → Treino Crossfit or Método Hyrox → pick a format → Start
+4. Confirm PREP 10s, then the large timer (no “montar o exercício” error)
+5. Optional: start CrossFit from Apple Watch → confirm the iPhone opens the same WOD session
 
 Demo login: healthfit.appreview@gmail.com
 Password: HealthFitReview2026!

@@ -1,4 +1,4 @@
-• Athlete Method PPL 2× for male and female programs, with GIF demos
-• New home workouts (Core Power, HIIT Burn, Posterior, and Express)
-• Apple Watch: strength sessions started on watch now progress sets and exercises
-• “New workouts unlocked” banner on updated programs
+• CrossFit and Hyrox Method in Workouts, with AMRAP, EMOM, For Time, and stations
+• WOD timer with a 10-second prep and AMRAP round counter
+• Apple Watch: start CrossFit on the watch with iPhone sync (heart rate and calories)
+• Workout of the day follows your trainer’s plan and suggests rest days
