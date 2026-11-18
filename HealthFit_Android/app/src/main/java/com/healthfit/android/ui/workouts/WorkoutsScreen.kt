@@ -59,6 +59,7 @@ private sealed interface WorkoutDest {
     data class MeditationSetup(val title: String, val subtitle: String) : WorkoutDest
     data object StudyFocus : WorkoutDest
     data object Fight : WorkoutDest
+    data object CrossFit : WorkoutDest
     data class Activity(
         val title: String,
         val detail: String,
@@ -127,12 +128,28 @@ fun WorkoutsScreen(userId: String? = null) {
     LaunchedEffect(watchOwned?.title, watchOwned?.exercise, dest) {
         val owned = watchOwned ?: return@LaunchedEffect
         if (dest is WorkoutDest.Activity) return@LaunchedEffect
+        val isCrossFit = owned.title.contains("CrossFit", ignoreCase = true) ||
+            owned.exercise.contains("Crossfit", ignoreCase = true) ||
+            owned.exercise.contains("Hyrox", ignoreCase = true) ||
+            owned.sets.contains("AMRAP", ignoreCase = true) ||
+            owned.sets.contains("EMOM", ignoreCase = true) ||
+            owned.sets.contains("WOD", ignoreCase = true)
         dest = WorkoutDest.Activity(
-            title = owned.exercise.ifBlank { owned.title },
-            detail = "Watch · ${owned.title}",
-            cardio = owned.kind == WorkoutWearContract.KIND_CARDIO,
-            cover = when (owned.kind) {
-                WorkoutWearContract.KIND_MEDITATION -> R.drawable.meditacaocoverrespiracao
+            title = if (isCrossFit) {
+                owned.title.ifBlank { "CrossFit — ${owned.exercise}" }
+            } else {
+                owned.exercise.ifBlank { owned.title }
+            },
+            detail = when {
+                isCrossFit -> "Watch · ${owned.sets.ifBlank { owned.title }}"
+                else -> "Watch · ${owned.title}"
+            },
+            cardio = owned.kind == WorkoutWearContract.KIND_CARDIO || isCrossFit,
+            cover = when {
+                isCrossFit && owned.exercise.contains("Hyrox", ignoreCase = true) ->
+                    R.drawable.crossfitcoverhyrox
+                isCrossFit -> R.drawable.crossfitcoverwod
+                owned.kind == WorkoutWearContract.KIND_MEDITATION -> R.drawable.meditacaocoverrespiracao
                 else -> R.drawable.cardiocovercorrida
             },
         )
@@ -338,6 +355,20 @@ fun WorkoutsScreen(userId: String? = null) {
             )
             return
         }
+        WorkoutDest.CrossFit -> {
+            CrossFitHubScreen(
+                onBack = { dest = WorkoutDest.Browse },
+                onStart = { name, format, cover ->
+                    dest = WorkoutDest.Activity(
+                        title = "CrossFit — $name · $format",
+                        detail = crossFitCoachDetail(name, format),
+                        cardio = true,
+                        cover = cover,
+                    )
+                },
+            )
+            return
+        }
         is WorkoutDest.Activity -> {
             if (current.cardio && usesCardioLiveScreen(current.title, current.detail)) {
                 CardioLiveScreen(
@@ -478,7 +509,10 @@ fun WorkoutsScreen(userId: String? = null) {
         )
         Spacer(Modifier.height(14.dp))
         when (tab) {
-            0 -> StrengthTab(onOpen = { dest = WorkoutDest.Program(it) })
+            0 -> StrengthTab(
+                onOpen = { dest = WorkoutDest.Program(it) },
+                onOpenCrossFit = { dest = WorkoutDest.CrossFit },
+            )
             1 -> HomeTab(onOpen = { index -> dest = WorkoutDest.Detail("home", index) })
             2 -> CardioTab(onOpen = { title ->
                 dest = if (title == "Luta") WorkoutDest.Fight else WorkoutDest.CardioSetup(title)
@@ -498,7 +532,10 @@ fun WorkoutsScreen(userId: String? = null) {
 }
 
 @Composable
-private fun StrengthTab(onOpen: (String) -> Unit) {
+private fun StrengthTab(
+    onOpen: (String) -> Unit,
+    onOpenCrossFit: () -> Unit,
+) {
     HeroCard(
         title = "Treino em dupla / equipe",
         subtitle = "2 equipe(s) · chat para marcar treinos",
@@ -533,6 +570,21 @@ private fun StrengthTab(onOpen: (String) -> Unit) {
             MetaRow(Icons.Filled.Star, "${WorkoutCatalog.mobility.size} fichas recomendadas", Color(0xFFFFD60A))
         },
         onClick = { onOpen("mobility") },
+    )
+    Spacer(Modifier.height(10.dp))
+    HeroCard(
+        title = "CrossFit",
+        subtitle = "WODs e Método Hyrox — metcon, estações e cronômetro no Watch",
+        brush = Brush.linearGradient(listOf(Color(0xFF3A1808), Color(0xFF1A1008))),
+        imageRes = R.drawable.crossfitcoverhub,
+        eyebrow = "FUNCIONAL · METCON",
+        eyebrowColor = Color(0xFFEB611F),
+        height = 180.dp,
+        footer = {
+            Spacer(Modifier.height(8.dp))
+            MetaRow(Icons.Filled.LocalFireDepartment, "2 trilhas · AMRAP · EMOM · Hyrox", Color(0xFFFF9A3C))
+        },
+        onClick = onOpenCrossFit,
     )
     Text(
         "Mobilidade ajuda a preparar articulações para agachamento, terra, supino e desenvolvimento.",
@@ -657,6 +709,29 @@ private fun MeditationTab(onOpen: (String, String) -> Unit) {
         )
         Spacer(Modifier.height(10.dp))
     }
+}
+
+private fun crossFitCoachDetail(track: String, format: String): String {
+    val key = format.lowercase()
+    val tip = when {
+        key.startsWith("amrap") ->
+            "Máximo de rounds no tempo. Anote rounds + reps no final."
+        key.startsWith("emom") ->
+            "A cada minuto complete o bloco; o resto do minuto é descanso."
+        "for time" in key ->
+            "Complete o WOD o mais rápido possível e encerre ao terminar."
+        "chipper" in key ->
+            "Passe pela lista uma vez, na ordem — sem rounds."
+        track.contains("Hyrox", ignoreCase = true) && ("prova" in key || "simula" in key) ->
+            "Alterne corrida e as 8 estações no ritmo de prova."
+        track.contains("Hyrox", ignoreCase = true) && "estação" in key ->
+            "Foque técnica e volume em uma estação."
+        track.contains("Hyrox", ignoreCase = true) && "doubles" in key ->
+            "Revezamento em dupla com o cronômetro contínuo."
+        else ->
+            "Cronômetro de WOD — sem demonstração de exercício; foque no formato."
+    }
+    return "CrossFit · $format · $tip"
 }
 
 private fun cardioImage(title: String): Int = when (title) {

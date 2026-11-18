@@ -62,7 +62,17 @@ object WatchPhoneSync {
                 .put(WorkoutWearContract.ACTIVE, true)
                 .put(WorkoutWearContract.TITLE, session.title)
                 .put(WorkoutWearContract.EXERCISE, session.exerciseName)
-                .put(WorkoutWearContract.SETS, if (session.isPaused) "Pausado" else session.kind.name)
+                .put(
+                    WorkoutWearContract.SETS,
+                    when {
+                        session.isCrossFitPrep -> "PREP ${session.crossFitPrepRemaining}"
+                        session.isPaused -> "Pausado"
+                        session.isCrossFit && session.isCrossFitAmrap ->
+                            "${session.crossFitFormat} · ${session.crossFitRounds} rounds"
+                        session.isCrossFit -> session.crossFitFormat.ifBlank { "WOD" }
+                        else -> session.kind.name
+                    },
+                )
                 .put(WorkoutWearContract.RESTING, session.isResting)
                 .put(WorkoutWearContract.PAUSED, session.isPaused)
                 .put(WorkoutWearContract.ELAPSED, session.elapsedSeconds())

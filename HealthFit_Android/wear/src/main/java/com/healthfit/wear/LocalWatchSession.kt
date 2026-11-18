@@ -53,7 +53,16 @@ data class ActiveSession(
     /** true quando a sessão veio do celular (somente leitura no relógio). */
     val fromPhone: Boolean = false,
     val phoneSets: String = "",
+    val isCrossFit: Boolean = false,
+    val crossFitFormat: String = "",
+    val crossFitRounds: Int = 0,
+    val crossFitPrepRemaining: Int = 0,
 ) {
+    val isCrossFitPrep: Boolean get() = isCrossFit && crossFitPrepRemaining > 0
+    val isCrossFitAmrap: Boolean get() = crossFitFormat.startsWith("AMRAP", ignoreCase = true)
+    val isCrossFitEmom: Boolean get() = crossFitFormat.startsWith("EMOM", ignoreCase = true)
+    val isCrossFitCountdown: Boolean
+        get() = isCrossFit && targetSeconds > 0 && (isCrossFitAmrap || isCrossFitEmom)
     private fun effectiveNow(now: Long): Long = if (isPaused && pauseStartEpoch > 0L) pauseStartEpoch else now
 
     /** Tempo total ativo da sessão (sem pausas). */
@@ -206,6 +215,65 @@ object LocalWatchSession {
         )
     }
 
+    fun beginCrossFit(track: WatchCatalog.CrossFitTrack, format: WatchCatalog.CrossFitFormat) {
+        val now = System.currentTimeMillis()
+        startLocal(
+            ActiveSession(
+                kind = SessionKind.Cardio,
+                title = "CrossFit — ${track.name} · ${format.title}",
+                exerciseName = track.name,
+                sessionStartEpoch = now,
+                exerciseStartEpoch = now,
+                targetSeconds = format.targetSeconds,
+                usesSegmentedChronometer = false,
+                isCrossFit = true,
+                crossFitFormat = format.title,
+                crossFitRounds = 0,
+                crossFitPrepRemaining = 10,
+                isPaused = true,
+                pauseStartEpoch = now,
+                syncStatus = "PREP · CrossFit",
+            ),
+        )
+    }
+
+    fun incrementCrossFitRound() {
+        val s = local ?: return
+        if (!s.isCrossFit || s.isCrossFitPrep) return
+        local = s.copy(crossFitRounds = s.crossFitRounds + 1, syncStatus = "${s.crossFitRounds + 1} rounds")
+        publish()
+        WatchPhoneSync.publishSession(local)
+    }
+
+    fun decrementCrossFitRound() {
+        val s = local ?: return
+        if (!s.isCrossFit || s.crossFitRounds <= 0 || s.isCrossFitPrep) return
+        local = s.copy(crossFitRounds = s.crossFitRounds - 1)
+        publish()
+        WatchPhoneSync.publishSession(local)
+    }
+
+    fun skipCrossFitPrep() {
+        finishCrossFitPrep()
+    }
+
+    private fun finishCrossFitPrep() {
+        val s = local ?: return
+        if (!s.isCrossFitPrep) return
+        val now = System.currentTimeMillis()
+        val paused = if (s.pauseStartEpoch > 0L) (now - s.pauseStartEpoch).coerceAtLeast(0L) else 0L
+        local = s.copy(
+            crossFitPrepRemaining = 0,
+            isPaused = false,
+            pauseStartEpoch = 0L,
+            pauseAccumulatedMs = s.pauseAccumulatedMs + paused,
+            syncStatus = "WOD · ${s.crossFitFormat}",
+        )
+        WatchSensorHub.setPaused(false)
+        publish()
+        WatchPhoneSync.publishSession(local)
+    }
+
     private fun startLocal(session: ActiveSession) {
         if (local != null) return
         climbingDetector?.stop()
@@ -347,6 +415,16 @@ object LocalWatchSession {
     /** Chamado a cada segundo pela UI: avança passos de meditação, descanso e metas. */
     fun tick(now: Long = System.currentTimeMillis()) {
         val s = local ?: return
+        if (s.isCrossFitPrep) {
+            val nextPrep = (s.crossFitPrepRemaining - 1).coerceAtLeast(0)
+            if (nextPrep <= 0) {
+                finishCrossFitPrep()
+            } else {
+                local = s.copy(crossFitPrepRemaining = nextPrep)
+                publish()
+            }
+            return
+        }
         if (s.isPaused) return
         var next = s
         when (s.kind) {

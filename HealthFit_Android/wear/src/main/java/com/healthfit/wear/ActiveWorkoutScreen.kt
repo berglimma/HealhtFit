@@ -236,6 +236,28 @@ private fun MeditationMetrics(s: ActiveSession, now: Long) {
 
 @Composable
 private fun CardioMetrics(s: ActiveSession, now: Long) {
+    if (s.isCrossFitPrep) {
+        ScalingLazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            item { Text("PREP", color = WearColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+            item {
+                Text(
+                    "${s.crossFitPrepRemaining}",
+                    color = WearColors.TextPrimary,
+                    fontSize = 40.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            item { Text(s.crossFitFormat, color = WearColors.TextSecondary, fontSize = 11.sp) }
+            item {
+                HFChip(label = "Pular prep", onClick = { LocalWatchSession.skipCrossFitPrep() })
+            }
+        }
+        return
+    }
     if (s.usesSegmentedChronometer) {
         SegmentedCardio(s, now)
         return
@@ -246,17 +268,48 @@ private fun CardioMetrics(s: ActiveSession, now: Long) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (s.isPaused) item { PausedBadge() }
-        item { Text(s.title, color = if (s.isWaterSport) WearColors.Cyan else WearColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
         item {
             Text(
-                formatDuration(s.elapsedSeconds(now)),
-                color = WearColors.TextPrimary,
+                if (s.isCrossFit) s.crossFitFormat.ifBlank { s.title } else s.title,
+                color = if (s.isWaterSport) WearColors.Cyan else WearColors.Accent,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        item {
+            val display = when {
+                s.isCrossFitCountdown -> s.remainingSeconds(now)
+                else -> s.elapsedSeconds(now)
+            }
+            Text(
+                formatDuration(display),
+                color = if (s.isCrossFitCountdown && display <= 10) Color.Red else WearColors.TextPrimary,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
             )
         }
-        if (s.targetSeconds > 0) {
+        if (s.isCrossFitCountdown) {
+            item {
+                Text(
+                    if (s.remainingSeconds(now) == 0) "Tempo esgotado" else "Restantes",
+                    color = WearColors.TextSecondary,
+                    fontSize = 10.sp,
+                )
+            }
+        } else if (s.targetSeconds > 0) {
             item { Text("Meta: ${formatDuration(s.targetSeconds)}", color = WearColors.TextSecondary, fontSize = 10.sp) }
+        }
+        if (s.isCrossFit && s.isCrossFitAmrap) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    HFChip(label = "−", onClick = { LocalWatchSession.decrementCrossFitRound() }, modifier = Modifier.size(40.dp))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("${s.crossFitRounds}", color = WearColors.TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text("rounds", color = WearColors.TextSecondary, fontSize = 9.sp)
+                    }
+                    HFChip(label = "+", onClick = { LocalWatchSession.incrementCrossFitRound() }, modifier = Modifier.size(40.dp))
+                }
+            }
         }
         if (s.isWaterSport) {
             if (s.waterSetupMode.isNotEmpty()) {

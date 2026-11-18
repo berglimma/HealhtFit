@@ -100,6 +100,7 @@ fun ProfileScreen(
         mutableStateListOf(
             Modality("Musculação", "Programas academia e mobilidade", Icons.Filled.FitnessCenter, "TREINO"),
             Modality("Treino em casa", "Peso corporal, HIIT e core", Icons.Filled.Home, "TREINO"),
+            Modality("CrossFit", "WODs (AMRAP/EMOM) e Método Hyrox", Icons.Filled.FitnessCenter, "TREINO"),
             Modality("Caminhada", "Caminhada outdoor com mapa GPS, ritmo e passos", Icons.Filled.DirectionsRun, "CARDIO"),
             Modality("Mountain bike", "Mountain bike em trilha ou terreno irregular", Icons.Filled.DirectionsBike, "CARDIO"),
             Modality("Bicicleta pedal", "Ciclismo outdoor em rua ou ciclovia", Icons.Filled.DirectionsBike, "CARDIO"),

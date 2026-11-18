@@ -373,6 +373,117 @@ fun MeditationSetupScreen(title: String, subtitle: String, onBack: () -> Unit, o
 }
 
 @Composable
+fun CrossFitHubScreen(onBack: () -> Unit, onStart: (String, String, Int) -> Unit) {
+    var selected by remember { mutableStateOf<CrossFitTrack?>(null) }
+    val track = selected
+    if (track != null) {
+        CrossFitConfirm(
+            track = track,
+            onBack = { selected = null },
+            onStart = { format ->
+                onStart(track.name, format, track.coverRes)
+            },
+        )
+        return
+    }
+    BackHandler(onBack = onBack)
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp),
+    ) {
+        SetupBar("CrossFit", onBack)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(HealthFitColors.CardBackground)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.crossfitcoverhub),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(14.dp)),
+                contentScale = ContentScale.Crop,
+            )
+            Column(Modifier.padding(start = 14.dp)) {
+                Text("CROSSFIT", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(
+                    "Metcon, estações Hyrox, BPM e calorias no Galaxy Watch",
+                    color = HealthFitColors.TextSecondary,
+                    fontSize = 13.sp,
+                )
+            }
+        }
+        SectionTitle(
+            "Escolha a trilha",
+            "Cada trilha tem formatos prontos, cronômetro e histórico — como nas outras modalidades.",
+        )
+        CrossFitTracks.forEach { item ->
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(HealthFitColors.CardBackground)
+                    .clickable { selected = item }
+                    .padding(14.dp),
+            ) {
+                Text(item.eyebrow, color = item.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(item.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                Text(item.summary, color = HealthFitColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+                Text(
+                    "${item.formats.size} formatos  ·  ~${item.kcalPerMin} kcal/min",
+                    color = HealthFitColors.Accent,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun CrossFitConfirm(
+    track: CrossFitTrack,
+    onBack: () -> Unit,
+    onStart: (String) -> Unit,
+) {
+    BackHandler(onBack = onBack)
+    var format by remember { mutableStateOf(track.formats.first()) }
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp),
+    ) {
+        SetupBar(track.name, onBack)
+        IdentityCard(
+            imageRes = track.coverRes,
+            title = track.name,
+            description = track.summary,
+            meta = "~${track.kcalPerMin} kcal/min",
+        )
+        SectionTitle("Formato da sessão", "Escolha como quer treinar hoje — a meta de tempo acompanha o formato.")
+        OptionGrid(track.formats, format) { format = it }
+        track.stationsHint?.let { stations ->
+            SectionTitle("Estações Hyrox", stations)
+        }
+        SectionTitle("Para a melhor experiência", track.tips.joinToString("\n• ", prefix = "• "))
+        SummaryCard(listOf("Trilha" to track.name, "Formato" to format))
+        Spacer(Modifier.height(16.dp))
+        GradientButton("Iniciar $format", onClick = { onStart(format) }, icon = Icons.Filled.PlayArrow)
+        Spacer(Modifier.height(28.dp))
+    }
+}
+
+@Composable
 fun FightHubScreen(onBack: () -> Unit, onStart: (String, String) -> Unit) {
     var selected by remember { mutableStateOf<FightStyle?>(null) }
     val style = selected

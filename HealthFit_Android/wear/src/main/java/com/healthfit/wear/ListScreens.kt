@@ -124,6 +124,43 @@ fun CardioListScreen(
 }
 
 @Composable
+fun CrossFitListScreen(onTrack: (WatchCatalog.CrossFitTrack) -> Unit) {
+    WearList("CrossFit") {
+        item {
+            SmallNote("Escolha a trilha — o celular abre o WOD em sync.", WearColors.TextSecondary)
+        }
+        items(WatchCatalog.crossFitTracks.size) { i ->
+            val track = WatchCatalog.crossFitTracks[i]
+            HFChip(
+                label = track.name,
+                onClick = { onTrack(track) },
+                secondary = "${track.formats.size} formatos",
+            )
+        }
+    }
+}
+
+@Composable
+fun CrossFitFormatScreen(
+    track: WatchCatalog.CrossFitTrack,
+    onStart: (WatchCatalog.CrossFitFormat) -> Unit,
+) {
+    WearList(track.name) {
+        item {
+            SmallNote("10 s de PREP · depois o cronômetro do WOD", WearColors.TextSecondary)
+        }
+        items(track.formats.size) { i ->
+            val format = track.formats[i]
+            HFChip(
+                label = format.title,
+                onClick = { onStart(format) },
+                secondary = format.detail,
+            )
+        }
+    }
+}
+
+@Composable
 fun MeditationListScreen(onTopic: (WatchCatalog.MeditationTopic) -> Unit) {
     WearList("Meditação") {
         items(WatchCatalog.meditationTopics.size) { i ->

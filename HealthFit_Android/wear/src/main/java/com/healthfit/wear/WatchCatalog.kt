@@ -21,6 +21,22 @@ object WatchCatalog {
         val prompts: List<String>,
     )
 
+    data class CrossFitFormat(
+        val id: String,
+        val title: String,
+        val detail: String,
+        val targetSeconds: Int,
+    ) {
+        val isAmrap: Boolean get() = title.startsWith("AMRAP", ignoreCase = true)
+        val isEmom: Boolean get() = title.startsWith("EMOM", ignoreCase = true)
+    }
+
+    data class CrossFitTrack(
+        val id: String,
+        val name: String,
+        val formats: List<CrossFitFormat>,
+    )
+
     enum class DurationOption(val minutes: Int) {
         Five(5), Ten(10), Fifteen(15), Twenty(20), Thirty(30), FortyFive(45), Sixty(60);
 
@@ -107,6 +123,34 @@ object WatchCatalog {
         CardioActivity("burpee", "Burpees"),
     )
 
+    val crossFitTracks = listOf(
+        CrossFitTrack(
+            id = "wod",
+            name = "Treino Crossfit",
+            formats = listOf(
+                CrossFitFormat("amrap12", "AMRAP 12", "Máximo de rounds em 12 min", 12 * 60),
+                CrossFitFormat("amrap15", "AMRAP 15", "Máximo de rounds em 15 min", 15 * 60),
+                CrossFitFormat("amrap20", "AMRAP 20", "Clássico de condicionamento", 20 * 60),
+                CrossFitFormat("emom12", "EMOM 12", "A cada minuto, um bloco", 12 * 60),
+                CrossFitFormat("emom16", "EMOM 16", "Blocos longos", 16 * 60),
+                CrossFitFormat("fortime", "For Time", "Complete o WOD no menor tempo", 0),
+                CrossFitFormat("chipper", "Chipper", "Lista longa, uma vez", 0),
+                CrossFitFormat("open", "Livre", "Cronômetro aberto", 0),
+            ),
+        ),
+        CrossFitTrack(
+            id = "hyrox",
+            name = "Método Hyrox",
+            formats = listOf(
+                CrossFitFormat("race", "Simulação de prova", "8 estações + corridas", 0),
+                CrossFitFormat("half", "Meia prova", "~30–45 min", 40 * 60),
+                CrossFitFormat("station", "Foco em estação", "Técnica e volume", 20 * 60),
+                CrossFitFormat("doubles", "Doubles", "Revezamento em dupla", 0),
+                CrossFitFormat("open", "Livre", "Cronômetro aberto", 0),
+            ),
+        ),
+    )
+
     val meditationTopics = listOf(
         MeditationTopic(
             "breath", "Respiração Consciente", "blue",
@@ -178,4 +222,5 @@ object WatchCatalog {
     fun cardio(id: String): CardioActivity? = cardioActivities.firstOrNull { it.id == id }
     fun strength(id: String): StrengthProgram? = strengthPrograms.firstOrNull { it.id == id }
     fun meditation(id: String): MeditationTopic? = meditationTopics.firstOrNull { it.id == id }
+    fun crossFit(id: String): CrossFitTrack? = crossFitTracks.firstOrNull { it.id == id }
 }

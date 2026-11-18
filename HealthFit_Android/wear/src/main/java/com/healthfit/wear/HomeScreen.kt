@@ -27,6 +27,7 @@ import androidx.wear.compose.material.TimeText
 fun HomeScreen(
     onStrength: () -> Unit,
     onCardio: () -> Unit,
+    onCrossFit: () -> Unit,
     onMeditation: () -> Unit,
 ) {
     val phoneReachable by LocalWatchSession.phoneReachable.collectAsState()
@@ -54,6 +55,7 @@ fun HomeScreen(
             item { SectionLabel("Iniciar") }
             item { HFChip("Treinos", onClick = onStrength, secondary = "${WatchCatalog.strengthPrograms.size} programas") }
             item { HFChip("Cardio", onClick = onCardio, secondary = "Água, corrida, bike, escalada…") }
+            item { HFChip("CrossFit", onClick = onCrossFit, secondary = "${WatchCatalog.crossFitTracks.size} trilhas · WOD / Hyrox") }
             item { HFChip("Meditação", onClick = onMeditation, secondary = "${WatchCatalog.meditationTopics.size} temas") }
             item {
                 Column(

@@ -17,12 +17,15 @@ object WearRoutes {
     const val CARDIO = "cardio"
     const val CARDIO_DURATION = "cardioDuration/{id}"
     const val WATER_SETUP = "waterSetup/{id}"
+    const val CROSSFIT = "crossfit"
+    const val CROSSFIT_FORMAT = "crossfitFormat/{id}"
     const val MEDITATION = "meditation"
     const val MEDITATION_DURATION = "meditationDuration/{id}"
     const val ACTIVE = "active"
 
     fun cardioDuration(id: String) = "cardioDuration/$id"
     fun waterSetup(id: String) = "waterSetup/$id"
+    fun crossFitFormat(id: String) = "crossfitFormat/$id"
     fun meditationDuration(id: String) = "meditationDuration/$id"
 }
 
@@ -58,6 +61,7 @@ fun WearNavigation() {
                 HomeScreen(
                     onStrength = { navController.navigate(WearRoutes.STRENGTH) },
                     onCardio = { navController.navigate(WearRoutes.CARDIO) },
+                    onCrossFit = { navController.navigate(WearRoutes.CROSSFIT) },
                     onMeditation = { navController.navigate(WearRoutes.MEDITATION) },
                 )
             }
@@ -98,6 +102,20 @@ fun WearNavigation() {
                             setupModeName = mode,
                             setupBoardName = board,
                         )
+                    }
+                }
+            }
+            composable(WearRoutes.CROSSFIT) {
+                CrossFitListScreen(onTrack = { navController.navigate(WearRoutes.crossFitFormat(it.id)) })
+            }
+            composable(
+                WearRoutes.CROSSFIT_FORMAT,
+                arguments = listOf(navArgument("id") { type = NavType.StringType }),
+            ) { entry ->
+                val track = entry.arguments?.getString("id")?.let { WatchCatalog.crossFit(it) }
+                if (track != null) {
+                    CrossFitFormatScreen(track) { format ->
+                        LocalWatchSession.beginCrossFit(track, format)
                     }
                 }
             }
